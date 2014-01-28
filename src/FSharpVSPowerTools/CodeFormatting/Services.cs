@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text;
 
-namespace Hestia.FSharpCommands
+namespace FSharpPowerTools.CodeFormatting
 {
     public class Services
     {

@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using Hestia.FSharpCommands.Utils;
+using FSharpPowerTools.CodeFormatting.Utils;
 using Microsoft.FSharp.Compiler;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 
-namespace Hestia.FSharpCommands.Commands
+namespace FSharpPowerTools.CodeFormatting.Commands
 {
     public class FormatSelectionCommand : FormatCommand
     {

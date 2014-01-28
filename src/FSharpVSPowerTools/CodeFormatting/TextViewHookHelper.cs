@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
 
-namespace Hestia.FSharpCommands
+namespace FSharpPowerTools.CodeFormatting
 {
     [Export(typeof(IWpfTextViewCreationListener))]
     [Name("F# Dummy Command Hook")]

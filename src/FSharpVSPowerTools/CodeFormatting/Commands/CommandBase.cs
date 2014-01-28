@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 
-namespace Hestia.FSharpCommands.Commands
+namespace FSharpPowerTools.CodeFormatting.Commands
 {
     public abstract class CommandBase
     {

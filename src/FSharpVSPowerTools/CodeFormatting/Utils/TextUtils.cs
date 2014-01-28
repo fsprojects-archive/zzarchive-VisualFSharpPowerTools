@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.FSharp.Compiler;
 using Microsoft.VisualStudio.Text;
 
-namespace Hestia.FSharpCommands.Utils
+namespace FSharpPowerTools.CodeFormatting.Utils
 {
     internal static class TextUtils
     {
