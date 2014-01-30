@@ -4,19 +4,19 @@
 // --------------------------------------------------------------------------------------
 
 // Binaries that have XML documentation (in a corresponding generated XML file)
-let referenceBinaries = [ "FSharp.ProjectTemplate.dll" ]
+let referenceBinaries = []
 // Web site location for the generated documentation
-let website = "/FSharp.ProjectScaffold"
+let website = "."
 
-let githubLink = "http://github.com/fsprojects/FSharp.ProjectScaffold"
+let githubLink = "http://github.com/fsprojects/FSharpVSPowerTools"
 
 // Specify more information about your project
 let info =
-  [ "project-name", "FSharp.ProjectScaffold"
-    "project-author", "Your Name"
-    "project-summary", "A short summary of your project"
+  [ "project-name", "F# Power Tools"
+    "project-author", "Anh-Dung Phan, Don Syme"
+    "project-summary", "F# Community Power Tools (for Visual Studio) "
     "project-github", githubLink
-    "project-nuget", "http://nuget.com/packages/FSharp.ProjectScaffold" ]
+    "project-nuget", "http://nuget.com/packages/FSharpVSPowerTools" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below
@@ -31,6 +31,7 @@ let info =
 #r "FSharp.Literate.dll"
 #r "FSharp.CodeFormat.dll"
 #r "FSharp.MetadataFormat.dll"
+
 open Fake
 open System.IO
 open Fake.FileHelper

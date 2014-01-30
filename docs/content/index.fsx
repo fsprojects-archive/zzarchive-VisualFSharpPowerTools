@@ -5,6 +5,9 @@
 
 (**
 
+You can install this extension by searching for "F# Power Tools" in "Tools --> Extensions and Updates --> Online".
+This extension is also available in the [Visual Studio Gallery](#).
+
 Documentation
 -----------------------
 
