@@ -21,21 +21,20 @@ open System
 
 // The name of the project 
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
-let project = "FSharp.ProjectTemplate"
+let project = "FSharpVSPowerTools"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "A short summary of your project."
+let summary = "F# Community Power Tools (for Visual Studio)"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
 let description = """
-  A lengthy description of your project. 
-  This can have multiple lines and will be cleaned up. """
+  F# Community Power Tools (for Visual Studio)"""
 // List of author names (for NuGet package)
-let authors = [ "Your Name" ]
+let authors = [ "Anh-Dung Phan, Don Syme" ]
 // Tags for your project (for NuGet package)
-let tags = "F# fsharp tags which describe your project"
+let tags = "F# fsharp formatting editting"
 
 // File system information 
 // (<solutionFile>.sln is built during the building process)
@@ -47,8 +46,8 @@ let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 // The profile where the project is posted 
 let gitHome = "https://github.com/fsprojects"
 // The name of the project on GitHub
-let gitName = "FSharp.ProjectScaffold"
-let cloneUrl = "git@github.com:fsprojects/FSharp.ProjectScaffold.git"
+let gitName = "FSharpVSPowerTools"
+let cloneUrl = "git@github.com:fsprojects/FSharpVSPowerTools.git"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps 
@@ -60,8 +59,8 @@ let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
 
 // Generate assembly info files with the right version & up-to-date information
 Target "AssemblyInfo" (fun _ ->
-  let fileName = "src/" + project + "/AssemblyInfo.fs"
-  CreateFSharpAssemblyInfo fileName
+  let fileName = "src/" + project + "/Properties/AssemblyInfo.cs"
+  CreateCSharpAssemblyInfo fileName
       [ Attribute.Title project
         Attribute.Product project
         Attribute.Description summary
@@ -94,7 +93,9 @@ Target "Build" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
 
-Target "RunTests" (fun _ ->
+Target "RunTests" DoNothing
+(*
+(fun _ ->
     !! testAssemblies 
     |> NUnit (fun p ->
         { p with
@@ -102,26 +103,7 @@ Target "RunTests" (fun _ ->
             TimeOut = TimeSpan.FromMinutes 20.
             OutputFile = "TestResults.xml" })
 )
-
-// --------------------------------------------------------------------------------------
-// Build a NuGet package
-
-Target "NuGet" (fun _ ->
-    NuGet (fun p -> 
-        { p with   
-            Authors = authors
-            Project = project
-            Summary = summary
-            Description = description
-            Version = release.NugetVersion
-            ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
-            Tags = tags
-            OutputPath = "bin"
-            AccessKey = getBuildParamOrDefault "nugetkey" ""
-            Publish = hasBuildParam "nugetkey"
-            Dependencies = [] })
-        ("nuget/" + project + ".nuspec")
-)
+*)
 
 // --------------------------------------------------------------------------------------
 // Generate the documentation
@@ -163,7 +145,6 @@ Target "All" DoNothing
   ==> "CleanDocs"
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
-  ==> "NuGet"
   ==> "Release"
 
 RunTargetOrDefault "All"
