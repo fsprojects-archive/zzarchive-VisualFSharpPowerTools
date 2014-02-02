@@ -16,7 +16,6 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 
-
 type MyFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
     let mutable passThruToEditor : IOleCommandTarget = null
     do

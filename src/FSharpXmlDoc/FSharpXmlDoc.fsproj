@@ -20,6 +20,8 @@
     <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
     <TargetFrameworkProfile />
     <Name>FSharpXmlDoc</Name>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -69,6 +71,9 @@
   <!-- <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" /> -->
   <!-- <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v11.0\VSSDK\Microsoft.VsSDK.targets" Condition="false" /> -->
   <ItemGroup>
+    <Compile Include="FSComp.fs" />
+    <Compile Include="XmlDoc.fsi" />
+    <Compile Include="XmlDoc.fs" />
     <Compile Include="Program.fs" />
     <!--
     <None Include="..\Key.snk">
@@ -76,8 +81,13 @@
     </None>
     -->
     <None Include="SampleFile.fs" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="FSharp.Compiler.Service">
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.11-alpha\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
@@ -125,13 +135,7 @@
     </Reference>
     <Reference Include="mscorlib" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FSharpParser\FSharpParser.fsproj">
-      <Name>FSharpParser</Name>
-      <Project>{c11d4092-a6e2-4bb8-a27a-fb31959a71f8}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-  </ItemGroup>
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

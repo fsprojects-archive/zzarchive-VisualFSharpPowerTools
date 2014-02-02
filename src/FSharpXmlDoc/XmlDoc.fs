@@ -17,11 +17,6 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open Microsoft.FSharp.Compiler.AbstractIL.Extensions.ILX
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler 
-open Microsoft.FSharp.Compiler.SR
-open Microsoft.FSharp.Compiler.DiagnosticMessage
-
-module SR = Microsoft.FSharp.Compiler.SR
-module DM = Microsoft.FSharp.Compiler.DiagnosticMessage
 
 open Microsoft.FSharp.Compiler.AbstractIL.IL
 open Microsoft.FSharp.Compiler.Range
@@ -30,6 +25,27 @@ open Microsoft.FSharp.Compiler.Lexhelp
 open Microsoft.FSharp.Compiler.PrettyNaming
 open Internal.Utilities.FileSystem
 open Internal.Utilities.Collections
+open Microsoft.FSharp.Compiler.ErrorLogger
+
+let warning _ = ()
+let libraryOnlyWarning _ = ()
+let libraryOnlyError _ = ()
+let mlCompatWarning _ _ = ()
+let errorR _ = ()
+let deprecatedWithError _ _ = ()
+let deprecatedOperator _ = ()
+let Deprecated _ = ()
+let error _ = failwith "error"
+let Error _ = ()
+
+module Filename =
+    // Case sensitive (original behaviour preserved).
+    let checkSuffix (x:string) (y:string) = x.EndsWith(y,System.StringComparison.Ordinal) 
+
+    let chopExtension (s:string) =
+        if Path.HasExtension(s) then
+            Path.Combine (Path.GetDirectoryName s,Path.GetFileNameWithoutExtension(s))
+        else s
 
 //----------------------------------------------------------------------------
 // Some Globals
@@ -43,13 +59,11 @@ let scriptSuffixes = [".fsscript";".fsx"]
 let doNotRequireNamespaceOrModuleSuffixes = [".mli";".ml"] @ scriptSuffixes
 let lightSyntaxDefaultExtensions : string list = [ ".fs";".fsscript";".fsx";".fsi" ]
 
-
 let GetWarningNumber(_m,s:string) =
     try 
         Some (int32 s)
     with err -> 
         None
-
 
 //----------------------------------------------------------------------------
 // Scoped #nowarn pragmas
@@ -60,13 +74,13 @@ let GetScopedPragmasForHashDirective hd =
           for s in numbers do
           match GetWarningNumber(m,s) with 
             | None -> ()
-            | Some n -> yield WarningOff(m,n) 
+            | Some n -> yield ScopedPragma.WarningOff(m,n) 
       | _ -> () ]
 
 let GetScopedPragmasForInput input = 
     match input with 
-    | SigFileInput (SigFile(_,_,pragmas,_,_)) -> pragmas
-    | ImplFileInput (ImplFile(_,_,_,pragmas,_,_,_)) ->pragmas
+    | ParsedInput.ImplFile (ParsedImplFileInput(_,_,_,pragmas,_,_,_)) -> pragmas
+    | ParsedInput.SigFile (ParsedSigFileInput(_,_,pragmas,_,_)) ->pragmas
 
 //----------------------------------------------------------------------------
 // Parsing
@@ -74,7 +88,7 @@ let GetScopedPragmasForInput input =
 
 let CanonicalizeFilename filename = 
   let basic = Path.GetFileName filename
-  String.capitalize (try Filename.chopExtension basic with _ -> basic)
+  String.capitalize (Filename.chopExtension basic)
 
 let IsScript filename = 
     let lower = String.lowercase filename 
@@ -90,22 +104,22 @@ let QualFileNameOfUniquePath (m, p: string list) = QualifiedNameOfFile(mkSynId m
 
 let QualFileNameOfSpecs filename specs = 
     match specs with 
-    | [ModuleOrNamespaceSig(modname,true,_,_,_,_,m)] -> QualFileNameOfModuleName m filename modname
+    | [SynModuleOrNamespaceSig(modname,true,_,_,_,_,m)] -> QualFileNameOfModuleName m filename modname
     | _ -> QualFileNameOfFilename (rangeN filename 1) filename
 
 let QualFileNameOfImpls filename specs = 
     match specs with 
-    | [ModuleOrNamespace(modname,true,_,_,_,_,m)] -> QualFileNameOfModuleName m filename modname
+    | [SynModuleOrNamespace(modname,true,_,_,_,_,m)] -> QualFileNameOfModuleName m filename modname
     | _ -> QualFileNameOfFilename (rangeN filename 1) filename
 
 let PrepandPathToQualFileName x (QualifiedNameOfFile(q)) = QualFileNameOfUniquePath (q.idRange,pathOfLid x@[q.idText])
-let PrepandPathToImpl x (ModuleOrNamespace(p,c,d,e,f,g,h)) = ModuleOrNamespace(x@p,c,d,e,f,g,h)
-let PrepandPathToSpec x (ModuleOrNamespaceSig(p,c,d,e,f,g,h)) = ModuleOrNamespaceSig(x@p,c,d,e,f,g,h)
+let PrepandPathToImpl x (SynModuleOrNamespace(p,c,d,e,f,g,h)) = SynModuleOrNamespace(x@p,c,d,e,f,g,h)
+let PrepandPathToSpec x (SynModuleOrNamespaceSig(p,c,d,e,f,g,h)) = SynModuleOrNamespaceSig(x@p,c,d,e,f,g,h)
 
 let PrependPathToInput x inp = 
     match inp with 
-    | ImplFileInput (ImplFile(b,c,q,d,hd,impls,e)) -> ImplFileInput (ImplFile(b,c,PrepandPathToQualFileName x q,d,hd,List.map (PrepandPathToImpl x) impls,e))
-    | SigFileInput (SigFile(b,q,d,hd,specs)) -> SigFileInput(SigFile(b,PrepandPathToQualFileName x q,d,hd,List.map (PrepandPathToSpec x) specs))
+    | ParsedInput.ImplFile (ParsedImplFileInput(b,c,q,d,hd,impls,e)) -> ParsedInput.ImplFile (ParsedImplFileInput(b,c,PrepandPathToQualFileName x q,d,hd,List.map (PrepandPathToImpl x) impls,e))
+    | ParsedInput.SigFile (ParsedSigFileInput(b,q,d,hd,specs)) -> ParsedInput.SigFile (ParsedSigFileInput(b,PrepandPathToQualFileName x q,d,hd,List.map (PrepandPathToSpec x) specs))
 
 let ComputeAnonModuleName check defaultNamespace filename m = 
     let modname = CanonicalizeFilename filename
@@ -120,52 +134,52 @@ let ComputeAnonModuleName check defaultNamespace filename m =
 
 let PostParseModuleImpl (_i,defaultNamespace,isLastCompiland,filename,impl) = 
     match impl with 
-    | NamedTopModule(ModuleOrNamespace(lid,isModule,decls,xmlDoc,attribs,access,m)) -> 
+    | ParsedImplFileFragment.NamedModule(SynModuleOrNamespace(lid,isModule,decls,xmlDoc,attribs,access,m)) -> 
         let lid = 
             match lid with 
             | [id] when isModule && id.idText = MangledGlobalName -> error(Error(FSComp.SR.buildInvalidModuleOrNamespaceName(),id.idRange))
             | id :: rest when id.idText = MangledGlobalName -> rest
             | _ -> lid
-        ModuleOrNamespace(lid,isModule,decls,xmlDoc,attribs,access,m)
+        SynModuleOrNamespace(lid,isModule,decls,xmlDoc,attribs,access,m)
 
-    | AnonTopModule (defs,m)-> 
+    | ParsedImplFileFragment.AnonModule (defs,m)-> 
         if not isLastCompiland && not (doNotRequireNamespaceOrModuleSuffixes |> List.exists (Filename.checkSuffix (String.lowercase filename))) then 
             errorR(Error(FSComp.SR.buildMultiFileRequiresNamespaceOrModule(),trimRangeToLine m))
         let modname = ComputeAnonModuleName (nonNil defs) defaultNamespace filename m
-        ModuleOrNamespace(modname,true,defs,PreXmlDoc.Empty,[],None,m)
+        SynModuleOrNamespace(modname,true,defs,PreXmlDoc.Empty,[],None,m)
 
-    | NamespaceFragment (lid,b,c,d,e,m)-> 
+    | ParsedImplFileFragment.NamespaceFragment (lid,b,c,d,e,m)-> 
         let lid = 
             match lid with 
             | id :: rest when id.idText = MangledGlobalName -> rest
             | _ -> lid
-        ModuleOrNamespace(lid,b,c,d,e,None,m)
+        SynModuleOrNamespace(lid,b,c,d,e,None,m)
 
 let PostParseModuleSpec (_i,defaultNamespace,isLastCompiland,filename,intf) = 
     match intf with 
-    | NamedTopModuleSig(ModuleOrNamespaceSig(lid,isModule,decls,xmlDoc,attribs,access,m)) -> 
+    | ParsedSigFileFragment.NamedModule(SynModuleOrNamespaceSig(lid,isModule,decls,xmlDoc,attribs,access,m)) -> 
         let lid = 
             match lid with 
             | [id] when isModule && id.idText = MangledGlobalName -> error(Error(FSComp.SR.buildInvalidModuleOrNamespaceName(),id.idRange))
             | id :: rest when id.idText = MangledGlobalName -> rest
             | _ -> lid
-        ModuleOrNamespaceSig(lid,isModule,decls,xmlDoc,attribs,access,m)
+        SynModuleOrNamespaceSig(lid,isModule,decls,xmlDoc,attribs,access,m)
 
-    | AnonTopModuleSig (defs,m) -> 
+    | ParsedSigFileFragment.AnonModule (defs,m) -> 
         if not isLastCompiland && not (doNotRequireNamespaceOrModuleSuffixes |> List.exists (Filename.checkSuffix (String.lowercase filename))) then 
             errorR(Error(FSComp.SR.buildMultiFileRequiresNamespaceOrModule(),m))
         let modname = ComputeAnonModuleName (nonNil defs) defaultNamespace filename m
-        ModuleOrNamespaceSig(modname,true,defs,PreXmlDoc.Empty,[],None,m)
+        SynModuleOrNamespaceSig(modname,true,defs,PreXmlDoc.Empty,[],None,m)
 
-    | NamespaceFragmentSig (lid,b,c,d,e,m)-> 
+    | ParsedSigFileFragment.NamespaceFragment (lid,b,c,d,e,m)-> 
         let lid = 
             match lid with 
             | id :: rest when id.idText = MangledGlobalName -> rest
             | _ -> lid
-        ModuleOrNamespaceSig(lid,b,c,d,e,None,m)
+        SynModuleOrNamespaceSig(lid,b,c,d,e,None,m)
 
 let PostParseModuleImpls (defaultNamespace,filename,isLastCompiland,ParsedImplFile(hashDirectives,impls)) = 
-    match impls |> List.rev |> List.tryPick (function NamedTopModule(ModuleOrNamespace(lid,_,_,_,_,_,_)) -> Some(lid) | _ -> None) with
+    match impls |> List.rev |> List.tryPick (function ParsedImplFileFragment.NamedModule(SynModuleOrNamespace(lid,_,_,_,_,_,_)) -> Some(lid) | _ -> None) with
     | Some lid when impls.Length > 1 -> 
         errorR(Error(FSComp.SR.buildMultipleToplevelModules(),rangeOfLid lid))
     | _ -> 
@@ -175,17 +189,17 @@ let PostParseModuleImpls (defaultNamespace,filename,isLastCompiland,ParsedImplFi
     let isScript = IsScript filename
 
     let scopedPragmas = 
-        [ for (ModuleOrNamespace(_,_,decls,_,_,_,_)) in impls do 
+        [ for (SynModuleOrNamespace(_,_,decls,_,_,_,_)) in impls do 
             for d in decls do
                 match d with 
                 | SynModuleDecl.HashDirective (hd,_) -> yield! GetScopedPragmasForHashDirective hd
                 | _ -> () 
           for hd in hashDirectives do 
               yield! GetScopedPragmasForHashDirective hd ]
-    ImplFileInput(ImplFile(filename,isScript,qualName,scopedPragmas,hashDirectives,impls,isLastCompiland))
+    ParsedInput.ImplFile(ParsedImplFileInput(filename,isScript,qualName,scopedPragmas,hashDirectives,impls,isLastCompiland))
   
 let PostParseModuleSpecs (defaultNamespace,filename,isLastCompiland,ParsedSigFile(hashDirectives,specs)) = 
-    match specs |> List.rev |> List.tryPick (function NamedTopModuleSig(ModuleOrNamespaceSig(lid,_,_,_,_,_,_)) -> Some(lid) | _ -> None) with
+    match specs |> List.rev |> List.tryPick (function ParsedSigFileFragment.NamedModule(SynModuleOrNamespaceSig(lid,_,_,_,_,_,_)) -> Some(lid) | _ -> None) with
     | Some  lid when specs.Length > 1 -> 
         errorR(Error(FSComp.SR.buildMultipleToplevelModules(),rangeOfLid lid))
     | _ -> 
@@ -194,7 +208,7 @@ let PostParseModuleSpecs (defaultNamespace,filename,isLastCompiland,ParsedSigFil
     let specs = specs |> List.mapi (fun i x -> PostParseModuleSpec(i,defaultNamespace,isLastCompiland,filename,x)) 
     let qualName = QualFileNameOfSpecs filename specs
     let scopedPragmas = 
-        [ for (ModuleOrNamespaceSig(_,_,decls,_,_,_,_)) in specs do 
+        [ for (SynModuleOrNamespaceSig(_,_,decls,_,_,_,_)) in specs do 
             for d in decls do
                 match d with 
                 | SynModuleSigDecl.HashDirective(hd,_) -> yield! GetScopedPragmasForHashDirective hd
@@ -202,7 +216,7 @@ let PostParseModuleSpecs (defaultNamespace,filename,isLastCompiland,ParsedSigFil
           for hd in hashDirectives do 
               yield! GetScopedPragmasForHashDirective hd ]
 
-    SigFileInput(SigFile(filename,qualName,scopedPragmas,hashDirectives,specs))
+    ParsedInput.SigFile(ParsedSigFileInput(filename,qualName,scopedPragmas,hashDirectives,specs))
 
 let ParseInput (lexer,lexbuf:UnicodeLexing.Lexbuf,defaultNamespace,filename,isLastCompiland) = 
     // The assert below is almost ok, but it fires in two cases:
@@ -228,10 +242,10 @@ let ParseInput (lexer,lexbuf:UnicodeLexing.Lexbuf,defaultNamespace,filename,isLa
 let ParseOneInputLexbuf (lexResourceManager,conditionalCompilationDefines,lexbuf,filename,isLastCompiland,errorLogger) =
     let skip = true in (* don't report whitespace from lexer *)
     let lightSyntaxStatus = LightSyntaxStatus (true,true) 
-    let lexargs = mkLexargs (conditionalCompilationDefines,lightSyntaxStatus,lexResourceManager, ref [],errorLogger)
+    let lexargs = mkLexargs ("/temp.fsx", conditionalCompilationDefines,lightSyntaxStatus,lexResourceManager, ref [],errorLogger)
     let input = 
         Lexhelp.usingLexbufForParsing (lexbuf,filename) (fun lexbuf ->
-            let tokenizer = Lexfilter.LexFilter(lightSyntaxStatus, Lexer.token lexargs skip, lexbuf)
+            let tokenizer = Lexfilter.LexFilter(lightSyntaxStatus, false, Lexfilter.token lexargs skip, lexbuf)
 
             let res = ParseInput(tokenizer.Lexer,lexbuf,None,filename,isLastCompiland)
             res
@@ -254,6 +268,10 @@ let ParseOneInputFile (conditionalCompilationDefines,(sourceCodeOfTheFile:string
 // The code below here is the essence of the extension.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+let (|ConstructorPats|) = function
+    | Pats ps -> ps
+    | NamePatPairs(xs, _) -> List.map snd xs
+
 let rec digNamesFrom pat =
     match pat with
     | SynPat.Const _ -> []
@@ -263,7 +281,7 @@ let rec digNamesFrom pat =
     | SynPat.Attrib(pat,_attrs,_range) -> digNamesFrom pat
     | SynPat.Or(_pat1,_pat2,_range) -> [] // no one uses ors in fun decls
     | SynPat.Ands(_pats,_range) -> [] // no one uses ands in fun decls
-    | SynPat.LongIdent(_lid,_idOpt,_typDeclsOpt,pats,_access,_range) -> pats |> List.collect digNamesFrom 
+    | SynPat.LongIdent(_lid,_idOpt,_typDeclsOpt,ConstructorPats pats,_access,_range) -> pats |> List.collect digNamesFrom 
     | SynPat.Tuple(pats,_range) -> pats |> List.collect digNamesFrom 
     | SynPat.Paren(pat,_range) -> digNamesFrom pat
     | SynPat.ArrayOrList(_,_pats,_range) -> [] // no one uses this in fun decls
@@ -274,6 +292,7 @@ let rec digNamesFrom pat =
     | SynPat.QuoteExpr _ -> []
     | SynPat.DeprecatedCharRange _ -> []
     | SynPat.InstanceMember _ -> []
+    | _ -> error ()
 
 type XmlDocable =
     | XmlDocable of (*line:*) int * (*indent:*) int * (*paramNames:*) string list
@@ -314,7 +333,7 @@ let GetXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, f
         | SynModuleDecl.HashDirective(_parsedHashDirective, _range) -> []
         | SynModuleDecl.NamespaceFragment(synModuleOrNamespace) -> GetXmlDocablesSynModuleOrNamespace synModuleOrNamespace
 
-    and GetXmlDocablesSynModuleOrNamespace (ModuleOrNamespace(_longIdent, _isModule, synModuleDecls, _preXmlDoc, _synAttributes, _synAccessOpt, _range)) =
+    and GetXmlDocablesSynModuleOrNamespace (SynModuleOrNamespace(_longIdent, _isModule, synModuleDecls, _preXmlDoc, _synAttributes, _synAccessOpt, _range)) =
         (synModuleDecls |> List.collect GetXmlDocablesSynModuleDecl)
 
     and GetXmlDocablesSynTypeDefn (SynTypeDefn.TypeDefn(ComponentInfo(synAttributes, _synTyparDeclList, _synTypeConstraintList, _longIdent, preXmlDoc, _bool, _synAccessOpt, compRange), synTypeDefnRepr, synMemberDefns, tRange)) =
@@ -363,15 +382,16 @@ let GetXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, f
         | SynMemberDefn.Inherit(_synType, _identOption, _range) -> []
         | SynMemberDefn.ValField(_synField, _range) -> []
         | SynMemberDefn.NestedType(synTypeDefn, _synAccessOption, _range) -> GetXmlDocablesSynTypeDefn synTypeDefn
+        | _ -> error ()
 
     and GetXmlDocablesInput input =
         match input with
-        | ImplFileInput(ImplFile(_,_,_,_,_,l,_))-> 
+        | ParsedInput.ImplFile(ParsedImplFileInput(_,_,_,_,_,l,_))-> 
             l |> List.collect GetXmlDocablesSynModuleOrNamespace
-        | SigFileInput _sigFile -> []
+        | ParsedInput.SigFile _sigFile -> []
 
     let conditionalCompilationDefines= []
-    let input = ParseOneInputFile (conditionalCompilationDefines,sourceCodeOfTheFile,filename,new ErrorLogger())
+    let input = ParseOneInputFile (conditionalCompilationDefines,sourceCodeOfTheFile,filename, DiscardErrorsLogger)
     GetXmlDocablesInput input
 
 // Main API.

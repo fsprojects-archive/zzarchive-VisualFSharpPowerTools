@@ -1,5 +1,4 @@
-﻿
-module MyParsing
+﻿module MyParsing
 
 type XmlDocable =
     | XmlDocable of (*line:*) int * (*indent:*) int * (*paramNames:*) string list
