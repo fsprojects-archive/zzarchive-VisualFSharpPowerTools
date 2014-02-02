@@ -7,7 +7,7 @@
 Code Formatting
 -----------------------
 
-Two main formatting commands are:
+Two main formatting commands are available:
  
  - *Formatting Document*, available under **Ctrl + K D** key combination.
  - *Formatting Selection / Formatting Cursor Position*, available under **Ctrl + K F** key combination.
@@ -48,10 +48,10 @@ module Hidden2 =
             | TyCon(s, ts) -> s
 
 (**
-The main formatting options are under `Tools -> Options -> Fantomas`. 
+The main formatting options are available under "Tools --> Options --> Fantomas" dialog. 
 
 ![Fantomas options](img/fantomas_options.png)
 
 To be consistent with Visual Studio editors, the last option, *indent size*, 
-can be adjusted under `Tools -> Options -> Text Editor -> F# -> Tabs` (looking for `Indent size` option).
+can be adjusted under "Tools --> Options --> Text Editor --> F# --> Tabs" (looking for "Indent size" option).
 *)

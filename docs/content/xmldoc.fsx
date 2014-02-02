@@ -18,7 +18,7 @@ type SomeType1() =
         printfn "%d: %s" x s
 
 (**
-and you type `///` anywhere on the blank line before `Foo`, then you get
+and you type `///` anywhere on the blank line before `Foo`, then you get:
 *)
 
 type SomeType2() =

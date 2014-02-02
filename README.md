@@ -3,10 +3,16 @@ F# Power Tools
 
 F# Community Power Tools (for Visual Studio)
 
-### Supported features
+### Why F# Power Tools?
+F# Power Tools is a community effort to bring useful F# VS extensions into single home for the following purpose:
+ - Easy maintainance and upgrade
+ - Share common functionalities and reduce conflicts between F# VS extensions
+ - Potentially add new features which complement Visual F# features for VS
+
+### Currently supported features
  - Format document (via [Fantomas extension](https://github.com/dungpa/fantomas))
  - Format selection (via [Fantomas extension](https://github.com/dungpa/fantomas))
- - Autocomplete XmlDoc comments (via [F# XmlDoc extension](http://lorgonblog.wordpress.com/2010/12/04/source-code-for-f-xmldoc-extension/))
+ - Auto-generate XmlDoc (via [F# XmlDoc extension](http://lorgonblog.wordpress.com/2010/12/04/source-code-for-f-xmldoc-extension/))
 
 For user guides, please take a look at [the home page](http://fsprojects.github.io/FSharpVSPowerTools/).
 

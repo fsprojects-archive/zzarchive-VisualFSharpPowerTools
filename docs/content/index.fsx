@@ -6,7 +6,7 @@
 (**
 
 You can install this extension by searching for "F# Power Tools" in "Tools --> Extensions and Updates --> Online".
-This extension is also available in the [Visual Studio Gallery](#).
+The extension is also available in the [Visual Studio Gallery](#).
 
 Documentation
 -----------------------
@@ -25,7 +25,7 @@ The project is hosted on [GitHub][gh] where you can [report issues][issues], for
 the project and submit pull requests. If you're adding new features, please also 
 consider adding [user guides][content] that can be turned into documentation.
 
-The library is available under Apache 2.0 license, which allows modification and 
+The extension is available under Apache 2.0 license, which allows modification and 
 redistribution for both commercial and non-commercial purposes. For more information see the 
 [License file][license] in the GitHub repository. 
 
