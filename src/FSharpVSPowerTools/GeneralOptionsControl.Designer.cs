@@ -29,10 +29,10 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
-            this.lblHome = new System.Windows.Forms.LinkLabel();
-            this.lblTitle = new System.Windows.Forms.Label();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -49,6 +49,26 @@
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Features";
             // 
+            // lblTitle
+            // 
+            this.lblTitle.AutoSize = true;
+            this.lblTitle.Location = new System.Drawing.Point(13, 119);
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Size = new System.Drawing.Size(72, 13);
+            this.lblTitle.TabIndex = 4;
+            this.lblTitle.Text = "Learn more at";
+            // 
+            // lblHome
+            // 
+            this.lblHome.AutoSize = true;
+            this.lblHome.Location = new System.Drawing.Point(84, 119);
+            this.lblHome.Name = "lblHome";
+            this.lblHome.Size = new System.Drawing.Size(240, 13);
+            this.lblHome.TabIndex = 3;
+            this.lblHome.TabStop = true;
+            this.lblHome.Text = "http://fsprojects.github.io/FSharpVSPowerTools/";
+            this.lblHome.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lblHome_LinkClicked);
+            // 
             // chbFormatting
             // 
             this.chbFormatting.AutoSize = true;
@@ -56,7 +76,6 @@
             this.chbFormatting.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbFormatting.Location = new System.Drawing.Point(16, 53);
             this.chbFormatting.Name = "chbFormatting";
-            this.chbFormatting.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.chbFormatting.Size = new System.Drawing.Size(156, 17);
             this.chbFormatting.TabIndex = 2;
             this.chbFormatting.Text = "Use source code formatting";
@@ -69,31 +88,11 @@
             this.chbXMLDoc.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbXMLDoc.Location = new System.Drawing.Point(16, 30);
             this.chbXMLDoc.Name = "chbXMLDoc";
-            this.chbXMLDoc.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.chbXMLDoc.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.chbXMLDoc.Size = new System.Drawing.Size(165, 17);
             this.chbXMLDoc.TabIndex = 1;
             this.chbXMLDoc.Text = "Use auto-generated XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
-            // 
-            // lblHome
-            // 
-            this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(13, 123);
-            this.lblHome.Name = "lblHome";
-            this.lblHome.Size = new System.Drawing.Size(240, 13);
-            this.lblHome.TabIndex = 3;
-            this.lblHome.TabStop = true;
-            this.lblHome.Text = "http://fsprojects.github.io/FSharpVSPowerTools/";
-            this.lblHome.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lblHome_LinkClicked);
-            // 
-            // lblTitle
-            // 
-            this.lblTitle.AutoSize = true;
-            this.lblTitle.Location = new System.Drawing.Point(13, 100);
-            this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(126, 13);
-            this.lblTitle.TabIndex = 4;
-            this.lblTitle.Text = "For more information, visit";
             // 
             // GeneralOptionsControl
             // 
