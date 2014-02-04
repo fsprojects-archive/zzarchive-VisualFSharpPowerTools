@@ -16,6 +16,11 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 
+open System.Diagnostics
+open Microsoft.VisualStudio
+open Microsoft.VisualStudio.Shell
+open EnvDTE
+
 type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
     let mutable passThruToEditor : IOleCommandTarget = null
     do
@@ -43,10 +48,17 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
     let getTypedChar(pvaIn:IntPtr) =
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
+    // FIXME: Until we sort out circular dependencies between assemblies,
+    // we have to use global mutable state
+    static member val XMLDocEnabled = true with get, set
+
     interface IOleCommandTarget with
         member this.Exec(pguidCmdGroup:byref<Guid>, nCmdID:uint32, nCmdexecopt:uint32, pvaIn:IntPtr, pvaOut:IntPtr) =
-            let hresult = 
-                if pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
+            let hresult =
+                if not XmlDocFilter.XMLDocEnabled then
+                    Debug.WriteLine("The feature is disabled in General option page.")
+                    passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
+                elif pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
                     let typedChar = getTypedChar(pvaIn)
                     if typedChar.Equals('/') then
                         let curLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().GetText()

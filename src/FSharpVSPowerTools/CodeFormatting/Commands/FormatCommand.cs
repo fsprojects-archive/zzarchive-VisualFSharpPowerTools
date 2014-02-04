@@ -10,12 +10,15 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 
-namespace FSharpPowerTools.CodeFormatting.Commands
+namespace FSharpVSPowerTools.CodeFormatting.Commands
 {
     public abstract class FormatCommand : CommandBase
     {
         protected void ExecuteFormat()
         {
+            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
+            if (!generalOptions.FormattingEnabled) return;
+
             var editorOperations = Services.EditorOperationsFactoryService.GetEditorOperations(TextView);
             using (var textUndoTransaction = TryCreateTextUndoTransaction())
             {

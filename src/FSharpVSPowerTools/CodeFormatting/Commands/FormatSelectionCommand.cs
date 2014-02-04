@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using FSharpPowerTools.CodeFormatting.Utils;
+using FSharpVSPowerTools.CodeFormatting.Utils;
 using Microsoft.FSharp.Compiler;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 
-namespace FSharpPowerTools.CodeFormatting.Commands
+namespace FSharpVSPowerTools.CodeFormatting.Commands
 {
     public class FormatSelectionCommand : FormatCommand
     {

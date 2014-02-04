@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FSharpPowerTools.CodeFormatting.Commands;
+using FSharpVSPowerTools.CodeFormatting.Commands;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 
-namespace FSharpPowerTools
+namespace FSharpVSPowerTools
 {
     public class StandardCommandDispatcher : IOleCommandTarget
     {

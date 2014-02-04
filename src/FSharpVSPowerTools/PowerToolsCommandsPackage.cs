@@ -8,11 +8,13 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 
-namespace FSharpPowerTools
+namespace FSharpVSPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
-    [ProvideOptionPage(typeof(FantomasOptionsPage), "F# Power Tools", "Formatting", 0, 0, false, 0)]
+    [ProvideOptionPage(typeof(GeneralOptionsPage), "F# Power Tools", "General", 0, 0, true, 0)]
+    [ProvideOptionPage(typeof(FantomasOptionsPage), "F# Power Tools", "Formatting", 0, 0, true, 0)]
     [Guid("684211D1-B47C-44FE-AECF-E9D3B5FF67E3")]
+    [ProvideService(typeof(GeneralOptionsPage))]
     [ProvideService(typeof(FantomasOptionsPage))]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
@@ -31,6 +33,8 @@ namespace FSharpPowerTools
             base.Initialize();
 
             IServiceContainer serviceContainer = this;
+            serviceContainer.AddService(typeof(GeneralOptionsPage),
+              delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
               delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, true);
         }

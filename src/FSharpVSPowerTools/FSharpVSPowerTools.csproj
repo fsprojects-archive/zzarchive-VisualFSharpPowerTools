@@ -89,6 +89,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
@@ -101,6 +102,15 @@
     <Compile Include="CodeFormatting\Commands\FormatSelectionCommand.cs" />
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="GeneralOptionsPage.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="GeneralOptionsControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GeneralOptionsControl.Designer.cs">
+      <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </Compile>
     <Compile Include="PowerToolsCommandsPackage.cs" />
     <Compile Include="Services.cs" />
@@ -146,6 +156,11 @@
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="GeneralOptionsControl.resx">
+      <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>
     <UseCodebase>true</UseCodebase>

@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
 
-namespace FSharpPowerTools
+namespace FSharpVSPowerTools
 {
     [Export(typeof(IWpfTextViewCreationListener))]
     [Name("F# Dummy Command Hook")]

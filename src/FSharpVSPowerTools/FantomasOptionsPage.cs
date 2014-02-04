@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
 using System.Runtime.InteropServices;
 
-namespace FSharpPowerTools
+namespace FSharpVSPowerTools
 {
     [Guid("9F2500E9-9A2E-4741-B13E-32FE96C01268")]
     public class FantomasOptionsPage : DialogPage
@@ -16,7 +16,7 @@ namespace FSharpPowerTools
         {
             var config = Fantomas.FormatConfig.FormatConfig.Default;
 
-            PageWidth = config.PageWidth;
+            PageWidth = 120;
             SemicolonAtEndOfLine = config.SemicolonAtEndOfLine;
             SpaceBeforeArgument = config.SpaceBeforeArgument;
             SpaceBeforeColon = config.SpaceBeforeColon;
