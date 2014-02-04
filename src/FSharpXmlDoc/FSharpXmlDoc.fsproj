@@ -17,7 +17,7 @@
     <AssemblyOriginatorKeyFile>..\Key.snk</AssemblyOriginatorKeyFile>
     -->
     <ProjectGuid>{48913937-d335-4a8e-a22f-7409385a989a}</ProjectGuid>
-    <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
+    <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <TargetFrameworkProfile />
     <Name>FSharpXmlDoc</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
@@ -80,12 +80,11 @@
       <Link>Key.snk</Link>
     </None>
     -->
-    <None Include="SampleFile.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.11-alpha\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.12-alpha\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

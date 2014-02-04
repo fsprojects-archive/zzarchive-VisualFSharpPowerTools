@@ -1,4 +1,4 @@
-﻿module MyParsing
+﻿module XmlDocHelpers
 
 // This file has two main parts:
 //  - first, nearly verbatim code from misc portions of the F# compiler
@@ -242,7 +242,7 @@ let ParseInput (lexer,lexbuf:UnicodeLexing.Lexbuf,defaultNamespace,filename,isLa
 let ParseOneInputLexbuf (lexResourceManager,conditionalCompilationDefines,lexbuf,filename,isLastCompiland,errorLogger) =
     let skip = true in (* don't report whitespace from lexer *)
     let lightSyntaxStatus = LightSyntaxStatus (true,true) 
-    let lexargs = mkLexargs ("/temp.fsx", conditionalCompilationDefines,lightSyntaxStatus,lexResourceManager, ref [],errorLogger)
+    let lexargs = Lexhelp.mkLexargs ("/temp.fsx", conditionalCompilationDefines,lightSyntaxStatus,lexResourceManager, ref [],errorLogger)
     let input = 
         Lexhelp.usingLexbufForParsing (lexbuf,filename) (fun lexbuf ->
             let tokenizer = Lexfilter.LexFilter(lightSyntaxStatus, false, Lexfilter.token lexargs skip, lexbuf)
@@ -295,7 +295,7 @@ let rec digNamesFrom pat =
     | _ -> error ()
 
 type XmlDocable =
-    | XmlDocable of (*line:*) int * (*indent:*) int * (*paramNames:*) string list
+    | XmlDocable of line: int * indent: int * paramNames: string list
 
 let GetXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, filename) =
     let indentOf (lineNum:int) =

@@ -85,6 +85,7 @@ let buildDocumentation () =
     let sub = if dir.Length > content.Length then dir.Substring(content.Length + 1) else "."
     Literate.ProcessDirectory
       ( dir, docTemplate, output @@ sub, replacements = ("root", root)::info,
+        lineNumbers = false,
         layoutRoots = layoutRoots )
 
 // Remove `FSharp.Core` from `bin` directory.

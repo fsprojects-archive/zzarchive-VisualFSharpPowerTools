@@ -7,28 +7,36 @@
 Auto-generating XMLDoc
 -----------------------
 
-This feature auto creates xml documentation boilerplate when you type triple-slash.
+This feature, originally written by Brian McNamara, auto creates xml documentation boilerplate when you type triple-slash.
 
 For example, if you have the code:
 *)
 
-type SomeType1() =
-
-    member this.Foo(x:int, s:string) = 
-        printfn "%d: %s" x s
+(*** hide ***)
+module Version1 =
+(**
+*)
+ type SomeType() =
+  
+     member this.Foo(x:int, s:string) = 
+         printfn "%d: %s" x s
 
 (**
 and you type `///` anywhere on the blank line before `Foo`, then you get:
 *)
 
-type SomeType2() =
-   /// <summary>
-   /// 
-   /// </summary>
-   /// <param name="x"></param>
-   /// <param name="s"></param>
-   member this.Foo(x:int, s:string) = 
-       printfn "%d: %s" x s
+(*** hide ***)
+module Version2 =
+(**
+*)
+ type SomeType() =
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="s"></param>
+    member this.Foo(x:int, s:string) = 
+        printfn "%d: %s" x s
 
 (**
 Just type `///` on a blank line right before a member, type, or module-scoped let (before any attributes, if there are any), 

@@ -19,33 +19,33 @@ To illustrate, the following example
 *)
 
 (*** hide ***)
-module Hidden1 =
+module Version1 =
 (**
 *)
-    type Type
-        = TyLam of Type * Type
-        | TyVar of string
-        | TyCon of string * Type list
-        with override this.ToString () =
-                match this with
-                | TyLam (t1, t2) -> sprintf "(%s -> %s)" (t1.ToString()) (t2.ToString())
-                | TyVar a -> a
-                | TyCon (s, ts) -> s
+ type Type
+     = TyLam of Type * Type
+     | TyVar of string
+     | TyCon of string * Type list
+     with override this.ToString () =
+             match this with
+             | TyLam (t1, t2) -> sprintf "(%s -> %s)" (t1.ToString()) (t2.ToString())
+             | TyVar a -> a
+             | TyCon (s, ts) -> s
 
 (** will be rewritten to *)
 (*** hide ***)
-module Hidden2 =
+module Version2 =
 (**
 *)
-    type Type = 
-        | TyLam of Type * Type
-        | TyVar of string
-        | TyCon of string * Type list
-        override this.ToString() = 
-            match this with
-            | TyLam(t1, t2) -> sprintf "(%s -> %s)" (t1.ToString()) (t2.ToString())
-            | TyVar a -> a
-            | TyCon(s, ts) -> s
+ type Type = 
+     | TyLam of Type * Type
+     | TyVar of string
+     | TyCon of string * Type list
+     override this.ToString() = 
+         match this with
+         | TyLam(t1, t2) -> sprintf "(%s -> %s)" (t1.ToString()) (t2.ToString())
+         | TyVar a -> a
+         | TyCon(s, ts) -> s
 
 (**
 The main formatting options are available under "Tools --> Options --> Fantomas" dialog. 

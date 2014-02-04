@@ -93,9 +93,7 @@ Target "Build" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
 
-Target "RunTests" DoNothing
-(*
-(fun _ ->
+Target "RunTests" (fun _ ->
     !! testAssemblies 
     |> NUnit (fun p ->
         { p with
@@ -103,7 +101,6 @@ Target "RunTests" DoNothing
             TimeOut = TimeSpan.FromMinutes 20.
             OutputFile = "TestResults.xml" })
 )
-*)
 
 // --------------------------------------------------------------------------------------
 // Generate the documentation
