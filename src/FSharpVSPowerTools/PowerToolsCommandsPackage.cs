@@ -8,20 +8,20 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 
-namespace FSharpPowerTools.CodeFormatting
+namespace FSharpPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
-    [ProvideOptionPage(typeof(FantomasOptionsPage), "Fantomas", "Formatting", 0, 0, false, 0)]
+    [ProvideOptionPage(typeof(FantomasOptionsPage), "F# Power Tools", "Formatting", 0, 0, false, 0)]
     [Guid("684211D1-B47C-44FE-AECF-E9D3B5FF67E3")]
     [ProvideService(typeof(FantomasOptionsPage))]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
-    public class FSharpVisualStudioCommandsPackage : Package
+    public class PowerToolsCommandsPackage : Package
     {
-        private static FSharpVisualStudioCommandsPackage _instance;
+        private static PowerToolsCommandsPackage _instance;
 
-        public FSharpVisualStudioCommandsPackage()
+        public PowerToolsCommandsPackage()
         {
             _instance = this;
         }

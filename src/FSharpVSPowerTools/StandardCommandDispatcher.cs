@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 
-namespace FSharpPowerTools.CodeFormatting
+namespace FSharpPowerTools
 {
     public class StandardCommandDispatcher : IOleCommandTarget
     {

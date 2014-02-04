@@ -99,14 +99,14 @@
     <Compile Include="CodeFormatting\Commands\FormatCommand.cs" />
     <Compile Include="CodeFormatting\Commands\FormatDocumentCommand.cs" />
     <Compile Include="CodeFormatting\Commands\FormatSelectionCommand.cs" />
-    <Compile Include="CodeFormatting\FantomasOptionsPage.cs">
+    <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CodeFormatting\FSharpVisualStudioCommandsPackage.cs" />
-    <Compile Include="CodeFormatting\Services.cs" />
-    <Compile Include="CodeFormatting\StandardCommandDispatcher.cs" />
+    <Compile Include="PowerToolsCommandsPackage.cs" />
+    <Compile Include="Services.cs" />
+    <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CodeFormatting\TextViewHookHelper.cs" />
+    <Compile Include="TextViewHookHelper.cs" />
     <Compile Include="CodeFormatting\Utils\Cursor.cs" />
     <Compile Include="CodeFormatting\Utils\Disposable.cs" />
     <Compile Include="CodeFormatting\Utils\TextUtils.cs" />

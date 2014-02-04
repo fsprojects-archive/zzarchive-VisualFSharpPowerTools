@@ -4,7 +4,7 @@
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.UnitTests.XMLDocTests
+module FSharpVSPowerTools.Core.Tests.XMLDocTests
 #endif
 
 open System.IO
@@ -14,11 +14,7 @@ open NUnit.Framework
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
 let input = File.ReadAllText(fileName)
 
-let mutable output = Set.empty
-
-[<TestFixtureSetUp>]
-let fixtureSetup() =
-    output <- XmlDocHelpers.GetXmlDocables(input, fileName) |> Set.ofList
+let output = XmlDocHelpers.GetXmlDocables(input, fileName) |> Set.ofList
 
 [<Test>]
 let ``should create XML Doc for module-level let bounds``() =
@@ -39,7 +35,6 @@ let ``should create XML Doc for members``() =
     Set.contains (XmlDocable(line=33, indent=4, paramNames=["x"; "y"])) output |> assertEqual true
 
 #if INTERACTIVE
-fixtureSetup();;
 Seq.iter (printfn "%A") output;;
 ``should create XML Doc for module-level let bounds``();;
 ``should create XML Doc for type names``();;

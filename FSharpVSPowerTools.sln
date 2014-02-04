@@ -38,7 +38,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools", "src\F
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpXmlDoc", "src\FSharpXmlDoc\FSharpXmlDoc.fsproj", "{48913937-D335-4A8E-A22F-7409385A989A}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core.UnitTests", "tests\FSharpVSPowerTools.Core.UnitTests\FSharpVSPowerTools.Core.UnitTests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core.Tests", "tests\FSharpVSPowerTools.Core.Tests\FSharpVSPowerTools.Core.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

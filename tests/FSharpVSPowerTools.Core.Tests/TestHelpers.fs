@@ -17,8 +17,6 @@ limitations under the License.
 
 *)
 
-(* Attribution :    The NUnitRunner class was adapted from some test code in the FSharpx project. *)
-
 /// Helper functions for implementing unit tests.
 [<AutoOpen>]
 module TestHelpers

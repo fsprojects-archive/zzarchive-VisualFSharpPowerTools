@@ -8,10 +8,10 @@
     <ProjectGuid>d751e684-285f-494d-b402-98772a541c31</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>FSharpVSPowerTools.Core.UnitTests</RootNamespace>
-    <AssemblyName>FSharpVSPowerTools.Core.UnitTests</AssemblyName>
+    <AssemblyName>FSharpVSPowerTools.Core.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>FSharpVSPowerTools.Core.UnitTests</Name>
+    <Name>FSharpVSPowerTools.Core.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
@@ -24,7 +24,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\FSharpVSPowerTools.Core.UnitTests.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FSharpVSPowerTools.Core.Tests.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -33,7 +33,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\FSharpVSPowerTools.Core.UnitTests.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FSharpVSPowerTools.Core.Tests.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -53,10 +53,10 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="XMLDocTests.fs" />
-    <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">

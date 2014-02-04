@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text;
 
-namespace FSharpPowerTools.CodeFormatting
+namespace FSharpPowerTools
 {
     public class Services
     {

@@ -16,7 +16,7 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 
-type MyFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
+type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
     let mutable passThruToEditor : IOleCommandTarget = null
     do
         if ErrorHandler.Succeeded(textView.AddCommandFilter(this, &passThruToEditor)) then
@@ -112,4 +112,4 @@ type VsTextViewCreationListener() =
             match this.TextDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer) with
             | false, _ -> ()
             | true, doc ->
-                new MyFilter(textView, wpfTextView, doc.FilePath) |> ignore
+                new XmlDocFilter(textView, wpfTextView, doc.FilePath) |> ignore
