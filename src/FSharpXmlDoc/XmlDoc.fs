@@ -295,7 +295,7 @@ let rec digNamesFrom pat =
     | _ -> error ()
 
 type XmlDocable =
-    | XmlDocable of line: int * indent: int * paramNames: string list
+    | XmlDocable of (*line:*) int * (*indent:*) int * (*paramNames:*) string list
 
 let GetXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, filename) =
     let indentOf (lineNum:int) =

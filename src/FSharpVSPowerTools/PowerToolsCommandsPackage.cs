@@ -13,7 +13,7 @@ namespace FSharpVSPowerTools
     [PackageRegistration(UseManagedResourcesOnly = true)]
     [ProvideOptionPage(typeof(GeneralOptionsPage), "F# Power Tools", "General", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(FantomasOptionsPage), "F# Power Tools", "Formatting", 0, 0, true, 0)]
-    [Guid("684211D1-B47C-44FE-AECF-E9D3B5FF67E3")]
+    [Guid("f152487e-9a22-4cf9-bee6-a8f7c77f828d")]
     [ProvideService(typeof(GeneralOptionsPage))]
     [ProvideService(typeof(FantomasOptionsPage))]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]

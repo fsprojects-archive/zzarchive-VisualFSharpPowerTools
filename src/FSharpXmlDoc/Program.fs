@@ -7,6 +7,7 @@
 // A command filter for the editor.  Command filters get an opportunity to observe and handle commands before and after the editor acts on them.
 
 open System
+open System.Diagnostics
 open System.ComponentModel.Composition
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
@@ -15,11 +16,6 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
-
-open System.Diagnostics
-open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Shell
-open EnvDTE
 
 type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
     let mutable passThruToEditor : IOleCommandTarget = null

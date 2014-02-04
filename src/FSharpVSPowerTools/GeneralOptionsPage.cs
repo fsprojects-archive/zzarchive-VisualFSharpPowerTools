@@ -11,7 +11,7 @@ using System.Windows.Forms;
 namespace FSharpVSPowerTools
 {
     [ClassInterface(ClassInterfaceType.AutoDual)]
-    [Guid("1D9ECCF3-5D2F-4112-9B25-264596873DC9")]
+    [Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")]
     public class GeneralOptionsPage : DialogPage
     {
         

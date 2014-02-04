@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 
 namespace FSharpVSPowerTools
 {
-    [Guid("9F2500E9-9A2E-4741-B13E-32FE96C01268")]
+    [Guid("30829e04-262b-4af7-89e3-d4bf7a1d0c23")]
     public class FantomasOptionsPage : DialogPage
     {
         public FantomasOptionsPage()
