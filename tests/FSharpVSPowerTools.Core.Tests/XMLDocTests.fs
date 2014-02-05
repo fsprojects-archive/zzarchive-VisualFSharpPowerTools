@@ -8,13 +8,13 @@ module FSharpVSPowerTools.Core.Tests.XMLDocTests
 #endif
 
 open System.IO
-open XmlDocHelpers
+open FSharpXmlDoc.XmlDocHelpers
 open NUnit.Framework
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
 let input = File.ReadAllText(fileName)
 
-let output = XmlDocHelpers.GetXmlDocables(input, fileName) |> Set.ofList
+let output = GetXmlDocables(input, fileName) |> Set.ofList
 
 [<Test>]
 let ``should create XML Doc for module-level let bounds``() =

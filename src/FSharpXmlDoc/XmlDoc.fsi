@@ -1,4 +1,4 @@
-﻿module XmlDocHelpers
+﻿module FSharpXmlDoc.XmlDocHelpers
 
 type XmlDocable =
     | XmlDocable of (*line:*) int * (*indent:*) int * (*paramNames:*) string list

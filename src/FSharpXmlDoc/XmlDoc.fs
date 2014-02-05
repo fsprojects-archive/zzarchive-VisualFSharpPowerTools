@@ -1,4 +1,4 @@
-﻿module XmlDocHelpers
+﻿module FSharpXmlDoc.XmlDocHelpers
 
 // This file has two main parts:
 //  - first, nearly verbatim code from misc portions of the F# compiler
