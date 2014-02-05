@@ -33,11 +33,13 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
+            this.lblInfo = new System.Windows.Forms.Label();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.lblInfo);
             this.grbOptions.Controls.Add(this.lblTitle);
             this.grbOptions.Controls.Add(this.lblHome);
             this.grbOptions.Controls.Add(this.chbFormatting);
@@ -61,7 +63,7 @@
             // lblHome
             // 
             this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(84, 119);
+            this.lblHome.Location = new System.Drawing.Point(82, 119);
             this.lblHome.Name = "lblHome";
             this.lblHome.Size = new System.Drawing.Size(240, 13);
             this.lblHome.TabIndex = 3;
@@ -94,6 +96,16 @@
             this.chbXMLDoc.Text = "Use auto-generated XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
             // 
+            // lblInfo
+            // 
+            this.lblInfo.AutoSize = true;
+            this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
+            this.lblInfo.Location = new System.Drawing.Point(13, 103);
+            this.lblInfo.Name = "lblInfo";
+            this.lblInfo.Size = new System.Drawing.Size(331, 13);
+            this.lblInfo.TabIndex = 5;
+            this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
+            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -115,5 +127,6 @@
         private System.Windows.Forms.CheckBox chbXMLDoc;
         private System.Windows.Forms.Label lblTitle;
         private System.Windows.Forms.LinkLabel lblHome;
+        private System.Windows.Forms.Label lblInfo;
     }
 }

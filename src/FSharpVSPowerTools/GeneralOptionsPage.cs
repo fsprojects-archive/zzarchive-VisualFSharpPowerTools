@@ -52,9 +52,6 @@ namespace FSharpVSPowerTools
             {
                 XMLDocEnabled = _optionsControl.XMLDocEnabled;
                 FormattingEnabled = _optionsControl.FormattingEnabled;
-
-                // FIXME: global mutable state
-                FSharpXmlDoc.XmlDocFilter.XMLDocEnabled = XMLDocEnabled;
             }
             base.OnApply(e);
         }

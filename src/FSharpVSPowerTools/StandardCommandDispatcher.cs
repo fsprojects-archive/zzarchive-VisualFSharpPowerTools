@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FSharpVSPowerTools.CodeFormatting.Commands;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
@@ -19,6 +21,13 @@ namespace FSharpVSPowerTools
 
         public static void Register(IVsTextView interopTextView, IWpfTextView textView, Services services)
         {
+            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
+            if (!generalOptions.FormattingEnabled)
+            {
+                Debug.WriteLine("Formatting feature is disabled in General option page.");
+                return;
+            }
+
             var dispatcher = new StandardCommandDispatcher();
             dispatcher._textView = textView;
             dispatcher._services = services;

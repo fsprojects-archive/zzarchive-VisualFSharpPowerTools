@@ -16,9 +16,6 @@ namespace FSharpVSPowerTools.CodeFormatting.Commands
     {
         protected void ExecuteFormat()
         {
-            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
-            if (!generalOptions.FormattingEnabled) return;
-
             var editorOperations = Services.EditorOperationsFactoryService.GetEditorOperations(TextView);
             using (var textUndoTransaction = TryCreateTextUndoTransaction())
             {

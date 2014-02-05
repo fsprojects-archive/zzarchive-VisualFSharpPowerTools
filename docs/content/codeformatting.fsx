@@ -48,10 +48,10 @@ module Version2 =
          | TyCon(s, ts) -> s
 
 (**
-The main formatting options are available under "Tools --> Options --> F# Power Tools" dialog. 
+The main formatting options are available under "Tools --> Options --> F# Power Tools --> Formatting" dialog. 
 
 ![Fantomas options](img/fantomas_options.png)
 
 To be consistent with Visual Studio editors, the last option, *indent size*, 
-can be adjusted under "Tools --> Options --> Text Editor --> F# --> Tabs" (looking for "Indent size" option).
+could be adjusted under "Tools --> Options --> Text Editor --> F# --> Tabs" (looking for "Indent size" option).
 *)

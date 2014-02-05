@@ -11,7 +11,7 @@ The extension is also available in the [Visual Studio Gallery](http://visualstud
 User guides
 -----------------------
 
-The extension comes with independent commands which can be toggled on/off in "Tools --> Options --> F# Power Tools" and General dialog:
+The extension comes with independent commands which can be toggled on/off in "Tools --> Options --> F# Power Tools --> General" dialog:
 
 ![General options](img/general_options.png)
 
