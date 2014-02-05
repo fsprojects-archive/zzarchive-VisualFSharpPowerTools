@@ -5,14 +5,16 @@
 
 (**
 
-You can install this extension by searching for "F# Power Tools" in "Tools --> Extensions and Updates --> Online".
-The extension is also available in the [Visual Studio Gallery](#).
+You can install this extension in Visual Studio 2012 and Visual Studio 2013 by searching for "FSharp Power Tools" in "Tools --> Extensions and Updates --> Online".
+The extension is also available in the [Visual Studio Gallery](http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff).
 
-Documentation
+User guides
 -----------------------
 
-The extension comes with comprehensible documentation. 
-It can include a use guide automatically generated from `*.fsx` files in [the content folder][content].
+The extension comes with independent commands which can be toggled on/off in "Tools --> Options --> F# Power Tools" and General dialog:
+
+![General options](img/general_options.png)
+
 Here are currently supported features:
 
  * [Code Formatting](codeformatting.html)
