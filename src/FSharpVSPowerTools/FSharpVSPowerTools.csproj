@@ -48,6 +48,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
     <Reference Include="FantomasLib">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Fantomas.1.0.5.1\lib\FantomasLib.dll</HintPath>
@@ -92,6 +95,9 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
+    <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
@@ -111,6 +117,7 @@
     <Compile Include="GeneralOptionsControl.Designer.cs">
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="HighlightUsageTaggerProvider.cs" />
     <Compile Include="PowerToolsCommandsPackage.cs" />
     <Compile Include="Services.cs" />
     <Compile Include="StandardCommandDispatcher.cs" />
@@ -150,6 +157,14 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
+      <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
+      <Name>FSharpVSPowerTools.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
+      <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
+      <Name>FSharpVSPowerTools.Logic</Name>
+    </ProjectReference>
     <ProjectReference Include="..\FSharpXmlDoc\FSharpXmlDoc.fsproj">
       <Project>{48913937-D335-4A8E-A22F-7409385A989A}</Project>
       <Name>FSharpXmlDoc</Name>
