@@ -29,16 +29,18 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbNavBar = new System.Windows.Forms.CheckBox();
+            this.lblInfo = new System.Windows.Forms.Label();
             this.lblTitle = new System.Windows.Forms.Label();
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
-            this.lblInfo = new System.Windows.Forms.Label();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbNavBar);
             this.grbOptions.Controls.Add(this.lblInfo);
             this.grbOptions.Controls.Add(this.lblTitle);
             this.grbOptions.Controls.Add(this.lblHome);
@@ -49,21 +51,41 @@
             this.grbOptions.Size = new System.Drawing.Size(414, 148);
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
-            this.grbOptions.Text = "Features";
+            this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbNavBar
+            // 
+            this.chbNavBar.AutoSize = true;
+            this.chbNavBar.Location = new System.Drawing.Point(16, 76);
+            this.chbNavBar.Name = "chbNavBar";
+            this.chbNavBar.Size = new System.Drawing.Size(115, 17);
+            this.chbNavBar.TabIndex = 6;
+            this.chbNavBar.Text = "Use navigation bar";
+            this.chbNavBar.UseVisualStyleBackColor = true;
+            // 
+            // lblInfo
+            // 
+            this.lblInfo.AutoSize = true;
+            this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
+            this.lblInfo.Location = new System.Drawing.Point(13, 103);
+            this.lblInfo.Name = "lblInfo";
+            this.lblInfo.Size = new System.Drawing.Size(331, 13);
+            this.lblInfo.TabIndex = 5;
+            this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
             // 
             // lblTitle
             // 
             this.lblTitle.AutoSize = true;
             this.lblTitle.Location = new System.Drawing.Point(13, 119);
             this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(72, 13);
+            this.lblTitle.Size = new System.Drawing.Size(95, 13);
             this.lblTitle.TabIndex = 4;
-            this.lblTitle.Text = "Learn more at";
+            this.lblTitle.Text = "Visit user guides at";
             // 
             // lblHome
             // 
             this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(82, 119);
+            this.lblHome.Location = new System.Drawing.Point(102, 119);
             this.lblHome.Name = "lblHome";
             this.lblHome.Size = new System.Drawing.Size(240, 13);
             this.lblHome.TabIndex = 3;
@@ -96,16 +118,6 @@
             this.chbXMLDoc.Text = "Use auto-generated XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
             // 
-            // lblInfo
-            // 
-            this.lblInfo.AutoSize = true;
-            this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.lblInfo.Location = new System.Drawing.Point(13, 103);
-            this.lblInfo.Name = "lblInfo";
-            this.lblInfo.Size = new System.Drawing.Size(331, 13);
-            this.lblInfo.TabIndex = 5;
-            this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
-            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -128,5 +140,6 @@
         private System.Windows.Forms.Label lblTitle;
         private System.Windows.Forms.LinkLabel lblHome;
         private System.Windows.Forms.Label lblInfo;
+        private System.Windows.Forms.CheckBox chbNavBar;
     }
 }
