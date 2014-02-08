@@ -7,8 +7,6 @@
 Navigation bar
 -----------------------
 
-This feature is a hidden experimental feature of F# in Visual Studio; use it at your own risk.
-
 > **NOTE:** The feature is distributed as an experimental part of F# Tools in Visual Studio. 
 The setting for this specific feature might be lost after updating/reinstalling Visual Studio.
 

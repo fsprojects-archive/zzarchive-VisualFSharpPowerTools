@@ -9,8 +9,8 @@ open FSharp.CompilerBinding
 
 type ProjectProvider(currentFile : string, project : VSProject) = 
     do Debug.Assert(project <> null && project.Project <> null, "Input project should be well-formed.")
-
     let currentDir = Path.GetDirectoryName(currentFile)
+
     let getProperty (tag : string) =
         let prop = try project.Project.Properties.[tag] with _ -> null
         match prop with
@@ -41,8 +41,8 @@ type ProjectProvider(currentFile : string, project : VSProject) =
     member private __.References = 
         project.References
         |> Seq.cast<Reference>
-        // REVIEW: we may not need resolving references if VS returns enough information
-        |> Seq.map (fun r -> r.Name)
+        // Remove all project references for now
+        |> Seq.choose (fun r -> if r.SourceProject = null then Some(Path.Combine(r.Path, r.Name)) else None)
         |> Seq.map (fun name -> 
             let assemblyName = if name.EndsWith ".dll" then name else name + ".dll"
             sprintf "-r:%s" (wrap assemblyName))
@@ -77,21 +77,15 @@ type ProjectProvider(currentFile : string, project : VSProject) =
         ]
 
     member __.SourceFiles = 
-        let castSeq (xs : ProjectItems) =
-            if xs = null then Seq.empty else Seq.cast<ProjectItem> xs
-
-        let allFiles (item : ProjectItem) =
-            item.ProjectItems
-            |> castSeq
-            // REVIEW: this may not return expected results
-            |> Seq.filter (fun item -> item <> null && item.SubProject <> null)
-            // REVIEW: we may not need current directory if VS can resolve absolute path
-            |> Seq.map (fun item -> Path.Combine(currentDir, item.Name))
-
-        project.Project.ProjectItems
-        |> castSeq
-        |> Seq.collect allFiles
-        |> fun xs -> if Seq.isEmpty xs then seq [currentFile] else xs      
-
+        let projectItems = project.Project.ProjectItems
+        Debug.Assert(Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
+        projectItems
+        |> Seq.cast<ProjectItem>
+        |> Seq.filter (fun item -> try item.Document |> ignore; true with _ -> false)
+        |> Seq.choose (fun item -> 
+            // TODO: there should be a better way to get source files
+            let buildAction = item.Properties.["BuildAction"].Value.ToString()
+            if buildAction = "BuildAction=Compile" then Some item else None)    
+        |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
 
 
