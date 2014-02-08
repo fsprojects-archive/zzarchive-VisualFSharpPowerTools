@@ -29,6 +29,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 	ProjectSection(SolutionItems) = preProject
 		docs\content\codeformatting.fsx = docs\content\codeformatting.fsx
 		docs\content\index.fsx = docs\content\index.fsx
+		docs\content\navbar.fsx = docs\content\navbar.fsx
 		docs\content\xmldoc.fsx = docs\content\xmldoc.fsx
 	EndProjectSection
 EndProject

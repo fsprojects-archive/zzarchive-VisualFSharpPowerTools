@@ -23,16 +23,24 @@ namespace FSharpVSPowerTools
             get { return chbXMLDoc.Checked; }
             set { chbXMLDoc.Checked = value;  }
         }
+
         public bool FormattingEnabled
         {
             get { return chbFormatting.Checked; }
             set { chbFormatting.Checked = value; }
         }
 
+        public bool NavBarEnabled
+        {
+            get { return chbNavBar.Checked; }
+            set { chbNavBar.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXMLDoc.Checked = OptionsPage.XMLDocEnabled;
             chbFormatting.Checked = OptionsPage.FormattingEnabled;
+            chbNavBar.Checked = OptionsPage.NavBarEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
