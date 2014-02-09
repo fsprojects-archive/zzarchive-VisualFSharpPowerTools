@@ -15,6 +15,7 @@ open Microsoft.VisualStudio.Shell
 open EnvDTE
 open VSLangProj
 open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
 
 // Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
 
@@ -29,7 +30,7 @@ type HighlightIdentifierFormatDefinition() =
     do  
       base.BackgroundColor <- Nullable Colors.LightGreen
       base.ForegroundColor <- Nullable Colors.DarkGreen
-      base.DisplayName <- "Highlight Usage"
+      base.DisplayName <- "F# Highlight Usage"
       base.ZOrder <- 5
 
 /// This tagger will provide tags for every word in the buffer that
@@ -71,16 +72,20 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer,
                     this.SynchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
                 else
                     let currentFile = doc.FullName
-                    let projectProvider = ProjectSystem.ProjectProvider(currentFile, project)
+                    let projectProvider = ProjectProvider(currentFile, project)
                     let projectFileName = projectProvider.ProjectFileName
                     let source = currentRequest.Snapshot.GetText()
                     let currentLine = currentRequest.GetContainingLine().GetText()
                     let framework = projectProvider.TargetFramework
                     let args = Array.ofSeq projectProvider.CompilerOptions
                     let sourceFiles = Array.ofSeq projectProvider.SourceFiles
-                    match ProjectSystem.VSLanguageService.Instance.GetReferences(projectFileName, currentFile, source, sourceFiles, 
-                                                                                 beginLine, beginCol, currentLine, args, framework) with
-                    | Some(currentSymbolName, currentSymbolRange, references) -> 
+                    let results = 
+                        VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
+                                                                             beginLine, beginCol, currentLine, args, framework)
+                        |> Async.RunSynchronously
+                    match results with
+                    | Some(currentSymbolName, lastIdent, currentSymbolRange, references) -> 
+                        // TODO: use lastIdent to highlight relevant part of the long identifier
                         let foundUsages =
                             references
                             |> Seq.filter (fun (fileName, range) -> fileName = currentFile)

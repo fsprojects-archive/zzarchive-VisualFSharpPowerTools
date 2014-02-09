@@ -330,7 +330,6 @@ module FSharpEnvironment =
             | NET_4_0 -> "4.0"
             | NET_4_5 -> "4.5"
 
-        let safeExists f = (try File.Exists(f) with _ -> false)
         let result = 
             possibleInstallationPoints |> List.tryPick (fun possibleInstallationDir -> 
  
