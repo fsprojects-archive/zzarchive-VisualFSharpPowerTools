@@ -38,7 +38,7 @@ let ``should create XML Doc for members``() =
 [<TestCase ("///<", 3)>]
 [<TestCase ("/// <", 4)>]
 [<TestCase ("///    <", 7)>]
-[<TestCase (" ///< ", 4)>]
+[<TestCase (" ///<", 4)>]
 let ``detects blank XML doc comment``(sample, pos) =
     XmlDocComment.isBlank sample |> assertEqual (Some pos)
 
@@ -48,6 +48,8 @@ let ``detects blank XML doc comment``(sample, pos) =
 [<TestCase "///">]
 [<TestCase "////">]
 [<TestCase "word">]
+[<TestCase "///</">]
+[<TestCase "///< ">]
 let ``detects not blank XML doc comment``(sample) =
     XmlDocComment.isBlank sample |> assertEqual None
 

@@ -29,11 +29,16 @@ module XmlDocComment =
             Some (res, pos + (s.Length - res.Length))
         | _ -> None
 
+    let private eol (s: string, pos) = 
+        match s with
+        | "" -> Some ("", pos)
+        | _ -> None
+
     let inline private (>=>) f g = fun x -> f x |> Option.bind g
 
     // if it's a blank XML comment with trailing "<", returns Some (index of the "<"), otherwise returns None
     let isBlank (s: string) =
-        let parser = ws >=> str "///" >=> ws >=> str "<"
+        let parser = ws >=> str "///" >=> ws >=> str "<" >=> eol
         let res = parser (s, 0) |> Option.map snd |> Option.map (fun x -> x - 1)
         res
 
