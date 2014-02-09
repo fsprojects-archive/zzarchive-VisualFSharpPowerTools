@@ -36,8 +36,16 @@ let ``should create XML Doc for members``() =
     Set.contains (XmlDocable(33, 4, ["x"; "y"])) output |> assertEqual true
 
 [<Test>]
+let ``detects "///<" as a blank XML doc comment``() =
+    XmlDocComment.isBlank "///<" |> assertEqual (Some 3)
+
+[<Test>]
 let ``detects "/// <" as a blank XML doc comment``() =
-    XmlDocComment.isBlank "/// <" |> assertEqual (Some 3)
+    XmlDocComment.isBlank "/// <" |> assertEqual (Some 4)
+
+[<Test>]
+let ``detects "///     <" as a blank XML doc comment``() =
+    XmlDocComment.isBlank "///     <" |> assertEqual (Some 8)
 
 #if INTERACTIVE
 Seq.iter (printfn "%A") output;;

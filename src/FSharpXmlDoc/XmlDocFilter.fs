@@ -18,33 +18,24 @@ open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 
 module XmlDocComment =
-    // if true, return Some (index just after slashes), otherwise returns None
-    let isBlank (s: string) =
-        let pattern = "/// <"
-        let res = 
-            match s.Split ([|pattern|], StringSplitOptions.RemoveEmptyEntries) with
-            | [||] -> Some ()
-            | [|x|] when x.Trim() = "" -> Some ()
-            | x -> None
-            |> Option.map (fun _ -> s.IndexOf pattern + pattern.Length - 1)
-        res
+    let private ws (s: string, pos) = 
+        let res = s.TrimStart()
+        Some (res, pos + (s.Length - res.Length))
 
-//        let mutable i = 0
-//        
-//        while i < s.Length && s.Chars(i) = ' ' do
-//            i <- i + 1
-//        
-//        if i = s.Length || not(s.Substring(i).StartsWith("//")) then  // only two slashes, have not typed third yet
-//            false, 0
-//        
-//        else
-//            i <- i + 2
-//            let n = i
-//        
-//            while i < s.Length && s.Chars(i) = ' ' do
-//                i <- i + 1
-//        
-//            i = s.Length, n
+    let private str (prefix: string) (s: string, pos) =
+        match s.StartsWith prefix with
+        | true -> 
+            let res = s.Substring prefix.Length
+            Some (res, pos + (s.Length - res.Length))
+        | _ -> None
+
+    let inline private (>=>) f g = fun x -> f x |> Option.bind g
+
+    // if it's a blank XML comment with trailing "<", returns Some (index of the "<"), otherwise returns None
+    let isBlank (s: string) =
+        let parser = ws >=> str "///" >=> ws >=> str "<"
+        let res = parser (s, 0) |> Option.map snd |> Option.map (fun x -> x - 1)
+        res
 
 type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
     let mutable passThruToEditor : IOleCommandTarget = null
