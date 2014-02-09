@@ -3,6 +3,7 @@
 open System
 open System.Diagnostics
 open System.Threading
+open System.Collections.Generic
 open System.ComponentModel.Composition
 open System.Windows.Media
 open Microsoft.VisualStudio.Text
@@ -35,41 +36,39 @@ type HighlightIdentifierFormatDefinition() =
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
-type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, 
-                          textStructureNavigator : ITextStructureNavigator) =
+type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchService, tn : ITextStructureNavigator) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
-    
-    member val private View = view with get, set
-    member val private SourceBuffer = sourceBuffer with get, set
-    member val private TextStructureNavigator = textStructureNavigator with get, set
-    member val private WordSpans = NormalizedSnapshotSpanCollection() with get, set
-    member val private CurrentWord = Nullable<SnapshotSpan>() with get, set
-    member val private RequestedPoint : SnapshotPoint = SnapshotPoint() with get, set
 
-    /// Perform a synchronous update, in case multiple background threads are running
-    member private this.SynchronousUpdate(currentRequest : SnapshotPoint, newSpans : NormalizedSnapshotSpanCollection,
-                                          newCurrentWord : Nullable<SnapshotSpan>) =
+    let mutable view = v
+    let mutable sourceBuffer = sb
+    let mutable textSearchService = ts
+    let mutable textStructureNavigator = tn
+    let mutable wordSpans = NormalizedSnapshotSpanCollection()
+    let mutable currentWord = Nullable<SnapshotSpan>()
+    let mutable requestedPoint = SnapshotPoint()
+
+    // Perform a synchronous update, in case multiple background threads are running
+    let synchronousUpdate(currentRequest : SnapshotPoint, newSpans : NormalizedSnapshotSpanCollection,
+                          newWord : Nullable<SnapshotSpan>) =
         lock updateLock (fun () ->
-            if currentRequest = this.RequestedPoint then
-                this.WordSpans <- newSpans
-                this.CurrentWord <- newCurrentWord
+            if currentRequest = requestedPoint then
+                wordSpans <- newSpans
+                currentWord <- newWord
+                tagsChanged.Trigger(self, SnapshotSpanEventArgs(SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, 
+                                                                    sourceBuffer.CurrentSnapshot.Length))))
 
-                tagsChanged.Trigger(this, SnapshotSpanEventArgs(SnapshotSpan(this.SourceBuffer.CurrentSnapshot, 0, 
-                                                                    this.SourceBuffer.CurrentSnapshot.Length)))
-            )
-
-    member private this.DoUpdate(currentRequest : SnapshotPoint, currentWord : SnapshotSpan, wordSpans : SnapshotSpan seq) =
-        if currentRequest = this.RequestedPoint then
+    let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq) =
+        if currentRequest = requestedPoint then
             lock updateLock (fun () ->
-                let (beginLine, beginCol, _, _) = currentWord.GetRange()
+                let (beginLine, beginCol, _, _) = newWord.GetRange()
                 let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
                 let doc = dte.ActiveDocument
                 Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, "Should be able to find active document.")
                 let project = doc.ProjectItem.ContainingProject.Object :?> VSProject
                 if project = null then
                     Debug.WriteLine("Can't find containing project. Probably the document is opened in an ad-hoc way.")
-                    this.SynchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
+                    synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
                 else
                     let currentFile = doc.FullName
                     let projectProvider = ProjectProvider(currentFile, project)
@@ -85,96 +84,100 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer,
                         |> Async.RunSynchronously
                     match results with
                     | Some(currentSymbolName, lastIdent, currentSymbolRange, references) -> 
-                        // TODO: use lastIdent to highlight relevant part of the long identifier
+                        let possibleSpans = HashSet(newWordSpans)
+                        // TODO: use lastIdent to highlight the relevant part of the long identifier
                         let foundUsages =
                             references
-                            |> Seq.filter (fun (fileName, range) -> fileName = currentFile)
-                            |> Seq.map (fun (_, ((beginLine, beginCol), (endLine, endCol))) -> 
+                            |> Seq.map (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
                                 // Range01 type consists of zero-based values, which is a bit confusing
-                                fromPosition(currentWord.Snapshot, beginLine + 1, beginCol, endLine + 1, endCol))
-                        this.SynchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), Nullable currentWord)
+                                fileName, fromPosition(newWord.Snapshot, beginLine + 1, beginCol, endLine + 1, endCol))
+                            |> Seq.filter (fun (fileName, span) -> fileName = currentFile && possibleSpans.Contains(span))
+                            |> Seq.map snd
+                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), Nullable newWord)
                     | None ->
                         // Return empty values in order to clear up markers
-                        this.SynchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
+                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
             )
 
-    member private this.UpdateWordAdornments(threadContext : obj) =
-        let currentRequest = this.RequestedPoint
+    let updateWordAdornments(_threadContext : obj) =
+        let currentRequest = requestedPoint
 
         // Find all words in the buffer like the one the caret is on
-        match this.TextStructureNavigator.FindAllWords(currentRequest) with
+        match textStructureNavigator.FindAllWords(currentRequest) with
         | None ->
             // If we couldn't find a word, just clear out the existing markers
-            this.SynchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
-        | Some currentWord ->
+            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
+        | Some newWord ->
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
-            if this.CurrentWord.HasValue && currentWord = this.CurrentWord.Value then ()
+            if currentWord.HasValue && newWord = currentWord.Value then ()
             else
                 // Find the new spans
-                let (span, newSpans) = currentWord.FindNewSpans()
+                let mutable findData = FindData(newWord.GetText(), newWord.Snapshot)
+                findData.FindOptions <- FindOptions.WholeWord ||| FindOptions.MatchCase
+                let newSpans = textSearchService.FindAll(findData)
                 // If we are still up-to-date (another change hasn't happened yet), do a real update))
-                this.DoUpdate(currentRequest, span, newSpans)
+                doUpdate(currentRequest, newWord, newSpans)
 
-    member private this.UpdateAtCaretPosition(caretPosition : CaretPosition) =
-        let point = caretPosition.Point.GetPoint(this.SourceBuffer, caretPosition.Affinity)
+    let updateAtCaretPosition(caretPosition : CaretPosition) =
+        let point = caretPosition.Point.GetPoint(sourceBuffer, caretPosition.Affinity)
 
         if point.HasValue then 
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
-            if this.CurrentWord.HasValue &&
-               this.CurrentWord.Value.Snapshot = this.View.TextSnapshot &&
-               point.Value.CompareTo(this.CurrentWord.Value.Start) >= 0 &&
-               point.Value.CompareTo(this.CurrentWord.Value.End) <= 0 then ()
+            if currentWord.HasValue &&
+               currentWord.Value.Snapshot = view.TextSnapshot &&
+               point.Value.CompareTo(currentWord.Value.Start) >= 0 &&
+               point.Value.CompareTo(currentWord.Value.End) <= 0 then ()
             else
-                this.RequestedPoint <- point.Value
-                ThreadPool.QueueUserWorkItem(new WaitCallback(this.UpdateWordAdornments)) |> ignore
+                requestedPoint <- point.Value
+                ThreadPool.QueueUserWorkItem(new WaitCallback(updateWordAdornments)) |> ignore
 
-    member private this.ViewLayoutChanged = 
+    let viewLayoutChanged = 
         EventHandler<_>(fun _ (e : TextViewLayoutChangedEventArgs) ->
             // If a new snapshot wasn't generated, then skip this layout 
             if e.NewSnapshot <> e.OldSnapshot then  
-                this.UpdateAtCaretPosition(this.View.Caret.Position))
+                updateAtCaretPosition(view.Caret.Position))
 
-    member private this.CaretPositionChanged =
+    let caretPositionChanged =
         EventHandler<_>(fun _ (e : CaretPositionChangedEventArgs) ->
-            this.UpdateAtCaretPosition(e.NewPosition))
+            updateAtCaretPosition(e.NewPosition))
 
-    member this.Initialize() =
-        this.View.LayoutChanged.AddHandler(this.ViewLayoutChanged)
-        this.View.Caret.PositionChanged.AddHandler(this.CaretPositionChanged)
+    do
+      view.LayoutChanged.AddHandler(viewLayoutChanged)
+      view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
     interface ITagger<HighlightUsageTag> with
-        member this.GetTags (spans : NormalizedSnapshotSpanCollection) : ITagSpan<HighlightUsageTag> seq =
+        member __.GetTags (spans : NormalizedSnapshotSpanCollection) : ITagSpan<HighlightUsageTag> seq =
             seq {
-                if not this.CurrentWord.HasValue then ()
+                if not currentWord.HasValue then ()
                 else
                     // Hold on to a "snapshot" of the word spans and current word, so that we maintain the same
                     // collection throughout
-                    let currentWord = ref this.CurrentWord.Value
-                    let wordSpans = ref this.WordSpans
-                    if spans.Count = 0 || (!wordSpans).Count = 0 then ()
+                    let newWord = ref currentWord.Value
+                    let newWordSpans = ref wordSpans
+                    if spans.Count = 0 || (!newWordSpans).Count = 0 then ()
                     else
                         // If the requested snapshot isn't the same as the one our words are on, translate our spans
                         // to the expected snapshot
-                        if spans.[0].Snapshot <> (!wordSpans).[0].Snapshot then
-                            wordSpans := 
-                                NormalizedSnapshotSpanCollection(!wordSpans |> Seq.map (fun span -> 
+                        if spans.[0].Snapshot <> (!newWordSpans).[0].Snapshot then
+                            newWordSpans := 
+                                NormalizedSnapshotSpanCollection(!newWordSpans |> Seq.map (fun span -> 
                                     span.TranslateTo(spans.[0].Snapshot, SpanTrackingMode.EdgeExclusive)))
-                            currentWord := (!currentWord).TranslateTo(spans.[0].Snapshot, SpanTrackingMode.EdgeExclusive)
+                            newWord := (!newWord).TranslateTo(spans.[0].Snapshot, SpanTrackingMode.EdgeExclusive)
                         // First, yield back the word the cursor is under (if it overlaps)
                         // Note that we'll yield back the same word again in the wordspans collection;
                         // the duplication here is expected.
-                        if spans.OverlapsWith(NormalizedSnapshotSpanCollection(!currentWord)) then
-                            yield TagSpan<HighlightUsageTag>(!currentWord, HighlightUsageTag()) :> ITagSpan<_>
+                        if spans.OverlapsWith(NormalizedSnapshotSpanCollection(!newWord)) then
+                            yield TagSpan<HighlightUsageTag>(!newWord, HighlightUsageTag()) :> ITagSpan<_>
 
                         // Second, yield all the other words in the file
-                        for span in NormalizedSnapshotSpanCollection.Overlap(spans, !wordSpans) ->
+                        for span in NormalizedSnapshotSpanCollection.Overlap(spans, !newWordSpans) ->
                             TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
             }
-        member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
-        member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
+        member __.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
+        member __.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
          
     interface IDisposable with
-        member this.Dispose() = 
-            this.View.LayoutChanged.RemoveHandler(this.ViewLayoutChanged)
-            this.View.Caret.PositionChanged.RemoveHandler(this.CaretPositionChanged)
+        member __.Dispose() = 
+            view.LayoutChanged.RemoveHandler(viewLayoutChanged)
+            view.Caret.PositionChanged.RemoveHandler(caretPositionChanged)

@@ -45,7 +45,7 @@ type SnapshotSpan with
                 newWord <- currentWord.Snapshot.GetText(!startWordPos, !endWordPos - !startWordPos)
                 decr startWordPos
             word <- newWord
-            currentWord <- new SnapshotSpan(currentWord.Snapshot, !startWordPos + 1, word.Length)
+            currentWord <- SnapshotSpan(currentWord.Snapshot, !startWordPos + 1, word.Length)
 
         (currentWord, word)
 
@@ -62,16 +62,16 @@ type SnapshotSpan with
 
     member this.FindNewSpans() =
         let txt = this.Snapshot.GetText()
-        let (word1, word2) = this.GetWordIncludingQuotes()
+        let (span, content) = this.GetWordIncludingQuotes()
         try
-            let matches = Regex.Matches(txt, word2)
+            let matches = Regex.Matches(txt, content)
             let spans = 
                 matches
                 |> Seq.cast<Match>
                 |> Seq.map (fun m -> SnapshotSpan(this.Snapshot, m.Index, m.Length))
-            (word1, spans)
+            (span, spans)
         with _ ->
-            (word1, Seq.empty)
+            (span, Seq.empty)
 
 type ITextStructureNavigator with
     member this.FindAllWords(currentRequest : SnapshotPoint) =

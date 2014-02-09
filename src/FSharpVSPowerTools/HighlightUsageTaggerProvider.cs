@@ -28,9 +28,7 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var textStructureNavigator = TextStructureNavigatorSelector.GetTextStructureNavigator(buffer);
-            var tagger = new HighlightUsageTagger(textView, buffer, textStructureNavigator);
-            tagger.Initialize();
-            return tagger as ITagger<T>;
+            return new HighlightUsageTagger(textView, buffer, TextSearchService, textStructureNavigator) as ITagger<T>;
         }
     }
 }
