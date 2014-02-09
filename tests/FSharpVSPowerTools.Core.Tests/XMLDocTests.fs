@@ -8,6 +8,7 @@ module FSharpVSPowerTools.Core.Tests.XMLDocTests
 #endif
 
 open System.IO
+open FSharpXmlDoc
 open FSharpXmlDoc.XmlDocHelpers
 open NUnit.Framework
 
@@ -33,6 +34,10 @@ let ``should create XML Doc for members``() =
     Set.contains (XmlDocable(24, 4, ["z"; "x"; "y"])) output |> assertEqual true
     Set.contains (XmlDocable(27, 4, [])) output |> assertEqual true
     Set.contains (XmlDocable(33, 4, ["x"; "y"])) output |> assertEqual true
+
+[<Test>]
+let ``detects "/// <" as a blank XML doc comment``() =
+    XmlDocComment.isBlank "/// <" |> assertEqual (Some 3)
 
 #if INTERACTIVE
 Seq.iter (printfn "%A") output;;
