@@ -7,10 +7,9 @@ open EnvDTE
 open VSLangProj
 open FSharp.CompilerBinding
 
-type ProjectProvider(currentFile : string, project : VSProject) = 
+type ProjectProvider(project : VSProject) = 
     do Debug.Assert(project <> null && project.Project <> null, "Input project should be well-formed.")
-    let currentDir = Path.GetDirectoryName(currentFile)
-
+    
     let getProperty (tag : string) =
         let prop = try project.Project.Properties.[tag] with _ -> null
         match prop with
@@ -20,11 +19,13 @@ type ProjectProvider(currentFile : string, project : VSProject) =
     /// Wraps the given string between double quotes
     let wrap (s : string) = if s.StartsWith "\"" then s else String.Join("", "\"", s, "\"")  
 
-    member __.ProjectFileName = 
+    let currentDir = getProperty "FullPath"
+    let projectFileName = 
         let fileName = getProperty "FileName"
-        let projectPath = getProperty "FullPath"
-        Debug.Assert(fileName <> null && projectPath <> null, "Should have a file name for the project.")
-        Path.Combine(projectPath, fileName)
+        Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
+        Path.Combine(currentDir, fileName)
+
+    member __.ProjectFileName = projectFileName
 
     member __.TargetFSharpCoreVersion = 
         getProperty "TargetFSharpCoreVersion"
@@ -81,7 +82,7 @@ type ProjectProvider(currentFile : string, project : VSProject) =
         Debug.Assert(Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
         projectItems
         |> Seq.cast<ProjectItem>
-        |> Seq.filter (fun item -> try item.Document |> ignore; true with _ -> false)
+        |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
         |> Seq.choose (fun item -> 
             // TODO: there should be a better way to get source files
             let buildAction = item.Properties.["BuildAction"].Value.ToString()

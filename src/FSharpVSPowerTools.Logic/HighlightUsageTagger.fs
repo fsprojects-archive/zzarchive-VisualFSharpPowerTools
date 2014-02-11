@@ -71,13 +71,16 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
                 else
                     let currentFile = doc.FullName
-                    let projectProvider = ProjectProvider(currentFile, project)
+                    let projectProvider = ProjectProvider(project)
                     let projectFileName = projectProvider.ProjectFileName
                     let source = currentRequest.Snapshot.GetText()
                     let currentLine = currentRequest.GetContainingLine().GetText()
                     let framework = projectProvider.TargetFramework
                     let args = Array.ofSeq projectProvider.CompilerOptions
-                    let sourceFiles = Array.ofSeq projectProvider.SourceFiles
+                    let sourceFiles = 
+                        let files = Array.ofSeq projectProvider.SourceFiles
+                        // If there is no source file, use currentFile as an independent script
+                        if Seq.isEmpty files then [| currentFile |] else files
                     let identifier = newWord.GetText()
                     Debug.WriteLine("[Highlight Usage] Get symbol references for '{0}' at line {1} col {2} on {3} framework and '{4}' arguments", 
                         identifier, endLine, endCol, sprintf "%A" framework, String.concat " " args)

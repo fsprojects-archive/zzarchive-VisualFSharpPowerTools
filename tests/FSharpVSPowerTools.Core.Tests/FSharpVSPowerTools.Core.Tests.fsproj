@@ -57,10 +57,11 @@
     <None Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="XMLDocTests.fs" />
+    <Compile Include="LanguageServiceTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.12-alpha\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.17\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />
@@ -76,6 +77,16 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
+      <Name>FSharpVSPowerTools.Core</Name>
+      <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
+      <Name>FSharpVSPowerTools.Logic</Name>
+      <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\..\src\FSharpXmlDoc\FSharpXmlDoc.fsproj">
       <Name>FSharpXmlDoc</Name>
       <Project>{48913937-d335-4a8e-a22f-7409385a989a}</Project>
