@@ -25,6 +25,8 @@ type ProjectProvider(project : VSProject) =
         Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
         Path.Combine(currentDir, fileName)
 
+    let projectOpt = ProjectParser.load projectFileName
+
     member __.ProjectFileName = projectFileName
 
     member __.TargetFSharpCoreVersion = 
@@ -49,44 +51,36 @@ type ProjectProvider(project : VSProject) =
             sprintf "-r:%s" (wrap assemblyName))
 
     member this.CompilerOptions = 
-        // REVIEW: getting properties are failing since we haven't got hold of F# Project System
-        let definesProp = getProperty "DefineConstants"
-        let defines = 
-            match definesProp with
-            | null -> [||] 
-            | _ -> definesProp.Split([| ';'; ','; ' ' |], StringSplitOptions.RemoveEmptyEntries)
-        let debugSymbolsProp = getProperty "DebugSymbols"
-        let hasDebugSymbols = debugSymbolsProp <> null && debugSymbolsProp.ToLower() = "true"
-        let optimizeProp = getProperty "Optimize"
-        let optimize = optimizeProp <> null && optimizeProp.ToLower() = "true"
-        let generateTailcallsProp = getProperty "Tailcalls"
-        let gerateTailcalls = generateTailcallsProp <> null && generateTailcallsProp.ToLower() = "true"
-        let otherFlagsProp = getProperty "OtherFlags"
-        let otherFlags = 
-            match otherFlagsProp with
-            | null -> [||]
-            | _ -> otherFlagsProp.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
-        [  
-           yield "--noframework"
-           for symbol in defines -> "--define:" + symbol
-           if hasDebugSymbols then yield "--debug+" else yield "--debug-"
-           if optimize then yield "--optimize+" else yield "--optimize-"
-           if gerateTailcalls then yield "--tailcalls+" else yield "--tailcalls-"
-           // TODO: This currently ignores escaping using 'wrap' function
-           yield! otherFlags
-           yield! this.References
-        ]
+        match projectOpt with
+        | Some p ->
+            [| 
+                yield! ProjectParser.getOptionsWithoutReferences p
+                yield! this.References 
+            |]
+        | None ->
+            Debug.WriteLine("[Project System] Can't read project file. Fall back to default compiler flags.")
+            [|  
+               yield "--noframework"
+               yield "--debug-"
+               yield "--optimize-"
+               yield "--tailcalls-"
+               yield! this.References
+            |]
 
     member __.SourceFiles = 
-        let projectItems = project.Project.ProjectItems
-        Debug.Assert(Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
-        projectItems
-        |> Seq.cast<ProjectItem>
-        |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
-        |> Seq.choose (fun item -> 
-            // TODO: there should be a better way to get source files
-            let buildAction = item.Properties.["BuildAction"].Value.ToString()
-            if buildAction = "BuildAction=Compile" then Some item else None)    
-        |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
-
+        match projectOpt with
+        | Some p ->
+            ProjectParser.getFiles p
+        | None ->
+            Debug.WriteLine("[Project System] Can't read project file. Fall back to incomplete source files.")
+            let projectItems = project.Project.ProjectItems
+            Debug.Assert(Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
+            projectItems
+            |> Seq.cast<ProjectItem>
+            |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
+            |> Seq.choose (fun item -> 
+                let buildAction = item.Properties.["BuildAction"].Value.ToString()
+                if buildAction = "BuildAction=Compile" then Some item else None)    
+            |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
+            |> Seq.toArray
 
