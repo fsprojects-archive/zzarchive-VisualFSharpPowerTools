@@ -1,6 +1,6 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
-type internal VSLanguageService private () =
+[<RequireQualifiedAccess>]
+module VSLanguageService =
     // TODO: we should reparse the stale document and cache it
-    static let instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
-    static member Instance = instance
+    let Instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())

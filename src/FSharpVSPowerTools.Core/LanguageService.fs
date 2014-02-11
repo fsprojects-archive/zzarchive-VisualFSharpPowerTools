@@ -21,7 +21,7 @@ type TypedParseResult(info:CheckFileResults, untyped : ParseFileResults) =
             // Get items & generate output
             try Some (info.GetDeclarations(None, line, col, lineStr, longName, residue, fun (_,_) -> false)
                       |> Async.RunSynchronously, residue)
-            with :? TimeoutException as e -> None
+            with :? TimeoutException as _e -> None
 
     /// Get the tool-tip to be displayed at the specified offset (relatively
     /// from the beginning of the current document)
@@ -255,7 +255,7 @@ type LanguageService(dirtyNotify) =
   member x.GetUntypedParseResult(projectFilename, fileName:string, src, files, args, targetFramework) = 
         let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
         Debug.WriteLine(sprintf "Parsing: Get untyped parse result (fileName=%s)" fileName)
-        let req = ParseRequest(fileName, src, opts, false, None)
+        let _req = ParseRequest(fileName, src, opts, false, None)
         checker.ParseFileInProject(fileName, src, opts)
 
   member x.GetTypedParseResult(projectFilename, fileName:string, src, files, args, allowRecentTypeCheckResults, timeout, targetFramework)  : TypedParseResult = 
@@ -275,18 +275,22 @@ type LanguageService(dirtyNotify) =
    async { 
     let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
 
-    //parse and retrieve Checked Project results, this has the entity graph and errors etc
+    // Parse and retrieve Checked Project results, this has the entity graph and errors etc
     let! projectResults = checker.ParseAndCheckProject(projectOptions) 
   
-    //get the parse results for the current file
-    let! backgroundParseResults, backgroundTypedParse = //Note this operates on the file system so the file needs to be current
+    // Get the parse results for the current file
+    let! _backgroundParseResults, backgroundTypedParse = 
+        // Note this operates on the file system so the file needs to be current
         checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
 
     match FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr) with 
     | Some(colu, identIsland) ->
-        //get symbol at location
-        //Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-        match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
+        // Guard against partial parsing results
+        let offset = identIsland |> List.sumBy (fun s -> if s.EndsWith(".") then 1 else 0)
+        let identIsland = identIsland |> List.map (fun s -> s.TrimEnd('.'))
+        Debug.WriteLine("Parsing: Offset from parsing is {0}", offset)
+        // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
+        match backgroundTypedParse.GetSymbolAtLocation(line, colu - offset, lineStr, identIsland) with
         | Some(symbol) ->
             let lastIdent = Seq.last identIsland
             let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation

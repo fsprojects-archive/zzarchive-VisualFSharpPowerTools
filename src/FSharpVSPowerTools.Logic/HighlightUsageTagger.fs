@@ -45,12 +45,12 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let mutable textSearchService = ts
     let mutable textStructureNavigator = tn
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
-    let mutable currentWord = Nullable<SnapshotSpan>()
+    let mutable currentWord = None
     let mutable requestedPoint = SnapshotPoint()
 
     // Perform a synchronous update, in case multiple background threads are running
     let synchronousUpdate(currentRequest : SnapshotPoint, newSpans : NormalizedSnapshotSpanCollection,
-                          newWord : Nullable<SnapshotSpan>) =
+                          newWord : SnapshotSpan option) =
         lock updateLock (fun () ->
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
@@ -59,16 +59,16 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                                                                     sourceBuffer.CurrentSnapshot.Length))))
 
     let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq) =
-        if currentRequest = requestedPoint then
-            lock updateLock (fun () ->
-                let (beginLine, beginCol, _, _) = newWord.GetRange()
+        async {
+            if currentRequest = requestedPoint then
+                let (_, _, endLine, endCol) = newWord.GetRange()
                 let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
                 let doc = dte.ActiveDocument
                 Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, "Should be able to find active document.")
                 let project = doc.ProjectItem.ContainingProject.Object :?> VSProject
                 if project = null then
-                    Debug.WriteLine("Can't find containing project. Probably the document is opened in an ad-hoc way.")
-                    synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
+                    Debug.WriteLine("[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way.")
+                    return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
                 else
                     let currentFile = doc.FullName
                     let projectProvider = ProjectProvider(currentFile, project)
@@ -78,38 +78,48 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     let framework = projectProvider.TargetFramework
                     let args = Array.ofSeq projectProvider.CompilerOptions
                     let sourceFiles = Array.ofSeq projectProvider.SourceFiles
-                    let results = 
+                    let identifier = newWord.GetText()
+                    Debug.WriteLine("[Highlight Usage] Get symbol references for '{0}' at line {1} col {2} on {3} framework and '{4}' arguments", 
+                        identifier, endLine, endCol, sprintf "%A" framework, String.concat " " args)
+                    let! results = 
                         VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
-                                                                             beginLine, beginCol, currentLine, args, framework)
-                        |> Async.RunSynchronously
+                                                                             endLine, endCol, currentLine, args, framework)
                     match results with
-                    | Some(currentSymbolName, lastIdent, currentSymbolRange, references) -> 
+                    | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
                         let possibleSpans = HashSet(newWordSpans)
-                        // TODO: use lastIdent to highlight the relevant part of the long identifier
+                        // Since we can't select multi-word, lastIdent is for debugging only.
+                        Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
                         let foundUsages =
                             references
                             |> Seq.map (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
                                 // Range01 type consists of zero-based values, which is a bit confusing
-                                fileName, fromPosition(newWord.Snapshot, beginLine + 1, beginCol, endLine + 1, endCol))
-                            |> Seq.filter (fun (fileName, span) -> fileName = currentFile && possibleSpans.Contains(span))
-                            |> Seq.map snd
-                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), Nullable newWord)
+                                fileName, fromVSPos(newWord.Snapshot, beginLine, beginCol, endLine, endCol))
+                            |> Seq.choose (fun (fileName, span) -> 
+                                // Sometimes F.C.S returns a composite identifier
+                                let subSpan = 
+                                    let index = identifier.LastIndexOf(".")
+                                    if index <> -1 then 
+                                        SnapshotSpan(newWord.Snapshot, span.Start.Position + index + 1, span.Length - index - 1)
+                                    else span
+                                if fileName = currentFile && possibleSpans.Contains(subSpan) then Some subSpan else None)
+                            
+                        return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), Some newWord)
                     | None ->
                         // Return empty values in order to clear up markers
-                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
-            )
+                        return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
+        } |> Async.Start
 
-    let updateWordAdornments(_threadContext : obj) =
+    let updateWordAdornments() =
         let currentRequest = requestedPoint
 
         // Find all words in the buffer like the one the caret is on
         match textStructureNavigator.FindAllWords(currentRequest) with
         | None ->
             // If we couldn't find a word, just clear out the existing markers
-            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), Nullable())
+            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
         | Some newWord ->
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
-            if currentWord.HasValue && newWord = currentWord.Value then ()
+            if currentWord.IsSome && newWord = currentWord.Value then ()
             else
                 // Find the new spans
                 let mutable findData = FindData(newWord.GetText(), newWord.Snapshot)
@@ -124,13 +134,13 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
         if point.HasValue then 
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
-            if currentWord.HasValue &&
+            if currentWord.IsSome &&
                currentWord.Value.Snapshot = view.TextSnapshot &&
                point.Value.CompareTo(currentWord.Value.Start) >= 0 &&
                point.Value.CompareTo(currentWord.Value.End) <= 0 then ()
             else
                 requestedPoint <- point.Value
-                ThreadPool.QueueUserWorkItem(new WaitCallback(updateWordAdornments)) |> ignore
+                updateWordAdornments()
 
     let viewLayoutChanged = 
         EventHandler<_>(fun _ (e : TextViewLayoutChangedEventArgs) ->
@@ -149,11 +159,12 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     interface ITagger<HighlightUsageTag> with
         member __.GetTags (spans : NormalizedSnapshotSpanCollection) : ITagSpan<HighlightUsageTag> seq =
             seq {
-                if not currentWord.HasValue then ()
-                else
+                match currentWord with
+                | None -> ()
+                | Some word ->
                     // Hold on to a "snapshot" of the word spans and current word, so that we maintain the same
                     // collection throughout
-                    let newWord = ref currentWord.Value
+                    let newWord = ref word
                     let newWordSpans = ref wordSpans
                     if spans.Count = 0 || (!newWordSpans).Count = 0 then ()
                     else

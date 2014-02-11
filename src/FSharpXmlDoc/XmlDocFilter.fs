@@ -63,7 +63,7 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
                             let hr = passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) // parse it before we pass thru to editor, as we want to notice if no XmlDoc yet
                             match xmlDocablesBelowThisLine with
                             | [] -> ()
-                            | XmlDocHelpers.XmlDocable(_line,indent,paramNames)::t ->
+                            | XmlDocHelpers.XmlDocable(_line,indent,paramNames)::_t ->
                                 // delete the slashes the user typed (they may be indented wrong)
                                 wpfTextView.TextBuffer.Delete(wpfTextView.Caret.Position.BufferPosition.GetContainingLine().Extent.Span) |> ignore
                                 // add the new xmldoc comment
@@ -73,7 +73,7 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
                                         .Append(' ', indent).Append("/// </summary>") |> ignore
                                 for p in paramNames do
                                     toInsert.AppendLine().Append(' ', indent).Append(sprintf "/// <param name=\"%s\"></param>" p) |> ignore
-                                let newSS = wpfTextView.TextBuffer.Insert(wpfTextView.Caret.Position.BufferPosition.Position, toInsert.ToString())
+                                let _newSS = wpfTextView.TextBuffer.Insert(wpfTextView.Caret.Position.BufferPosition.Position, toInsert.ToString())
                                 // move the caret to between the summary tags
                                 let lastLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine()
                                 let middleSummaryLine = wpfTextView.TextSnapshot.GetLineFromLineNumber(lastLine.LineNumber - 1 - paramNames.Length)

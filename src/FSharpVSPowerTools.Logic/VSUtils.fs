@@ -10,9 +10,10 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
 
-let fromPosition(snapshot : ITextSnapshot, startLine, startCol, endLine, endCol) =
-    let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startCol
-    let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endCol
+/// Retrieve snapshot from VS zero-based positions
+let fromVSPos(snapshot : ITextSnapshot, startLine, startCol, endLine, endCol) =
+    let startPos = snapshot.GetLineFromLineNumber(startLine).Start.Position + startCol
+    let endPos = snapshot.GetLineFromLineNumber(endLine).Start.Position + endCol
     SnapshotSpan(snapshot, startPos, endPos - startPos)
 
 type SnapshotPoint with
@@ -49,11 +50,12 @@ type SnapshotSpan with
 
         (currentWord, word)
 
+    /// Return corresponding zero-based range
     member this.GetRange() =
         let (_, w2) = this.GetWordIncludingQuotes()
         let extraLength = w2.Length - this.Length
-        let lineStart = this.Snapshot.GetLineNumberFromPosition(this.Start.Position) + 1
-        let lineEnd = this.Snapshot.GetLineNumberFromPosition(this.End.Position) + 1
+        let lineStart = this.Snapshot.GetLineNumberFromPosition(this.Start.Position)
+        let lineEnd = this.Snapshot.GetLineNumberFromPosition(this.End.Position)
         let startLine = this.Snapshot.GetLineFromPosition(this.Start.Position)
         let endLine = this.Snapshot.GetLineFromPosition(this.End.Position)
         let colStart = this.Start.Position - startLine.Start.Position
