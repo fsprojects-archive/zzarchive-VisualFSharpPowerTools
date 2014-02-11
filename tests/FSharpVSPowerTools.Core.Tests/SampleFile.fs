@@ -72,3 +72,23 @@ module LocalModule =
         member this.NopeIsAPropertyGetterSetter
             with get() = 42
             and set(x) = ()
+
+///
+let functionWithEmptyXmlDocComment x = ()			
+
+/// <
+let functionWithOpenSquareBracketOnlyXmlDocComment x = ()			
+
+/// function
+let functionWithNormalXmlDocComment x = ()			
+
+/// 
+type TypeWithEmptyXmlDocComment = class end
+
+/// type
+type TypeWithXmlDocComment() =
+    ///
+    member x.X = ()
+	/// member
+	member x.Y = ()
+	

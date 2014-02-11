@@ -305,13 +305,20 @@ let GetXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, f
             i <- i + 1
         i
 
+    let isEmptyXmlDoc (preXmlDoc: PreXmlDoc) = 
+        match preXmlDoc.ToXmlDoc() with 
+        | XmlDoc [||] -> true
+        | XmlDoc [|x|] when x.Trim() = "" -> true
+        | _ -> false
+
     let rec GetXmlDocablesSynModuleDecl decl =
         match decl with
         | SynModuleDecl.ModuleAbbrev(_ident, _longIdent, _range) -> []
         | SynModuleDecl.NestedModule(_synComponentInfo, synModuleDecls, _, _range) -> (synModuleDecls |> List.collect GetXmlDocablesSynModuleDecl)
         | SynModuleDecl.Let(_, synBindingList, range) -> 
             let anyXmlDoc = 
-                synBindingList |> List.exists (fun (SynBinding.Binding(_, _, _, _, _, preXmlDoc, _, _, _, _, _, _)) -> match preXmlDoc.ToXmlDoc() with | XmlDoc [| |] -> false | _ -> true)
+                synBindingList |> List.exists (fun (SynBinding.Binding(_, _, _, _, _, preXmlDoc, _, _, _, _, _, _)) -> 
+                    not <| isEmptyXmlDoc preXmlDoc)
             if anyXmlDoc then [] else
             let synAttributes = 
                 synBindingList |> List.collect (fun (SynBinding.Binding(_, _, _, _, a, _, _, _, _, _, _, _)) -> a)
@@ -342,39 +349,36 @@ let GetXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, f
             | ObjectModel(_synTypeDefnKind, synMemberDefns, _oRange) -> (synMemberDefns |> List.collect GetXmlDocablesSynMemberDefn)
             | Simple(_synTypeDefnSimpleRepr, _range) -> []
         let docForTypeDefn = 
-            match preXmlDoc.ToXmlDoc() with 
-            | XmlDoc [| |] -> 
+            if isEmptyXmlDoc preXmlDoc then
                 let fullRange = synAttributes |> List.fold (fun r a -> unionRanges r a.Range) (unionRanges compRange tRange)
                 let line = fullRange.StartLine 
                 let indent = indentOf line
                 [XmlDocable(line,indent,[])]
-            | _ -> []
+            else []
         docForTypeDefn @ stuff @ (synMemberDefns |> List.collect GetXmlDocablesSynMemberDefn)
 
     and GetXmlDocablesSynMemberDefn m =
         match m with
         | SynMemberDefn.Open(_longIdent, _range) -> []
         | SynMemberDefn.Member(SynBinding.Binding(_synAccessOption, _synBindingKind, _, _, synAttributes, preXmlDoc, _synValData, synPat, _synBindingReturnInfoOption, _synExpr, _range, _sequencePointInfoForBinding), memRange) -> 
-            match preXmlDoc.ToXmlDoc() with
-            | XmlDoc [| |] ->
+            if isEmptyXmlDoc preXmlDoc then
                 let fullRange = synAttributes |> List.fold (fun r a -> unionRanges r a.Range) memRange
                 let line = fullRange.StartLine 
                 let indent = indentOf line
                 let paramNames = digNamesFrom synPat 
                 [XmlDocable(line,indent,paramNames)]
-            | _ -> []
+            else []
         | SynMemberDefn.ImplicitCtor(_synAccessOption, _synAttributes, _synSimplePatList, _identOption, _range) -> []
         | SynMemberDefn.ImplicitInherit(_synType, _synExpr, _identOption, _range) -> []
         | SynMemberDefn.LetBindings(_synBindingList, _, _, _range) -> []
         | SynMemberDefn.AbstractSlot(ValSpfn(synAttributes, _ident, _synValTyparDecls, _synType, SynValInfo(args, _ret), _, _, preXmlDoc, _synAccessOpt, _synExprOpt, _range), _memberFlags, range) -> 
-            match preXmlDoc.ToXmlDoc() with
-            | XmlDoc [| |] ->
+            if isEmptyXmlDoc preXmlDoc then
                 let fullRange = synAttributes |> List.fold (fun r a -> unionRanges r a.Range) range
                 let line = fullRange.StartLine 
                 let indent = indentOf line
                 let paramNames = args |> List.collect (fun az -> az |> List.choose (fun (SynArgInfo(_synAttributes, _, idOpt)) -> match idOpt with | Some id -> Some(id.idText) | _ -> None))
                 [XmlDocable(line,indent,paramNames)]
-            | _ -> []
+            else []
         | SynMemberDefn.Interface(_synType, synMemberDefnsOption, _range) -> 
             match synMemberDefnsOption with 
             | None -> [] 
