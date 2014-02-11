@@ -277,7 +277,8 @@ type LanguageService(dirtyNotify) =
 
     // Parse and retrieve Checked Project results, this has the entity graph and errors etc
     let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-  
+    Debug.WriteLine(sprintf "There are %i error(s)." projectResults.Errors.Length)
+    Debug.Assert(not projectResults.HasCriticalErrors, "Should abort on critical errors.")
     // Get the parse results for the current file
     let! _backgroundParseResults, backgroundTypedParse = 
         // Note this operates on the file system so the file needs to be current
@@ -287,8 +288,8 @@ type LanguageService(dirtyNotify) =
     | Some(colu, identIsland) ->
         // Guard against partial parsing results
         let offset = identIsland |> List.sumBy (fun s -> if s.EndsWith(".") then 1 else 0)
-        let identIsland = identIsland |> List.map (fun s -> s.TrimEnd('.'))
-        Debug.WriteLine("Parsing: Offset from parsing is {0}", offset)
+        let identIsland = if offset = 0 then identIsland else identIsland |> List.map (fun s -> s.TrimEnd('.'))
+        Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
         // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
         match backgroundTypedParse.GetSymbolAtLocation(line, colu - offset, lineStr, identIsland) with
         | Some(symbol) ->

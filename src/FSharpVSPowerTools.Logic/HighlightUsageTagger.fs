@@ -29,8 +29,8 @@ type HighlightUsageTag() =
 type HighlightIdentifierFormatDefinition() =
     inherit MarkerFormatDefinition()
     do  
-      base.BackgroundColor <- Nullable Colors.LightGreen
-      base.ForegroundColor <- Nullable Colors.DarkGreen
+      base.BackgroundColor <- Nullable(Color.FromRgb(173uy, 214uy, 255uy))
+      base.ForegroundColor <- Nullable(Color.FromRgb(231uy, 231uy, 214uy))
       base.DisplayName <- "F# Highlight Usage"
       base.ZOrder <- 5
 
@@ -81,9 +81,8 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                         let files = projectProvider.SourceFiles
                         // If there is no source file, use currentFile as an independent script
                         if Array.isEmpty files then [| currentFile |] else files
-                    let identifier = newWord.GetText()
                     Debug.WriteLine("[Highlight Usage] Get symbol references for '{0}' at line {1} col {2} on {3} framework and '{4}' arguments", 
-                        identifier, endLine, endCol, sprintf "%A" framework, String.concat " " args)
+                        newWord.GetText(), endLine, endCol, sprintf "%A" framework, String.concat " " args)
                     let! results = 
                         VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
                                                                              endLine, endCol, currentLine, args, framework)
@@ -94,17 +93,20 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                         Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
                         let foundUsages =
                             references
-                            |> Seq.map (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
-                                // Range01 type consists of zero-based values, which is a bit confusing
-                                fileName, fromVSPos(newWord.Snapshot, beginLine, beginCol, endLine, endCol))
-                            |> Seq.choose (fun (fileName, span) -> 
-                                // Sometimes F.C.S returns a composite identifier
+                            |> Seq.choose (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
+                                // We have to filter by file name otherwise the range is invalid wrt current snapshot
+                                if fileName = currentFile then
+                                    // Range01 type consists of zero-based values, which is a bit confusing
+                                    Some (fromVSPos(newWord.Snapshot, beginLine, beginCol, endLine, endCol))
+                                else None)
+                            |> Seq.choose (fun span -> 
                                 let subSpan = 
-                                    let index = identifier.LastIndexOf(".")
+                                    // Sometimes F.C.S returns a composite identifier which should be truncated
+                                    let index = span.GetText().LastIndexOf(".")
                                     if index <> -1 then 
                                         SnapshotSpan(newWord.Snapshot, span.Start.Position + index + 1, span.Length - index - 1)
                                     else span
-                                if fileName = currentFile && possibleSpans.Contains(subSpan) then Some subSpan else None)
+                                if possibleSpans.Contains(subSpan) then Some subSpan else None)
                             
                         return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), Some newWord)
                     | None ->
@@ -114,7 +116,6 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
 
     let updateWordAdornments() =
         let currentRequest = requestedPoint
-
         // Find all words in the buffer like the one the caret is on
         match textStructureNavigator.FindAllWords(currentRequest) with
         | None ->

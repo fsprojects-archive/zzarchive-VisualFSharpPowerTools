@@ -24,13 +24,13 @@ let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
 let args = 
   [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-    "-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll\FSharp.Core.dll";
-    "-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll\mscorlib.dll";
-    "-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll\System.dll";
-    "-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll\System.Core.dll";
-    "-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll\System.Drawing.dll";
-    "-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll\System.Numerics.dll";
-    "-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll\System.Windows.Forms.dll"|]
+    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
+    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
+    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
+    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
+    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
+    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
+    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
 
@@ -40,18 +40,21 @@ let checker = InteractiveChecker.Create()
 let projectOptions = 
     checker.GetProjectOptionsFromCommandLineArgs
        (projectFileName,
-        [| yield "--noframework" 
-           yield "--debug-" 
-           yield "--define:DEBUG" 
-           yield "--optimize-"
-           yield fileName
-           let references = 
-             [ @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\mscorlib.dll" 
-               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.dll" 
-               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Core.dll" 
-               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"]  
-           for r in references do
-                 yield "-r:" + r |])
+        [| 
+            yield! args
+//           yield "--noframework" 
+//           yield "--debug-" 
+//           yield "--define:DEBUG" 
+//           yield "--optimize-"
+            yield fileName
+//           let references = 
+//             [ @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\mscorlib.dll" 
+//               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.dll" 
+//               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Core.dll" 
+//               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"]  
+//           for r in references do
+//                 yield "-r:" + r 
+        |])
 
 let rec allSymbolsInEntities compGen (entities: IList<FSharpEntity>) = 
     [ for e in entities do 
@@ -67,12 +70,14 @@ let rec allSymbolsInEntities compGen (entities: IList<FSharpEntity>) =
           yield! allSymbolsInEntities compGen e.NestedEntities ]
 
 let wholeProjectResults = checker.ParseAndCheckProject(projectOptions) |> Async.RunSynchronously
+printfn "There are %i error(s)." wholeProjectResults.Errors.Length
+Array.iter (printfn "Errors:\n %A") wholeProjectResults.Errors;;
 let allSymbols = allSymbolsInEntities true wholeProjectResults.AssemblySignature.Entities;;
 let allUsesOfAllSymbols = 
     [ for s in allSymbols do 
             let loc = s.DeclarationLocation |> Option.map (fun r -> Range.Range.toZ r)
             yield s.ToString(), loc, wholeProjectResults.GetUsesOfSymbol(s) ]
-    |> List.iter (printfn "%A")
+    //|> List.iter (printfn "%A")
 #endif
 
 [<Test>]

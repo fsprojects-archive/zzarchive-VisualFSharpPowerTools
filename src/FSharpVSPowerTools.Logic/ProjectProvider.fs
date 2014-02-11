@@ -16,9 +16,6 @@ type ProjectProvider(project : VSProject) =
         | null -> null
         | _ -> prop.Value.ToString()
 
-    /// Wraps the given string between double quotes
-    let wrap (s : string) = if s.StartsWith "\"" then s else String.Join("", "\"", s, "\"")  
-
     let currentDir = getProperty "FullPath"
     let projectFileName = 
         let fileName = getProperty "FileName"
@@ -45,10 +42,9 @@ type ProjectProvider(project : VSProject) =
         project.References
         |> Seq.cast<Reference>
         // Remove all project references for now
-        |> Seq.choose (fun r -> if r.SourceProject = null then Some(Path.Combine(r.Path, r.Name)) else None)
-        |> Seq.map (fun name -> 
-            let assemblyName = if name.EndsWith ".dll" then name else name + ".dll"
-            sprintf "-r:%s" (wrap assemblyName))
+        // Path.GetFullPath will escape path strings correctly
+        |> Seq.choose (fun r -> if r.SourceProject = null then Some(Path.GetFullPath(r.Path)) else None)
+        |> Seq.map (fun path -> sprintf "-r:%s" path)
 
     member this.CompilerOptions = 
         match projectOpt with
