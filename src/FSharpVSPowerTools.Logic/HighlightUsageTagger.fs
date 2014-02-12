@@ -61,11 +61,12 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq) =
         async {
             if currentRequest = requestedPoint then
+              try
                 let (_, _, endLine, endCol) = newWord.GetRange()
                 let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
                 let doc = dte.ActiveDocument
                 Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, "Should be able to find active document.")
-                let project = doc.ProjectItem.ContainingProject.Object :?> VSProject
+                let project = try doc.ProjectItem.ContainingProject.Object :?> VSProject with _ -> null
                 if project = null then
                     Debug.WriteLine("[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way.")
                     return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
@@ -112,6 +113,9 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     | None ->
                         // Return empty values in order to clear up markers
                         return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
+              with e ->
+                Debug.WriteLine(sprintf "[Highlight Usage] %O exception occurs while updating." e)
+                return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
         } |> Async.Start
 
     let updateWordAdornments() =

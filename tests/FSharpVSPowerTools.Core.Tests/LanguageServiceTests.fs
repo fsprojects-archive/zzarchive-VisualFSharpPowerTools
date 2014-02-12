@@ -83,7 +83,7 @@ let allUsesOfAllSymbols =
 [<Test>]
 let ``should find usages of arrays``() =
     VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                         126, 30, "    let substring = helloWorld.[0..6]", args, framework)
+                                                         126, 29, "    let substring = helloWorld.[0..6]", args, framework)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, _, references) -> Array.map snd references)
     |> Option.get
