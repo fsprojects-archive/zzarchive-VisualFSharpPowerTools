@@ -60,7 +60,7 @@ type SnapshotSpan with
         let endLine = this.Snapshot.GetLineFromPosition(this.End.Position)
         let colStart = this.Start.Position - startLine.Start.Position
         let colEnd = this.End.Position - endLine.Start.Position
-        (lineStart, colStart, lineEnd, colEnd + extraLength)
+        (lineStart, colStart, lineEnd, colEnd + extraLength - 1)
 
     member this.FindNewSpans() =
         let txt = this.Snapshot.GetText()

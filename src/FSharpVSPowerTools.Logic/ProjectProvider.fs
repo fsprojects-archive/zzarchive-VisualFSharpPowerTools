@@ -41,9 +41,9 @@ type ProjectProvider(project : VSProject) =
     member private __.References = 
         project.References
         |> Seq.cast<Reference>
-        // Remove all project references for now
+        // Since project references are resolved automatically, we include it here
         // Path.GetFullPath will escape path strings correctly
-        |> Seq.choose (fun r -> if r.SourceProject = null then Some(Path.GetFullPath(r.Path)) else None)
+        |> Seq.map (fun r -> Path.GetFullPath(r.Path))
         |> Seq.map (fun path -> sprintf "-r:%s" path)
 
     member this.CompilerOptions = 

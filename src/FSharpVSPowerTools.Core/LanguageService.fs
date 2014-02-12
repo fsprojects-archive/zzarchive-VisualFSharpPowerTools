@@ -286,12 +286,12 @@ type LanguageService(dirtyNotify) =
 
     match FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr) with 
     | Some(colu, identIsland) ->
-        // Guard against partial parsing results
-        let offset = identIsland |> List.sumBy (fun s -> if s.EndsWith(".") then 1 else 0)
-        let identIsland = if offset = 0 then identIsland else identIsland |> List.map (fun s -> s.TrimEnd('.'))
+//        // Guard against partial parsing results
+//        let offset = identIsland |> List.sumBy (fun s -> if s.EndsWith(".") || s.EndsWith("<") then 1 else 0)
+//        let identIsland = if offset = 0 then identIsland else identIsland |> List.map (fun s -> s.TrimEnd('.'))
         Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
         // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-        match backgroundTypedParse.GetSymbolAtLocation(line, colu - offset, lineStr, identIsland) with
+        match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
         | Some(symbol) ->
             let lastIdent = Seq.last identIsland
             let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
