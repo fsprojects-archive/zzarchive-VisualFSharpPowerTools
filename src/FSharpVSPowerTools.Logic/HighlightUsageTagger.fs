@@ -88,12 +88,12 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                         VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
                                                                              endLine, endCol, currentLine, args, framework)
                     match results with
-                    | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
+                    | Some(_currentSymbolName, lastIdent, _currentSymbolRange, refs) -> 
                         let possibleSpans = HashSet(newWordSpans)
                         // Since we can't select multi-word, lastIdent is for debugging only.
                         Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
-                        let foundUsages =
-                            references
+                        let references =
+                            refs
                             |> Seq.choose (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
                                 // We have to filter by file name otherwise the range is invalid wrt current snapshot
                                 if fileName = currentFile then
@@ -108,7 +108,8 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                                         SnapshotSpan(newWord.Snapshot, span.Start.Position + index + 1, span.Length - index - 1)
                                     else span
                                 if possibleSpans.Contains(subSpan) then Some subSpan else None)
-                            
+                        // If we find a symbol, color it no matter what
+                        let foundUsages = if Seq.isEmpty references then seq [newWord] else references
                         return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), Some newWord)
                     | None ->
                         // Return empty values in order to clear up markers

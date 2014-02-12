@@ -286,18 +286,24 @@ type LanguageService(dirtyNotify) =
 
     match FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr) with 
     | Some(colu, identIsland) ->
-//        // Guard against partial parsing results
-//        let offset = identIsland |> List.sumBy (fun s -> if s.EndsWith(".") || s.EndsWith("<") then 1 else 0)
-//        let identIsland = if offset = 0 then identIsland else identIsland |> List.map (fun s -> s.TrimEnd('.'))
-        Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
-        // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-        match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
-        | Some(symbol) ->
-            let lastIdent = Seq.last identIsland
-            let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
-            let refs = projectResults.GetUsesOfSymbol(symbol)
-            return Some(symbol, lastIdent, symRangeOpt, refs)
-        | _ -> return None
+        if List.isEmpty identIsland then 
+            return None
+        else
+            // Not yet find a way to handle exceptions raised by GetSymbolAtLocation
+            // Temporarily disable lookup of directives and keywords
+            if List.forall (String.forall Char.IsUpper) identIsland || 
+               List.exists (fun s -> List.exists ((=) s) identIsland) Lexhelp.Keywords.keywordNames then
+                return None
+            else
+                Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
+                // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
+                match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
+                | Some(symbol) ->
+                    let lastIdent = Seq.last identIsland
+                    let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
+                    let refs = projectResults.GetUsesOfSymbol(symbol)
+                    return Some(symbol, lastIdent, symRangeOpt, refs)
+                | _ -> return None
     | _ -> return None }
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
