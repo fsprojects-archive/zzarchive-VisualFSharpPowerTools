@@ -35,11 +35,13 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
+            this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbHighlightUsage);
             this.grbOptions.Controls.Add(this.chbNavBar);
             this.grbOptions.Controls.Add(this.lblInfo);
             this.grbOptions.Controls.Add(this.lblTitle);
@@ -48,7 +50,7 @@
             this.grbOptions.Controls.Add(this.chbXMLDoc);
             this.grbOptions.Location = new System.Drawing.Point(3, 3);
             this.grbOptions.Name = "grbOptions";
-            this.grbOptions.Size = new System.Drawing.Size(414, 148);
+            this.grbOptions.Size = new System.Drawing.Size(424, 254);
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
@@ -67,7 +69,7 @@
             // 
             this.lblInfo.AutoSize = true;
             this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.lblInfo.Location = new System.Drawing.Point(13, 103);
+            this.lblInfo.Location = new System.Drawing.Point(13, 215);
             this.lblInfo.Name = "lblInfo";
             this.lblInfo.Size = new System.Drawing.Size(331, 13);
             this.lblInfo.TabIndex = 5;
@@ -76,7 +78,7 @@
             // lblTitle
             // 
             this.lblTitle.AutoSize = true;
-            this.lblTitle.Location = new System.Drawing.Point(13, 119);
+            this.lblTitle.Location = new System.Drawing.Point(13, 231);
             this.lblTitle.Name = "lblTitle";
             this.lblTitle.Size = new System.Drawing.Size(95, 13);
             this.lblTitle.TabIndex = 4;
@@ -85,7 +87,7 @@
             // lblHome
             // 
             this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(102, 119);
+            this.lblHome.Location = new System.Drawing.Point(104, 230);
             this.lblHome.Name = "lblHome";
             this.lblHome.Size = new System.Drawing.Size(240, 13);
             this.lblHome.TabIndex = 3;
@@ -118,13 +120,25 @@
             this.chbXMLDoc.Text = "Use auto-generated XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
             // 
+            // chbHighlightUsage
+            // 
+            this.chbHighlightUsage.AutoSize = true;
+            this.chbHighlightUsage.Checked = true;
+            this.chbHighlightUsage.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 99);
+            this.chbHighlightUsage.Name = "chbHighlightUsage";
+            this.chbHighlightUsage.Size = new System.Drawing.Size(133, 17);
+            this.chbHighlightUsage.TabIndex = 7;
+            this.chbHighlightUsage.Text = "Use highlighting usage";
+            this.chbHighlightUsage.UseVisualStyleBackColor = true;
+            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.grbOptions);
             this.Name = "GeneralOptionsControl";
-            this.Size = new System.Drawing.Size(454, 173);
+            this.Size = new System.Drawing.Size(461, 294);
             this.Load += new System.EventHandler(this.GeneralOptionsControl_Load);
             this.grbOptions.ResumeLayout(false);
             this.grbOptions.PerformLayout();
@@ -141,5 +155,6 @@
         private System.Windows.Forms.LinkLabel lblHome;
         private System.Windows.Forms.Label lblInfo;
         private System.Windows.Forms.CheckBox chbNavBar;
+        private System.Windows.Forms.CheckBox chbHighlightUsage;
     }
 }

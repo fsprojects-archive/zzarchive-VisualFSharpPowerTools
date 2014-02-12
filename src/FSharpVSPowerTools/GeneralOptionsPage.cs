@@ -56,6 +56,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool NavBarEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool HighlightUsageEnabled { get; set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -66,6 +69,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.XMLDocEnabled = XMLDocEnabled;
                 _optionsControl.FormattingEnabled = FormattingEnabled;
                 _optionsControl.NavBarEnabled = NavBarEnabled;
+                _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
 
                 return _optionsControl;
             }
@@ -75,6 +79,7 @@ namespace FSharpVSPowerTools
             XMLDocEnabled = true;
             FormattingEnabled = true;
             NavBarEnabled = GetNavigationBarConfig();
+            HighlightUsageEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
@@ -90,6 +95,8 @@ namespace FSharpVSPowerTools
                 {
                     NavBarEnabled = _optionsControl.NavBarEnabled;
                 };
+
+                HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
             }
             base.OnApply(e);
         }

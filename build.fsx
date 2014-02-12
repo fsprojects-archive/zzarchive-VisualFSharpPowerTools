@@ -85,7 +85,8 @@ Target "CleanDocs" (fun _ ->
 // Build library & test project
 
 Target "Build" (fun _ ->
-    !! (solutionFile + "*.sln")
+    // We only like to build only one solution
+    !! (solutionFile + ".sln")
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 )

@@ -172,3 +172,4 @@ TestResults.xml
 
 # Nuget outputs
 nuget/*.nupkg
+src/FSharpVSPowerTools/Properties/AssemblyInfo.cs

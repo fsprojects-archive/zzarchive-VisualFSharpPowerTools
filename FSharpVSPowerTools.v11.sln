@@ -1,8 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
-MinimumVisualStudioVersion = 10.0.40219.1
+# Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
 		.nuget\NuGet.Config = .nuget\NuGet.Config
@@ -35,8 +33,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools", "src\FSharpVSPowerTools\FSharpVSPowerTools.csproj", "{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}"
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpXmlDoc", "src\FSharpXmlDoc\FSharpXmlDoc.fsproj", "{48913937-D335-4A8E-A22F-7409385A989A}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core.Tests", "tests\FSharpVSPowerTools.Core.Tests\FSharpVSPowerTools.Core.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
@@ -45,16 +41,14 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic", 
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core", "src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.v11", "src\FSharpVSPowerTools\FSharpVSPowerTools.v11.csproj", "{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.Build.0 = Release|Any CPU
 		{48913937-D335-4A8E-A22F-7409385A989A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{48913937-D335-4A8E-A22F-7409385A989A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48913937-D335-4A8E-A22F-7409385A989A}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -71,6 +65,10 @@ Global
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.Build.0 = Release|Any CPU
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

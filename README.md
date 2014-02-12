@@ -10,9 +10,11 @@ F# Power Tools is a community effort to bring useful F# VS extensions into a sin
  - Potentially adding new features which complement Visual F# Tools for VS
 
 ### Currently supported features
- - Format document (via [Fantomas extension](https://github.com/dungpa/fantomas))
- - Format selection (via [Fantomas extension](https://github.com/dungpa/fantomas))
- - Auto-generate XmlDoc (via [F# XmlDoc extension](http://lorgonblog.wordpress.com/2010/12/04/source-code-for-f-xmldoc-extension/))
+ - Auto-generated XmlDoc (via [F# XmlDoc extension](http://lorgonblog.wordpress.com/2010/12/04/source-code-for-f-xmldoc-extension/))
+ - Formatting document (via [Fantomas extension](https://github.com/dungpa/fantomas))
+ - Formatting selection (via [Fantomas extension](https://github.com/dungpa/fantomas))
+ - Navigation bar (see [this article](http://tomasp.net/blog/regions-navigation.aspx/))
+ - Highlighting usage
 
 For user guides, please take a look at [the home page](http://fsprojects.github.io/FSharpVSPowerTools/).
 

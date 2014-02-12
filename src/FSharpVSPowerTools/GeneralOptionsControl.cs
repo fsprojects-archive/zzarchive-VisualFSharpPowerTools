@@ -36,11 +36,18 @@ namespace FSharpVSPowerTools
             set { chbNavBar.Checked = value; }
         }
 
+        public bool HighlightUsageEnabled
+        {
+            get { return chbHighlightUsage.Checked; }
+            set { chbHighlightUsage.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXMLDoc.Checked = OptionsPage.XMLDocEnabled;
             chbFormatting.Checked = OptionsPage.FormattingEnabled;
             chbNavBar.Checked = OptionsPage.NavBarEnabled;
+            chbHighlightUsage.Checked = OptionsPage.HighlightUsageEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

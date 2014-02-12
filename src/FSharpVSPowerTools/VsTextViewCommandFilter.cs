@@ -33,7 +33,7 @@ namespace FSharpVSPowerTools
             GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
             if (!generalOptions.XMLDocEnabled)
             {
-                Debug.WriteLine("XMLDoc feature is disabled in General option page.");
+                Debug.WriteLine("[XMLDoc] The feature is disabled in General option page.");
                 return;
             }
 
