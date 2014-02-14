@@ -472,6 +472,12 @@ module UnionTypes =
     let (B b) = B 1
     type C = A list
 
+    let message = "a"
+    let x = message + "b"
+    let y = "a message and more"
+
+    // List.length ref
+
 // ---------------------------------------------------------------
 //         Option types
 // ---------------------------------------------------------------

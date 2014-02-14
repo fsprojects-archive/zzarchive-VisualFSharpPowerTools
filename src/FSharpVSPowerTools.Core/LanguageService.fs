@@ -286,29 +286,48 @@ type LanguageService(dirtyNotify) =
         // Note this operates on the file system so the file needs to be current
         checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
 
+    let defines = 
+        args |> Array.choose (fun s -> if s.StartsWith "--define:" then Some(s.Substring(9)) else None)
+             |> Array.toList
+    let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
+
+    let (|Symbol|_|) (colu, lineStr) =
+        let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
+        let rec loop lexState =
+            match lineTokenizer.ScanToken(!lexState) with
+            | None, _ -> None
+            | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
+                // Ignore everything in a line with compiler directives
+                None
+            | Some tok, newLexState ->
+                // Tokenizer uses zero-based columns
+                if tok.LeftColumn <= colu-1 && colu-1 <= tok.RightColumn && tok.TokenName = "IDENT" then
+                    Some tok
+                else
+                    lexState := newLexState
+                    loop lexState
+            
+        let lexState = ref 0L
+        loop lexState
+            
     match FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr) with 
     | Some(colu, identIsland) ->
         if List.isEmpty identIsland then 
             return None
         else
-            // Not yet find a way to handle exceptions raised by GetSymbolAtLocation
-            // Temporarily disable lookup of directives and keywords
-            if lineStr.Trim().StartsWith "#" && List.forall (String.forall Char.IsUpper) identIsland then
-                return None
-            else
-                let identIslandSet = set identIsland 
-                if keywordNames |> Set.intersect identIslandSet |> Set.isEmpty |> not then
-                    return None
-                else
-                    Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
-                    // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-                    match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
-                    | Some(symbol) ->
-                        let lastIdent = Seq.last identIsland
-                        let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
-                        let refs = projectResults.GetUsesOfSymbol(symbol)
-                        return Some(symbol, lastIdent, symRangeOpt, refs)
-                    | _ -> return None
+            match (colu, lineStr) with
+            | Symbol _ ->
+                // We only look up identifiers, everything else isn't of interest       
+                Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
+                // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
+                match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
+                | Some(symbol) ->
+                    let lastIdent = Seq.last identIsland
+                    let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
+                    let refs = projectResults.GetUsesOfSymbol(symbol)
+                    return Some(symbol, lastIdent, symRangeOpt, refs)
+                | _ -> return None
+            | _ -> return None
     | _ -> return None }
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =

@@ -89,6 +89,13 @@ let checkSymbolUsage line col lineStr expected =
     |> set
     |> assertEqual (set expected)
 
+let hasNoSymbolUsage line col lineStr =
+    VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
+                                                         line, col, lineStr, args, framework)
+    |> Async.RunSynchronously
+    |> Option.map (fun (_, _, _, references) -> Array.map snd references)
+    |> assertEqual None
+
 [<Test>]
 let ``should find usages of arrays``() =
     checkSymbolUsage 
@@ -112,3 +119,15 @@ let ``should find usages of DU types named with single upper-case letter``() =
     checkSymbolUsage
         470 10 "    type A = B of int"
         [ (470, 9), (470, 10); (472, 13), (472, 14) ]
+
+[<Test>]
+let ``should not find usages inside comments``() =
+    hasNoSymbolUsage 478 11 "    // List.length ref"
+
+[<Test>]
+let ``should not find usages inside strings``() =
+    hasNoSymbolUsage 476 22 "    let y = \"a message and more\""
+
+[<Test>]
+let ``should not find usages inside compiler directives``() =
+    hasNoSymbolUsage 682 12 "#if COMPILED"
