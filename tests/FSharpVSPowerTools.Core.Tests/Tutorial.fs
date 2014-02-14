@@ -467,7 +467,10 @@ module UnionTypes =
         for card in fullDeck do 
             printfn "%s" (showCard card)
 
-
+    // single upper-case letter named DU
+    type A = B of int
+    let (B b) = B 1
+    type C = A list
 
 // ---------------------------------------------------------------
 //         Option types

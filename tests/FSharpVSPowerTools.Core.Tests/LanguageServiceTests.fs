@@ -80,22 +80,35 @@ let allUsesOfAllSymbols =
     //|> List.iter (printfn "%A")
 #endif
 
-[<Test>]
-let ``should find usages of arrays``() =
+let checkSymbolUsage line col lineStr expected =
     VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                         126, 29, "    let substring = helloWorld.[0..6]", args, framework)
+                                                         line, col, lineStr, args, framework)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, _, references) -> Array.map snd references)
     |> Option.get
     |> set
-    |> assertEqual (set [ ((126, 20), (126, 30)); ((123, 8), (123, 18)); ((132, 17), (132, 27)) ])
+    |> assertEqual (set expected)
+
+[<Test>]
+let ``should find usages of arrays``() =
+    checkSymbolUsage 
+        126 29 "    let substring = helloWorld.[0..6]"
+        [ (126, 20), (126, 30); (123, 8), (123, 18); (132, 17), (132, 27) ]
 
 [<Test>]
 let ``should find usages of members``() =
-    VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                         217, 26, "        member this.Length = length", args, framework)
-    |> Async.RunSynchronously
-    |> Option.map (fun (_, _, _, references) -> Array.map snd references)
-    |> Option.get
-    |> set
-    |> assertEqual (set [ ((217, 20), (217, 26)); ((227, 63), (227, 77)); ((227, 78), (227, 92)) ])
+    checkSymbolUsage
+        217 26 "        member this.Length = length"
+        [ (217, 20), (217, 26); (227, 63), (227, 77); (227, 78), (227, 92) ]
+
+[<Test>]
+let ``should find usages of DU constructors named with single upper-case letter``() =
+    checkSymbolUsage
+        470 14 "    type A = B of int"
+        [ (470, 13), (470, 14); (471, 9), (471, 10); (471, 16), (471, 17) ]
+
+[<Test>]
+let ``should find usages of DU types named with single upper-case letter``() =
+    checkSymbolUsage
+        470 10 "    type A = B of int"
+        [ (470, 9), (470, 10); (472, 13), (472, 14) ]

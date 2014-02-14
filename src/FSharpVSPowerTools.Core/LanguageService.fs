@@ -118,6 +118,8 @@ type LanguageService(dirtyNotify) =
           Environment.ExpandEnvironmentVariables("%HOMEDRIVE%%HOMEPATH%")
       Path.Combine(dir, Path.GetFileName(path))
    
+  let keywordNames = set Lexhelp.Keywords.keywordNames
+
   // Mailbox of this 'LanguageService'
   let mbox = MailboxProcessor.Start(fun mbox ->
     
@@ -291,19 +293,22 @@ type LanguageService(dirtyNotify) =
         else
             // Not yet find a way to handle exceptions raised by GetSymbolAtLocation
             // Temporarily disable lookup of directives and keywords
-            if List.forall (String.forall Char.IsUpper) identIsland || 
-               List.exists (fun s -> List.exists ((=) s) identIsland) Lexhelp.Keywords.keywordNames then
+            if lineStr.Trim().StartsWith "#" && List.forall (String.forall Char.IsUpper) identIsland then
                 return None
             else
-                Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
-                // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-                match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
-                | Some(symbol) ->
-                    let lastIdent = Seq.last identIsland
-                    let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
-                    let refs = projectResults.GetUsesOfSymbol(symbol)
-                    return Some(symbol, lastIdent, symRangeOpt, refs)
-                | _ -> return None
+                let identIslandSet = set identIsland 
+                if keywordNames |> Set.intersect identIslandSet |> Set.isEmpty |> not then
+                    return None
+                else
+                    Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
+                    // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
+                    match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
+                    | Some(symbol) ->
+                        let lastIdent = Seq.last identIsland
+                        let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
+                        let refs = projectResults.GetUsesOfSymbol(symbol)
+                        return Some(symbol, lastIdent, symRangeOpt, refs)
+                    | _ -> return None
     | _ -> return None }
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
