@@ -81,17 +81,13 @@ let allUsesOfAllSymbols =
 #endif
 
 let checkSymbolUsage line col lineStr expected =
-    let actual = 
-        VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                             line, col, lineStr, args, framework)
-        |> Async.RunSynchronously
-        |> Option.map (fun (_, _, _, references) -> Array.map snd references)
-        |> Option.get
-        |> set
-        |> Set.toList
-        |> List.sort
-
-    actual |> assertEqual (set expected |> Set.toList |> List.sort)
+    VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
+                                                         line, col, lineStr, args, framework)
+    |> Async.RunSynchronously
+    |> Option.map (fun (_, _, _, references) -> Array.map snd references)
+    |> Option.get
+    |> set
+    |> assertEqual (set expected)
 
 [<Test>]
 let ``should find usages of arrays``() =
