@@ -31,7 +31,7 @@ type HighlightIdentifierFormatDefinition() =
     do  
       base.BackgroundColor <- Nullable(Color.FromRgb(173uy, 214uy, 255uy))
       base.ForegroundColor <- Nullable(Color.FromRgb(231uy, 231uy, 214uy))
-      base.DisplayName <- "F# Highlight Usage"
+      base.DisplayName <- "F# Highlight References"
       base.ZOrder <- 5
 
 /// This tagger will provide tags for every word in the buffer that

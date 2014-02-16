@@ -4,10 +4,10 @@
 #I "../../bin"
 
 (**
-Highlighting usage
+Highlight references
 -----------------------
 
-Color of the highlighting marker could be customized in  "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> F# Highlight Usage".
+The color of the highlighted marker could be customized in  "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> F# Highlight References".
 Here is a demo screencast.
 
 ![Highlighting usage](img/highlight_usage.gif)

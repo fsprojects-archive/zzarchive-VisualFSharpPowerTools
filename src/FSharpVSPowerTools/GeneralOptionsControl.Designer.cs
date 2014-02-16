@@ -29,13 +29,13 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
             this.chbNavBar = new System.Windows.Forms.CheckBox();
             this.lblInfo = new System.Windows.Forms.Label();
             this.lblTitle = new System.Windows.Forms.Label();
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
-            this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -55,14 +55,26 @@
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
             // 
+            // chbHighlightUsage
+            // 
+            this.chbHighlightUsage.AutoSize = true;
+            this.chbHighlightUsage.Checked = true;
+            this.chbHighlightUsage.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 99);
+            this.chbHighlightUsage.Name = "chbHighlightUsage";
+            this.chbHighlightUsage.Size = new System.Drawing.Size(120, 17);
+            this.chbHighlightUsage.TabIndex = 7;
+            this.chbHighlightUsage.Text = "Highlight references";
+            this.chbHighlightUsage.UseVisualStyleBackColor = true;
+            // 
             // chbNavBar
             // 
             this.chbNavBar.AutoSize = true;
             this.chbNavBar.Location = new System.Drawing.Point(16, 76);
             this.chbNavBar.Name = "chbNavBar";
-            this.chbNavBar.Size = new System.Drawing.Size(115, 17);
+            this.chbNavBar.Size = new System.Drawing.Size(95, 17);
             this.chbNavBar.TabIndex = 6;
-            this.chbNavBar.Text = "Use navigation bar";
+            this.chbNavBar.Text = "Navigation bar";
             this.chbNavBar.UseVisualStyleBackColor = true;
             // 
             // lblInfo
@@ -87,7 +99,7 @@
             // lblHome
             // 
             this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(104, 230);
+            this.lblHome.Location = new System.Drawing.Point(101, 231);
             this.lblHome.Name = "lblHome";
             this.lblHome.Size = new System.Drawing.Size(240, 13);
             this.lblHome.TabIndex = 3;
@@ -102,9 +114,9 @@
             this.chbFormatting.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbFormatting.Location = new System.Drawing.Point(16, 53);
             this.chbFormatting.Name = "chbFormatting";
-            this.chbFormatting.Size = new System.Drawing.Size(156, 17);
+            this.chbFormatting.Size = new System.Drawing.Size(136, 17);
             this.chbFormatting.TabIndex = 2;
-            this.chbFormatting.Text = "Use source code formatting";
+            this.chbFormatting.Text = "Source code formatting";
             this.chbFormatting.UseVisualStyleBackColor = true;
             // 
             // chbXMLDoc
@@ -115,22 +127,10 @@
             this.chbXMLDoc.Location = new System.Drawing.Point(16, 30);
             this.chbXMLDoc.Name = "chbXMLDoc";
             this.chbXMLDoc.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.chbXMLDoc.Size = new System.Drawing.Size(165, 17);
+            this.chbXMLDoc.Size = new System.Drawing.Size(146, 17);
             this.chbXMLDoc.TabIndex = 1;
-            this.chbXMLDoc.Text = "Use auto-generated XMLDoc";
+            this.chbXMLDoc.Text = "Auto-generating XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
-            // 
-            // chbHighlightUsage
-            // 
-            this.chbHighlightUsage.AutoSize = true;
-            this.chbHighlightUsage.Checked = true;
-            this.chbHighlightUsage.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 99);
-            this.chbHighlightUsage.Name = "chbHighlightUsage";
-            this.chbHighlightUsage.Size = new System.Drawing.Size(133, 17);
-            this.chbHighlightUsage.TabIndex = 7;
-            this.chbHighlightUsage.Text = "Use highlighting usage";
-            this.chbHighlightUsage.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 

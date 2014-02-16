@@ -20,7 +20,7 @@ Here are currently supported features:
  * [Auto-generating XMLDoc](xmldoc.html)
  * [Code formatting](codeformatting.html)
  * [Navigation bar](navbar.html)
- * [Highlighting usage](highlightusage.html)
+ * [Highlight references](highlightusage.html)
  
 Contributing and copyright
 --------------------------
