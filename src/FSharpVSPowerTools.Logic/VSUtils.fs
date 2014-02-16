@@ -16,9 +16,19 @@ let fromVSPos(snapshot : ITextSnapshot, startLine, startCol, endLine, endCol) =
     let endPos = snapshot.GetLineFromLineNumber(endLine).Start.Position + endCol
     SnapshotSpan(snapshot, startPos, endPos - startPos)
 
+open Microsoft.FSharp.Compiler.PrettyNaming
+
+let isIdentifier (s : string) =
+    s |> Seq.mapi (fun i c -> i, c)
+      |> Seq.forall (fun (i, c) -> (i = 0 && IsIdentifierFirstCharacter c) || IsIdentifierPartCharacter c) 
+
+let isIdentifierOrOperator (s : string) =
+    isIdentifier s || IsOpName s
+
 type SnapshotPoint with
     member this.WordExtentIsValid(word : TextExtent) =
-        word.IsSignificant && this.Snapshot.GetText(word.Span.Span) |> Seq.exists Char.IsLetter
+        word.IsSignificant && isIdentifierOrOperator(this.Snapshot.GetText(word.Span.Span))
+        
 
 type SnapshotSpan with
     member this.GetWordIncludingQuotes() =
@@ -38,8 +48,8 @@ type SnapshotSpan with
             incr endWordPos
 
         if word.EndsWith("``") then
-            let startWordPos = ref currentWord.Start.Position;
-            let mutable newWord = currentWord.Snapshot.GetText(!startWordPos, !endWordPos - !startWordPos);
+            let startWordPos = ref currentWord.Start.Position
+            let mutable newWord = currentWord.Snapshot.GetText(!startWordPos, !endWordPos - !startWordPos)
             decr startWordPos
             
             while not (newWord.StartsWith("``")) || !startWordPos <= 0 || currentWord.Snapshot.GetText(!startWordPos, 1) = "\n" do

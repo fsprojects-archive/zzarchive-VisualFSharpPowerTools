@@ -685,3 +685,8 @@ module BoilerPlateForForm =
     do ()
     do System.Windows.Forms.Application.Run()
 #endif
+
+module TestCases =
+    let ( *. ) x y = x * y
+    let func1 x = x *. x + 3
+    let func1a (x) = x *. x + 3    

@@ -118,8 +118,6 @@ type LanguageService(dirtyNotify) =
           Environment.ExpandEnvironmentVariables("%HOMEDRIVE%%HOMEPATH%")
       Path.Combine(dir, Path.GetFileName(path))
    
-  let keywordNames = set Lexhelp.Keywords.keywordNames
-
   // Mailbox of this 'LanguageService'
   let mbox = MailboxProcessor.Start(fun mbox ->
     
@@ -287,22 +285,23 @@ type LanguageService(dirtyNotify) =
         checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
 
     let defines = 
-        args |> Array.choose (fun s -> if s.StartsWith "--define:" then Some(s.Substring(9)) else None)
-             |> Array.toList
+        args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
+             |> Seq.toList
     let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
 
-    let (|Symbol|_|) (colu, lineStr) =
+    let isSymbol (colu, lineStr) =
         let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
         let rec loop lexState =
             match lineTokenizer.ScanToken(!lexState) with
-            | None, _ -> None
+            | None, _ -> false
             | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
                 // Ignore everything in a line with compiler directives
-                None
+                false
             | Some tok, newLexState ->
                 // Tokenizer uses zero-based columns
-                if tok.LeftColumn <= colu-1 && colu-1 <= tok.RightColumn && tok.TokenName = "IDENT" then
-                    Some tok
+                if tok.LeftColumn <= colu-1 && colu-1 <= tok.RightColumn && 
+                   (tok.TokenName = "IDENT" || tok.CharClass = TokenCharKind.Operator) then
+                    true
                 else
                     lexState := newLexState
                     loop lexState
@@ -315,10 +314,9 @@ type LanguageService(dirtyNotify) =
         if List.isEmpty identIsland then 
             return None
         else
-            match (colu, lineStr) with
-            | Symbol _ ->
-                // We only look up identifiers, everything else isn't of interest       
-                Debug.WriteLine(sprintf "Parsing: Passed in the following identifiers '%O'" <| String.concat ", " identIsland)
+            if isSymbol(colu, lineStr) then
+                // We only look up identifiers and operators, everything else isn't of interest       
+                Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," identIsland)
                 // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
                 match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
                 | Some(symbol) ->
@@ -327,7 +325,8 @@ type LanguageService(dirtyNotify) =
                     let refs = projectResults.GetUsesOfSymbol(symbol)
                     return Some(symbol, lastIdent, symRangeOpt, refs)
                 | _ -> return None
-            | _ -> return None
+            else 
+                return None
     | _ -> return None }
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =

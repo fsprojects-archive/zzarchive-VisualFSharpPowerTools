@@ -42,18 +42,7 @@ let projectOptions =
        (projectFileName,
         [| 
             yield! args
-//           yield "--noframework" 
-//           yield "--debug-" 
-//           yield "--define:DEBUG" 
-//           yield "--optimize-"
             yield fileName
-//           let references = 
-//             [ @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\mscorlib.dll" 
-//               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.dll" 
-//               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Core.dll" 
-//               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"]  
-//           for r in references do
-//                 yield "-r:" + r 
         |])
 
 let rec allSymbolsInEntities compGen (entities: IList<FSharpEntity>) = 
@@ -77,7 +66,7 @@ let allUsesOfAllSymbols =
     [ for s in allSymbols do 
             let loc = s.DeclarationLocation |> Option.map (fun r -> Range.Range.toZ r)
             yield s.ToString(), loc, wholeProjectResults.GetUsesOfSymbol(s) ]
-    //|> List.iter (printfn "%A")
+//allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
 
 let checkSymbolUsage line col lineStr expected =
@@ -85,9 +74,9 @@ let checkSymbolUsage line col lineStr expected =
                                                          line, col, lineStr, args, framework)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, _, references) -> Array.map snd references)
-    |> Option.get
-    |> set
-    |> assertEqual (set expected)
+    |> Option.map set
+    //|> Option.map (fun s -> printfn "actual: %A" s; s)
+    |> assertEqual (Some (set expected))
 
 let hasNoSymbolUsage line col lineStr =
     VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
@@ -119,6 +108,12 @@ let ``should find usages of DU types named with single upper-case letter``() =
     checkSymbolUsage
         470 10 "    type A = B of int"
         [ (470, 9), (470, 10); (472, 13), (472, 14) ]
+
+[<Test>]
+let ``should find usages of operators``() =
+    checkSymbolUsage
+        690 22 "    let func1 x = x *. x + 3"
+        [ (689, 10), (689, 12); (690, 20), (690, 22); (691, 23), (691, 25) ]
 
 [<Test>]
 let ``should not find usages inside comments``() =
