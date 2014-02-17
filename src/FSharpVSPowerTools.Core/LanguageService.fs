@@ -289,14 +289,14 @@ type LanguageService(dirtyNotify) =
              |> Seq.toList
     let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
 
-    let (|Ident|Operator|None|) (colu, lineStr) =
+    let (|Ident|Operator|Other|) (colu, lineStr) =
         let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
         let rec loop lexState =
             match lineTokenizer.ScanToken lexState with
-            | None, _ -> None
+            | None, _ -> Other
             | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
                 // Ignore everything in a line with compiler directives
-                None
+                Other
             | Some tok, newLexState ->
                 // Tokenizer uses zero-based columns
                 let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
@@ -317,7 +317,7 @@ type LanguageService(dirtyNotify) =
                     match colu, lineStr with
                     | Ident -> Some (Seq.last identIsland)
                     | Operator op -> Some op
-                    | None -> None
+                    | Other -> None
 
                 symbol
                 |> Option.bind (fun lastIdent ->
