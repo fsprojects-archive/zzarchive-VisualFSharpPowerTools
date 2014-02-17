@@ -292,7 +292,7 @@ type LanguageService(dirtyNotify) =
     let isSymbol (colu, lineStr) =
         let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
         let rec loop lexState =
-            match lineTokenizer.ScanToken(!lexState) with
+            match lineTokenizer.ScanToken lexState with
             | None, _ -> false
             | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
                 // Ignore everything in a line with compiler directives
@@ -303,11 +303,8 @@ type LanguageService(dirtyNotify) =
                    (tok.TokenName = "IDENT" || tok.CharClass = TokenCharKind.Operator) then
                     true
                 else
-                    lexState := newLexState
-                    loop lexState
-            
-        let lexState = ref 0L
-        loop lexState
+                    loop newLexState
+        loop 0L
             
     match FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr) with 
     | Some(colu, identIsland) ->
@@ -341,3 +338,28 @@ type LanguageService(dirtyNotify) =
     return (symDeclRangeOpt, refs) }
 
   member x.Checker = checker
+
+  /// Returns Some (start point, end point) of an operator, None if the symbol at colu is not an operator. 
+  member x.GetOperatorBounds (colu: int) (lineStart: int) (lineStr: string) (args: string seq) : (int * int) option =
+    let defines = 
+        args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
+             |> Seq.toList
+    let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
+    let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
+    // get column number inside the line
+    let colu = colu - lineStart
+
+    let rec loop lexState =
+        match lineTokenizer.ScanToken lexState with
+        | None, _ -> None
+        | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
+            // Ignore everything in a line with compiler directives
+            None
+        | Some tok, newLexState ->
+            let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
+            if leftCol <= colu && colu <= rightCol && tok.CharClass = TokenCharKind.Operator 
+            then Some (lineStart + leftCol, lineStart + rightCol)
+            else loop newLexState
+    loop 0L
+
+           
