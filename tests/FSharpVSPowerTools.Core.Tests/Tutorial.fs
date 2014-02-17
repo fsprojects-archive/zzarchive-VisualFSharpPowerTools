@@ -701,3 +701,5 @@ module TestCases =
     1 >.> 2
     let ( >>. ) x y = x
     1 >>. 2 >>. 3 |> ignore
+    let ws x = x
+    let x = 1 >>. ws >>. 2 >>. ws
