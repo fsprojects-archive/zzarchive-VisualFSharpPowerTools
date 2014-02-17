@@ -302,7 +302,7 @@ type LanguageService(dirtyNotify) =
                 let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
                 if leftCol <= colu - 1 && colu - 1 <= rightCol then
                     if tok.TokenName = "IDENT" then Ident
-                    elif tok.ColorClass = TokenColorKind.Operator then Operator (lineStr.Substring(leftCol, rightCol - leftCol))
+                    elif tok.CharClass = TokenCharKind.Operator then Operator (lineStr.Substring(leftCol, rightCol - leftCol))
                     else loop newLexState
                 else loop newLexState
         loop 0L
@@ -354,7 +354,7 @@ type LanguageService(dirtyNotify) =
     // get column number inside the line
     let colu = colu - lineStart
 
-    let rec loop lexState =
+    let rec loop lexState skipOperator =
         match lineTokenizer.ScanToken lexState with
         | None, _ -> None
         | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
@@ -362,9 +362,9 @@ type LanguageService(dirtyNotify) =
             None
         | Some tok, newLexState ->
             let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
-            if leftCol <= colu && colu <= rightCol && tok.ColorClass = TokenColorKind.Operator
+            if not skipOperator && leftCol <= colu && colu <= rightCol && tok.CharClass = TokenCharKind.Operator
             then Some (lineStart + leftCol, lineStart + rightCol)
-            else loop newLexState
-    loop 0L
+            else loop newLexState (tok.CharClass = TokenCharKind.Operator)
+    loop 0L false
 
            
