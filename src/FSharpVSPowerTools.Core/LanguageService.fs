@@ -289,42 +289,47 @@ type LanguageService(dirtyNotify) =
              |> Seq.toList
     let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
 
-    let isSymbol (colu, lineStr) =
+    let (|Ident|Operator|None|) (colu, lineStr) =
         let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
         let rec loop lexState =
             match lineTokenizer.ScanToken lexState with
-            | None, _ -> false
+            | None, _ -> None
             | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
                 // Ignore everything in a line with compiler directives
-                false
+                None
             | Some tok, newLexState ->
                 // Tokenizer uses zero-based columns
-                if tok.LeftColumn <= colu-1 && colu-1 <= tok.RightColumn && 
-                   (tok.TokenName = "IDENT" || tok.CharClass = TokenCharKind.Operator) then
-                    true
-                else
-                    loop newLexState
+                let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
+                if leftCol <= colu - 1 && colu - 1 <= rightCol then
+                    if tok.TokenName = "IDENT" then Ident
+                    elif tok.ColorClass = TokenColorKind.Operator then Operator (lineStr.Substring(leftCol, rightCol - leftCol))
+                    else loop newLexState
+                else loop newLexState
         loop 0L
             
-    match FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr) with 
-    | Some(colu, identIsland) ->
-        if List.isEmpty identIsland then 
-            return None
-        else
-            if isSymbol(colu, lineStr) then
-                // We only look up identifiers and operators, everything else isn't of interest       
-                Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," identIsland)
-                // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-                match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
-                | Some(symbol) ->
-                    let lastIdent = Seq.last identIsland
-                    let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
-                    let refs = projectResults.GetUsesOfSymbol(symbol)
-                    return Some(symbol, lastIdent, symRangeOpt, refs)
-                | _ -> return None
-            else 
-                return None
-    | _ -> return None }
+    return 
+        FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr)
+        |> Option.bind (fun (colu, identIsland) ->
+            match identIsland with
+            | [] -> None
+            | _ ->
+                let symbol =
+                    match colu, lineStr with
+                    | Ident -> Some (Seq.last identIsland)
+                    | Operator op -> Some op
+                    | None -> None
+
+                symbol
+                |> Option.bind (fun lastIdent ->
+                    // We only look up identifiers and operators, everything else isn't of interest       
+                    Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," identIsland)
+                    // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
+                    match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
+                    | Some symbol ->
+                        let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
+                        let refs = projectResults.GetUsesOfSymbol(symbol)
+                        Some(symbol, lastIdent, symRangeOpt, refs)
+                    | _ -> None)) }
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
    async { 
@@ -357,7 +362,7 @@ type LanguageService(dirtyNotify) =
             None
         | Some tok, newLexState ->
             let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
-            if leftCol <= colu && colu <= rightCol && tok.CharClass = TokenCharKind.Operator 
+            if leftCol <= colu && colu <= rightCol && tok.ColorClass = TokenColorKind.Operator
             then Some (lineStart + leftCol, lineStart + rightCol)
             else loop newLexState
     loop 0L

@@ -695,3 +695,9 @@ module TestCases =
     1 >>= 2
     let (>~>>) x y = ()
     1 >~>> 2
+    let (.>>) x y = ()
+    1 .>> 2
+    let (>.>) x y = ()
+    1 >.> 2
+    let ( >>. ) x y = x
+    1 >>. 2 >>. 3 |> ignore
