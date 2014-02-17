@@ -137,7 +137,16 @@ let ``should find usages of operators containing dots``() =
 
     checkSymbolUsage
         701 11 "    let ( >>. ) x y = ()"
-        [ (701, 10), (701, 13); (702, 6), (702, 9); (702, 12), (702, 15) ]
+        [ (701, 10), (701, 13); (702, 6), (702, 9); (702, 12), (702, 15); (704, 14), (704, 17); (704, 21), (704, 24); 
+          (704, 27), (704, 30) ]
+
+[<Test>]
+let ``should find usages of symbols if where are operators containing dots on the same line``() =
+    let line = "    let x = 1 >>. ws >>. 2 >>. ws"
+    let usages = [ (703, 8), (703, 10); (704, 18), (704, 20); (704, 31), (704, 33) ]
+    checkSymbolUsage 704 18 line usages
+    checkSymbolUsage 704 19 line usages
+    checkSymbolUsage 704 20 line usages
 
 [<Test>]
 let ``should not find usages inside comments``() =
