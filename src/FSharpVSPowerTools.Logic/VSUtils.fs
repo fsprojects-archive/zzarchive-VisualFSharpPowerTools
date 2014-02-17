@@ -27,8 +27,7 @@ let isIdentifierOrOperator (s : string) =
 
 type SnapshotPoint with
     member this.WordExtentIsValid(word : TextExtent) =
-        word.IsSignificant && isIdentifierOrOperator(this.Snapshot.GetText(word.Span.Span))
-        
+        word.IsSignificant && isIdentifierOrOperator(this.Snapshot.GetText(word.Span.Span))        
 
 type SnapshotSpan with
     member this.GetWordIncludingQuotes() =

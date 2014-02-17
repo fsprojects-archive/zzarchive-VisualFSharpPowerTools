@@ -18,21 +18,12 @@ open VSLangProj
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
-// Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
+// Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 
 type HighlightUsageTag() = 
-    inherit TextMarkerTag("MarkerFormatDefinition/HighlightIdentifierFormatDefinition")
+    inherit TextMarkerTag("MarkerFormatDefinition/HighlightedReference")
 
-[<Export(typeof<EditorFormatDefinition>)>]
-[<Name("MarkerFormatDefinition/HighlightIdentifierFormatDefinition")>]
-[<UserVisible(true)>]
-type HighlightIdentifierFormatDefinition() =
-    inherit MarkerFormatDefinition()
-    do  
-      base.BackgroundColor <- Nullable(Color.FromRgb(173uy, 214uy, 255uy))
-      base.ForegroundColor <- Nullable(Color.FromRgb(231uy, 231uy, 214uy))
-      base.DisplayName <- "F# Highlight References"
-      base.ZOrder <- 5
+// Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
