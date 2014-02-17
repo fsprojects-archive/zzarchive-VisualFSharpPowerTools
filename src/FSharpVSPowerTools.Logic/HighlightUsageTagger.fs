@@ -122,7 +122,22 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let updateWordAdornments() =
         let currentRequest = requestedPoint
         // Find all words in the buffer like the one the caret is on
-        match textStructureNavigator.FindAllWords(currentRequest) with
+
+        let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
+        let doc = dte.ActiveDocument
+        Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, "Should be able to find active document.")
+        let project = try doc.ProjectItem.ContainingProject.Object :?> VSProject with _ -> null
+
+        let operatorBounds =
+            if project = null then
+                Debug.WriteLine("[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way.")
+                None
+            else
+                let args = ProjectProvider(project).CompilerOptions
+                let line = currentRequest.GetContainingLine()
+                VSLanguageService.Instance.GetOperatorBounds currentRequest.Position line.Start.Position (line.GetText()) args
+
+        match textStructureNavigator.FindAllWords(currentRequest, operatorBounds) with
         | None ->
             // If we couldn't find a word, just clear out the existing markers
             synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)

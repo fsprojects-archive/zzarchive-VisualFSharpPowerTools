@@ -689,4 +689,9 @@ module BoilerPlateForForm =
 module TestCases =
     let ( *. ) x y = x * y
     let func1 x = x *. x + 3
-    let func1a (x) = x *. x + 3    
+    let func1a (x) = x *. x + 3
+
+    let (>>=) x y = ()
+    1 >>= 2
+    let (>~>>) x y = ()
+    1 >~>> 2

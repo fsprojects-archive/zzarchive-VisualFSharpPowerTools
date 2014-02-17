@@ -86,8 +86,12 @@ type SnapshotSpan with
             (span, Seq.empty)
 
 type ITextStructureNavigator with
-    member this.FindAllWords(currentRequest : SnapshotPoint) =
-        let mutable word = this.GetExtentOfWord(currentRequest)
+    member this.FindAllWords(currentRequest : SnapshotPoint, operatorBounds: (int * int) option) =
+        let mutable word = 
+            match operatorBounds with
+            | Some (left, right) -> TextExtent(SnapshotSpan(currentRequest.Snapshot, left, right - left), true)
+            | None -> this.GetExtentOfWord(currentRequest)
+
         let mutable foundWord = true
 
         // If we've selected something not worth highlighting, we might have
