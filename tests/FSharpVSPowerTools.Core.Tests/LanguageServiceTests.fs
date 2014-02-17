@@ -126,6 +126,20 @@ let ``should find usages of operators starting with '>' symbol``() =
         [ (695, 9), (695, 13); (696, 6), (696, 10) ]
 
 [<Test>]
+let ``should find usages of operators containing dots``() =
+    checkSymbolUsage
+        697 11 "    let (.>>) x y = ()"
+        [ (697, 9), (697, 12); (698, 6), (698, 9) ]
+
+    checkSymbolUsage
+        699 11 "    let (>.>) x y = ()"
+        [ (699, 9), (699, 12); (700, 6), (700, 9) ]
+
+    checkSymbolUsage
+        701 11 "    let ( >>. ) x y = ()"
+        [ (701, 10), (701, 13); (702, 6), (702, 9); (702, 12), (702, 15) ]
+
+[<Test>]
 let ``should not find usages inside comments``() =
     hasNoSymbolUsage 478 11 "    // List.length ref"
 

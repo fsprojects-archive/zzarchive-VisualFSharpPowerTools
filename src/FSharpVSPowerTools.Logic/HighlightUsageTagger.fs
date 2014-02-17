@@ -46,8 +46,8 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
                 currentWord <- newWord
-                tagsChanged.Trigger(self, SnapshotSpanEventArgs(SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, 
-                                                                    sourceBuffer.CurrentSnapshot.Length))))
+                let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
+                tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
     let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq) =
         async {
@@ -78,33 +78,34 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     let! results = 
                         VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
                                                                              endLine, endCol, currentLine, args, framework)
-                    match results with
-                    | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
-                        let possibleSpans = HashSet(newWordSpans)
-                        // Since we can't select multi-word, lastIdent is for debugging only.
-                        Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
-                        let foundUsages =
-                            references
-                            |> Seq.choose (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
-                                // We have to filter by file name otherwise the range is invalid wrt current snapshot
-                                if fileName = currentFile then
-                                    // Range01 type consists of zero-based values, which is a bit confusing
-                                    Some (fromVSPos(newWord.Snapshot, beginLine, beginCol, endLine, endCol))
-                                else None)
-                            |> Seq.choose (fun span -> 
-                                let subSpan = 
-                                    // Sometimes F.C.S returns a composite identifier which should be truncated
-                                    let index = span.GetText().LastIndexOf(lastIdent)
-                                    if index > 0 then 
-                                        SnapshotSpan(newWord.Snapshot, span.Start.Position + index, span.Length - index)
-                                    else span
-                                if possibleSpans.Contains(subSpan) then Some subSpan else None)
-                        // Ignore symbols without any use
-                        let word = if Seq.isEmpty foundUsages then None else Some newWord
-                        return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), word)
-                    | None ->
-                        // Return empty values in order to clear up markers
-                        return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    return 
+                        match results with
+                        | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
+                            let possibleSpans = HashSet(newWordSpans)
+                            // Since we can't select multi-word, lastIdent is for debugging only.
+                            Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
+                            let foundUsages =
+                                references
+                                |> Seq.choose (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
+                                    // We have to filter by file name otherwise the range is invalid wrt current snapshot
+                                    if fileName = currentFile then
+                                        // Range01 type consists of zero-based values, which is a bit confusing
+                                        Some (fromVSPos(newWord.Snapshot, beginLine, beginCol, endLine, endCol))
+                                    else None)
+                                |> Seq.choose (fun span -> 
+                                    let subSpan = 
+                                        // Sometimes F.C.S returns a composite identifier which should be truncated
+                                        let index = span.GetText().LastIndexOf (lastIdent)
+                                        if index > 0 then 
+                                            SnapshotSpan(newWord.Snapshot, span.Start.Position + index, span.Length - index)
+                                        else span
+                                    if possibleSpans.Contains(subSpan) then Some subSpan else None)
+                            // Ignore symbols without any use
+                            let word = if Seq.isEmpty foundUsages then None else Some newWord
+                            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), word)
+                        | None ->
+                            // Return empty values in order to clear up markers
+                            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
               with e ->
                 Debug.WriteLine(sprintf "[Highlight Usage] %O exception occurs while updating." e)
                 return synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
@@ -138,7 +139,7 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
             else
                 // Find the new spans
                 let mutable findData = FindData(newWord.GetText(), newWord.Snapshot)
-                findData.FindOptions <- FindOptions.WholeWord ||| FindOptions.MatchCase
+                findData.FindOptions <- FindOptions.MatchCase
                 let newSpans = textSearchService.FindAll(findData)
                 // If we are still up-to-date (another change hasn't happened yet), do a real update))
                 doUpdate(currentRequest, newWord, newSpans)
