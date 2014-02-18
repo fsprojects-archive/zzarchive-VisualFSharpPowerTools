@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{c11d4092-a6e2-4bb8-a27a-fb31959a71f8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>MyFSParser</RootNamespace>
+    <AssemblyName>MyFSParser</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <Name>MyFSParser</Name>
+    <!--
+    <KeyOriginatorFile>..\Key.snk</KeyOriginatorFile>    
+    -->
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>true</Optimize>
+    <!-- always need tailcalls in compiler -->
+    <Tailcalls>true</Tailcalls>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <WarningLevel>3</WarningLevel>
+    <DocumentationFile>bin\Debug\MyFSParser.XML</DocumentationFile>
+    <DefineConstants>COMPILER;INCLUDE_METADATA_READER;INCLUDE_METADATA_WRITER;EXTENSIBLE_DUMPER;$(DefineConstants)</DefineConstants>
+    <DefineConstants>TRYING_TO_FIX_4577;$(DefineConstants)</DefineConstants>
+    <AllowCrossTargeting>true</AllowCrossTargeting>
+    <BaseAddress>0x06800000</BaseAddress>
+    <OtherFlags>$(OtherFlags) /warnon:1182</OtherFlags>
+    <NoWarn>$(NoWarn);44;62;9;1203</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <WarningLevel>3</WarningLevel>
+    <DocumentationFile>bin\Release\MyFSParser.XML</DocumentationFile>
+    <DefineConstants>COMPILER;INCLUDE_METADATA_READER;INCLUDE_METADATA_WRITER;EXTENSIBLE_DUMPER;$(DefineConstants)</DefineConstants>
+    <DefineConstants>TRYING_TO_FIX_4577;$(DefineConstants)</DefineConstants>
+    <AllowCrossTargeting>true</AllowCrossTargeting>
+    <BaseAddress>0x06800000</BaseAddress>
+    <OtherFlags>$(OtherFlags) /warnon:1182</OtherFlags>
+    <NoWarn>$(NoWarn);44;62;9;1203</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="FSComp.fs" />
+    <EmbeddedResource Include="FSComp.resx" />
+    <EmbeddedResource Include="FSStrings.resx" />
+    <Compile Include="assemblyinfo.FSharp.Compiler.dll.fs" />
+    <Compile Include="ExtensibleDumper.fsi" />
+    <Compile Include="ExtensibleDumper.fs" />
+    <Compile Include="sformat.fsi" />
+    <Compile Include="sformat.fs" />
+    <Compile Include="sr.fsi" />
+    <Compile Include="sr.fs" />
+    <Compile Include="prim-lexing.fsi" />
+    <Compile Include="prim-lexing.fs" />
+    <Compile Include="prim-parsing.fsi" />
+    <Compile Include="prim-parsing.fs" />
+    <Compile Include="resizearray.fsi" />
+    <Compile Include="resizearray.fs" />
+    <Compile Include="HashMultiMap.fsi" />
+    <Compile Include="HashMultiMap.fs" />
+    <Compile Include="TaggedCollections.fsi" />
+    <Compile Include="TaggedCollections.fs" />
+    <Compile Include="filename.fsi" />
+    <Compile Include="filename.fs" />
+    <Compile Include="FlatList.fs" />
+    <Compile Include="illib.fs" />
+    <Compile Include="zmap.fsi" />
+    <Compile Include="zmap.fs" />
+    <Compile Include="zset.fsi" />
+    <Compile Include="zset.fs" />
+    <Compile Include="bytes.fsi" />
+    <Compile Include="bytes.fs" />
+    <Compile Include="il.fsi" />
+    <Compile Include="il.fs" />
+    <Compile Include="lib.fs" />
+    <Compile Include="range.fsi" />
+    <Compile Include="range.fs" />
+    <Compile Include="InternalCollections.fsi" />
+    <Compile Include="InternalCollections.fs" />
+    <Compile Include="CompilerLocationUtils.fs" />
+    <Compile Include="PrettyNaming.fs" />
+    <Compile Include="ilxsettings.fs" />
+    <Compile Include="InternalFileSystemUtils.fsi" />
+    <Compile Include="InternalFileSystemUtils.fs" />
+    <Compile Include="unilex.fsi" />
+    <Compile Include="unilex.fs" />
+    <Compile Include="layout.fsi" />
+    <Compile Include="layout.fs" />
+    <Compile Include="ast.fs" />
+    <Compile Include="pars.fs" />
+    <Compile Include="lexhelp.fsi" />
+    <Compile Include="lexhelp.fs" />
+    <Compile Include="lex.fs" />
+    <Compile Include="lexfilter.fs" />
+    <Compile Include="MyParsing.fsi" />
+    <Compile Include="MyParsing.fs" />
+    <!--
+    <None Include="..\Key.snk">
+      <Link>Key.snk</Link>
+    </None>
+    -->
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib" />
+    <Reference Include="FSharp.Core" />
+    <Reference Include="System" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
