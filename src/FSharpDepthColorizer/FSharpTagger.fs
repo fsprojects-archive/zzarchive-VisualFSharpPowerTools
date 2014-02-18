@@ -150,16 +150,3 @@ type FSharpTagger(sourceBuffer : ITextBuffer, filename : string) as this =
             upcast prevTags
         [<CLIEvent>]
         member this.TagsChanged = tagsChangedEvent.Publish 
-
-[<Export(typeof<ITaggerProvider>)>]
-[<ContentType("F#")>]
-[<TagType(typeof<FSharpRegionTag>)>]
-type FSharpTaggerProvider() =
-    let mutable textDocumentFactoryService : ITextDocumentFactoryService = null
-    [<Import>]
-    member this.TextDocumentFactoryService with get() = textDocumentFactoryService and set(x) = textDocumentFactoryService <- x
-    interface ITaggerProvider with
-        member this.CreateTagger<'T when 'T :> ITag>(buffer : ITextBuffer) : ITagger<'T> =
-            match this.TextDocumentFactoryService.TryGetTextDocument(buffer) with
-            | false, _ -> null
-            | true, doc -> downcast (new FSharpTagger(buffer, doc.FilePath) |> box)

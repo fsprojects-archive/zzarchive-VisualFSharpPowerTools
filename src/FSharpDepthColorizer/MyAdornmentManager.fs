@@ -141,23 +141,3 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
                 RefreshLine(line)
             *)
             )
-
-[<Export(typeof<IWpfTextViewCreationListener>)>]
-[<ContentType("F#")>]
-[<TextViewRole(PredefinedTextViewRoles.Structured)>]
-type MyAdornmentManager() =
-    let mutable adornmentLayerDefinition : AdornmentLayerDefinition = null
-    let mutable viewTagAggregatorFactoryService : IViewTagAggregatorFactoryService = null
-
-    [<Export>]
-    [<Name("FSharpDepthFullLineAdornment")>]
-    [<Order(Before=PredefinedAdornmentLayers.Selection)>]
-    member this.AdornmentLayerDefinition with get() = adornmentLayerDefinition and set(x) = adornmentLayerDefinition <- x
-
-    [<Import>]
-    member this.ViewTagAggregatorFactoryService with get() = viewTagAggregatorFactoryService and set(x) = viewTagAggregatorFactoryService <- x
-
-    interface IWpfTextViewCreationListener with
-        member this.TextViewCreated(textView) =
-            new FullLineAdornmentManager(textView, this.ViewTagAggregatorFactoryService.CreateTagAggregator<FSharpRegionTag>(textView))
-            |> ignore

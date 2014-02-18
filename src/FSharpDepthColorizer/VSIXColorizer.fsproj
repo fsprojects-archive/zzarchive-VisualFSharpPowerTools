@@ -72,6 +72,7 @@
     <Compile Include="MyParsing.fs" />
     <Compile Include="FSharpTagger.fs" />
     <Compile Include="MyAdornmentManager.fs" />
+    <Compile Include="Program.fs" />
     <None Include="source.extension.vsixmanifest">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <SubType>Designer</SubType>

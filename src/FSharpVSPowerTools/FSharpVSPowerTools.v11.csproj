@@ -95,6 +95,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
+    <Reference Include="UIAutomationTypes" />
     <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="WindowsBase" />
@@ -104,6 +105,7 @@
     <Compile Include="CodeFormatting\Commands\FormatCommand.cs" />
     <Compile Include="CodeFormatting\Commands\FormatDocumentCommand.cs" />
     <Compile Include="CodeFormatting\Commands\FormatSelectionCommand.cs" />
+    <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
