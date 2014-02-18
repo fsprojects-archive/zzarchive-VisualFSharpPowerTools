@@ -11,6 +11,7 @@
     <AssemblyName>MyFSParser</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <Name>MyFSParser</Name>
+    <TargetFrameworkProfile />
     <!--
     <KeyOriginatorFile>..\Key.snk</KeyOriginatorFile>    
     -->
@@ -47,74 +48,27 @@
     <OtherFlags>$(OtherFlags) /warnon:1182</OtherFlags>
     <NoWarn>$(NoWarn);44;62;9;1203</NoWarn>
   </PropertyGroup>
+  <PropertyGroup>
+    <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets" Condition="Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition="(!Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')) And (Exists('$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets'))" />
+  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="(!Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')) And (!Exists('$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets')) And (Exists('$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets'))" />
   <ItemGroup>
-    <Compile Include="FSComp.fs" />
-    <EmbeddedResource Include="FSComp.resx" />
-    <EmbeddedResource Include="FSStrings.resx" />
-    <Compile Include="assemblyinfo.FSharp.Compiler.dll.fs" />
-    <Compile Include="ExtensibleDumper.fsi" />
-    <Compile Include="ExtensibleDumper.fs" />
-    <Compile Include="sformat.fsi" />
-    <Compile Include="sformat.fs" />
-    <Compile Include="sr.fsi" />
-    <Compile Include="sr.fs" />
-    <Compile Include="prim-lexing.fsi" />
-    <Compile Include="prim-lexing.fs" />
-    <Compile Include="prim-parsing.fsi" />
-    <Compile Include="prim-parsing.fs" />
-    <Compile Include="resizearray.fsi" />
-    <Compile Include="resizearray.fs" />
-    <Compile Include="HashMultiMap.fsi" />
-    <Compile Include="HashMultiMap.fs" />
-    <Compile Include="TaggedCollections.fsi" />
-    <Compile Include="TaggedCollections.fs" />
-    <Compile Include="filename.fsi" />
-    <Compile Include="filename.fs" />
-    <Compile Include="FlatList.fs" />
-    <Compile Include="illib.fs" />
-    <Compile Include="zmap.fsi" />
-    <Compile Include="zmap.fs" />
-    <Compile Include="zset.fsi" />
-    <Compile Include="zset.fs" />
-    <Compile Include="bytes.fsi" />
-    <Compile Include="bytes.fs" />
-    <Compile Include="il.fsi" />
-    <Compile Include="il.fs" />
-    <Compile Include="lib.fs" />
-    <Compile Include="range.fsi" />
-    <Compile Include="range.fs" />
-    <Compile Include="InternalCollections.fsi" />
-    <Compile Include="InternalCollections.fs" />
-    <Compile Include="CompilerLocationUtils.fs" />
-    <Compile Include="PrettyNaming.fs" />
-    <Compile Include="ilxsettings.fs" />
-    <Compile Include="InternalFileSystemUtils.fsi" />
-    <Compile Include="InternalFileSystemUtils.fs" />
-    <Compile Include="unilex.fsi" />
-    <Compile Include="unilex.fs" />
-    <Compile Include="layout.fsi" />
-    <Compile Include="layout.fs" />
-    <Compile Include="ast.fs" />
-    <Compile Include="pars.fs" />
-    <Compile Include="lexhelp.fsi" />
-    <Compile Include="lexhelp.fs" />
-    <Compile Include="lex.fs" />
-    <Compile Include="lexfilter.fs" />
     <Compile Include="MyParsing.fsi" />
     <Compile Include="MyParsing.fs" />
-    <!--
-    <None Include="..\Key.snk">
-      <Link>Key.snk</Link>
-    </None>
-    -->
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="FSharp.Compiler.Service">
+      <HintPath>..\packages\FSharp.Compiler.Service.0.0.7-alpha\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FSharp.Core, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="mscorlib" />
-    <Reference Include="FSharp.Core" />
     <Reference Include="System" />
+    <Reference Include="System.Numerics" />
   </ItemGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
