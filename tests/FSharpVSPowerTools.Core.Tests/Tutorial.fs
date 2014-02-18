@@ -703,3 +703,8 @@ module TestCases =
     1 >>. 2 >>. 3 |> ignore
     let ws x = x
     let x = 1 >>. ws >>. 2 >>. ws
+
+    let f (a, b) = a + b
+    type C<'a> = C of 'a
+    let g x = ()
+    g(2)

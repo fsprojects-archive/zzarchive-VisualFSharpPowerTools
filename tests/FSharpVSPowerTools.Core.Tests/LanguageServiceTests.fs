@@ -149,6 +149,20 @@ let ``should find usages of symbols if where are operators containing dots on th
     checkSymbolUsage 704 20 line usages
 
 [<Test>]
+let ``should find usages of symbols contacting with a special symbol on the right``() =
+    checkSymbolUsage
+        706 12 "    let f (a, b) = a + b"
+        [ (706, 11), (706, 12); (706, 19), (706, 20) ]
+
+    checkSymbolUsage
+        707 9 "    type C<'a> = C of 'a"
+        [ (707, 9), (707, 10) ]
+
+    checkSymbolUsage
+        709 5 "    g(2)"
+        [ (708, 8), (708, 9); (709, 4), (709, 5) ]
+
+[<Test>]
 let ``should not find usages inside comments``() =
     hasNoSymbolUsage 478 11 "    // List.length ref"
 
