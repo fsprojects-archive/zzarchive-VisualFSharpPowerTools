@@ -46,6 +46,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic", 
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core", "src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpDepthColorizer", "src\FSharpDepthColorizer\FSharpDepthColorizer.fsproj", "{CE0F28E8-6F56-400F-8729-AEA105472B0F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,6 +74,10 @@ Global
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
