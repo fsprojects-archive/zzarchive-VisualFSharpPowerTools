@@ -362,9 +362,12 @@ type LanguageService(dirtyNotify) =
             None
         | Some tok, newLexState ->
             let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
-            if not skipOperator && leftCol <= colu && colu <= rightCol && tok.CharClass = TokenCharKind.Operator
-            then Some (lineStart + leftCol, lineStart + rightCol)
-            else loop newLexState (tok.CharClass = TokenCharKind.Operator)
+            let inRange = leftCol <= colu && colu <= rightCol
+            match not skipOperator && inRange && tok.ColorClass = TokenColorKind.Operator, tok.CharClass with
+            | true, TokenCharKind.Operator
+            | true, TokenCharKind.Delimiter when tok.FullMatchedLength > 1 ->
+                Some (lineStart + leftCol, lineStart + rightCol)
+            | _ -> loop newLexState (tok.CharClass = TokenCharKind.Operator)
     loop 0L false
 
            

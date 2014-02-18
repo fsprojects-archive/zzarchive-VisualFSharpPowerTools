@@ -18,16 +18,30 @@ let fromVSPos(snapshot : ITextSnapshot, startLine, startCol, endLine, endCol) =
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
-let isIdentifier (s : string) =
-    s |> Seq.mapi (fun i c -> i, c)
-      |> Seq.forall (fun (i, c) -> (i = 0 && IsIdentifierFirstCharacter c) || IsIdentifierPartCharacter c) 
+let (|Identifier|Operator|Other|) (s: string) =
+    if s |> Seq.mapi (fun i c -> i, c)
+         |> Seq.forall (fun (i, c) -> 
+              if i = 0 then IsIdentifierFirstCharacter c
+              else IsIdentifierPartCharacter c)
+    then Identifier
+    elif IsOpName s && s <> "."
+    then Operator
+    else Other
 
-let isIdentifierOrOperator (s : string) =
-    isIdentifier s || IsOpName s
+let commonInsignificantChars = set [','; '('; ')'; ']']
+let identInsignificantChars = commonInsignificantChars |> Set.union (set ['.'; '<'; '>'])
+let operatorInsignificantChars = commonInsignificantChars
+
+let isInsignificant (text: string) (insignificantChars: Set<char>) =
+    not (String.IsNullOrEmpty text) && insignificantChars |> Set.contains text.[0] |> not
 
 type SnapshotPoint with
     member this.WordExtentIsValid(word : TextExtent) =
-        word.IsSignificant && isIdentifierOrOperator(this.Snapshot.GetText(word.Span.Span))        
+        let text = word.Span.GetText()
+        match word.IsSignificant, text with
+        | true, Identifier -> isInsignificant text identInsignificantChars
+        | true, Operator -> isInsignificant text operatorInsignificantChars
+        | _ -> false
 
 type SnapshotSpan with
     member this.GetWordIncludingQuotes() =
