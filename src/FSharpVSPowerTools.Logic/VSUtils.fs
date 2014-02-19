@@ -42,6 +42,10 @@ type SnapshotPoint with
         | true, Identifier -> isInsignificant text identInsignificantChars
         | true, Operator -> isInsignificant text operatorInsignificantChars
         | _ -> false
+    member this.FromRange(lineStart, colStart, lineEnd, colEnd) =
+        let startPos = this.Snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+        let endPos = this.Snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+        SnapshotSpan(this.Snapshot, startPos, endPos - startPos)
 
 type SnapshotSpan with
     member this.GetWordIncludingQuotes() =
@@ -74,7 +78,7 @@ type SnapshotSpan with
         (currentWord, word)
 
     /// Return corresponding zero-based range
-    member this.GetRange() =
+    member this.ToRange() =
         let (_, w2) = this.GetWordIncludingQuotes()
         let extraLength = w2.Length - this.Length
         let lineStart = this.Snapshot.GetLineNumberFromPosition(this.Start.Position)
@@ -99,10 +103,10 @@ type SnapshotSpan with
             (span, Seq.empty)
 
 type ITextStructureNavigator with
-    member this.FindAllWords(currentRequest : SnapshotPoint, operatorBounds: (int * int) option) =
+    member this.FindAllWords(currentRequest : SnapshotPoint, operatorSpan) =
         let mutable word = 
-            match operatorBounds with
-            | Some (left, right) -> TextExtent(SnapshotSpan(currentRequest.Snapshot, left, right - left), true)
+            match operatorSpan with
+            | Some span -> TextExtent(span, true)
             | None -> this.GetExtentOfWord(currentRequest)
 
         let mutable foundWord = true

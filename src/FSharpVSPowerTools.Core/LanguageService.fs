@@ -100,7 +100,7 @@ type LanguageService(dirtyNotify) =
   // and its time to re-typecheck the current file.
   let checker = 
     let checker = InteractiveChecker.Create()
-    checker.FileTypeCheckStateIsDirty.Add dirtyNotify
+    checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
   /// When creating new script file on Mac, the filename we get sometimes 
@@ -344,15 +344,13 @@ type LanguageService(dirtyNotify) =
 
   member x.Checker = checker
 
-  /// Returns Some (start point, end point) of an operator, None if the symbol at colu is not an operator. 
-  member x.GetOperatorBounds (colu: int) (lineStart: int) (lineStr: string) (args: string seq) : (int * int) option =
+  /// Returns Some zero-based range of an operator, None if the symbol at line, colu is not an operator. 
+  member x.GetOperatorBounds(_source: string, line: int, colu, lineStr, args: string seq) =
     let defines = 
         args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
              |> Seq.toList
     let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
     let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
-    // get column number inside the line
-    let colu = colu - lineStart
 
     let rec loop lexState skipOperator =
         match lineTokenizer.ScanToken lexState with
@@ -366,7 +364,7 @@ type LanguageService(dirtyNotify) =
             match not skipOperator && inRange && tok.ColorClass = TokenColorKind.Operator, tok.CharClass with
             | true, TokenCharKind.Operator
             | true, TokenCharKind.Delimiter when tok.FullMatchedLength > 1 ->
-                Some (lineStart + leftCol, lineStart + rightCol)
+                Some (line, leftCol, line, rightCol)
             | _ -> loop newLexState (tok.CharClass = TokenCharKind.Operator)
     loop 0L false
 
