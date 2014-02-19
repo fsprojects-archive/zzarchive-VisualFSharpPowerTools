@@ -299,36 +299,36 @@ module Parsing =
     | _ -> Some (col + nextIdent.Length,identIsland)
     
   /// find the identifier prior to a '(' or ',' once the method tip trigger '(' shows
-  let findLongIdentsAtGetMethodsTrigger (col, lineStr) = 
-    let lookBack = createBackStringReader lineStr col
-    let backIdentOpt = tryGetFirst parseBackTriggerThenLongIdent lookBack
-    match backIdentOpt with 
-    | None -> None 
-    | Some backIdent -> 
-
-    let identIsland =
-      match List.rev backIdent with
-      | last::prev -> (last::prev |> List.rev)
-      | [] -> []
-
-    match identIsland with
-    | [] | [ "" ] -> None
-    | _ -> Some (col,identIsland)
+//  let findLongIdentsAtGetMethodsTrigger (col, lineStr) = 
+//    let lookBack = createBackStringReader lineStr col
+//    let backIdentOpt = tryGetFirst parseBackTriggerThenLongIdent lookBack
+//    match backIdentOpt with 
+//    | None -> None 
+//    | Some backIdent -> 
+//
+//    let identIsland =
+//      match List.rev backIdent with
+//      | last::prev -> (last::prev |> List.rev)
+//      | [] -> []
+//
+//    match identIsland with
+//    | [] | [ "" ] -> None
+//    | _ -> Some (col,identIsland)
     
   /// Returns the previous long idents and the current 'residue'
-  let findLongIdentsAndResidue (col, lineStr) =
-    let lookBack = createBackStringReader lineStr (col - 1)
-    let results = apply parseBackIdentWithEitherResidue lookBack
-    let residue, longName =
-        List.sortBy (fun (s,ss) -> String.length s + (List.sumBy String.length ss)) results
-        |> List.rev
-        |> List.head
-
-    if String.IsNullOrEmpty residue &&
-       List.isEmpty longName &&
-       col >= 0 && col <= lineStr.Length &&
-       lineStr.[col - 1] = '.'
-    then
-        None
-    else
-        Some (longName, residue)
+//  let findLongIdentsAndResidue (col, lineStr) =
+//    let lookBack = createBackStringReader lineStr (col - 1)
+//    let results = apply parseBackIdentWithEitherResidue lookBack
+//    let residue, longName =
+//        List.sortBy (fun (s,ss) -> String.length s + (List.sumBy String.length ss)) results
+//        |> List.rev
+//        |> List.head
+//
+//    if String.IsNullOrEmpty residue &&
+//       List.isEmpty longName &&
+//       col >= 0 && col <= lineStr.Length &&
+//       lineStr.[col - 1] = '.'
+//    then
+//        None
+//    else
+//        Some (longName, residue)

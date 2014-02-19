@@ -23,3 +23,8 @@ let ``can find simple double-tick quoted idents``() =
 let ``can find double-tick quoted idents containing whitespaces``() =
     (7, "let ``f g`` x = x * x") ==> (7, ["f g"])
 
+[<Test>]
+let ``can find all idents belogning to a complex one``() =
+    (9, "let a.b.c x = ()") ==> (9, ["a"; "b"; "c"])
+    (7, "let a.b.c x = ()") ==> (8, ["a"; "b."])
+    (5, "let a.b.c x = ()") ==> (6, ["a."])

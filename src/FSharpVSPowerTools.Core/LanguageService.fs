@@ -13,49 +13,49 @@ type TypedParseResult(info:CheckFileResults, untyped : ParseFileResults) =
 
     /// Get declarations at the current location in the specified document
     /// (used to implement dot-completion in 'FSharpTextEditorCompletion.fs')
-    member x.GetDeclarations(line, col, lineStr) = 
-        match Parsing.findLongIdentsAndResidue(col, lineStr) with
-        | None -> None
-        | Some (longName, residue) ->
-            Debug.WriteLine (sprintf "GetDeclarations: '%A', '%s'" longName residue)
-            // Get items & generate output
-            try Some (info.GetDeclarations(None, line, col, lineStr, longName, residue, fun (_,_) -> false)
-                      |> Async.RunSynchronously, residue)
-            with :? TimeoutException as _e -> None
+//    member x.GetDeclarations(line, col, lineStr) = 
+//        match Parsing.findLongIdentsAndResidue(col, lineStr) with
+//        | None -> None
+//        | Some (longName, residue) ->
+//            Debug.WriteLine (sprintf "GetDeclarations: '%A', '%s'" longName residue)
+//            // Get items & generate output
+//            try Some (info.GetDeclarations(None, line, col, lineStr, longName, residue, fun (_,_) -> false)
+//                      |> Async.RunSynchronously, residue)
+//            with :? TimeoutException as _e -> None
 
     /// Get the tool-tip to be displayed at the specified offset (relatively
     /// from the beginning of the current document)
-    member x.GetToolTip(line, col, lineStr) : Option<ToolTipText * (int * int)> =
-        match Parsing.findLongIdents(col, lineStr) with 
-        | None -> None
-        | Some(col,identIsland) ->
-          let res = info.GetToolTipText(line, col, lineStr, identIsland, token)
-          Debug.WriteLine("Result: Got something, returning")
-          Some (res, (col - (Seq.last identIsland).Length, col))
+//    member x.GetToolTip(line, col, lineStr) : Option<ToolTipText * (int * int)> =
+//        match Parsing.findLongIdents(col, lineStr) with 
+//        | None -> None
+//        | Some(col,identIsland) ->
+//          let res = info.GetToolTipText(line, col, lineStr, identIsland, token)
+//          Debug.WriteLine("Result: Got something, returning")
+//          Some (res, (col - (Seq.last identIsland).Length, col))
 
-    member x.GetDeclarationLocation(line, col, lineStr) =
-        match Parsing.findLongIdents(col, lineStr) with 
-        | None -> FindDeclResult.DeclNotFound FindDeclFailureReason.Unknown
-        | Some(col,identIsland) ->
-            let res = info.GetDeclarationLocation(line, col, lineStr, identIsland, true)
-            Debug.WriteLine("Result: Got something, returning")
-            res 
+//    member x.GetDeclarationLocation(line, col, lineStr) =
+//        match Parsing.findLongIdents(col, lineStr) with 
+//        | None -> FindDeclResult.DeclNotFound FindDeclFailureReason.Unknown
+//        | Some(col,identIsland) ->
+//            let res = info.GetDeclarationLocation(line, col, lineStr, identIsland, true)
+//            Debug.WriteLine("Result: Got something, returning")
+//            res 
 
-    member x.GetMethods(line, col, lineStr) =
-        match Parsing.findLongIdentsAtGetMethodsTrigger(col, lineStr) with 
-        | None -> None
-        | Some(col,identIsland) ->
-            let res = info.GetMethods(line, col, lineStr, Some identIsland)
-            Debug.WriteLine("Result: Got something, returning")
-            Some (res.MethodName, res.Methods) 
+//    member x.GetMethods(line, col, lineStr) =
+//        match Parsing.findLongIdentsAtGetMethodsTrigger(col, lineStr) with 
+//        | None -> None
+//        | Some(col,identIsland) ->
+//            let res = info.GetMethods(line, col, lineStr, Some identIsland)
+//            Debug.WriteLine("Result: Got something, returning")
+//            Some (res.MethodName, res.Methods) 
 
-    member x.GetSymbol(line, col, lineStr) =
-        match Parsing.findLongIdents(col, lineStr) with 
-        | Some(colu, identIsland) ->
-            //get symbol at location
-            //Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-            info.GetSymbolAtLocation(line, colu, lineStr, identIsland)
-        | None -> None
+//    member x.GetSymbol(line, col, lineStr) =
+//        match Parsing.findLongIdents(col, lineStr) with 
+//        | Some(colu, identIsland) ->
+//            //get symbol at location
+//            //Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
+//            info.GetSymbolAtLocation(line, colu, lineStr, identIsland)
+//        | None -> None
 
     member x.CheckFileResults = info        
     member x.ParseFileResults = untyped 
@@ -271,65 +271,109 @@ type LanguageService(dirtyNotify) =
            // If we didn't get a recent set of type checking results, we put in a request and wait for at most 'timeout' for a response
            mbox.PostAndReply((fun repl -> UpdateAndGetTypedInfo(req, repl)), timeout = timeout)
 
-  member x.GetUsesOfSymbolAtLocation(projectFilename, file, source, files, line:int, col, lineStr, args, framework) =
-   async { 
-    let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
+  member x.GetUsesOfSymbolAtLocation(projectFilename, file, source, files, line:int, col, lineStr, args, framework) = async { 
+      let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
+      
+      // Parse and retrieve Checked Project results, this has the entity graph and errors etc
+      let! projectResults = checker.ParseAndCheckProject(projectOptions) 
+      Debug.WriteLine(sprintf "There are %i error(s)." projectResults.Errors.Length)
+      Debug.Assert(not projectResults.HasCriticalErrors, "Should abort on critical errors.")
+      // Get the parse results for the current file
+      let! _backgroundParseResults, backgroundTypedParse = 
+          // Note this operates on the file system so the file needs to be current
+          checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
+      
+      let defines = 
+          args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
+               |> Seq.toList
 
-    // Parse and retrieve Checked Project results, this has the entity graph and errors etc
-    let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-    Debug.WriteLine(sprintf "There are %i error(s)." projectResults.Errors.Length)
-    Debug.Assert(not projectResults.HasCriticalErrors, "Should abort on critical errors.")
-    // Get the parse results for the current file
-    let! _backgroundParseResults, backgroundTypedParse = 
-        // Note this operates on the file system so the file needs to be current
-        checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
+      let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
+      
+//      let (|Ident|Operator|Other|) (colu, lineStr) =
+//          let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
+//          let rec loop lexState =
+//              match lineTokenizer.ScanToken lexState with
+//              | None, _ -> Other
+//              | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
+//                  // Ignore everything in a line with compiler directives
+//                  Other
+//              | Some tok, newLexState ->
+//                  // Tokenizer uses zero-based columns
+//                  let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
+//                  if leftCol <= colu - 1 && colu - 1 <= rightCol then
+//                      if tok.TokenName = "IDENT" then Ident
+//                      elif tok.CharClass = TokenCharKind.Operator then Operator (lineStr.Substring(leftCol, rightCol - leftCol))
+//                      else loop newLexState
+//                  else loop newLexState
+//          loop 0L
 
-    let defines = 
-        args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-             |> Seq.toList
-    let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
+      let (|Ident|Operator|Other|) (colu, lineStr) =
+          let tokens =
+            let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
+            let rec loop lexState acc =
+                match lineTokenizer.ScanToken lexState with
+                | Some tok, state when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> loop state acc
+                | Some tok, state -> loop state (tok :: acc)
+                | _ -> List.rev acc
+            loop 0L []
 
-    let (|Ident|Operator|Other|) (colu, lineStr) =
-        let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
-        let rec loop lexState =
-            match lineTokenizer.ScanToken lexState with
-            | None, _ -> Other
-            | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
-                // Ignore everything in a line with compiler directives
-                Other
-            | Some tok, newLexState ->
-                // Tokenizer uses zero-based columns
-                let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
-                if leftCol <= colu - 1 && colu - 1 <= rightCol then
-                    if tok.TokenName = "IDENT" then Ident
-                    elif tok.CharClass = TokenCharKind.Operator then Operator (lineStr.Substring(leftCol, rightCol - leftCol))
-                    else loop newLexState
-                else loop newLexState
-        loop 0L
+          // filter out overlapping oparators
+          let tokens = 
+            tokens
+            |> List.fold (fun (acc, lastRightCol) x ->
+                 if x.LeftColumn <= lastRightCol then acc, lastRightCol
+                 else x :: acc, x.LeftColumn + x.FullMatchedLength - 1
+               ) ([], 0)
+            |> fst 
+            |> List.rev
+             
+          let tokenUnderCursor = tokens |> List.tryFind (fun x ->
+              let leftCol, rightCol = x.LeftColumn, x.LeftColumn + x.FullMatchedLength
+              leftCol <= colu - 1 && colu - 1 <= rightCol)
+         
+          let getTokenText (tok: TokenInformation) = lineStr.Substring(tok.LeftColumn, tok.FullMatchedLength)
+
+          match tokenUnderCursor with
+          | None -> Other
+          | Some tok when tok.CharClass = TokenCharKind.Operator -> Operator (tok.LeftColumn, getTokenText tok)
+          | Some _ ->
+              let lefts, _ = tokens |> List.partition (fun x -> x.LeftColumn <= colu)
+              lefts 
+              |> List.rev 
+              |> Seq.takeWhile (fun x -> x.TokenName = "IDENT" || x.TokenName = "DOT") 
+              |> Seq.toList 
+              |> List.rev
+              |> List.filter (fun x -> x.TokenName = "IDENT")
+              |> function
+                  | [] -> Other
+                  | xs -> Ident ((Seq.last xs).LeftColumn, xs |> List.map (fun x -> getTokenText x))
+              
+    //          let all = lefts
+    //            lefts @ 
+    //            match rights with
+    //            | h :: _ when h.TokenName = "DOT" -> [h]
+    //            | _ -> []
+              //lefts |> List.filter (fun x -> x.)
+          
+      let symbol =
+        match col, lineStr with
+        | Other -> None
+        | Ident (leftCol, identIsland) -> Some (leftCol, Seq.last identIsland, identIsland)
+        | Operator (leftCol, op) -> Some (leftCol, op, [op])
             
-    return 
-        FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr)
-        |> Option.bind (fun (colu, identIsland) ->
-            match identIsland with
-            | [] -> None
-            | _ ->
-                let symbol =
-                    match colu, lineStr with
-                    | Ident -> Some (Seq.last identIsland)
-                    | Operator op -> Some op
-                    | Other -> None
-
-                symbol
-                |> Option.bind (fun lastIdent ->
-                    // We only look up identifiers and operators, everything else isn't of interest       
-                    Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," identIsland)
-                    // Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-                    match backgroundTypedParse.GetSymbolAtLocation(line, colu, lineStr, identIsland) with
-                    | Some symbol ->
-                        let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
-                        let refs = projectResults.GetUsesOfSymbol(symbol)
-                        Some(symbol, lastIdent, symRangeOpt, refs)
-                    | _ -> None)) }
+      return 
+          match symbol with
+          | None -> None
+          | Some (leftCol, lastSymbol, island) ->
+              // We only look up identifiers and operators, everything else isn't of interest       
+              Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," island)
+              // Note we advance the caret to 'leftCol' ** due to GetSymbolAtLocation only working at the beginning/end **
+              match backgroundTypedParse.GetSymbolAtLocation(line, leftCol + 1, lineStr, island) with
+              | Some symbol ->
+                  let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
+                  let refs = projectResults.GetUsesOfSymbol(symbol)
+                  Some(symbol, lastSymbol, symRangeOpt, refs)
+              | _ -> None }
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
    async { 

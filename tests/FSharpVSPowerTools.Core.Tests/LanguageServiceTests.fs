@@ -90,9 +90,13 @@ let ``should find usages of arrays``() =
 
 [<Test>]
 let ``should find usages of members``() =
+//    checkSymbolUsage
+//        217 26 "        member this.Length = length"
+//        [ (217, 20), (217, 26); (227, 63), (227, 77); (227, 78), (227, 92) ]
+
     checkSymbolUsage
-        217 26 "        member this.Length = length"
-        [ (217, 20), (217, 26); (227, 63), (227, 77); (227, 78), (227, 92) ]
+        610 35 "    eventForDelegateType.Publish.AddHandler("
+        [ (610, 4), (610, 43) ]
 
 [<Test>]
 let ``should find usages of DU constructors named with single upper-case letter``() =
