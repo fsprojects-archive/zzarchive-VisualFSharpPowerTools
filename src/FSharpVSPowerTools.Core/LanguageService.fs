@@ -201,6 +201,44 @@ type LanguageService(dirtyNotify) =
     // Start looping with no initial information        
     loop None)
 
+  /// Get the array of all lex states in current source
+  let getLexStates defines (source : string) =
+    [|
+        /// Iterate through the whole line to get the final lex state
+        let rec loop (lineTokenizer : LineTokenizer) lexState =
+            match lineTokenizer.ScanToken lexState with
+            | None, newLexState -> newLexState
+            | Some _, newLexState ->
+                loop lineTokenizer newLexState
+
+        let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
+        let lines = source.Replace("\r\n","\n").Split('\r', '\n')
+        let lexState = ref 0L
+        for line in lines do 
+            yield !lexState
+            let lineTokenizer = sourceTokenizer.CreateLineTokenizer line
+            lexState := loop lineTokenizer !lexState
+    |]
+
+  // Until F.C.S returns lex states of current file, we cache lex states of the current document.
+  // We assume that current document will be queried repeatedly
+  let queryLexState =
+    let currentDocumentState = ref None
+    fun source defines line ->
+        let lexStates = 
+            match !currentDocumentState with
+            | Some (lexStates, s, d) when s = source && d = defines ->
+                lexStates
+            // OPTIMIZE: if the new document has the current document as a prefix, 
+            // we can reuse lexing results and process only the added part.
+            | _ ->
+                Debug.WriteLine("queryLexState: lexing current document")
+                let lexStates = getLexStates defines source
+                currentDocumentState := Some (lexStates, source, defines) 
+                lexStates
+        Debug.Assert(line >= 0 && line < Array.length lexStates, "Should have lex states for every line.")
+        lexStates.[line]
+
    /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
     let ext = Path.GetExtension(fileName)
@@ -305,7 +343,7 @@ type LanguageService(dirtyNotify) =
                     elif tok.CharClass = TokenCharKind.Operator then Operator (lineStr.Substring(leftCol, rightCol - leftCol))
                     else loop newLexState
                 else loop newLexState
-        loop 0L
+        loop (queryLexState source defines line)
             
     return 
         FSharp.CompilerBinding.Parsing.findLongIdents(col, lineStr)
@@ -345,7 +383,7 @@ type LanguageService(dirtyNotify) =
   member x.Checker = checker
 
   /// Returns Some zero-based range of an operator, None if the symbol at line, colu is not an operator. 
-  member x.GetOperatorBounds(_source: string, line: int, colu, lineStr, args: string seq) =
+  member x.GetOperatorBounds(source: string, line: int, colu, lineStr, args: string seq) =
     let defines = 
         args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
              |> Seq.toList
@@ -366,6 +404,6 @@ type LanguageService(dirtyNotify) =
             | true, TokenCharKind.Delimiter when tok.FullMatchedLength > 1 ->
                 Some (line, leftCol, line, rightCol)
             | _ -> loop newLexState (tok.CharClass = TokenCharKind.Operator)
-    loop 0L false
+    loop (queryLexState source defines line) false
 
            

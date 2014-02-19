@@ -168,8 +168,16 @@ let ``should not find usages inside comments``() =
     hasNoSymbolUsage 478 11 "    // List.length ref"
 
 [<Test>]
+let ``should not find usages inside multiline comments``() =
+    hasNoSymbolUsage 713 13 "        let p = 1"
+
+[<Test>]
 let ``should not find usages inside strings``() =
     hasNoSymbolUsage 476 22 "    let y = \"a message and more\""
+
+[<Test>]
+let ``should not find usages inside multiline strings``() =
+    hasNoSymbolUsage 716 4 "let p = 1"
 
 [<Test>]
 let ``should not find usages inside compiler directives``() =

@@ -708,3 +708,11 @@ module TestCases =
     type C<'a> = C of 'a
     let g x = ()
     g(2)
+
+    let p = 1
+    (* 
+        let p = 1
+    *)
+    printfn """
+let p = 1
+"""
