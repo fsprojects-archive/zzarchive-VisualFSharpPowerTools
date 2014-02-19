@@ -94,6 +94,14 @@ let ``should find usages of members``() =
         217 26 "        member this.Length = length"
         [ (217, 20), (217, 26); (227, 63), (227, 77); (227, 78), (227, 92) ]
 
+    checkSymbolUsage
+        610 35 "    eventForDelegateType.Publish.AddHandler("
+        [ (610, 4), (610, 43) ]
+
+    checkSymbolUsage
+        714 16 "    Nested.``long name``()"
+        [ (712, 12), (712, 25); (714, 4), (714, 24) ]
+
 [<Test>]
 let ``should find usages of DU constructors named with single upper-case letter``() =
     checkSymbolUsage

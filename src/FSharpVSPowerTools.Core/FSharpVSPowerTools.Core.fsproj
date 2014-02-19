@@ -55,7 +55,6 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
     <Compile Include="CompilerLocationUtils.fs" />
-    <Compile Include="Parser.fs" />
     <Compile Include="LanguageService.fs" />
     <None Include="packages.config" />
   </ItemGroup>
