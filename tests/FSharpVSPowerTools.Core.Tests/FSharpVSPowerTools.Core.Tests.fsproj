@@ -57,6 +57,7 @@
     <None Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="XMLDocTests.fs" />
+    <Compile Include="ParserTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
   </ItemGroup>
   <ItemGroup>
