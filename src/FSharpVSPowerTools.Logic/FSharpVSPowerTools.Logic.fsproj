@@ -54,18 +54,18 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <None Include="packages.config" />
     <Compile Include="VSUtils.fs" />
     <Compile Include="ProjectParser.fs" />
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="HighlightUsageTagger.fs" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.17\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.20\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -112,8 +112,6 @@
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="mscorlib" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
       <Name>FSharpVSPowerTools.Core</Name>
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>

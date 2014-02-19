@@ -86,11 +86,11 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                             Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
                             let foundUsages =
                                 references
-                                |> Seq.choose (fun (fileName, ((beginLine, beginCol), (endLine, endCol))) -> 
+                                |> Seq.choose (fun su -> 
                                     // We have to filter by file name otherwise the range is invalid wrt current snapshot
-                                    if fileName = currentFile then
+                                    if su.FileName = currentFile then
                                         // Range01 type consists of zero-based values, which is a bit confusing
-                                        Some (fromVSPos(newWord.Snapshot, beginLine, beginCol, endLine, endCol))
+                                        Some (fromVSPos newWord.Snapshot su.Range)
                                     else None)
                                 |> Seq.choose (fun span -> 
                                     let subSpan = 

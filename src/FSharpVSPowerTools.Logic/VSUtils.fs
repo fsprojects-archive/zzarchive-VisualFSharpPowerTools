@@ -11,7 +11,7 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
 
 /// Retrieve snapshot from VS zero-based positions
-let fromVSPos(snapshot : ITextSnapshot, startLine, startCol, endLine, endCol) =
+let fromVSPos(snapshot : ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
     let startPos = snapshot.GetLineFromLineNumber(startLine).Start.Position + startCol
     let endPos = snapshot.GetLineFromLineNumber(endLine).Start.Position + endCol
     SnapshotSpan(snapshot, startPos, endPos - startPos)
