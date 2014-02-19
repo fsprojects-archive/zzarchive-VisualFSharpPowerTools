@@ -708,3 +708,8 @@ module TestCases =
     type C<'a> = C of 'a
     let g x = ()
     g(2)
+
+    module Nested =
+        let ``long name``() = ()
+
+    Nested.``long name``()

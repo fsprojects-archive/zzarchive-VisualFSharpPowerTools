@@ -289,25 +289,12 @@ type LanguageService(dirtyNotify) =
 
       let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
       
-//      let (|Ident|Operator|Other|) (colu, lineStr) =
-//          let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
-//          let rec loop lexState =
-//              match lineTokenizer.ScanToken lexState with
-//              | None, _ -> Other
-//              | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
-//                  // Ignore everything in a line with compiler directives
-//                  Other
-//              | Some tok, newLexState ->
-//                  // Tokenizer uses zero-based columns
-//                  let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
-//                  if leftCol <= colu - 1 && colu - 1 <= rightCol then
-//                      if tok.TokenName = "IDENT" then Ident
-//                      elif tok.CharClass = TokenCharKind.Operator then Operator (lineStr.Substring(leftCol, rightCol - leftCol))
-//                      else loop newLexState
-//                  else loop newLexState
-//          loop 0L
-
+      /// Tokenizes a line of code. Returns:
+      /// - Ident (right column of the ident under the cursor: int * list of all parts of the ident: string list)
+      /// - Operator (right column of the operator under the cursor: int * operator name as a single-element list: string list) 
+      /// - Other
       let (|Ident|Operator|Other|) (colu, lineStr) =
+          // get all tokens excluding keywords
           let tokens =
             let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
             let rec loop lexState acc =
@@ -317,7 +304,8 @@ type LanguageService(dirtyNotify) =
                 | _ -> List.rev acc
             loop 0L []
 
-          // filter out overlapping oparators
+          // filter out overlapped oparators (>>= operator is tokenized as GREATER, GREATER, EQUALS. 
+          // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two.
           let tokens = 
             tokens
             |> List.fold (fun (acc, lastRightCol) x ->
@@ -327,48 +315,54 @@ type LanguageService(dirtyNotify) =
             |> fst 
             |> List.rev
              
-          let tokenUnderCursor = tokens |> List.tryFind (fun x ->
-              let leftCol, rightCol = x.LeftColumn, x.LeftColumn + x.FullMatchedLength
-              leftCol <= colu - 1 && colu - 1 <= rightCol)
+          // One or two tokens that in touch with the cursor (for "let x|(g) = ()" the tokens will be "x" and "(")
+          let tokensUnderCursor = tokens |> List.filter (fun x ->
+            let leftCol, rightCol = x.LeftColumn, x.LeftColumn + x.FullMatchedLength - 1
+            leftCol <= colu && rightCol + 1 >= colu)
+
+          // Select IDENT or OPERATOR token
+          let tokenUnderCursor = 
+            tokensUnderCursor |> List.tryFind (fun x -> x.CharClass = TokenCharKind.Identifier || x.ColorClass = TokenColorKind.Operator)
          
           let getTokenText (tok: TokenInformation) = lineStr.Substring(tok.LeftColumn, tok.FullMatchedLength)
 
           match tokenUnderCursor with
           | None -> Other
-          | Some tok when tok.CharClass = TokenCharKind.Operator -> Operator (tok.LeftColumn, getTokenText tok)
+          | Some tok when tok.ColorClass = TokenColorKind.Operator -> 
+              Operator (tok.LeftColumn + tok.FullMatchedLength, getTokenText tok)
           | Some _ ->
-              let lefts, _ = tokens |> List.partition (fun x -> x.LeftColumn <= colu)
-              lefts 
-              |> List.rev 
-              |> Seq.takeWhile (fun x -> x.TokenName = "IDENT" || x.TokenName = "DOT") 
-              |> Seq.toList 
+              tokens 
+              |> List.filter (fun x -> x.LeftColumn <= colu) 
               |> List.rev
+              // skip tailing non-interesting tokens
+              |> Seq.skipWhile (fun x -> x.CharClass <> TokenCharKind.Identifier && x.ColorClass <> TokenColorKind.Operator)
+              // take a sequence of idents and dots, like "Namespace.Module.func"
+              |> Seq.takeWhile (fun x -> x.TokenName = "IDENT" || x.TokenName = "DOT") 
+              |> Seq.toList
+              |> List.rev
+              // filter out the dots
               |> List.filter (fun x -> x.TokenName = "IDENT")
               |> function
                   | [] -> Other
-                  | xs -> Ident ((Seq.last xs).LeftColumn, xs |> List.map (fun x -> getTokenText x))
+                  | xs -> 
+                    let lastIdent = Seq.last xs
+                    Ident (lastIdent.LeftColumn + lastIdent.FullMatchedLength, xs |> List.map (fun x -> getTokenText x))
               
-    //          let all = lefts
-    //            lefts @ 
-    //            match rights with
-    //            | h :: _ when h.TokenName = "DOT" -> [h]
-    //            | _ -> []
-              //lefts |> List.filter (fun x -> x.)
-          
+      // right column of the last symbol * last symbol * all parts of a long ident
       let symbol =
         match col, lineStr with
         | Other -> None
-        | Ident (leftCol, identIsland) -> Some (leftCol, Seq.last identIsland, identIsland)
-        | Operator (leftCol, op) -> Some (leftCol, op, [op])
+        | Ident (rightCol, identIsland) -> Some (rightCol, Seq.last identIsland, identIsland)
+        | Operator (rightCol, op) -> Some (rightCol, op, [op])
             
       return 
           match symbol with
           | None -> None
-          | Some (leftCol, lastSymbol, island) ->
+          | Some (rightCol, lastSymbol, island) ->
               // We only look up identifiers and operators, everything else isn't of interest       
               Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," island)
               // Note we advance the caret to 'leftCol' ** due to GetSymbolAtLocation only working at the beginning/end **
-              match backgroundTypedParse.GetSymbolAtLocation(line, leftCol + 1, lineStr, island) with
+              match backgroundTypedParse.GetSymbolAtLocation(line, rightCol, lineStr, island) with
               | Some symbol ->
                   let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
                   let refs = projectResults.GetUsesOfSymbol(symbol)
@@ -377,14 +371,14 @@ type LanguageService(dirtyNotify) =
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
    async { 
-    let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
-
-    //parse and retrieve Checked Project results, this has the entity graph and errors etc
-    let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-  
-    let symDeclRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
-    let refs = projectResults.GetUsesOfSymbol(symbol)
-    return (symDeclRangeOpt, refs) }
+      let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
+      
+      //parse and retrieve Checked Project results, this has the entity graph and errors etc
+      let! projectResults = checker.ParseAndCheckProject(projectOptions) 
+      
+      let symDeclRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
+      let refs = projectResults.GetUsesOfSymbol(symbol)
+      return (symDeclRangeOpt, refs) }
 
   member x.Checker = checker
 
