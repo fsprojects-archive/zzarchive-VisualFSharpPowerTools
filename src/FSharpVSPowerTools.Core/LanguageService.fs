@@ -9,54 +9,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 /// Wraps the result of type-checking and provides methods for implementing
 /// various IntelliSense functions (such as completion & tool tips)
 type TypedParseResult(info:CheckFileResults, untyped : ParseFileResults) =
-    let token = Parser.tagOfToken(Parser.token.IDENT("")) 
-
-    /// Get declarations at the current location in the specified document
-    /// (used to implement dot-completion in 'FSharpTextEditorCompletion.fs')
-//    member x.GetDeclarations(line, col, lineStr) = 
-//        match Parsing.findLongIdentsAndResidue(col, lineStr) with
-//        | None -> None
-//        | Some (longName, residue) ->
-//            Debug.WriteLine (sprintf "GetDeclarations: '%A', '%s'" longName residue)
-//            // Get items & generate output
-//            try Some (info.GetDeclarations(None, line, col, lineStr, longName, residue, fun (_,_) -> false)
-//                      |> Async.RunSynchronously, residue)
-//            with :? TimeoutException as _e -> None
-
-    /// Get the tool-tip to be displayed at the specified offset (relatively
-    /// from the beginning of the current document)
-//    member x.GetToolTip(line, col, lineStr) : Option<ToolTipText * (int * int)> =
-//        match Parsing.findLongIdents(col, lineStr) with 
-//        | None -> None
-//        | Some(col,identIsland) ->
-//          let res = info.GetToolTipText(line, col, lineStr, identIsland, token)
-//          Debug.WriteLine("Result: Got something, returning")
-//          Some (res, (col - (Seq.last identIsland).Length, col))
-
-//    member x.GetDeclarationLocation(line, col, lineStr) =
-//        match Parsing.findLongIdents(col, lineStr) with 
-//        | None -> FindDeclResult.DeclNotFound FindDeclFailureReason.Unknown
-//        | Some(col,identIsland) ->
-//            let res = info.GetDeclarationLocation(line, col, lineStr, identIsland, true)
-//            Debug.WriteLine("Result: Got something, returning")
-//            res 
-
-//    member x.GetMethods(line, col, lineStr) =
-//        match Parsing.findLongIdentsAtGetMethodsTrigger(col, lineStr) with 
-//        | None -> None
-//        | Some(col,identIsland) ->
-//            let res = info.GetMethods(line, col, lineStr, Some identIsland)
-//            Debug.WriteLine("Result: Got something, returning")
-//            Some (res.MethodName, res.Methods) 
-
-//    member x.GetSymbol(line, col, lineStr) =
-//        match Parsing.findLongIdents(col, lineStr) with 
-//        | Some(colu, identIsland) ->
-//            //get symbol at location
-//            //Note we advance the caret to 'colu' ** due to GetSymbolAtLocation only working at the beginning/end **
-//            info.GetSymbolAtLocation(line, colu, lineStr, identIsland)
-//        | None -> None
-
     member x.CheckFileResults = info        
     member x.ParseFileResults = untyped 
 
