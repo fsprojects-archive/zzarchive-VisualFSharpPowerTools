@@ -69,21 +69,18 @@ let allUsesOfAllSymbols =
 //allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
 
-let checkSymbolUsage line col lineStr expected =
+let getUsesOfSymbol line col lineStr =
     VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                         line, col, lineStr, args, framework)
+                                                                   line, col, lineStr, args, framework)
     |> Async.RunSynchronously
-    |> Option.map (fun (_, _, _, references) -> Array.map snd references)
+    |> Option.map (fun (_, _, _, symbolUses) -> symbolUses |> Array.map (fun x -> x.Range))
     |> Option.map set
-    //|> Option.map (fun s -> printfn "actual: %A" s; s)
-    |> assertEqual (Some (set expected))
+
+let checkSymbolUsage line col lineStr expected =
+    getUsesOfSymbol line col lineStr |> assertEqual (Some (set expected))
 
 let hasNoSymbolUsage line col lineStr =
-    VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                         line, col, lineStr, args, framework)
-    |> Async.RunSynchronously
-    |> Option.map (fun (_, _, _, references) -> Array.map snd references)
-    |> assertEqual None
+    getUsesOfSymbol line col lineStr |> assertEqual None
 
 [<Test>]
 let ``should find usages of arrays``() =
