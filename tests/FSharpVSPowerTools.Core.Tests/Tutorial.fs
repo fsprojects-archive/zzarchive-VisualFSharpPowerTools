@@ -716,3 +716,8 @@ module TestCases =
     printfn """
 let p = 1
 """
+
+    module Nested =
+        let ``long name``() = ()
+
+    Nested.``long name``()
