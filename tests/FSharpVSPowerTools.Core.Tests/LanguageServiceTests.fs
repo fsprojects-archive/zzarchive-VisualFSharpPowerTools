@@ -82,8 +82,8 @@ let checkSymbolUsage line col lineStr expected =
 let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
-let checkGetIdent line col lineStr expected =
-    VSLanguageService.Instance.GetIdent(source, line, col, lineStr, args)
+let checkGetLongIdent line col lineStr expected =
+    VSLanguageService.Instance.GetLongIdent(source, line, col, lineStr, args)
     |> List.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
         text, (line, leftCol), (line, rightCol))
     |> assertEqual expected
@@ -195,12 +195,21 @@ let ``should not find usages inside compiler directives``() =
 
 [<Test>]
 let ``should find idents of operators``() =
-    checkGetIdent 693 10 "    let (>>=) x y = ()" [ ">>=", (693, 9), (693, 12) ]
-    checkGetIdent 695 12 "    let (>~>>) x y = ()" [ ">~>>", (695, 9), (695, 13) ]
-    checkGetIdent 701 12 "    let ( >>. ) x y = x" [ ">>.", (701, 10), (701, 13) ]
-    checkGetIdent 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" [ ">>.", (704, 14), (704, 17) ]
+    checkGetLongIdent 693 10 "    let (>>=) x y = ()" [ ">>=", (693, 9), (693, 12) ]
+    checkGetLongIdent 695 12 "    let (>~>>) x y = ()" [ ">~>>", (695, 9), (695, 13) ]
+    checkGetLongIdent 701 12 "    let ( >>. ) x y = x" [ ">>.", (701, 10), (701, 13) ]
+    checkGetLongIdent 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" [ ">>.", (704, 14), (704, 17) ]
 
 [<Test>]
 let ``should find idents of identifiers``() =
-    checkGetIdent 703 8 "    let ws x = x" [ "ws", (703, 8), (703, 10) ]
-    checkGetIdent 702 24 "    1 >>. 2 >>. 3 |> ignore" [ "ignore", (702, 21), (702, 27) ]
+    checkGetLongIdent 703 8 "    let ws x = x" [ "ws", (703, 8), (703, 10) ]
+    checkGetLongIdent 702 24 "    1 >>. 2 >>. 3 |> ignore" [ "ignore", (702, 21), (702, 27) ]
+    
+    checkGetLongIdent 722 14 "    Nested.``long name``()" 
+        [ "``long name``", (722, 11), (722, 24) 
+          "Nested", (722, 4), (722, 10) ]
+
+    checkGetLongIdent 582 59 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        [ "map", (582, 57), (582, 60) 
+          "Parallel", (582, 48), (582, 56) 
+          "Array", (582, 42), (582, 47) ]

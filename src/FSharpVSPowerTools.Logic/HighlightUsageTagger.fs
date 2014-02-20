@@ -125,7 +125,7 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                 let col = currentRequest.Position - currentRequest.GetContainingLine().Start.Position
                 let lineStr = currentRequest.GetContainingLine().GetText()                
                 let args = projectProvider.CompilerOptions                
-                match VSLanguageService.Instance.GetIdent(source, line, col, lineStr, args) with
+                match VSLanguageService.Instance.GetLongIdent(source, line, col, lineStr, args) with
                 | [] -> None
                 | lastIdent :: _ -> Some (currentRequest.FromRange lastIdent.Range)
 

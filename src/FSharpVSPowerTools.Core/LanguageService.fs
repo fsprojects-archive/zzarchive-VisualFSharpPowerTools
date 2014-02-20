@@ -43,8 +43,6 @@ type Ident =
       Text: string }
     member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
 
-type LongIdent = LongIdent of Ident list
-
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService(dirtyNotify) =
   let tryGetSymbolRange (range: Range.range option) = 
@@ -200,7 +198,7 @@ type LanguageService(dirtyNotify) =
         lexStates.[line]
 
   // Returns long ident at a given position. Parts are returned in reverse order.
-  let getIdent source line col lineStr (args: string array) : Ident list =
+  let getLongIdent source line col lineStr (args: string array) : Ident list =
       let defines =
           args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
                |> Seq.toList
@@ -338,7 +336,7 @@ type LanguageService(dirtyNotify) =
            mbox.PostAndReply((fun repl -> UpdateAndGetTypedInfo(req, repl)), timeout = timeout)
 
   /// Returns long ident at a given position.
-  member x.GetIdent (source, line, col, lineStr, args) = getIdent source line col lineStr args
+  member x.GetLongIdent (source, line, col, lineStr, args) = getLongIdent source line col lineStr args
 
   member x.GetUsesOfSymbolAtLocation(projectFilename, file, source, files, line:int, col, lineStr, args, framework) = async { 
       let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
@@ -353,7 +351,7 @@ type LanguageService(dirtyNotify) =
           checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
              
       return 
-          match getIdent source line col lineStr args with
+          match getLongIdent source line col lineStr args with
           | lastIdent :: _ as idents ->
               let identsText = idents |> List.map (fun x -> x.Text) |> List.rev
               // We only look up identifiers and operators, everything else isn't of interest       
