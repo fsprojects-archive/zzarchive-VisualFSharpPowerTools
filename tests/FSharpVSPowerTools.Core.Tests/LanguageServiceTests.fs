@@ -225,3 +225,8 @@ let ``should find idents of identifiers``() =
     checkGetLongIdent 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
         [ "Parallel", (582, 48), (582, 56) 
           "Array", (582, 42), (582, 47) ]
+
+[<Test>]
+let ``should find idents of generic parameters``() =
+    checkGetLongIdent 707 12 "    type C<'a> = C of 'a" [ "'a", (707, 11), (707, 13) ]
+    checkGetLongIdent 707 22 "    type C<'a> = C of 'a" [ "'a", (707, 22), (707, 24) ]
