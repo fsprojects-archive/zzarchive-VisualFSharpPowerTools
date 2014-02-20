@@ -191,6 +191,72 @@ type LanguageService(dirtyNotify) =
         Debug.Assert(line >= 0 && line < Array.length lexStates, "Should have lex states for every line.")
         lexStates.[line]
 
+  /// Tokenizes a line of code. 
+  /// Returns: right column of the last lart of symbol * all parts of a long ident (in reverse order)
+  let tokenize source line col (args: string array) lineStr =
+      let defines =
+          args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
+               |> Seq.toList
+
+      let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
+
+      // get all tokens excluding keywords
+      let tokens =
+        let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
+        let rec loop lexState acc =
+            match lineTokenizer.ScanToken lexState with
+            | Some tok, state when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> loop state acc
+            | Some tok, state -> loop state (tok :: acc)
+            | _ -> List.rev acc
+        loop (queryLexState source defines line) []
+
+      let getCorrectRightCol token = token.LeftColumn + token.FullMatchedLength
+
+      // filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
+      // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two.
+      let tokens = 
+        tokens
+        |> List.fold (fun (acc, lastRightCol) token ->
+             if token.LeftColumn <= lastRightCol then acc, lastRightCol
+             else token :: acc, (getCorrectRightCol token) - 1
+           ) ([], 0)
+        |> fst 
+        |> List.rev
+         
+      // One or two tokens that in touch with the cursor (for "let x|(g) = ()" the tokens will be "x" and "(")
+      let tokensUnderCursor = tokens |> List.filter (fun x ->
+        x.LeftColumn <= col && getCorrectRightCol x >= col)
+
+      let isSignificantToken token = 
+        token.CharClass = TokenCharKind.Identifier || token.ColorClass = TokenColorKind.Operator             
+
+      // Select IDENT or OPERATOR token
+      let tokenUnderCursor = tokensUnderCursor |> List.tryFind isSignificantToken
+      let getTokenText (tok: TokenInformation) = lineStr.Substring(tok.LeftColumn, tok.FullMatchedLength)
+
+      match tokenUnderCursor with
+      | None -> None
+      // operator
+      | Some tok when tok.ColorClass = TokenColorKind.Operator -> 
+          Some (getCorrectRightCol tok, [getTokenText tok])
+      // (long) ident Like.this.one
+      | Some _ ->
+          tokens 
+          |> List.filter (fun x -> x.LeftColumn <= col) 
+          |> List.rev
+          // skip tailing non-interesting tokens
+          |> Seq.skipWhile (isSignificantToken >> not)
+          // take a sequence of idents and dots, like "Namespace.Module.func"
+          |> Seq.takeWhile (fun x -> x.TokenName = "IDENT" || x.TokenName = "DOT") 
+          |> Seq.toList
+          // filter out the dots
+          |> List.filter (fun x -> x.TokenName = "IDENT")
+          |> function
+              | [] -> None
+              | lastIdent :: _ as tokens -> 
+                  Some (getCorrectRightCol lastIdent, tokens |> List.map getTokenText)
+
+
    /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
     let ext = Path.GetExtension(fileName)
@@ -269,77 +335,12 @@ type LanguageService(dirtyNotify) =
       Debug.WriteLine(sprintf "There are %i error(s)." projectResults.Errors.Length)
       Debug.Assert(not projectResults.HasCriticalErrors, "Should abort on critical errors.")
       // Get the parse results for the current file
-      let! _backgroundParseResults, backgroundTypedParse = 
+      let! _, backgroundTypedParse = 
           // Note this operates on the file system so the file needs to be current
           checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
-      
-      let defines = 
-          args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-               |> Seq.toList
-
-      let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
-      
-      /// Tokenizes a line of code. 
-      /// Returns: right column of the last lart of symbol * all parts of a long ident (in reverse order)
-      let tokenize colu lineStr =
-          // get all tokens excluding keywords
-          let tokens =
-            let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
-            let rec loop lexState acc =
-                match lineTokenizer.ScanToken lexState with
-                | Some tok, state when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> loop state acc
-                | Some tok, state -> loop state (tok :: acc)
-                | _ -> List.rev acc
-            loop (queryLexState source defines line) []
-
-          let getCorrectRightCol token = token.LeftColumn + token.FullMatchedLength
-
-          // filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
-          // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two.
-          let tokens = 
-            tokens
-            |> List.fold (fun (acc, lastRightCol) token ->
-                 if token.LeftColumn <= lastRightCol then acc, lastRightCol
-                 else token :: acc, (getCorrectRightCol token) - 1
-               ) ([], 0)
-            |> fst 
-            |> List.rev
-             
-          // One or two tokens that in touch with the cursor (for "let x|(g) = ()" the tokens will be "x" and "(")
-          let tokensUnderCursor = tokens |> List.filter (fun x ->
-            x.LeftColumn <= colu && getCorrectRightCol x >= colu)
-
-          let isSignificantToken token = 
-            token.CharClass = TokenCharKind.Identifier || token.ColorClass = TokenColorKind.Operator             
-
-          // Select IDENT or OPERATOR token
-          let tokenUnderCursor = tokensUnderCursor |> List.tryFind isSignificantToken
-          let getTokenText (tok: TokenInformation) = lineStr.Substring(tok.LeftColumn, tok.FullMatchedLength)
-
-          match tokenUnderCursor with
-          | None -> None
-          // operator
-          | Some tok when tok.ColorClass = TokenColorKind.Operator -> 
-              Some (getCorrectRightCol tok, [getTokenText tok])
-          // (long) ident Like.this.one
-          | Some _ ->
-              tokens 
-              |> List.filter (fun x -> x.LeftColumn <= colu) 
-              |> List.rev
-              // skip tailing non-interesting tokens
-              |> Seq.skipWhile (isSignificantToken >> not)
-              // take a sequence of idents and dots, like "Namespace.Module.func"
-              |> Seq.takeWhile (fun x -> x.TokenName = "IDENT" || x.TokenName = "DOT") 
-              |> Seq.toList
-              // filter out the dots
-              |> List.filter (fun x -> x.TokenName = "IDENT")
-              |> function
-                  | [] -> None
-                  | lastIdent :: _ as tokens -> 
-                      Some (getCorrectRightCol lastIdent, tokens |> List.map getTokenText)
              
       return 
-          match tokenize col lineStr with
+          match tokenize source line col args lineStr with
           | Some (rightCol, (lastSymbol :: _ as island)) ->
               // We only look up identifiers and operators, everything else isn't of interest       
               Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," island)

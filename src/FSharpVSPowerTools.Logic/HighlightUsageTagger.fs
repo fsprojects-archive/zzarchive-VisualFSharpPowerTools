@@ -124,7 +124,7 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                 let lineStr = currentRequest.GetContainingLine().GetText()                
                 let args = projectProvider.CompilerOptions                
                 VSLanguageService.Instance.GetOperatorBounds(source, line, col, lineStr, args)
-                |> Option.map (currentRequest.FromRange)
+                |> Option.map currentRequest.FromRange
 
             match textStructureNavigator.FindAllWords(currentRequest, operatorSpan) with
             | None ->
