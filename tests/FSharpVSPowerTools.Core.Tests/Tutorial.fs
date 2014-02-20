@@ -721,3 +721,10 @@ let p = 1
         let ``long name``() = ()
 
     Nested.``long name``()
+
+    module M =
+        module N =
+            let (+.) x y = ()
+    
+    M.N.(+.) 1 2
+

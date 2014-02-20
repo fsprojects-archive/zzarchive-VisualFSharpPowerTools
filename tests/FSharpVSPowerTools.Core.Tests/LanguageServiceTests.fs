@@ -86,6 +86,7 @@ let checkGetLongIdent line col lineStr expected =
     VSLanguageService.Instance.GetLongIdent(source, line, col, lineStr, args)
     |> List.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
         text, (line, leftCol), (line, rightCol))
+    |> fun actual -> printfn "Expected = %A, Actual = %A" expected actual; actual
     |> assertEqual expected
 
 [<Test>]
@@ -150,6 +151,12 @@ let ``should find usages of operators containing dots``() =
         701 11 "    let ( >>. ) x y = ()"
         [ (701, 10), (701, 13); (702, 6), (702, 9); (702, 12), (702, 15); (704, 14), (704, 17); (704, 21), (704, 24); 
           (704, 27), (704, 30) ]
+
+[<Test>]
+let ``should find fully qualified operator``() =
+    checkSymbolUsage 
+        728 9 "    M.N.(+.) 1 2" 
+        [ (726, 17), (726, 19); (728, 4), (728, 11) ]
 
 [<Test>]
 let ``should find usages of symbols if where are operators containing dots on the same line``() =
@@ -225,6 +232,10 @@ let ``should find idents of identifiers``() =
     checkGetLongIdent 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
         [ "Parallel", (582, 48), (582, 56) 
           "Array", (582, 42), (582, 47) ]
+
+[<Test>]
+let ``should find operator``() =
+    checkGetLongIdent 728 9 "    M.N.(+.) 1 2" [ "+.", (728, 9), (728, 11) ]
 
 [<Test>]
 let ``should find idents of generic parameters``() =
