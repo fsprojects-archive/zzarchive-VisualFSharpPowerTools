@@ -170,6 +170,10 @@ let ``should find usages of symbols contacting with a special symbol on the righ
         [ (707, 9), (707, 10) ]
 
     checkSymbolUsage
+        707 10 "    type C<'a> = C of 'a"
+        [ (707, 9), (707, 10) ]
+
+    checkSymbolUsage
         709 5 "    g(2)"
         [ (708, 8), (708, 9); (709, 4), (709, 5) ]
 
@@ -212,4 +216,12 @@ let ``should find idents of identifiers``() =
     checkGetLongIdent 582 59 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
         [ "map", (582, 57), (582, 60) 
           "Parallel", (582, 48), (582, 56) 
+          "Array", (582, 42), (582, 47) ]
+
+    checkGetLongIdent 582 48 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        [ "Parallel", (582, 48), (582, 56) 
+          "Array", (582, 42), (582, 47) ]
+
+    checkGetLongIdent 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        [ "Parallel", (582, 48), (582, 56) 
           "Array", (582, 42), (582, 47) ]

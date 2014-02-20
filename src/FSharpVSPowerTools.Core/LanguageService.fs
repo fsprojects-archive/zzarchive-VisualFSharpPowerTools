@@ -232,12 +232,14 @@ type LanguageService(dirtyNotify) =
       let tokensUnderCursor = tokens |> List.filter (fun x ->
         x.LeftColumn <= col && getCorrectRightCol x >= col)
 
-      let isSignificantToken token = 
-        token.CharClass = TokenCharKind.Identifier || token.ColorClass = TokenColorKind.Operator             
+      // Select IDENT token. If failes, select OPERATOR token.
+      let tokenUnderCursor =
+        match tokensUnderCursor |> List.tryFind (fun t -> t.CharClass = TokenCharKind.Identifier) with
+        | Some x -> Some x
+        | _ -> tokensUnderCursor |> List.tryFind (fun t -> t.ColorClass = TokenColorKind.Operator)
 
-      // Select IDENT or OPERATOR token
-      let tokenUnderCursor = tokensUnderCursor |> List.tryFind isSignificantToken
       let getTokenText (tok: TokenInformation) = lineStr.Substring(tok.LeftColumn, tok.FullMatchedLength)
+      let identOrDot tok = tok.TokenName = "IDENT" || tok.TokenName = "DOT"
 
       match tokenUnderCursor with
       | None -> []
@@ -253,9 +255,9 @@ type LanguageService(dirtyNotify) =
           |> List.filter (fun x -> x.LeftColumn <= col) 
           |> List.rev
           // skip tailing non-interesting tokens
-          |> Seq.skipWhile (isSignificantToken >> not)
+          |> Seq.skipWhile (not << identOrDot)
           // take a sequence of idents and dots, like "Namespace.Module.func"
-          |> Seq.takeWhile (fun x -> x.TokenName = "IDENT" || x.TokenName = "DOT") 
+          |> Seq.takeWhile identOrDot
           |> Seq.toList
           // filter out the dots
           |> List.filter (fun x -> x.TokenName = "IDENT")
