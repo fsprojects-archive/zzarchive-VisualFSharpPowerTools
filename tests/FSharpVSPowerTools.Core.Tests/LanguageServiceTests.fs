@@ -82,8 +82,10 @@ let checkSymbolUsage line col lineStr expected =
 let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
-let checkOperatorBounds line col lineStr expected =
-    VSLanguageService.Instance.GetOperatorBounds(source, line, col, lineStr, args)
+let checkGetIdent line col lineStr expected =
+    VSLanguageService.Instance.GetIdent(source, line, col, lineStr, args)
+    |> List.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
+        text, (line, leftCol), (line, rightCol))
     |> assertEqual expected
 
 [<Test>]
@@ -192,13 +194,13 @@ let ``should not find usages inside compiler directives``() =
     hasNoSymbolUsage 682 12 "#if COMPILED"
 
 [<Test>]
-let ``should find bounds of operators``() =
-    checkOperatorBounds 693 10 "    let (>>=) x y = ()" (Some(693, 9, 693, 12))
-    checkOperatorBounds 695 12 "    let (>~>>) x y = ()" (Some(695, 9, 695, 13))
-    checkOperatorBounds 701 12 "    let ( >>. ) x y = x" (Some(701, 10, 701, 13))
-    checkOperatorBounds 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" (Some(704, 14, 704, 17))
+let ``should find idents of operators``() =
+    checkGetIdent 693 10 "    let (>>=) x y = ()" [ ">>=", (693, 9), (693, 12) ]
+    checkGetIdent 695 12 "    let (>~>>) x y = ()" [ ">~>>", (695, 9), (695, 13) ]
+    checkGetIdent 701 12 "    let ( >>. ) x y = x" [ ">>.", (701, 10), (701, 13) ]
+    checkGetIdent 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" [ ">>.", (704, 14), (704, 17) ]
 
 [<Test>]
-let ``should not find bounds of identifiers``() =
-    checkOperatorBounds 693 15 "    let (>>=) x y = ()" None
-    checkOperatorBounds 704 9 "    let x = 1 >>. ws >>. 2 >>. ws" None
+let ``should find idents of identifiers``() =
+    checkGetIdent 703 8 "    let ws x = x" [ "ws", (703, 8), (703, 10) ]
+    checkGetIdent 702 24 "    1 >>. 2 >>. 3 |> ignore" [ "ignore", (702, 21), (702, 27) ]

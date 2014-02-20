@@ -101,29 +101,3 @@ type SnapshotSpan with
             (span, spans)
         with _ ->
             (span, Seq.empty)
-
-type ITextStructureNavigator with
-    member this.FindAllWords(currentRequest : SnapshotPoint, operatorSpan) =
-        let mutable word = 
-            match operatorSpan with
-            | Some span -> TextExtent(span, true)
-            | None -> this.GetExtentOfWord(currentRequest)
-
-        let mutable foundWord = true
-
-        // If we've selected something not worth highlighting, we might have
-        // missed a "word" by a little bit
-        if not <| currentRequest.WordExtentIsValid(word) then
-            // Before we retry, make sure it is worthwhile
-            if word.Span.Start <> currentRequest ||
-               currentRequest = currentRequest.GetContainingLine().Start ||
-               Char.IsWhiteSpace((currentRequest - 1).GetChar()) then
-                foundWord <- false
-            else
-                // Try again, one character previous.  If the caret is at the end of a word, then
-                // this will pick up the word we are at the end of.
-                word <- this.GetExtentOfWord(currentRequest - 1)
-                // If we still aren't valid the second time around, we're done
-                if not <| currentRequest.WordExtentIsValid(word) then
-                    foundWord <- false
-        if foundWord then Some word.Span else None

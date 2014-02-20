@@ -36,6 +36,14 @@ type internal LanguageServiceMessage =
   | UpdateAndGetTypedInfo of ParseRequest * AsyncReplyChannel<TypedParseResult>
   | GetTypedInfoDone of AsyncReplyChannel<TypedParseResult>
 
+type Ident =
+    { Line: int
+      LeftColumn: int
+      RightColumn: int
+      Text: string }
+    member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
+
+type LongIdent = LongIdent of Ident list
 
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService(dirtyNotify) =
@@ -191,9 +199,8 @@ type LanguageService(dirtyNotify) =
         Debug.Assert(line >= 0 && line < Array.length lexStates, "Should have lex states for every line.")
         lexStates.[line]
 
-  /// Tokenizes a line of code. 
-  /// Returns: right column of the last lart of symbol * all parts of a long ident (in reverse order)
-  let tokenize source line col (args: string array) lineStr =
+  // Returns long ident at a given position. Parts are returned in reverse order.
+  let getIdent source line col lineStr (args: string array) : Ident list =
       let defines =
           args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
                |> Seq.toList
@@ -210,7 +217,7 @@ type LanguageService(dirtyNotify) =
             | _ -> List.rev acc
         loop (queryLexState source defines line) []
 
-      let getCorrectRightCol token = token.LeftColumn + token.FullMatchedLength
+      let getCorrectRightCol (token: TokenInformation) = token.LeftColumn + token.FullMatchedLength
 
       // filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
       // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two.
@@ -235,10 +242,13 @@ type LanguageService(dirtyNotify) =
       let getTokenText (tok: TokenInformation) = lineStr.Substring(tok.LeftColumn, tok.FullMatchedLength)
 
       match tokenUnderCursor with
-      | None -> None
+      | None -> []
       // operator
       | Some tok when tok.ColorClass = TokenColorKind.Operator -> 
-          Some (getCorrectRightCol tok, [getTokenText tok])
+            [{ Line = line
+               LeftColumn = tok.LeftColumn
+               RightColumn = getCorrectRightCol tok
+               Text = getTokenText tok }]
       // (long) ident Like.this.one
       | Some _ ->
           tokens 
@@ -251,11 +261,11 @@ type LanguageService(dirtyNotify) =
           |> Seq.toList
           // filter out the dots
           |> List.filter (fun x -> x.TokenName = "IDENT")
-          |> function
-              | [] -> None
-              | lastIdent :: _ as tokens -> 
-                  Some (getCorrectRightCol lastIdent, tokens |> List.map getTokenText)
-
+          |> List.map (fun x -> 
+              { Line = line
+                LeftColumn = x.LeftColumn
+                RightColumn = getCorrectRightCol x
+                Text = getTokenText x })
 
    /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
@@ -327,6 +337,9 @@ type LanguageService(dirtyNotify) =
            // If we didn't get a recent set of type checking results, we put in a request and wait for at most 'timeout' for a response
            mbox.PostAndReply((fun repl -> UpdateAndGetTypedInfo(req, repl)), timeout = timeout)
 
+  /// Returns long ident at a given position.
+  member x.GetIdent (source, line, col, lineStr, args) = getIdent source line col lineStr args
+
   member x.GetUsesOfSymbolAtLocation(projectFilename, file, source, files, line:int, col, lineStr, args, framework) = async { 
       let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
       
@@ -340,54 +353,30 @@ type LanguageService(dirtyNotify) =
           checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
              
       return 
-          match tokenize source line col args lineStr with
-          | Some (rightCol, (lastSymbol :: _ as island)) ->
+          match getIdent source line col lineStr args with
+          | lastIdent :: _ as idents ->
+              let identsText = idents |> List.map (fun x -> x.Text) |> List.rev
               // We only look up identifiers and operators, everything else isn't of interest       
-              Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," island)
-              // Note we advance the caret to 'leftCol' ** due to GetSymbolAtLocation only working at the beginning/end **
-              match backgroundTypedParse.GetSymbolAtLocation(line, rightCol, lineStr, List.rev island) with
+              Debug.WriteLine(sprintf "Parsing: Passed in the following symbols '%O'" <| String.concat "," identsText)
+              // Note we advance the caret to 'rightCol' ** due to GetSymbolAtLocation only working at the beginning/end **
+              match backgroundTypedParse.GetSymbolAtLocation(line, lastIdent.RightColumn, lineStr, identsText) with
               | Some symbol ->
                   let symRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
                   let refs = projectResults.GetUsesOfSymbol(symbol)
-                  Some(symbol, lastSymbol, symRangeOpt, refs)
+                  Some(symbol, lastIdent.Text, symRangeOpt, refs)
               | _ -> None
           | _ -> None }
 
   member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
-   async { 
-      let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
-      
-      //parse and retrieve Checked Project results, this has the entity graph and errors etc
-      let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-      
-      let symDeclRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
-      let refs = projectResults.GetUsesOfSymbol(symbol)
-      return (symDeclRangeOpt, refs) }
+      async { 
+          let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
+          
+          //parse and retrieve Checked Project results, this has the entity graph and errors etc
+          let! projectResults = checker.ParseAndCheckProject(projectOptions) 
+          
+          let symDeclRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
+          let refs = projectResults.GetUsesOfSymbol(symbol)
+          return (symDeclRangeOpt, refs) }
 
   member x.Checker = checker
-
-  /// Returns Some zero-based range of an operator, None if the symbol at line, colu is not an operator. 
-  member x.GetOperatorBounds(source: string, line: int, colu, lineStr, args: string seq) =
-    let defines = 
-        args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-             |> Seq.toList
-    let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
-    let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
-
-    let rec loop lexState skipOperator =
-        match lineTokenizer.ScanToken lexState with
-        | None, _ -> None
-        | Some tok, _ when tok.ColorClass = TokenColorKind.PreprocessorKeyword -> 
-            // Ignore everything in a line with compiler directives
-            None
-        | Some tok, newLexState ->
-            let leftCol, rightCol = tok.LeftColumn, tok.LeftColumn + tok.FullMatchedLength
-            let inRange = leftCol <= colu && colu <= rightCol
-            match not skipOperator && inRange && tok.ColorClass = TokenColorKind.Operator, tok.CharClass with
-            | true, TokenCharKind.Operator
-            | true, TokenCharKind.Delimiter when tok.FullMatchedLength > 1 ->
-                Some (line, leftCol, line, rightCol)
-            | _ -> loop newLexState (tok.CharClass = TokenCharKind.Operator)
-    loop (queryLexState source defines line) false
-
            
