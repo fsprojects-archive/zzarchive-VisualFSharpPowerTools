@@ -731,3 +731,8 @@ let p = 1
     let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =
         if (^T : (static member IsInfinity: ^T -> bool) (num)) then None
         else Some num
+
+    type A =
+        | B of field1: int * field2: string
+
+    let a = B (field1 = 1, field2 = "2")
