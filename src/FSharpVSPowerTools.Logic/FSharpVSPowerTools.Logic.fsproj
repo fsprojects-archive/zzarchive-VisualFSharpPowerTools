@@ -59,6 +59,9 @@
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="HighlightUsageTagger.fs" />
+    <Compile Include="RenameDialog.fs" />
+    <Compile Include="RenameCommandFilter.fs" />
+    <None Include="RenameDialog.xaml" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -70,6 +73,10 @@
     </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
+    </Reference>
+    <Reference Include="FSharpx.TypeProviders.Xaml">
+      <HintPath>..\..\packages\FSharpx.TypeProviders.Xaml.1.8.41\lib\40\FSharpx.TypeProviders.Xaml.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Build" />
     <Reference Include="Microsoft.Build.Engine" />
