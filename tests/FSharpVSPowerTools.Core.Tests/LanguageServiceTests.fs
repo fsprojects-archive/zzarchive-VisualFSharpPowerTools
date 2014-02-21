@@ -82,8 +82,10 @@ let checkSymbolUsage line col lineStr expected =
 let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
-let checkOperatorBounds line col lineStr expected =
-    VSLanguageService.Instance.GetOperatorBounds(source, line, col, lineStr, args)
+let checkGetSymbol line col lineStr expected =
+    VSLanguageService.Instance.GetSymbol(source, line, col, lineStr, args)
+    |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
+        text, (line, leftCol), (line, rightCol))
     |> assertEqual expected
 
 [<Test>]
@@ -150,6 +152,12 @@ let ``should find usages of operators containing dots``() =
           (704, 27), (704, 30) ]
 
 [<Test>]
+let ``should find fully qualified operator``() =
+    checkSymbolUsage 
+        728 9 "    M.N.(+.) 1 2" 
+        [ (726, 17), (726, 19); (728, 4), (728, 11) ]
+
+[<Test>]
 let ``should find usages of symbols if where are operators containing dots on the same line``() =
     let line = "    let x = 1 >>. ws >>. 2 >>. ws"
     let usages = [ (703, 8), (703, 10); (704, 18), (704, 20); (704, 31), (704, 33) ]
@@ -165,6 +173,10 @@ let ``should find usages of symbols contacting with a special symbol on the righ
 
     checkSymbolUsage
         707 9 "    type C<'a> = C of 'a"
+        [ (707, 9), (707, 10) ]
+
+    checkSymbolUsage
+        707 10 "    type C<'a> = C of 'a"
         [ (707, 9), (707, 10) ]
 
     checkSymbolUsage
@@ -192,13 +204,35 @@ let ``should not find usages inside compiler directives``() =
     hasNoSymbolUsage 682 12 "#if COMPILED"
 
 [<Test>]
-let ``should find bounds of operators``() =
-    checkOperatorBounds 693 10 "    let (>>=) x y = ()" (Some(693, 9, 693, 12))
-    checkOperatorBounds 695 12 "    let (>~>>) x y = ()" (Some(695, 9, 695, 13))
-    checkOperatorBounds 701 12 "    let ( >>. ) x y = x" (Some(701, 10, 701, 13))
-    checkOperatorBounds 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" (Some(704, 14, 704, 17))
+let ``should find operators``() =
+    checkGetSymbol 693 10 "    let (>>=) x y = ()" (Some (">>=", (693, 9), (693, 12)))
+    checkGetSymbol 695 12 "    let (>~>>) x y = ()" (Some (">~>>", (695, 9), (695, 13)))
+    checkGetSymbol 701 12 "    let ( >>. ) x y = x" (Some (">>.", (701, 10), (701, 13)))
+    checkGetSymbol 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" (Some (">>.", (704, 14), (704, 17)))
+    checkGetSymbol 728 9 "    M.N.(+.) 1 2" (Some ("+.", (728, 9), (728, 11)))
 
 [<Test>]
-let ``should not find bounds of identifiers``() =
-    checkOperatorBounds 693 15 "    let (>>=) x y = ()" None
-    checkOperatorBounds 704 9 "    let x = 1 >>. ws >>. 2 >>. ws" None
+let ``should find identifiers``() =
+    checkGetSymbol 703 8 "    let ws x = x" (Some ("ws", (703, 8), (703, 10)))
+    checkGetSymbol 702 24 "    1 >>. 2 >>. 3 |> ignore" (Some ("ignore", (702, 21), (702, 27)))
+    
+    checkGetSymbol 722 14 "    Nested.``long name``()" (Some ("``long name``", (722, 11), (722, 24)))
+
+    checkGetSymbol 582 59 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        (Some ("map", (582, 57), (582, 60)))
+
+    checkGetSymbol 582 48 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        (Some ("Parallel", (582, 48), (582, 56)))
+
+    checkGetSymbol 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        (Some ("Parallel", (582, 48), (582, 56)))
+
+[<Test>]
+let ``should find generic parameters``() =
+    checkGetSymbol 707 12 "    type C<'a> = C of 'a" (Some ("'a", (707, 11), (707, 13)))
+    checkGetSymbol 707 22 "    type C<'a> = C of 'a" (Some ("'a", (707, 22), (707, 24)))
+
+[<Test>]
+let ``should find statically resolved type parameters``() =
+    checkGetSymbol 730 22 "    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
+        (Some ("^T", (730, 22), (730, 24)))

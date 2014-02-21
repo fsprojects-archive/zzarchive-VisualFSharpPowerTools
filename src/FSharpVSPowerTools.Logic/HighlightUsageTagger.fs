@@ -17,6 +17,7 @@ open EnvDTE
 open VSLangProj
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open FSharp.CompilerBinding
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 
@@ -49,7 +50,8 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                 let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq, fileName : string, projectProvider : ProjectProvider) =
+    let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq, fileName : string, 
+                 projectProvider : ProjectProvider) =
         async {
             if currentRequest = requestedPoint then
               try
@@ -68,7 +70,7 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     newWord.GetText(), endLine, endCol, sprintf "%A" framework, String.concat " " args)
                 let! results = 
                     VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                                            endLine, endCol, lineStr, args, framework)
+                                                                         endLine, endCol, lineStr, args, framework)
                 return 
                     match results with
                     | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
@@ -117,18 +119,18 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
             synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
         else
             let projectProvider = ProjectProvider(project)
-            let operatorSpan =
+            let ident =
                 let source = currentRequest.Snapshot.GetText()
                 let line = currentRequest.Snapshot.GetLineNumberFromPosition(currentRequest.Position)
                 let col = currentRequest.Position - currentRequest.GetContainingLine().Start.Position
                 let lineStr = currentRequest.GetContainingLine().GetText()                
                 let args = projectProvider.CompilerOptions                
-                VSLanguageService.Instance.GetOperatorBounds(source, line, col, lineStr, args)
-                |> Option.map (currentRequest.FromRange)
+                VSLanguageService.Instance.GetSymbol (source, line, col, lineStr, args)
+                |> Option.map (fun symbol -> currentRequest.FromRange symbol.Range)
 
-            match textStructureNavigator.FindAllWords(currentRequest, operatorSpan) with
+            match ident with
             | None ->
-                // If we couldn't find a word, just clear out the existing markers
+                // If we couldn't find an ident, just clear out the existing markers
                 synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
             | Some newWord ->
                 // If this is the same word we currently have, we're done (e.g. caret moved within a word).

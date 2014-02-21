@@ -721,3 +721,13 @@ let p = 1
         let ``long name``() = ()
 
     Nested.``long name``()
+
+    module M =
+        module N =
+            let (+.) x y = ()
+    
+    M.N.(+.) 1 2
+
+    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =
+        if (^T : (static member IsInfinity: ^T -> bool) (num)) then None
+        else Some num
