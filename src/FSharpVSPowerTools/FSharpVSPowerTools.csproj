@@ -1,17 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
-    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
-    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <UpgradeBackupLocation>
-    </UpgradeBackupLocation>
-    <OldToolsVersion>4.0</OldToolsVersion>
-  </PropertyGroup>
+   <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
+   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
+     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
+   </PropertyGroup>
+ 
+   <!-- This is needed to prevent forced migrations when opening the project in Vs2013 -->
+   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
+     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
+   </PropertyGroup>
+
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -25,6 +23,8 @@
     <RootNamespace>FSharpVSPowerTools</RootNamespace>
     <AssemblyName>FSharpVSPowerTools</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <VsSdkTargets>$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\VSSDK\Microsoft.VsSDK.targets</VsSdkTargets>
+    <VsSdkTargets Condition=" '$(VisualStudioVersion)' == '' ">$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v11.0\VSSDK\Microsoft.VsSDK.targets</VsSdkTargets>
     <FileAlignment>512</FileAlignment>
     <StartAction>Program</StartAction>
     <StartProgram>$(DevEnvDir)\devenv.exe</StartProgram>
@@ -112,6 +112,11 @@
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="FSharpVSPowerTools.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>FSharpVSPowerTools.resx</DependentUpon>
+    </Compile>
     <Compile Include="GeneralOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -123,6 +128,7 @@
     </Compile>
     <Compile Include="HighlightUsageTaggerProvider.cs" />
     <Compile Include="PowerToolsCommandsPackage.cs" />
+    <Compile Include="RenameCommandFilterProvider.cs" />
     <Compile Include="Services.cs" />
     <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -159,6 +165,10 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <VSCTCompile Include="FSharpVSPowerTools.vsct">
+      <ResourceName>1000</ResourceName>
+      <SubType>Designer</SubType>
+    </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
@@ -177,6 +187,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="FSharpVSPowerTools.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <MergeWithCTO>true</MergeWithCTO>
+      <LastGenOutput>FSharpVSPowerTools.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
     <EmbeddedResource Include="GeneralOptionsControl.resx">
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </EmbeddedResource>
@@ -185,7 +201,7 @@
     <UseCodebase>true</UseCodebase>
   </PropertyGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Condition="Exists($(VsSdkTargets))" Project="$(VsSdkTargets)" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
