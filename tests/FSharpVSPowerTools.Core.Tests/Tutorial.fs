@@ -728,3 +728,6 @@ let p = 1
     
     M.N.(+.) 1 2
 
+    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =
+        if (^T : (static member IsInfinity: ^T -> bool) (num)) then None
+        else Some num

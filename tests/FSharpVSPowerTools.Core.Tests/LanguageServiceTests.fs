@@ -82,11 +82,10 @@ let checkSymbolUsage line col lineStr expected =
 let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
-let checkGetLongIdent line col lineStr expected =
-    VSLanguageService.Instance.GetLongIdent(source, line, col, lineStr, args)
-    |> List.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
+let checkGetSymbol line col lineStr expected =
+    VSLanguageService.Instance.GetSymbol(source, line, col, lineStr, args)
+    |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
         text, (line, leftCol), (line, rightCol))
-    |> fun actual -> printfn "Expected = %A, Actual = %A" expected actual; actual
     |> assertEqual expected
 
 [<Test>]
@@ -205,39 +204,35 @@ let ``should not find usages inside compiler directives``() =
     hasNoSymbolUsage 682 12 "#if COMPILED"
 
 [<Test>]
-let ``should find idents of operators``() =
-    checkGetLongIdent 693 10 "    let (>>=) x y = ()" [ ">>=", (693, 9), (693, 12) ]
-    checkGetLongIdent 695 12 "    let (>~>>) x y = ()" [ ">~>>", (695, 9), (695, 13) ]
-    checkGetLongIdent 701 12 "    let ( >>. ) x y = x" [ ">>.", (701, 10), (701, 13) ]
-    checkGetLongIdent 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" [ ">>.", (704, 14), (704, 17) ]
+let ``should find operators``() =
+    checkGetSymbol 693 10 "    let (>>=) x y = ()" (Some (">>=", (693, 9), (693, 12)))
+    checkGetSymbol 695 12 "    let (>~>>) x y = ()" (Some (">~>>", (695, 9), (695, 13)))
+    checkGetSymbol 701 12 "    let ( >>. ) x y = x" (Some (">>.", (701, 10), (701, 13)))
+    checkGetSymbol 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" (Some (">>.", (704, 14), (704, 17)))
+    checkGetSymbol 728 9 "    M.N.(+.) 1 2" (Some ("+.", (728, 9), (728, 11)))
 
 [<Test>]
-let ``should find idents of identifiers``() =
-    checkGetLongIdent 703 8 "    let ws x = x" [ "ws", (703, 8), (703, 10) ]
-    checkGetLongIdent 702 24 "    1 >>. 2 >>. 3 |> ignore" [ "ignore", (702, 21), (702, 27) ]
+let ``should find identifiers``() =
+    checkGetSymbol 703 8 "    let ws x = x" (Some ("ws", (703, 8), (703, 10)))
+    checkGetSymbol 702 24 "    1 >>. 2 >>. 3 |> ignore" (Some ("ignore", (702, 21), (702, 27)))
     
-    checkGetLongIdent 722 14 "    Nested.``long name``()" 
-        [ "``long name``", (722, 11), (722, 24) 
-          "Nested", (722, 4), (722, 10) ]
+    checkGetSymbol 722 14 "    Nested.``long name``()" (Some ("``long name``", (722, 11), (722, 24)))
 
-    checkGetLongIdent 582 59 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        [ "map", (582, 57), (582, 60) 
-          "Parallel", (582, 48), (582, 56) 
-          "Array", (582, 42), (582, 47) ]
+    checkGetSymbol 582 59 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        (Some ("map", (582, 57), (582, 60)))
 
-    checkGetLongIdent 582 48 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        [ "Parallel", (582, 48), (582, 56) 
-          "Array", (582, 42), (582, 47) ]
+    checkGetSymbol 582 48 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        (Some ("Parallel", (582, 48), (582, 56)))
 
-    checkGetLongIdent 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        [ "Parallel", (582, 48), (582, 56) 
-          "Array", (582, 42), (582, 47) ]
+    checkGetSymbol 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
+        (Some ("Parallel", (582, 48), (582, 56)))
 
 [<Test>]
-let ``should find operator``() =
-    checkGetLongIdent 728 9 "    M.N.(+.) 1 2" [ "+.", (728, 9), (728, 11) ]
+let ``should find generic parameters``() =
+    checkGetSymbol 707 12 "    type C<'a> = C of 'a" (Some ("'a", (707, 11), (707, 13)))
+    checkGetSymbol 707 22 "    type C<'a> = C of 'a" (Some ("'a", (707, 22), (707, 24)))
 
 [<Test>]
-let ``should find idents of generic parameters``() =
-    checkGetLongIdent 707 12 "    type C<'a> = C of 'a" [ "'a", (707, 11), (707, 13) ]
-    checkGetLongIdent 707 22 "    type C<'a> = C of 'a" [ "'a", (707, 22), (707, 24) ]
+let ``should find statically resolved type parameters``() =
+    checkGetSymbol 730 22 "    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
+        (Some ("^T", (730, 22), (730, 24)))
