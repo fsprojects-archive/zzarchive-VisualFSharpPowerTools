@@ -9,4 +9,10 @@
 #### 0.2.0 - February 12 2013
 * Add navigation bar setting
 * XML doc comments are generated as the first '<' char in a blank "///" comment is entered
-* Implement highlighting usage
+* Implement highlight references
+
+#### 0.3.0 - Unreleased
+* Implement major improvements on highlight references
+* Support operator highlighting
+* Reuse C#'s highlighted reference marker
+

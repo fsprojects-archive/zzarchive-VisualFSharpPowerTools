@@ -35,7 +35,7 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let mutable view = v
     let mutable sourceBuffer = sb
     let mutable textSearchService = ts
-    let mutable textStructureNavigator = tn
+    let mutable _textStructureNavigator = tn
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
     let mutable currentWord = None
     let mutable requestedPoint = SnapshotPoint()

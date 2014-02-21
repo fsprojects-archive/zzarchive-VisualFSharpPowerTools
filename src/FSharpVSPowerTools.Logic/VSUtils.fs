@@ -11,7 +11,7 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
 
 /// Retrieve snapshot from VS zero-based positions
-let fromVSPos(snapshot : ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
+let fromVSPos (snapshot : ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
     let startPos = snapshot.GetLineFromLineNumber(startLine).Start.Position + startCol
     let endPos = snapshot.GetLineFromLineNumber(endLine).Start.Position + endCol
     SnapshotSpan(snapshot, startPos, endPos - startPos)
@@ -43,61 +43,15 @@ type SnapshotPoint with
         | true, Operator -> isInsignificant text operatorInsignificantChars
         | _ -> false
     member this.FromRange(lineStart, colStart, lineEnd, colEnd) =
-        let startPos = this.Snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-        let endPos = this.Snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
-        SnapshotSpan(this.Snapshot, startPos, endPos - startPos)
+        fromVSPos this.Snapshot ((lineStart, colStart), (lineEnd, colEnd))
 
 type SnapshotSpan with
-    member this.GetWordIncludingQuotes() =
-        let endWordPos = ref this.End.Position
-        let mutable word = this.GetText().Trim()
-        let mutable currentWord = this
-
-        while !endWordPos < currentWord.Snapshot.Length && currentWord.Snapshot.GetText(!endWordPos, 1) = "\'" do
-            word <- word + "\'"
-            incr endWordPos
-
-        if word.EndsWith("\'") then
-            currentWord <- SnapshotSpan(currentWord.Snapshot, currentWord.Start.Position, word.Length)
-
-        while !endWordPos < currentWord.Snapshot.Length && currentWord.Snapshot.GetText(!endWordPos, 1) = "`" do
-            word <- word + "`"
-            incr endWordPos
-
-        if word.EndsWith("``") then
-            let startWordPos = ref currentWord.Start.Position
-            let mutable newWord = currentWord.Snapshot.GetText(!startWordPos, !endWordPos - !startWordPos)
-            decr startWordPos
-            
-            while not (newWord.StartsWith("``")) || !startWordPos <= 0 || currentWord.Snapshot.GetText(!startWordPos, 1) = "\n" do
-                newWord <- currentWord.Snapshot.GetText(!startWordPos, !endWordPos - !startWordPos)
-                decr startWordPos
-            word <- newWord
-            currentWord <- SnapshotSpan(currentWord.Snapshot, !startWordPos + 1, word.Length)
-
-        (currentWord, word)
-
     /// Return corresponding zero-based range
     member this.ToRange() =
-        let (_, w2) = this.GetWordIncludingQuotes()
-        let extraLength = w2.Length - this.Length
         let lineStart = this.Snapshot.GetLineNumberFromPosition(this.Start.Position)
         let lineEnd = this.Snapshot.GetLineNumberFromPosition(this.End.Position)
         let startLine = this.Snapshot.GetLineFromPosition(this.Start.Position)
         let endLine = this.Snapshot.GetLineFromPosition(this.End.Position)
         let colStart = this.Start.Position - startLine.Start.Position
         let colEnd = this.End.Position - endLine.Start.Position
-        (lineStart, colStart, lineEnd, colEnd + extraLength - 1)
-
-    member this.FindNewSpans() =
-        let txt = this.Snapshot.GetText()
-        let (span, content) = this.GetWordIncludingQuotes()
-        try
-            let matches = Regex.Matches(txt, content)
-            let spans = 
-                matches
-                |> Seq.cast<Match>
-                |> Seq.map (fun m -> SnapshotSpan(this.Snapshot, m.Index, m.Length))
-            (span, spans)
-        with _ ->
-            (span, Seq.empty)
+        (lineStart, colStart, lineEnd, colEnd - 1)

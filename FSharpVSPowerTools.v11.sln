@@ -41,7 +41,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic", 
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core", "src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.v11", "src\FSharpVSPowerTools\FSharpVSPowerTools.v11.csproj", "{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools", "src\FSharpVSPowerTools\FSharpVSPowerTools.csproj", "{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
