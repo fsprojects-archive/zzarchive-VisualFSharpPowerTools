@@ -32,9 +32,9 @@ let summary = "F# Community Power Tools (for Visual Studio)"
 let description = """
   F# Community Power Tools (for Visual Studio)"""
 // List of author names (for NuGet package)
-let authors = [ "Anh-Dung Phan, Don Syme" ]
+let authors = [ "Anh-Dung Phan, Don Syme", "Vasily Kirichenko" ]
 // Tags for your project (for NuGet package)
-let tags = "F# fsharp formatting editting"
+let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 
 // File system information 
 // (<solutionFile>.sln is built during the building process)
@@ -100,6 +100,8 @@ Target "RunTests" (fun _ ->
         { p with
             DisableShadowCopy = true
             TimeOut = TimeSpan.FromMinutes 20.
+            Framework = "4.5"
+            Domain = "Multiple"
             OutputFile = "TestResults.xml" })
 )
 
