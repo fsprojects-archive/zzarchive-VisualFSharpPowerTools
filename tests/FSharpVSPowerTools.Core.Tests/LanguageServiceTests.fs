@@ -203,6 +203,27 @@ let ``should not find usages inside multiline strings``() =
 let ``should not find usages inside compiler directives``() =
     hasNoSymbolUsage 682 12 "#if COMPILED"
 
+[<Test; Ignore "FSharp.Compiler.Services does not support this yet">]
+let ``should find usages of generic parameters``() =
+    checkSymbolUsage 707 12 "    type C<'a> = C of 'a" 
+        [ (707, 11), (707, 13)
+          (707, 22), (707, 24) ]
+
+[<Test; Ignore "FSharp.Compiler.Services does not support this yet">]
+let ``should find usages of statically resolved type parameters``() =
+    checkSymbolUsage 730 22 "    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
+        [ (730, 22), (730, 24)
+          (730, 30), (730, 32) 
+          (730, 63), (730, 65) 
+          (730, 82), (730, 84) 
+          (730, 88), (730, 90) ] 
+
+[<Test; Ignore "FSharp.Compiler.Services does not support this yet">]
+let ``should find usages of named discriminated union fields``() =
+    checkSymbolUsage 735 15 "        | B of field1: int * field2: string" 
+        [ (735, 15), (735, 21)
+          (737, 15), (737, 21) ]
+
 [<Test>]
 let ``should find operators``() =
     checkGetSymbol 693 10 "    let (>>=) x y = ()" (Some (">>=", (693, 9), (693, 12)))
