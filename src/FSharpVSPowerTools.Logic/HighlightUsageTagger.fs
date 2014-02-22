@@ -54,50 +54,20 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq, fileName : string, 
                  projectProvider : ProjectProvider) =
         async {
-            if currentRequest = requestedPoint then
+           if currentRequest = requestedPoint then
               try
-                let projectFileName = projectProvider.ProjectFileName
-                let source = currentRequest.Snapshot.GetText()
-                let sourceFiles = 
-                    let files = projectProvider.SourceFiles
-                    // If there is no source file, use currentFile as an independent script
-                    if Array.isEmpty files then [| fileName |] else files
-                let (_, _, endLine, endCol) = newWord.ToRange()
-                let lineStr = currentRequest.GetContainingLine().GetText()                
-                let args = projectProvider.CompilerOptions
-                let framework = projectProvider.TargetFramework
-                
-                debug "[Highlight Usage] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
-                      (newWord.GetText()) endLine endCol framework (String.concat " " args)
+                let! results = VSLanguageService.findUsages newWord fileName projectProvider view.TextSnapshot
 
-                let! results = 
-                    VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                                         endLine, endCol, lineStr, args, framework)
                 return 
                     match results with
-                    | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
+                    | Some (lastIdent, references) -> 
                         let possibleSpans = HashSet(newWordSpans)
                         // Since we can't select multi-word, lastIdent is for debugging only.
                         debug "[Highlight Usage] The last identifier found is '%s'" lastIdent
-                        let foundUsages =
-                            references
-                            |> Seq.choose (fun symbolUse -> 
-                                // We have to filter by file name otherwise the range is invalid wrt current snapshot
-                                if symbolUse.FileName = fileName then
-                                    // Range01 type consists of zero-based values, which is a bit confusing
-                                    Some (fromVSPos newWord.Snapshot symbolUse.Range)
-                                else None)
-                            |> Seq.choose (fun span -> 
-                                let subSpan = 
-                                    // Sometimes F.C.S returns a composite identifier which should be truncated
-                                    let index = span.GetText().LastIndexOf (lastIdent)
-                                    if index > 0 then 
-                                        SnapshotSpan(newWord.Snapshot, span.Start.Position + index, span.Length - index)
-                                    else span
-                                if possibleSpans.Contains(subSpan) then Some subSpan else None)
+                        let references = references |> List.filter possibleSpans.Contains
                         // Ignore symbols without any use
-                        let word = if Seq.isEmpty foundUsages then None else Some newWord
-                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), word)
+                        let word = if Seq.isEmpty references then None else Some newWord
+                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection references, word)
                     | None ->
                         // Return empty values in order to clear up markers
                         synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)

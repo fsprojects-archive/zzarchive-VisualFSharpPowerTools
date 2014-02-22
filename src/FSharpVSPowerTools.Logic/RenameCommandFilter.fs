@@ -83,52 +83,11 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
 
     let guidMenuAndCommandsCmdSet = "{5debbcf2-6cb1-480c-9e69-edcb2196bad7}"
 
-    let findUsages (word : SnapshotSpan) (currentFile : string) (projectProvider : ProjectProvider) =         
-        try 
-            let (_, _, endLine, endCol) = word.ToRange()
-            let projectFileName = projectProvider.ProjectFileName
-            let source = word.Snapshot.GetText()
-            let currentLine = word.Start.GetContainingLine().GetText()
-            let framework = projectProvider.TargetFramework
-            let args = projectProvider.CompilerOptions
-            let sourceFiles = 
-                let files = projectProvider.SourceFiles
-                // If there is no source file, use currentFile as an independent script
-                if Array.isEmpty files then [| currentFile |] else files
-            Debug.WriteLine("[Rename Refactoring] Get symbol references for '{0}' at line {1} col {2} on {3} framework and '{4}' arguments", 
-                word.GetText(), endLine, endCol, sprintf "%A" framework, String.concat " " args)
-            
-            VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
-                                                                    endLine, endCol, currentLine, args, framework)
-            |> Async.RunSynchronously
-            
-        with e ->
-            Debug.WriteLine(sprintf "[Rename Refactoring] %O exception occurs while updating." e)
-            None
-
-    let rename (lastIdent : string) (newText : string) references =
-        // Assume to rename the current file only
-        let foundUsages =
-            references
-            |> Seq.choose (fun (symbolUse : FSharpSymbolUse) -> 
-                // We have to filter by file name otherwise the range is invalid wrt current snapshot
-                if symbolUse.FileName = currentFile then
-                    // Range01 type consists of zero-based values, which is a bit confusing
-                    Some (fromVSPos textView.TextSnapshot symbolUse.Range)
-                else None)
-            |> Seq.map (fun span -> 
-                    // Sometimes F.C.S returns a composite identifier which should be truncated
-                    let index = span.GetText().LastIndexOf (lastIdent)
-                    if index > 0 then 
-                        SnapshotSpan(textView.TextSnapshot, span.Start.Position + index, span.Length - index)
-                    else span)
-            // we must make the sequence non-lazy here
-            |> Seq.toList
-            
+    let rename (lastIdent : string) (newText : string) (references: SnapshotSpan list) =
         let description = String.Format("Rename -> '{0}'", newText)
         use transaction = undoHistory.CreateTransaction(description)
-        foundUsages
-        |> Seq.fold (fun snapshot span ->
+        references
+        |> List.fold (fun snapshot span ->
             let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
             textView.TextBuffer.Replace(span.Span, newText)) textView.TextSnapshot
         |> ignore
@@ -144,9 +103,9 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
         match currentWord with
         | None -> ()
         | Some w ->
-            match findUsages w currentFile currentProject with
+            match VSLanguageService.findUsages w currentFile currentProject textView.TextSnapshot |> Async.RunSynchronously with
             | None -> ()
-            | Some (_, lastIdent, _, references) ->
+            | Some (lastIdent, references) ->
                 let wnd = UI.loadRenameDialog(this)
                 let hostWnd = Window.GetWindow(textView.VisualElement)
                 wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
@@ -154,7 +113,7 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
                 this.Name <- ""
                 let res = wnd.ShowDialog()
                 if res.HasValue && res.Value then
-                rename lastIdent this.Name references
+                    rename lastIdent this.Name references
 
     member val IsAdded = false with get, set
     member val NextTarget : IOleCommandTarget = null with get, set
