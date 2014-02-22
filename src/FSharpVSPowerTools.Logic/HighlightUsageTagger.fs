@@ -16,6 +16,7 @@ open Microsoft.VisualStudio.Shell
 open EnvDTE
 open VSLangProj
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 
@@ -66,8 +67,9 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                 let args = projectProvider.CompilerOptions
                 let framework = projectProvider.TargetFramework
                 
-                Debug.WriteLine("[Highlight Usage] Get symbol references for '{0}' at line {1} col {2} on {3} framework and '{4}' arguments", 
-                    newWord.GetText(), endLine, endCol, sprintf "%A" framework, String.concat " " args)
+                debug "[Highlight Usage] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
+                      (newWord.GetText()) endLine endCol framework (String.concat " " args)
+
                 let! results = 
                     VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
                                                                          endLine, endCol, lineStr, args, framework)
@@ -76,7 +78,7 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
                         let possibleSpans = HashSet(newWordSpans)
                         // Since we can't select multi-word, lastIdent is for debugging only.
-                        Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
+                        debug "[Highlight Usage] The last identifier found is '%s'" lastIdent
                         let foundUsages =
                             references
                             |> Seq.choose (fun symbolUse -> 
@@ -107,17 +109,10 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let updateWordAdornments() =
         let currentRequest = requestedPoint
         // Find all words in the buffer like the one the caret is on
+        let doc = Dte.getActiveDocument()
 
-        let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-        let doc = dte.ActiveDocument        
-        Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, "Should be able to find active document.")
-        let project = try doc.ProjectItem.ContainingProject.Object :?> VSProject with _ -> null
-        let fileName = doc.FullName
-
-        if project = null then
-            Debug.WriteLine("[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way.")
-            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
-        else
+        match doc.Project with
+        | Some project ->
             let projectProvider = ProjectProvider(project)
             let ident =
                 let source = currentRequest.Snapshot.GetText()
@@ -141,7 +136,10 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     findData.FindOptions <- FindOptions.MatchCase
                     let newSpans = textSearchService.FindAll(findData)
                     // If we are still up-to-date (another change hasn't happened yet), do a real update
-                    doUpdate(currentRequest, newWord, newSpans, fileName, projectProvider)
+                    doUpdate(currentRequest, newWord, newSpans, doc.FullName, projectProvider)
+        | _ -> 
+            debug "[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way."
+            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
 
     let updateAtCaretPosition(caretPosition : CaretPosition) =
         let point = caretPosition.Point.GetPoint(sourceBuffer, caretPosition.Affinity)

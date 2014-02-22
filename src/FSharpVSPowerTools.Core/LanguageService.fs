@@ -43,10 +43,6 @@ type Symbol =
       Text: string }
     member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
 
-[<AutoOpen>]
-module Utils =
-    let inline debug msg = Printf.kprintf Debug.WriteLine msg
-
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService(dirtyNotify) =
   let debug msg = Printf.kprintf Debug.WriteLine msg
