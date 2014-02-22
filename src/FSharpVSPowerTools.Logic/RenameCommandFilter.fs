@@ -110,7 +110,6 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
             None
 
     let rename (lastIdent : string) (newText : string) references =
-        let afterSnapshot = ref textView.TextSnapshot
         // Assume to rename the current file only
         let foundUsages =
             references
@@ -118,20 +117,24 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
                 // We have to filter by file name otherwise the range is invalid wrt current snapshot
                 if symbolUse.FileName = currentFile then
                     // Range01 type consists of zero-based values, which is a bit confusing
-                    Some (fromVSPos !afterSnapshot symbolUse.Range)
+                    Some (fromVSPos textView.TextSnapshot symbolUse.Range)
                 else None)
             |> Seq.map (fun span -> 
                     // Sometimes F.C.S returns a composite identifier which should be truncated
                     let index = span.GetText().LastIndexOf (lastIdent)
                     if index > 0 then 
-                        SnapshotSpan(!afterSnapshot, span.Start.Position + index, span.Length - index)
+                        SnapshotSpan(textView.TextSnapshot, span.Start.Position + index, span.Length - index)
                     else span)
+            // we must make the sequence non-lazy here
+            |> Seq.toList
             
         let description = String.Format("Rename -> '{0}'", newText)
         use transaction = undoHistory.CreateTransaction(description)
-        for usage in foundUsages do
-            let newUsage = usage.TranslateTo(!afterSnapshot, SpanTrackingMode.EdgeExclusive)
-            afterSnapshot := textView.TextBuffer.Replace(newUsage.Span, newText)
+        foundUsages
+        |> Seq.fold (fun snapshot span ->
+            let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
+            textView.TextBuffer.Replace(span.Span, newText)) textView.TextSnapshot
+        |> ignore
         transaction.Complete()
 
         // Try to save current document
