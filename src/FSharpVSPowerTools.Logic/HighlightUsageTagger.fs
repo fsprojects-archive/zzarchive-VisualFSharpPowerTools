@@ -16,6 +16,7 @@ open Microsoft.VisualStudio.Shell
 open EnvDTE
 open VSLangProj
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 
@@ -53,49 +54,20 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let doUpdate(currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq, fileName : string, 
                  projectProvider : ProjectProvider) =
         async {
-            if currentRequest = requestedPoint then
+           if currentRequest = requestedPoint then
               try
-                let projectFileName = projectProvider.ProjectFileName
-                let source = currentRequest.Snapshot.GetText()
-                let sourceFiles = 
-                    let files = projectProvider.SourceFiles
-                    // If there is no source file, use currentFile as an independent script
-                    if Array.isEmpty files then [| fileName |] else files
-                let (_, _, endLine, endCol) = newWord.ToRange()
-                let lineStr = currentRequest.GetContainingLine().GetText()                
-                let args = projectProvider.CompilerOptions
-                let framework = projectProvider.TargetFramework
-                
-                Debug.WriteLine("[Highlight Usage] Get symbol references for '{0}' at line {1} col {2} on {3} framework and '{4}' arguments", 
-                    newWord.GetText(), endLine, endCol, sprintf "%A" framework, String.concat " " args)
-                let! results = 
-                    VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                                         endLine, endCol, lineStr, args, framework)
+                let! results = VSLanguageService.findUsages newWord fileName projectProvider view.TextSnapshot
+
                 return 
                     match results with
-                    | Some(_currentSymbolName, lastIdent, _currentSymbolRange, references) -> 
+                    | Some (lastIdent, references) -> 
                         let possibleSpans = HashSet(newWordSpans)
                         // Since we can't select multi-word, lastIdent is for debugging only.
-                        Debug.WriteLine(sprintf "[Highlight Usage] The last identifier found is '%s'" lastIdent)
-                        let foundUsages =
-                            references
-                            |> Seq.choose (fun symbolUse -> 
-                                // We have to filter by file name otherwise the range is invalid wrt current snapshot
-                                if symbolUse.FileName = fileName then
-                                    // Range01 type consists of zero-based values, which is a bit confusing
-                                    Some (fromVSPos newWord.Snapshot symbolUse.Range)
-                                else None)
-                            |> Seq.choose (fun span -> 
-                                let subSpan = 
-                                    // Sometimes F.C.S returns a composite identifier which should be truncated
-                                    let index = span.GetText().LastIndexOf (lastIdent)
-                                    if index > 0 then 
-                                        SnapshotSpan(newWord.Snapshot, span.Start.Position + index, span.Length - index)
-                                    else span
-                                if possibleSpans.Contains(subSpan) then Some subSpan else None)
+                        debug "[Highlight Usage] The last identifier found is '%s'" lastIdent
+                        let references = references |> List.filter possibleSpans.Contains
                         // Ignore symbols without any use
-                        let word = if Seq.isEmpty foundUsages then None else Some newWord
-                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(foundUsages), word)
+                        let word = if Seq.isEmpty references then None else Some newWord
+                        synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection references, word)
                     | None ->
                         // Return empty values in order to clear up markers
                         synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
@@ -107,17 +79,10 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
     let updateWordAdornments() =
         let currentRequest = requestedPoint
         // Find all words in the buffer like the one the caret is on
+        let doc = Dte.getActiveDocument()
 
-        let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-        let doc = dte.ActiveDocument        
-        Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, "Should be able to find active document.")
-        let project = try doc.ProjectItem.ContainingProject.Object :?> VSProject with _ -> null
-        let fileName = doc.FullName
-
-        if project = null then
-            Debug.WriteLine("[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way.")
-            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
-        else
+        match doc.Project with
+        | Some project ->
             let projectProvider = ProjectProvider(project)
             let ident =
                 let source = currentRequest.Snapshot.GetText()
@@ -141,7 +106,10 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
                     findData.FindOptions <- FindOptions.MatchCase
                     let newSpans = textSearchService.FindAll(findData)
                     // If we are still up-to-date (another change hasn't happened yet), do a real update
-                    doUpdate(currentRequest, newWord, newSpans, fileName, projectProvider)
+                    doUpdate(currentRequest, newWord, newSpans, doc.FullName, projectProvider)
+        | _ -> 
+            debug "[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way."
+            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
 
     let updateAtCaretPosition(caretPosition : CaretPosition) =
         let point = caretPosition.Point.GetPoint(sourceBuffer, caretPosition.Affinity)
