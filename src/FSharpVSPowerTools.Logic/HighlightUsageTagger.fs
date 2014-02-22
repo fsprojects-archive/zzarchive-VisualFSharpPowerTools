@@ -16,7 +16,6 @@ open Microsoft.VisualStudio.Shell
 open EnvDTE
 open VSLangProj
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 
@@ -60,10 +59,8 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
 
                 return 
                     match results with
-                    | Some (lastIdent, references) -> 
+                    | Some references -> 
                         let possibleSpans = HashSet(newWordSpans)
-                        // Since we can't select multi-word, lastIdent is for debugging only.
-                        debug "[Highlight Usage] The last identifier found is '%s'" lastIdent
                         let references = references |> List.filter possibleSpans.Contains
                         // Ignore symbols without any use
                         let word = if Seq.isEmpty references then None else Some newWord
@@ -81,49 +78,35 @@ type HighlightUsageTagger(v : ITextView, sb : ITextBuffer, ts : ITextSearchServi
         // Find all words in the buffer like the one the caret is on
         let doc = Dte.getActiveDocument()
 
-        match doc.Project with
-        | Some project ->
-            let projectProvider = ProjectProvider(project)
-            let ident =
-                let source = currentRequest.Snapshot.GetText()
-                let line = currentRequest.Snapshot.GetLineNumberFromPosition(currentRequest.Position)
-                let col = currentRequest.Position - currentRequest.GetContainingLine().Start.Position
-                let lineStr = currentRequest.GetContainingLine().GetText()                
-                let args = projectProvider.CompilerOptions                
-                VSLanguageService.Instance.GetSymbol (source, line, col, lineStr, args)
-                |> Option.map (fun symbol -> currentRequest.FromRange symbol.Range)
-
-            match ident with
-            | None ->
-                // If we couldn't find an ident, just clear out the existing markers
-                synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
-            | Some newWord ->
-                // If this is the same word we currently have, we're done (e.g. caret moved within a word).
-                if currentWord.IsSome && newWord = currentWord.Value then ()
-                else
-                    // Find the new spans
-                    let mutable findData = FindData(newWord.GetText(), newWord.Snapshot)
-                    findData.FindOptions <- FindOptions.MatchCase
-                    let newSpans = textSearchService.FindAll(findData)
-                    // If we are still up-to-date (another change hasn't happened yet), do a real update
-                    doUpdate(currentRequest, newWord, newSpans, doc.FullName, projectProvider)
-        | _ -> 
-            debug "[Highlight Usage] Can't find containing project. Probably the document is opened in an ad-hoc way."
-            synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
+        maybe {
+            let! project = doc.Project
+            let! newWord = VSLanguageService.getSymbol currentRequest project
+            // If this is the same word we currently have, we're done (e.g. caret moved within a word).
+            match currentWord with
+            | Some cw when cw = newWord -> ()
+            | _ ->
+                // Find the new spans
+                let findData = FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
+                let newSpans = textSearchService.FindAll(findData)
+                // If we are still up-to-date (another change hasn't happened yet), do a real update
+                doUpdate(currentRequest, newWord, newSpans, doc.FullName, project) }
+        |> function
+           | None -> synchronousUpdate(currentRequest, NormalizedSnapshotSpanCollection(), None)
+           | _ -> ()
 
     let updateAtCaretPosition(caretPosition : CaretPosition) =
-        let point = caretPosition.Point.GetPoint(sourceBuffer, caretPosition.Affinity)
-
-        if point.HasValue then 
+        match sourceBuffer.GetSnapshotPoint caretPosition with
+        | Some point ->
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
-            if currentWord.IsSome &&
-               currentWord.Value.Snapshot = view.TextSnapshot &&
-               point.Value.CompareTo(currentWord.Value.Start) >= 0 &&
-               point.Value.CompareTo(currentWord.Value.End) <= 0 then ()
-            else
-                requestedPoint <- point.Value
+            match currentWord with
+            | Some cw when cw.Snapshot = view.TextSnapshot && 
+                           point.CompareTo cw.Start >= 0 &&
+                           point.CompareTo cw.End <= 0 -> ()
+            | _ ->
+                requestedPoint <- point
                 updateWordAdornments()
+        | _ -> ()
 
     let viewLayoutChanged = 
         EventHandler<_>(fun _ (e : TextViewLayoutChangedEventArgs) ->

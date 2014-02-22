@@ -18,7 +18,6 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Windows
-open FSharpVSPowerTools.Core
 
 type PkgCmdIDList =
     static member CmdidMyCommand = 0x2001u
@@ -37,26 +36,13 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
         word.IsSome
 
     let updateAtCaretPosition(caretPosition : CaretPosition) = 
-        match textView.GetSnapshotPoint caretPosition with
-        | Some point ->
+        maybe {
+            let! point = textView.TextBuffer.GetSnapshotPoint caretPosition
             let doc = Dte.getActiveDocument()
             currentFile <- doc.FullName
-
-            match doc.Project with
-            | Some project ->
-                let ident =
-                    let projectProvider = ProjectProvider(project)
-                    let source = point.Snapshot.GetText()
-                    let line = point.Snapshot.GetLineNumberFromPosition(point.Position)
-                    let col = point.Position - point.GetContainingLine().Start.Position
-                    let lineStr = point.GetContainingLine().GetText()                
-                    let args = projectProvider.CompilerOptions        
-                    currentProject <- projectProvider        
-                    VSLanguageService.Instance.GetSymbol (source, line, col, lineStr, args)
-                    |> Option.map (fun symbol -> point.FromRange symbol.Range)
-                currentWord <- ident
-            | _ -> debug "[Rename Refactoring] Can't find containing project. Probably the document is opened in an ad-hoc way."
-        | _ -> ()
+            let! project = doc.Project
+            currentProject <- project
+            currentWord <- VSLanguageService.getSymbol point project } |> ignore
 
     let analyze _ = 
         // TODO: it seems too early to reparse everything when text changed
@@ -83,7 +69,7 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
 
     let guidMenuAndCommandsCmdSet = "{5debbcf2-6cb1-480c-9e69-edcb2196bad7}"
 
-    let rename (lastIdent : string) (newText : string) (references: SnapshotSpan list) =
+    let rename (newText : string) (references: SnapshotSpan list) =
         let description = String.Format("Rename -> '{0}'", newText)
         use transaction = undoHistory.CreateTransaction(description)
         references
@@ -100,20 +86,18 @@ type RenameCommandFilter(tv : IWpfTextView, uh : ITextUndoHistory) =
         doc.Save() |> ignore
 
     member this.HandleRename() =
-        match currentWord with
-        | None -> ()
-        | Some w ->
-            match VSLanguageService.findUsages w currentFile currentProject textView.TextSnapshot |> Async.RunSynchronously with
-            | None -> ()
-            | Some (lastIdent, references) ->
-                let wnd = UI.loadRenameDialog(this)
-                let hostWnd = Window.GetWindow(textView.VisualElement)
-                wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
-                wnd.Owner <- hostWnd
-                this.Name <- ""
-                let res = wnd.ShowDialog()
-                if res.HasValue && res.Value then
-                    rename lastIdent this.Name references
+        maybe {
+            let! cw = currentWord
+            let! references = 
+                  VSLanguageService.findUsages cw currentFile currentProject textView.TextSnapshot 
+                  |> Async.RunSynchronously
+            let wnd = UI.loadRenameDialog(this)
+            let hostWnd = Window.GetWindow(textView.VisualElement)
+            wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
+            wnd.Owner <- hostWnd
+            this.Name <- ""
+            let! res = wnd.ShowDialog() |> Option.ofNullable
+            if res then rename this.Name references } |> ignore
 
     member val IsAdded = false with get, set
     member val NextTarget : IOleCommandTarget = null with get, set

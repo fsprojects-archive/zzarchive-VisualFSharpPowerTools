@@ -9,7 +9,7 @@ open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
-open FSharpVSPowerTools.Core
+open FSharpVSPowerTools
 
 /// Retrieve snapshot from VS zero-based positions
 let fromVSPos (snapshot : ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
@@ -34,9 +34,9 @@ type SnapshotSpan with
         let colEnd = this.End.Position - endLine.Start.Position
         (lineStart, colStart, lineEnd, colEnd - 1)
 
-type IWpfTextView with
+type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
-        Option.ofNullable <| position.Point.GetPoint(x.TextBuffer, position.Affinity)
+        Option.ofNullable <| position.Point.GetPoint(x, position.Affinity)
 
 open Microsoft.VisualStudio.Shell
 open EnvDTE
@@ -49,6 +49,3 @@ module Dte =
         System.Diagnostics.Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, 
                                         "Should be able to find active document and active project.")
         doc
-
-type Document with
-    member x.Project = try Some (x.ProjectItem.ContainingProject.Object :?> VSProject) with _ -> None
