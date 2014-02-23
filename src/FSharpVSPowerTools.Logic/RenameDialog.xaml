@@ -18,7 +18,7 @@
             <TextBox Height="23" HorizontalAlignment="Stretch" Margin="12,0,12,0" Name="txtName" VerticalAlignment="Center" Text="{Binding Name}" />
             <Label Content="Enter a new name:" Height="28" HorizontalAlignment="Left" Margin="12,19,0,0" VerticalAlignment="Top" />
         </Grid>
-        <Label Content="F# Power Tools" HorizontalAlignment="Left" Margin="12,0,0,0" VerticalAlignment="Top" FontWeight="Bold" />
+        <Label Content="F# Power Tools - Rename" HorizontalAlignment="Left" Margin="12,0,0,0" VerticalAlignment="Top" FontWeight="Bold" />
     </Grid>
 </Window>
 

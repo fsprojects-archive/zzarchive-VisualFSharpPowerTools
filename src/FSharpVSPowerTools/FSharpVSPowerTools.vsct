@@ -50,29 +50,11 @@
    -->
 
    <Menus>
-     <Menu guid="guidMenuAndCommandsCmdSet" id="SubMenu" priority="0x001" type="Menu">
-       <Parent guid="guidMenuAndCommandsCmdSet" id="MyEditorCtxGroup"/>
-       <CommandFlag>DefaultInvisible</CommandFlag>
-       <CommandFlag>DynamicVisibility</CommandFlag>        
+     <Menu guid="guidPowerToolsCmdSet" id="RefactorMenu" priority="0x001" type="Menu">
+       <Parent guid="guidPowerToolsCmdSet" id="PowerToolsCtxGroup"/>      
        <Strings>
-         <ButtonText>Refactor</ButtonText>
+         <ButtonText>&amp;Refactor</ButtonText>
          <CommandName>Refactor</CommandName>
-       </Strings>
-     </Menu>
-   </Menus>
-
-   <Groups>
-     <Group guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" priority="0x0000">
-       <Parent guid="guidMenuAndCommandsCmdSet" id="IDM_VS_CTX_REFACTORING"/>
-     </Group>
-   </Groups>
-
-   <Menus>
-     <Menu guid="guidMenuAndCommandsCmdSet" id="IDM_VS_CTX_REFACTORING" priority="0x0300" type="Context">
-       <Parent guid="guidSHLMainMenu" id="IDG_VS_CODEWIN_LANGUAGE"/>
-       <Strings>
-         <ButtonText>Refactor</ButtonText>
-         <CommandName>&amp;Refactor</CommandName>
        </Strings>
      </Menu>
    </Menus>
@@ -87,13 +69,15 @@
      Now create a new group inside the standard editor's context menu. As always the ID of this
      menu is defined inside vsshlids.h.
      -->
-     <Group guid="guidMenuAndCommandsCmdSet" id="MyEditorCtxGroup" priority="0x600">
+     
+     <Group guid="guidPowerToolsCmdSet" id="PowerToolsCtxGroup" priority="0x600">
        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN"/>
      </Group>
-
-     <Group guid="guidMenuAndCommandsCmdSet" id="SubMenuGroup"   priority="0x001">
-       <Parent guid="guidMenuAndCommandsCmdSet" id="SubMenu"/>
+     
+     <Group guid="guidPowerToolsCmdSet" id="RefactorMenuGroup"   priority="0x001">
+       <Parent guid="guidPowerToolsCmdSet" id="RefactorMenu"/>
      </Group>
+
    </Groups>
 
    <!--
@@ -105,7 +89,7 @@
      An element inside this section is defined by its ID and must specify a parent group, a display
      priority, an image, a type, some visibility flags (optional) and a default text.
      -->
-     <Button guid="guidMenuAndCommandsCmdSet" id="cmdidMyCommand" priority="0x100" type="Button">        
+     <Button guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" priority="0x100" type="Button">        
        <CommandFlag>DefaultDisabled</CommandFlag>
        <Strings>
          <ButtonText>Rename...</ButtonText>
@@ -123,8 +107,8 @@
  -->
  <CommandPlacements>
    <!--Here we place two commands inside the empty menu group we created in the Groups section.-->
-   <CommandPlacement guid="guidMenuAndCommandsCmdSet" id="cmdidMyCommand" priority="0x100">
-     <Parent guid="guidMenuAndCommandsCmdSet" id="SubMenuGroup"/>
+   <CommandPlacement guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" priority="0x100">
+     <Parent guid="guidPowerToolsCmdSet" id="RefactorMenuGroup"/>
    </CommandPlacement>
  </CommandPlacements>
 
@@ -152,7 +136,8 @@
    In this example we want to use the <Control><1> accelerator for the first command defined in
    the Buttons section above, so this is its definition:
    -->
-   <KeyBinding guid="guidMenuAndCommandsCmdSet" id="cmdidMyCommand" editor="guidVSStd97" key1="R" key2="R" mod1="Control" mod2="Control" />
+   <KeyBinding guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" editor="guidVSStd97" key1="R" key2="N" 
+               mod1="Control" mod2="Control" />
  </KeyBindings>
 
 
@@ -179,14 +164,14 @@
    
    <!--The GUID for the command set is the one that contains the numeric IDs used in this sample
        with the only exception of the one used for the bitmap.-->
-   <GuidSymbol name="guidMenuAndCommandsCmdSet" value="{5debbcf2-6cb1-480c-9e69-edcb2196bad7}">
+   <GuidSymbol name="guidPowerToolsCmdSet" value="{5debbcf2-6cb1-480c-9e69-edcb2196bad7}">
      <!--Groups-->      
-     <IDSymbol name="MyEditorCtxGroup" value="0x1013" />
+     <IDSymbol name="PowerToolsCtxGroup" value="0x1013" />
      <!--Commands-->
-     <IDSymbol name="cmdidMyCommand" value="0x2001" />
+     <IDSymbol name="cmdidRenameCommand" value="0x2001" />
 
-     <IDSymbol name="SubMenu" value="0x1100"/>
-     <IDSymbol name="SubMenuGroup" value="0x1150"/>
+     <IDSymbol name="RefactorMenu" value="0x1100"/>
+     <IDSymbol name="RefactorMenuGroup" value="0x1150"/>
 
    </GuidSymbol>        
  </Symbols>

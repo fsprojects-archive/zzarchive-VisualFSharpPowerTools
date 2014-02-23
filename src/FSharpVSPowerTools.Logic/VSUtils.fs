@@ -19,6 +19,14 @@ let fromVSPos (snapshot : ITextSnapshot) ((startLine, startCol), (endLine, endCo
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
+let isIdentifier (s : string) =
+    s |> Seq.mapi (fun i c -> i, c)
+      |> Seq.forall (fun (i, c) -> 
+            if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
+
+let isOperator (s : string) = 
+    IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s
+
 type SnapshotPoint with
     member this.FromRange(lineStart, colStart, lineEnd, colEnd) =
         fromVSPos this.Snapshot ((lineStart, colStart), (lineEnd, colEnd))

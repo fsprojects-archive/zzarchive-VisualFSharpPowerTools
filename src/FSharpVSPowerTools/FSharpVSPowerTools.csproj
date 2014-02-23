@@ -169,7 +169,7 @@
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <VSCTCompile Include="FSharpVSPowerTools.vsct">
-      <ResourceName>1000</ResourceName>
+      <ResourceName>Menus.ctmenu</ResourceName>
       <SubType>Designer</SubType>
     </VSCTCompile>
   </ItemGroup>

@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.Shell;
 namespace FSharpVSPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
-    [ProvideMenuResource(1000, 1)]
+    [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideOptionPage(typeof(GeneralOptionsPage), "F# Power Tools", "General", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(FantomasOptionsPage), "F# Power Tools", "Formatting", 0, 0, true, 0)]
     [Guid("f152487e-9a22-4cf9-bee6-a8f7c77f828d")]

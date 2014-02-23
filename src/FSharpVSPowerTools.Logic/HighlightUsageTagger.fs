@@ -40,8 +40,25 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! results = VSLanguageService.findUsages newWord fileName projectProvider view.TextSnapshot
-
+                    let! res = 
+                        VSLanguageService.findUsages newWord fileName projectProvider
+                    let results =
+                        res
+                        |> Option.map (fun (_, lastIdent, _, refs) -> 
+                            refs 
+                            |> Seq.choose (fun symbolUse -> 
+                                // We have to filter by file name otherwise the range is invalid wrt current snapshot
+                                if symbolUse.FileName = fileName then
+                                    // Range01 type consists of zero-based values, which is a bit confusing
+                                    Some (fromVSPos view.TextSnapshot symbolUse.Range)
+                                else None)
+                            |> Seq.map (fun span -> 
+                                // Sometimes F.C.S returns a composite identifier which should be truncated
+                                let index = span.GetText().LastIndexOf (lastIdent)
+                                if index > 0 then 
+                                    SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
+                                else span)
+                            |> Seq.toList)
                     return 
                         match results with
                         | Some references -> 
