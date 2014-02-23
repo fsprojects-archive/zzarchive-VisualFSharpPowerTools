@@ -80,3 +80,14 @@ type ProjectProvider(project : VSProject) =
             |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
             |> Seq.toArray
 
+[<AutoOpen>]
+module Extensions =
+    open FSharpVSPowerTools
+
+    type Document with
+        member x.Project = 
+            try 
+                Some (ProjectProvider (x.ProjectItem.ContainingProject.Object :?> VSProject))
+            with _ -> 
+                debug "Can't find containing project. Probably the document is opened in an ad-hoc way."
+                None
