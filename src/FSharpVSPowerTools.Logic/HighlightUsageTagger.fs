@@ -6,7 +6,6 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
-open ExtCore.Control
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
@@ -25,23 +24,21 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
     let updateLock = obj()
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
     let mutable currentWord = None
-    let mutable requestedPoint = None
+    let mutable requestedPoint = SnapshotPoint()
 
     // Perform a synchronous update, in case multiple background threads are running
-    let synchronousUpdate(newSpans : NormalizedSnapshotSpanCollection, newWord : SnapshotSpan option) =
+    let synchronousUpdate(currentRequest : SnapshotPoint, newSpans : NormalizedSnapshotSpanCollection, newWord : SnapshotSpan option) =
         lock updateLock (fun () ->
-            match requestedPoint with
-            | Some _ ->
+            if currentRequest = requestedPoint then
                 wordSpans <- newSpans
                 currentWord <- newWord
                 let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
-                tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-            | _ -> ())
+                tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let doUpdate (newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq, fileName : string, projectProvider : ProjectProvider) =
-        match requestedPoint with
-        | Some _ ->
-            async {
+    let doUpdate (currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq, 
+                  fileName : string, projectProvider : ProjectProvider) =
+        async {
+            if currentRequest = requestedPoint then
                 try
                     let! results = VSLanguageService.findUsages newWord fileName projectProvider view.TextSnapshot
 
@@ -52,24 +49,23 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
                             let references = references |> List.filter possibleSpans.Contains
                             // Ignore symbols without any use
                             let word = if Seq.isEmpty references then None else Some newWord
-                            synchronousUpdate (NormalizedSnapshotSpanCollection references, word)
+                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
                         | None ->
                             // Return empty values in order to clear up markers
-                            synchronousUpdate (NormalizedSnapshotSpanCollection(), None)
+                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
                 debug "[Highlight Usage] %O exception occurs while updating." e
-                return synchronousUpdate (NormalizedSnapshotSpanCollection(), None)
+                return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             } |> Async.Start
-        | _ -> ()
 
     let updateWordAdornments() =
+        let currentRequest = requestedPoint
         // Find all words in the buffer like the one the caret is on
         let doc = Dte.getActiveDocument()
 
         maybe {
-            let! point = requestedPoint
             let! project = doc.Project
-            let! newWord = VSLanguageService.getSymbol point project
+            let! newWord = VSLanguageService.getSymbol currentRequest project
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
             match currentWord with
             | Some cw when cw = newWord -> ()
@@ -79,9 +75,9 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
                     FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
                     |> textSearchService.FindAll
                 // If we are still up-to-date (another change hasn't happened yet), do a real update
-                doUpdate (newWord, newSpans, doc.FullName, project) }
+                doUpdate (currentRequest, newWord, newSpans, doc.FullName, project) }
         |> function
-           | None -> synchronousUpdate (NormalizedSnapshotSpanCollection(), None)
+           | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
            | _ -> ()
 
     let updateAtCaretPosition(caretPosition : CaretPosition) =
@@ -94,9 +90,9 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
                            point.CompareTo cw.Start >= 0 &&
                            point.CompareTo cw.End <= 0 -> ()
             | _ ->
-                requestedPoint <- Some point
+                requestedPoint <- point
                 updateWordAdornments()
-        | _ -> requestedPoint <- None
+        | _ -> ()
 
     let viewLayoutChanged = 
         EventHandler<_>(fun _ (e : TextViewLayoutChangedEventArgs) ->
