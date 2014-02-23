@@ -14,6 +14,7 @@ open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open EnvDTE
 open VSLangProj
+open ExtCore.Control
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices

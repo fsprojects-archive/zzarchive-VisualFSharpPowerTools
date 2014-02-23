@@ -15,6 +15,7 @@ open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell
 open EnvDTE
 open VSLangProj
+open ExtCore.Control
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
