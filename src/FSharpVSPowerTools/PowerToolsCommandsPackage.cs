@@ -29,6 +29,11 @@ namespace FSharpVSPowerTools
             _instance = this;
         }
 
+        public static Package Instance 
+        {
+            get { return _instance; }
+        }
+
         protected override void Initialize()
         {
             base.Initialize();

@@ -9,6 +9,7 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
@@ -16,13 +17,14 @@ module PkgCmdIDList =
     let CmdidRenameCommand = 0x2001u
     let CmdidRefactorMenu = 0x1100u
 
-type State =
+type DocumentState =
     { Word: SnapshotSpan option
       File: string
       Project: ProjectProvider }
 
-type RenameCommandFilter(view : IWpfTextView, undoHistory : ITextUndoHistory) =
+type RenameCommandFilter(view : IWpfTextView, _undoHistory : ITextUndoHistory, serviceProvider : System.IServiceProvider) =
     let mutable state = None
+    let documentUpdater = DocumentUpdater(serviceProvider)
 
     let canRename() = 
         // TODO : it should be a symbol and is defined in current project
@@ -54,20 +56,29 @@ type RenameCommandFilter(view : IWpfTextView, undoHistory : ITextUndoHistory) =
 
     let guidPowerToolsCmdSet = "{5debbcf2-6cb1-480c-9e69-edcb2196bad7}"
 
-    let rename (newText : string) (references: SnapshotSpan list) =
-        let description = String.Format("Rename -> '{0}'", newText)
-        use transaction = undoHistory.CreateTransaction(description)
-        references
-        |> List.fold (fun snapshot span ->
-            let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
-            view.TextBuffer.Replace(span.Span, newText)) view.TextSnapshot
-        |> ignore
-        transaction.Complete()
-        Dte.getActiveDocument().Save() |> ignore
+    let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 seq) seq) =
+        try
+            let undo = documentUpdater.BeginGlobalUndo("Refactoring Rename")
+            try
+                for (fileName, ranges) in foundUsages do
+                    let buffer = documentUpdater.GetBufferForDocument(fileName)
+                    for r in ranges do
+                        let snapshotSpan = fromVSPos buffer.CurrentSnapshot r
+                        let i = snapshotSpan.GetText().LastIndexOf(oldText)
+                        let span = 
+                            if i > 0 then 
+                                // Subtract lengths of qualified identifiers
+                                Span(snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
+                            else snapshotSpan.Span
+                        buffer.Replace(span, newText) |> ignore
+            finally
+                documentUpdater.EndGlobalUndo(undo)
+        with e ->
+            debug "[Rename Refactoring] Error %O occurs while renaming symbols." e
 
     let isFileInCurrentProject fileName (projectProvider : ProjectProvider) =
         let filePath = Path.GetFullPath(fileName)
-        // NB: this is not the fullproof way to match two paths
+        // NB: this isn't a foolproof way to match two paths
         projectProvider.SourceFiles |> Array.exists ((=) filePath)
 
     let validateName (symbol : FSharpSymbol) (projectProvider : ProjectProvider) = 
@@ -97,32 +108,23 @@ type RenameCommandFilter(view : IWpfTextView, undoHistory : ITextUndoHistory) =
         maybe {
             let! state = state
             let! cw = state.Word
-            let! (symbol, references) = 
+            let! (symbol, currentName, references) = 
                   VSLanguageService.findUsages cw state.File state.Project
                   |> Async.RunSynchronously
                   // TODO: This part is going to diverse since we use all references (not only in the active document)
                   |> Option.map (fun (symbol, lastIdent, _, refs) -> 
-                        symbol, refs 
-                                |> Seq.choose (fun symbolUse -> 
-                                    // We have to filter by file name otherwise the range is invalid wrt current snapshot
-                                    if symbolUse.FileName = state.File then
-                                        // Range01 type consists of zero-based values, which is a bit confusing
-                                        Some (fromVSPos view.TextSnapshot symbolUse.Range)
-                                    else None)
-                                |> Seq.map (fun span -> 
-                                    // Sometimes F.C.S returns a composite identifier which should be truncated
-                                    let index = span.GetText().LastIndexOf (lastIdent)
-                                    if index > 0 then 
-                                        SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
-                                    else span)
-                                |> Seq.toList)
+                        symbol, lastIdent,
+                            refs 
+                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.Range))
+                            |> Seq.groupBy (fst >> Path.GetFullPath)
+                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses))
             let wnd = UI.loadRenameDialog(this, validateName symbol state.Project)
             let hostWnd = Window.GetWindow(view.VisualElement)
             wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
             wnd.Owner <- hostWnd
             this.Name <- cw.GetText()
             let! res = wnd.ShowDialog() |> Option.ofNullable
-            if res then rename this.Name references } |> ignore
+            if res then rename currentName this.Name references } |> ignore
 
     member val IsAdded = false with get, set
     member val NextTarget : IOleCommandTarget = null with get, set

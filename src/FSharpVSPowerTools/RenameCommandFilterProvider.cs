@@ -11,7 +11,6 @@ namespace FSharpVSPowerTools.Refactoring
 {
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
-    [FileExtension(".fs")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal class RenameCommandFilterProvider : IVsTextViewCreationListener
     {
@@ -29,8 +28,11 @@ namespace FSharpVSPowerTools.Refactoring
             IVsTextLines buffer;
             if (textViewAdapter.GetBuffer(out buffer) != VSConstants.S_OK) return;
 
-            AddCommandFilter(textViewAdapter, new RenameCommandFilter(
-                textView, UndoHistoryRegistry.RegisterHistory(EditorFactory.GetDocumentBuffer(buffer))));
+            AddCommandFilter(textViewAdapter, 
+                new RenameCommandFilter(
+                    textView, 
+                    UndoHistoryRegistry.RegisterHistory(EditorFactory.GetDocumentBuffer(buffer)), 
+                    PowerToolsCommandsPackage.Instance));
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, RenameCommandFilter commandFilter)

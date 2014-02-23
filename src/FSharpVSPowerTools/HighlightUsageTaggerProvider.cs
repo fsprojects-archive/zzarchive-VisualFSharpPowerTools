@@ -13,7 +13,6 @@ namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
-    [FileExtension(".fs")]
     [TagType(typeof(HighlightUsageTag))]
     public class HighlightUsageTaggerProvider : IViewTaggerProvider
     {
