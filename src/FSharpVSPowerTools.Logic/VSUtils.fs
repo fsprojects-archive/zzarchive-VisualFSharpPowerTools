@@ -45,7 +45,7 @@ open VSLangProj
 module Dte =
     let getActiveDocument() =
         let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-        let doc = dte.ActiveDocument        
+        let doc = dte.ActiveDocument
         System.Diagnostics.Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, 
                                         "Should be able to find active document and active project.")
         doc
