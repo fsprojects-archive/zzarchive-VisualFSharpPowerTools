@@ -12,6 +12,15 @@ type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
 type IRenameValidator =
     abstract ValidateName : string -> Choice<unit, string>
 
+type RenameDialogModel(originalName: string) =
+    let mutable name = originalName
+    member x.Name with get() = name 
+                       and set (v: string) =
+                         match v.Trim() with
+                         | "" -> failwith "Empty names are not allowed."
+                         | _ when v = originalName -> failwith "New name is the same as the original."
+                         | _ -> name <- v
+
 [<RequireQualifiedAccess>]
 module UI =
     let loadRenameDialog(viewModel, renameValidator : IRenameValidator) =

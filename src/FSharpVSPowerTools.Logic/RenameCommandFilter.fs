@@ -85,6 +85,7 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
         projectProvider.SourceFiles |> Array.exists ((=) filePath)
 
     let validateName (symbol : FSharpSymbol) (projectProvider : ProjectProvider) = 
+        let cleanUpSymbol (s: string) = s.Replace(")", "").Replace("(", "").Trim()
         { new IRenameValidator with
             member __.ValidateName(name) = 
                 debug "[Rename Refactoring] Check the following name: %s" name
@@ -100,12 +101,16 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                             Choice1Of2()
                         else
                             Choice2Of2 "Invalid name for union cases."
-                    | _ ->
-                        // TODO: possibly check operators and identifiers separately
-                        if isIdentifier name || isOperator name then
+                    | :? FSharpMemberFunctionOrValue as v when isOperator (cleanUpSymbol v.DisplayName)  ->
+                        if isOperator name then 
+                            Choice1Of2() 
+                        else 
+                            Choice2Of2 "Invalid name for operators."
+                    | _ -> 
+                        if isIdentifier name then
                             Choice1Of2()
                         else
-                            Choice2Of2 "Invalid name for identifiers or operators." }
+                            Choice2Of2 "Invalid name for identifiers." }
 
     member this.HandleRename() =
         maybe {
@@ -121,13 +126,13 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                             |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.Range))
                             |> Seq.groupBy (fst >> Path.GetFullPath)
                             |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses))
-            let wnd = UI.loadRenameDialog(this, validateName symbol state.Project)
+            let model = RenameDialogModel (cw.GetText())
+            let wnd = UI.loadRenameDialog(model, validateName symbol state.Project)
             let hostWnd = Window.GetWindow(view.VisualElement)
             wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
             wnd.Owner <- hostWnd
-            this.Name <- cw.GetText()
             let! res = wnd.ShowDialog() |> Option.ofNullable
-            if res then rename currentName this.Name references } |> ignore
+            if res then rename currentName model.Name references } |> ignore
 
     member val IsAdded = false with get, set
     member val NextTarget : IOleCommandTarget = null with get, set
