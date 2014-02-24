@@ -36,11 +36,13 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
+            this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbRenameRefactoring);
             this.grbOptions.Controls.Add(this.chbHighlightUsage);
             this.grbOptions.Controls.Add(this.chbNavBar);
             this.grbOptions.Controls.Add(this.lblInfo);
@@ -132,6 +134,18 @@
             this.chbXMLDoc.Text = "Auto-generating XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
             // 
+            // chbRenameRefactoring
+            // 
+            this.chbRenameRefactoring.AutoSize = true;
+            this.chbRenameRefactoring.Checked = true;
+            this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 122);
+            this.chbRenameRefactoring.Name = "chbRenameRefactoring";
+            this.chbRenameRefactoring.Size = new System.Drawing.Size(119, 17);
+            this.chbRenameRefactoring.TabIndex = 8;
+            this.chbRenameRefactoring.Text = "Rename refactoring";
+            this.chbRenameRefactoring.UseVisualStyleBackColor = true;
+            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -156,5 +170,6 @@
         private System.Windows.Forms.Label lblInfo;
         private System.Windows.Forms.CheckBox chbNavBar;
         private System.Windows.Forms.CheckBox chbHighlightUsage;
+        private System.Windows.Forms.CheckBox chbRenameRefactoring;
     }
 }

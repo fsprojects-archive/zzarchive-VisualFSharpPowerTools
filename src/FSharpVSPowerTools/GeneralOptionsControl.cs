@@ -42,12 +42,19 @@ namespace FSharpVSPowerTools
             set { chbHighlightUsage.Checked = value; }
         }
 
+        public bool RenameRefactoringEnabled
+        {
+            get { return chbRenameRefactoring.Checked; }
+            set { chbRenameRefactoring.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXMLDoc.Checked = OptionsPage.XMLDocEnabled;
             chbFormatting.Checked = OptionsPage.FormattingEnabled;
             chbNavBar.Checked = OptionsPage.NavBarEnabled;
             chbHighlightUsage.Checked = OptionsPage.HighlightUsageEnabled;
+            chbRenameRefactoring.Checked = OptionsPage.RenameRefactoringEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

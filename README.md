@@ -17,6 +17,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Formatting document / Formatting selection (via [Fantomas extension](https://github.com/dungpa/fantomas))
  - Navigation bar (see [this article](http://tomasp.net/blog/regions-navigation.aspx/))
  - Highlight references
+ - Rename refactoring
 
 For user guides, please take a look at [the home page](http://fsprojects.github.io/FSharpVSPowerTools/).
 

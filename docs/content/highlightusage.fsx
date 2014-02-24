@@ -7,9 +7,12 @@
 Highlight references
 -----------------------
 
-The color of the highlighted marker could be customized in  "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> F# Highlight References".
+The color of the highlighted marker could be customized in  "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> Highlighted References".
+Since v0.3.0 we also support operator highlighting.
+![Highlight operators](img/highlight_operators.png)
+
 Here is a demo screencast.
 
-![Highlighting usage](img/highlight_usage.gif)
+![Highlight references](img/highlight_references.gif)
 
 *)

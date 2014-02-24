@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.Composition;
+﻿using System.Diagnostics;
+using System.ComponentModel.Composition;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.OLE.Interop;
@@ -6,6 +7,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
+using Microsoft.VisualStudio.Shell;
 
 namespace FSharpVSPowerTools.Refactoring
 {
@@ -25,14 +27,14 @@ namespace FSharpVSPowerTools.Refactoring
             var textView = EditorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
-            IVsTextLines buffer;
-            if (textViewAdapter.GetBuffer(out buffer) != VSConstants.S_OK) return;
+            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
+            if (!generalOptions.RenameRefactoringEnabled)
+            {
+                Debug.WriteLine("[Rename Refactoring] The feature is disabled in General option page.");
+                return;
+            }
 
-            AddCommandFilter(textViewAdapter, 
-                new RenameCommandFilter(
-                    textView, 
-                    UndoHistoryRegistry.RegisterHistory(EditorFactory.GetDocumentBuffer(buffer)), 
-                    PowerToolsCommandsPackage.Instance));
+            AddCommandFilter(textViewAdapter, new RenameCommandFilter(textView, PowerToolsCommandsPackage.Instance));
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, RenameCommandFilter commandFilter)

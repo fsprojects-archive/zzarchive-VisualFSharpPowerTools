@@ -15,4 +15,5 @@
 * Implement major improvements on highlight references
 * Support operator highlighting
 * Reuse C#'s highlighted reference marker
+* Add rename refactoring
 
