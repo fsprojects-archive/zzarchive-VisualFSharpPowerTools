@@ -50,13 +50,13 @@
    -->
 
    <Menus>
-     <Menu guid="guidPowerToolsCmdSet" id="RefactorMenu" priority="0x001" type="Menu">
-       <Parent guid="guidPowerToolsCmdSet" id="PowerToolsCtxGroup"/>      
-       <Strings>
-         <ButtonText>&amp;Refactor</ButtonText>
-         <CommandName>Refactor</CommandName>
-       </Strings>
-     </Menu>
+     <Menu guid="guidSHLMainMenu" id="IDM_VS_MENU_REFACTORING" priority="0x0100" type="Menu">
+      <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_REFACTORING"/>
+      <Strings>
+        <ButtonText>&amp;Refactor</ButtonText>
+        <CommandName>&amp;Refactor</CommandName>
+      </Strings>
+    </Menu>
    </Menus>
 
    <!--
@@ -64,20 +64,17 @@
    buttons (commands); from a visual point of view you can see the group as the part of a menu
    contained between two lines. The parent of a group must be a menu.
    -->
+        
    <Groups>     
      <!--
      Now create a new group inside the standard editor's context menu. As always the ID of this
      menu is defined inside vsshlids.h.
      -->
-     
-     <Group guid="guidPowerToolsCmdSet" id="PowerToolsCtxGroup" priority="0x600">
-       <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN"/>
-     </Group>
-     
-     <Group guid="guidPowerToolsCmdSet" id="RefactorMenuGroup"   priority="0x001">
-       <Parent guid="guidPowerToolsCmdSet" id="RefactorMenu"/>
-     </Group>
-
+        
+      <Group guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" priority="0x0100">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_EDIT"/>
+      </Group>
+   
    </Groups>
 
    <!--
@@ -90,11 +87,28 @@
      priority, an image, a type, some visibility flags (optional) and a default text.
      -->
      <Button guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" priority="0x100" type="Button">        
+       <Icon guid="guidRefactorIcon" id="IDBI_Rename"/>
        <CommandFlag>DefaultDisabled</CommandFlag>
-       <Strings>
-         <ButtonText>Rename...</ButtonText>
-       </Strings>
+        <Strings>
+            <ButtonText>&amp;Rename...</ButtonText>
+            <MenuText>&amp;Rename...</MenuText>
+            <ToolTipText>Rename</ToolTipText>
+            <CommandName>Rename</CommandName>
+        </Strings>
      </Button>
+     <!--
+      <Button guid="guidVSStd2K" id="ECMD_RENAME" priority="0x0000" type="Button">            
+            <Icon guid="guidRefactorIcon" id="IDBI_Rename"/>
+            <CommandFlag>DynamicVisibility</CommandFlag>
+            <CommandFlag>DefaultDisabled</CommandFlag>
+            <Strings>
+                <ButtonText>&amp;Rename...</ButtonText>
+                <MenuText>&amp;Rename...</MenuText>
+                <ToolTipText>Rename</ToolTipText>
+                <CommandName>Rename</CommandName>
+            </Strings>
+       </Button>
+    -->
    </Buttons>   
  </Commands>
 
@@ -107,9 +121,15 @@
  -->
  <CommandPlacements>
    <!--Here we place two commands inside the empty menu group we created in the Groups section.-->
+
    <CommandPlacement guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" priority="0x100">
-     <Parent guid="guidPowerToolsCmdSet" id="RefactorMenuGroup"/>
+     <Parent guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" />
    </CommandPlacement>
+   <!--
+   <CommandPlacement guid="guidVSStd2K" id="ECMD_RENAME" priority="0x0000">
+     <Parent guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" />
+   </CommandPlacement>
+   -->
  </CommandPlacements>
 
 
@@ -169,9 +189,6 @@
      <IDSymbol name="PowerToolsCtxGroup" value="0x1013" />
      <!--Commands-->
      <IDSymbol name="cmdidRenameCommand" value="0x2001" />
-
-     <IDSymbol name="RefactorMenu" value="0x1100"/>
-     <IDSymbol name="RefactorMenuGroup" value="0x1150"/>
 
    </GuidSymbol>        
  </Symbols>

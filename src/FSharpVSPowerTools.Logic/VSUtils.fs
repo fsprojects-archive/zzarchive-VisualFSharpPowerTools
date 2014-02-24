@@ -58,7 +58,7 @@ open Microsoft.VisualStudio.ComponentModelHost
 // Reference at https://pytools.codeplex.com/SourceControl/latest#Python/Product/PythonTools/PythonToolsPackage.cs
 
 type DocumentUpdater(serviceProvider : IServiceProvider) = 
-    member __.OpenDocument (fileName : string, [<Out>] viewAdapter : byref<IVsTextView>, pWindowFrame : byref<IVsWindowFrame>) = 
+    member __.OpenDocument(fileName : string, [<Out>] viewAdapter : byref<IVsTextView>, pWindowFrame : byref<IVsWindowFrame>) = 
         let _textMgr = Package.GetGlobalService(typedefof<SVsTextManager>) :?> IVsTextManager
         let _uiShellOpenDocument = Package.GetGlobalService(typedefof<SVsUIShellOpenDocument>) :?> IVsUIShellOpenDocument
         let hierarchy = ref null

@@ -58,8 +58,9 @@ type RenameCommandFilter(view : IWpfTextView, _undoHistory : ITextUndoHistory, s
 
     let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 seq) seq) =
         try
-            let undo = documentUpdater.BeginGlobalUndo("Refactoring Rename")
+            let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
+                let doc = Dte.getActiveDocument()
                 for (fileName, ranges) in foundUsages do
                     let buffer = documentUpdater.GetBufferForDocument(fileName)
                     for r in ranges do
@@ -71,6 +72,8 @@ type RenameCommandFilter(view : IWpfTextView, _undoHistory : ITextUndoHistory, s
                                 Span(snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
                             else snapshotSpan.Span
                         buffer.Replace(span, newText) |> ignore
+                // Refocus to the current document
+                doc.Activate()
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
