@@ -63,15 +63,23 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                 let doc = Dte.getActiveDocument()
                 for (fileName, ranges) in foundUsages do
                     let buffer = documentUpdater.GetBufferForDocument(fileName)
-                    for r in ranges do
-                        let snapshotSpan = fromVSPos buffer.CurrentSnapshot r
-                        let i = snapshotSpan.GetText().LastIndexOf(oldText)
-                        let span = 
+                    let spans =
+                        ranges
+                        |> Seq.map (fun range ->
+                            let snapshotSpan = fromVSPos buffer.CurrentSnapshot range
+                            let i = snapshotSpan.GetText().LastIndexOf(oldText)
                             if i > 0 then 
                                 // Subtract lengths of qualified identifiers
-                                Span(snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
-                            else snapshotSpan.Span
-                        buffer.Replace(span, newText) |> ignore
+                                SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
+                            else snapshotSpan)
+                        |> Seq.toList
+
+                    spans
+                    |> List.fold (fun (snapshot: ITextSnapshot) span ->
+                        let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
+                        snapshot.TextBuffer.Replace(span.Span, newText)) buffer.CurrentSnapshot
+                    |> ignore
+
                 // Refocus to the current document
                 doc.Activate()
             finally
