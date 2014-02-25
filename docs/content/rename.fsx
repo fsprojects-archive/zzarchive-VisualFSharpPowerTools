@@ -4,11 +4,11 @@
 #I "../../bin"
 
 (**
-Rename refactoring
+Rename refactoring (experimental)
 -----------------------
 
 We currently support rename identifiers and operators which are defined in current project.
-Rename dialog can be activated via Edit --> Refactor --> Rename, context menu or Ctrl + R N key binding.
+Rename dialog can be activated via Edit --> Refactor --> Rename menu, context menu or Ctrl + R N key binding.
 
 Here is a demo screencast.
 

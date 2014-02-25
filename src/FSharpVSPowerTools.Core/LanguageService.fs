@@ -198,7 +198,7 @@ type LanguageService(dirtyNotify) =
         Debug.Assert(line >= 0 && line < Array.length lexStates, "Should have lex states for every line.")
         lexStates.[line]
 
-  let tap msg x = debug "[%s] %A" msg x; x
+  //let tap msg x = debug "[%s] %A" msg x; x
 
   let (|TypeParameterPrefix|_|) =
       let prefixes = set ["QUOTE"; "INFIX_AT_HAT_OP"]

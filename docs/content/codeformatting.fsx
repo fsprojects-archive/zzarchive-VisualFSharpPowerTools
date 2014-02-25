@@ -4,7 +4,7 @@
 #I "../../bin"
 
 (**
-Code formatting
+Source code formatting
 -----------------------
 
 Two main formatting commands are available:

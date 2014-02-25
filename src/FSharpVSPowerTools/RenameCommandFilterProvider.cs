@@ -16,11 +16,12 @@ namespace FSharpVSPowerTools.Refactoring
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal class RenameCommandFilterProvider : IVsTextViewCreationListener
     {
-        [Import(typeof(IVsEditorAdaptersFactoryService))]
-        public IVsEditorAdaptersFactoryService EditorFactory;
+#pragma warning disable 0649
 
         [Import]
-        internal ITextUndoHistoryRegistry UndoHistoryRegistry { get; set; }
+        internal IVsEditorAdaptersFactoryService EditorFactory { get; set; }
+
+#pragma warning restore 0649
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {

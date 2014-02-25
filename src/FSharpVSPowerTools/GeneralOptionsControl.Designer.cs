@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
             this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
             this.chbNavBar = new System.Windows.Forms.CheckBox();
             this.lblInfo = new System.Windows.Forms.Label();
@@ -36,7 +37,6 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
-            this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -56,6 +56,18 @@
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbRenameRefactoring
+            // 
+            this.chbRenameRefactoring.AutoSize = true;
+            this.chbRenameRefactoring.Checked = true;
+            this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 122);
+            this.chbRenameRefactoring.Name = "chbRenameRefactoring";
+            this.chbRenameRefactoring.Size = new System.Drawing.Size(187, 17);
+            this.chbRenameRefactoring.TabIndex = 8;
+            this.chbRenameRefactoring.Text = "Rename refactoring (experimental)";
+            this.chbRenameRefactoring.UseVisualStyleBackColor = true;
             // 
             // chbHighlightUsage
             // 
@@ -133,18 +145,6 @@
             this.chbXMLDoc.TabIndex = 1;
             this.chbXMLDoc.Text = "Auto-generating XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
-            // 
-            // chbRenameRefactoring
-            // 
-            this.chbRenameRefactoring.AutoSize = true;
-            this.chbRenameRefactoring.Checked = true;
-            this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 122);
-            this.chbRenameRefactoring.Name = "chbRenameRefactoring";
-            this.chbRenameRefactoring.Size = new System.Drawing.Size(119, 17);
-            this.chbRenameRefactoring.TabIndex = 8;
-            this.chbRenameRefactoring.Text = "Rename refactoring";
-            this.chbRenameRefactoring.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 

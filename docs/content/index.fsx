@@ -18,7 +18,7 @@ The extension comes with independent commands which can be toggled on/off in "To
 Here are currently supported features:
 
  * [Auto-generating XMLDoc](xmldoc.html)
- * [Code formatting](codeformatting.html)
+ * [Source code formatting](codeformatting.html)
  * [Navigation bar](navbar.html)
  * [Highlight references](highlightusage.html)
  * [Rename refactoring](rename.html)

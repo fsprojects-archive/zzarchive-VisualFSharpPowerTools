@@ -16,7 +16,7 @@
         <Button Content="Ok" Height="23" HorizontalAlignment="Right" Margin="0,0,12,6" VerticalAlignment="Bottom" Width="75" Grid.Row="2" Name="btnOk" IsDefault="true"/>
         <Grid Background="LightGray" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <TextBox Height="23" HorizontalAlignment="Stretch" Margin="12,0,12,0" Name="txtName" VerticalAlignment="Center" Text="{Binding Name}" />
-            <Label Content="Enter a new name:" Height="28" HorizontalAlignment="Left" Margin="12,19,0,0" VerticalAlignment="Top" />
+            <Label Content="Enter a new name:" Height="28" HorizontalAlignment="Left" Margin="5,16,0,0" VerticalAlignment="Top" />
         </Grid>
         <Label Content="F# Power Tools - Rename" HorizontalAlignment="Left" Margin="12,0,0,0" VerticalAlignment="Top" FontWeight="Bold" />
     </Grid>
