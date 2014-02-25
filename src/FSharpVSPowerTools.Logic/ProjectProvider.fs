@@ -26,6 +26,7 @@ type ProjectProvider(project : VSProject) =
     let projectOpt = ProjectParser.load projectFileName
 
     member __.ProjectFileName = projectFileName
+    member __.UniqueName = project.Project.UniqueName
 
     member __.TargetFSharpCoreVersion = 
         getProperty "TargetFSharpCoreVersion"
@@ -92,23 +93,23 @@ module ProjectProvider =
             let! msg = inbox.Receive()
             match msg with
             | Get (doc, r) ->
-                let vsProject = doc.ProjectItem.ContainingProject.Object :?> VSProject
-                let project = 
-                    match projects |> Map.tryFind vsProject.Project.UniqueName with
-                    | None -> 
-                        try
-                            debug "Creating new project provider."
-                            Some (ProjectProvider (vsProject))
-                        with _ -> 
-                            debug "Can't find containing project. Probably the document is opened in an ad-hoc way."
-                            None
-                    | x -> 
-                        debug "Found cached project provider."
-                        x
+                let project =
+                    Option.attempt <| fun _ -> doc.ProjectItem.ContainingProject.Object :?> VSProject
+                    |> Option.bind (fun vsProject ->
+                            match projects |> Map.tryFind vsProject.Project.UniqueName with
+                            | None -> 
+                                try
+                                    debug "Creating new project provider."
+                                    Some (ProjectProvider (vsProject))
+                                with _ -> 
+                                    debug "Can't find containing project. Probably the document is opened in an ad-hoc way."
+                                    None
+                            | x -> debug "Found cached project provider."; x)
+
                 r.Reply project
                 let projects =
                     match project with
-                    | Some p -> projects |> Map.add vsProject.Project.UniqueName p
+                    | Some p -> projects |> Map.add p.UniqueName p
                     | _ -> projects
                 return! loop projects }
         loop Map.empty)
