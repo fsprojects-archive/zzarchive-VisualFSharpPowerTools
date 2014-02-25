@@ -59,6 +59,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool HighlightUsageEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool DepthColorizerEnabled { get; set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -70,6 +73,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.FormattingEnabled = FormattingEnabled;
                 _optionsControl.NavBarEnabled = NavBarEnabled;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
+                _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
 
                 return _optionsControl;
             }
@@ -80,6 +84,7 @@ namespace FSharpVSPowerTools
             FormattingEnabled = true;
             NavBarEnabled = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
+            DepthColorizerEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
@@ -97,6 +102,7 @@ namespace FSharpVSPowerTools
                 };
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
+                DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
             }
             base.OnApply(e);
         }
