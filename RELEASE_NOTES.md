@@ -11,9 +11,12 @@
 * XML doc comments are generated as the first '<' char in a blank "///" comment is entered
 * Implement highlight references
 
-#### 0.3.0 - Unreleased
+#### 0.3.0 - February 25 2013
 * Implement major improvements on highlight references
 * Support operator highlighting
 * Reuse C#'s highlighted reference marker
 * Add rename refactoring
 
+#### 0.3.1 - February 25 2013
+* Fix the issue where multiple replacements are wrong if performed in a single line
+* Use Ctrl + R R key binding for rename refactoring
