@@ -19,10 +19,20 @@ let fromVSPos (snapshot : ITextSnapshot) ((startLine, startCol), (endLine, endCo
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
+let isDoubleBacktickIdent (s : string) =
+    if s.StartsWith("``") && s.EndsWith("``") then
+        let inner = s.Substring("``".Length, s.Length - "````".Length)
+        not (inner.Contains("``"))
+    else
+        false
+
 let isIdentifier (s : string) =
-    s |> Seq.mapi (fun i c -> i, c)
-      |> Seq.forall (fun (i, c) -> 
-            if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
+    if isDoubleBacktickIdent s then
+        true
+    else
+        s |> Seq.mapi (fun i c -> i, c)
+          |> Seq.forall (fun (i, c) -> 
+                if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
 
 let isOperator (s : string) = 
     IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s
