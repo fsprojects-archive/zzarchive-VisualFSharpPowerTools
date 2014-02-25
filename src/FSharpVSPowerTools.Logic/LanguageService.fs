@@ -38,7 +38,7 @@ module VSLanguageService =
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 return! Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
-                                                                  endLine, endCol, currentLine, args, framework)
+                                                           endLine, endCol, currentLine, args, framework)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }

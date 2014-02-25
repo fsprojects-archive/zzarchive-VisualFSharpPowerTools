@@ -81,7 +81,7 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
         let doc = Dte.getActiveDocument()
 
         maybe {
-            let! project = doc.Project
+            let! project = ProjectProvider.get doc
             let! newWord = VSLanguageService.getSymbol currentRequest project
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
             match currentWord with
