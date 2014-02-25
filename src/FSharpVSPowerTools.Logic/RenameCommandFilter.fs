@@ -79,39 +79,6 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
         with e ->
             debug "[Rename Refactoring] Error %O occurs while renaming symbols." e
 
-    let isFileInCurrentProject fileName (projectProvider : ProjectProvider) =
-        let filePath = Path.GetFullPath(fileName)
-        // NB: this isn't a foolproof way to match two paths
-        projectProvider.SourceFiles |> Array.exists ((=) filePath)
-
-    let validateName (symbol : FSharpSymbol) (projectProvider : ProjectProvider) = 
-        let cleanUpSymbol (s: string) = s.Replace(")", "").Replace("(", "").Trim()
-        { new IRenameValidator with
-            member __.ValidateName(name) = 
-                debug "[Rename Refactoring] Check the following name: %s" name
-                match symbol.DeclarationLocation with
-                // TODO: this should be determined before opening rename dialog
-                | Some loc when not <| isFileInCurrentProject loc.FileName projectProvider ->
-                    Choice2Of2 "Can't rename. The symbol isn't defined in current project."
-                | _ ->
-                    match symbol with
-                    | :? FSharpUnionCase ->
-                        // Union case shouldn't be lowercase
-                        if isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0])) then
-                            Choice1Of2()
-                        else
-                            Choice2Of2 "Invalid name for union cases."
-                    | :? FSharpMemberFunctionOrValue as v when isOperator (cleanUpSymbol v.DisplayName)  ->
-                        if isOperator name then 
-                            Choice1Of2() 
-                        else 
-                            Choice2Of2 "Invalid name for operators."
-                    | _ -> 
-                        if isIdentifier name then
-                            Choice1Of2()
-                        else
-                            Choice2Of2 "Invalid name for identifiers." }
-
     member this.HandleRename() =
         maybe {
             let! state = state
@@ -126,8 +93,8 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                             |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.Range))
                             |> Seq.groupBy (fst >> Path.GetFullPath)
                             |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses))
-            let model = RenameDialogModel (cw.GetText())
-            let wnd = UI.loadRenameDialog(model, validateName symbol state.Project)
+            let model = RenameDialogModel (cw.GetText(), symbol, state.Project)
+            let wnd = UI.loadRenameDialog model
             let hostWnd = Window.GetWindow(view.VisualElement)
             wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
             wnd.Owner <- hostWnd
