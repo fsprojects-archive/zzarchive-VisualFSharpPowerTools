@@ -6,16 +6,54 @@
              mc:Ignorable="d" 
             WindowStyle="ToolWindow"
             Width="512" Height="215" Background="White" FocusManager.FocusedElement="{Binding ElementName=txtName}">
+    
     <Grid>
+        <Grid.Resources>
+            <ControlTemplate x:Key="InputErrorTemplate">
+                <DockPanel>
+                    <Ellipse DockPanel.Dock="Right" Margin="2,0" ToolTip="Contains invalid data" Width="10" Height="10">
+                        <Ellipse.Fill>
+                            <LinearGradientBrush>
+                                <GradientStop Color="#11FF1111" Offset="0" />
+                                <GradientStop Color="#FFFF0000" Offset="1" />
+                            </LinearGradientBrush>
+                        </Ellipse.Fill>
+                    </Ellipse>
+                    <AdornedElementPlaceholder />
+                </DockPanel>
+            </ControlTemplate>
+            <Style TargetType="TextBox">
+                <Setter Property="Margin" Value="4,4,15,4" />
+                <Setter Property="Validation.ErrorTemplate" Value="{StaticResource InputErrorTemplate}" />
+                <Style.Triggers>
+                    <Trigger Property="Validation.HasError" Value="True">
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <Binding 
+                            Path="(Validation.Errors).CurrentItem.ErrorContent"
+                            RelativeSource="{x:Static RelativeSource.Self}"
+                            />
+                            </Setter.Value>
+                        </Setter>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="32" />
             <RowDefinition Height="110" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Button Content="Cancel" Height="23" HorizontalAlignment="Right" Margin="0,0,100,6" VerticalAlignment="Bottom" Width="75" Grid.Row="2" Name="btnCancel" IsCancel="True" />
-        <Button Content="Ok" Height="23" HorizontalAlignment="Right" Margin="0,0,12,6" VerticalAlignment="Bottom" Width="75" Grid.Row="2" Name="btnOk" IsDefault="true"/>
+        <Button Content="Ok" Height="23" HorizontalAlignment="Right" Margin="0,0,12,6" VerticalAlignment="Bottom" Width="75" Grid.Row="2" Name="btnOk" IsDefault="true" IsEnabled="False"/>
         <Grid Background="LightGray" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <TextBox Height="23" HorizontalAlignment="Stretch" Margin="12,0,12,0" Name="txtName" VerticalAlignment="Center" Text="{Binding Name}" />
+            <TextBox Height="23" HorizontalAlignment="Stretch" Margin="20,43,20.453,43.585" Name="txtName" VerticalAlignment="Center" 
+                     Text="{Binding Path=Name, 
+                                    UpdateSourceTrigger=PropertyChanged, 
+                                    ValidatesOnExceptions=True,
+                                    ValidatesOnDataErrors=True,
+                                    NotifyOnValidationError=True}">
+            </TextBox>
             <Label Content="Enter a new name:" Height="28" HorizontalAlignment="Left" Margin="5,16,0,0" VerticalAlignment="Top" />
         </Grid>
         <Label Content="F# Power Tools - Rename" HorizontalAlignment="Left" Margin="12,0,0,0" VerticalAlignment="Top" FontWeight="Bold" />

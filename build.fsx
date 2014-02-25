@@ -136,7 +136,7 @@ Target "All" DoNothing
 
 "Clean"
   ==> "RestorePackages"
-  ==> "AssemblyInfo"
+  =?> ("AssemblyInfo", not isLocalBuild)
   ==> "Build"
   ==> "RunTests"
   ==> "All"
