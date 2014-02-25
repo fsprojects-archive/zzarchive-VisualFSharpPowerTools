@@ -17,6 +17,7 @@ type ProjectProvider(project : VSProject) =
         | _ -> prop.Value.ToString()
 
     let currentDir = getProperty "FullPath"
+    
     let projectFileName = 
         let fileName = getProperty "FileName"
         Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
@@ -25,6 +26,7 @@ type ProjectProvider(project : VSProject) =
     let projectOpt = ProjectParser.load projectFileName
 
     member __.ProjectFileName = projectFileName
+    member __.UniqueName = project.Project.UniqueName
 
     member __.TargetFSharpCoreVersion = 
         getProperty "TargetFSharpCoreVersion"
@@ -80,14 +82,37 @@ type ProjectProvider(project : VSProject) =
             |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
             |> Seq.toArray
 
-[<AutoOpen>]
-module Extensions =
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module ProjectProvider =
     open FSharpVSPowerTools
 
-    type Document with
-        member x.Project = 
-            try 
-                Some (ProjectProvider (x.ProjectItem.ContainingProject.Object :?> VSProject))
-            with _ -> 
-                debug "Can't find containing project. Probably the document is opened in an ad-hoc way."
-                None
+    type private Message = Get of Document * AsyncReplyChannel<ProjectProvider option>
+
+    let private agent = MailboxProcessor.Start(fun inbox ->
+        let rec loop (projects: Map<string, ProjectProvider>) = async {
+            let! msg = inbox.Receive()
+            match msg with
+            | Get (doc, r) ->
+                let project =
+                    Option.attempt <| fun _ -> doc.ProjectItem.ContainingProject.Object :?> VSProject
+                    |> Option.bind (fun vsProject ->
+                            match projects |> Map.tryFind vsProject.Project.UniqueName with
+                            | None -> 
+                                try
+                                    debug "Creating new project provider."
+                                    Some (ProjectProvider (vsProject))
+                                with _ -> 
+                                    debug "Can't find containing project. Probably the document is opened in an ad-hoc way."
+                                    None
+                            | x -> debug "Found cached project provider."; x)
+
+                r.Reply project
+                let projects =
+                    match project with
+                    | Some p -> projects |> Map.add p.UniqueName p
+                    | _ -> projects
+                return! loop projects }
+        loop Map.empty)
+
+    /// Returns ProjectProvider for given Documents (it caches ProjectProviders forever for now).
+    let get document = agent.PostAndReply (fun r -> Get (document, r))
