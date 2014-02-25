@@ -14,8 +14,8 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
 module PkgCmdIDList =
-    let CmdidRenameCommand = 0x2001u
-    let CmdidRefactorMenu = 0x1100u
+    let CmdidBuiltinRenameCommand = 1550u // ECMD_RENAME
+    let GuidBuiltinCmdSet = typedefof<VSConstants.VSStd2KCmdID>.GUID
 
 type DocumentState =
     { Word: SnapshotSpan option
@@ -53,8 +53,6 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
     do
       view.LayoutChanged.AddHandler(viewLayoutChanged)
       view.Caret.PositionChanged.AddHandler(caretPositionChanged)
-
-    let guidPowerToolsCmdSet = "{5debbcf2-6cb1-480c-9e69-edcb2196bad7}"
 
     let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 seq) seq) =
         try
@@ -111,22 +109,16 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
 
     member val IsAdded = false with get, set
     member val NextTarget : IOleCommandTarget = null with get, set
-    member val Name = "" with get, set
 
     interface IOleCommandTarget with
         member this.Exec(pguidCmdGroup : byref<Guid>, nCmdId : uint32, nCmdexecopt : uint32, pvaIn : IntPtr, pvaOut : IntPtr) =
-            if (pguidCmdGroup = Guid.Parse(guidPowerToolsCmdSet) && nCmdId = PkgCmdIDList.CmdidRenameCommand) then
+            if (pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && nCmdId = PkgCmdIDList.CmdidBuiltinRenameCommand) && canRename() then
                 this.HandleRename()
             this.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member this.QueryStatus(pguidCmdGroup:byref<Guid>, cCmds:uint32, prgCmds:OLECMD[], pCmdText:IntPtr) =
-            if pguidCmdGroup = Guid.Parse(guidPowerToolsCmdSet) && 
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdIDList.CmdidRefactorMenu) then
-                prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
-                VSConstants.S_OK
-            elif pguidCmdGroup = Guid.Parse(guidPowerToolsCmdSet) && 
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdIDList.CmdidRenameCommand) &&
-                canRename() then
+            if pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdIDList.CmdidBuiltinRenameCommand) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else

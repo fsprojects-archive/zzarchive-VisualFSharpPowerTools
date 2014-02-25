@@ -86,29 +86,6 @@
      An element inside this section is defined by its ID and must specify a parent group, a display
      priority, an image, a type, some visibility flags (optional) and a default text.
      -->
-     <Button guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" priority="0x100" type="Button">        
-       <Icon guid="guidRefactorIcon" id="IDBI_Rename"/>
-       <CommandFlag>DefaultDisabled</CommandFlag>
-        <Strings>
-            <ButtonText>&amp;Rename...</ButtonText>
-            <MenuText>&amp;Rename...</MenuText>
-            <ToolTipText>Rename</ToolTipText>
-            <CommandName>Rename</CommandName>
-        </Strings>
-     </Button>
-     <!--
-      <Button guid="guidVSStd2K" id="ECMD_RENAME" priority="0x0000" type="Button">            
-            <Icon guid="guidRefactorIcon" id="IDBI_Rename"/>
-            <CommandFlag>DynamicVisibility</CommandFlag>
-            <CommandFlag>DefaultDisabled</CommandFlag>
-            <Strings>
-                <ButtonText>&amp;Rename...</ButtonText>
-                <MenuText>&amp;Rename...</MenuText>
-                <ToolTipText>Rename</ToolTipText>
-                <CommandName>Rename</CommandName>
-            </Strings>
-       </Button>
-    -->
    </Buttons>   
  </Commands>
 
@@ -121,15 +98,6 @@
  -->
  <CommandPlacements>
    <!--Here we place two commands inside the empty menu group we created in the Groups section.-->
-
-   <CommandPlacement guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" priority="0x100">
-     <Parent guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" />
-   </CommandPlacement>
-   <!--
-   <CommandPlacement guid="guidVSStd2K" id="ECMD_RENAME" priority="0x0000">
-     <Parent guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" />
-   </CommandPlacement>
-   -->
  </CommandPlacements>
 
 
@@ -156,8 +124,6 @@
    In this example we want to use the <Control><1> accelerator for the first command defined in
    the Buttons section above, so this is its definition:
    -->
-   <KeyBinding guid="guidPowerToolsCmdSet" id="cmdidRenameCommand" editor="guidVSStd97" key1="R" key2="N" 
-               mod1="Control" mod2="Control" />
  </KeyBindings>
 
 
@@ -188,8 +154,7 @@
      <!--Groups-->      
      <IDSymbol name="PowerToolsCtxGroup" value="0x1013" />
      <!--Commands-->
-     <IDSymbol name="cmdidRenameCommand" value="0x2001" />
-
+    
    </GuidSymbol>        
  </Symbols>
 </CommandTable>
