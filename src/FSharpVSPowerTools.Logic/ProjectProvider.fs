@@ -88,7 +88,13 @@ module ProjectProvider =
     open EnvDTE
     open Microsoft.VisualStudio.Shell
 
-    type private Message = Get of Document * AsyncReplyChannel<ProjectProvider option>
+    type private Message = 
+        | Get of Document * AsyncReplyChannel<ProjectProvider option>
+        | Remove of projectUniqueName:string
+
+    let getVSProject (projectItem: ProjectItem) = maybe {
+        let! item = Option.ofNull projectItem
+        return! try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None }
 
     let private agent = MailboxProcessor.Start(fun inbox ->
         let rec loop (projects: Map<string, ProjectProvider>) = async {
@@ -96,7 +102,7 @@ module ProjectProvider =
             match msg with
             | Get (doc, r) ->
                 let project =
-                    try Option.ofNull (doc.ProjectItem.ContainingProject.Object :?> VSProject)
+                    getVSProject doc.ProjectItem
                     with _ -> None
                     |> Option.bind (fun vsProject ->
                             match projects |> Map.tryFind vsProject.Project.UniqueName with
@@ -114,14 +120,23 @@ module ProjectProvider =
                     match project with
                     | Some p -> projects |> Map.add p.UniqueName p
                     | _ -> projects
-                return! loop projects }
+                return! loop projects
+            | Remove uniqueProjectName ->
+                debug "[ProjectProvider] %s has been removed from cache." uniqueProjectName
+                return! loop (projects |> Map.remove uniqueProjectName) }
         loop Map.empty)
 
     let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-    let events = dte.Events.GetObject("CSharpProjectItemsEvents") :?> ProjectItemsEvents
- 
-    do events.add_ItemRenamed (fun projectItem oldName -> 
-          debug "! SolutionItemsEvents.add_ItemRenamed (%A, %s)" projectItem oldName)
+    let events = dte.Events :?> EnvDTE80.Events2
+    
+    let onProjectChanged projectItem  = maybe {
+        let! item = getVSProject projectItem
+        agent.Post (Remove item.Project.UniqueName)
+        debug "[ProjectProvider] %s changed." projectItem.Name } |> ignore
+
+    do events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
+       events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
+       events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
 
     /// Returns ProjectProvider for given Documents (it caches ProjectProviders forever for now).
     let get document = agent.PostAndReply (fun r -> Get (document, r))
