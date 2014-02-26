@@ -1,6 +1,7 @@
 ﻿namespace FSharpDepthColorizer
 
 open System
+open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
@@ -11,6 +12,7 @@ open System.Windows.Media
 open System.Windows
 open System.Windows.Controls
 open Microsoft.Win32 
+open EnvDTE
 
 // an inexpensive-to-render rectangular adornment
 type RectangleAdornment(fillBrush : Brush, geometry : Geometry) as this =
@@ -36,6 +38,44 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
     let LayerName = "FSharpDepthFullLineAdornment"  // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
 
+    // Gets a set of default colors to use depending on whether a light or dark theme is being used
+    let defaultColors =
+        let defaultLightThemeColors = 
+                [|  // greyscale colors
+                190uy,190uy,190uy,230uy,230uy,230uy
+                170uy,170uy,170uy,210uy,210uy,210uy
+                184uy,184uy,184uy,224uy,224uy,224uy
+                164uy,164uy,164uy,204uy,204uy,204uy
+                178uy,178uy,178uy,218uy,218uy,218uy
+                158uy,158uy,158uy,198uy,198uy,198uy
+                172uy,172uy,172uy,212uy,212uy,212uy
+                152uy,152uy,152uy,192uy,192uy,192uy
+                166uy,166uy,166uy,206uy,206uy,206uy
+                146uy,146uy,146uy,186uy,186uy,186uy
+                |]
+
+        let defaultDarkThemeColors = 
+                [| 
+                15uy,15uy,15uy,55uy,55uy,55uy
+                35uy,35uy,35uy,75uy,75uy,75uy
+                21uy,21uy,21uy,61uy,61uy,61uy
+                41uy,41uy,41uy,81uy,81uy,81uy
+                27uy,27uy,27uy,67uy,67uy,67uy
+                47uy,47uy,47uy,87uy,87uy,87uy
+                33uy,33uy,33uy,73uy,73uy,73uy
+                53uy,53uy,53uy,93uy,93uy,93uy
+                39uy,39uy,39uy,79uy,79uy,79uy
+                59uy,59uy,59uy,99uy,99uy,99uy
+                |]
+
+        let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
+        let fontsAndColors = dte.Properties("FontsAndColors", "TextEditor").Item("FontsAndColorsItems").Object :?> FontsAndColorsItems
+        let background = System.Drawing.ColorTranslator.FromOle(int (fontsAndColors.Item("Plain Text").Background))
+
+        match background.R, background.G, background.B with
+        | 30uy, 30uy, 30uy -> defaultDarkThemeColors
+        | _ -> defaultLightThemeColors
+
     // Amount to increase the adornment height to ensure there aren't gaps between adornments
     // due to the way that layout rounding changes the placement of these adornments.
     let AdornmentHeightFudgeFactor = 0.0  // can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
@@ -48,18 +88,8 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
             Array.init 10 (fun i -> key.GetValue(sprintf "Depth%d" i) :?> string)
             |> Array.map (fun s -> let [|r1;g1;b1;r2;g2;b2|] = s.Split[|','|] |> Array.map byte in r1,g1,b1,r2,g2,b2)
         with e ->
-            [|  // greyscale colors
-            190uy,190uy,190uy,230uy,230uy,230uy
-            170uy,170uy,170uy,210uy,210uy,210uy
-            184uy,184uy,184uy,224uy,224uy,224uy
-            164uy,164uy,164uy,204uy,204uy,204uy
-            178uy,178uy,178uy,218uy,218uy,218uy
-            158uy,158uy,158uy,198uy,198uy,198uy
-            172uy,172uy,172uy,212uy,212uy,212uy
-            152uy,152uy,152uy,192uy,192uy,192uy
-            166uy,166uy,166uy,206uy,206uy,206uy
-            146uy,146uy,146uy,186uy,186uy,186uy
-            |]
+            defaultColors
+
     let edgeColors = colors |> Array.map (fun (r,g,b,_,_,_) -> System.Windows.Media.Color.FromRgb(r,g,b))
     let mainColors = colors |> Array.map (fun (_,_,_,r,g,b) -> System.Windows.Media.Color.FromRgb(r,g,b))
     let GetFadeColor(depth, numCharsWide) =
