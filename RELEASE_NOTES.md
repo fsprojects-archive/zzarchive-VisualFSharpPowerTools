@@ -20,3 +20,7 @@
 #### 0.3.1 - February 25 2013
 * Fix the issue where multiple replacements are wrong if performed in a single line
 * Use Ctrl + R R key binding for rename refactoring
+
+#### 0.3.2 - February 26 2013
+* Fix the NRE when there is no project or solution
+
