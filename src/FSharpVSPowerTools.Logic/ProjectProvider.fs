@@ -94,7 +94,8 @@ module ProjectProvider =
             match msg with
             | Get (doc, r) ->
                 let project =
-                    Option.attempt <| fun _ -> doc.ProjectItem.ContainingProject.Object :?> VSProject
+                    try Option.ofNull (doc.ProjectItem.ContainingProject.Object :?> VSProject)
+                    with _ -> None
                     |> Option.bind (fun vsProject ->
                             match projects |> Map.tryFind vsProject.Project.UniqueName with
                             | None -> 
