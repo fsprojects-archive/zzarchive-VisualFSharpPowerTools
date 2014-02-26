@@ -85,6 +85,8 @@ type ProjectProvider(project : VSProject) =
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module ProjectProvider =
     open FSharpVSPowerTools
+    open EnvDTE
+    open Microsoft.VisualStudio.Shell
 
     type private Message = Get of Document * AsyncReplyChannel<ProjectProvider option>
 
@@ -114,6 +116,12 @@ module ProjectProvider =
                     | _ -> projects
                 return! loop projects }
         loop Map.empty)
+
+    let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
+    let events = dte.Events.GetObject("CSharpProjectItemsEvents") :?> ProjectItemsEvents
+ 
+    do events.add_ItemRenamed (fun projectItem oldName -> 
+          debug "! SolutionItemsEvents.add_ItemRenamed (%A, %s)" projectItem oldName)
 
     /// Returns ProjectProvider for given Documents (it caches ProjectProviders forever for now).
     let get document = agent.PostAndReply (fun r -> Get (document, r))
