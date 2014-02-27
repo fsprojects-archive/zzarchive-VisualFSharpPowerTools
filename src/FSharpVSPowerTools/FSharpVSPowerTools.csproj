@@ -74,8 +74,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Fantomas.1.0.5.1\lib\FantomasLib.dll</HintPath>
     </Reference>
-    <Reference Include="FSharp.Compiler.Service, Version=0.0.20.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
     <Reference Include="FSharp.Compiler.Service">
       <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.20\lib\net40\FSharp.Compiler.Service.dll</HintPath>
     </Reference>
