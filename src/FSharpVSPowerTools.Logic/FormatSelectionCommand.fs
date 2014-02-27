@@ -6,14 +6,15 @@ open System.Linq
 open System.Text
 open System.Threading.Tasks
 open System.Windows
+open Fantomas.FormatConfig
 open FSharpVSPowerTools.CodeFormatting.Utils
 open Microsoft.FSharp.Compiler
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
 
-type FormatSelectionCommand() as this =
-    inherit FormatCommand()
+type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
+    inherit FormatCommand(getConfig)
 
     let mutable isFormattingCursor = false
 

@@ -7,6 +7,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
+open Fantomas.FormatConfig
 open FSharpVSPowerTools
 
 [<AbstractClass>]
@@ -17,8 +18,11 @@ type CommandBase() =
     abstract Execute: unit -> unit
 
 [<AbstractClass>]
-type FormatCommand() as this =
+type FormatCommand(getConfig: Func<FormatConfig>) as this =
     inherit CommandBase()
+
+    // Rebind to this method call as it's more F#-friendly
+    let getConfig () = getConfig.Invoke()
 
     let tryCreateTextUndoTransaction () =
         let textBufferUndoManager =
@@ -62,26 +66,10 @@ type FormatCommand() as this =
         let text = this.TextView.TextSnapshot.GetText()
         let buffer = this.TextView.TextBuffer
 
-        let editorOptions = this.Services.EditorOptionsFactory.GetOptions(buffer)
-        let indentSize = editorOptions.GetOptionValue<int>((new IndentSize()).Key)
-        let customOptions =
-            (Package.GetGlobalService(typeof<FantomasOptionsPage>)) :?> FantomasOptionsPage
-
         let source = FormatCommand.GetAllText(buffer)
         let isSignatureFile = this.IsSignatureFile(buffer)
 
-        let config =
-            Fantomas.FormatConfig.FormatConfig.create(
-                indentSize,
-                customOptions.PageWidth,
-                customOptions.SemicolonAtEndOfLine,
-                customOptions.SpaceBeforeArgument,
-                customOptions.SpaceBeforeColon,
-                customOptions.SpaceAfterComma,
-                customOptions.SpaceAfterSemicolon,
-                customOptions.IndentOnTryWith,
-                customOptions.ReorderOpenDeclaration,
-                customOptions.SpaceAroundDelimiter)
+        let config = getConfig()
 
         try
             let formatted = this.GetFormatted(isSignatureFile, source, config)
@@ -97,11 +85,11 @@ type FormatCommand() as this =
             true
         with
             | :? Fantomas.FormatConfig.FormatException as ex ->
-                MessageBox.Show(ex.Message, "Fantomas")
+                MessageBox.Show(ex.Message, "Fantomas") |> ignore
                 false
-            | :? Exception as ex ->
-                MessageBox.Show("Unable to format. " + ex.Message, "Fantomas");
-                false;
+            | ex ->
+                MessageBox.Show("Unable to format. " + ex.Message, "Fantomas") |> ignore
+                false
 
     abstract GetFormatted: isSignatureFile: bool * source: string * config: Fantomas.FormatConfig.FormatConfig -> string
     abstract GetNewCaretPositionSetter: unit -> (unit -> unit)

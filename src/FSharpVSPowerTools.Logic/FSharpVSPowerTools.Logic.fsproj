@@ -59,7 +59,6 @@
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="Services.fs" />
-    <Compile Include="FantomasOptionsPage.fs" />
     <Compile Include="CodeFormattingUtils.fs" />
     <Compile Include="CodeFormattingCommands.fs" />
     <Compile Include="FormatSelectionCommand.fs" />
