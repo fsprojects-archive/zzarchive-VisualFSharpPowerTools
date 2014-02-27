@@ -98,13 +98,22 @@ type DocumentUpdater(serviceProvider : IServiceProvider) =
 open Microsoft.VisualStudio.Shell
 open EnvDTE
 open VSLangProj
+open System.Diagnostics
 
 module Dte =
+    let instance(): DTE option = tryCast (Package.GetGlobalService typedefof<DTE>)
+    
     let getActiveDocument() =
-        let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-        let doc = dte.ActiveDocument
-        System.Diagnostics.Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, 
-                                        "Should be able to find active document and active project.")
+        let doc =
+            maybe {
+                let! dte = instance()
+                let! doc = Option.ofNull dte.ActiveDocument
+                let! item = Option.ofNull doc.ProjectItem 
+                let! _ = Option.ofNull item.ContainingProject 
+                return doc }
+        match doc with
+        | None -> fail "Should be able to find active document and active project."
+        | _ -> ()
         doc
 
 type ProjectItem with
@@ -113,21 +122,29 @@ type ProjectItem with
         |> Option.bind (fun item ->
             try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
 
-module SolutionEvents =
-    let private projectChanged = Event<_>()
-    let private dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-    let private events = dte.Events :?> EnvDTE80.Events2
+type SolutionEvents() =
+    let projectChanged = Event<_>()
+    // we must keep a reference to the events in order to prevent GC to collect it
+    let dte = Dte.instance()
+    let events: EnvDTE80.Events2 option = dte |> Option.bind (fun dte -> tryCast dte.Events)
     
-    let private onProjectChanged (projectItem: ProjectItem) =
+    let onProjectChanged (projectItem: ProjectItem) =
         projectItem.VSProject
         |> Option.iter (fun item ->
             debug "[ProjectsCache] %s changed." projectItem.Name
             item.Project.Save()
             projectChanged.Trigger item)
 
-    events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-    events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
-    events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
-    
+    do match events with
+       | Some events ->
+           events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
+           events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
+           events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
+           debug "[SolutionEvents] Subscribed for ProjectItemsEvents"
+       | _ -> fail "[SolutionEvents] Cannot subscribe for ProjectItemsEvents"
+
+    static let instance = lazy (SolutionEvents())
+    static member Initialize() = () // instance.Force()
+    static member Instance = instance.Value
     /// Raised when any project in solution has changed.
-    let ProjectChanged = projectChanged.Publish
+    member x.ProjectChanged = projectChanged.Publish

@@ -9,7 +9,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 module VSLanguageService =
     // TODO: we should reparse the stale document and cache it
     let Instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
-    do SolutionEvents.ProjectChanged.Add (fun _ -> 
+    do SolutionEvents.Instance.ProjectChanged.Add (fun _ -> 
         debug "[Language Service] InteractiveChecker.InvalidateAll"
         Instance.Checker.InvalidateAll())
 

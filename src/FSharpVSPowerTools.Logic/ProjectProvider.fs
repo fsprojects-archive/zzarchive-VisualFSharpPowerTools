@@ -87,7 +87,7 @@ type ProjectProvider(project : VSProject) =
 module ProjectsCache =
     type private Message = 
         | Get of Document * AsyncReplyChannel<ProjectProvider option>
-        | Remove of projectUniqueName:string
+        | Remove of VSProject
 
     let private agent = MailboxProcessor.Start(fun inbox ->
         let rec loop (projects: Map<string, ProjectProvider>) = async {
@@ -113,12 +113,17 @@ module ProjectsCache =
                     | Some p -> projects |> Map.add p.UniqueName p
                     | _ -> projects
                 return! loop projects
-            | Remove uniqueProjectName ->
-                debug "[ProjectsCache] %s has been removed from cache." uniqueProjectName
-                return! loop (projects |> Map.remove uniqueProjectName) }
+            | Remove vsProject -> 
+                let projects =
+                    match Option.ofNull vsProject.Project with
+                    | Some project ->
+                        debug "[ProjectsCache] %s has been removed from cache." project.UniqueName
+                        projects |> Map.remove project.UniqueName
+                    | None -> projects
+                return! loop projects }
         loop Map.empty)
 
-    SolutionEvents.ProjectChanged.Add (fun vsProject -> agent.Post (Remove vsProject.Project.UniqueName))
+    SolutionEvents.Instance.ProjectChanged.Add (fun vsProject -> agent.Post (Remove vsProject))
 
     /// Returns ProjectProvider for given Documents (it caches ProjectProviders forever for now).
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))

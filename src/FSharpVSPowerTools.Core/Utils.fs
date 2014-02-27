@@ -78,7 +78,14 @@ type MaybeBuilder () =
                     body enum.Current)))
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
-module Debug =
+module Pervasive =
     let inline debug msg = Printf.kprintf System.Diagnostics.Debug.WriteLine msg
+    let inline fail msg = Printf.kprintf System.Diagnostics.Debug.Fail msg
     let maybe = MaybeBuilder()
+    
+    let tryCast<'a> (o: obj) : 'a option = 
+        match o with
+        | null -> None
+        | :? 'a as a -> Some a
+        | _ -> fail "Cannot cast %O to %O" (o.GetType()) typeof<'a>.Name; None
 
