@@ -106,3 +106,28 @@ module Dte =
         System.Diagnostics.Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, 
                                         "Should be able to find active document and active project.")
         doc
+
+type ProjectItem with
+    member x.VSProject =
+        Option.ofNull x
+        |> Option.bind (fun item ->
+            try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
+
+module SolutionEvents =
+    let private projectChanged = Event<_>()
+    let private dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
+    let private events = dte.Events :?> EnvDTE80.Events2
+    
+    let private onProjectChanged (projectItem: ProjectItem) =
+        projectItem.VSProject
+        |> Option.iter (fun item ->
+            debug "[ProjectsCache] %s changed." projectItem.Name
+            item.Project.Save()
+            projectChanged.Trigger item)
+
+    events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
+    events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
+    events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
+    
+    /// Raised when any project in solution has changed.
+    let ProjectChanged = projectChanged.Publish

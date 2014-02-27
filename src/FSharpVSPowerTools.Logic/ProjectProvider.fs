@@ -6,6 +6,7 @@ open System.Diagnostics
 open EnvDTE
 open VSLangProj
 open FSharp.CompilerBinding
+open FSharpVSPowerTools
 
 type ProjectProvider(project : VSProject) = 
     do Debug.Assert(project <> null && project.Project <> null, "Input project should be well-formed.")
@@ -56,7 +57,7 @@ type ProjectProvider(project : VSProject) =
                 yield! this.References 
             |]
         | None ->
-            Debug.WriteLine("[Project System] Can't read project file. Fall back to default compiler flags.")
+            debug "[Project System] Can't read project file. Fall back to default compiler flags."
             [|  
                yield "--noframework"
                yield "--debug-"
@@ -70,9 +71,9 @@ type ProjectProvider(project : VSProject) =
         | Some p ->
             ProjectParser.getFiles p
         | None ->
-            Debug.WriteLine("[Project System] Can't read project file. Fall back to incomplete source files.")
+            debug "[Project System] Can't read project file. Fall back to incomplete source files."
             let projectItems = project.Project.ProjectItems
-            Debug.Assert(Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
+            Debug.Assert (Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
             projectItems
             |> Seq.cast<ProjectItem>
             |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
@@ -82,19 +83,11 @@ type ProjectProvider(project : VSProject) =
             |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
             |> Seq.toArray
 
-[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
-module ProjectProvider =
-    open FSharpVSPowerTools
-    open EnvDTE
-    open Microsoft.VisualStudio.Shell
-
+/// Cache of ProjectProviders. Listens for projects changes and invalidates itself.
+module ProjectsCache =
     type private Message = 
         | Get of Document * AsyncReplyChannel<ProjectProvider option>
         | Remove of projectUniqueName:string
-
-    let getVSProject (projectItem: ProjectItem) = maybe {
-        let! item = Option.ofNull projectItem
-        return! try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None }
 
     let private agent = MailboxProcessor.Start(fun inbox ->
         let rec loop (projects: Map<string, ProjectProvider>) = async {
@@ -102,18 +95,17 @@ module ProjectProvider =
             match msg with
             | Get (doc, r) ->
                 let project =
-                    getVSProject doc.ProjectItem
-                    with _ -> None
+                    doc.ProjectItem.VSProject
                     |> Option.bind (fun vsProject ->
                             match projects |> Map.tryFind vsProject.Project.UniqueName with
                             | None -> 
                                 try
-                                    debug "Creating new project provider."
+                                    debug "[ProjectsCache] Creating new project provider."
                                     Some (ProjectProvider (vsProject))
                                 with _ -> 
-                                    debug "Can't find containing project. Probably the document is opened in an ad-hoc way."
+                                    debug "[ProjectsCache] Can't find containing project. Probably the document is opened in an ad-hoc way."
                                     None
-                            | x -> debug "Found cached project provider."; x)
+                            | x -> debug "[ProjectsCache] Found cached project provider."; x)
 
                 r.Reply project
                 let projects =
@@ -122,21 +114,11 @@ module ProjectProvider =
                     | _ -> projects
                 return! loop projects
             | Remove uniqueProjectName ->
-                debug "[ProjectProvider] %s has been removed from cache." uniqueProjectName
+                debug "[ProjectsCache] %s has been removed from cache." uniqueProjectName
                 return! loop (projects |> Map.remove uniqueProjectName) }
         loop Map.empty)
 
-    let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-    let events = dte.Events :?> EnvDTE80.Events2
-    
-    let onProjectChanged projectItem  = maybe {
-        let! item = getVSProject projectItem
-        agent.Post (Remove item.Project.UniqueName)
-        debug "[ProjectProvider] %s changed." projectItem.Name } |> ignore
-
-    do events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-       events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
-       events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
+    SolutionEvents.ProjectChanged.Add (fun vsProject -> agent.Post (Remove vsProject.Project.UniqueName))
 
     /// Returns ProjectProvider for given Documents (it caches ProjectProviders forever for now).
-    let get document = agent.PostAndReply (fun r -> Get (document, r))
+    let getProject document = agent.PostAndReply (fun r -> Get (document, r))
