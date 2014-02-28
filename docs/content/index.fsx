@@ -22,6 +22,7 @@ Here are currently supported features:
  * [Navigation bar](navbar.html)
  * [Highlight references](highlightusage.html)
  * [Rename refactoring](rename.html)
+ * [Depth colorizer](depthcolorizer.html)
  
 Contributing and copyright
 --------------------------

@@ -103,6 +103,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
+    <Reference Include="UIAutomationTypes" />
     <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="WindowsBase" />
@@ -139,6 +140,7 @@
     <Compile Include="CodeFormatting\Utils\Cursor.cs" />
     <Compile Include="CodeFormatting\Utils\Disposable.cs" />
     <Compile Include="CodeFormatting\Utils\TextUtils.cs" />
+    <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="VsTextViewCommandFilter.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -174,6 +176,12 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\FSharpDepthColorizer\FSharpDepthColorizer.fsproj">
+      <Project>{CE0F28E8-6F56-400F-8729-AEA105472B0F}</Project>
+      <Name>FSharpDepthColorizer</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+    </ProjectReference>
     <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
       <Name>FSharpVSPowerTools.Core</Name>
