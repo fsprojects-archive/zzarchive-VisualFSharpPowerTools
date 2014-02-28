@@ -43,6 +43,8 @@ namespace FSharpVSPowerTools
               delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
               delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, true);
+
+            VSUtils.SolutionEvents.Initialize();
         }
     }
 }

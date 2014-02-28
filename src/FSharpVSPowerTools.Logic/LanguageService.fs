@@ -9,6 +9,9 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 module VSLanguageService =
     // TODO: we should reparse the stale document and cache it
     let Instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
+    do SolutionEvents.Instance.ProjectChanged.Add (fun _ -> 
+        debug "[Language Service] InteractiveChecker.InvalidateAll"
+        Instance.Checker.InvalidateAll())
 
     let getSymbol (point: SnapshotPoint) (projectProvider : ProjectProvider) =
         let source = point.Snapshot.GetText()
@@ -34,7 +37,7 @@ module VSLanguageService =
                     | [||] -> [| currentFile |] 
                     | files -> files
             
-                debug "Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
+                debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 return! Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 

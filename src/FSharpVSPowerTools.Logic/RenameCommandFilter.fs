@@ -33,8 +33,8 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
     let updateAtCaretPosition(caretPosition : CaretPosition) = 
         maybe {
             let! point = view.TextBuffer.GetSnapshotPoint caretPosition
-            let doc = Dte.getActiveDocument()
-            let! project = ProjectProvider.get doc
+            let! doc = Dte.getActiveDocument()
+            let! project = ProjectsCache.getProject doc
             state <- Some
                 { File = doc.FullName
                   Project =  project
@@ -58,28 +58,29 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
-                let doc = Dte.getActiveDocument()
-                for (fileName, ranges) in foundUsages do
-                    let buffer = documentUpdater.GetBufferForDocument(fileName)
-                    let spans =
-                        ranges
-                        |> Seq.map (fun range ->
-                            let snapshotSpan = fromVSPos buffer.CurrentSnapshot range
-                            let i = snapshotSpan.GetText().LastIndexOf(oldText)
-                            if i > 0 then 
-                                // Subtract lengths of qualified identifiers
-                                SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
-                            else snapshotSpan)
-                        |> Seq.toList
+                maybe {
+                    let! doc = Dte.getActiveDocument()
+                    for (fileName, ranges) in foundUsages do
+                        let buffer = documentUpdater.GetBufferForDocument(fileName)
+                        let spans =
+                            ranges
+                            |> Seq.map (fun range ->
+                                let snapshotSpan = fromVSPos buffer.CurrentSnapshot range
+                                let i = snapshotSpan.GetText().LastIndexOf(oldText)
+                                if i > 0 then 
+                                    // Subtract lengths of qualified identifiers
+                                    SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
+                                else snapshotSpan)
+                            |> Seq.toList
 
-                    spans
-                    |> List.fold (fun (snapshot: ITextSnapshot) span ->
-                        let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
-                        snapshot.TextBuffer.Replace(span.Span, newText)) buffer.CurrentSnapshot
-                    |> ignore
+                        spans
+                        |> List.fold (fun (snapshot: ITextSnapshot) span ->
+                            let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
+                            snapshot.TextBuffer.Replace(span.Span, newText)) buffer.CurrentSnapshot
+                        |> ignore
 
-                // Refocus to the current document
-                doc.Activate()
+                    // Refocus to the current document
+                    doc.Activate() } |> ignore
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
