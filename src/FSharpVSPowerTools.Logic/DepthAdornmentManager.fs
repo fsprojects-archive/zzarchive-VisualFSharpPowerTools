@@ -1,4 +1,4 @@
-﻿namespace FSharpDepthColorizer
+﻿namespace FSharpVSPowerTools.DepthColorizer
 
 open System
 open Microsoft.VisualStudio.Shell

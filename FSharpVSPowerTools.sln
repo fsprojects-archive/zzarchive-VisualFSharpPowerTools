@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30110.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
@@ -40,15 +40,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools", "src\FSharpVSPowerTools\FSharpVSPowerTools.csproj", "{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpXmlDoc", "src\FSharpXmlDoc\FSharpXmlDoc.fsproj", "{48913937-D335-4A8E-A22F-7409385A989A}"
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core.Tests", "tests\FSharpVSPowerTools.Core.Tests\FSharpVSPowerTools.Core.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic", "src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj", "{70456B75-F623-41B4-8044-ED02C265F0FF}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core", "src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpDepthColorizer", "src\FSharpDepthColorizer\FSharpDepthColorizer.fsproj", "{CE0F28E8-6F56-400F-8729-AEA105472B0F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -60,10 +56,6 @@ Global
 		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.Build.0 = Release|Any CPU
-		{48913937-D335-4A8E-A22F-7409385A989A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{48913937-D335-4A8E-A22F-7409385A989A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{48913937-D335-4A8E-A22F-7409385A989A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{48913937-D335-4A8E-A22F-7409385A989A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -76,10 +68,6 @@ Global
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CE0F28E8-6F56-400F-8729-AEA105472B0F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

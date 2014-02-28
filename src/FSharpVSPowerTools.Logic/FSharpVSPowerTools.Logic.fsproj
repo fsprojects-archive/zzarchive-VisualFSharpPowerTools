@@ -54,15 +54,18 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
+    <None Include="packages.config" />
     <Compile Include="VSUtils.fs" />
     <Compile Include="ProjectParser.fs" />
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="LanguageService.fs" />
+    <Compile Include="XmlDocFilter.fs" />
+    <Compile Include="DepthTagger.fs" />
+    <Compile Include="DepthAdornmentManager.fs" />
     <Compile Include="HighlightUsageTagger.fs" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
     <None Include="RenameDialog.xaml" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -124,8 +127,10 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
+    <Reference Include="UIAutomationTypes" />
     <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="WindowsBase" />

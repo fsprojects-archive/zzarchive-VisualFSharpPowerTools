@@ -9,7 +9,8 @@ using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Text; 
+using Microsoft.VisualStudio.Text;
+using FSharpVSPowerTools.XmlDoc;
 
 // Useful reference: http://msdn.microsoft.com/en-us/library/dd885243.aspx
 namespace FSharpVSPowerTools
@@ -40,7 +41,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (TextDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                new FSharpXmlDoc.XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath);
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath);
             }
         }
     }

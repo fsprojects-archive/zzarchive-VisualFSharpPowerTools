@@ -7,9 +7,8 @@
 module FSharpVSPowerTools.Core.Tests.DepthColorizerTests
 #endif
 
-#if INTERACTIVE
 open System.IO
-open FSharpDepthColorizer
+open FSharpVSPowerTools.Core
 open NUnit.Framework
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "DepthColorizerSampleFile.fs")
@@ -108,6 +107,7 @@ let ``should increase depth inside for loop``() =
 let ``should increase depth inside async expression``() =
     output |> Seq.exists (fun (l, i, c, d) -> l = 175 && i = 12 && c = 17 && d = 4) |> assertEqual true
 
+#if INTERACTIVE
 Seq.iter (printfn "%A") output;;
 ``should create single level at depth 0 for module definition``();;
 ``should create single level for blank line``();;

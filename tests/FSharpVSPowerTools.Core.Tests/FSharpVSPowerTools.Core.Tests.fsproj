@@ -78,11 +78,6 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FSharpDepthColorizer\FSharpDepthColorizer.fsproj">
-      <Name>FSharpDepthColorizer</Name>
-      <Project>{ce0f28e8-6f56-400f-8729-aea105472b0f}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\..\src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
       <Name>FSharpVSPowerTools.Core</Name>
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
@@ -91,11 +86,6 @@
     <ProjectReference Include="..\..\src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
       <Name>FSharpVSPowerTools.Logic</Name>
       <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\src\FSharpXmlDoc\FSharpXmlDoc.fsproj">
-      <Name>FSharpXmlDoc</Name>
-      <Project>{48913937-d335-4a8e-a22f-7409385a989a}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>

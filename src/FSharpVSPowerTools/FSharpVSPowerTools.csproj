@@ -1,14 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-   <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
-   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
-     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
-   </PropertyGroup>
- 
-   <!-- This is needed to prevent forced migrations when opening the project in Vs2013 -->
-   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
-     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
-   </PropertyGroup>
+  <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
+    <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
+  </PropertyGroup>
+  <!-- This is needed to prevent forced migrations when opening the project in Vs2013 -->
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
+    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
+  </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -176,12 +175,6 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FSharpDepthColorizer\FSharpDepthColorizer.fsproj">
-      <Project>{CE0F28E8-6F56-400F-8729-AEA105472B0F}</Project>
-      <Name>FSharpDepthColorizer</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
-    </ProjectReference>
     <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
       <Name>FSharpVSPowerTools.Core</Name>
@@ -189,12 +182,6 @@
     <ProjectReference Include="..\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
       <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
       <Name>FSharpVSPowerTools.Logic</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\FSharpXmlDoc\FSharpXmlDoc.fsproj">
-      <Project>{48913937-D335-4A8E-A22F-7409385A989A}</Project>
-      <Name>FSharpXmlDoc</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

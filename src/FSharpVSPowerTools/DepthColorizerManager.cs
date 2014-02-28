@@ -10,7 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 
-using FSharpDepthColorizer;
+using FSharpVSPowerTools.DepthColorizer;
 using Microsoft.VisualStudio.Shell;
 using System.Diagnostics;
 

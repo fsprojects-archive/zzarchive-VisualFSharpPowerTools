@@ -1,4 +1,4 @@
-﻿namespace FSharpDepthColorizer
+﻿namespace FSharpVSPowerTools.DepthColorizer
 
 [<AutoOpen>]
 module Utils =
@@ -41,6 +41,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Utilities
 open System.Windows.Threading
+open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 
 // The tag that carries metadata about F# color-regions.

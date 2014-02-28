@@ -22,10 +22,8 @@
   </Dependencies>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
-    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
-    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpXmlDoc" Path="|FSharpXmlDoc|" />
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />    
     <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Core" Path="|FSharpVSPowerTools.Core|" />
-    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Logic" Path="|FSharpVSPowerTools.Logic|" />
-  <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpDepthColorizer" Path="|FSharpDepthColorizer|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Logic" Path="|FSharpVSPowerTools.Logic|" />  
   </Assets>
 </PackageManifest>

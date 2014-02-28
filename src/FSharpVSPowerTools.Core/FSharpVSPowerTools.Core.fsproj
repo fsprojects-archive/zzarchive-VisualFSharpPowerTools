@@ -54,10 +54,13 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
+    <None Include="packages.config" />
     <Compile Include="Utils.fs" />
     <Compile Include="CompilerLocationUtils.fs" />
     <Compile Include="LanguageService.fs" />
-    <None Include="packages.config" />
+    <Compile Include="FSComp.fs" />
+    <Compile Include="XmlDocParser.fs" />
+    <Compile Include="DepthParser.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">

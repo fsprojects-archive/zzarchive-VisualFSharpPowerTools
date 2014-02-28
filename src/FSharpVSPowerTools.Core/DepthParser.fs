@@ -1,4 +1,4 @@
-﻿namespace FSharpDepthColorizer
+﻿namespace FSharpVSPowerTools.Core
 
 module internal DepthParsing =
 
