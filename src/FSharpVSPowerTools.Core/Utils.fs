@@ -16,6 +16,18 @@ module Option =
         | None -> Nullable<_> ()
 
     let inline attempt (f: unit -> 'a) = try Some <| f() with _ -> None
+
+    /// Gets the value associated with the option or the supplied default value.
+    let inline getOrElse v =
+        function
+        | Some x -> x
+        | None -> v
+
+    /// Gets the option if Some x, otherwise the supplied default value.
+    let inline orElse v =
+        function
+        | Some x -> Some x
+        | None -> v
     
 /// Maybe computation expression builder, copied from ExtCore library
 /// https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs

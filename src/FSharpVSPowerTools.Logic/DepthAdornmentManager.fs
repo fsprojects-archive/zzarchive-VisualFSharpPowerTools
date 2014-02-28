@@ -13,6 +13,7 @@ open System.Windows
 open System.Windows.Controls
 open Microsoft.Win32 
 open EnvDTE
+open FSharpVSPowerTools
 
 // an inexpensive-to-render rectangular adornment
 type RectangleAdornment(fillBrush : Brush, geometry : Geometry) as this =
@@ -83,17 +84,24 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
     let AdornmentHeightFudgeFactor = 0.0  // can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
 
     let colors =
-        try
-            let key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer")
-            // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
-            let key = if key<> null then key else Registry.CurrentUser.OpenSubKey(@"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer")
-            Array.init 10 (fun i -> key.GetValue(sprintf "Depth%d" i) :?> string)
-            |> Array.map (fun s -> 
-                match s.Split[|','|] |> Array.map byte with
-                | [|r1;g1;b1;r2;g2;b2|] -> r1,g1,b1,r2,g2,b2
-                | _ -> failwith "Unhandled case")
-        with e ->
-            defaultColors
+        let openKey key = try Registry.CurrentUser.OpenSubKey key |> Option.ofNull with _ -> None
+
+        maybe {
+            let! key = 
+                openKey @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer"
+                // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
+                |> Option.orElse (openKey @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer")
+
+            return! 
+                try
+                    Some [| for i in 0..9 do
+                              let s = key.GetValue(sprintf "Depth%d" i) :?> string
+                              yield 
+                                 match s.Split[|','|] |> Array.map byte with
+                                 | [|r1;g1;b1;r2;g2;b2|] -> r1,g1,b1,r2,g2,b2
+                                 | _ -> failwith "Unhandled case" |] 
+                with _ -> None
+        } |> Option.getOrElse defaultColors
 
     let edgeColors = colors |> Array.map (fun (r,g,b,_,_,_) -> System.Windows.Media.Color.FromRgb(r,g,b))
     let mainColors = colors |> Array.map (fun (_,_,_,r,g,b) -> System.Windows.Media.Color.FromRgb(r,g,b))
