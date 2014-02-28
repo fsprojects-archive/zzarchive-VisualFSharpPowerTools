@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Vsix xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="1.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2010">
+  <Identifier Id="FSharpDepthColorizer">
+    <Name>F# Depth Colorizer</Name>
+    <Author>Brian McNamara</Author>
+    <Version>0.8</Version>
+    <Description xml:space="preserve">Use the F# parse control-flow depth to colorize code to show structure (fsharp)</Description>
+    <Locale>1033</Locale>
+    <Icon>FSColor.png</Icon>
+    <PreviewImage>FSColor.png</PreviewImage>
+    <SupportedProducts>
+      <VisualStudio Version="10.0">
+        <Edition>Ultimate</Edition>
+        <Edition>Premium</Edition>
+        <Edition>Pro</Edition>
+        <Edition>IntegratedShell</Edition>
+      </VisualStudio>
+      <VisualStudio Version="11.0">
+        <Edition>Ultimate</Edition>
+        <Edition>Premium</Edition>
+        <Edition>Pro</Edition>
+        <Edition>IntegratedShell</Edition>
+      </VisualStudio>
+      <VisualStudio Version="12.0">
+        <Edition>Ultimate</Edition>
+        <Edition>Premium</Edition>
+        <Edition>Pro</Edition>
+        <Edition>IntegratedShell</Edition>
+      </VisualStudio>
+    </SupportedProducts>
+    <SupportedFrameworkRuntimeEdition MinVersion="4.0" MaxVersion="4.0" />
+    <SystemComponent>false</SystemComponent>
+  </Identifier>
+  <References />
+  <Content>
+    <MefComponent>VSIXColorizer.dll</MefComponent>
+  </Content>
+</Vsix>
