@@ -21,6 +21,7 @@ Here are currently supported features:
  * [Code formatting](codeformatting.html)
  * [Navigation bar](navbar.html)
  * [Highlight references](highlightusage.html)
+ * [Depth Colorizer](depthcolorizer.html)
  
 Contributing and copyright
 --------------------------

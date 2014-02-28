@@ -11,6 +11,8 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 
 using FSharpDepthColorizer;
+using Microsoft.VisualStudio.Shell;
+using System.Diagnostics;
 
 namespace FSharpVSPowerTools
 {
@@ -25,6 +27,13 @@ namespace FSharpVSPowerTools
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             ITextDocument doc;
+
+            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
+            if (!generalOptions.DepthColorizerEnabled)
+            {
+                Debug.WriteLine("[Depth Colorizer] The feature is disabled in General option page.");
+                return null;
+            }
 
             if (TextDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
