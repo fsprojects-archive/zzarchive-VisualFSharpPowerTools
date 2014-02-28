@@ -54,12 +54,12 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
       view.LayoutChanged.AddHandler(viewLayoutChanged)
       view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
-    let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 seq) seq) =
+    let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 list) list) =
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
-                maybe {
-                    let! doc = Dte.getActiveDocument()
+                Dte.getActiveDocument()
+                |> Option.iter (fun doc ->
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
                         let spans =
@@ -80,7 +80,7 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                         |> ignore
 
                     // Refocus to the current document
-                    doc.Activate() } |> ignore
+                    doc.Activate())
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
@@ -99,7 +99,8 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                             refs 
                             |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.Range))
                             |> Seq.groupBy (fst >> Path.GetFullPath)
-                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses))
+                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                            |> Seq.toList)
             let model = RenameDialogModel (cw.GetText(), symbol, state.Project)
             let wnd = UI.loadRenameDialog model
             let hostWnd = Window.GetWindow(view.VisualElement)
