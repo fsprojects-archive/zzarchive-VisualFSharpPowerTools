@@ -4,13 +4,14 @@ open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.ComponentModel.Composition
 
-[<RequireQualifiedAccess>]
-module VSLanguageService =
+[<Export(typeof<VSLanguageService>)>]
+type VSLanguageService() =
     // TODO: we should reparse the stale document and cache it
     let Instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
-    let getSymbol (point: SnapshotPoint) (projectProvider : ProjectProvider) =
+    member this.GetSymbol(point: SnapshotPoint, projectProvider : ProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
@@ -19,7 +20,18 @@ module VSLanguageService =
         Instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range)
 
-    let findUsages (word : SnapshotSpan) (currentFile : string) (projectProvider : ProjectProvider) =
+    member this.FindSymbols(openDocuments, (projectProvider: ProjectProvider), reportSymbols, ct) =
+        async {
+            do! Instance.CollectSymbolsInProject(
+                    projectProvider.ProjectFileName, 
+                    openDocuments, 
+                    projectProvider.SourceFiles, 
+                    projectProvider.CompilerOptions, 
+                    projectProvider.TargetFramework, 
+                    reportSymbols, ct)
+        }
+
+    member this.FindUsages (word : SnapshotSpan, currentFile : string, projectProvider : ProjectProvider) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()

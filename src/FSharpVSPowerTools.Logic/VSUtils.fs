@@ -1,5 +1,5 @@
 ﻿[<AutoOpen>]
-module FSharpVSPowerTools.VSUtils
+module FSharpVSPowerTools.ProjectSystem.VSUtils
 
 open System
 open System.Text.RegularExpressions
@@ -106,3 +106,7 @@ module Dte =
         System.Diagnostics.Debug.Assert(doc <> null && doc.ProjectItem.ContainingProject <> null, 
                                         "Should be able to find active document and active project.")
         doc
+
+let inline ensureSucceded hr = 
+    ErrorHandler.ThrowOnFailure hr 
+    |> ignore

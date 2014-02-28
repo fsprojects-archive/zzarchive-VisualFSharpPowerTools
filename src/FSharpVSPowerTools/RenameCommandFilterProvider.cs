@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
+using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools.Refactoring
 {
@@ -23,6 +24,12 @@ namespace FSharpVSPowerTools.Refactoring
 
 #pragma warning restore 0649
 
+        [Import]
+        private VSLanguageService fsharpVsLanguageService;
+
+        [Import(typeof(SVsServiceProvider))]
+        private System.IServiceProvider  serviceProvider;
+
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
             var textView = EditorFactory.GetWpfTextView(textViewAdapter);
@@ -35,7 +42,7 @@ namespace FSharpVSPowerTools.Refactoring
                 return;
             }
 
-            AddCommandFilter(textViewAdapter, new RenameCommandFilter(textView, PowerToolsCommandsPackage.Instance));
+            AddCommandFilter(textViewAdapter, new RenameCommandFilter(textView, fsharpVsLanguageService, serviceProvider));
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, RenameCommandFilter commandFilter)

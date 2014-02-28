@@ -22,7 +22,7 @@ type DocumentState =
       File: string
       Project: ProjectProvider }
 
-type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceProvider) =
+type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider : System.IServiceProvider) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 
@@ -38,7 +38,7 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
             state <- Some
                 { File = doc.FullName
                   Project =  project
-                  Word = VSLanguageService.getSymbol point project }} |> ignore
+                  Word = vsLanguageService.GetSymbol(point, project) }} |> ignore
 
     let viewLayoutChanged = 
         EventHandler<_>(fun _ (e : TextViewLayoutChangedEventArgs) ->
@@ -90,7 +90,7 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
             let! state = state
             let! cw = state.Word
             let! (symbol, currentName, references) = 
-                  VSLanguageService.findUsages cw state.File state.Project
+                  vsLanguageService.FindUsages(cw, state.File, state.Project)
                   |> Async.RunSynchronously
                   // TODO: This part is going to diverse since we use all references (not only in the active document)
                   |> Option.map (fun (symbol, lastIdent, _, refs) -> 

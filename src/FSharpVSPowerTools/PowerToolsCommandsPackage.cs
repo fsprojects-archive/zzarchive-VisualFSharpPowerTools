@@ -22,27 +22,15 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package
     {
-        private static PowerToolsCommandsPackage _instance;
-
-        public PowerToolsCommandsPackage()
-        {
-            _instance = this;
-        }
-
-        public static Package Instance 
-        {
-            get { return _instance; }
-        }
-
         protected override void Initialize()
         {
             base.Initialize();
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(GeneralOptionsPage),
-              delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, true);
+                delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
-              delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, true);
+                delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
         }
     }
 }

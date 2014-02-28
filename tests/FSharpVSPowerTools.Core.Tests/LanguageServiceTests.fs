@@ -33,7 +33,7 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-
+let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
 
@@ -70,7 +70,7 @@ let allUsesOfAllSymbols =
 #endif
 
 let getUsesOfSymbol line col lineStr =
-    VSLanguageService.Instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
+    vsLanguageService.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
                                                                    line, col, lineStr, args, framework)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, _, symbolUses) -> symbolUses |> Array.map (fun x -> x.Range))
@@ -83,7 +83,7 @@ let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
 let checkGetSymbol line col lineStr expected =
-    VSLanguageService.Instance.GetSymbol(source, line, col, lineStr, args)
+    vsLanguageService.GetSymbol(source, line, col, lineStr, args)
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
         text, (line, leftCol), (line, rightCol))
     |> assertEqual expected
