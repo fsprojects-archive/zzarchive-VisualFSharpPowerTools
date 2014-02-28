@@ -74,10 +74,9 @@
   <!-- <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v11.0\VSSDK\Microsoft.VsSDK.targets" Condition="false" /> -->
   <ItemGroup>
     <None Include="packages.config" />
-    <Compile Include="MyParsing.fsi" />
-    <Compile Include="MyParsing.fs" />
-    <Compile Include="FSharpTagger.fs" />
-    <Compile Include="MyAdornmentManager.fs" />
+    <Compile Include="DepthParser.fs" />
+    <Compile Include="DepthTagger.fs" />
+    <Compile Include="DepthAdornmentManager.fs" />
     <!--
     <None Include="..\Key.snk">
       <Link>Key.snk</Link>
@@ -129,6 +128,18 @@
     <Reference Include="UIAutomationTypes" />
     <Reference Include="WindowsBase" />
     <Reference Include="mscorlib" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
+      <Name>FSharpVSPowerTools.Core</Name>
+      <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
+      <Name>FSharpVSPowerTools.Logic</Name>
+      <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

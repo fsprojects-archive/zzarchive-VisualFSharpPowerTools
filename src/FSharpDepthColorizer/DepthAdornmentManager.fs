@@ -86,7 +86,10 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
             // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
             let key = if key<> null then key else Registry.CurrentUser.OpenSubKey(@"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer")
             Array.init 10 (fun i -> key.GetValue(sprintf "Depth%d" i) :?> string)
-            |> Array.map (fun s -> let [|r1;g1;b1;r2;g2;b2|] = s.Split[|','|] |> Array.map byte in r1,g1,b1,r2,g2,b2)
+            |> Array.map (fun s -> 
+                match s.Split[|','|] |> Array.map byte with
+                | [|r1;g1;b1;r2;g2;b2|] -> r1,g1,b1,r2,g2,b2
+                | _ -> failwith "Unhandled case")
         with e ->
             defaultColors
 
@@ -105,8 +108,8 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
 
     // was once useful for debugging
     let trace(s) = 
-        //let ticks = System.DateTime.Now.Ticks 
-        //System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
+        let ticks = System.DateTime.Now.Ticks 
+        System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
         ()
 
     let mutable pixelsPerChar = 7.0 // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.
@@ -125,7 +128,7 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
 
             if tagSpan.Length > 0 then
                 pixelsPerChar <- view.TextViewLines.GetCharacterBounds(tagSpan.Start).Right - view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
-            let left = view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
+            
             // negative d means a depth of -d and a blank line where we have to adorn in a non-char-relative way since there are no whitespace chars on the line to tag
             let left = if d > 0 then 
                             view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left 
@@ -161,7 +164,7 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
     do
         view.ViewportWidthChanged.Add (fun _ -> RefreshView() )
         view.LayoutChanged.Add (fun e -> for line in e.NewOrReformattedLines do RefreshLine(line) )
-        tagAggregator.TagsChanged.Add (fun e ->
+        tagAggregator.TagsChanged.Add (fun _e ->
             RefreshView()  // if we don't refresh the whole view, blank lines (which have no chars to hang tags) are not updated, which is a disaster
             (*
             let spans = e.Span.GetSpans(view.TextSnapshot)

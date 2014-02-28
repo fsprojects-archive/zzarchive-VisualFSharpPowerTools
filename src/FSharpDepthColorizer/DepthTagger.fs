@@ -22,7 +22,7 @@ module Utils =
     type Microsoft.FSharp.Control.Async with 
         static member EitherEvent(ev1:IObservable<'a>, ev2:IObservable<'b>) = 
             synchronize (fun f ->
-                Async.FromContinuations((fun (cont,econt,ccont) -> 
+                Async.FromContinuations((fun (cont, _econt, _ccont) -> 
                     let rec callback1 = (fun value ->
                         remover1.Dispose()
                         remover2.Dispose()
@@ -41,6 +41,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Utilities
 open System.Windows.Threading
+open FSharpVSPowerTools.ProjectSystem
 
 // The tag that carries metadata about F# color-regions.
 type FSharpRegionTag(info : int*int*int*int) =
@@ -64,8 +65,8 @@ type FSharpTagger(sourceBuffer : ITextBuffer, filename : string) as this =
 
     // was once useful for debugging
     let trace(s) = 
-        //let ticks = System.DateTime.Now.Ticks 
-        //System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
+        let ticks = System.DateTime.Now.Ticks 
+        System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
         ()
 
     let RefreshFileImpl(doSync) =
@@ -77,7 +78,8 @@ type FSharpTagger(sourceBuffer : ITextBuffer, filename : string) as this =
                     do! Async.SwitchToThreadPool()
                 do
                     let sourceCodeOfTheFile = ss.GetText()
-                    let ranges = MyParsing.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename)
+                    // Reuse the instance of InteractiveChecker
+                    let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, VSLanguageService.Instance.Checker)
                     let tempResults = new ResizeArray<_>()
                     for (line,sc,ec,d) as info in ranges do
                         try
