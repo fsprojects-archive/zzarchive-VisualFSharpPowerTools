@@ -18,7 +18,7 @@ namespace FSharpVSPowerTools
 {
     [Export(typeof(ITaggerProvider))]
     [ContentType("F#")]
-    [TagType(typeof(FSharpRegionTag))]
+    [TagType(typeof(DepthRegionTag))]
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
         [Import]
@@ -37,7 +37,7 @@ namespace FSharpVSPowerTools
 
             if (TextDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new FSharpTagger(buffer, doc.FilePath) as ITagger<T>;
+                return new DepthTagger(buffer, doc.FilePath) as ITagger<T>;
             }
 
             return null;
@@ -51,7 +51,7 @@ namespace FSharpVSPowerTools
     {
         [Export]
         [Name("FSharpDepthFullLineAdornment")]
-        [Order(Before=PredefinedAdornmentLayers.Selection)]
+        [Order(Before = PredefinedAdornmentLayers.TextMarker)]
         internal AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
         [Import]
@@ -61,7 +61,7 @@ namespace FSharpVSPowerTools
         {
             if (textView == null) return;
 
-            var tagAggregator = ViewTagAggregatorFactoryService.CreateTagAggregator<FSharpRegionTag>(textView);
+            var tagAggregator = ViewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
             new FullLineAdornmentManager(textView, tagAggregator);
         }
     }

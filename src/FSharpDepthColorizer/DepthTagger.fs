@@ -44,19 +44,19 @@ open System.Windows.Threading
 open FSharpVSPowerTools.ProjectSystem
 
 // The tag that carries metadata about F# color-regions.
-type FSharpRegionTag(info : int*int*int*int) =
+type DepthRegionTag(info : int*int*int*int) =
     interface ITag
     // why are (line,startColumn,endColumn,depth) here, and not just depth?  
     // because we might have range info for indent coloring on a blank line, and there are no chars to tag there, so we put a tag in column 0 and carry all this info as metadata
     member this.Info = info
 
-type FSharpTagger(sourceBuffer : ITextBuffer, filename : string) as this =
+type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as this =
     // computed periodically on a background thread
     let mutable results : _[] = null
     let resultsLock = obj() // lock for reading/writing "results"
 
     // only updated on the UI thread in the GetTags method
-    let mutable prevTags : ITagSpan<FSharpRegionTag>[] = null
+    let mutable prevTags : ITagSpan<DepthRegionTag>[] = null
     let mutable prevSnapshot = null
     let mutable prevResults = null
 
@@ -132,7 +132,7 @@ type FSharpTagger(sourceBuffer : ITextBuffer, filename : string) as this =
         // go ahead and synchronously get the first bit of info for the original rendering
         RefreshFileImpl(true)
 
-    interface ITagger<FSharpRegionTag> with
+    interface ITagger<DepthRegionTag> with
         member this.GetTags(spans) =
             let ss = spans.[0].Snapshot
             // note: accessing 'results' on line below outside the lock.  in theory we could have stale result cached and neglect to update,
@@ -145,7 +145,7 @@ type FSharpTagger(sourceBuffer : ITextBuffer, filename : string) as this =
                 )
                 prevTags <- [|
                     for span,depth in prevResults do
-                        yield upcast new TagSpan<FSharpRegionTag>(span.GetSpan(ss), new FSharpRegionTag(depth))
+                        yield upcast new TagSpan<DepthRegionTag>(span.GetSpan(ss), new DepthRegionTag(depth))
                     |]
             else
                 trace("using cached results")

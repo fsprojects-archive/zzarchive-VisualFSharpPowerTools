@@ -34,7 +34,7 @@ type RectangleAdornment(fillBrush : Brush, geometry : Geometry) as this =
 
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works
-type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator<FSharpRegionTag>) =
+type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator<DepthRegionTag>) =
     let LayerName = "FSharpDepthFullLineAdornment"  // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
 
@@ -67,14 +67,16 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator: ITagAggregator
                 39uy,39uy,39uy,79uy,79uy,79uy
                 59uy,59uy,59uy,99uy,99uy,99uy
                 |]
+        try
+            let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
+            let fontsAndColors = dte.Properties("FontsAndColors", "TextEditor").Item("FontsAndColorsItems").Object :?> FontsAndColorsItems
+            let background = System.Drawing.ColorTranslator.FromOle(int (fontsAndColors.Item("Plain Text").Background))
 
-        let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
-        let fontsAndColors = dte.Properties("FontsAndColors", "TextEditor").Item("FontsAndColorsItems").Object :?> FontsAndColorsItems
-        let background = System.Drawing.ColorTranslator.FromOle(int (fontsAndColors.Item("Plain Text").Background))
-
-        match background.R, background.G, background.B with
-        | 30uy, 30uy, 30uy -> defaultDarkThemeColors
-        | _ -> defaultLightThemeColors
+            match background.R, background.G, background.B with
+            | 30uy, 30uy, 30uy -> defaultDarkThemeColors
+            | _ -> defaultLightThemeColors
+        with _ ->
+            defaultLightThemeColors
 
     // Amount to increase the adornment height to ensure there aren't gaps between adornments
     // due to the way that layout rounding changes the placement of these adornments.
