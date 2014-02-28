@@ -46,11 +46,11 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
                             let xmldocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename)
                             let xmlDocablesBelowThisLine = 
                                 xmldocables 
-                                |> List.filter (fun (XmlDocParser.XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'
+                                |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'
                             let hr = passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) // parse it before we pass thru to editor, as we want to notice if no XmlDoc yet
                             match xmlDocablesBelowThisLine with
                             | [] -> ()
-                            | XmlDocParser.XmlDocable(_line,indent,paramNames)::_t ->
+                            | XmlDocable(_line,indent,paramNames)::_t ->
                                 // delete the slashes the user typed (they may be indented wrong)
                                 wpfTextView.TextBuffer.Delete(wpfTextView.Caret.Position.BufferPosition.GetContainingLine().Extent.Span) |> ignore
                                 // add the new xmldoc comment

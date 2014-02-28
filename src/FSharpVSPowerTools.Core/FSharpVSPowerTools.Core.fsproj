@@ -58,7 +58,6 @@
     <Compile Include="Utils.fs" />
     <Compile Include="CompilerLocationUtils.fs" />
     <Compile Include="LanguageService.fs" />
-    <Compile Include="FSComp.fs" />
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
   </ItemGroup>

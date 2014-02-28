@@ -18,13 +18,13 @@ namespace FSharpVSPowerTools
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Interactive)]
-    public class VsTextViewCommandFilter : IVsTextViewCreationListener
+    public class XmlDocCommandFilterProvider : IVsTextViewCreationListener
     {
-        [Import(typeof(ITextDocumentFactoryService))]
-        public ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
+        [Import]
+        internal ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
 
-        [Import(typeof(IVsEditorAdaptersFactoryService))]
-        public IVsEditorAdaptersFactoryService EditorFactory { get; set; }
+        [Import]
+        internal IVsEditorAdaptersFactoryService EditorFactory { get; set; }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {

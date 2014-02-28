@@ -8,14 +8,13 @@ module FSharpVSPowerTools.Core.Tests.XMLDocTests
 #endif
 
 open System.IO
-open FSharpVSPowerTools.Core.XmlDocComment
-open FSharpVSPowerTools.Core.XmlDocParser
+open FSharpVSPowerTools.Core
 open NUnit.Framework
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
 let input = File.ReadAllText(fileName)
 
-let output = GetXmlDocables(input, fileName) |> Set.ofList
+let output = XmlDocParser.GetXmlDocables(input, fileName) |> Set.ofList
 
 [<Test>]
 let ``should create XML Doc for module-level let bounds``() =
@@ -56,7 +55,7 @@ let ``should not create XML Doc for members which already have non-empty XML Doc
 [<TestCase ("///    <", 7)>]
 [<TestCase (" ///<", 4)>]
 let ``detects blank XML doc comment``(sample, pos) =
-    isBlank sample |> assertEqual (Some pos)
+    XmlDocComment.isBlank sample |> assertEqual (Some pos)
 
 [<TestCase "">]
 [<TestCase "/">]
@@ -67,7 +66,7 @@ let ``detects blank XML doc comment``(sample, pos) =
 [<TestCase "///</">]
 [<TestCase "///< ">]
 let ``detects not blank XML doc comment``(sample) =
-    isBlank sample |> assertEqual None
+    XmlDocComment.isBlank sample |> assertEqual None
 
 #if INTERACTIVE
 Seq.iter (printfn "%A") output;;

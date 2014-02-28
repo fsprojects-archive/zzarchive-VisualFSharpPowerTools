@@ -345,7 +345,10 @@ open DepthParsing
 open System
 
 type DepthParser private () =
-    member internal __.Checker = lazy (InteractiveChecker.Create())
+    let checker = lazy (InteractiveChecker.Create())
+
+    member internal __.Checker = checker.Value
+
     static member internal Instance = DepthParser()
 
     /////////////////////////////////////////////////////
@@ -361,7 +364,7 @@ type DepthParser private () =
                 n <- n + 1
             i
         
-        let checker = defaultArg checker x.Checker.Value
+        let checker = defaultArg checker x.Checker
         // Get compiler options for the 'project' implied by a single script file
         let projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
         let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)

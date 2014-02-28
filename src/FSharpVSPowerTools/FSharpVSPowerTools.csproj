@@ -140,7 +140,7 @@
     <Compile Include="CodeFormatting\Utils\Disposable.cs" />
     <Compile Include="CodeFormatting\Utils\TextUtils.cs" />
     <Compile Include="DepthColorizerManager.cs" />
-    <Compile Include="VsTextViewCommandFilter.cs" />
+    <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config">
