@@ -15,7 +15,7 @@ module VSLanguageService =
                                                p.CompilerOptions, p.TargetFramework)
         instance.Checker.InvalidateConfiguration opts)
 
-    let getSymbol (point: SnapshotPoint) (projectProvider : ProjectProvider) =
+    let getSymbol (point: SnapshotPoint) (projectProvider: ProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
@@ -24,7 +24,7 @@ module VSLanguageService =
         instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range)
 
-    let findUsages (word : SnapshotSpan) (currentFile : string) (projectProvider : ProjectProvider) =
+    let findUsages (word: SnapshotSpan) (currentFile: string) (projectProvider: ProjectProvider) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()

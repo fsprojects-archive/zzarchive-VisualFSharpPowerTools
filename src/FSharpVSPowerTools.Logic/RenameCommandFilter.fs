@@ -23,15 +23,15 @@ type DocumentState =
       File: string
       Project: ProjectProvider }
 
-type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceProvider) =
+type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServiceProvider) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 
     let canRename() = 
-        // TODO : it should be a symbol and is defined in current project
+        // TODO: it should be a symbol and is defined in current project
         state |> Option.bind (fun x -> x.Word) |> Option.isSome
 
-    let updateAtCaretPosition(caretPosition : CaretPosition) = 
+    let updateAtCaretPosition(caretPosition: CaretPosition) = 
         maybe {
             let! point = view.TextBuffer.GetSnapshotPoint caretPosition
             let! doc = Dte.getActiveDocument()
@@ -42,20 +42,20 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                   Word = VSLanguageService.getSymbol point project }} |> ignore
 
     let viewLayoutChanged = 
-        EventHandler<_>(fun _ (e : TextViewLayoutChangedEventArgs) ->
+        EventHandler<_>(fun _ (e: TextViewLayoutChangedEventArgs) ->
             // If a new snapshot wasn't generated, then skip this layout 
             if e.NewSnapshot <> e.OldSnapshot then  
                 updateAtCaretPosition(view.Caret.Position))
 
     let caretPositionChanged =
-        EventHandler<_>(fun _ (e : CaretPositionChangedEventArgs) ->
+        EventHandler<_>(fun _ (e: CaretPositionChangedEventArgs) ->
             updateAtCaretPosition(e.NewPosition))
 
     do
-      view.LayoutChanged.AddHandler(viewLayoutChanged)
-      view.Caret.PositionChanged.AddHandler(caretPositionChanged)
+        view.LayoutChanged.AddHandler(viewLayoutChanged)
+        view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
-    let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 list) list) =
+    let rename (oldText: string) (newText: string) (foundUsages: (string * Range01 list) list) =
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
@@ -94,7 +94,6 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
             let! (symbol, currentName, references) = 
                   VSLanguageService.findUsages cw state.File state.Project
                   |> Async.RunSynchronously
-                  // TODO: This part is going to diverse since we use all references (not only in the active document)
                   |> Option.map (fun (symbol, lastIdent, _, refs) -> 
                         symbol, lastIdent,
                             refs 
@@ -110,7 +109,7 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
             let! res = x.ShowDialog wnd
             if res then rename currentName model.Name references } |> ignore
 
-    member x.ShowDialog (wnd : Window) =
+    member x.ShowDialog (wnd: Window) =
         let vsShell = serviceProvider.GetService(typeof<SVsUIShell>) :?> IVsUIShell
         try
             if ErrorHandler.Failed(vsShell.EnableModeless(0)) then
@@ -121,15 +120,15 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
             vsShell.EnableModeless(1) |> ignore
 
     member val IsAdded = false with get, set
-    member val NextTarget : IOleCommandTarget = null with get, set
+    member val NextTarget: IOleCommandTarget = null with get, set
 
     interface IOleCommandTarget with
-        member x.Exec(pguidCmdGroup : byref<Guid>, nCmdId : uint32, nCmdexecopt : uint32, pvaIn : IntPtr, pvaOut : IntPtr) =
+        member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if (pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && nCmdId = PkgCmdIDList.CmdidBuiltinRenameCommand) && canRename() then
                 x.HandleRename()
             x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
-        member x.QueryStatus(pguidCmdGroup:byref<Guid>, cCmds:uint32, prgCmds:OLECMD[], pCmdText:IntPtr) =
+        member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
             if pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && 
                 prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdIDList.CmdidBuiltinRenameCommand) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)

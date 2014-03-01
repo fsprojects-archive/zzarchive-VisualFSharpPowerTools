@@ -10,8 +10,9 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
-open Fantomas.FormatConfig
 open FSharpVSPowerTools.CodeFormatting.Utils
+open Fantomas.FormatConfig
+open Fantomas.CodeFormatter
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
@@ -20,8 +21,8 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
         use disposable = Cursor.wait()
         x.ExecuteFormat()
 
-    override x.GetFormatted(isSignatureFile: bool, source: string, config: Fantomas.FormatConfig.FormatConfig): string =
-        Fantomas.CodeFormatter.formatSourceString isSignatureFile source config
+    override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
+        formatSourceString isSignatureFile source config
 
     override x.GetNewCaretPositionSetter() =
         let currentSnapshot = x.TextView.TextBuffer.CurrentSnapshot

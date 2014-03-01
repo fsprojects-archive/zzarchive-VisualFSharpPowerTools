@@ -43,7 +43,7 @@ module internal XmlDocParsing =
         | SynPat.InstanceMember _ -> []
         | _ -> failwith "error"
 
-    let getXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, filename, checker : InteractiveChecker) =
+    let getXmlDocablesImpl(sourceCodeLinesOfTheFile: string[], sourceCodeOfTheFile, filename, checker: InteractiveChecker) =
         let indentOf (lineNum:int) =
             let mutable i = 0
             let line = sourceCodeLinesOfTheFile.[lineNum-1] // -1 because lineNum reported by xmldocs are 1-based, but array is 0-based
@@ -187,7 +187,7 @@ type XmlDocParser private () =
     static member internal Instance = XmlDocParser()
 
     // Main API.
-    static member GetXmlDocables(sourceCodeOfTheFile : string, filename, ?checker) =
+    static member GetXmlDocables(sourceCodeOfTheFile: string, filename, ?checker) =
         let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split [|'\n'|]
         let checker = defaultArg checker XmlDocParser.Instance.Checker
         getXmlDocablesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)

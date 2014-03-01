@@ -17,7 +17,7 @@ module ProjectParser =
       loadtime: DateTime
     }
 
-  let load (uri: string) : Option<ProjectResolver> =
+  let load (uri: string): Option<ProjectResolver> =
     let p = Project()    
     try
       p.Load(uri)
@@ -26,14 +26,14 @@ module ProjectParser =
       Debug.WriteLine(sprintf "[Project System] %O exception occurs." e)
       None
 
-  let getFileName (p: ProjectResolver) : string = p.project.FullFileName
+  let getFileName (p: ProjectResolver): string = p.project.FullFileName
 
-  let getLoadTime (p: ProjectResolver) : DateTime = p.loadtime
+  let getLoadTime (p: ProjectResolver): DateTime = p.loadtime
 
-  let getDirectory (p: ProjectResolver) : string =
+  let getDirectory (p: ProjectResolver): string =
     IO.Path.GetDirectoryName p.project.FullFileName
 
-  let getFiles (p: ProjectResolver) : string array =
+  let getFiles (p: ProjectResolver): string array =
     let fs  = p.project.GetEvaluatedItemsByName("Compile")
     let dir = getDirectory p
     [| for f in fs do yield IO.Path.Combine(dir, f.FinalItemSpec) |]
@@ -46,12 +46,12 @@ module ProjectParser =
   // We can therefore build ResolveReferences, which depends on both of them,
   // or [|"ResolveProjectReferences";"ResolveAssemblyReferences"|]. These seem
   // to be equivalent. See Microsoft.Common.targets if you want more info.
-  let getReferences (p: ProjectResolver) : string array =
+  let getReferences (p: ProjectResolver): string array =
     ignore <| p.project.Build([|"ResolveReferences"|])
     [| for i in p.project.GetEvaluatedItemsByName("ResolvedFiles")
          do yield "-r:" + i.FinalItemSpec |]
 
-  let getOptionsWithoutReferences (p: ProjectResolver) : string array =
+  let getOptionsWithoutReferences (p: ProjectResolver): string array =
     let getprop s = p.project.GetEvaluatedProperty s
     let split (s: string) (cs: char[]) =
       if s = null then [||]

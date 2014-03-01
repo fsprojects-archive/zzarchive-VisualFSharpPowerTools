@@ -13,11 +13,11 @@ namespace FSharpVSPowerTools
     public class StandardCommandDispatcher : IOleCommandTarget
     {
         private IWpfTextView _textView;
-        private Services _services;
+        private CodeFormattingServices _services;
         private IOleCommandTarget _commandChain;
         private readonly CommandMapping[] Commands;
 
-        public static void Register(IVsTextView interopTextView, IWpfTextView textView, Services services)
+        public static void Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
             GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
             if (!generalOptions.FormattingEnabled)

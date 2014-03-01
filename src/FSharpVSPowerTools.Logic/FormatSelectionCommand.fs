@@ -6,19 +6,20 @@ open System.Linq
 open System.Text
 open System.Threading.Tasks
 open System.Windows
-open Fantomas.FormatConfig
 open FSharpVSPowerTools.CodeFormatting.Utils
 open Microsoft.FSharp.Compiler
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
+open Fantomas.FormatConfig
+open Fantomas.CodeFormatter
 
 type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
 
     let mutable isFormattingCursor = false
 
-    override x.Execute(): unit =
+    override x.Execute() =
         isFormattingCursor <- x.TextView.Selection.IsEmpty
 
         use disposable = Cursor.wait()
@@ -27,17 +28,17 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
 
         resetSelection()
 
-    override x.GetFormatted(isSignatureFile: bool, source: string, config: Fantomas.FormatConfig.FormatConfig) =
+    override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
         if isFormattingCursor then
             let caretPos = new VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, int x.TextView.Caret.Position.BufferPosition)
             let pos = TextUtils.getFSharpPos(caretPos)
-            Fantomas.CodeFormatter.formatAroundCursor isSignatureFile pos source config
+            formatAroundCursor isSignatureFile pos source config
         else
             let startPos = TextUtils.getFSharpPos(x.TextView.Selection.Start)
             let endPos = TextUtils.getFSharpPos(x.TextView.Selection.End)
             let range = Range.mkRange "fsfile" startPos endPos
 
-            Fantomas.CodeFormatter.formatSelectionFromString isSignatureFile range source config
+            formatSelectionFromString isSignatureFile range source config
 
     override x.GetNewCaretPositionSetter() =
         let caretPos = x.TextView.Caret.Position.BufferPosition

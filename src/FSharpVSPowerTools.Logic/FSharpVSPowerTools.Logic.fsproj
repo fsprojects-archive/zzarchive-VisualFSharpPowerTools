@@ -61,7 +61,7 @@
     <Compile Include="ProjectParser.fs" />
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="LanguageService.fs" />
-    <Compile Include="Services.fs" />
+    <Compile Include="CodeFormattingServices.fs" />
     <Compile Include="CodeFormattingUtils.fs" />
     <Compile Include="CodeFormattingCommands.fs" />
     <Compile Include="FormatDocumentCommand.fs" />

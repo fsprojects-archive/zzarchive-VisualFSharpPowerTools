@@ -8,10 +8,10 @@ open VSLangProj
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
-type ProjectProvider(project : VSProject) = 
+type ProjectProvider(project: VSProject) = 
     do Debug.Assert(project <> null && project.Project <> null, "Input project should be well-formed.")
     
-    let getProperty (tag : string) =
+    let getProperty (tag: string) =
         let prop = try project.Project.Properties.[tag] with _ -> null
         match prop with
         | null -> null

@@ -137,7 +137,7 @@
     <Compile Include="RenameCommandFilterProvider.cs" />
     <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TextViewHookHelper.cs" />
+    <Compile Include="CodeFormattingHookHelper.cs" />
     <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>

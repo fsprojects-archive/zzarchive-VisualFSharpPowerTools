@@ -19,9 +19,6 @@ namespace FSharpVSPowerTools
         [Import]
         internal ITextSearchService TextSearchService { get; set; }
 
-        [Import]
-        internal ITextStructureNavigatorSelectorService TextStructureNavigatorSelector { get; set; }
-
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // Only provide highlighting on the top-level buffer
@@ -34,8 +31,7 @@ namespace FSharpVSPowerTools
                 return null;
             }
 
-            var textStructureNavigator = TextStructureNavigatorSelector.GetTextStructureNavigator(buffer);
-            return new HighlightUsageTagger(textView, buffer, TextSearchService, textStructureNavigator) as ITagger<T>;
+            return new HighlightUsageTagger(textView, buffer, TextSearchService) as ITagger<T>;
         }
     }
 }

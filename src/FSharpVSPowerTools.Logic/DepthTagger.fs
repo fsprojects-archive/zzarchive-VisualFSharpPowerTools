@@ -31,8 +31,8 @@ module Utils =
                         remover1.Dispose()
                         remover2.Dispose()
                         f cont (Choice2Of2(value)) )
-                    and remover1 : IDisposable  = ev1.Subscribe(callback1) 
-                    and remover2 : IDisposable  = ev2.Subscribe(callback2) 
+                    and remover1: IDisposable  = ev1.Subscribe(callback1) 
+                    and remover2: IDisposable  = ev2.Subscribe(callback2) 
                     () )))
 
 open System
@@ -45,19 +45,19 @@ open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 
 // The tag that carries metadata about F# color-regions.
-type DepthRegionTag(info : int*int*int*int) =
+type DepthRegionTag(info: int*int*int*int) =
     interface ITag
     // why are (line,startColumn,endColumn,depth) here, and not just depth?  
     // because we might have range info for indent coloring on a blank line, and there are no chars to tag there, so we put a tag in column 0 and carry all this info as metadata
     member x.Info = info
 
-type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as self =
+type DepthTagger(sourceBuffer: ITextBuffer, filename: string) as self =
     // computed periodically on a background thread
-    let mutable results : _[] = null
+    let mutable results: _[] = null
     let resultsLock = obj() // lock for reading/writing "results"
 
     // only updated on the UI thread in the GetTags method
-    let mutable prevTags : ITagSpan<DepthRegionTag>[] = null
+    let mutable prevTags: ITagSpan<DepthRegionTag>[] = null
     let mutable prevSnapshot = null
     let mutable prevResults = null
 
@@ -65,7 +65,7 @@ type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as self =
     let tagsChangedEvent = new Event<EventHandler<SnapshotSpanEventArgs>, SnapshotSpanEventArgs>()
 
     // was once useful for debugging
-    let trace(s) = 
+    let trace s = 
         let ticks = System.DateTime.Now.Ticks 
         System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
         ()

@@ -13,7 +13,7 @@ open FSharpVSPowerTools
 [<AbstractClass>]
 type CommandBase() =
     member val TextView: IWpfTextView = null with get, set
-    member val Services: Services = null with get, set
+    member val Services: CodeFormattingServices = null with get, set
     member x.TextBuffer: ITextBuffer = x.TextView.TextBuffer
     abstract Execute: unit -> unit
 

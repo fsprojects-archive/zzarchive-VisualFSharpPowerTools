@@ -37,7 +37,7 @@ module internal DepthParsing =
     // Top-level entities report their range as going up to and through the 'next starter token', e.g. the 'let' or 'type'
     // that begins the next construct.  This function just hacks off a range to end at the previous line, as an ad-hoc way to
     // work around the ranges that have this extra ugly residue at the end of them.
-    let cutoffTheLineBefore (r:range) =
+    let cutoffTheLineBefore (r: range) =
         let filename = r.FileName
         let startL,startC = r.StartLine,r.StartColumn
         let endL,_endC   = r.EndLine,r.EndColumn
@@ -357,7 +357,7 @@ type DepthParser private () =
 
     // TODO, consider perf, way just to consider viewport and do as little work as necessary?
 
-    member internal x.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, ?checker : InteractiveChecker) =
+    member internal x.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, ?checker: InteractiveChecker) =
         let mindents = computeMinIndentArray sourceCodeLinesOfTheFile
         let indent startLine endLine =
             let mutable i, n = mindents.[startLine-1], startLine+1
@@ -386,7 +386,7 @@ type DepthParser private () =
     /// Get the "nested ranges" of source code structures, along with the minimum-number-of-indent spaces inside that span (ignoring comments and #commands).
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    static member GetRanges(sourceCodeOfTheFile : string, filename, ?checker : InteractiveChecker) =
+    static member GetRanges(sourceCodeOfTheFile: string, filename, ?checker: InteractiveChecker) =
         let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split [|'\n'|]
         DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, ?checker = checker)
 
@@ -399,7 +399,7 @@ type DepthParser private () =
     /// Get non-overlapping ranges, where each range spans at most a single line, and has info about its "semantic depth".
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    static member GetNonoverlappingDepthRanges(sourceCodeOfTheFile : string, filename, ?checker : InteractiveChecker) =
+    static member GetNonoverlappingDepthRanges(sourceCodeOfTheFile: string, filename, ?checker: InteractiveChecker) =
         let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split([|"\r\n";"\n"|], StringSplitOptions.None)
         let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
         let len line = lineLens.[line-1]  // line #s are 1-based

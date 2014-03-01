@@ -20,8 +20,8 @@ open Microsoft.VisualStudio.Utilities
 open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 
-type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as self =
-    let mutable passThruToEditor : IOleCommandTarget = null
+type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: string) as self =
+    let mutable passThruToEditor: IOleCommandTarget = null
     do
         if ErrorHandler.Succeeded(textView.AddCommandFilter(self, &passThruToEditor)) then
             () // ok
@@ -30,11 +30,11 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
                 System.Diagnostics.Debugger.Break()
 
     /// Get the char for a <see cref="VSConstants.VSStd2KCmdID.TYPECHAR"/> command.
-    let getTypedChar(pvaIn:IntPtr) =
+    let getTypedChar(pvaIn: IntPtr) =
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
     interface IOleCommandTarget with
-        member x.Exec(pguidCmdGroup:byref<Guid>, nCmdID:uint32, nCmdexecopt:uint32, pvaIn:IntPtr, pvaOut:IntPtr) =
+        member x.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             let hresult =
                 if pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
                     match getTypedChar pvaIn with
@@ -76,6 +76,6 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
 
             hresult
 
-        member x.QueryStatus(pguidCmdGroup:byref<Guid>, cCmds:uint32, prgCmds:OLECMD[], pCmdText:IntPtr) =
+        member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
             passThruToEditor.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText)
 

@@ -18,8 +18,7 @@ type HighlightUsageTag() =
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
-type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSearchService : ITextSearchService, 
-                          _textStructureNavigator : ITextStructureNavigator) as self =
+type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearchService: ITextSearchService) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
@@ -27,7 +26,7 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
     let mutable requestedPoint = SnapshotPoint()
 
     // Perform a synchronous update, in case multiple background threads are running
-    let synchronousUpdate(currentRequest : SnapshotPoint, newSpans : NormalizedSnapshotSpanCollection, newWord : SnapshotSpan option) =
+    let synchronousUpdate(currentRequest: SnapshotPoint, newSpans: NormalizedSnapshotSpanCollection, newWord: SnapshotSpan option) =
         lock updateLock (fun () ->
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
@@ -35,8 +34,8 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
                 let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let doUpdate (currentRequest : SnapshotPoint, newWord : SnapshotSpan, newWordSpans : SnapshotSpan seq, 
-                  fileName : string, projectProvider : ProjectProvider) =
+    let doUpdate (currentRequest: SnapshotPoint, newWord: SnapshotSpan, newWordSpans: SnapshotSpan seq, 
+                  fileName: string, projectProvider: ProjectProvider) =
         async {
             if currentRequest = requestedPoint then
                 try
@@ -97,7 +96,7 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
            | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
            | _ -> ()
 
-    let updateAtCaretPosition(caretPosition : CaretPosition) =
+    let updateAtCaretPosition(caretPosition: CaretPosition) =
         match sourceBuffer.GetSnapshotPoint caretPosition with
         | Some point ->
             // If the new cursor position is still within the current word (and on the same snapshot),
@@ -112,21 +111,21 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
         | _ -> ()
 
     let viewLayoutChanged = 
-        EventHandler<_>(fun _ (e : TextViewLayoutChangedEventArgs) ->
+        EventHandler<_>(fun _ (e: TextViewLayoutChangedEventArgs) ->
             // If a new snapshot wasn't generated, then skip this layout 
             if e.NewSnapshot <> e.OldSnapshot then  
                 updateAtCaretPosition(view.Caret.Position))
 
     let caretPositionChanged =
-        EventHandler<_>(fun _ (e : CaretPositionChangedEventArgs) ->
+        EventHandler<_>(fun _ (e: CaretPositionChangedEventArgs) ->
             updateAtCaretPosition(e.NewPosition))
 
     do
-      view.LayoutChanged.AddHandler(viewLayoutChanged)
-      view.Caret.PositionChanged.AddHandler(caretPositionChanged)
+        view.LayoutChanged.AddHandler(viewLayoutChanged)
+        view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
     interface ITagger<HighlightUsageTag> with
-        member x.GetTags (spans : NormalizedSnapshotSpanCollection) : ITagSpan<HighlightUsageTag> seq =
+        member x.GetTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq =
             seq {
                 match currentWord with
                 | Some word when spans.Count <> 0 && wordSpans.Count <> 0 ->

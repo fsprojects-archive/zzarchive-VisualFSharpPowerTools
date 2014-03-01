@@ -16,7 +16,7 @@ open EnvDTE
 open FSharpVSPowerTools
 
 // an inexpensive-to-render rectangular adornment
-type RectangleAdornment(fillBrush : Brush, geometry : Geometry) as self = 
+type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self = 
     inherit FrameworkElement()
     let child = new DrawingVisual()
     
@@ -34,7 +34,7 @@ type RectangleAdornment(fillBrush : Brush, geometry : Geometry) as self =
 
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works
-type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregator<DepthRegionTag>) = 
+type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<DepthRegionTag>) = 
     let LayerName = "FSharpDepthFullLineAdornment" // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
     
@@ -116,7 +116,7 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregato
     
     let mutable pixelsPerChar = 7.0 // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.
     
-    let refreshLine(line : ITextViewLine) = 
+    let refreshLine(line: ITextViewLine) = 
         trace ("refresh line {0}", line.TextTop)
         let tags = tagAggregator.GetTags(line.Extent)
         
@@ -169,8 +169,8 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregato
         view.LayoutChanged.Add(fun e -> 
             for line in e.NewOrReformattedLines do
                 refreshLine(line))
-        tagAggregator.TagsChanged.Add(fun _e -> refreshView() // if we don't refresh the whole view, blank lines (which have no chars to hang tags) are not updated, which is a disaster
-                                                              )
+        // if we don't refresh the whole view, blank lines (which have no chars to hang tags) are not updated, which is a disaster
+        tagAggregator.TagsChanged.Add(fun _ -> refreshView())
         (*
             let spans = e.Span.GetSpans(view.TextSnapshot)
             let lineSpan = new SnapshotSpan(spans.[0].Start, spans.[spans.Count - 1].End)

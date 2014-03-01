@@ -12,21 +12,21 @@ open Microsoft.VisualStudio.Utilities
 open FSharpVSPowerTools
 
 /// Retrieve snapshot from VS zero-based positions
-let fromVSPos (snapshot : ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
+let fromVSPos (snapshot: ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
     let startPos = snapshot.GetLineFromLineNumber(startLine).Start.Position + startCol
     let endPos = snapshot.GetLineFromLineNumber(endLine).Start.Position + endCol
     SnapshotSpan(snapshot, startPos, endPos - startPos)
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
-let isDoubleBacktickIdent (s : string) =
+let isDoubleBacktickIdent (s: string) =
     if s.StartsWith("``") && s.EndsWith("``") then
         let inner = s.Substring("``".Length, s.Length - "````".Length)
         not (inner.Contains("``"))
     else
         false
 
-let isIdentifier (s : string) =
+let isIdentifier (s: string) =
     if isDoubleBacktickIdent s then
         true
     else
@@ -34,7 +34,7 @@ let isIdentifier (s : string) =
           |> Seq.forall (fun (i, c) -> 
                 if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
 
-let isOperator (s : string) = 
+let isOperator (s: string) = 
     IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s
 
 type SnapshotPoint with
@@ -67,15 +67,15 @@ open Microsoft.VisualStudio.ComponentModelHost
 // This is for updating documents after refactoring
 // Reference at https://pytools.codeplex.com/SourceControl/latest#Python/Product/PythonTools/PythonToolsPackage.cs
 
-type DocumentUpdater(serviceProvider : IServiceProvider) = 
-    member x.OpenDocument(fileName : string, [<Out>] viewAdapter : byref<IVsTextView>, pWindowFrame : byref<IVsWindowFrame>) = 
+type DocumentUpdater(serviceProvider: IServiceProvider) = 
+    member x.OpenDocument(fileName: string, [<Out>] viewAdapter: byref<IVsTextView>, pWindowFrame: byref<IVsWindowFrame>) = 
         let _textMgr = Package.GetGlobalService(typedefof<SVsTextManager>) :?> IVsTextManager
         let _uiShellOpenDocument = Package.GetGlobalService(typedefof<SVsUIShellOpenDocument>) :?> IVsUIShellOpenDocument
         let hierarchy = ref null
         let itemid = ref 0u
         VsShellUtilities.OpenDocument(serviceProvider, fileName, Guid.Empty, hierarchy, itemid, &pWindowFrame, &viewAdapter)
 
-    member x.GetBufferForDocument(fileName : string) = 
+    member x.GetBufferForDocument(fileName: string) = 
         let viewAdapter = ref null
         let frame = ref null
         x.OpenDocument(fileName, viewAdapter, frame)
@@ -87,12 +87,12 @@ type DocumentUpdater(serviceProvider : IServiceProvider) =
         let adapter = componentModel.GetService<IVsEditorAdaptersFactoryService>()
         adapter.GetDocumentBuffer(!lines)
 
-    member x.BeginGlobalUndo(key : string) = 
+    member x.BeginGlobalUndo(key: string) = 
         let linkedUndo = Package.GetGlobalService(typedefof<SVsLinkedUndoTransactionManager>) :?> IVsLinkedUndoTransactionManager
         ErrorHandler.ThrowOnFailure(linkedUndo.OpenLinkedUndo(uint32 LinkedTransactionFlags2.mdtGlobal, key)) |> ignore
         linkedUndo
 
-    member x.EndGlobalUndo(linkedUndo : IVsLinkedUndoTransactionManager) = 
+    member x.EndGlobalUndo(linkedUndo: IVsLinkedUndoTransactionManager) = 
         ErrorHandler.ThrowOnFailure(linkedUndo.CloseLinkedUndo()) |> ignore
 
 open Microsoft.VisualStudio.Shell

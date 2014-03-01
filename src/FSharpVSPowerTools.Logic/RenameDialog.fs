@@ -50,11 +50,12 @@ type RenameDialogModel(originalName: string, symbol: FSharpSymbol, project: Proj
     let mutable validationResult = validate name
     member x.Result = validationResult
 
-    member x.Name with get() = name 
-                       and set (v: string) =
-                           name <- v
-                           validationResult <- validate name
-                           errorsChanged.Trigger(x :> obj, DataErrorsChangedEventArgs("Name"))
+    member x.Name 
+        with get() = name 
+        and set (v: string) =
+                name <- v
+                validationResult <- validate name
+                errorsChanged.Trigger(x :> obj, DataErrorsChangedEventArgs("Name"))
 
     interface INotifyDataErrorInfo with
         member x.GetErrors _ = 

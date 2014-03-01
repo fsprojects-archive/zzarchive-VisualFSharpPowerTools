@@ -10,7 +10,7 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Text
 
 [<AllowNullLiteral>]
-type Services(editorOptionsFactory: IEditorOptionsFactoryService,
+type CodeFormattingServices(editorOptionsFactory: IEditorOptionsFactoryService,
               editorOperationsFactoryService: IEditorOperationsFactoryService,
               textBufferUndoManagerProvider: ITextBufferUndoManagerProvider,
               textDocumentFactoryService: ITextDocumentFactoryService) =

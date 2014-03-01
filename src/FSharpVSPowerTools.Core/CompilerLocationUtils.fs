@@ -175,7 +175,7 @@ module FSharpEnvironment =
     else
       None
   
-  let internal tryAppConfig (appConfigKey:string) = 
+  let internal tryAppConfig (appConfigKey: string) = 
 
     let locationFromAppConfig = ConfigurationSettings.AppSettings.[appConfigKey]
     System.Diagnostics.Debug.Print(sprintf "Considering appConfigKey %s which has value '%s'" appConfigKey locationFromAppConfig) 
@@ -189,7 +189,7 @@ module FSharpEnvironment =
       Some locationFromAppConfig
 
   /// Try to find the F# compiler location by looking at the "fsharpi" script installed by F# packages
-  let internal tryFsharpiScript(url:string) =
+  let internal tryFsharpiScript(url: string) =
     try
       let str = File.ReadAllText(url)
       let reg = new Regex("mono.* (\/.*)\/fsi\.exe")
@@ -284,7 +284,7 @@ module FSharpEnvironment =
       None
 
 
-  let folderOfDefaultFSharpCore(reqLangVersion:FSharpCompilerVersion, targetFramework) = 
+  let folderOfDefaultFSharpCore(reqLangVersion: FSharpCompilerVersion, targetFramework) = 
     try 
       Debug.WriteLine(sprintf "Resolution: Determing folder of FSharp.Core for target framework '%A'" targetFramework)
       let result = tryAppConfig "fsharp-core-location"
@@ -367,7 +367,7 @@ module FSharpEnvironment =
         | None -> None
 
     with e -> 
-      System.Diagnostics.Debug.Assert(false, "Error while determining default location of F# compiler")
+      Debug.Assert(false, "Error while determining default location of F# compiler")
       None
 
   /// Returns default directories to be used when searching for DLL files
