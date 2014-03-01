@@ -141,6 +141,6 @@ module ProjectsCache =
     SolutionEvents.Instance.ProjectChanged.Add (fun vsProject -> agent.Post (Update vsProject))
 
     /// Returns ProjectProvider for given Document.
-    let GetProject document = agent.PostAndReply (fun r -> Get (document, r))
+    let getProject document = agent.PostAndReply (fun r -> Get (document, r))
     /// Raised when a project is changed.
-    let ProjectChanged = projectUpdated.Publish
+    let projectChanged = projectUpdated.Publish

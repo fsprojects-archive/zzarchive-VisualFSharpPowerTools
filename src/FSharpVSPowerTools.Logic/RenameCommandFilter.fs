@@ -34,7 +34,7 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
         maybe {
             let! point = view.TextBuffer.GetSnapshotPoint caretPosition
             let! doc = Dte.getActiveDocument()
-            let! project = ProjectsCache.GetProject doc
+            let! project = ProjectsCache.getProject doc
             state <- Some
                 { File = doc.FullName
                   Project =  project
