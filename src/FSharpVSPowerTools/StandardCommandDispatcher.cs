@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Fantomas;
 using FSharpVSPowerTools.CodeFormatting.Commands;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
@@ -18,6 +15,7 @@ namespace FSharpVSPowerTools
         private IWpfTextView _textView;
         private Services _services;
         private IOleCommandTarget _commandChain;
+        private readonly CommandMapping[] Commands;
 
         public static void Register(IVsTextView interopTextView, IWpfTextView textView, Services services)
         {
@@ -36,13 +34,42 @@ namespace FSharpVSPowerTools
 
         private StandardCommandDispatcher()
         {
+            Commands = new[]
+            {
+                new CommandMapping(
+                    typeof (VSConstants.VSStd2KCmdID).GUID,
+                    (int) (VSConstants.VSStd2KCmdID.FORMATDOCUMENT),
+                    OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED,
+                    () => new FormatDocumentCommand(this.GetConfig)),
+                new CommandMapping(
+                    typeof (VSConstants.VSStd2KCmdID).GUID,
+                    (int) (VSConstants.VSStd2KCmdID.FORMATSELECTION),
+                    OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED,
+                    () => new FormatSelectionCommand(this.GetConfig))
+            };
         }
 
-        private static readonly CommandMapping[] Commands = new CommandMapping[]
+        private FormatConfig.FormatConfig GetConfig()
         {
-            new CommandMapping(typeof(VSConstants.VSStd2KCmdID).GUID, (int)(VSConstants.VSStd2KCmdID.FORMATDOCUMENT), OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED, () => new FormatDocumentCommand()),
-            new CommandMapping(typeof(VSConstants.VSStd2KCmdID).GUID, (int)(VSConstants.VSStd2KCmdID.FORMATSELECTION), OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED, () => new FormatSelectionCommand()),
-        };
+            IEditorOptions editorOptions = _services.EditorOptionsFactory.GetOptions(_textView.TextBuffer);
+            int indentSize = editorOptions.GetOptionValue((new IndentSize()).Key);
+            var customOptions = (FantomasOptionsPage) (Package.GetGlobalService(typeof (FantomasOptionsPage)));
+
+            var config =
+                FormatConfig.FormatConfig.create(
+                    indentSize,
+                    customOptions.PageWidth,
+                    customOptions.SemicolonAtEndOfLine,
+                    customOptions.SpaceBeforeArgument,
+                    customOptions.SpaceBeforeColon,
+                    customOptions.SpaceAfterComma,
+                    customOptions.SpaceAfterSemicolon,
+                    customOptions.IndentOnTryWith,
+                    customOptions.ReorderOpenDeclaration,
+                    customOptions.SpaceAroundDelimiter);
+
+            return config;
+        }
 
         public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
         {

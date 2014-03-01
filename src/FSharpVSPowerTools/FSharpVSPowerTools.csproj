@@ -8,6 +8,14 @@
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
   </PropertyGroup>
+  <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
+    <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
+  </PropertyGroup>
+  <!-- This is needed to prevent forced migrations when opening the project in Vs2013 -->
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
+    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
+  </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -53,8 +61,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Fantomas.1.0.5.1\lib\FantomasLib.dll</HintPath>
     </Reference>
-    <Reference Include="FSharp.Compiler.Service, Version=0.0.20.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="FSharp.Compiler.Service">
       <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.20\lib\net40\FSharp.Compiler.Service.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Build" />
@@ -108,10 +115,6 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CodeFormatting\Commands\CommandBase.cs" />
-    <Compile Include="CodeFormatting\Commands\FormatCommand.cs" />
-    <Compile Include="CodeFormatting\Commands\FormatDocumentCommand.cs" />
-    <Compile Include="CodeFormatting\Commands\FormatSelectionCommand.cs" />
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -132,13 +135,9 @@
     <Compile Include="HighlightUsageTaggerProvider.cs" />
     <Compile Include="PowerToolsCommandsPackage.cs" />
     <Compile Include="RenameCommandFilterProvider.cs" />
-    <Compile Include="Services.cs" />
     <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TextViewHookHelper.cs" />
-    <Compile Include="CodeFormatting\Utils\Cursor.cs" />
-    <Compile Include="CodeFormatting\Utils\Disposable.cs" />
-    <Compile Include="CodeFormatting\Utils\TextUtils.cs" />
     <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>
