@@ -327,18 +327,18 @@ module internal DepthParsing =
 
     type Range = int * int * int * int * int  // start line, column, end line, column, minIndent
     type QueueEvent = | Start of Range | End of Range
-        with member this.Info = 
-                match this with
+        with member x.Info = 
+                match x with
                 | Start(sl,sc,_,_,_) -> sl,sc
                 | End(_,_,el,ec,_) -> el,ec
-             member this.UniqueInfo = 
-                match this with
+             member x.UniqueInfo = 
+                match x with
                 | Start(data) -> data
                 | End(sl,sc,el,ec,m) -> el,ec,sl,sc,m
 
     let qevComp = { new System.Collections.Generic.IComparer<QueueEvent> with
-                        member this.Compare(x, y) =
-                            compare x.UniqueInfo y.UniqueInfo }
+                        member x.Compare(v1, v2) =
+                            compare v1.UniqueInfo v2.UniqueInfo }
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open DepthParsing
@@ -347,7 +347,7 @@ open System
 type DepthParser private () =
     let checker = lazy (InteractiveChecker.Create())
 
-    member internal __.Checker = checker.Value
+    member internal x.Checker = checker.Value
 
     static member internal Instance = DepthParser()
 

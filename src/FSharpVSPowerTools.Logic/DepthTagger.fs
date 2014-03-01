@@ -49,9 +49,9 @@ type DepthRegionTag(info : int*int*int*int) =
     interface ITag
     // why are (line,startColumn,endColumn,depth) here, and not just depth?  
     // because we might have range info for indent coloring on a blank line, and there are no chars to tag there, so we put a tag in column 0 and carry all this info as metadata
-    member this.Info = info
+    member x.Info = info
 
-type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as this =
+type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as self =
     // computed periodically on a background thread
     let mutable results : _[] = null
     let resultsLock = obj() // lock for reading/writing "results"
@@ -103,7 +103,7 @@ type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as this =
                 if not doSync then
                     do! Async.SwitchToContext(syncContext)
                 trace("firing tagschanged")
-                tagsChangedEvent.Trigger(this, new SnapshotSpanEventArgs(new SnapshotSpan(ss, 0, ss.Length)))
+                tagsChangedEvent.Trigger(self, new SnapshotSpanEventArgs(new SnapshotSpan(ss, 0, ss.Length)))
             with e ->
                 System.Diagnostics.Debug.WriteLine(e)
                 if (System.Diagnostics.Debugger.IsAttached) then
@@ -134,7 +134,7 @@ type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as this =
         RefreshFileImpl(true)
 
     interface ITagger<DepthRegionTag> with
-        member this.GetTags(spans) =
+        member x.GetTags(spans) =
             let ss = spans.[0].Snapshot
             // note: accessing 'results' on line below outside the lock.  in theory we could have stale result cached and neglect to update,
             // but in practice this is extremely unlikely to happen, and is easily recoverable (e.g. by the user typing a new char into the buffer).
@@ -152,4 +152,4 @@ type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as this =
                 trace("using cached results")
             upcast prevTags
         [<CLIEvent>]
-        member this.TagsChanged = tagsChangedEvent.Publish 
+        member x.TagsChanged = tagsChangedEvent.Publish 

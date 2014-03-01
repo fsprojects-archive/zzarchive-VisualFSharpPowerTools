@@ -16,21 +16,21 @@ open EnvDTE
 open FSharpVSPowerTools
 
 // an inexpensive-to-render rectangular adornment
-type RectangleAdornment(fillBrush : Brush, geometry : Geometry) as this = 
+type RectangleAdornment(fillBrush : Brush, geometry : Geometry) as self = 
     inherit FrameworkElement()
     let child = new DrawingVisual()
     
     do 
         // disable hit testing and interaction with mouse input events such as drag/drop
-        this.IsHitTestVisible <- false
-        this.UseLayoutRounding <- true
+        self.IsHitTestVisible <- false
+        self.UseLayoutRounding <- true
         let context = child.RenderOpen()
         context.DrawGeometry(fillBrush, null, geometry)
         context.Close()
-        this.AddVisualChild(child)
+        self.AddVisualChild(child)
     
-    override this.GetVisualChild(_index) = upcast child
-    override this.VisualChildrenCount = 1
+    override x.GetVisualChild(_index) = upcast child
+    override x.VisualChildrenCount = 1
 
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works

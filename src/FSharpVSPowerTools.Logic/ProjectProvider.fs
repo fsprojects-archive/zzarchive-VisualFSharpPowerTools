@@ -26,13 +26,13 @@ type ProjectProvider(project : VSProject) =
 
     let projectOpt = ProjectParser.load projectFileName
 
-    member __.ProjectFileName = projectFileName
-    member __.UniqueName = project.Project.UniqueName
+    member x.ProjectFileName = projectFileName
+    member x.UniqueName = project.Project.UniqueName
 
-    member __.TargetFSharpCoreVersion = 
+    member x.TargetFSharpCoreVersion = 
         getProperty "TargetFSharpCoreVersion"
 
-    member __.TargetFramework = 
+    member x.TargetFramework = 
         match getProperty "TargetFrameworkVersion" with
         | null | "v4.5" | "v4.5.1" -> FSharpTargetFramework.NET_4_5
         | "v4.0" -> FSharpTargetFramework.NET_4_0
@@ -41,7 +41,7 @@ type ProjectProvider(project : VSProject) =
         | "v2.0" -> FSharpTargetFramework.NET_2_0
         | _ -> invalidArg "prop" "Unsupported .NET framework version"
 
-    member private __.References = 
+    member private x.References = 
         project.References
         |> Seq.cast<Reference>
         // Since project references are resolved automatically, we include it here
@@ -49,12 +49,12 @@ type ProjectProvider(project : VSProject) =
         |> Seq.map (fun r -> Path.GetFullPath(r.Path))
         |> Seq.map (fun path -> sprintf "-r:%s" path)
 
-    member this.CompilerOptions = 
+    member x.CompilerOptions = 
         match projectOpt with
         | Some p ->
             [| 
                 yield! ProjectParser.getOptionsWithoutReferences p
-                yield! this.References 
+                yield! x.References 
             |]
         | None ->
             debug "[Project System] Can't read project file. Fall back to default compiler flags."
@@ -63,10 +63,10 @@ type ProjectProvider(project : VSProject) =
                yield "--debug-"
                yield "--optimize-"
                yield "--tailcalls-"
-               yield! this.References
+               yield! x.References
             |]
 
-    member __.SourceFiles = 
+    member x.SourceFiles = 
         match projectOpt with
         | Some p ->
             ProjectParser.getFiles p

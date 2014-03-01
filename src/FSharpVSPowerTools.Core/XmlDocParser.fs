@@ -182,7 +182,7 @@ open System
 type XmlDocParser private () =
     let checker = lazy (InteractiveChecker.Create())
 
-    member internal __.Checker = checker.Value
+    member internal x.Checker = checker.Value
 
     static member internal Instance = XmlDocParser()
 

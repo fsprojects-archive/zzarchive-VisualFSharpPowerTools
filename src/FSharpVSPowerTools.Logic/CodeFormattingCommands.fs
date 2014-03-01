@@ -14,11 +14,11 @@ open FSharpVSPowerTools
 type CommandBase() =
     member val TextView: IWpfTextView = null with get, set
     member val Services: Services = null with get, set
-    member this.TextBuffer: ITextBuffer = this.TextView.TextBuffer
+    member x.TextBuffer: ITextBuffer = x.TextView.TextBuffer
     abstract Execute: unit -> unit
 
 [<AbstractClass>]
-type FormatCommand(getConfig: Func<FormatConfig>) as this =
+type FormatCommand(getConfig: Func<FormatConfig>) as self =
     inherit CommandBase()
 
     // Rebind to this method call as it's more F#-friendly
@@ -26,8 +26,8 @@ type FormatCommand(getConfig: Func<FormatConfig>) as this =
 
     let tryCreateTextUndoTransaction() =
         let textBufferUndoManager =
-            this.TextBuffer
-            |> this.Services.TextBufferUndoManagerProvider.GetTextBufferUndoManager
+            self.TextBuffer
+            |> self.Services.TextBufferUndoManagerProvider.GetTextBufferUndoManager
 
         // It is possible for an ITextBuffer to have a null ITextUndoManager.  This will happen in 
         // cases like the differencing viewer.  If VS doesn't consider the document to be editable then 
@@ -36,8 +36,8 @@ type FormatCommand(getConfig: Func<FormatConfig>) as this =
         | null -> null
         | _ -> textBufferUndoManager.TextBufferUndoHistory.CreateTransaction("Format Code")
 
-    member this.ExecuteFormat() =
-        let editorOperations = this.Services.EditorOperationsFactoryService.GetEditorOperations(this.TextView)
+    member x.ExecuteFormat() =
+        let editorOperations = x.Services.EditorOperationsFactoryService.GetEditorOperations(x.TextView)
         use textUndoTransaction = tryCreateTextUndoTransaction()
         // Handle the special case of a null ITextUndoTransaction up here because it simplifies
         // the rest of the method.  The implementation of operations such as 
@@ -46,13 +46,13 @@ type FormatCommand(getConfig: Func<FormatConfig>) as this =
         // instead of failing gracefully.  If we have an ITextUndoTransaction then we know that the 
         // ITextUndoHistory exists and can call all of the methods as appropriate. 
         if textUndoTransaction = null then
-            this.ExecuteFormatCore() |> ignore
+            x.ExecuteFormatCore() |> ignore
         else
             // This command will capture the caret position as it currently exists inside the undo 
             // transaction.  That way the undo command will reset the caret back to this position.  
             editorOperations.AddBeforeTextBufferChangePrimitive()
 
-            if this.ExecuteFormatCore() then
+            if x.ExecuteFormatCore() then
                 // Capture the caret as it exists now.  This way any redo of this edit will 
                 // reposition the caret as it exists now. 
                 editorOperations.AddAfterTextBufferChangePrimitive()
@@ -60,20 +60,20 @@ type FormatCommand(getConfig: Func<FormatConfig>) as this =
             else
                 textUndoTransaction.Cancel()
     
-    member this.ExecuteFormatCore() =
-        let text = this.TextView.TextSnapshot.GetText()
-        let buffer = this.TextView.TextBuffer
+    member x.ExecuteFormatCore() =
+        let text = x.TextView.TextSnapshot.GetText()
+        let buffer = x.TextView.TextBuffer
 
         let source = FormatCommand.GetAllText(buffer)
-        let isSignatureFile = this.IsSignatureFile(buffer)
+        let isSignatureFile = x.IsSignatureFile(buffer)
 
         let config = getConfig()
 
         try
-            let formatted = this.GetFormatted(isSignatureFile, source, config)
+            let formatted = x.GetFormatted(isSignatureFile, source, config)
 
             use edit = buffer.CreateEdit()
-            let setCaretPosition = this.GetNewCaretPositionSetter()
+            let setCaretPosition = x.GetNewCaretPositionSetter()
 
             edit.Replace(0, text.Length, formatted) |> ignore
             edit.Apply() |> ignore
@@ -90,8 +90,8 @@ type FormatCommand(getConfig: Func<FormatConfig>) as this =
     abstract GetFormatted: isSignatureFile: bool * source: string * config: Fantomas.FormatConfig.FormatConfig -> string
     abstract GetNewCaretPositionSetter: unit -> (unit -> unit)
 
-    member this.IsSignatureFile(buffer: ITextBuffer) =
-        match this.Services.TextDocumentFactoryService.TryGetTextDocument(buffer) with
+    member x.IsSignatureFile(buffer: ITextBuffer) =
+        match x.Services.TextDocumentFactoryService.TryGetTextDocument(buffer) with
         | true, textDocument ->
             let fileExtension = Path.GetExtension(textDocument.FilePath)
             // There isn't a distinct content type for FSI files, so we have to use the file extension

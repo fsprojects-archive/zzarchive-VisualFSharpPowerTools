@@ -126,7 +126,7 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
       view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
     interface ITagger<HighlightUsageTag> with
-        member __.GetTags (spans : NormalizedSnapshotSpanCollection) : ITagSpan<HighlightUsageTag> seq =
+        member x.GetTags (spans : NormalizedSnapshotSpanCollection) : ITagSpan<HighlightUsageTag> seq =
             seq {
                 match currentWord with
                 | Some word when spans.Count <> 0 && wordSpans.Count <> 0 ->
@@ -151,10 +151,10 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
                         TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
                 | _ -> ()
             }
-        member __.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
-        member __.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
+        member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
+        member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
          
     interface IDisposable with
-        member __.Dispose() = 
+        member x.Dispose() = 
             view.LayoutChanged.RemoveHandler(viewLayoutChanged)
             view.Caret.PositionChanged.RemoveHandler(caretPositionChanged)

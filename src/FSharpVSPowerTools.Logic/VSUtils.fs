@@ -38,18 +38,18 @@ let isOperator (s : string) =
     IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s
 
 type SnapshotPoint with
-    member this.FromRange(lineStart, colStart, lineEnd, colEnd) =
-        fromVSPos this.Snapshot ((lineStart, colStart), (lineEnd, colEnd))
+    member x.FromRange(lineStart, colStart, lineEnd, colEnd) =
+        fromVSPos x.Snapshot ((lineStart, colStart), (lineEnd, colEnd))
 
 type SnapshotSpan with
     /// Return corresponding zero-based range
-    member this.ToRange() =
-        let lineStart = this.Snapshot.GetLineNumberFromPosition(this.Start.Position)
-        let lineEnd = this.Snapshot.GetLineNumberFromPosition(this.End.Position)
-        let startLine = this.Snapshot.GetLineFromPosition(this.Start.Position)
-        let endLine = this.Snapshot.GetLineFromPosition(this.End.Position)
-        let colStart = this.Start.Position - startLine.Start.Position
-        let colEnd = this.End.Position - endLine.Start.Position
+    member x.ToRange() =
+        let lineStart = x.Snapshot.GetLineNumberFromPosition(x.Start.Position)
+        let lineEnd = x.Snapshot.GetLineNumberFromPosition(x.End.Position)
+        let startLine = x.Snapshot.GetLineFromPosition(x.Start.Position)
+        let endLine = x.Snapshot.GetLineFromPosition(x.End.Position)
+        let colStart = x.Start.Position - startLine.Start.Position
+        let colEnd = x.End.Position - endLine.Start.Position
         (lineStart, colStart, lineEnd, colEnd - 1)
 
 type ITextBuffer with
@@ -68,17 +68,17 @@ open Microsoft.VisualStudio.ComponentModelHost
 // Reference at https://pytools.codeplex.com/SourceControl/latest#Python/Product/PythonTools/PythonToolsPackage.cs
 
 type DocumentUpdater(serviceProvider : IServiceProvider) = 
-    member __.OpenDocument(fileName : string, [<Out>] viewAdapter : byref<IVsTextView>, pWindowFrame : byref<IVsWindowFrame>) = 
+    member x.OpenDocument(fileName : string, [<Out>] viewAdapter : byref<IVsTextView>, pWindowFrame : byref<IVsWindowFrame>) = 
         let _textMgr = Package.GetGlobalService(typedefof<SVsTextManager>) :?> IVsTextManager
         let _uiShellOpenDocument = Package.GetGlobalService(typedefof<SVsUIShellOpenDocument>) :?> IVsUIShellOpenDocument
         let hierarchy = ref null
         let itemid = ref 0u
         VsShellUtilities.OpenDocument(serviceProvider, fileName, Guid.Empty, hierarchy, itemid, &pWindowFrame, &viewAdapter)
 
-    member this.GetBufferForDocument(fileName : string) = 
+    member x.GetBufferForDocument(fileName : string) = 
         let viewAdapter = ref null
         let frame = ref null
-        this.OpenDocument(fileName, viewAdapter, frame)
+        x.OpenDocument(fileName, viewAdapter, frame)
 
         let lines = ref null
         ErrorHandler.ThrowOnFailure((!viewAdapter).GetBuffer(lines)) |> ignore
@@ -87,12 +87,12 @@ type DocumentUpdater(serviceProvider : IServiceProvider) =
         let adapter = componentModel.GetService<IVsEditorAdaptersFactoryService>()
         adapter.GetDocumentBuffer(!lines)
 
-    member __.BeginGlobalUndo(key : string) = 
+    member x.BeginGlobalUndo(key : string) = 
         let linkedUndo = Package.GetGlobalService(typedefof<SVsLinkedUndoTransactionManager>) :?> IVsLinkedUndoTransactionManager
         ErrorHandler.ThrowOnFailure(linkedUndo.OpenLinkedUndo(uint32 LinkedTransactionFlags2.mdtGlobal, key)) |> ignore
         linkedUndo
 
-    member __.EndGlobalUndo(linkedUndo : IVsLinkedUndoTransactionManager) = 
+    member x.EndGlobalUndo(linkedUndo : IVsLinkedUndoTransactionManager) = 
         ErrorHandler.ThrowOnFailure(linkedUndo.CloseLinkedUndo()) |> ignore
 
 open Microsoft.VisualStudio.Shell

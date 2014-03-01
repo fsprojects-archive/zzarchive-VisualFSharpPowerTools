@@ -11,7 +11,7 @@ open Microsoft.VisualStudio.Text
 module internal Disposable =
     let Create (onDispose: unit -> unit) =
         { new IDisposable with
-            member this.Dispose() =
+            member x.Dispose() =
                 onDispose() }
 
 module internal Cursor =

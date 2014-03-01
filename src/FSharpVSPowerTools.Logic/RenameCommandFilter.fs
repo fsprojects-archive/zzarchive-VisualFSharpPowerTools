@@ -87,7 +87,7 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
         with e ->
             debug "[Rename Refactoring] Error %O occurs while renaming symbols." e
 
-    member this.HandleRename() =
+    member x.HandleRename() =
         maybe {
             let! state = state
             let! cw = state.Word
@@ -107,10 +107,10 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
             let hostWnd = Window.GetWindow(view.VisualElement)
             wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
             wnd.Owner <- hostWnd
-            let! res = this.ShowDialog wnd
+            let! res = x.ShowDialog wnd
             if res then rename currentName model.Name references } |> ignore
 
-    member this.ShowDialog (wnd : Window) =
+    member x.ShowDialog (wnd : Window) =
         let vsShell = serviceProvider.GetService(typeof<SVsUIShell>) :?> IVsUIShell
         try
             if ErrorHandler.Failed(vsShell.EnableModeless(0)) then
@@ -124,20 +124,20 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
     member val NextTarget : IOleCommandTarget = null with get, set
 
     interface IOleCommandTarget with
-        member this.Exec(pguidCmdGroup : byref<Guid>, nCmdId : uint32, nCmdexecopt : uint32, pvaIn : IntPtr, pvaOut : IntPtr) =
+        member x.Exec(pguidCmdGroup : byref<Guid>, nCmdId : uint32, nCmdexecopt : uint32, pvaIn : IntPtr, pvaOut : IntPtr) =
             if (pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && nCmdId = PkgCmdIDList.CmdidBuiltinRenameCommand) && canRename() then
-                this.HandleRename()
-            this.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
+                x.HandleRename()
+            x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
-        member this.QueryStatus(pguidCmdGroup:byref<Guid>, cCmds:uint32, prgCmds:OLECMD[], pCmdText:IntPtr) =
+        member x.QueryStatus(pguidCmdGroup:byref<Guid>, cCmds:uint32, prgCmds:OLECMD[], pCmdText:IntPtr) =
             if pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && 
                 prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdIDList.CmdidBuiltinRenameCommand) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
-                this.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
+                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
 
     interface IDisposable with
-        member __.Dispose() = 
+        member x.Dispose() = 
             view.LayoutChanged.RemoveHandler(viewLayoutChanged)
             view.Caret.PositionChanged.RemoveHandler(caretPositionChanged)
