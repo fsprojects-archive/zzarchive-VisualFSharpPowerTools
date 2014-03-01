@@ -84,7 +84,7 @@ type ProjectProvider(project : VSProject) =
             |> Seq.toArray
 
 /// Cache of ProjectProviders. Listens for projects changes and invalidates itself.
-module ProjectsCache =
+module ProjectCache =
     type UniqueProjectName = string
     type Projects = Map<UniqueProjectName, ProjectProvider>
 
