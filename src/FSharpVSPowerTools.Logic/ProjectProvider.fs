@@ -142,5 +142,5 @@ module ProjectsCache =
 
     /// Returns ProjectProvider for given Document.
     let GetProject document = agent.PostAndReply (fun r -> Get (document, r))
-    /// Raised when one of cached projects is changed.
+    /// Raised when a project is changed.
     let ProjectChanged = projectUpdated.Publish
