@@ -4,7 +4,8 @@
 // https://github.com/NoahRic/EditorItemTemplates/raw/master/CommandFilterTemplate.cs
 // http://msdn.microsoft.com/en-us/library/dd885474.aspx
 
-// A command filter for the editor.  Command filters get an opportunity to observe and handle commands before and after the editor acts on them.
+// A command filter for the editor. 
+// Command filters get an opportunity to observe and handle commands before and after the editor acts on them.
 
 open System
 open System.Diagnostics
@@ -17,6 +18,7 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 open FSharpVSPowerTools.Core
+open FSharpVSPowerTools.ProjectSystem
 
 type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
     let mutable passThruToEditor : IOleCommandTarget = null
@@ -43,7 +45,7 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
                         match XmlDocComment.isBlank (curLine + (string lastChar)) with
                         | Some i when i = indexOfCaret ->
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 // XmlDocable line #1 are 1-based, editor is 0-based
-                            let xmldocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename)
+                            let xmldocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, VSLanguageService.Instance.Checker)
                             let xmlDocablesBelowThisLine = 
                                 xmldocables 
                                 |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'

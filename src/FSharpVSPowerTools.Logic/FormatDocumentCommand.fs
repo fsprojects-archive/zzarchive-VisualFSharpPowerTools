@@ -13,11 +13,10 @@ open Microsoft.VisualStudio.Text.Formatting
 open Fantomas.FormatConfig
 open FSharpVSPowerTools.CodeFormatting.Utils
 
-
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
 
-    override this.Execute(): unit =
+    override this.Execute() =
         use disposable = Cursor.Wait()
         this.ExecuteFormat()
 
@@ -35,24 +34,23 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
         // Get start line of scroll bar
         let scrollBarLine = this.TextView.TextViewLines.FirstOrDefault(fun l -> l.VisibilityState <> VisibilityState.Hidden)
         let scrollBarPos =
-            if scrollBarLine = null then
-                0
-            else
-                currentSnapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
+            match scrollBarLine with
+            | null -> 0
+            | _ -> currentSnapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
         let maxLine = currentSnapshot.LineCount
 
-        let setNewCaretPosition () =
+        let setNewCaretPosition() =
             let newCurrentSnapshot = this.TextView.TextBuffer.CurrentSnapshot
             let newMaxLine = newCurrentSnapshot.LineCount
 
             // Scale caret positions in a linear way
-            let newLine = (int) ((float)line * (float)newMaxLine / (float)maxLine)
+            let newLine = int (float line * (float newMaxLine) / (float maxLine))
             let newCaretPos = newCurrentSnapshot.GetLineFromLineNumber(newLine).Start.Add(column)
-            let caretPolet = new VirtualSnapshotPoint(newCurrentSnapshot, int newCaretPos)
+            let caretPolet = VirtualSnapshotPoint(newCurrentSnapshot, int newCaretPos)
             this.TextView.Caret.MoveTo(caretPolet) |> ignore
 
             // Assume that the document scales in a linear way
-            let newScrollBarPos = (int) ((float)scrollBarPos * (float)newMaxLine / (float)maxLine)
+            let newScrollBarPos = int (float scrollBarPos * (float newMaxLine) / (float maxLine))
             this.TextView.ViewScroller.ScrollViewportVerticallyByLines(ScrollDirection.Down, newScrollBarPos)
 
         setNewCaretPosition

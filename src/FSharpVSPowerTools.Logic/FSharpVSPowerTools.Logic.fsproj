@@ -64,8 +64,8 @@
     <Compile Include="Services.fs" />
     <Compile Include="CodeFormattingUtils.fs" />
     <Compile Include="CodeFormattingCommands.fs" />
-    <Compile Include="FormatSelectionCommand.fs" />
     <Compile Include="FormatDocumentCommand.fs" />
+    <Compile Include="FormatSelectionCommand.fs" />
     <Compile Include="XmlDocFilter.fs" />
     <Compile Include="DepthTagger.fs" />
     <Compile Include="DepthAdornmentManager.fs" />

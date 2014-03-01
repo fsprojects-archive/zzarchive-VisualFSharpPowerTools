@@ -27,7 +27,7 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
 
         resetSelection()
 
-    override this.GetFormatted(isSignatureFile: bool, source: string, config: Fantomas.FormatConfig.FormatConfig): string =
+    override this.GetFormatted(isSignatureFile: bool, source: string, config: Fantomas.FormatConfig.FormatConfig) =
         if isFormattingCursor then
             let caretPos = new VirtualSnapshotPoint(this.TextView.TextBuffer.CurrentSnapshot, int this.TextView.Caret.Position.BufferPosition)
             let pos = TextUtils.GetFSharpPos(caretPos)
@@ -50,7 +50,7 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
             let scrollBarPos =
                 if (scrollBarLine = null) then 0 else scrollBarLine.Snapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
 
-            let setNewCaretPosition () =
+            let setNewCaretPosition() =
                 // The caret is at the start of selection, its position is unchanged
                 let newSelStartPos = selStartPos
                 let newActivePoint = new VirtualSnapshotPoint(this.TextView.TextBuffer.CurrentSnapshot, newSelStartPos)
@@ -78,21 +78,22 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
 
             setNewCaretPosition
 
-    member this.GetSelectionResetter(): unit -> unit =
+    member this.GetSelectionResetter() =
         if isFormattingCursor then
-            fun () -> ()
+            id
         else
             // We're going to take advantage of the fact that nothing before or after the selection
             // should change, so the post-formatting range will start at the same point, and end at
             // the same offset from the end of the file.
             let activePointPos = this.TextView.Selection.ActivePoint.Position.Position
             let anchorPointPos = this.TextView.Selection.AnchorPoint.Position.Position
-            let activePointIsAtStart = activePointPos <= anchorPointPos  // they should always be different but just in case
+            // They should always be different but just in case
+            let activePointIsAtStart = activePointPos <= anchorPointPos  
 
             let selOffsetFromStart = this.TextView.Selection.Start.Position.Position
             let selOffsetFromEnd = this.TextView.TextBuffer.CurrentSnapshot.Length - this.TextView.Selection.End.Position.Position
 
-            let resetSelection () =
+            let resetSelection() =
                 let newSelStartPos = selOffsetFromStart
                 let newSelEndPos = this.TextView.TextBuffer.CurrentSnapshot.Length - selOffsetFromEnd
                 let newActivePointPos = if activePointIsAtStart then newSelStartPos else newSelEndPos

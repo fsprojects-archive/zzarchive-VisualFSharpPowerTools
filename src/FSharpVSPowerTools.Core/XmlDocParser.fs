@@ -146,7 +146,9 @@ module internal XmlDocParsing =
     
         match input.ParseTree with
         | Some input -> GetXmlDocablesInput input
-        | None -> failwith "Failed to parse"
+        | None ->
+            // Should not fail here, just in case 
+            []
 
 module XmlDocComment =
     let private ws (s: string, pos) = 
