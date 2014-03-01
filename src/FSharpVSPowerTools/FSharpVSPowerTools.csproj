@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-   <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
-   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
-     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
-   </PropertyGroup>
-   <!-- This is needed to prevent forced migrations when opening the project in Vs2013 -->
-   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
-     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
-   </PropertyGroup>
+  <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
+    <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
+  </PropertyGroup>
+  <!-- This is needed to prevent forced migrations when opening the project in Vs2013 -->
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
+    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
+  </PropertyGroup>
   <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
@@ -138,10 +138,6 @@
     <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TextViewHookHelper.cs" />
-    <Compile Include="VsTextViewCommandFilter.cs" />
-    <Compile Include="CodeFormatting\Utils\Cursor.cs" />
-    <Compile Include="CodeFormatting\Utils\Disposable.cs" />
-    <Compile Include="CodeFormatting\Utils\TextUtils.cs" />
     <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>
