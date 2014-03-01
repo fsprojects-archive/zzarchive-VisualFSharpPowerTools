@@ -84,46 +84,63 @@ type ProjectProvider(project : VSProject) =
             |> Seq.toArray
 
 /// Cache of ProjectProviders. Listens for projects changes and invalidates itself.
-module ProjectsCache =
+module ProjectCache =
+    type UniqueProjectName = string
+    type Projects = Map<UniqueProjectName, ProjectProvider>
+
     type private Message = 
         | Get of Document * AsyncReplyChannel<ProjectProvider option>
-        | Remove of VSProject
+        | Update of VSProject
+
+    let projectUpdated = Event<_>()
 
     let private agent = MailboxProcessor.Start(fun inbox ->
-        let rec loop (projects: Map<string, ProjectProvider>) = async {
+        let obtainProject (projects: Projects) (vsProject: VSProject option) = 
+            let project = maybe {
+                let! vsProject = vsProject
+                let! project = Option.ofNull vsProject.Project
+                return! 
+                    match projects |> Map.tryFind project.UniqueName with
+                    | None -> 
+                        try
+                            debug "[ProjectsCache] Creating new project provider."
+                            Some (ProjectProvider vsProject)
+                        with _ -> 
+                            debug "[ProjectsCache] Can't find containing project. Probably the document is opened in an ad-hoc way."
+                            None
+                    | x -> debug "[ProjectsCache] Found cached project provider."; x }
+            let projects =
+                match project with
+                | Some p -> projects |> Map.add p.UniqueName p
+                | _ -> projects
+            projects, project
+
+        let removeProject (projects: Projects) (vsProject: VSProject) =
+            match Option.ofNull vsProject.Project with
+            | Some project ->
+                debug "[ProjectsCache] %s has been removed from cache." project.UniqueName
+                projects |> Map.remove project.UniqueName
+            | None -> projects
+
+        let rec loop (projects: Projects) = async {
             let! msg = inbox.Receive()
             match msg with
             | Get (doc, r) ->
-                let project =
-                    doc.ProjectItem.VSProject
-                    |> Option.bind (fun vsProject ->
-                            match projects |> Map.tryFind vsProject.Project.UniqueName with
-                            | None -> 
-                                try
-                                    debug "[ProjectsCache] Creating new project provider."
-                                    Some (ProjectProvider (vsProject))
-                                with _ -> 
-                                    debug "[ProjectsCache] Can't find containing project. Probably the document is opened in an ad-hoc way."
-                                    None
-                            | x -> debug "[ProjectsCache] Found cached project provider."; x)
-
+                let projects, project = obtainProject projects doc.ProjectItem.VSProject
                 r.Reply project
-                let projects =
-                    match project with
-                    | Some p -> projects |> Map.add p.UniqueName p
-                    | _ -> projects
                 return! loop projects
-            | Remove vsProject -> 
-                let projects =
-                    match Option.ofNull vsProject.Project with
-                    | Some project ->
-                        debug "[ProjectsCache] %s has been removed from cache." project.UniqueName
-                        projects |> Map.remove project.UniqueName
-                    | None -> projects
+            | Update vsProject -> 
+                let projects = removeProject projects vsProject
+                let projects, project = obtainProject projects (Some vsProject)
+                project |> Option.iter projectUpdated.Trigger
                 return! loop projects }
         loop Map.empty)
 
-    SolutionEvents.Instance.ProjectChanged.Add (fun vsProject -> agent.Post (Remove vsProject))
+    agent.Error.Add (fail "%O")
 
-    /// Returns ProjectProvider for given Documents (it caches ProjectProviders forever for now).
+    SolutionEvents.Instance.ProjectChanged.Add (fun vsProject -> agent.Post (Update vsProject))
+
+    /// Returns ProjectProvider for given Document.
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))
+    /// Raised when a project is changed.
+    let projectChanged = projectUpdated.Publish
