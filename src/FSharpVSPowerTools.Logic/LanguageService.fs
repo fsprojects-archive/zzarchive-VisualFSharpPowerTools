@@ -6,7 +6,7 @@ open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.ComponentModel.Composition
 
-[<Export(typeof<VSLanguageService>)>]
+[<Export>]
 type VSLanguageService() =
     // TODO: we should reparse the stale document and cache it
     let Instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
@@ -20,16 +20,15 @@ type VSLanguageService() =
         Instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range)
 
-    member this.FindSymbols(openDocuments, (projectProvider: ProjectProvider), reportSymbols, ct) =
-        async {
-            do! Instance.CollectSymbolsInProject(
-                    projectProvider.ProjectFileName, 
-                    openDocuments, 
-                    projectProvider.SourceFiles, 
-                    projectProvider.CompilerOptions, 
-                    projectProvider.TargetFramework, 
-                    reportSymbols, ct)
-        }
+    member this.ProcessNavigableItemsInProject(openDocuments, (projectProvider: ProjectProvider), processNavigableItems, ct) =
+        Instance.ProcessParseTrees(
+            projectProvider.ProjectFileName, 
+            openDocuments, 
+            projectProvider.SourceFiles, 
+            projectProvider.CompilerOptions, 
+            projectProvider.TargetFramework, 
+            (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
+            ct)
 
     member this.FindUsages (word : SnapshotSpan, currentFile : string, projectProvider : ProjectProvider) =
         async {

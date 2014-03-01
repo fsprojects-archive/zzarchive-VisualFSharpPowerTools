@@ -59,6 +59,7 @@
     <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="ProjectParser.fs" />
     <Compile Include="ProjectProvider.fs" />
+    <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="NavigateToItem.fs" />
     <Compile Include="HighlightUsageTagger.fs" />

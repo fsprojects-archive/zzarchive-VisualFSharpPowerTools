@@ -318,31 +318,30 @@ type LanguageService(dirtyNotify) =
           opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
     opts
 
-  member x.CollectSymbolsInProject(projectFilename, openDocuments, files, args, targetFramework, reportSymbolsInFile, ct : System.Threading.CancellationToken) = 
-    async {
-      let projectOptions = ref None
-      for file in files do
-        if not ct.IsCancellationRequested then
+  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct : System.Threading.CancellationToken) = 
+    let projectOptions = ref None
+    let rec loop i = 
+        if not ct.IsCancellationRequested && i < files.Length then
+            let file = files.[i]
+            let source = 
+                match Map.tryFind file openDocuments with
+                | Some source -> source 
+                | _ -> File.ReadAllText file
+            let opts = 
+                match !projectOptions with
+                | None -> 
+                    let opts = x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
+                    projectOptions := Some opts
+                    opts
+                | Some opts -> opts
+            let parseResults = checker.ParseFileInProject(file, source, opts)
+            match parseResults.ParseTree with
+            | Some parseTree -> 
+                parseTreeHandler parseTree
+            | None -> ()
+            loop (i + 1)
+    loop 0
 
-          let source = 
-            match Map.tryFind file openDocuments with
-            | Some source -> source 
-            | _ -> File.ReadAllText file
-          
-          let opts = 
-            match !projectOptions with
-            | None -> 
-              let opts = x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
-              projectOptions := Some opts
-              opts
-            | Some opts -> opts
-          let parseResults = checker.ParseFileInProject(file, source, opts)
-          let! resultsForFile = checker.CheckFileInProject(parseResults, file, 0, source, opts)
-          match resultsForFile with
-          | CheckFileAnswer.Succeeded results -> 
-            reportSymbolsInFile (results.GetAllUsesOfAllSymbolsInFile())
-          | CheckFileAnswer.Aborted -> () }
-  
   /// Parses and type-checks the given file in the given project under the given configuration. The callback
   /// is called after the complete typecheck has been performed.
   member x.TriggerParse(projectFilename, fileName:string, src, files, args, targetFramework, afterCompleteTypeCheckCallback) = 
@@ -410,4 +409,3 @@ type LanguageService(dirtyNotify) =
           return (symDeclRangeOpt, refs) }
 
   member x.Checker = checker
-           

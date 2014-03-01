@@ -33,8 +33,7 @@ type internal NavigateToItemExtraData =
     {
         FileName: string
         Span: Microsoft.FSharp.Compiler.Range.Range01
-        StringRepresentation: string
-        Kind: string
+        Description: string
     }
 
 [<Package("f152487e-9a22-4cf9-bee6-a8f7c77f828d")>]
@@ -82,15 +81,10 @@ and
 
     let runSearch(projects: ProjectProvider list, openedDocuments: OpenedDocument list, searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
         let openDocuments = openedDocuments |> List.map (fun { FilePath = f; SourceText = s } -> f, s) |> Map.ofList
-        let searchPattern = System.Text.RegularExpressions.Regex(searchValue)
-        let seen = HashSet()
-        let reportSymbols (symbols : FSharpSymbolUse[]) = 
-            for s in symbols do
-                if not (seen.Add(s.Range,s.Symbol.DisplayName)) then 
-                    // skip duplicates
-                    ()
-                else
-                let name = s.Symbol.DisplayName
+        let searchPattern = Text.RegularExpressions.Regex(searchValue, Text.RegularExpressions.RegexOptions.IgnoreCase)
+        let processNavigableItems (navigationItems: seq<Navigation.NavigableItem>) = 
+            for item in navigationItems do
+                let name = item.Name
                 let m = searchPattern.Match name
                 let matchKind = 
                     if not m.Success then MatchKind.None
@@ -99,44 +93,35 @@ and
                         else MatchKind.Prefix
                     else MatchKind.Substring
                 if matchKind <> MatchKind.None then
-                    let kind, textKind = 
-                        match s.Symbol with
-                        | :? FSharpField-> NavigateToItemKind.Field, "field"
-                        | :? FSharpEntity as fse -> 
-                            if fse.IsClass then 
-                                if fse.IsMeasure then NavigateToItemKind.Class, "class"
-                                else NavigateToItemKind.Class, "measure"
-                            elif fse.IsFSharpExceptionDeclaration then NavigateToItemKind.Class, "exception"
-                            elif fse.IsFSharpAbbreviation then NavigateToItemKind.Class, "type abbreviation"
-                            elif fse.IsFSharpRecord then NavigateToItemKind.Class, "record"
-                            elif fse.IsFSharpUnion then NavigateToItemKind.Class, "union"
-                            elif fse.IsDelegate then NavigateToItemKind.Delegate, "delegate"
-                            elif fse.IsEnum then NavigateToItemKind.Enum, "enum"
-                            elif fse.IsFSharpModule then NavigateToItemKind.Module, "module"
-                            elif fse.IsInterface then NavigateToItemKind.Interface, "interface" 
-                            elif fse.IsValueType then NavigateToItemKind.Structure, "struct"
-                            else NavigateToItemKind.Class, "???"
-                        | :? FSharpMemberFunctionOrValue as fsm -> 
-                            if fsm.IsGetterMethod then NavigateToItemKind.Property, "getter"
-                            elif fsm.IsSetterMethod then NavigateToItemKind.Property, "setter"
-                            elif fsm.IsActivePattern then NavigateToItemKind.Method, "active pattern"
-                            elif fsm.IsExtensionMember then NavigateToItemKind.Method, "extension"
-                            elif fsm.IsImplicitConstructor then NavigateToItemKind.Method, "constructor"
-                            elif fsm.IsTypeFunction then NavigateToItemKind.Method, "type function"
-                            elif fsm.IsModuleValueOrMember then NavigateToItemKind.Method, "module value or member"
-                            else NavigateToItemKind.Method, "???" // TODO: recognize parameters, locals etc...
-                        | _ -> NavigateToItemKind.Constant, "???" // TODO: reasonable default value
-                    let extraData = { FileName = s.FileName; Span = s.Range; StringRepresentation = s.Symbol.ToString(); Kind = textKind }
-                    let navigateToItem = NavigateToItem(s.Symbol.DisplayName, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
-                    callback.AddItem navigateToItem
+                    let kindOpt = 
+                        match item.Kind with
+                        | Navigation.NavigableItemKind.Exception -> Some(NavigateToItemKind.Class, "exception")
+                        | Navigation.NavigableItemKind.Field -> Some (NavigateToItemKind.Field, "field")
+                        | Navigation.NavigableItemKind.Constructor -> Some (NavigateToItemKind.Class, "constructor")
+                        | Navigation.NavigableItemKind.Member -> Some (NavigateToItemKind.Method, "member")
+                        | Navigation.NavigableItemKind.Module -> Some (NavigateToItemKind.Module, "module")
+                        | Navigation.NavigableItemKind.ModuleAbbreviation -> Some (NavigateToItemKind.Module, "module abbreviation")
+                        | Navigation.NavigableItemKind.ModuleValue -> Some (NavigateToItemKind.Field, "module value")
+                        | Navigation.NavigableItemKind.Property -> Some (NavigateToItemKind.Property, "property")
+                        | Navigation.NavigableItemKind.Type -> Some (NavigateToItemKind.Class, "type")
+                        | Navigation.NavigableItemKind.EnumCase -> Some(NavigateToItemKind.EnumItem, "enum")
+                        | Navigation.NavigableItemKind.UnionCase -> Some(NavigateToItemKind.Class, "union case")
+                    match kindOpt with
+                    | Some(kind, textKind) ->
+                        let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
+                        let fileName, range01 = Microsoft.FSharp.Compiler.Range.Range.toFileZ item.Range
+                        let extraData = { FileName = fileName; Span = range01; Description = textKind; }
+                        let navigateToItem = NavigateToItem(item.Name, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
+                        callback.AddItem navigateToItem
+                    | _ -> ()
 
-        let computation = async {
+        Tasks.Task.Run(fun() ->
             for p in projects do
                 if not ct.IsCancellationRequested then
-                    do! fsharpLanguageService.FindSymbols(openDocuments, p, reportSymbols, ct)
+                    do fsharpLanguageService.ProcessNavigableItemsInProject(openDocuments, p, processNavigableItems, ct)
             callback.Done()
-        }
-        Async.Start(computation)
+        )
+        |> ignore
 
     interface INavigateToItemProvider with
         member this.StartSearch(callback, searchValue) = 
@@ -159,16 +144,13 @@ and
     interface IDisposable with
         member this.Dispose() = (this :> INavigateToItemProvider).StopSearch()
 and
-    [<Export(typeof<INavigateToItemDisplayFactory>)>]
-    NavigateToItemDisplayFactory() as this =
-        
+    [<Export>]
+    IconCache() =
         [<Import; DefaultValue>] 
         val mutable glyphService: IGlyphService
-        [<Import; DefaultValue>]
-        val mutable navigator: DocumentNavigator
-
         let iconCache = Dictionary()
-        let getIcon glyphGroup glyphItem: System.Drawing.Icon = 
+        
+        member this.GetIcon(glyphGroup, glyphItem): System.Drawing.Icon = 
             let key = (glyphGroup, glyphItem)
             match iconCache.TryGetValue key with
             | true, (icon, _) -> icon
@@ -187,29 +169,6 @@ and
                     | _ -> null, null
                 iconCache.[key] <- pair
                 icon
-
-        let glyphForNavigateToItemKind (kind : string) =
-            let glyphGroup = 
-                match kind with
-                | NavigateToItemKind.Class    -> StandardGlyphGroup.GlyphGroupClass
-                | NavigateToItemKind.Constant -> StandardGlyphGroup.GlyphGroupConstant
-                | NavigateToItemKind.Delegate -> StandardGlyphGroup.GlyphGroupDelegate
-                | NavigateToItemKind.Enum     -> StandardGlyphGroup.GlyphGroupEnum
-                | NavigateToItemKind.EnumItem -> StandardGlyphGroup.GlyphGroupEnumMember
-                | NavigateToItemKind.Event    -> StandardGlyphGroup.GlyphGroupEvent
-                | NavigateToItemKind.Field    -> StandardGlyphGroup.GlyphGroupField
-                | NavigateToItemKind.Interface -> StandardGlyphGroup.GlyphGroupInterface
-                | NavigateToItemKind.Method   -> StandardGlyphGroup.GlyphGroupMethod
-                | NavigateToItemKind.Module   -> StandardGlyphGroup.GlyphGroupModule
-                | NavigateToItemKind.Property -> StandardGlyphGroup.GlyphGroupProperty
-                | NavigateToItemKind.Structure -> StandardGlyphGroup.GlyphGroupStruct
-                | other -> failwithf "Unrecognized NavigateToItemKind:%s" other
-            // TODO 
-            let glyphItem = StandardGlyphItem.GlyphItemPublic 
-            getIcon glyphGroup glyphItem
-
-        interface INavigateToItemDisplayFactory with
-            member this.CreateItemDisplay(item) = NavigateToItemDisplay(item, glyphForNavigateToItemKind item.Kind, this.navigator) :> _
         interface IDisposable with
             member this.Dispose() = 
                 for (KeyValue(_, (icon, bitmap))) in iconCache do
@@ -217,18 +176,52 @@ and
                         icon.Dispose()
                         bitmap.Dispose()
                 iconCache.Clear()
+and
+    [<Export(typeof<INavigateToItemDisplayFactory>)>]
+    NavigateToItemDisplayFactory() =
+        
+        [<Import; DefaultValue>]
+        val mutable navigator: DocumentNavigator
+        [<Import; DefaultValue>]
+        val mutable iconCache: IconCache
+
+        let glyphGroupForNavigateToItemKind (kind : string) =
+            match kind with
+            | NavigateToItemKind.Class    -> StandardGlyphGroup.GlyphGroupClass
+            | NavigateToItemKind.Constant -> StandardGlyphGroup.GlyphGroupConstant
+            | NavigateToItemKind.Delegate -> StandardGlyphGroup.GlyphGroupDelegate
+            | NavigateToItemKind.Enum     -> StandardGlyphGroup.GlyphGroupEnum
+            | NavigateToItemKind.EnumItem -> StandardGlyphGroup.GlyphGroupEnumMember
+            | NavigateToItemKind.Event    -> StandardGlyphGroup.GlyphGroupEvent
+            | NavigateToItemKind.Field    -> StandardGlyphGroup.GlyphGroupField
+            | NavigateToItemKind.Interface -> StandardGlyphGroup.GlyphGroupInterface
+            | NavigateToItemKind.Method   -> StandardGlyphGroup.GlyphGroupMethod
+            | NavigateToItemKind.Module   -> StandardGlyphGroup.GlyphGroupModule
+            | NavigateToItemKind.Property -> StandardGlyphGroup.GlyphGroupProperty
+            | NavigateToItemKind.Structure -> StandardGlyphGroup.GlyphGroupStruct
+            | other -> failwithf "Unrecognized NavigateToItemKind:%s" other
+
+        interface INavigateToItemDisplayFactory with
+            member this.CreateItemDisplay(item) = 
+                let glyphGroup = glyphGroupForNavigateToItemKind item.Kind
+                // TODO 
+                let glyphItem = StandardGlyphItem.GlyphItemPublic 
+                let icon = this.iconCache.GetIcon(glyphGroup, glyphItem)
+                NavigateToItemDisplay(item, icon, this.navigator) :> _
 and 
     NavigateToItemDisplay(item : NavigateToItem, icon, navigator: DocumentNavigator) =
         let extraData : NavigateToItemExtraData = unbox item.Tag
-        interface INavigateToItemDisplay with
+        interface INavigateToItemDisplay2 with
             member this.Name = item.Name
             member this.Glyph = icon
-            member this.AdditionalInformation = extraData.Kind
-            member this.Description = extraData.StringRepresentation
+            member this.AdditionalInformation = extraData.FileName
+            member this.Description = extraData.Description
             member this.DescriptionItems = Constants.EmptyReadOnlyCollection
             member this.NavigateTo() = navigator.NavigateTo(extraData)
+            member this.GetProvisionalViewingStatus() = navigator.GetProvisionalViewingStatus(extraData)
+            member this.PreviewItem() = navigator.PreviewItem(extraData)
 and
-    [<Export(typeof<DocumentNavigator>)>]
+    [<Export>]
     DocumentNavigator() =
 
         [<Import(typeof<Microsoft.VisualStudio.Shell.SVsServiceProvider>); DefaultValue>]
@@ -260,7 +253,7 @@ and
                             &itemId,
                             &windowFrame)
                     ErrorHandler.Succeeded(opened)
-            if (canShow) then
+            if canShow then
                 windowFrame.Show()
                 |> ensureSucceded
 
@@ -273,3 +266,7 @@ and
                 let (startRow, startCol), (endRow, endCol) = position.Span
                 vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
                 |> ensureSucceded
+        member internal this.GetProvisionalViewingStatus(position: NavigateToItemExtraData) = 
+            int (VsShellUtilities.GetProvisionalViewingStatus(position.FileName)) 
+        member internal this.PreviewItem(position: NavigateToItemExtraData) = 
+            this.NavigateTo(position)
