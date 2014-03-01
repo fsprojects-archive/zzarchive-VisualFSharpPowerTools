@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
+open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
@@ -106,8 +107,18 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
             let hostWnd = Window.GetWindow(view.VisualElement)
             wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
             wnd.Owner <- hostWnd
-            let! res = wnd.ShowDialog() |> Option.ofNullable
+            let! res = this.ShowDialog wnd
             if res then rename currentName model.Name references } |> ignore
+
+    member this.ShowDialog (wnd : Window) =
+        let vsShell = serviceProvider.GetService(typeof<SVsUIShell>) :?> IVsUIShell
+        try
+            if ErrorHandler.Failed(vsShell.EnableModeless(0)) then
+                Some false
+            else
+                wnd.ShowDialog() |> Option.ofNullable
+        finally
+            vsShell.EnableModeless(1) |> ignore
 
     member val IsAdded = false with get, set
     member val NextTarget : IOleCommandTarget = null with get, set
