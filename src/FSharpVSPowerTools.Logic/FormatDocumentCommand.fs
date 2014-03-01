@@ -17,7 +17,7 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
 
     override x.Execute() =
-        use disposable = Cursor.Wait()
+        use disposable = Cursor.wait()
         x.ExecuteFormat()
 
     override x.GetFormatted(isSignatureFile: bool, source: string, config: Fantomas.FormatConfig.FormatConfig): string =

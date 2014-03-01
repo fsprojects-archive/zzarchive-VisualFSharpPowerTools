@@ -43,7 +43,7 @@ module internal XmlDocParsing =
         | SynPat.InstanceMember _ -> []
         | _ -> failwith "error"
 
-    let GetXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, filename, checker : InteractiveChecker) =
+    let getXmlDocablesImpl(sourceCodeLinesOfTheFile:string[], sourceCodeOfTheFile, filename, checker : InteractiveChecker) =
         let indentOf (lineNum:int) =
             let mutable i = 0
             let line = sourceCodeLinesOfTheFile.[lineNum-1] // -1 because lineNum reported by xmldocs are 1-based, but array is 0-based
@@ -57,10 +57,10 @@ module internal XmlDocParsing =
             | XmlDoc [|x|] when x.Trim() = "" -> true
             | _ -> false
 
-        let rec GetXmlDocablesSynModuleDecl decl =
+        let rec getXmlDocablesSynModuleDecl decl =
             match decl with
             | SynModuleDecl.ModuleAbbrev(_ident, _longIdent, _range) -> []
-            | SynModuleDecl.NestedModule(_synComponentInfo, synModuleDecls, _, _range) -> (synModuleDecls |> List.collect GetXmlDocablesSynModuleDecl)
+            | SynModuleDecl.NestedModule(_synComponentInfo, synModuleDecls, _, _range) -> (synModuleDecls |> List.collect getXmlDocablesSynModuleDecl)
             | SynModuleDecl.Let(_, synBindingList, range) -> 
                 let anyXmlDoc = 
                     synBindingList |> List.exists (fun (SynBinding.Binding(_, _, _, _, _, preXmlDoc, _, _, _, _, _, _)) -> 
@@ -79,20 +79,20 @@ module internal XmlDocParsing =
                     | _ -> ()]
                 |> fun paramNames -> [XmlDocable(line,indent,paramNames)]
             | SynModuleDecl.DoExpr(_sequencePointInfoForBinding, _synExpr, _range) -> []
-            | SynModuleDecl.Types(synTypeDefnList, _range) -> (synTypeDefnList |> List.collect GetXmlDocablesSynTypeDefn)
+            | SynModuleDecl.Types(synTypeDefnList, _range) -> (synTypeDefnList |> List.collect getXmlDocablesSynTypeDefn)
             | SynModuleDecl.Exception(_synExceptionDefn, _range) -> []
             | SynModuleDecl.Open(_longIdent, _range) -> []
             | SynModuleDecl.Attributes(_synAttributes, _range) -> []
             | SynModuleDecl.HashDirective(_parsedHashDirective, _range) -> []
-            | SynModuleDecl.NamespaceFragment(synModuleOrNamespace) -> GetXmlDocablesSynModuleOrNamespace synModuleOrNamespace
+            | SynModuleDecl.NamespaceFragment(synModuleOrNamespace) -> getXmlDocablesSynModuleOrNamespace synModuleOrNamespace
 
-        and GetXmlDocablesSynModuleOrNamespace (SynModuleOrNamespace(_longIdent, _isModule, synModuleDecls, _preXmlDoc, _synAttributes, _synAccessOpt, _range)) =
-            (synModuleDecls |> List.collect GetXmlDocablesSynModuleDecl)
+        and getXmlDocablesSynModuleOrNamespace (SynModuleOrNamespace(_longIdent, _isModule, synModuleDecls, _preXmlDoc, _synAttributes, _synAccessOpt, _range)) =
+            (synModuleDecls |> List.collect getXmlDocablesSynModuleDecl)
 
-        and GetXmlDocablesSynTypeDefn (SynTypeDefn.TypeDefn(ComponentInfo(synAttributes, _synTyparDeclList, _synTypeConstraintList, _longIdent, preXmlDoc, _bool, _synAccessOpt, compRange), synTypeDefnRepr, synMemberDefns, tRange)) =
+        and getXmlDocablesSynTypeDefn (SynTypeDefn.TypeDefn(ComponentInfo(synAttributes, _synTyparDeclList, _synTypeConstraintList, _longIdent, preXmlDoc, _bool, _synAccessOpt, compRange), synTypeDefnRepr, synMemberDefns, tRange)) =
             let stuff = 
                 match synTypeDefnRepr with
-                | ObjectModel(_synTypeDefnKind, synMemberDefns, _oRange) -> (synMemberDefns |> List.collect GetXmlDocablesSynMemberDefn)
+                | ObjectModel(_synTypeDefnKind, synMemberDefns, _oRange) -> (synMemberDefns |> List.collect getXmlDocablesSynMemberDefn)
                 | Simple(_synTypeDefnSimpleRepr, _range) -> []
             let docForTypeDefn = 
                 if isEmptyXmlDoc preXmlDoc then
@@ -101,9 +101,9 @@ module internal XmlDocParsing =
                     let indent = indentOf line
                     [XmlDocable(line,indent,[])]
                 else []
-            docForTypeDefn @ stuff @ (synMemberDefns |> List.collect GetXmlDocablesSynMemberDefn)
+            docForTypeDefn @ stuff @ (synMemberDefns |> List.collect getXmlDocablesSynMemberDefn)
 
-        and GetXmlDocablesSynMemberDefn m =
+        and getXmlDocablesSynMemberDefn m =
             match m with
             | SynMemberDefn.Open(_longIdent, _range) -> []
             | SynMemberDefn.Member(SynBinding.Binding(_synAccessOption, _synBindingKind, _, _, synAttributes, preXmlDoc, _synValData, synPat, _synBindingReturnInfoOption, _synExpr, _range, _sequencePointInfoForBinding), memRange) -> 
@@ -128,16 +128,16 @@ module internal XmlDocParsing =
             | SynMemberDefn.Interface(_synType, synMemberDefnsOption, _range) -> 
                 match synMemberDefnsOption with 
                 | None -> [] 
-                | Some(x) -> x |> List.collect GetXmlDocablesSynMemberDefn
+                | Some(x) -> x |> List.collect getXmlDocablesSynMemberDefn
             | SynMemberDefn.Inherit(_synType, _identOption, _range) -> []
             | SynMemberDefn.ValField(_synField, _range) -> []
-            | SynMemberDefn.NestedType(synTypeDefn, _synAccessOption, _range) -> GetXmlDocablesSynTypeDefn synTypeDefn
+            | SynMemberDefn.NestedType(synTypeDefn, _synAccessOption, _range) -> getXmlDocablesSynTypeDefn synTypeDefn
             | _ -> failwith "error"
 
-        and GetXmlDocablesInput input =
+        and getXmlDocablesInput input =
             match input with
             | ParsedInput.ImplFile(ParsedImplFileInput(_,_,_,_,_,l,_))-> 
-                l |> List.collect GetXmlDocablesSynModuleOrNamespace
+                l |> List.collect getXmlDocablesSynModuleOrNamespace
             | ParsedInput.SigFile _sigFile -> []
 
         // Get compiler options for the 'project' implied by a single script file
@@ -145,7 +145,7 @@ module internal XmlDocParsing =
         let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
     
         match input.ParseTree with
-        | Some input -> GetXmlDocablesInput input
+        | Some input -> getXmlDocablesInput input
         | None ->
             // Should not fail here, just in case 
             []
@@ -190,7 +190,7 @@ type XmlDocParser private () =
     static member GetXmlDocables(sourceCodeOfTheFile : string, filename, ?checker) =
         let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split [|'\n'|]
         let checker = defaultArg checker XmlDocParser.Instance.Checker
-        GetXmlDocablesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
+        getXmlDocablesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
 
 
 

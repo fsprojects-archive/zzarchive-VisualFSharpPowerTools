@@ -8,12 +8,12 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 [<RequireQualifiedAccess>]
 module VSLanguageService =
     // TODO: we should reparse the stale document and cache it
-    let Instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
+    let instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
     do ProjectCache.projectChanged.Add (fun p -> 
         debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-        let opts = Instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
+        let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
                                                p.CompilerOptions, p.TargetFramework)
-        Instance.Checker.InvalidateConfiguration opts)
+        instance.Checker.InvalidateConfiguration opts)
 
     let getSymbol (point: SnapshotPoint) (projectProvider : ProjectProvider) =
         let source = point.Snapshot.GetText()
@@ -21,7 +21,7 @@ module VSLanguageService =
         let col = point.Position - point.GetContainingLine().Start.Position
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions                
-        Instance.GetSymbol (source, line, col, lineStr, args)
+        instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range)
 
     let findUsages (word : SnapshotSpan) (currentFile : string) (projectProvider : ProjectProvider) =
@@ -42,7 +42,7 @@ module VSLanguageService =
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                return! Instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
+                return! instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
                                                            endLine, endCol, currentLine, args, framework)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e

@@ -21,7 +21,7 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
     override x.Execute(): unit =
         isFormattingCursor <- x.TextView.Selection.IsEmpty
 
-        use disposable = Cursor.Wait()
+        use disposable = Cursor.wait()
         let resetSelection = x.GetSelectionResetter()
         x.ExecuteFormat()
 
@@ -30,11 +30,11 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
     override x.GetFormatted(isSignatureFile: bool, source: string, config: Fantomas.FormatConfig.FormatConfig) =
         if isFormattingCursor then
             let caretPos = new VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, int x.TextView.Caret.Position.BufferPosition)
-            let pos = TextUtils.GetFSharpPos(caretPos)
+            let pos = TextUtils.getFSharpPos(caretPos)
             Fantomas.CodeFormatter.formatAroundCursor isSignatureFile pos source config
         else
-            let startPos = TextUtils.GetFSharpPos(x.TextView.Selection.Start)
-            let endPos = TextUtils.GetFSharpPos(x.TextView.Selection.End)
+            let startPos = TextUtils.getFSharpPos(x.TextView.Selection.Start)
+            let endPos = TextUtils.getFSharpPos(x.TextView.Selection.End)
             let range = Range.mkRange "fsfile" startPos endPos
 
             Fantomas.CodeFormatter.formatSelectionFromString isSignatureFile range source config
@@ -98,8 +98,8 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
                 let newSelEndPos = x.TextView.TextBuffer.CurrentSnapshot.Length - selOffsetFromEnd
                 let newActivePointPos = if activePointIsAtStart then newSelStartPos else newSelEndPos
                 let newAnchorPointPos = if activePointIsAtStart then newSelEndPos else newSelStartPos
-                let newActivePoint = new VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newActivePointPos) 
-                let newAnchorPoint = new VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newAnchorPointPos)
+                let newActivePoint = VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newActivePointPos) 
+                let newAnchorPoint = VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newAnchorPointPos)
                 x.TextView.Selection.Select(newAnchorPoint, newActivePoint)
 
             resetSelection

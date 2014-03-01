@@ -9,19 +9,19 @@ open Microsoft.FSharp.Compiler
 open Microsoft.VisualStudio.Text
 
 module internal Disposable =
-    let Create (onDispose: unit -> unit) =
+    let create (onDispose: unit -> unit) =
         { new IDisposable with
             member x.Dispose() =
                 onDispose() }
 
 module internal Cursor =
-    let Wait (): IDisposable =
+    let wait() =
         let currentCursor = System.Windows.Forms.Cursor.Current
         System.Windows.Forms.Cursor.Current <- System.Windows.Forms.Cursors.WaitCursor
-        Disposable.Create(fun () -> System.Windows.Forms.Cursor.Current <- currentCursor)
+        Disposable.create(fun () -> System.Windows.Forms.Cursor.Current <- currentCursor)
 
 module internal TextUtils =
-    let GetFSharpPos (point: VirtualSnapshotPoint): Range.pos =
+    let getFSharpPos (point: VirtualSnapshotPoint) =
         let containingLine = point.Position.GetContainingLine()
         // F# compiler line numbers start at 1
         let lineNumber = containingLine.LineNumber + 1

@@ -70,7 +70,7 @@ type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as self =
         System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
         ()
 
-    let RefreshFileImpl(doSync) =
+    let refreshFileImpl(doSync) =
         async {
             try
                 let syncContext = System.Threading.SynchronizationContext.Current
@@ -80,7 +80,7 @@ type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as self =
                 do
                     let sourceCodeOfTheFile = ss.GetText()
                     // Reuse the instance of InteractiveChecker
-                    let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, VSLanguageService.Instance.Checker)
+                    let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, VSLanguageService.instance.Checker)
                     let tempResults = new ResizeArray<_>()
                     for (line,sc,ec,d) as info in ranges do
                         try
@@ -128,10 +128,10 @@ type DepthTagger(sourceBuffer : ITextBuffer, filename : string) as self =
                 let! _ = Async.AwaitEvent sourceBuffer.Changed
                 do! awaitPauseAfterChange(startNewTimer())
                 trace("about to refresh")
-                RefreshFileImpl(false)
+                refreshFileImpl(false)
         } |> Async.StartImmediate 
         // go ahead and synchronously get the first bit of info for the original rendering
-        RefreshFileImpl(true)
+        refreshFileImpl(true)
 
     interface ITagger<DepthRegionTag> with
         member x.GetTags(spans) =

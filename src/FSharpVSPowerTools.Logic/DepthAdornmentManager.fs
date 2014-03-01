@@ -76,7 +76,7 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregato
     
     // Amount to increase the adornment height to ensure there aren't gaps between adornments
     // due to the way that layout rounding changes the placement of these adornments.
-    let AdornmentHeightFudgeFactor = 0.0 // can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
+    let adornmentHeightFudgeFactor = 0.0 // can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
     
     let colors = 
         let openKey key = 
@@ -86,9 +86,7 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregato
         maybe { 
             let! key = openKey @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer" 
                        // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
-                       |> Option.orElse 
-                              (openKey 
-                                   @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer")
+                       |> Option.orElse (openKey @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer")
             return! try 
                         Some [| for i in 0..9 do
                                     let s = key.GetValue(sprintf "Depth%d" i) :?> string
@@ -99,10 +97,10 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregato
         }
         |> Option.getOrElse defaultColors
     
-    let edgeColors = colors |> Array.map (fun (r, g, b, _, _, _) -> System.Windows.Media.Color.FromRgb(r, g, b))
-    let mainColors = colors |> Array.map (fun (_, _, _, r, g, b) -> System.Windows.Media.Color.FromRgb(r, g, b))
+    let edgeColors = colors |> Array.map (fun (r, g, b, _, _, _) -> Color.FromRgb(r, g, b))
+    let mainColors = colors |> Array.map (fun (_, _, _, r, g, b) -> Color.FromRgb(r, g, b))
     
-    let GetFadeColor(depth, numCharsWide) = 
+    let getFadeColor(depth, numCharsWide) = 
         let depth = depth % colors.Length
         let thin = 1.0 / (4.0 * numCharsWide)
         new LinearGradientBrush(new GradientStopCollection([| new GradientStop(edgeColors.[depth], 0.0)
@@ -111,14 +109,14 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregato
                                 new Point(0.0, 0.5), new Point(1.0, 0.5))
     
     // was once useful for debugging
-    let trace (s) = 
+    let trace s = 
         let ticks = System.DateTime.Now.Ticks
         System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
         ()
     
     let mutable pixelsPerChar = 7.0 // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.
     
-    let RefreshLine(line : ITextViewLine) = 
+    let refreshLine(line : ITextViewLine) = 
         trace ("refresh line {0}", line.TextTop)
         let tags = tagAggregator.GetTags(line.Extent)
         
@@ -147,33 +145,33 @@ type FullLineAdornmentManager(view : IWpfTextView, tagAggregator : ITagAggregato
                 else view.ViewportWidth + view.MaxTextRightCoordinate
             
             let depth = abs d
-            let color = GetFadeColor(depth, (right - left) / pixelsPerChar)
+            let color = getFadeColor(depth, (right - left) / pixelsPerChar)
             let width = max (right - left) 0.0 // sometimes at startup these calculations go funky and I get a negative number for (right-left), hmm...
             //System.Diagnostics.Debug.WriteLine("Rect: line.Top {0} left {1} width {2} color {3}", line.Top, left, width, depth)
             let rectangle = 
-                new RectangleGeometry(new Rect(new Size(width, adornmentHeight + AdornmentHeightFudgeFactor)))
+                new RectangleGeometry(new Rect(new Size(width, adornmentHeight + adornmentHeightFudgeFactor)))
             let adornment = new RectangleAdornment(color, rectangle)
             Canvas.SetLeft(adornment, left)
-            Canvas.SetTop(adornment, line.Top + (line.Height - adornmentHeight) - (AdornmentHeightFudgeFactor / 2.0))
+            Canvas.SetTop(adornment, line.Top + (line.Height - adornmentHeight) - (adornmentHeightFudgeFactor / 2.0))
             Canvas.SetZIndex(adornment, depth)
             // Add adornment to the appropriate adornment layer
             adornmentLayer.AddAdornment
                 (AdornmentPositioningBehavior.TextRelative, Nullable<_>(line.Extent), null, adornment, null) |> ignore
     
-    let RefreshView() = 
+    let refreshView() = 
         trace ("refresh view")
         adornmentLayer.RemoveAllAdornments()
         for line in view.TextViewLines do
-            RefreshLine(line)
+            refreshLine(line)
     
     do 
-        view.ViewportWidthChanged.Add(fun _ -> RefreshView())
+        view.ViewportWidthChanged.Add(fun _ -> refreshView())
         view.LayoutChanged.Add(fun e -> 
             for line in e.NewOrReformattedLines do
-                RefreshLine(line))
-        tagAggregator.TagsChanged.Add(fun _e -> RefreshView() // if we don't refresh the whole view, blank lines (which have no chars to hang tags) are not updated, which is a disaster
+                refreshLine(line))
+        tagAggregator.TagsChanged.Add(fun _e -> refreshView() // if we don't refresh the whole view, blank lines (which have no chars to hang tags) are not updated, which is a disaster
                                                               )
-(*
+        (*
             let spans = e.Span.GetSpans(view.TextSnapshot)
             let lineSpan = new SnapshotSpan(spans.[0].Start, spans.[spans.Count - 1].End)
             for line in view.TextViewLines.GetTextViewLinesIntersectingSpan(lineSpan) do

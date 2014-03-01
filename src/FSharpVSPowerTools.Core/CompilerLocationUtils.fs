@@ -27,12 +27,16 @@ type FSharpTargetFramework =
     
 type FSharpCompilerVersion = 
     // F# 2.0
-    | FSharp_2_0 
+    | FSharp_2_0
     // F# 3.0
     | FSharp_3_0
     // F# 3.1
     | FSharp_3_1
-    override x.ToString() = match x with | FSharp_2_0 -> "4.0.0.0" | FSharp_3_0 -> "4.3.0.0" | FSharp_3_1 -> "4.3.1.0"
+    override x.ToString() = 
+        match x with
+        | FSharp_2_0 -> "4.0.0.0"
+        | FSharp_3_0 -> "4.3.0.0"
+        | FSharp_3_1 -> "4.3.1.0"
     /// The current requested language version can be overriden by the user using environment variable.
     static member LatestKnown = 
         match System.Environment.GetEnvironmentVariable("FSHARP_PREFERRED_VERSION") with
@@ -46,7 +50,7 @@ module FSharpEnvironment =
 
   let safeExists f = (try File.Exists(f) with _ -> false)
 
-  let FSharpCoreLibRunningVersion =
+  let fsharpCoreLibRunningVersion =
     try 
       match (typeof<Microsoft.FSharp.Collections.List<int>>).Assembly.GetName().Version.ToString() with
       | null -> None
@@ -57,7 +61,7 @@ module FSharpEnvironment =
   // Returns:
   // -- on 2.0:  "v2.0.50727"
   // -- on 4.0:  "v4.0.30109" (last 5 digits vary by build)
-  let MSCorLibRunningRuntimeVersion = 
+  let mscorlibRunningRuntimeVersion = 
     typeof<int>.Assembly.ImageRuntimeVersion
 
   // The F# team version number. This version number is used for
@@ -69,13 +73,13 @@ module FSharpEnvironment =
   // Also for Beta2, the language revision number indicated on the F# language spec
   //
   // It is NOT the version number listed on FSharp.Core.dll
-  let FSharpTeamVersionNumber = "2.0.0.0"
+  let fsharpTeamVersionNumber = "2.0.0.0"
 
   // The F# binary format revision number. The first three digits of this form the significant part of the 
   // format revision number for F# binary signature and optimization metadata. The last digit is not significant.
   //
   // WARNING: Do not change this revision number unless you absolutely know what you're doing.
-  let FSharpBinaryMetadataFormatRevision = "2.0.0.0"
+  let fsharpBinaryMetadataFormatRevision = "2.0.0.0"
 
   [<DllImport("Advapi32.dll", CharSet = CharSet.Unicode, BestFitMapping = false)>]
   extern uint32 RegOpenKeyExW(UIntPtr _hKey, string _lpSubKey, uint32 _ulOptions, int _samDesired, UIntPtr & _phkResult);
@@ -103,7 +107,7 @@ module FSharpEnvironment =
   let KEY_QUERY_VALUE = 0x1
   let REG_SZ = 1u
 
-  let GetDefaultRegistryStringValueViaDotNet(subKey: string)  =
+  let getDefaultRegistryStringValueViaDotNet(subKey: string)  =
     Option.ofString
       (try
         downcast Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\"+subKey,null,null)
@@ -111,7 +115,7 @@ module FSharpEnvironment =
         System.Diagnostics.Debug.Assert(false, sprintf "Failed in GetDefaultRegistryStringValueViaDotNet: %s" (e.ToString()))
         null)
 
-  let Get32BitRegistryStringValueViaPInvoke(subKey:string) = 
+  let get32BitRegistryStringValueViaPInvoke(subKey:string) = 
     Option.ofString
       (try
         // 64 bit flag is not available <= Win2k
@@ -153,16 +157,16 @@ module FSharpEnvironment =
   let tryRegKey(subKey:string) = 
 
     if is32Bit then
-      let s = GetDefaultRegistryStringValueViaDotNet(subKey)
+      let s = getDefaultRegistryStringValueViaDotNet(subKey)
       // If we got here AND we're on a 32-bit OS then we can validate that Get32BitRegistryStringValueViaPInvoke(...) works
       // by comparing against the result from GetDefaultRegistryStringValueViaDotNet(...)
 #if DEBUG
-      let viaPinvoke = Get32BitRegistryStringValueViaPInvoke(subKey)
+      let viaPinvoke = get32BitRegistryStringValueViaPInvoke(subKey)
       System.Diagnostics.Debug.Assert((s = viaPinvoke), sprintf "32bit path: pi=%A def=%A" viaPinvoke s)
 #endif
       s
     else
-      Get32BitRegistryStringValueViaPInvoke(subKey) 
+      get32BitRegistryStringValueViaPInvoke(subKey) 
 
   let internal tryCurrentDomain() = 
     let pathFromCurrentDomain = System.AppDomain.CurrentDomain.BaseDirectory
@@ -206,13 +210,13 @@ module FSharpEnvironment =
     //early termination on Mono, continuing here results in failed pinvokes and reg key failures ~18-35ms
     if Environment.runningOnMono then None else
     // On windows the location of the compiler is via a registry key
-    let key20 = @"Software\Microsoft\.NETFramework\AssemblyFolders\Microsoft.FSharp-" + FSharpTeamVersionNumber 
+    let key20 = @"Software\Microsoft\.NETFramework\AssemblyFolders\Microsoft.FSharp-" + fsharpTeamVersionNumber 
     let key40 = match reqLangVersion with 
                 | FSharp_2_0 ->  @"Software\Microsoft\FSharp\2.0\Runtime\v4.0"
                 | FSharp_3_0 ->  @"Software\Microsoft\FSharp\3.0\Runtime\v4.0"
                 | FSharp_3_1 ->  @"Software\Microsoft\FSharp\3.1\Runtime\v4.0"
                 
-    let key1,key2 = match FSharpCoreLibRunningVersion with 
+    let key1,key2 = match fsharpCoreLibRunningVersion with 
                     | None -> key20,key40 
                     | Some v -> if v.Length > 1 && v.[0] <= '3' then key20,key40 
                                 else key40,key20
@@ -258,7 +262,7 @@ module FSharpEnvironment =
   //   - default F# binaries directory in service.fs (REVIEW: check this)
   //   - default location of fsi.exe in FSharp.VS.FSI.dll
   //   - default location of fsc.exe in FSharp.Compiler.CodeDom.dll
-  let BinFolderOfDefaultFSharpCompiler(reqLangVersion: FSharpCompilerVersion) = 
+  let binFolderOfDefaultFSharpCompiler(reqLangVersion: FSharpCompilerVersion) = 
     // Check for an app.config setting to redirect the default compiler location
     // Like fsharp-compiler-location
     try
@@ -280,7 +284,7 @@ module FSharpEnvironment =
       None
 
 
-  let FolderOfDefaultFSharpCore(reqLangVersion:FSharpCompilerVersion, targetFramework) = 
+  let folderOfDefaultFSharpCore(reqLangVersion:FSharpCompilerVersion, targetFramework) = 
     try 
       Debug.WriteLine(sprintf "Resolution: Determing folder of FSharp.Core for target framework '%A'" targetFramework)
       let result = tryAppConfig "fsharp-core-location"
@@ -321,7 +325,7 @@ module FSharpEnvironment =
         | Some _ -> result
         | None -> 
         let possibleInstallationPoints = 
-            Option.toList (BinFolderOfDefaultFSharpCompiler(reqLangVersion) |> Option.map Path.GetDirectoryName) @  
+            Option.toList (binFolderOfDefaultFSharpCompiler(reqLangVersion) |> Option.map Path.GetDirectoryName) @  
             BackupInstallationProbePoints
         Debug.WriteLine(sprintf "Resolution: targetFramework = %A" targetFramework)
         let ext = 
@@ -369,7 +373,7 @@ module FSharpEnvironment =
   /// Returns default directories to be used when searching for DLL files
   let getDefaultDirectories(langVersion, fsTargetFramework) =   
     // Return all known directories, get the location of the System DLLs
-    [match FolderOfDefaultFSharpCore(langVersion, fsTargetFramework) with 
+    [match folderOfDefaultFSharpCore(langVersion, fsTargetFramework) with 
      | Some dir -> Debug.WriteLine(sprintf "Resolution: Using '%A' as the location of default FSharp.Core.dll" dir)
                    yield dir
      | None -> Debug.WriteLine(sprintf "Resolution: Unable to find a default location for FSharp.Core.dll")
