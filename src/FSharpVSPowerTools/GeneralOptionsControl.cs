@@ -47,6 +47,12 @@ namespace FSharpVSPowerTools
             get { return chbRenameRefactoring.Checked; }
             set { chbRenameRefactoring.Checked = value; }
         }
+        public bool DepthColorizerEnabled
+        {
+            get { return chbDepthColorizer.Checked; }
+            set { chbDepthColorizer.Checked = value; }
+
+        }
 
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
@@ -55,6 +61,7 @@ namespace FSharpVSPowerTools
             chbNavBar.Checked = OptionsPage.NavBarEnabled;
             chbHighlightUsage.Checked = OptionsPage.HighlightUsageEnabled;
             chbRenameRefactoring.Checked = OptionsPage.RenameRefactoringEnabled;
+            chbDepthColorizer.Checked = OptionsPage.DepthColorizerEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

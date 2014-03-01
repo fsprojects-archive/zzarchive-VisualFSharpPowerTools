@@ -33,8 +33,8 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
     let updateAtCaretPosition(caretPosition : CaretPosition) = 
         maybe {
             let! point = view.TextBuffer.GetSnapshotPoint caretPosition
-            let doc = Dte.getActiveDocument()
-            let! project = ProjectProvider.get doc
+            let! doc = Dte.getActiveDocument()
+            let! project = ProjectsCache.getProject doc
             state <- Some
                 { File = doc.FullName
                   Project =  project
@@ -54,32 +54,33 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
       view.LayoutChanged.AddHandler(viewLayoutChanged)
       view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
-    let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 seq) seq) =
+    let rename (oldText : string) (newText : string) (foundUsages: (string * Range01 list) list) =
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
-                let doc = Dte.getActiveDocument()
-                for (fileName, ranges) in foundUsages do
-                    let buffer = documentUpdater.GetBufferForDocument(fileName)
-                    let spans =
-                        ranges
-                        |> Seq.map (fun range ->
-                            let snapshotSpan = fromVSPos buffer.CurrentSnapshot range
-                            let i = snapshotSpan.GetText().LastIndexOf(oldText)
-                            if i > 0 then 
-                                // Subtract lengths of qualified identifiers
-                                SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
-                            else snapshotSpan)
-                        |> Seq.toList
+                Dte.getActiveDocument()
+                |> Option.iter (fun doc ->
+                    for (fileName, ranges) in foundUsages do
+                        let buffer = documentUpdater.GetBufferForDocument(fileName)
+                        let spans =
+                            ranges
+                            |> Seq.map (fun range ->
+                                let snapshotSpan = fromVSPos buffer.CurrentSnapshot range
+                                let i = snapshotSpan.GetText().LastIndexOf(oldText)
+                                if i > 0 then 
+                                    // Subtract lengths of qualified identifiers
+                                    SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
+                                else snapshotSpan)
+                            |> Seq.toList
 
-                    spans
-                    |> List.fold (fun (snapshot: ITextSnapshot) span ->
-                        let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
-                        snapshot.TextBuffer.Replace(span.Span, newText)) buffer.CurrentSnapshot
-                    |> ignore
+                        spans
+                        |> List.fold (fun (snapshot: ITextSnapshot) span ->
+                            let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
+                            snapshot.TextBuffer.Replace(span.Span, newText)) buffer.CurrentSnapshot
+                        |> ignore
 
-                // Refocus to the current document
-                doc.Activate()
+                    // Refocus to the current document
+                    doc.Activate())
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
@@ -98,7 +99,8 @@ type RenameCommandFilter(view : IWpfTextView, serviceProvider : System.IServiceP
                             refs 
                             |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.Range))
                             |> Seq.groupBy (fst >> Path.GetFullPath)
-                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses))
+                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                            |> Seq.toList)
             let model = RenameDialogModel (cw.GetText(), symbol, state.Project)
             let wnd = UI.loadRenameDialog model
             let hostWnd = Window.GetWindow(view.VisualElement)

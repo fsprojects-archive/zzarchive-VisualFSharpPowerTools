@@ -78,10 +78,10 @@ type HighlightUsageTagger(view : ITextView, sourceBuffer : ITextBuffer, textSear
     let updateWordAdornments() =
         let currentRequest = requestedPoint
         // Find all words in the buffer like the one the caret is on
-        let doc = Dte.getActiveDocument()
-
+        
         maybe {
-            let! project = ProjectProvider.get doc
+            let! doc = Dte.getActiveDocument()
+            let! project = ProjectsCache.getProject doc
             let! newWord = VSLanguageService.getSymbol currentRequest project
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
             match currentWord with

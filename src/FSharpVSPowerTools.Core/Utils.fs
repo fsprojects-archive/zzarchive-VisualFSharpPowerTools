@@ -16,6 +16,18 @@ module Option =
         | None -> Nullable<_> ()
 
     let inline attempt (f: unit -> 'a) = try Some <| f() with _ -> None
+
+    /// Gets the value associated with the option or the supplied default value.
+    let inline getOrElse v =
+        function
+        | Some x -> x
+        | None -> v
+
+    /// Gets the option if Some x, otherwise the supplied default value.
+    let inline orElse v =
+        function
+        | Some x -> Some x
+        | None -> v
     
 /// Maybe computation expression builder, copied from ExtCore library
 /// https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs
@@ -78,7 +90,14 @@ type MaybeBuilder () =
                     body enum.Current)))
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
-module Debug =
+module Pervasive =
     let inline debug msg = Printf.kprintf System.Diagnostics.Debug.WriteLine msg
+    let inline fail msg = Printf.kprintf System.Diagnostics.Debug.Fail msg
     let maybe = MaybeBuilder()
+    
+    let tryCast<'a> (o: obj) : 'a option = 
+        match o with
+        | null -> None
+        | :? 'a as a -> Some a
+        | _ -> fail "Cannot cast %O to %O" (o.GetType()) typeof<'a>.Name; None
 

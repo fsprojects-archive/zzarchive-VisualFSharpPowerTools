@@ -1,4 +1,4 @@
-﻿namespace FSharpXmlDoc
+﻿namespace FSharpVSPowerTools.XmlDoc
 
 // Somewhat based on these:
 // https://github.com/NoahRic/EditorItemTemplates/raw/master/CommandFilterTemplate.cs
@@ -16,31 +16,7 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
-
-module XmlDocComment =
-    let private ws (s: string, pos) = 
-        let res = s.TrimStart()
-        Some (res, pos + (s.Length - res.Length))
-
-    let private str (prefix: string) (s: string, pos) =
-        match s.StartsWith prefix with
-        | true -> 
-            let res = s.Substring prefix.Length
-            Some (res, pos + (s.Length - res.Length))
-        | _ -> None
-
-    let private eol (s: string, pos) = 
-        match s with
-        | "" -> Some ("", pos)
-        | _ -> None
-
-    let inline private (>=>) f g = fun x -> f x |> Option.bind g
-
-    // if it's a blank XML comment with trailing "<", returns Some (index of the "<"), otherwise returns None
-    let isBlank (s: string) =
-        let parser = ws >=> str "///" >=> ws >=> str "<" >=> eol
-        let res = parser (s, 0) |> Option.map snd |> Option.map (fun x -> x - 1)
-        res
+open FSharpVSPowerTools.Core
 
 type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:string) as this =
     let mutable passThruToEditor : IOleCommandTarget = null
@@ -67,14 +43,14 @@ type XmlDocFilter(textView:IVsTextView, wpfTextView:IWpfTextView, filename:strin
                         match XmlDocComment.isBlank (curLine + (string lastChar)) with
                         | Some i when i = indexOfCaret ->
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 // XmlDocable line #1 are 1-based, editor is 0-based
-                            let xmldocables = XmlDocHelpers.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename)
+                            let xmldocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename)
                             let xmlDocablesBelowThisLine = 
                                 xmldocables 
-                                |> List.filter (fun (XmlDocHelpers.XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'
+                                |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'
                             let hr = passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) // parse it before we pass thru to editor, as we want to notice if no XmlDoc yet
                             match xmlDocablesBelowThisLine with
                             | [] -> ()
-                            | XmlDocHelpers.XmlDocable(_line,indent,paramNames)::_t ->
+                            | XmlDocable(_line,indent,paramNames)::_t ->
                                 // delete the slashes the user typed (they may be indented wrong)
                                 wpfTextView.TextBuffer.Delete(wpfTextView.Caret.Position.BufferPosition.GetContainingLine().Extent.Span) |> ignore
                                 // add the new xmldoc comment
