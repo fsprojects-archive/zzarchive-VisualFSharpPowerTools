@@ -128,8 +128,11 @@ module ProjectCache =
             let! msg = inbox.Receive()
             match msg with
             | Put(project, r) ->
-                let vsProject = try Option.ofNull (project.Object :?> VSProject) with _ -> None
-                let projects, project = obtainProject projects vsProject
+                let projects, project =
+                    let vsProject = try Option.ofNull (project.Object :?> VSProject) with _ -> None
+                    match vsProject with
+                    | None -> projects, None
+                    | x -> obtainProject projects x
                 r.Reply project
                 return! loop projects
             | Get (doc, r) ->
@@ -149,7 +152,7 @@ module ProjectCache =
 
     /// Returns ProjectProvider for given Document.
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))
-    /// Returns ProjectProvider for given Document.
+    /// Returns ProjectProvider for given Project.
     let putProject project = agent.PostAndReply (fun r -> Put (project, r))
     /// Raised when a project is changed.
     let projectChanged = projectUpdated.Publish
