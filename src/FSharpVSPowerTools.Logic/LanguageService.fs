@@ -35,7 +35,7 @@ type VSLanguageService() =
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)
 
-    member this.FindUsages (word : SnapshotSpan, currentFile : string, projectProvider : ProjectProvider) =
+    member this.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: ProjectProvider) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()

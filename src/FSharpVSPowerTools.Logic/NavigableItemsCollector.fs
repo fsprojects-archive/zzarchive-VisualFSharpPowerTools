@@ -30,13 +30,13 @@ type NavigableItem =
 
 module NavigableItemsCollector =
     
-    let rec private lastInLid (lid : LongIdent) = 
+    let rec private lastInLid (lid: LongIdent) = 
         match lid with
         | [x] -> Some x
         | _::xs -> lastInLid xs
         | _ -> None // empty lid is possible in case of broken ast
      
-    let collect (parsedInput : ParsedInput) = 
+    let collect (parsedInput: ParsedInput) = 
         let result = ResizeArray()
         
         let addIdent kind (id: Ident) (isSignature: bool) = 
@@ -49,7 +49,7 @@ module NavigableItemsCollector =
             | Some id -> addIdent NavigableItemKind.Module id isSig
             | _ -> ()
 
-        let addModuleAbbreviation (id : Ident) isSig =
+        let addModuleAbbreviation (id: Ident) isSig =
             addIdent NavigableItemKind.ModuleAbbreviation id isSig 
         
         let addExceptionRepr (ExceptionDefnRepr(_attributes, UnionCase(_unionAttributes, id, _type, _unionXmlDoc, _unionAccess, _unionRange), _lid, _xmlDoc, _access, _range)) isSig = 
@@ -120,7 +120,7 @@ module NavigableItemsCollector =
             match decl with
             | SynModuleSigDecl.ModuleAbbrev(lhs, _rhs, _range) ->
                 addModuleAbbreviation lhs true
-            | SynModuleSigDecl.Exception(ExceptionSig(representation, _members, _ExceptionRange), _range) ->
+            | SynModuleSigDecl.Exception(ExceptionSig(representation, _members, _exceptionRange), _range) ->
                 addExceptionRepr representation true
             | SynModuleSigDecl.NamespaceFragment fragment ->
                 walkSynModuleOrNamespaceSig fragment
@@ -147,7 +147,7 @@ module NavigableItemsCollector =
             | SynTypeDefnSigRepr.Simple(repr, _range) ->
                 walkSynTypeDefnSimpleRepr repr true
 
-        and walkSynMemberSig (synMemberSig : SynMemberSig) = 
+        and walkSynMemberSig (synMemberSig: SynMemberSig) = 
             match synMemberSig with
             | SynMemberSig.Member(valSig, memberFlags, _range) ->
                 addMember valSig memberFlags true
@@ -199,7 +199,7 @@ module NavigableItemsCollector =
             for m in members do
                 walkSynMemberDefn m
 
-        and walkSynTypeDefnRepr(typeDefnRepr : SynTypeDefnRepr) = 
+        and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
             match typeDefnRepr with
             | SynTypeDefnRepr.ObjectModel(_kind, members, _range) ->
                 for m in members do
@@ -207,7 +207,7 @@ module NavigableItemsCollector =
             | SynTypeDefnRepr.Simple(repr, _range) -> 
                 walkSynTypeDefnSimpleRepr repr false
 
-        and walkSynTypeDefnSimpleRepr(repr : SynTypeDefnSimpleRepr) isSig = 
+        and walkSynTypeDefnSimpleRepr(repr: SynTypeDefnSimpleRepr) isSig = 
             match repr with
             | SynTypeDefnSimpleRepr.Enum(enumCases, _range) ->
                 for c in enumCases do

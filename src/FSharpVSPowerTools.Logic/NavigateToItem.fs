@@ -49,8 +49,8 @@ type NavigateToItemProviderFactory() =
     val mutable itemDisplayFactory: INavigateToItemDisplayFactory
     
     interface INavigateToItemProviderFactory with
-        member this.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
-            provider <- new NavigateToItemProvider(this.activeViewsContainer, this.textDocumentFactoryService, serviceProvider, this.fsharpLanguageService, this.itemDisplayFactory)
+        member x.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
+            provider <- new NavigateToItemProvider(x.activeViewsContainer, x.textDocumentFactoryService, serviceProvider, x.fsharpLanguageService, x.itemDisplayFactory)
             true
 and 
     NavigateToItemProvider
@@ -65,7 +65,7 @@ and
     let dte = serviceProvider.GetService(typeof<SDTE>) :?> DTE
     
     let listFSharpProjectsInSolution() = 
-        let rec handleProject (p : Project) =
+        let rec handleProject (p: Project) =
             if LanguagePrimitives.PhysicalEquality p null then []
             elif p.Kind.ToUpperInvariant() = Constants.FSharpProjectKind then [ ProjectProvider(p.Object :?> _)]
             elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
@@ -124,7 +124,7 @@ and
         |> ignore
 
     interface INavigateToItemProvider with
-        member this.StartSearch(callback, searchValue) = 
+        member x.StartSearch(callback, searchValue) = 
             let openedDocuments = 
                 activeViewsContainer.MapOpenViews (fun view -> 
                     match textDocumentFactoryService.TryGetTextDocument view.TextBuffer with
@@ -137,12 +137,12 @@ and
             // TODO enable for loose files
             let projects = listFSharpProjectsInSolution();
             runSearch(projects, openedDocuments, searchValue, callback, cts.Token)
-        member this.StopSearch() = 
+        member x.StopSearch() = 
             cts.Cancel()
             cts <- new CancellationTokenSource()
 
     interface IDisposable with
-        member this.Dispose() = (this :> INavigateToItemProvider).StopSearch()
+        member x.Dispose() = (x :> INavigateToItemProvider).StopSearch()
 and
     [<Export>]
     IconCache() =
@@ -150,13 +150,13 @@ and
         val mutable glyphService: IGlyphService
         let iconCache = Dictionary()
         
-        member this.GetIcon(glyphGroup, glyphItem): System.Drawing.Icon = 
+        member x.GetIcon(glyphGroup, glyphItem): System.Drawing.Icon = 
             let key = (glyphGroup, glyphItem)
             match iconCache.TryGetValue key with
             | true, (icon, _) -> icon
             | false, _ ->
                 let (icon, _) as pair =
-                    match this.glyphService.GetGlyph(glyphGroup, glyphItem) with
+                    match x.glyphService.GetGlyph(glyphGroup, glyphItem) with
                     | :? Windows.Media.Imaging.BitmapSource as bs ->
                         let bmpEncoder = Windows.Media.Imaging.PngBitmapEncoder()
                         bmpEncoder.Frames.Add(Windows.Media.Imaging.BitmapFrame.Create(bs))
@@ -170,7 +170,7 @@ and
                 iconCache.[key] <- pair
                 icon
         interface IDisposable with
-            member this.Dispose() = 
+            member x.Dispose() = 
                 for (KeyValue(_, (icon, bitmap))) in iconCache do
                     if not (LanguagePrimitives.PhysicalEquality icon null) then
                         icon.Dispose()
@@ -185,7 +185,7 @@ and
         [<Import; DefaultValue>]
         val mutable iconCache: IconCache
 
-        let glyphGroupForNavigateToItemKind (kind : string) =
+        let glyphGroupForNavigateToItemKind (kind: string) =
             match kind with
             | NavigateToItemKind.Class    -> StandardGlyphGroup.GlyphGroupClass
             | NavigateToItemKind.Constant -> StandardGlyphGroup.GlyphGroupConstant
@@ -202,39 +202,39 @@ and
             | other -> failwithf "Unrecognized NavigateToItemKind:%s" other
 
         interface INavigateToItemDisplayFactory with
-            member this.CreateItemDisplay(item) = 
+            member x.CreateItemDisplay(item) = 
                 let glyphGroup = glyphGroupForNavigateToItemKind item.Kind
                 // TODO 
                 let glyphItem = StandardGlyphItem.GlyphItemPublic 
-                let icon = this.iconCache.GetIcon(glyphGroup, glyphItem)
-                NavigateToItemDisplay(item, icon, this.navigator) :> _
+                let icon = x.iconCache.GetIcon(glyphGroup, glyphItem)
+                NavigateToItemDisplay(item, icon, x.navigator) :> _
 and 
-    NavigateToItemDisplay(item : NavigateToItem, icon, navigator: DocumentNavigator) =
-        let extraData : NavigateToItemExtraData = unbox item.Tag
+    NavigateToItemDisplay(item: NavigateToItem, icon, navigator: DocumentNavigator) =
+        let extraData: NavigateToItemExtraData = unbox item.Tag
         interface INavigateToItemDisplay2 with
-            member this.Name = item.Name
-            member this.Glyph = icon
-            member this.AdditionalInformation = extraData.FileName
-            member this.Description = extraData.Description
-            member this.DescriptionItems = Constants.EmptyReadOnlyCollection
-            member this.NavigateTo() = navigator.NavigateTo(extraData)
-            member this.GetProvisionalViewingStatus() = navigator.GetProvisionalViewingStatus(extraData)
-            member this.PreviewItem() = navigator.PreviewItem(extraData)
+            member x.Name = item.Name
+            member x.Glyph = icon
+            member x.AdditionalInformation = extraData.FileName
+            member x.Description = extraData.Description
+            member x.DescriptionItems = Constants.EmptyReadOnlyCollection
+            member x.NavigateTo() = navigator.NavigateTo(extraData)
+            member x.GetProvisionalViewingStatus() = navigator.GetProvisionalViewingStatus(extraData)
+            member x.PreviewItem() = navigator.PreviewItem(extraData)
 and
     [<Export>]
     DocumentNavigator() =
 
         [<Import(typeof<Microsoft.VisualStudio.Shell.SVsServiceProvider>); DefaultValue>]
-        val mutable serviceProvider : IServiceProvider
+        val mutable serviceProvider: IServiceProvider
 
-        member internal this.NavigateTo(position: NavigateToItemExtraData) =
+        member internal x.NavigateTo(position: NavigateToItemExtraData) =
             let mutable hierarchy = Unchecked.defaultof<_>
             let mutable itemId = Unchecked.defaultof<_>
             let mutable windowFrame = Unchecked.defaultof<_>
 
             let isOpened = 
                 VsShellUtilities.IsDocumentOpen(
-                    this.serviceProvider, 
+                    x.serviceProvider, 
                     position.FileName, 
                     Constants.LogicalViewTextGuid,
                     &hierarchy,
@@ -246,7 +246,7 @@ and
                     // TODO: track the project that contains document and open document in project context
                     let opened = 
                         VsShellUtilities.TryOpenDocument(
-                            this.serviceProvider, 
+                            x.serviceProvider, 
                             position.FileName, 
                             Constants.LogicalViewTextGuid, 
                             &hierarchy,
@@ -258,7 +258,7 @@ and
                 |> ensureSucceded
 
                 let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-                let vsTextManager = this.serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
+                let vsTextManager = x.serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
                 let mutable vsTextBuffer = Unchecked.defaultof<_>
                 vsTextView.GetBuffer(&vsTextBuffer)
                 |> ensureSucceded
@@ -266,7 +266,7 @@ and
                 let (startRow, startCol), (endRow, endCol) = position.Span
                 vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
                 |> ensureSucceded
-        member internal this.GetProvisionalViewingStatus(position: NavigateToItemExtraData) = 
+        member internal x.GetProvisionalViewingStatus(position: NavigateToItemExtraData) = 
             int (VsShellUtilities.GetProvisionalViewingStatus(position.FileName)) 
-        member internal this.PreviewItem(position: NavigateToItemExtraData) = 
-            this.NavigateTo(position)
+        member internal x.PreviewItem(position: NavigateToItemExtraData) = 
+            x.NavigateTo(position)

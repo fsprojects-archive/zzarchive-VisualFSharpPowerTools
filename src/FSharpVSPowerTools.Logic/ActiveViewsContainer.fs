@@ -13,7 +13,7 @@ type ActiveViewsContainer() =
     let gate = obj()
     let activeViews = HashSet(HashIdentity.Reference)
 
-    member this.RegisterActiveView(view : IWpfTextView) = 
+    member x.RegisterActiveView(view: IWpfTextView) = 
         let rec disposable: IDisposable = view.Closed.Subscribe(removeView)
         and removeView _ = 
             lock gate (fun () -> activeViews.Remove(view) |> ignore)
@@ -21,7 +21,7 @@ type ActiveViewsContainer() =
 
         lock gate (fun() -> activeViews.Add(view) |> ignore)
     
-    member this.MapOpenViews f = 
+    member x.MapOpenViews f = 
         lock gate <| fun() ->
             [
                 for view in activeViews do 

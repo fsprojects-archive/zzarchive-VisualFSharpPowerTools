@@ -318,7 +318,7 @@ type LanguageService(dirtyNotify) =
           opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
     opts
 
-  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct : System.Threading.CancellationToken) = 
+  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
     let projectOptions = ref None
     let rec loop i = 
         if not ct.IsCancellationRequested && i < files.Length then
