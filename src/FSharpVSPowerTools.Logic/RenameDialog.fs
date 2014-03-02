@@ -12,14 +12,9 @@ open FSharpVSPowerTools
 
 type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
 
-type RenameDialogModel(originalName: string, symbol: FSharpSymbol, project: ProjectProvider) =
+type RenameDialogModel(originalName: string, symbol: FSharpSymbol) =
     let mutable name = originalName
     let errorsChanged = Event<_,_>()
-
-    let isFileInCurrentProject ffileName =
-        let filePath = Path.GetFullPath ffileName
-        // NB: this isn't a foolproof way to match two paths
-        project.SourceFiles |> Array.exists ((=) filePath)
 
     let validate name = 
         let cleanUpSymbol (s: string) = s.Replace(")", "").Replace("(", "").Trim()
@@ -29,23 +24,18 @@ type RenameDialogModel(originalName: string, symbol: FSharpSymbol, project: Proj
         | "" -> Choice2Of2 "Empty names are not allowed."
         | _ when name = originalName -> Choice2Of2 "New name is the same as the original."
         | _ ->
-            match symbol.DeclarationLocation with
-            // TODO: this should be determined before opening rename dialog
-            | Some loc when not <| isFileInCurrentProject loc.FileName ->
-                Choice2Of2 "Can't rename. The symbol isn't defined in current project."
-            | _ ->
-                match symbol with
-                | :? FSharpUnionCase ->
-                    // Union case shouldn't be lowercase
-                    if isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0])) then
-                        Choice1Of2()
-                    else
-                        Choice2Of2 "Invalid name for union cases."
-                | :? FSharpMemberFunctionOrValue as v when isOperator (cleanUpSymbol v.DisplayName)  ->
-                    if isOperator name then Choice1Of2() 
-                    else Choice2Of2 "Invalid name for operators."
-                | _ -> if isIdentifier name then Choice1Of2()
-                       else Choice2Of2 "Invalid name for identifiers."
+            match symbol with
+            | :? FSharpUnionCase ->
+                // Union case shouldn't be lowercase
+                if isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0])) then
+                    Choice1Of2()
+                else
+                    Choice2Of2 "Invalid name for union cases."
+            | :? FSharpMemberFunctionOrValue as v when isOperator (cleanUpSymbol v.DisplayName)  ->
+                if isOperator name then Choice1Of2() 
+                else Choice2Of2 "Invalid name for operators."
+            | _ -> if isIdentifier name then Choice1Of2()
+                    else Choice2Of2 "Invalid name for identifiers."
 
     let mutable validationResult = validate name
     member x.Result = validationResult
@@ -88,5 +78,6 @@ module UI =
             window.Root.DialogResult <- Nullable false
             window.Root.Close())
         window.Root.DataContext <- viewModel
+        window.Root.Loaded.Add (fun _ -> window.txtName.SelectAll())
         window.Root
  
