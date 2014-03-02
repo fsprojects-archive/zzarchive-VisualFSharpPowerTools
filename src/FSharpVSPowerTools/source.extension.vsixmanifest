@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="FSharpVSPowerTools.68b42cfe-c752-4094-8dba-ed48aa81cac8" Version="0.3.1" Language="en-US" Publisher="fsharp.org" />
+    <Identity Id="FSharpVSPowerTools.68b42cfe-c752-4094-8dba-ed48aa81cac8" Version="0.3.2" Language="en-US" Publisher="fsharp.org" />
     <DisplayName>F# Power Tools</DisplayName>
     <Description xml:space="preserve">A colllection of additional commands for F# in Visual Studio</Description>
     <MoreInfo>https://github.com/fsprojects/FSharpVSPowerTools</MoreInfo>
@@ -22,9 +22,8 @@
   </Dependencies>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
-    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
-    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpXmlDoc" Path="|FSharpXmlDoc|" />
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />    
     <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Core" Path="|FSharpVSPowerTools.Core|" />
-    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Logic" Path="|FSharpVSPowerTools.Logic|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Logic" Path="|FSharpVSPowerTools.Logic|" />  
   </Assets>
 </PackageManifest>

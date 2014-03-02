@@ -19,6 +19,7 @@ type NavigableItemKind =
     | EnumCase
     | UnionCase
 
+[<NoComparison; NoEquality>]
 type NavigableItem = 
     {
         Name: string

@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
@@ -31,9 +30,13 @@ namespace FSharpVSPowerTools
             serviceContainer.AddService(typeof(GeneralOptionsPage),
                 delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
+<<<<<<< HEAD
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
+=======
+              delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, true);
 
             VSUtils.SolutionEvents.Initialize();
+>>>>>>> upstream/master
         }
     }
 }

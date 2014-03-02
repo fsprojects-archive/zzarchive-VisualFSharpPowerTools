@@ -26,14 +26,15 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D5255-776D-4B61-85F9-73C37AA1FB9A}"
 	ProjectSection(SolutionItems) = preProject
 		docs\content\codeformatting.fsx = docs\content\codeformatting.fsx
+		docs\content\depthcolorizer.fsx = docs\content\depthcolorizer.fsx
+		docs\content\highlightusage.fsx = docs\content\highlightusage.fsx
 		docs\content\index.fsx = docs\content\index.fsx
 		docs\content\navbar.fsx = docs\content\navbar.fsx
+		docs\content\rename.fsx = docs\content\rename.fsx
 		docs\content\xmldoc.fsx = docs\content\xmldoc.fsx
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpXmlDoc", "src\FSharpXmlDoc\FSharpXmlDoc.fsproj", "{48913937-D335-4A8E-A22F-7409385A989A}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core.Tests", "tests\FSharpVSPowerTools.Core.Tests\FSharpVSPowerTools.Core.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
 EndProject
@@ -49,10 +50,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{48913937-D335-4A8E-A22F-7409385A989A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{48913937-D335-4A8E-A22F-7409385A989A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{48913937-D335-4A8E-A22F-7409385A989A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{48913937-D335-4A8E-A22F-7409385A989A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Release|Any CPU.ActiveCfg = Release|Any CPU

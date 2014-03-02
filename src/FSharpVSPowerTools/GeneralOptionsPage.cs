@@ -62,6 +62,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool RenameRefactoringEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool DepthColorizerEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -75,6 +78,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.NavBarEnabled = NavBarEnabled;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
                 _optionsControl.RenameRefactoringEnabled = RenameRefactoringEnabled;
+                _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
 
                 return _optionsControl;
             }
@@ -86,6 +90,7 @@ namespace FSharpVSPowerTools
             NavBarEnabled = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
             RenameRefactoringEnabled = true;
+            DepthColorizerEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
@@ -104,6 +109,7 @@ namespace FSharpVSPowerTools
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
                 RenameRefactoringEnabled = _optionsControl.RenameRefactoringEnabled;
+                DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
             }
             base.OnApply(e);
         }

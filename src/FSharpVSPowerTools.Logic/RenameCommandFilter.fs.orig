@@ -23,7 +23,11 @@ type DocumentState =
       File: string
       Project: ProjectProvider }
 
+<<<<<<< HEAD
 type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider : System.IServiceProvider) =
+=======
+type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServiceProvider) =
+>>>>>>> upstream/master
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 

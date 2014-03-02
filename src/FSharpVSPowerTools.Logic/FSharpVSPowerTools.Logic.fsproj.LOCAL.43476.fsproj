@@ -22,10 +22,9 @@
     <Tailcalls>false</Tailcalls>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <WarningLevel>5</WarningLevel>
+    <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\Debug\FSharpVSPowerTools.Logic.XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
-    <NoWarn>52</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -33,10 +32,9 @@
     <Tailcalls>true</Tailcalls>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
-    <WarningLevel>5</WarningLevel>
+    <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\Release\FSharpVSPowerTools.Logic.XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
-    <NoWarn>52</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -56,7 +54,6 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <None Include="packages.config" />
     <Compile Include="VSUtils.fs" />
     <Compile Include="ActiveViewsContainer.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />
@@ -65,25 +62,14 @@
     <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="NavigateToItem.fs" />
-    <Compile Include="CodeFormattingServices.fs" />
-    <Compile Include="CodeFormattingUtils.fs" />
-    <Compile Include="CodeFormattingCommands.fs" />
-    <Compile Include="FormatDocumentCommand.fs" />
-    <Compile Include="FormatSelectionCommand.fs" />
-    <Compile Include="XmlDocFilter.fs" />
-    <Compile Include="DepthTagger.fs" />
-    <Compile Include="DepthAdornmentManager.fs" />
     <Compile Include="HighlightUsageTagger.fs" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
     <None Include="RenameDialog.xaml" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    </Reference>
-    <Reference Include="FantomasLib">
-      <HintPath>..\..\packages\Fantomas.1.0.5.1\lib\FantomasLib.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="FSharp.Compiler.Service">
@@ -146,11 +132,9 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
-    <Reference Include="UIAutomationTypes" />
     <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="WindowsBase" />

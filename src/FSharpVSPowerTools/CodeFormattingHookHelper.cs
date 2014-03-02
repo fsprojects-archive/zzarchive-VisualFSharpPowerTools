@@ -16,7 +16,7 @@ namespace FSharpVSPowerTools
     [Name("F# Dummy Command Hook")]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Interactive)]
-    public sealed class TextViewHookHelper : IWpfTextViewCreationListener
+    public class CodeFormattingHookHelper : IWpfTextViewCreationListener
     {
         private readonly IVsEditorAdaptersFactoryService _adaptersFactory;
         private readonly IEditorOptionsFactoryService _editorOptionsFactory;
@@ -25,7 +25,7 @@ namespace FSharpVSPowerTools
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
 
         [ImportingConstructor]
-        public TextViewHookHelper(
+        public CodeFormattingHookHelper(
             IVsEditorAdaptersFactoryService adaptersFactory, 
             IEditorOptionsFactoryService editorOptionsFactory,
             IEditorOperationsFactoryService editorOperationsFactoryService,
@@ -51,9 +51,9 @@ namespace FSharpVSPowerTools
             }));
         }
 
-        private Services GetServices()
+        private CodeFormattingServices GetServices()
         {
-            return new Services(_editorOptionsFactory, _editorOperationsFactorySerivce, _textBufferUndoManagerProvider, _textDocumentFactoryService);
+            return new CodeFormattingServices(_editorOptionsFactory, _editorOperationsFactorySerivce, _textBufferUndoManagerProvider, _textDocumentFactoryService);
         }
     }
 }

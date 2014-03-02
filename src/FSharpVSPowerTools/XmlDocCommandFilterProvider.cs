@@ -9,7 +9,9 @@ using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Text; 
+using Microsoft.VisualStudio.Text;
+using FSharpVSPowerTools.XmlDoc;
+using FSharpVSPowerTools.ProjectSystem;
 
 // Useful reference: http://msdn.microsoft.com/en-us/library/dd885243.aspx
 namespace FSharpVSPowerTools
@@ -17,13 +19,16 @@ namespace FSharpVSPowerTools
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Interactive)]
-    public class VsTextViewCommandFilter : IVsTextViewCreationListener
+    public class XmlDocCommandFilterProvider : IVsTextViewCreationListener
     {
-        [Import(typeof(ITextDocumentFactoryService))]
-        public ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
+        [Import]
+        internal ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
 
-        [Import(typeof(IVsEditorAdaptersFactoryService))]
-        public IVsEditorAdaptersFactoryService EditorFactory { get; set; }
+        [Import]
+        internal IVsEditorAdaptersFactoryService EditorFactory { get; set; }
+
+        [Import]
+        internal VSLanguageService FsharpLanguageService { get; set; }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -40,7 +45,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (TextDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                new FSharpXmlDoc.XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath);
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, FsharpLanguageService);
             }
         }
     }

@@ -116,6 +116,11 @@ module Dte =
         | _ -> ()
         doc
 
+<<<<<<< HEAD
+let inline ensureSucceded hr = 
+    ErrorHandler.ThrowOnFailure hr 
+    |> ignore
+=======
 type ProjectItem with
     member x.VSProject =
         Option.ofNull x
@@ -148,7 +153,4 @@ type SolutionEvents() =
     static member Instance = instance.Value
     /// Raised when any project in solution has changed.
     member x.ProjectChanged = projectChanged.Publish
-
-let inline ensureSucceded hr = 
-    ErrorHandler.ThrowOnFailure hr
-    |> ignore        
+>>>>>>> upstream/master

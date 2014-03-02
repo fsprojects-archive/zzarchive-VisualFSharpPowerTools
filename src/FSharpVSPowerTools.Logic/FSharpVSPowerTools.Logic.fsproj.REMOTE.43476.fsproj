@@ -58,13 +58,9 @@
   <ItemGroup>
     <None Include="packages.config" />
     <Compile Include="VSUtils.fs" />
-    <Compile Include="ActiveViewsContainer.fs" />
-    <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="ProjectParser.fs" />
     <Compile Include="ProjectProvider.fs" />
-    <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="LanguageService.fs" />
-    <Compile Include="NavigateToItem.fs" />
     <Compile Include="CodeFormattingServices.fs" />
     <Compile Include="CodeFormattingUtils.fs" />
     <Compile Include="CodeFormattingCommands.fs" />
@@ -111,13 +107,10 @@
     <Reference Include="Microsoft.VisualStudio.Editor">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Editor.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.VisualStudio.Language.Intellisense, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.11.0">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Shell.11.0.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.VisualStudio.Shell.12.0, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Immutable.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -138,7 +131,6 @@
     </Reference>
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Threading, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />

@@ -16,7 +16,11 @@ type VSLanguageService() =
                                                p.CompilerOptions, p.TargetFramework)
         instance.Checker.InvalidateConfiguration opts)
 
+<<<<<<< HEAD
     member this.GetSymbol(point: SnapshotPoint, projectProvider : ProjectProvider) =
+=======
+    let getSymbol (point: SnapshotPoint) (projectProvider: ProjectProvider) =
+>>>>>>> upstream/master
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
@@ -25,8 +29,9 @@ type VSLanguageService() =
         instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range)
 
+<<<<<<< HEAD
     member this.ProcessNavigableItemsInProject(openDocuments, (projectProvider: ProjectProvider), processNavigableItems, ct) =
-        instance.ProcessParseTrees(
+        Instance.ProcessParseTrees(
             projectProvider.ProjectFileName, 
             openDocuments, 
             projectProvider.SourceFiles, 
@@ -36,6 +41,9 @@ type VSLanguageService() =
             ct)
 
     member this.FindUsages (word : SnapshotSpan, currentFile : string, projectProvider : ProjectProvider) =
+=======
+    let findUsages (word: SnapshotSpan) (currentFile: string) (projectProvider: ProjectProvider) =
+>>>>>>> upstream/master
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
@@ -58,5 +66,3 @@ type VSLanguageService() =
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
-
-    member this.Checker = instance.Checker

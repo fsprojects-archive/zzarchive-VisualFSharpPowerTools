@@ -56,8 +56,9 @@
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
-    <Compile Include="XMLDocTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
+    <Compile Include="XMLDocTests.fs" />
+    <Compile Include="DepthColorizerTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
@@ -87,11 +88,6 @@
     <ProjectReference Include="..\..\src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
       <Name>FSharpVSPowerTools.Logic</Name>
       <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\src\FSharpXmlDoc\FSharpXmlDoc.fsproj">
-      <Name>FSharpXmlDoc</Name>
-      <Project>{48913937-d335-4a8e-a22f-7409385a989a}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>

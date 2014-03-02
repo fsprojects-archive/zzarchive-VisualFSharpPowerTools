@@ -8,7 +8,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
 /// various IntelliSense functions (such as completion & tool tips)
-type TypedParseResult(info:CheckFileResults, untyped : ParseFileResults) =
+type TypedParseResult(info:CheckFileResults, untyped: ParseFileResults) =
     member x.CheckFileResults = info        
     member x.ParseFileResults = untyped 
 
@@ -161,10 +161,10 @@ type LanguageService(dirtyNotify) =
     loop None)
 
   /// Get the array of all lex states in current source
-  let getLexStates defines (source : string) =
+  let getLexStates defines (source: string) =
     [|
         /// Iterate through the whole line to get the final lex state
-        let rec loop (lineTokenizer : LineTokenizer) lexState =
+        let rec loop (lineTokenizer: LineTokenizer) lexState =
             match lineTokenizer.ScanToken lexState with
             | None, newLexState -> newLexState
             | Some _, newLexState ->
@@ -207,7 +207,7 @@ type LanguageService(dirtyNotify) =
         else None
 
   // Returns symbol at a given position.
-  let getSymbol source line col lineStr (args: string array) : Symbol option =
+  let getSymbol source line col lineStr (args: string array): Symbol option =
       let defines =
           args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
                |> Seq.toList
@@ -355,7 +355,7 @@ type LanguageService(dirtyNotify) =
         let _req = ParseRequest(fileName, src, opts, false, None)
         checker.ParseFileInProject(fileName, src, opts)
 
-  member x.GetTypedParseResult(projectFilename, fileName:string, src, files, args, allowRecentTypeCheckResults, timeout, targetFramework)  : TypedParseResult = 
+  member x.GetTypedParseResult(projectFilename, fileName:string, src, files, args, allowRecentTypeCheckResults, timeout, targetFramework) : TypedParseResult = 
     let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
     debug "Parsing: Get typed parse result, fileName=%s" fileName
     let req = ParseRequest(fileName, src, opts, false, None)
