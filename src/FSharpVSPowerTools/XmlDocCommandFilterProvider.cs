@@ -28,7 +28,7 @@ namespace FSharpVSPowerTools
         internal IVsEditorAdaptersFactoryService EditorFactory { get; set; }
 
         [Import]
-        internal VSLanguageService FsharpLanguageService { get; set; }
+        internal VSLanguageService FSharpLanguageService { get; set; }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -45,7 +45,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (TextDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, FsharpLanguageService);
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, FSharpLanguageService);
             }
         }
     }
