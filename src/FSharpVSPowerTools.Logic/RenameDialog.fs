@@ -12,12 +12,12 @@ open FSharpVSPowerTools
 
 type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
 
-type RenameDialogModel(originalName: string, symbol: FSharpSymbol, project: ProjectProvider) =
+type RenameDialogModel(originalName: string, symbol: FSharpSymbol, project: IProjectProvider) =
     let mutable name = originalName
     let errorsChanged = Event<_,_>()
 
-    let isFileInCurrentProject ffileName =
-        let filePath = Path.GetFullPath ffileName
+    let isFileInCurrentProject fileName =
+        let filePath = Path.GetFullPath fileName
         // NB: this isn't a foolproof way to match two paths
         project.SourceFiles |> Array.exists ((=) filePath)
 
