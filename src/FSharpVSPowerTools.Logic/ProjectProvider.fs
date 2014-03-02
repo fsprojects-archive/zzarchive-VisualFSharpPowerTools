@@ -92,7 +92,7 @@ type ProjectProvider(project: VSProject) =
                 |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
                 |> Seq.toArray
 
-type DummyProjectProvider (doc: Document) = 
+type VirtualProjectProvider (doc: Document) = 
     do Debug.Assert (doc <> null, "Input document should not be null.")
     
     interface IProjectProvider with
@@ -155,7 +155,7 @@ module ProjectCache =
             match msg with
             | Get (doc, r) ->
                 let projects, project = obtainProject projects doc.ProjectItem.VSProject
-                let project = project |> Option.orElse (Some (DummyProjectProvider doc :> _))
+                let project = project |> Option.orElse (Some (VirtualProjectProvider doc :> _))
                 r.Reply project
                 return! loop projects
             | Update vsProject -> 
