@@ -67,7 +67,10 @@ and
     let listFSharpProjectsInSolution() = 
         let rec handleProject (p: Project) =
             if LanguagePrimitives.PhysicalEquality p null then []
-            elif p.Kind.ToUpperInvariant() = Constants.FSharpProjectKind then [ ProjectProvider(p.Object :?> _)]
+            elif p.Kind.ToUpperInvariant() = Constants.FSharpProjectKind then 
+                match ProjectCache.putProject p with
+                | Some provider -> [provider]
+                | _ -> []
             elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
             else []
         and handleProjectItems(items: ProjectItems) = 

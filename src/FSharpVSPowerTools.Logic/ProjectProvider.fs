@@ -88,9 +88,11 @@ module ProjectCache =
     type UniqueProjectName = string
     type Projects = Map<UniqueProjectName, ProjectProvider>
 
+    [<NoEquality; NoComparison>]
     type private Message = 
         | Get of Document * AsyncReplyChannel<ProjectProvider option>
         | Update of VSProject
+        | Put of Project * AsyncReplyChannel<ProjectProvider option>
 
     let projectUpdated = Event<_>()
 
@@ -125,6 +127,11 @@ module ProjectCache =
         let rec loop (projects: Projects) = async {
             let! msg = inbox.Receive()
             match msg with
+            | Put(project, r) ->
+                let vsProject = try Option.ofNull (project.Object :?> VSProject) with _ -> None
+                let projects, project = obtainProject projects vsProject
+                r.Reply project
+                return! loop projects
             | Get (doc, r) ->
                 let projects, project = obtainProject projects doc.ProjectItem.VSProject
                 r.Reply project
@@ -142,5 +149,7 @@ module ProjectCache =
 
     /// Returns ProjectProvider for given Document.
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))
+    /// Returns ProjectProvider for given Document.
+    let putProject project = agent.PostAndReply (fun r -> Put (project, r))
     /// Raised when a project is changed.
     let projectChanged = projectUpdated.Publish
