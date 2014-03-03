@@ -81,10 +81,12 @@ type FormatCommand(getConfig: Func<FormatConfig>) as self =
             true
         with
             | :? Fantomas.FormatConfig.FormatException as ex ->
-                MessageBox.Show(ex.Message, "F# Power Tools") |> ignore
+                MessageBox.Show(ex.Message, Resource.vsPackageTitle, 
+                    MessageBoxButton.OK, MessageBoxImage.Error) |> ignore
                 false
             | ex ->
-                MessageBox.Show("Unable to format. " + ex.Message, "F# Power Tools") |> ignore
+                MessageBox.Show(Resource.formattingErrorMessage + ex.Message, 
+                    Resource.vsPackageTitle, MessageBoxButton.OK, MessageBoxImage.Error) |> ignore
                 false
 
     abstract GetFormatted: isSignatureFile: bool * source: string * config: Fantomas.FormatConfig.FormatConfig -> string

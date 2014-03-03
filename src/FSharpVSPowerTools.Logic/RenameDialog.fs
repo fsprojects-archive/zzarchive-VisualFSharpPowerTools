@@ -21,8 +21,8 @@ type RenameDialogModel(originalName: string, symbol: FSharpSymbol) =
         debug "[Rename Refactoring] Check the following name: %s" name
         let name = name.Trim()
         match name with
-        | "" -> Choice2Of2 "Empty names are not allowed."
-        | _ when name = originalName -> Choice2Of2 "New name is the same as the original."
+        | "" -> Choice2Of2 Resource.validatingEmptyName
+        | _ when name = originalName -> Choice2Of2 Resource.validatingOriginalName
         | _ ->
             match symbol with
             | :? FSharpUnionCase ->
@@ -30,12 +30,13 @@ type RenameDialogModel(originalName: string, symbol: FSharpSymbol) =
                 if isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0])) then
                     Choice1Of2()
                 else
-                    Choice2Of2 "Invalid name for union cases."
+                    Choice2Of2 Resource.validatingUnionCase
             | :? FSharpMemberFunctionOrValue as v when isOperator (cleanUpSymbol v.DisplayName)  ->
                 if isOperator name then Choice1Of2() 
-                else Choice2Of2 "Invalid name for operators."
-            | _ -> if isIdentifier name then Choice1Of2()
-                    else Choice2Of2 "Invalid name for identifiers."
+                else Choice2Of2 Resource.validatingOperator
+            | _ -> 
+                if isIdentifier name then Choice1Of2()
+                else Choice2Of2 Resource.validatingIdentifier
 
     let mutable validationResult = validate name
     member x.Result = validationResult
@@ -73,7 +74,7 @@ module UI =
                 window.Root.Close()
             | Choice2Of2 errorMsg ->
                 window.Root.DialogResult <- Nullable false
-                MessageBox.Show(errorMsg, "F# Power Tools") |> ignore)
+                MessageBox.Show(errorMsg, Resource.vsPackageTitle, MessageBoxButton.OK, MessageBoxImage.Error) |> ignore)
         window.btnCancel.Click.Add(fun _ -> 
             window.Root.DialogResult <- Nullable false
             window.Root.Close())

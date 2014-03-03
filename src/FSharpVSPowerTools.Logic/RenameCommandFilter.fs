@@ -120,7 +120,8 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
                 let! res = x.ShowDialog wnd
                 if res then rename currentName model.Name references
             else
-                MessageBox.Show ("Can't rename. The symbol isn't defined in current project.", "F# Power Tools") |> ignore 
+                MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
+                    MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 
         } |> ignore
 
     member x.ShowDialog (wnd: Window) =

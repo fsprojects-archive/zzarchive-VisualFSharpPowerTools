@@ -57,6 +57,7 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
     <None Include="packages.config" />
+    <Compile Include="Resource.fs" />
     <Compile Include="VSUtils.fs" />
     <Compile Include="ProjectParser.fs" />
     <Compile Include="ProjectProvider.fs" />
