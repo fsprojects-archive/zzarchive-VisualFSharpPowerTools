@@ -15,6 +15,7 @@ type TypedParseResult(info:CheckFileResults, untyped: ParseFileResults) =
 // --------------------------------------------------------------------------------------
 /// Represents request send to the background worker
 /// We need information about the current file and project (options)
+[<NoEquality; NoComparison>]
 type internal ParseRequest (file:string, source:string, options:ProjectOptions, fullCompile:bool, afterCompleteTypeCheckCallback: (string * ErrorInfo [] -> unit) option) =
   member x.File  = file
   member x.Source = source
@@ -29,6 +30,7 @@ type internal ParseRequest (file:string, source:string, options:ProjectOptions, 
 // All processing in the mailbox is quick - however, if we don't have required info
 // we post ourselves a message that will be handled when the info becomes available
 
+[<NoEquality; NoComparison>]
 type internal LanguageServiceMessage = 
   // Trigger parse request in ParserWorker
   | TriggerRequest of ParseRequest
