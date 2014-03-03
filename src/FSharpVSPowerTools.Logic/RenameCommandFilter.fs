@@ -22,7 +22,7 @@ module PkgCmdIDList =
 type DocumentState =
     { Word: SnapshotSpan option
       File: string
-      Project: ProjectProvider }
+      Project: IProjectProvider }
 
 type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServiceProvider) =
     let mutable state = None
