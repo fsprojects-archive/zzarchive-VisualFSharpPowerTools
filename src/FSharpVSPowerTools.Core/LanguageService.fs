@@ -29,6 +29,7 @@ type internal ParseRequest (file:string, source:string, options:ProjectOptions, 
 // All processing in the mailbox is quick - however, if we don't have required info
 // we post ourselves a message that will be handled when the info becomes available
 
+[<NoComparison>]
 type internal LanguageServiceMessage = 
   // Trigger parse request in ParserWorker
   | TriggerRequest of ParseRequest

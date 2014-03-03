@@ -51,7 +51,7 @@ namespace FSharpVSPowerTools
     {
         [Export]
         [Name("FSharpDepthFullLineAdornment")]
-        [Order(Before = PredefinedAdornmentLayers.TextMarker)]
+        [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
         internal AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
         [Import]

@@ -88,6 +88,7 @@ module ProjectCache =
     type UniqueProjectName = string
     type Projects = Map<UniqueProjectName, ProjectProvider>
 
+    [<NoComparison>]
     type private Message = 
         | Get of Document * AsyncReplyChannel<ProjectProvider option>
         | Update of VSProject

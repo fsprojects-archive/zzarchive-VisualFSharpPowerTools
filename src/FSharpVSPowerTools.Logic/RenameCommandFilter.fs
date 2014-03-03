@@ -18,6 +18,7 @@ module PkgCmdIDList =
     let CmdidBuiltinRenameCommand = 1550u // ECMD_RENAME
     let GuidBuiltinCmdSet = typedefof<VSConstants.VSStd2KCmdID>.GUID
 
+[<NoComparison>]
 type DocumentState =
     { Word: SnapshotSpan option
       File: string

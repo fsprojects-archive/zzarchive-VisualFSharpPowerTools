@@ -10,10 +10,10 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Text
 
 [<AllowNullLiteral>]
-type CodeFormattingServices(editorOptionsFactory: IEditorOptionsFactoryService,
-              editorOperationsFactoryService: IEditorOperationsFactoryService,
-              textBufferUndoManagerProvider: ITextBufferUndoManagerProvider,
-              textDocumentFactoryService: ITextDocumentFactoryService) =
+type CodeFormattingServices(editorOptionsFactory: IEditorOptionsFactoryService, 
+                            editorOperationsFactoryService: IEditorOperationsFactoryService,
+                            textBufferUndoManagerProvider: ITextBufferUndoManagerProvider, 
+                            textDocumentFactoryService: ITextDocumentFactoryService) = 
     member val EditorOptionsFactory = editorOptionsFactory
     member val TextBufferUndoManagerProvider = textBufferUndoManagerProvider
     member val EditorOperationsFactoryService = editorOperationsFactoryService
