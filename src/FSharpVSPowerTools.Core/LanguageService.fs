@@ -327,20 +327,22 @@ type LanguageService(dirtyNotify) =
             let file = files.[i]
             let source = 
                 match Map.tryFind file openDocuments with
-                | Some source -> source 
-                | _ -> File.ReadAllText file
-            let opts = 
-                match !projectOptions with
-                | None -> 
-                    let opts = x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
-                    projectOptions := Some opts
-                    opts
-                | Some opts -> opts
-            let parseResults = checker.ParseFileInProject(file, source, opts)
-            match parseResults.ParseTree with
-            | Some parseTree -> 
-                parseTreeHandler parseTree
-            | None -> ()
+                | None -> try Some(File.ReadAllText file) with _ -> None 
+                | x -> x
+            source
+            |> Option.iter (fun source -> 
+                let opts = 
+                    match !projectOptions with
+                    | None -> 
+                        let opts = x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
+                        projectOptions := Some opts
+                        opts
+                    | Some opts -> opts
+                let parseResults = checker.ParseFileInProject(file, source, opts)
+
+                parseResults.ParseTree
+                |> Option.iter parseTreeHandler
+            )
             loop (i + 1)
     loop 0
 

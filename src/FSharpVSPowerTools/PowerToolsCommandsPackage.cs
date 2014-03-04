@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.ProjectSystem;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
 {
@@ -23,6 +24,8 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package
     {
+        private VSUtils.SolutionEvents solutionEvents;
+
         protected override void Initialize()
         {
             base.Initialize();
@@ -33,7 +36,8 @@ namespace FSharpVSPowerTools
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
 
-            VSUtils.SolutionEvents.Initialize();
+            solutionEvents = new VSUtils.SolutionEvents(this);
+            ProjectCache.connect(solutionEvents);
         }
     }
 }

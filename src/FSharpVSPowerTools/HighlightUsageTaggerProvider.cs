@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Shell;
 using EnvDTE;
 using FSharpVSPowerTools.HighlightUsage;
 using FSharpVSPowerTools.ProjectSystem;
+using System;
 
 namespace FSharpVSPowerTools
 {
@@ -23,6 +24,9 @@ namespace FSharpVSPowerTools
         [Import]
         private VSLanguageService fsharpVsLanguageService;
 
+        [Import(typeof(SVsServiceProvider))]
+        private IServiceProvider serviceProvider;
+
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // Only provide highlighting on the top-level buffer
@@ -35,7 +39,7 @@ namespace FSharpVSPowerTools
                 return null;
             }
 
-            return new HighlightUsageTagger(textView, buffer, TextSearchService, fsharpVsLanguageService) as ITagger<T>;
+            return new HighlightUsageTagger(textView, buffer, TextSearchService, fsharpVsLanguageService, serviceProvider) as ITagger<T>;
         }
     }
 }

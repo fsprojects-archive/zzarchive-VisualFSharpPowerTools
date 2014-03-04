@@ -29,7 +29,7 @@ type internal OpenedDocument =
         FilePath: string
     }
 
-type internal NavigateToItemExtraData = 
+type NavigateToItemExtraData = 
     {
         FileName: string
         Span: Microsoft.FSharp.Compiler.Range.Range01
@@ -38,21 +38,38 @@ type internal NavigateToItemExtraData =
 
 [<Package("f152487e-9a22-4cf9-bee6-a8f7c77f828d")>]
 [<Export(typeof<INavigateToItemProviderFactory>)>]
-type NavigateToItemProviderFactory() =
-    [<Import; DefaultValue>]
-    val mutable activeViewsContainer: ActiveViewsContainer
-    [<Import; DefaultValue>]
-    val mutable textDocumentFactoryService: ITextDocumentFactoryService
-    [<Import; DefaultValue>]
-    val mutable fsharpLanguageService: VSLanguageService
-    [<Import; DefaultValue>]
-    val mutable itemDisplayFactory: INavigateToItemDisplayFactory
+type NavigateToItemProviderFactory 
+    [<ImportingConstructor>]
+    (
+        activeViewsContainer: ActiveViewsContainer,
+        [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+        textDocumentFactoryService: ITextDocumentFactoryService,
+        fsharpLanguageService: VSLanguageService,
+        [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
+        vsCompositionService: ICompositionService
+    ) =
     
+    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let currentVersion = VisualStudioVersion.FromDTEVersion dte.Version
+    let itemDisplayFactory = 
+        let candidate =
+            itemDisplayFactories
+            |> Seq.tryFind (fun f -> VisualStudioVersion.Matches currentVersion f.Metadata.Version)
+
+        match candidate with
+        | Some l -> l.Value
+        | None -> 
+            let instance = VS2012NavigateToItemDisplayFactory()
+            vsCompositionService.SatisfyImportsOnce(instance)
+            |> ignore
+            instance :> _
+
+
     interface INavigateToItemProviderFactory with
         member x.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
-            provider <- new NavigateToItemProvider(x.activeViewsContainer, x.textDocumentFactoryService, serviceProvider, x.fsharpLanguageService, x.itemDisplayFactory)
+            provider <- new NavigateToItemProvider(activeViewsContainer, textDocumentFactoryService, serviceProvider, fsharpLanguageService, itemDisplayFactory)
             true
-and 
+and
     NavigateToItemProvider
         (
             activeViewsContainer: ActiveViewsContainer,
@@ -62,7 +79,7 @@ and
             itemDisplayFactory: INavigateToItemDisplayFactory
         ) = 
     let mutable cts = new System.Threading.CancellationTokenSource()
-    let dte = serviceProvider.GetService(typeof<SDTE>) :?> DTE
+    let dte = serviceProvider.GetService<DTE, SDTE>()
     
     let listFSharpProjectsInSolution() = 
         let rec handleProject (p: Project) =
@@ -84,15 +101,14 @@ and
 
     let runSearch(projects: ProjectProvider list, openedDocuments: OpenedDocument list, searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
         let openDocuments = openedDocuments |> List.map (fun { FilePath = f; SourceText = s } -> f, s) |> Map.ofList
-        let searchPattern = Text.RegularExpressions.Regex(searchValue, Text.RegularExpressions.RegexOptions.IgnoreCase)
         let processNavigableItems (navigationItems: seq<Navigation.NavigableItem>) = 
             for item in navigationItems do
                 let name = item.Name
-                let m = searchPattern.Match name
+                let index = name.IndexOf(searchValue, StringComparison.CurrentCultureIgnoreCase)
                 let matchKind = 
-                    if not m.Success then MatchKind.None
-                    elif m.Index = 0 then
-                        if m.Length = name.Length then MatchKind.Exact
+                    if index = -1 then MatchKind.None
+                    elif index = 0 then
+                        if searchValue.Length = name.Length then MatchKind.Exact
                         else MatchKind.Prefix
                     else MatchKind.Substring
                 if matchKind <> MatchKind.None then
@@ -148,12 +164,29 @@ and
         member x.Dispose() = (x :> INavigateToItemProvider).StopSearch()
 and
     [<Export>]
-    IconCache() =
+    NavigationItemIconCache() =
+
         [<Import; DefaultValue>] 
         val mutable glyphService: IGlyphService
         let iconCache = Dictionary()
-        
-        member x.GetIcon(glyphGroup, glyphItem): System.Drawing.Icon = 
+
+        let glyphGroupForNavigateToItemKind (kind: string) =
+            match kind with
+            | NavigateToItemKind.Class    -> StandardGlyphGroup.GlyphGroupClass
+            | NavigateToItemKind.Constant -> StandardGlyphGroup.GlyphGroupConstant
+            | NavigateToItemKind.Delegate -> StandardGlyphGroup.GlyphGroupDelegate
+            | NavigateToItemKind.Enum     -> StandardGlyphGroup.GlyphGroupEnum
+            | NavigateToItemKind.EnumItem -> StandardGlyphGroup.GlyphGroupEnumMember
+            | NavigateToItemKind.Event    -> StandardGlyphGroup.GlyphGroupEvent
+            | NavigateToItemKind.Field    -> StandardGlyphGroup.GlyphGroupField
+            | NavigateToItemKind.Interface -> StandardGlyphGroup.GlyphGroupInterface
+            | NavigateToItemKind.Method   -> StandardGlyphGroup.GlyphGroupMethod
+            | NavigateToItemKind.Module   -> StandardGlyphGroup.GlyphGroupModule
+            | NavigateToItemKind.Property -> StandardGlyphGroup.GlyphGroupProperty
+            | NavigateToItemKind.Structure -> StandardGlyphGroup.GlyphGroupStruct
+            | other -> failwithf "Unrecognized NavigateToItemKind:%s" other
+                    
+        member private x.GetOrCreateIcon(glyphGroup, glyphItem): System.Drawing.Icon = 
             let key = (glyphGroup, glyphItem)
             match iconCache.TryGetValue key with
             | true, (icon, _) -> icon
@@ -172,6 +205,12 @@ and
                     | _ -> null, null
                 iconCache.[key] <- pair
                 icon
+        member x.GetIconForNavigationItemKind(kind: string) = 
+            let glyphGroup = glyphGroupForNavigateToItemKind kind
+            // TODO
+            let glyphItem = StandardGlyphItem.GlyphItemPublic
+            x.GetOrCreateIcon((glyphGroup, glyphItem))
+
         interface IDisposable with
             member x.Dispose() = 
                 for (KeyValue(_, (icon, bitmap))) in iconCache do
@@ -180,96 +219,64 @@ and
                         bitmap.Dispose()
                 iconCache.Clear()
 and
-    [<Export(typeof<INavigateToItemDisplayFactory>)>]
-    NavigateToItemDisplayFactory() =
+    [<ExportWithMinimalVisualStudioVersion(typeof<INavigateToItemDisplayFactory>, Version = VisualStudioVersion.VS2012)>]
+    VS2012NavigateToItemDisplayFactory() =
+
+        [<Import(typeof<SVsServiceProvider>); DefaultValue>]
+        val mutable serviceProvider: IServiceProvider
+        [<Import; DefaultValue>]
+        val mutable iconCache: NavigationItemIconCache
         
-        [<Import; DefaultValue>]
-        val mutable navigator: DocumentNavigator
-        [<Import; DefaultValue>]
-        val mutable iconCache: IconCache
-
-        let glyphGroupForNavigateToItemKind (kind: string) =
-            match kind with
-            | NavigateToItemKind.Class    -> StandardGlyphGroup.GlyphGroupClass
-            | NavigateToItemKind.Constant -> StandardGlyphGroup.GlyphGroupConstant
-            | NavigateToItemKind.Delegate -> StandardGlyphGroup.GlyphGroupDelegate
-            | NavigateToItemKind.Enum     -> StandardGlyphGroup.GlyphGroupEnum
-            | NavigateToItemKind.EnumItem -> StandardGlyphGroup.GlyphGroupEnumMember
-            | NavigateToItemKind.Event    -> StandardGlyphGroup.GlyphGroupEvent
-            | NavigateToItemKind.Field    -> StandardGlyphGroup.GlyphGroupField
-            | NavigateToItemKind.Interface -> StandardGlyphGroup.GlyphGroupInterface
-            | NavigateToItemKind.Method   -> StandardGlyphGroup.GlyphGroupMethod
-            | NavigateToItemKind.Module   -> StandardGlyphGroup.GlyphGroupModule
-            | NavigateToItemKind.Property -> StandardGlyphGroup.GlyphGroupProperty
-            | NavigateToItemKind.Structure -> StandardGlyphGroup.GlyphGroupStruct
-            | other -> failwithf "Unrecognized NavigateToItemKind:%s" other
-
         interface INavigateToItemDisplayFactory with
             member x.CreateItemDisplay(item) = 
-                let glyphGroup = glyphGroupForNavigateToItemKind item.Kind
-                // TODO 
-                let glyphItem = StandardGlyphItem.GlyphItemPublic 
-                let icon = x.iconCache.GetIcon(glyphGroup, glyphItem)
-                NavigateToItemDisplay(item, icon, x.navigator) :> _
-and 
-    NavigateToItemDisplay(item: NavigateToItem, icon, navigator: DocumentNavigator) =
+                let icon = x.iconCache.GetIconForNavigationItemKind(item.Kind)
+                NavigateToItemDisplay(item, icon, x.serviceProvider) :> _
+and
+    NavigateToItemDisplay(item: NavigateToItem, icon, serviceProvider: IServiceProvider) =
         let extraData: NavigateToItemExtraData = unbox item.Tag
-        interface INavigateToItemDisplay2 with
+        interface INavigateToItemDisplay with
             member x.Name = item.Name
             member x.Glyph = icon
             member x.AdditionalInformation = extraData.FileName
             member x.Description = extraData.Description
             member x.DescriptionItems = Constants.EmptyReadOnlyCollection
-            member x.NavigateTo() = navigator.NavigateTo(extraData)
-            member x.GetProvisionalViewingStatus() = navigator.GetProvisionalViewingStatus(extraData)
-            member x.PreviewItem() = navigator.PreviewItem(extraData)
-and
-    [<Export>]
-    DocumentNavigator() =
+            member x.NavigateTo() = 
+                let mutable hierarchy = Unchecked.defaultof<_>
+                let mutable itemId = Unchecked.defaultof<_>
+                let mutable windowFrame = Unchecked.defaultof<_>
+                let isOpened = 
+                    VsShellUtilities.IsDocumentOpen(
+                        serviceProvider, 
+                        extraData.FileName, 
+                        Constants.LogicalViewTextGuid,
+                        &hierarchy,
+                        &itemId,
+                        &windowFrame)
+                let canShow = 
+                    if isOpened then true
+                    else
+                        // TODO: track the project that contains document and open document in project context
+                        try
+                            VsShellUtilities.OpenDocument(
+                                serviceProvider, 
+                                extraData.FileName, 
+                                Constants.LogicalViewTextGuid, 
+                                &hierarchy,
+                                &itemId,
+                                &windowFrame)
+                            true
+                        with _ -> false
+                if canShow then
+                    windowFrame.Show()
+                    |> ensureSucceded
 
-        [<Import(typeof<Microsoft.VisualStudio.Shell.SVsServiceProvider>); DefaultValue>]
-        val mutable serviceProvider: IServiceProvider
+                    let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+                    let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+                    let mutable vsTextBuffer = Unchecked.defaultof<_>
+                    vsTextView.GetBuffer(&vsTextBuffer)
+                    |> ensureSucceded
 
-        member internal x.NavigateTo(position: NavigateToItemExtraData) =
-            let mutable hierarchy = Unchecked.defaultof<_>
-            let mutable itemId = Unchecked.defaultof<_>
-            let mutable windowFrame = Unchecked.defaultof<_>
+                    let (startRow, startCol), (endRow, endCol) = extraData.Span
+                    vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
+                    |> ensureSucceded
 
-            let isOpened = 
-                VsShellUtilities.IsDocumentOpen(
-                    x.serviceProvider, 
-                    position.FileName, 
-                    Constants.LogicalViewTextGuid,
-                    &hierarchy,
-                    &itemId,
-                    &windowFrame)
-            let canShow = 
-                if isOpened then true
-                else
-                    // TODO: track the project that contains document and open document in project context
-                    let opened = 
-                        VsShellUtilities.TryOpenDocument(
-                            x.serviceProvider, 
-                            position.FileName, 
-                            Constants.LogicalViewTextGuid, 
-                            &hierarchy,
-                            &itemId,
-                            &windowFrame)
-                    ErrorHandler.Succeeded(opened)
-            if canShow then
-                windowFrame.Show()
-                |> ensureSucceded
-
-                let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-                let vsTextManager = x.serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
-                let mutable vsTextBuffer = Unchecked.defaultof<_>
-                vsTextView.GetBuffer(&vsTextBuffer)
-                |> ensureSucceded
-
-                let (startRow, startCol), (endRow, endCol) = position.Span
-                vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
-                |> ensureSucceded
-        member internal x.GetProvisionalViewingStatus(position: NavigateToItemExtraData) = 
-            int (VsShellUtilities.GetProvisionalViewingStatus(position.FileName)) 
-        member internal x.PreviewItem(position: NavigateToItemExtraData) = 
-            x.NavigateTo(position)

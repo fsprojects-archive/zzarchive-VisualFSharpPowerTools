@@ -18,6 +18,7 @@ module PkgCmdIDList =
     let CmdidBuiltinRenameCommand = 1550u // ECMD_RENAME
     let GuidBuiltinCmdSet = typedefof<VSConstants.VSStd2KCmdID>.GUID
 
+[<NoEquality; NoComparison>]
 type DocumentState =
     { Word: SnapshotSpan option
       File: string
@@ -34,7 +35,8 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
     let updateAtCaretPosition(caretPosition: CaretPosition) = 
         maybe {
             let! point = view.TextBuffer.GetSnapshotPoint caretPosition
-            let! doc = Dte.getActiveDocument()
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = Dte.getActiveDocument(dte)
             let! project = ProjectCache.getProject doc
             state <- Some
                 { File = doc.FullName
@@ -59,7 +61,8 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
-                Dte.getActiveDocument()
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                Dte.getActiveDocument(dte)
                 |> Option.iter (fun doc ->
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)

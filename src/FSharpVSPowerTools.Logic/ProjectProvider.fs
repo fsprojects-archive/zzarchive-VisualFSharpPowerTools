@@ -93,7 +93,7 @@ module ProjectCache =
         | Get of Document * AsyncReplyChannel<ProjectProvider option>
         | Update of VSProject
         | Put of Project * AsyncReplyChannel<ProjectProvider option>
-
+    
     let projectUpdated = Event<_>()
 
     let private agent = MailboxProcessor.Start(fun inbox ->
@@ -147,9 +147,8 @@ module ProjectCache =
         loop Map.empty)
 
     agent.Error.Add (fail "%O")
-
-    SolutionEvents.Instance.ProjectChanged.Add (fun vsProject -> agent.Post (Update vsProject))
-
+    // attaches listener to the given instance of VSUtils.SolutionEvents
+    let connect (solutionEvents: VSUtils.SolutionEvents) = solutionEvents.ProjectChanged.Add(Update >> agent.Post)
     /// Returns ProjectProvider for given Document.
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))
     /// Returns ProjectProvider for given Project.

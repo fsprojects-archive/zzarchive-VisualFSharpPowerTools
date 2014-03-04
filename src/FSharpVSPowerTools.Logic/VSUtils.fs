@@ -56,6 +56,10 @@ type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
         Option.ofNullable <| position.Point.GetPoint(x, position.Affinity)
 
+type IServiceProvider with
+    member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
+    member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
+
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Editor
@@ -101,12 +105,9 @@ open VSLangProj
 open System.Diagnostics
 
 module Dte =
-    let instance(): DTE option = tryCast (Package.GetGlobalService typedefof<DTE>)
-    
-    let getActiveDocument() =
+    let getActiveDocument(dte: DTE) =
         let doc =
             maybe {
-                let! dte = instance()
                 let! doc = Option.ofNull dte.ActiveDocument
                 let! item = Option.ofNull doc.ProjectItem 
                 let! _ = Option.ofNull item.ContainingProject 
@@ -115,6 +116,7 @@ module Dte =
         | None -> fail "Should be able to find active document and active project."
         | _ -> ()
         doc
+    
 
 type ProjectItem with
     member x.VSProject =
@@ -122,11 +124,11 @@ type ProjectItem with
         |> Option.bind (fun item ->
             try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
 
-type SolutionEvents() =
+type SolutionEvents (serviceProvider: IServiceProvider) =
     let projectChanged = Event<_>()
     // we must keep a reference to the events in order to prevent GC to collect it
-    let dte = Dte.instance()
-    let events: EnvDTE80.Events2 option = dte |> Option.bind (fun dte -> tryCast dte.Events)
+    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let events: EnvDTE80.Events2 option = tryCast dte.Events
     
     let onProjectChanged (projectItem: ProjectItem) =
         projectItem.VSProject
@@ -142,10 +144,7 @@ type SolutionEvents() =
            events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
            debug "[SolutionEvents] Subscribed for ProjectItemsEvents"
        | _ -> fail "[SolutionEvents] Cannot subscribe for ProjectItemsEvents"
-
-    static let instance = lazy (SolutionEvents())
-    static member Initialize() = () // instance.Force()
-    static member Instance = instance.Value
+    
     /// Raised when any project in solution has changed.
     member x.ProjectChanged = projectChanged.Publish
 
