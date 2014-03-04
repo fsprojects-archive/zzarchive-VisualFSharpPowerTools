@@ -56,7 +56,6 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <None Include="packages.config" />
     <Compile Include="Utils.fs" />
     <Compile Include="CompilerLocationUtils.fs" />
     <Compile Include="LanguageService.fs" />
@@ -65,7 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.20\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.22\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />
@@ -75,6 +74,9 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
