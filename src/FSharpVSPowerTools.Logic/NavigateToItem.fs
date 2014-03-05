@@ -23,12 +23,6 @@ module Constants =
     let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||]); 
     let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 
-type internal OpenedDocument = 
-    {
-        SourceText: string
-        FilePath: string
-    }
-
 type NavigateToItemExtraData = 
     {
         FileName: string
@@ -41,9 +35,8 @@ type NavigateToItemExtraData =
 type NavigateToItemProviderFactory 
     [<ImportingConstructor>]
     (
-        activeViewsContainer: ActiveViewsContainer,
+        openDocumentsTracker: OpenDocumentsTracker,
         [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
-        textDocumentFactoryService: ITextDocumentFactoryService,
         fsharpLanguageService: VSLanguageService,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
         vsCompositionService: ICompositionService
@@ -67,13 +60,12 @@ type NavigateToItemProviderFactory
 
     interface INavigateToItemProviderFactory with
         member x.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
-            provider <- new NavigateToItemProvider(activeViewsContainer, textDocumentFactoryService, serviceProvider, fsharpLanguageService, itemDisplayFactory)
+            provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory)
             true
 and
     NavigateToItemProvider
         (
-            activeViewsContainer: ActiveViewsContainer,
-            textDocumentFactoryService: ITextDocumentFactoryService,
+            openDocumentsTracker: OpenDocumentsTracker,
             serviceProvider: IServiceProvider,
             fsharpLanguageService: VSLanguageService,
             itemDisplayFactory: INavigateToItemDisplayFactory
@@ -99,8 +91,7 @@ and
             for p in dte.Solution.Projects do yield! handleProject p
         ]
 
-    let runSearch(projects: ProjectProvider list, openedDocuments: OpenedDocument list, searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
-        let openDocuments = openedDocuments |> List.map (fun { FilePath = f; SourceText = s } -> f, s) |> Map.ofList
+    let runSearch(projects: IProjectProvider list, openDocuments: Map<string, string>, searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
         let processNavigableItems (navigationItems: seq<Navigation.NavigableItem>) = 
             for item in navigationItems do
                 let name = item.Name
@@ -145,14 +136,8 @@ and
     interface INavigateToItemProvider with
         member x.StartSearch(callback, searchValue) = 
             let openedDocuments = 
-                activeViewsContainer.MapOpenViews (fun view -> 
-                    match textDocumentFactoryService.TryGetTextDocument view.TextBuffer with
-                    | false, _ -> None
-                    | true, document ->
-                        // TODO: save project for opened files 
-                        let text = view.TextSnapshot.GetText()
-                        Some ({ SourceText = text; FilePath = document.FilePath })
-                )
+                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path,snapshot)) -> path, snapshot.GetText())
+                |> Map.ofSeq
             // TODO enable for loose files
             let projects = listFSharpProjectsInSolution();
             runSearch(projects, openedDocuments, searchValue, callback, cts.Token)

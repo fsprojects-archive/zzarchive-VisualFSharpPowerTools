@@ -8,6 +8,14 @@ open VSLangProj
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
+type IProjectProvider =
+    abstract ProjectFileName: string
+    abstract UniqueName: string
+    abstract TargetFSharpCoreVersion: string
+    abstract TargetFramework: FSharpTargetFramework
+    abstract CompilerOptions: string array
+    abstract SourceFiles: string array
+
 type ProjectProvider(project: VSProject) = 
     do Debug.Assert(project <> null && project.Project <> null, "Input project should be well-formed.")
     
@@ -26,22 +34,7 @@ type ProjectProvider(project: VSProject) =
 
     let projectOpt = ProjectParser.load projectFileName
 
-    member x.ProjectFileName = projectFileName
-    member x.UniqueName = project.Project.UniqueName
-
-    member x.TargetFSharpCoreVersion = 
-        getProperty "TargetFSharpCoreVersion"
-
-    member x.TargetFramework = 
-        match getProperty "TargetFrameworkVersion" with
-        | null | "v4.5" | "v4.5.1" -> FSharpTargetFramework.NET_4_5
-        | "v4.0" -> FSharpTargetFramework.NET_4_0
-        | "v3.5" -> FSharpTargetFramework.NET_3_5
-        | "v3.0" -> FSharpTargetFramework.NET_3_5
-        | "v2.0" -> FSharpTargetFramework.NET_2_0
-        | _ -> invalidArg "prop" "Unsupported .NET framework version"
-
-    member private x.References = 
+    let references = 
         project.References
         |> Seq.cast<Reference>
         // Since project references are resolved automatically, we include it here
@@ -49,50 +42,85 @@ type ProjectProvider(project: VSProject) =
         |> Seq.map (fun r -> Path.GetFullPath(r.Path))
         |> Seq.map (fun path -> sprintf "-r:%s" path)
 
-    member x.CompilerOptions = 
-        match projectOpt with
-        | Some p ->
-            [| 
-                yield! ProjectParser.getOptionsWithoutReferences p
-                yield! x.References 
-            |]
-        | None ->
-            debug "[Project System] Can't read project file. Fall back to default compiler flags."
+    interface IProjectProvider with
+        member x.ProjectFileName = projectFileName
+        member x.UniqueName = project.Project.UniqueName
+
+        member x.TargetFSharpCoreVersion = 
+            getProperty "TargetFSharpCoreVersion"
+
+        member x.TargetFramework = 
+            match getProperty "TargetFrameworkVersion" with
+            | null | "v4.5" | "v4.5.1" -> FSharpTargetFramework.NET_4_5
+            | "v4.0" -> FSharpTargetFramework.NET_4_0
+            | "v3.5" -> FSharpTargetFramework.NET_3_5
+            | "v3.0" -> FSharpTargetFramework.NET_3_5
+            | "v2.0" -> FSharpTargetFramework.NET_2_0
+            | _ -> invalidArg "prop" "Unsupported .NET framework version"
+
+        member x.CompilerOptions = 
+            match projectOpt with
+            | Some p ->
+                [| 
+                    yield! ProjectParser.getOptionsWithoutReferences p
+                    yield! references 
+                |]
+            | None ->
+                debug "[Project System] Can't read project file. Fall back to default compiler flags."
+                [|  
+                   yield "--noframework"
+                   yield "--debug-"
+                   yield "--optimize-"
+                   yield "--tailcalls-"
+                   yield! references
+                |]
+
+        member x.SourceFiles = 
+            match projectOpt with
+            | Some p ->
+                ProjectParser.getFiles p
+            | None ->
+                debug "[Project System] Can't read project file. Fall back to incomplete source files."
+                let projectItems = project.Project.ProjectItems
+                Debug.Assert (Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
+                projectItems
+                |> Seq.cast<ProjectItem>
+                |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
+                |> Seq.choose (fun item -> 
+                    let buildAction = item.Properties.["BuildAction"].Value.ToString()
+                    if buildAction = "BuildAction=Compile" then Some item else None)    
+                |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
+                |> Seq.toArray
+
+type VirtualProjectProvider (doc: Document) = 
+    do Debug.Assert (doc <> null, "Input document should not be null.")
+    
+    interface IProjectProvider with
+        member x.ProjectFileName = null
+        member x.UniqueName = "DummyProject-for-" + doc.FullName
+        member x.TargetFSharpCoreVersion = null
+        member x.TargetFramework = FSharpTargetFramework.NET_4_5
+
+        member x.CompilerOptions = 
             [|  
-               yield "--noframework"
-               yield "--debug-"
-               yield "--optimize-"
-               yield "--tailcalls-"
-               yield! x.References
+                yield "--noframework"
+                yield "--debug-"
+                yield "--optimize-"
+                yield "--tailcalls-"
             |]
 
-    member x.SourceFiles = 
-        match projectOpt with
-        | Some p ->
-            ProjectParser.getFiles p
-        | None ->
-            debug "[Project System] Can't read project file. Fall back to incomplete source files."
-            let projectItems = project.Project.ProjectItems
-            Debug.Assert (Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
-            projectItems
-            |> Seq.cast<ProjectItem>
-            |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
-            |> Seq.choose (fun item -> 
-                let buildAction = item.Properties.["BuildAction"].Value.ToString()
-                if buildAction = "BuildAction=Compile" then Some item else None)    
-            |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
-            |> Seq.toArray
+        member x.SourceFiles = [|doc.FullName|]
 
 /// Cache of ProjectProviders. Listens for projects changes and invalidates itself.
 module ProjectCache =
     type UniqueProjectName = string
-    type Projects = Map<UniqueProjectName, ProjectProvider>
+    type Projects = Map<UniqueProjectName, IProjectProvider>
 
     [<NoEquality; NoComparison>]
     type private Message = 
-        | Get of Document * AsyncReplyChannel<ProjectProvider option>
+        | Get of Document * AsyncReplyChannel<IProjectProvider option>
         | Update of VSProject
-        | Put of Project * AsyncReplyChannel<ProjectProvider option>
+        | Put of Project * AsyncReplyChannel<IProjectProvider option>
     
     let projectUpdated = Event<_>()
 
@@ -106,7 +134,7 @@ module ProjectCache =
                     | None -> 
                         try
                             debug "[ProjectsCache] Creating new project provider."
-                            Some (ProjectProvider vsProject)
+                            Some (ProjectProvider vsProject :> IProjectProvider)
                         with _ -> 
                             debug "[ProjectsCache] Can't find containing project. Probably the document is opened in an ad-hoc way."
                             None
@@ -137,6 +165,7 @@ module ProjectCache =
                 return! loop projects
             | Get (doc, r) ->
                 let projects, project = obtainProject projects doc.ProjectItem.VSProject
+                let project = project |> Option.orElse (Some (VirtualProjectProvider doc :> _))
                 r.Reply project
                 return! loop projects
             | Update vsProject -> 

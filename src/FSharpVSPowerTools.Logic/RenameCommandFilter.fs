@@ -22,7 +22,7 @@ module PkgCmdIDList =
 type DocumentState =
     { Word: SnapshotSpan option
       File: string
-      Project: ProjectProvider }
+      Project: IProjectProvider }
 
 type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider : System.IServiceProvider) =
     let mutable state = None
@@ -104,13 +104,27 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
                             |> Seq.groupBy (fst >> Path.GetFullPath)
                             |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
                             |> Seq.toList)
-            let model = RenameDialogModel (cw.GetText(), symbol, state.Project)
-            let wnd = UI.loadRenameDialog model
-            let hostWnd = Window.GetWindow(view.VisualElement)
-            wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
-            wnd.Owner <- hostWnd
-            let! res = x.ShowDialog wnd
-            if res then rename currentName model.Name references } |> ignore
+
+            let isSymbolDeclaredInCurrentProject =
+                match symbol.DeclarationLocation with
+                | Some loc ->
+                    let filePath = Path.GetFullPath loc.FileName
+                    // NB: this isn't a foolproof way to match two paths
+                    state.Project.SourceFiles |> Array.exists ((=) filePath)
+                | _ -> false
+
+            if isSymbolDeclaredInCurrentProject then
+                let model = RenameDialogModel (cw.GetText(), symbol)
+                let wnd = UI.loadRenameDialog model
+                let hostWnd = Window.GetWindow(view.VisualElement)
+                wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
+                wnd.Owner <- hostWnd
+                let! res = x.ShowDialog wnd
+                if res then rename currentName model.Name references
+            else
+                MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
+                    MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 
+        } |> ignore
 
     member x.ShowDialog (wnd: Window) =
         let vsShell = serviceProvider.GetService(typeof<SVsUIShell>) :?> IVsUIShell

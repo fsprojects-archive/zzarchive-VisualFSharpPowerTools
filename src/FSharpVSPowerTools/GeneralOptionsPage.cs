@@ -40,7 +40,7 @@ namespace FSharpVSPowerTools
             }
             catch (Exception)
             {
-                MessageBox.Show("Can't save navigation bar configuration. Please consider to submit a bug report.", "F# Power Tools");
+                MessageBox.Show(Resource.navBarErrorMessage, Resource.vsPackageTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
         }

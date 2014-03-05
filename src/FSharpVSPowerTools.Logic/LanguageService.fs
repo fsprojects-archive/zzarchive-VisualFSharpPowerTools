@@ -16,7 +16,7 @@ type VSLanguageService() =
                                                p.CompilerOptions, p.TargetFramework)
         instance.Checker.InvalidateConfiguration opts)
 
-    member this.GetSymbol(point: SnapshotPoint, projectProvider : ProjectProvider) =
+    member this.GetSymbol(point: SnapshotPoint, projectProvider : IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
@@ -25,7 +25,7 @@ type VSLanguageService() =
         instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range)
 
-    member this.ProcessNavigableItemsInProject(openDocuments, (projectProvider: ProjectProvider), processNavigableItems, ct) =
+    member this.ProcessNavigableItemsInProject(openDocuments, (projectProvider: IProjectProvider), processNavigableItems, ct) =
         instance.ProcessParseTrees(
             projectProvider.ProjectFileName, 
             openDocuments, 
@@ -35,7 +35,7 @@ type VSLanguageService() =
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)
 
-    member this.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: ProjectProvider) =
+    member this.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
