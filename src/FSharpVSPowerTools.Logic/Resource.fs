@@ -11,6 +11,8 @@ module Resource =
     let [<Literal>] validatingOriginalName = "New name should not be the same as the original one."
     let [<Literal>] validatingUnionCase = "Invalid name for union cases."
     let [<Literal>] validatingIdentifier = "Invalid name for identifiers."
+    let [<Literal>] validatingGenericTypeParameter = "Invalid name for generic type parameter."
+    let [<Literal>] validatingStaticallyResolvedTypeParameter = "Invalid name for statically resolved type parameter."
     let [<Literal>] validatingOperator ="Invalid name for operators."
 
     let [<Literal>] navBarErrorMessage = "Error occurs while saving navigation bar configuration."

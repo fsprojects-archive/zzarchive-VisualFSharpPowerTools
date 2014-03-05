@@ -19,7 +19,7 @@ let fromVSPos (snapshot: ITextSnapshot) ((startLine, startCol), (endLine, endCol
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
-let isDoubleBacktickIdent (s: string) =
+let private isDoubleBacktickIdent (s: string) =
     if s.StartsWith("``") && s.EndsWith("``") then
         let inner = s.Substring("``".Length, s.Length - "````".Length)
         not (inner.Contains("``"))
@@ -35,7 +35,17 @@ let isIdentifier (s: string) =
                 if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
 
 let isOperator (s: string) = 
-    IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s
+    let allowedChars = Set.ofList ['!'; '%'; '&'; '*'; '+'; '-'; '.'; '/'; '<'; '='; '>'; '?'; '@'; '^'; '|'; '~']
+    (IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s)
+    && (s.ToCharArray() |> Array.forall (fun c -> Set.contains c allowedChars))
+
+let inline private isTypeParameter (prefix: char) (s: string) =
+    match s.Length with
+    | 0 | 1 -> false
+    | _ -> s.[0] = prefix && isIdentifier (s.Substring(1))
+
+let isGenericTypeParameter = isTypeParameter '''
+let isStaticallyResolvedTypeParameter = isTypeParameter '^'
 
 type SnapshotPoint with
     member x.FromRange(lineStart, colStart, lineEnd, colEnd) =

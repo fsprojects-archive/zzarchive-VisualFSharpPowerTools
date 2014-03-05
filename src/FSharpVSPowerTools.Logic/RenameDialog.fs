@@ -9,32 +9,38 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
+open FSharp.CompilerBinding
 
 type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
 
-type RenameDialogModel(originalName: string, symbol: FSharpSymbol) =
+type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) =
     let mutable name = originalName
     let errorsChanged = Event<_,_>()
 
     let validate name = 
-        let cleanUpSymbol (s: string) = s.Replace(")", "").Replace("(", "").Trim()
         debug "[Rename Refactoring] Check the following name: %s" name
         let name = name.Trim()
         match name with
         | "" -> Choice2Of2 Resource.validatingEmptyName
         | _ when name = originalName -> Choice2Of2 Resource.validatingOriginalName
         | _ ->
-            match symbol with
-            | :? FSharpUnionCase ->
+            match symbol.Kind, fSharpSymbol with
+            | _, :? FSharpUnionCase ->
                 // Union case shouldn't be lowercase
                 if isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0])) then
                     Choice1Of2()
                 else
                     Choice2Of2 Resource.validatingUnionCase
-            | :? FSharpMemberFunctionOrValue as v when isOperator (cleanUpSymbol v.DisplayName)  ->
+            | Operator, _ ->
                 if isOperator name then Choice1Of2() 
                 else Choice2Of2 Resource.validatingOperator
-            | _ -> 
+            | GenericTypeParameter, _ ->
+                if isGenericTypeParameter name then Choice1Of2()
+                else Choice2Of2 Resource.validatingGenericTypeParameter
+            | StaticallyResolvedTypeParameter, _ ->
+                if isStaticallyResolvedTypeParameter name then Choice1Of2()
+                else Choice2Of2 Resource.validatingStaticallyResolvedTypeParameter
+            | (Ident | Other), _ -> 
                 if isIdentifier name then Choice1Of2()
                 else Choice2Of2 Resource.validatingIdentifier
 

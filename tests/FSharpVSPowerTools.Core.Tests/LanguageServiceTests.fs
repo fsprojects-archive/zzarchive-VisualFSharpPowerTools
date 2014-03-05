@@ -84,8 +84,8 @@ let hasNoSymbolUsage line col lineStr =
 
 let checkGetSymbol line col lineStr expected =
     VSLanguageService.instance.GetSymbol(source, line, col, lineStr, args)
-    |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text } ->
-        text, (line, leftCol), (line, rightCol))
+    |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
+        text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected
 
 [<Test>]
@@ -228,34 +228,34 @@ let ``should find usages of named discriminated union fields``() =
 
 [<Test>]
 let ``should find operators``() =
-    checkGetSymbol 693 10 "    let (>>=) x y = ()" (Some (">>=", (693, 9), (693, 12)))
-    checkGetSymbol 695 12 "    let (>~>>) x y = ()" (Some (">~>>", (695, 9), (695, 13)))
-    checkGetSymbol 701 12 "    let ( >>. ) x y = x" (Some (">>.", (701, 10), (701, 13)))
-    checkGetSymbol 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" (Some (">>.", (704, 14), (704, 17)))
-    checkGetSymbol 728 9 "    M.N.(+.) 1 2" (Some ("+.", (728, 9), (728, 11)))
+    checkGetSymbol 693 10 "    let (>>=) x y = ()" (Some (">>=", (693, 9), (693, 12), Operator))
+    checkGetSymbol 695 12 "    let (>~>>) x y = ()" (Some (">~>>", (695, 9), (695, 13), Operator))
+    checkGetSymbol 701 12 "    let ( >>. ) x y = x" (Some (">>.", (701, 10), (701, 13), Operator))
+    checkGetSymbol 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" (Some (">>.", (704, 14), (704, 17), Operator))
+    checkGetSymbol 728 9 "    M.N.(+.) 1 2" (Some ("+.", (728, 9), (728, 11), Operator))
 
 [<Test>]
 let ``should find identifiers``() =
-    checkGetSymbol 703 8 "    let ws x = x" (Some ("ws", (703, 8), (703, 10)))
-    checkGetSymbol 702 24 "    1 >>. 2 >>. 3 |> ignore" (Some ("ignore", (702, 21), (702, 27)))
+    checkGetSymbol 703 8 "    let ws x = x" (Some ("ws", (703, 8), (703, 10), Ident))
+    checkGetSymbol 702 24 "    1 >>. 2 >>. 3 |> ignore" (Some ("ignore", (702, 21), (702, 27), Ident))
     
-    checkGetSymbol 722 14 "    Nested.``long name``()" (Some ("``long name``", (722, 11), (722, 24)))
+    checkGetSymbol 722 14 "    Nested.``long name``()" (Some ("``long name``", (722, 11), (722, 24), Ident))
 
     checkGetSymbol 582 59 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        (Some ("map", (582, 57), (582, 60)))
+        (Some ("map", (582, 57), (582, 60), Ident))
 
     checkGetSymbol 582 48 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        (Some ("Parallel", (582, 48), (582, 56)))
+        (Some ("Parallel", (582, 48), (582, 56), Ident))
 
     checkGetSymbol 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        (Some ("Parallel", (582, 48), (582, 56)))
+        (Some ("Parallel", (582, 48), (582, 56), Ident))
 
 [<Test>]
 let ``should find generic parameters``() =
-    checkGetSymbol 707 12 "    type C<'a> = C of 'a" (Some ("'a", (707, 11), (707, 13)))
-    checkGetSymbol 707 22 "    type C<'a> = C of 'a" (Some ("'a", (707, 22), (707, 24)))
+    checkGetSymbol 707 12 "    type C<'a> = C of 'a" (Some ("'a", (707, 11), (707, 13), GenericTypeParameter))
+    checkGetSymbol 707 22 "    type C<'a> = C of 'a" (Some ("'a", (707, 22), (707, 24), GenericTypeParameter))
 
 [<Test>]
 let ``should find statically resolved type parameters``() =
     checkGetSymbol 730 22 "    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
-        (Some ("^T", (730, 22), (730, 24)))
+        (Some ("^T", (730, 22), (730, 24), StaticallyResolvedTypeParameter))

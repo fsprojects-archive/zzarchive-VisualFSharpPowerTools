@@ -13,6 +13,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open FSharp.CompilerBinding
 
 module PkgCmdIDList =
     let CmdidBuiltinRenameCommand = 1550u // ECMD_RENAME
@@ -20,7 +21,7 @@ module PkgCmdIDList =
 
 [<NoComparison>]
 type DocumentState =
-    { Word: SnapshotSpan option
+    { Word: (SnapshotSpan * Symbol) option
       File: string
       Project: IProjectProvider }
 
@@ -91,7 +92,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
     member x.HandleRename() =
         maybe {
             let! state = state
-            let! cw = state.Word
+            let! cw, sym = state.Word
             let! (symbol, currentName, references) = 
                   VSLanguageService.findUsages cw state.File state.Project
                   |> Async.RunSynchronously
@@ -112,7 +113,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
                 | _ -> false
 
             if isSymbolDeclaredInCurrentProject then
-                let model = RenameDialogModel (cw.GetText(), symbol)
+                let model = RenameDialogModel (cw.GetText(), sym, symbol)
                 let wnd = UI.loadRenameDialog model
                 let hostWnd = Window.GetWindow(view.VisualElement)
                 wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
