@@ -60,7 +60,6 @@ type DraftToken =
       RightColumn: int }
     static member Create kind token = 
         { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
-    member x.IsOperator = match x.Kind with Operator -> true | _ -> false
 
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService(dirtyNotify) =
@@ -243,7 +242,7 @@ type LanguageService(dirtyNotify) =
           match token.TokenName with
           | "QUOTE" -> GenericTypeParameterPrefix
           | "INFIX_AT_HAT_OP" -> StaticallyResolvedTypeParameterPrefix
-          | name -> Other name
+          | _ -> Other
 
       // Operators: Filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
       // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two).
@@ -263,8 +262,8 @@ type LanguageService(dirtyNotify) =
             | _ ->
                 match token with
                 | GenericTypeParameterPrefix -> acc, Some (DraftToken.Create GenericTypeParameter token)
-                | StaticallyResolvedTypeParameterPrefix -> acc, Some (DraftToken.Create StaticallyResolvedTypeParameter  token)
-                | Other tokenName ->
+                | StaticallyResolvedTypeParameterPrefix -> acc, Some (DraftToken.Create StaticallyResolvedTypeParameter token)
+                | Other ->
                     let draftToken =
                         match lastToken with
                         | Some { Kind = GenericTypeParameter | StaticallyResolvedTypeParameter as kind } when isIdentifier token ->
@@ -281,8 +280,15 @@ type LanguageService(dirtyNotify) =
       let tokensUnderCursor = tokens |> List.filter (fun x -> x.Token.LeftColumn <= col && x.RightColumn + 1 >= col)
 
       // Select IDENT token. If failes, select OPERATOR token.
-      List.tryFind (fun (x: DraftToken) -> not x.IsOperator) tokensUnderCursor
-      |> Option.orElse (List.tryFind (fun (x: DraftToken) -> x.IsOperator) tokensUnderCursor)
+      tokensUnderCursor
+      |> List.tryFind (fun (x: DraftToken) -> 
+          match x.Kind with 
+          | Ident | GenericTypeParameter | StaticallyResolvedTypeParameter -> true 
+          | _ -> false) 
+      |> Option.orElse (List.tryFind (fun (x: DraftToken) -> 
+          match x.Kind with 
+          | Operator -> true 
+          | _ -> false) tokensUnderCursor)
       |> Option.map (fun token ->
           { Kind = token.Kind
             Line = line

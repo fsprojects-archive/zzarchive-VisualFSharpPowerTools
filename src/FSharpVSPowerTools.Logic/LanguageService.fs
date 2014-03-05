@@ -25,7 +25,7 @@ module VSLanguageService =
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions                
         instance.GetSymbol (source, line, col, lineStr, args)
-        |> Option.map (fun symbol -> point.FromRange symbol.Range)
+        |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
     let findUsages (word: SnapshotSpan) (currentFile: string) (projectProvider: IProjectProvider) =
         async {
