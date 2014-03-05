@@ -387,7 +387,7 @@ type LanguageService(dirtyNotify) =
               // We only look up identifiers and operators, everything else isn't of interest       
               debug "Parsing: Passed in the following symbol '%s'" symbol.Text
               // Note we advance the caret to 'rightCol' ** due to GetSymbolAtLocation only working at the beginning/end **
-              match backgroundTypedParse.GetSymbolAtLocation(line, symbol.RightColumn, lineStr, [symbol.Text]) with
+              match backgroundTypedParse.GetSymbolAtLocationAlternate(line+1, symbol.RightColumn, lineStr, [symbol.Text]) with
               | Some fsharpSymbol ->
                   let symRangeOpt = tryGetSymbolRange fsharpSymbol.DeclarationLocation
                   let refs = projectResults.GetUsesOfSymbol(fsharpSymbol)

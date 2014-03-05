@@ -9,12 +9,13 @@ open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
+open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 /// Retrieve snapshot from VS zero-based positions
-let fromVSPos (snapshot: ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
-    let startPos = snapshot.GetLineFromLineNumber(startLine).Start.Position + startCol
-    let endPos = snapshot.GetLineFromLineNumber(endLine).Start.Position + endCol
+let fromFSharpPos (snapshot: ITextSnapshot) (r: range) =
+    let startPos = snapshot.GetLineFromLineNumber(r.StartLine - 1).Start.Position + r.StartColumn
+    let endPos = snapshot.GetLineFromLineNumber(r.EndLine - 1).Start.Position + r.EndColumn
     SnapshotSpan(snapshot, startPos, endPos - startPos)
 
 open Microsoft.FSharp.Compiler.PrettyNaming
@@ -49,7 +50,9 @@ let isStaticallyResolvedTypeParameter = isTypeParameter '^'
 
 type SnapshotPoint with
     member x.FromRange(lineStart, colStart, lineEnd, colEnd) =
-        fromVSPos x.Snapshot ((lineStart, colStart), (lineEnd, colEnd))
+        let startPos = x.Snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+        let endPos = x.Snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+        SnapshotSpan(x.Snapshot, startPos, endPos - startPos)
 
 type SnapshotSpan with
     /// Return corresponding zero-based range
