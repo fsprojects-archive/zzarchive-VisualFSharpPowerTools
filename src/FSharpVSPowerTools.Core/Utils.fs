@@ -1,6 +1,11 @@
 ﻿namespace FSharpVSPowerTools
 
 [<RequireQualifiedAccess>]
+module Seq =
+    let tryHead s =
+        if Seq.isEmpty s then None else Some (Seq.head s)
+
+[<RequireQualifiedAccess>]
 module Option =
     open System
 

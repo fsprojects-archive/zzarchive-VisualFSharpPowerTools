@@ -15,6 +15,29 @@ module VSLanguageService =
                                                p.CompilerOptions, p.TargetFramework)
         instance.Checker.InvalidateConfiguration opts)
 
+    let internal tryGetFirstMember (symbol: FSharpSymbol) =
+        match symbol with
+        | :? FSharpEntity as symb ->
+            if symb.IsFSharpUnion then
+                Seq.tryHead symb.UnionCases
+                |> Option.map (fun s -> s :> FSharpSymbol)
+            elif symb.IsFSharpRecord || symb.IsClass || symb.IsValueType || symb.IsFSharpExceptionDeclaration then
+                Seq.tryHead symb.FSharpFields
+                |> Option.map (fun s -> s :> FSharpSymbol)
+            else
+                Seq.tryHead symb.MembersFunctionsAndValues
+                |> Option.map (fun s -> s :> FSharpSymbol)
+        | _ -> None
+
+    /// Since F.C.S doesn't return declaration location for types, we try to get it from type members
+    let tryGetLocation (symbol: FSharpSymbol) =
+        match symbol with
+        | :? FSharpEntity ->
+            match tryGetFirstMember symbol with
+            | Some s -> Option.orElse s.ImplementationLocation s.DeclarationLocation
+            | None -> Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
+        | _ -> Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
+
     let getSymbol (point: SnapshotPoint) (projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
