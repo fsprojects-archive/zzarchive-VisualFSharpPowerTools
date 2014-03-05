@@ -72,6 +72,7 @@
     <Compile Include="XmlDocFilter.fs" />
     <Compile Include="DepthTagger.fs" />
     <Compile Include="DepthAdornmentManager.fs" />
+    <Compile Include="SyntaxColorTagger.fs" />
     <Compile Include="HighlightUsageTagger.fs" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
