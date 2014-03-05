@@ -57,7 +57,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
         view.LayoutChanged.AddHandler(viewLayoutChanged)
         view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
-    let rename (oldText: string) (newText: string) (foundUsages: (string * Range01 list) list) =
+    let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
@@ -68,7 +68,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
                         let spans =
                             ranges
                             |> Seq.map (fun range ->
-                                let snapshotSpan = fromVSPos buffer.CurrentSnapshot range
+                                let snapshotSpan = fromFSharpPos buffer.CurrentSnapshot range
                                 let i = snapshotSpan.GetText().LastIndexOf(oldText)
                                 if i > 0 then 
                                     // Subtract lengths of qualified identifiers
@@ -99,7 +99,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
                   |> Option.map (fun (symbol, lastIdent, _, refs) -> 
                         symbol, lastIdent,
                             refs 
-                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.Range))
+                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
                             |> Seq.groupBy (fst >> Path.GetFullPath)
                             |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
                             |> Seq.toList)

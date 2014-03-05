@@ -73,7 +73,10 @@ let getUsesOfSymbol line col lineStr =
     VSLanguageService.instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
                                                                    line, col, lineStr, args, framework)
     |> Async.RunSynchronously
-    |> Option.map (fun (_, _, _, symbolUses) -> symbolUses |> Array.map (fun x -> x.Range))
+    |> Option.map (fun (_, _, _, symbolUses) -> 
+        symbolUses |> Array.map (fun x -> 
+                        let r = x.RangeAlternate
+                        ((r.StartLine-1, r.StartColumn), (r.EndLine-1, r.EndColumn))))
     |> Option.map set
 
 let checkSymbolUsage line col lineStr expected =
