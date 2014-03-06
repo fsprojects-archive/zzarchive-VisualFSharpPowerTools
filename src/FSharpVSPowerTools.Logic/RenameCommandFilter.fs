@@ -36,12 +36,17 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
     let updateAtCaretPosition(caretPosition: CaretPosition) = 
         maybe {
             let! point = view.TextBuffer.GetSnapshotPoint caretPosition
-            let! doc = Dte.getActiveDocument()
-            let! project = ProjectCache.getProject doc
-            state <- Some
-                { File = doc.FullName
-                  Project =  project
-                  Word = VSLanguageService.getSymbol point project }} |> ignore
+            // If the new cursor position is still within the current word (and on the same snapshot),
+            // we don't need to check it.
+            match state with
+            | Some { Word = Some (cw,_) } when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
+            | _ ->
+                let! doc = Dte.getActiveDocument()
+                let! project = ProjectCache.getProject doc
+                state <- Some
+                    { File = doc.FullName
+                      Project =  project
+                      Word = VSLanguageService.getSymbol point project }} |> ignore
 
     let viewLayoutChanged = 
         EventHandler<_>(fun _ (e: TextViewLayoutChangedEventArgs) ->

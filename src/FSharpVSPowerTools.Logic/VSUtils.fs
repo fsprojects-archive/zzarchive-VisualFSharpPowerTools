@@ -49,10 +49,11 @@ let isGenericTypeParameter = isTypeParameter '''
 let isStaticallyResolvedTypeParameter = isTypeParameter '^'
 
 type SnapshotPoint with
-    member x.FromRange(lineStart, colStart, lineEnd, colEnd) =
+    member x.FromRange (lineStart, colStart, lineEnd, colEnd) =
         let startPos = x.Snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
         let endPos = x.Snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
         SnapshotSpan(x.Snapshot, startPos, endPos - startPos)
+    member x.InSpan (span: SnapshotSpan) = x.CompareTo span.Start >= 0 && x.CompareTo span.End <= 0
 
 type SnapshotSpan with
     /// Return corresponding zero-based range

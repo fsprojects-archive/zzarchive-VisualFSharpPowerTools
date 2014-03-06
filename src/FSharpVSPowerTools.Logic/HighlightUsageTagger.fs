@@ -40,8 +40,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = 
-                        VSLanguageService.findUsages newWord fileName projectProvider
+                    let! res = VSLanguageService.findUsages newWord fileName projectProvider
                     let results =
                         res
                         |> Option.map (fun (_, lastIdent, _, refs) -> 
@@ -102,9 +101,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
             match currentWord with
-            | Some cw when cw.Snapshot = view.TextSnapshot && 
-                           point.CompareTo cw.Start >= 0 &&
-                           point.CompareTo cw.End <= 0 -> ()
+            | Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
             | _ ->
                 requestedPoint <- point
                 updateWordAdornments()
