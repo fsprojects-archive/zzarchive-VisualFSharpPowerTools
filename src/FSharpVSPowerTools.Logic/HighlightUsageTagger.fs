@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.HighlightUsage
 
 open System
+open System.IO
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -46,10 +47,9 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                         |> Option.map (fun (_, lastIdent, _, refs) -> 
                             refs 
                             |> Seq.choose (fun symbolUse -> 
-                                // We have to filter by file name otherwise the range is invalid wrt current snapshot
-                                if symbolUse.FileName = fileName then
-                                    // Range01 type consists of zero-based values, which is a bit confusing
-                                    Some (fromVSPos view.TextSnapshot symbolUse.Range)
+                                // We have to filter by full paths otherwise the range is invalid wrt current snapshot
+                                if Path.GetFullPath(symbolUse.FileName) = Path.GetFullPath(fileName) then
+                                    Some (fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate)
                                 else None)
                             |> Seq.map (fun span -> 
                                 // Sometimes F.C.S returns a composite identifier which should be truncated

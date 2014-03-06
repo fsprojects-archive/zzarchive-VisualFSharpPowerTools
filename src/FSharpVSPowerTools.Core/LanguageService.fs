@@ -1,9 +1,11 @@
 ﻿namespace FSharp.CompilerBinding
+
 open System
 open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpVSPowerTools
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -38,12 +40,27 @@ type internal LanguageServiceMessage =
   | UpdateAndGetTypedInfo of ParseRequest * AsyncReplyChannel<TypedParseResult>
   | GetTypedInfoDone of AsyncReplyChannel<TypedParseResult>
 
+type SymbolKind =
+    | Ident
+    | Operator
+    | GenericTypeParameter
+    | StaticallyResolvedTypeParameter
+    | Other
+
 type Symbol =
-    { Line: int
+    { Kind: SymbolKind
+      Line: int
       LeftColumn: int
       RightColumn: int
       Text: string }
     member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
+
+type DraftToken =
+    { Kind: SymbolKind
+      Token: TokenInformation 
+      RightColumn: int }
+    static member Create kind token = 
+        { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
 
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService(dirtyNotify) =
@@ -202,12 +219,6 @@ type LanguageService(dirtyNotify) =
 
   //let tap msg x = debug "[%s] %A" msg x; x
 
-  let (|TypeParameterPrefix|_|) =
-      let prefixes = set ["QUOTE"; "INFIX_AT_HAT_OP"]
-      fun token -> 
-        if prefixes |> Set.contains token.TokenName then Some()
-        else None
-
   // Returns symbol at a given position.
   let getSymbol source line col lineStr (args: string array): Symbol option =
       let defines =
@@ -225,9 +236,14 @@ type LanguageService(dirtyNotify) =
             | _ -> List.rev acc
         loop (queryLexState source defines line) []
 
-      let getCorrectRightCol (token: TokenInformation) = token.LeftColumn + token.FullMatchedLength
       let isIdentifier t = t.CharClass = TokenCharKind.Identifier
       let isOperator t = t.ColorClass = TokenColorKind.Operator
+
+      let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) token =
+          match token.TokenName with
+          | "QUOTE" -> GenericTypeParameterPrefix
+          | "INFIX_AT_HAT_OP" -> StaticallyResolvedTypeParameterPrefix
+          | _ -> Other
 
       // Operators: Filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
       // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two).
@@ -241,40 +257,45 @@ type LanguageService(dirtyNotify) =
       // we'll get (IDENT, left=2, lenght=5).
       let tokens = 
         tokens
-        |> List.fold (fun (acc, (lastToken, lastRightCol)) token ->
-             if token.LeftColumn <= lastRightCol then 
-                acc, (lastToken, lastRightCol)
-             else 
+        |> List.fold (fun (acc, lastToken) token ->
+            match lastToken with
+            | Some t when token.LeftColumn <= t.RightColumn -> acc, lastToken
+            | _ ->
                 match token with
-                | TypeParameterPrefix ->
-                    acc, (Some token, (getCorrectRightCol token) - 1)
-                | _ ->
-                    let token =
+                | GenericTypeParameterPrefix -> acc, Some (DraftToken.Create GenericTypeParameter token)
+                | StaticallyResolvedTypeParameterPrefix -> acc, Some (DraftToken.Create StaticallyResolvedTypeParameter token)
+                | Other ->
+                    let draftToken =
                         match lastToken with
-                        | Some TypeParameterPrefix when isIdentifier token ->
-                             { token with LeftColumn = token.LeftColumn - 1
-                                          FullMatchedLength = token.FullMatchedLength + 1 }
-                        | _ -> token
-                    token :: acc, (Some token, (getCorrectRightCol token) - 1)
-           ) ([], (None, 0))
+                        | Some { Kind = GenericTypeParameter | StaticallyResolvedTypeParameter as kind } when isIdentifier token ->
+                            DraftToken.Create kind { token with LeftColumn = token.LeftColumn - 1
+                                                                FullMatchedLength = token.FullMatchedLength + 1 }
+                        | _ -> 
+                            let kind = if isOperator token then Operator elif isIdentifier token then Ident else Other
+                            DraftToken.Create kind token
+                    draftToken :: acc, Some draftToken
+           ) ([], None)
         |> fst
          
       // One or two tokens that in touch with the cursor (for "let x|(g) = ()" the tokens will be "x" and "(")
-      let tokensUnderCursor = tokens |> List.filter (fun x -> x.LeftColumn <= col && getCorrectRightCol x >= col)
+      let tokensUnderCursor = tokens |> List.filter (fun x -> x.Token.LeftColumn <= col && x.RightColumn + 1 >= col)
 
       // Select IDENT token. If failes, select OPERATOR token.
-      let tokenUnderCursor =
-        match List.tryFind isIdentifier tokensUnderCursor with
-        | Some x -> Some x
-        | _ -> List.tryFind isOperator tokensUnderCursor
-
-      match tokenUnderCursor with
-      | Some tok when (isIdentifier tok || isOperator tok) -> 
-          Some { Line = line
-                 LeftColumn = tok.LeftColumn
-                 RightColumn = getCorrectRightCol tok
-                 Text = lineStr.Substring(tok.LeftColumn, tok.FullMatchedLength) }
-      | _ -> None
+      tokensUnderCursor
+      |> List.tryFind (fun (x: DraftToken) -> 
+          match x.Kind with 
+          | Ident | GenericTypeParameter | StaticallyResolvedTypeParameter -> true 
+          | _ -> false) 
+      |> Option.orElse (List.tryFind (fun (x: DraftToken) -> 
+          match x.Kind with 
+          | Operator -> true 
+          | _ -> false) tokensUnderCursor)
+      |> Option.map (fun token ->
+          { Kind = token.Kind
+            Line = line
+            LeftColumn = token.Token.LeftColumn
+            RightColumn = token.RightColumn + 1
+            Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
@@ -393,7 +414,7 @@ type LanguageService(dirtyNotify) =
               // We only look up identifiers and operators, everything else isn't of interest       
               debug "Parsing: Passed in the following symbol '%s'" symbol.Text
               // Note we advance the caret to 'rightCol' ** due to GetSymbolAtLocation only working at the beginning/end **
-              match backgroundTypedParse.GetSymbolAtLocation(line, symbol.RightColumn, lineStr, [symbol.Text]) with
+              match backgroundTypedParse.GetSymbolAtLocationAlternate(line+1, symbol.RightColumn, lineStr, [symbol.Text]) with
               | Some fsharpSymbol ->
                   let symRangeOpt = tryGetSymbolRange fsharpSymbol.DeclarationLocation
                   let refs = projectResults.GetUsesOfSymbol(fsharpSymbol)

@@ -9,17 +9,18 @@ open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
+open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 /// Retrieve snapshot from VS zero-based positions
-let fromVSPos (snapshot: ITextSnapshot) ((startLine, startCol), (endLine, endCol)) =
-    let startPos = snapshot.GetLineFromLineNumber(startLine).Start.Position + startCol
-    let endPos = snapshot.GetLineFromLineNumber(endLine).Start.Position + endCol
+let fromFSharpPos (snapshot: ITextSnapshot) (r: range) =
+    let startPos = snapshot.GetLineFromLineNumber(r.StartLine - 1).Start.Position + r.StartColumn
+    let endPos = snapshot.GetLineFromLineNumber(r.EndLine - 1).Start.Position + r.EndColumn
     SnapshotSpan(snapshot, startPos, endPos - startPos)
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
-let isDoubleBacktickIdent (s: string) =
+let private isDoubleBacktickIdent (s: string) =
     if s.StartsWith("``") && s.EndsWith("``") then
         let inner = s.Substring("``".Length, s.Length - "````".Length)
         not (inner.Contains("``"))
@@ -35,11 +36,23 @@ let isIdentifier (s: string) =
                 if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
 
 let isOperator (s: string) = 
-    IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s
+    let allowedChars = Set.ofList ['!'; '%'; '&'; '*'; '+'; '-'; '.'; '/'; '<'; '='; '>'; '?'; '@'; '^'; '|'; '~']
+    (IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s)
+    && (s.ToCharArray() |> Array.forall (fun c -> Set.contains c allowedChars))
+
+let inline private isTypeParameter (prefix: char) (s: string) =
+    match s.Length with
+    | 0 | 1 -> false
+    | _ -> s.[0] = prefix && isIdentifier (s.Substring(1))
+
+let isGenericTypeParameter = isTypeParameter '''
+let isStaticallyResolvedTypeParameter = isTypeParameter '^'
 
 type SnapshotPoint with
     member x.FromRange(lineStart, colStart, lineEnd, colEnd) =
-        fromVSPos x.Snapshot ((lineStart, colStart), (lineEnd, colEnd))
+        let startPos = x.Snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+        let endPos = x.Snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+        SnapshotSpan(x.Snapshot, startPos, endPos - startPos)
 
 type SnapshotSpan with
     /// Return corresponding zero-based range

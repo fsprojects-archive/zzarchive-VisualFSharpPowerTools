@@ -15,6 +15,9 @@ type VSLanguageService() =
         let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
                                                p.CompilerOptions, p.TargetFramework)
         instance.Checker.InvalidateConfiguration opts)
+    
+    let tryGetLocation (symbol: FSharpSymbol) =
+        Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 
     member this.GetSymbol(point: SnapshotPoint, projectProvider : IProjectProvider) =
         let source = point.Snapshot.GetText()
@@ -23,7 +26,7 @@ type VSLanguageService() =
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions                
         instance.GetSymbol (source, line, col, lineStr, args)
-        |> Option.map (fun symbol -> point.FromRange symbol.Range)
+        |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
     member this.ProcessNavigableItemsInProject(openDocuments, (projectProvider: IProjectProvider), processNavigableItems, ct) =
         instance.ProcessParseTrees(

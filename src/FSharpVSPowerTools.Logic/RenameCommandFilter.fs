@@ -13,6 +13,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open FSharp.CompilerBinding
 
 module PkgCmdIDList =
     let CmdidBuiltinRenameCommand = 1550u // ECMD_RENAME
@@ -20,7 +21,7 @@ module PkgCmdIDList =
 
 [<NoEquality; NoComparison>]
 type DocumentState =
-    { Word: SnapshotSpan option
+    { Word: (SnapshotSpan * Symbol) option
       File: string
       Project: IProjectProvider }
 
@@ -57,7 +58,7 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
         view.LayoutChanged.AddHandler(viewLayoutChanged)
         view.Caret.PositionChanged.AddHandler(caretPositionChanged)
 
-    let rename (oldText: string) (newText: string) (foundUsages: (string * Range01 list) list) =
+    let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
@@ -69,7 +70,7 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
                         let spans =
                             ranges
                             |> Seq.map (fun range ->
-                                let snapshotSpan = fromVSPos buffer.CurrentSnapshot range
+                                let snapshotSpan = fromFSharpPos buffer.CurrentSnapshot range
                                 let i = snapshotSpan.GetText().LastIndexOf(oldText)
                                 if i > 0 then 
                                     // Subtract lengths of qualified identifiers
@@ -93,20 +94,20 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
     member x.HandleRename() =
         maybe {
             let! state = state
-            let! cw = state.Word
+            let! cw, sym = state.Word
             let! (symbol, currentName, references) = 
                   vsLanguageService.FindUsages(cw, state.File, state.Project)
                   |> Async.RunSynchronously
                   |> Option.map (fun (symbol, lastIdent, _, refs) -> 
                         symbol, lastIdent,
                             refs 
-                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.Range))
+                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
                             |> Seq.groupBy (fst >> Path.GetFullPath)
                             |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
                             |> Seq.toList)
 
             let isSymbolDeclaredInCurrentProject =
-                match symbol.DeclarationLocation with
+                match VSLanguageService.tryGetLocation symbol with
                 | Some loc ->
                     let filePath = Path.GetFullPath loc.FileName
                     // NB: this isn't a foolproof way to match two paths
@@ -114,7 +115,7 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
                 | _ -> false
 
             if isSymbolDeclaredInCurrentProject then
-                let model = RenameDialogModel (cw.GetText(), symbol)
+                let model = RenameDialogModel (cw.GetText(), sym, symbol)
                 let wnd = UI.loadRenameDialog model
                 let hostWnd = Window.GetWindow(view.VisualElement)
                 wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner

@@ -37,10 +37,11 @@ type ProjectProvider(project: VSProject) =
     let references = 
         project.References
         |> Seq.cast<Reference>
+        // Somethimes references are empty strings
+        |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
         // Since project references are resolved automatically, we include it here
         // Path.GetFullPath will escape path strings correctly
-        |> Seq.map (fun r -> Path.GetFullPath(r.Path))
-        |> Seq.map (fun path -> sprintf "-r:%s" path)
+        |> Seq.map (Path.GetFullPath >> sprintf "-r:%s")
 
     interface IProjectProvider with
         member x.ProjectFileName = projectFileName
