@@ -107,7 +107,7 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
                             |> Seq.toList)
 
             let isSymbolDeclaredInCurrentProject =
-                match VSLanguageService.tryGetLocation symbol with
+                match vsLanguageService.TryGetLocation symbol with
                 | Some loc ->
                     let filePath = Path.GetFullPath loc.FileName
                     // NB: this isn't a foolproof way to match two paths

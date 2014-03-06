@@ -16,10 +16,10 @@ type VSLanguageService() =
                                                p.CompilerOptions, p.TargetFramework)
         instance.Checker.InvalidateConfiguration opts)
     
-    let tryGetLocation (symbol: FSharpSymbol) =
+    member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 
-    member this.GetSymbol(point: SnapshotPoint, projectProvider : IProjectProvider) =
+    member x.GetSymbol(point: SnapshotPoint, projectProvider : IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
@@ -28,7 +28,7 @@ type VSLanguageService() =
         instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
-    member this.ProcessNavigableItemsInProject(openDocuments, (projectProvider: IProjectProvider), processNavigableItems, ct) =
+    member x.ProcessNavigableItemsInProject(openDocuments, (projectProvider: IProjectProvider), processNavigableItems, ct) =
         instance.ProcessParseTrees(
             projectProvider.ProjectFileName, 
             openDocuments, 
@@ -38,7 +38,7 @@ type VSLanguageService() =
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)
 
-    member this.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
@@ -62,4 +62,4 @@ type VSLanguageService() =
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
 
-    member this.Checker = instance.Checker
+    member x.Checker = instance.Checker
