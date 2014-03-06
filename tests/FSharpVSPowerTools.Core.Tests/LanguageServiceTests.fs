@@ -223,7 +223,7 @@ let ``should find usages of statically resolved type parameters``() =
           (731, 12), (731, 14)
           (731, 44), (731, 46) ] 
 
-[<Test; Ignore "FSharp.Compiler.Services does not support this yet">]
+[<Test>]
 let ``should find usages of named discriminated union fields``() =
     checkSymbolUsage 735 15 "        | B of field1: int * field2: string" 
         [ (735, 15), (735, 21)
