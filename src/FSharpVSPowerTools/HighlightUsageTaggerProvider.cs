@@ -22,10 +22,10 @@ namespace FSharpVSPowerTools
         internal ITextSearchService TextSearchService { get; set; }
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService;
+        private VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider;
+        private IServiceProvider serviceProvider = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {

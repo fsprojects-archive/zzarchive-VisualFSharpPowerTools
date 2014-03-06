@@ -152,23 +152,19 @@ let inline ensureSucceded hr =
     ErrorHandler.ThrowOnFailure hr
     |> ignore        
 
-type IThreadGuard = 
-    abstract EnsureOnCorrectThread: unit -> unit
-
 open System.ComponentModel.Composition
 
 [<Literal>]
 let private UnassignedThreadId = -1
 
-[<Export(typeof<IThreadGuard>)>]
-[<Export(typeof<ThreadGuard>)>]
-type ThreadGuard() = 
-    let mutable threadId = UnassignedThreadId
-    member this.BindToCurrentThread() = 
+type ForegroundThreadGuard private() = 
+    static let mutable threadId = UnassignedThreadId
+    static member BindThread() =
+        if threadId <> UnassignedThreadId then 
+            fail "Thread is already set"
         threadId <- System.Threading.Thread.CurrentThread.ManagedThreadId
-    interface IThreadGuard with
-        member this.EnsureOnCorrectThread() =
-            if threadId = UnassignedThreadId then 
-                fail "Thread id not set"
-            if threadId <> System.Threading.Thread.CurrentThread.ManagedThreadId then
-                fail "Accessed from the wrong thread"
+    static member CheckThread() =
+        if threadId = UnassignedThreadId then 
+            fail "Thread not set"
+        if threadId <> System.Threading.Thread.CurrentThread.ManagedThreadId then
+            fail "Accessed from the wrong thread"

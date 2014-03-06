@@ -7,9 +7,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.ProjectSystem;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.ComponentModelHost;
+using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
@@ -30,10 +29,7 @@ namespace FSharpVSPowerTools
         protected override void Initialize()
         {
             base.Initialize();
-
-            var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
-            var threadGuard = componentModel.DefaultExportProvider.GetExportedValue<VSUtils.ThreadGuard>();
-            threadGuard.BindToCurrentThread();
+            VSUtils.ForegroundThreadGuard.BindThread();
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(GeneralOptionsPage),

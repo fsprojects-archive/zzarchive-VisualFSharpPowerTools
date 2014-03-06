@@ -25,10 +25,10 @@ namespace FSharpVSPowerTools.Refactoring
 #pragma warning restore 0649
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService;
+        private VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private System.IServiceProvider  serviceProvider;
+        private System.IServiceProvider  serviceProvider = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {

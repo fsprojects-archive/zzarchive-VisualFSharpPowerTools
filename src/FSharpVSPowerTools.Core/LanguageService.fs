@@ -321,30 +321,30 @@ type LanguageService(dirtyNotify) =
     opts
 
   member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
-    let projectOptions = ref None
-    let rec loop i = 
+    let rec loop i options = 
         if not ct.IsCancellationRequested && i < files.Length then
             let file = files.[i]
             let source = 
                 match Map.tryFind file openDocuments with
                 | None -> try Some(File.ReadAllText file) with _ -> None 
                 | x -> x
-            source
-            |> Option.iter (fun source -> 
-                let opts = 
-                    match !projectOptions with
-                    | None -> 
-                        let opts = x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
-                        projectOptions := Some opts
-                        opts
-                    | Some opts -> opts
-                let parseResults = checker.ParseFileInProject(file, source, opts)
-
-                parseResults.ParseTree
-                |> Option.iter parseTreeHandler
-            )
-            loop (i + 1)
-    loop 0
+            let options = 
+                match source with
+                | Some source ->
+                    let opts = 
+                        match options with
+                        | None -> 
+                            x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
+                        | Some opts -> opts
+                    let parseResults = checker.ParseFileInProject(file, source, opts)
+                    match parseResults.ParseTree with
+                    | Some tree -> parseTreeHandler tree
+                    | None -> ()
+                    Some opts
+                | None -> 
+                    options
+            loop (i + 1) options
+    loop 0 None
 
   /// Parses and type-checks the given file in the given project under the given configuration. The callback
   /// is called after the complete typecheck has been performed.

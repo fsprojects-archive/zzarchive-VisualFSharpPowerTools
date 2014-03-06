@@ -11,7 +11,6 @@ open Microsoft.VisualStudio.Text.Editor
 type OpenDocumentsTracker
     [<ImportingConstructor>]
     (
-        threadGuard: IThreadGuard,
         textDocumentFactoryService: ITextDocumentFactoryService
 
     ) =
@@ -19,18 +18,18 @@ type OpenDocumentsTracker
     let mutable openDocuments = Map.empty
 
     member x.RegisterView(view: IWpfTextView) = 
-        threadGuard.EnsureOnCorrectThread()
+        ForegroundThreadGuard.CheckThread()
         match textDocumentFactoryService.TryGetTextDocument(view.TextBuffer) with
         | true, document ->
             let path = document.FilePath
             let rec textBufferChanged (args: TextContentChangedEventArgs) =
-                threadGuard.EnsureOnCorrectThread()
+                ForegroundThreadGuard.CheckThread()
                 
                 openDocuments <- Map.add path args.After openDocuments
 
             and textBufferChangedSubscription: IDisposable = view.TextBuffer.Changed.Subscribe(textBufferChanged)
             and viewClosed _ = 
-                threadGuard.EnsureOnCorrectThread()
+                ForegroundThreadGuard.CheckThread()
 
                 textBufferChangedSubscription.Dispose()
                 viewClosedSubscription.Dispose()
