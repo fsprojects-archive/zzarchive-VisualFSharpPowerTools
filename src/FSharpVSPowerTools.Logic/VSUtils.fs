@@ -21,7 +21,7 @@ let fromFSharpPos (snapshot: ITextSnapshot) (r: range) =
 open Microsoft.FSharp.Compiler.PrettyNaming
 
 let private isDoubleBacktickIdent (s: string) =
-    if s.StartsWith("``") && s.EndsWith("``") then
+    if s.StartsWith("``") && s.EndsWith("``") && s.Length > 4 then
         let inner = s.Substring("``".Length, s.Length - "````".Length)
         not (inner.Contains("``"))
     else
