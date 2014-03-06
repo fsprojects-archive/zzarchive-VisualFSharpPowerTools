@@ -117,11 +117,12 @@ module ProjectCache =
     type UniqueProjectName = string
     type Projects = Map<UniqueProjectName, IProjectProvider>
 
-    [<NoComparison>]
+    [<NoEquality; NoComparison>]
     type private Message = 
         | Get of Document * AsyncReplyChannel<IProjectProvider option>
         | Update of VSProject
-
+        | Put of Project * AsyncReplyChannel<IProjectProvider option>
+    
     let projectUpdated = Event<_>()
 
     let private agent = MailboxProcessor.Start(fun inbox ->
@@ -155,6 +156,14 @@ module ProjectCache =
         let rec loop (projects: Projects) = async {
             let! msg = inbox.Receive()
             match msg with
+            | Put(project, r) ->
+                let projects, project =
+                    let vsProject = try Option.ofNull (project.Object :?> VSProject) with _ -> None
+                    match vsProject with
+                    | None -> projects, None
+                    | x -> obtainProject projects x
+                r.Reply project
+                return! loop projects
             | Get (doc, r) ->
                 let projects, project = obtainProject projects doc.ProjectItem.VSProject
                 let project = project |> Option.orElse (Some (VirtualProjectProvider doc :> _))
@@ -168,10 +177,11 @@ module ProjectCache =
         loop Map.empty)
 
     agent.Error.Add (fail "%O")
-
-    SolutionEvents.Instance.ProjectChanged.Add (fun vsProject -> agent.Post (Update vsProject))
-
+    // attaches listener to the given instance of VSUtils.SolutionEvents
+    let connect (solutionEvents: VSUtils.SolutionEvents) = solutionEvents.ProjectChanged.Add(Update >> agent.Post)
     /// Returns ProjectProvider for given Document.
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))
+    /// Returns ProjectProvider for given Project.
+    let putProject project = agent.PostAndReply (fun r -> Put (project, r))
     /// Raised when a project is changed.
     let projectChanged = projectUpdated.Publish

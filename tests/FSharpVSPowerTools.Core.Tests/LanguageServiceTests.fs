@@ -33,7 +33,7 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-
+let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
 
@@ -70,7 +70,7 @@ let allUsesOfAllSymbols =
 #endif
 
 let getUsesOfSymbol line col lineStr =
-    VSLanguageService.instance.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
+    vsLanguageService.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
                                                                    line, col, lineStr, args, framework)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, _, symbolUses) -> 
@@ -86,7 +86,7 @@ let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
 let checkGetSymbol line col lineStr expected =
-    VSLanguageService.instance.GetSymbol(source, line, col, lineStr, args)
+    vsLanguageService.GetSymbol(source, line, col, lineStr, args)
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
         text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected
@@ -262,3 +262,76 @@ let ``should find generic parameters``() =
 let ``should find statically resolved type parameters``() =
     checkGetSymbol 730 22 "    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
         (Some ("^T", (730, 22), (730, 24), StaticallyResolvedTypeParameter))
+
+type ITempSource = 
+    inherit System.IDisposable
+    abstract FilePath: string
+
+let private tempSource content = 
+    let path = Path.GetTempPath();
+    let path = Path.ChangeExtension(path, "fs")
+    File.WriteAllText(path, content)
+    {
+        new ITempSource with
+            member this.FilePath = path
+            member this.Dispose() = File.Delete(path)
+    }
+
+[<Test>]
+let ``ProcessParseTree should be called for all files in project``() =
+    use f1 = tempSource "module M1"
+    use f2 = tempSource "module M2"
+    let seen = ResizeArray()
+    vsLanguageService.ProcessParseTrees(
+        projectFileName, 
+        Map.empty, 
+        [| f1.FilePath; f2.FilePath |], 
+        args, 
+        framework, 
+        seen.Add,
+        System.Threading.CancellationToken.None)
+
+    assertTrue (seen.Count = 2)
+    assertEqual seen.[0].Range.FileName f1.FilePath
+    assertEqual seen.[1].Range.FileName f2.FilePath
+
+[<Test>]
+let ``ProcessParseTree should prefer open documents``() =
+    use f1 = tempSource "module Foo"
+    let seen = ResizeArray()
+    vsLanguageService.ProcessParseTrees(
+        projectFileName,
+        [f1.FilePath, "module Bar"] |> Map.ofList, 
+        [| f1.FilePath|], 
+        args, 
+        framework, 
+        seen.Add,
+        System.Threading.CancellationToken.None)
+
+    assertTrue (seen.Count = 1)
+    match seen.[0] with
+    | Ast.ParsedInput.ImplFile(Ast.ParsedImplFileInput(name, _isScript, _fileName, _scopedPragmas, _hashDirectives, [m], _)) -> 
+        match m with
+        | Ast.SynModuleOrNamespace([name], isModule, decls, _xmldoc, _attributes, _access, _range) ->
+            assertEqual name.idText "Bar"
+        | x -> 
+            Assert.Fail (sprintf "Expected empty module named Bar got %+A" x)
+    | _ -> 
+        Assert.Fail("Impl file expected")
+
+[<Test>]
+let ``ProcessParseTree should react on cancellation``() =
+    use f1 = tempSource "module Foo"
+    let seen = ResizeArray()
+    let cts = new System.Threading.CancellationTokenSource();
+    cts.Cancel()
+    vsLanguageService.ProcessParseTrees(
+        projectFileName,
+        Map.empty, 
+        [| f1.FilePath|], 
+        args, 
+        framework, 
+        seen.Add,
+        cts.Token)
+
+    assertTrue (seen.Count = 0)

@@ -11,6 +11,7 @@ using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
 using FSharpVSPowerTools.XmlDoc;
+using FSharpVSPowerTools.ProjectSystem;
 
 // Useful reference: http://msdn.microsoft.com/en-us/library/dd885243.aspx
 namespace FSharpVSPowerTools
@@ -25,6 +26,9 @@ namespace FSharpVSPowerTools
 
         [Import]
         internal IVsEditorAdaptersFactoryService EditorFactory { get; set; }
+
+        [Import]
+        internal VSLanguageService FSharpLanguageService { get; set; }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -41,7 +45,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (TextDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath);
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, FSharpLanguageService);
             }
         }
     }

@@ -13,6 +13,7 @@ using Microsoft.Win32;
 using FSharpVSPowerTools.DepthColorizer;
 using Microsoft.VisualStudio.Shell;
 using System.Diagnostics;
+using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
@@ -23,6 +24,9 @@ namespace FSharpVSPowerTools
     {
         [Import]
         internal ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
+
+        [Import]
+        internal VSLanguageService FSharpLanguageService { get; set; }
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
@@ -37,7 +41,7 @@ namespace FSharpVSPowerTools
 
             if (TextDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new DepthTagger(buffer, doc.FilePath) as ITagger<T>;
+                return new DepthTagger(buffer, doc.FilePath, FSharpLanguageService) as ITagger<T>;
             }
 
             return null;
