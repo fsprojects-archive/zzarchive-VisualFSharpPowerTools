@@ -1,5 +1,7 @@
 ﻿namespace FSharpVSPowerTools
 
+open System
+
 [<RequireQualifiedAccess>]
 module Seq =
     let tryHead s =
@@ -7,8 +9,6 @@ module Seq =
 
 [<RequireQualifiedAccess>]
 module Option =
-    open System
-
     let inline ofNull value =
         if obj.ReferenceEquals(value, null) then None else Some value
 
@@ -106,3 +106,39 @@ module Pervasive =
         | :? 'a as a -> Some a
         | _ -> fail "Cannot cast %O to %O" (o.GetType()) typeof<'a>.Name; None
 
+
+    open System.Threading
+    
+    let synchronize f = 
+        let ctx = SynchronizationContext.Current
+        
+        let thread = 
+            match ctx with
+            | null -> null // saving a thread-local access
+            | _ -> Thread.CurrentThread
+        f (fun g arg -> 
+            let nctx = SynchronizationContext.Current
+            match ctx, nctx with
+            | null, _ -> g arg
+            | _, _ when Object.Equals(ctx, nctx) && thread.Equals(Thread.CurrentThread) -> g arg
+            | _ -> ctx.Post((fun _ -> g (arg)), null))
+
+    type Microsoft.FSharp.Control.Async with
+        static member EitherEvent(ev1: IObservable<'a>, ev2: IObservable<'b>) = 
+            synchronize (fun f -> 
+                Async.FromContinuations((fun (cont, _econt, _ccont) -> 
+                    let rec callback1 = 
+                        (fun value -> 
+                        remover1.Dispose()
+                        remover2.Dispose()
+                        f cont (Choice1Of2(value)))
+                    
+                    and callback2 = 
+                        (fun value -> 
+                        remover1.Dispose()
+                        remover2.Dispose()
+                        f cont (Choice2Of2(value)))
+                    
+                    and remover1: IDisposable = ev1.Subscribe(callback1)
+                    and remover2: IDisposable = ev2.Subscribe(callback2)
+                    ())))
