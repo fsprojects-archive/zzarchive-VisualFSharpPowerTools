@@ -15,11 +15,24 @@ type TypeColorTag() =
     inherit TextMarkerTag("SymbolDefinitionClassificationFormat")
 
 // Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
-type SyntaxColorTagger() =
+type SyntaxColorTagger(view: ITextView,
+                       sourceBuffer: ITextBuffer,
+                       textSearchService: ITextSearchService) as self =
     let tagsChanged = Event<_, _>()
 
+    let caretPositionChangedHandler =
+        let handler e f =
+            let snapshot = sourceBuffer.CurrentSnapshot
+            let getText = snapshot.GetText()
+            ()
+
+        EventHandler<_>(handler)
+
+    do
+        view.Caret.PositionChanged.AddHandler(caretPositionChangedHandler)
+
     interface ITagger<TypeColorTag> with
-        member x.GetTags (spans: NormalizedSnapshotSpanCollection): seq<ITagSpan<HighlightUsageTag>> =
+        member x.GetTags (spans: NormalizedSnapshotSpanCollection): seq<ITagSpan<TypeColorTag>> =
             Seq.empty
 
         [<CLIEvent>]
