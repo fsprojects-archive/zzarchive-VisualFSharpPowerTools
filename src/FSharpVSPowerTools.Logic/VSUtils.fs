@@ -162,3 +162,38 @@ type SolutionEvents() =
     static member Instance = instance.Value
     /// Raised when any project in solution has changed.
     member x.ProjectChanged = projectChanged.Publish
+
+open System.Windows.Threading
+
+type DocumentEventsListener (view: ITextView, update: unit -> unit) =
+    // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
+    let timeSpan = TimeSpan.FromMilliseconds 200.
+
+    let events =
+        view.LayoutChanged
+        |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
+        |> Event.merge (view.Caret.PositionChanged |> Event.map (fun _ -> ()))
+        
+    let startNewTimer() = 
+        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = timeSpan)
+        timer.Start()
+        timer
+        
+    let rec awaitPauseAfterChange (timer: DispatcherTimer) = 
+        async { 
+            let! e = Async.EitherEvent(events, timer.Tick)
+            match e with
+            | Choice1Of2 _ -> 
+                timer.Stop()
+                do! awaitPauseAfterChange (startNewTimer())
+            | _ -> ()
+        }
+        
+    do async { 
+        while true do
+            do! Async.AwaitEvent events
+            do! awaitPauseAfterChange (startNewTimer())
+            update() }
+       |> Async.StartImmediate
+       // go ahead and synchronously get the first bit of info for the original rendering
+       update() 

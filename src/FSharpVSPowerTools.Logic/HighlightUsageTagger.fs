@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open System.Windows.Threading
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -95,8 +96,8 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
            | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
            | _ -> ()
 
-    let updateAtCaretPosition(caretPosition: CaretPosition) =
-        match sourceBuffer.GetSnapshotPoint caretPosition with
+    let updateAtCaretPosition () =
+        match sourceBuffer.GetSnapshotPoint view.Caret.Position with
         | Some point ->
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
@@ -107,19 +108,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                 updateWordAdornments()
         | _ -> ()
 
-    let viewLayoutChanged = 
-        EventHandler<_>(fun _ (e: TextViewLayoutChangedEventArgs) ->
-            // If a new snapshot wasn't generated, then skip this layout 
-            if e.NewSnapshot <> e.OldSnapshot then  
-                updateAtCaretPosition(view.Caret.Position))
-
-    let caretPositionChanged =
-        EventHandler<_>(fun _ (e: CaretPositionChangedEventArgs) ->
-            updateAtCaretPosition(e.NewPosition))
-
-    do
-        view.LayoutChanged.AddHandler(viewLayoutChanged)
-        view.Caret.PositionChanged.AddHandler(caretPositionChanged)
+    let _ = DocumentEventsListener (view, updateAtCaretPosition)
 
     interface ITagger<HighlightUsageTag> with
         member x.GetTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq =
@@ -149,8 +138,3 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
             }
         member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
         member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
-         
-    interface IDisposable with
-        member x.Dispose() = 
-            view.LayoutChanged.RemoveHandler(viewLayoutChanged)
-            view.Caret.PositionChanged.RemoveHandler(caretPositionChanged)

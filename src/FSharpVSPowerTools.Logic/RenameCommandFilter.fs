@@ -33,9 +33,9 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
         // TODO: it should be a symbol and is defined in current project
         state |> Option.bind (fun x -> x.Word) |> Option.isSome
 
-    let updateAtCaretPosition(caretPosition: CaretPosition) = 
+    let updateAtCaretPosition () =
         maybe {
-            let! point = view.TextBuffer.GetSnapshotPoint caretPosition
+            let! point = view.TextBuffer.GetSnapshotPoint view.Caret.Position
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
             match state with
@@ -48,19 +48,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
                       Project =  project
                       Word = VSLanguageService.getSymbol point project }} |> ignore
 
-    let viewLayoutChanged = 
-        EventHandler<_>(fun _ (e: TextViewLayoutChangedEventArgs) ->
-            // If a new snapshot wasn't generated, then skip this layout 
-            if e.NewSnapshot <> e.OldSnapshot then  
-                updateAtCaretPosition(view.Caret.Position))
-
-    let caretPositionChanged =
-        EventHandler<_>(fun _ (e: CaretPositionChangedEventArgs) ->
-            updateAtCaretPosition(e.NewPosition))
-
-    do
-        view.LayoutChanged.AddHandler(viewLayoutChanged)
-        view.Caret.PositionChanged.AddHandler(caretPositionChanged)
+    let _ = DocumentEventsListener (view, updateAtCaretPosition)
 
     let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
         try
@@ -156,8 +144,3 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
                 VSConstants.S_OK
             else
                 x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
-
-    interface IDisposable with
-        member x.Dispose() = 
-            view.LayoutChanged.RemoveHandler(viewLayoutChanged)
-            view.Caret.PositionChanged.RemoveHandler(caretPositionChanged)
