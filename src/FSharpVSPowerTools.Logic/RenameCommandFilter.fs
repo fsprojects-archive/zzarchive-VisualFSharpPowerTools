@@ -89,9 +89,9 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
             let! state = state
             let! cw, sym = state.Word
             let! (symbol, currentName, references) = 
-                  vsLanguageService.FindUsages(cw, state.File, state.Project)
+                  vsLanguageService.FindUsages(cw, state.File, state.Project, Scope.Project)
                   |> Async.RunSynchronously
-                  |> Option.map (fun (symbol, lastIdent, _, refs) -> 
+                  |> Option.map (fun (symbol, lastIdent, refs) -> 
                         symbol, lastIdent,
                             refs 
                             |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))

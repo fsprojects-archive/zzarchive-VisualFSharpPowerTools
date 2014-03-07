@@ -42,10 +42,10 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.FindUsages(newWord, fileName, projectProvider)
+                    let! res = vsLanguageService.FindUsages(newWord, fileName, projectProvider, Scope.File)
                     let results =
                         res
-                        |> Option.map (fun (_, lastIdent, _, refs) -> 
+                        |> Option.map (fun (_,lastIdent, refs) -> 
                             refs 
                             |> Seq.choose (fun symbolUse -> 
                                 // We have to filter by full paths otherwise the range is invalid wrt current snapshot

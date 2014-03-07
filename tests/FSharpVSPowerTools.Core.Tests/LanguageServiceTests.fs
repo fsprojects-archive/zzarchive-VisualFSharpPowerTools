@@ -15,6 +15,7 @@ open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.CompilerBinding
+open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tutorial.fs")
@@ -70,10 +71,10 @@ let allUsesOfAllSymbols =
 #endif
 
 let getUsesOfSymbol line col lineStr =
-    vsLanguageService.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                                   line, col, lineStr, args, framework)
+    vsLanguageService.GetUsesOfSymbolAtLocationInFile(projectFileName, fileName, source, sourceFiles, 
+                                                      line, col, lineStr, args, framework)
     |> Async.RunSynchronously
-    |> Option.map (fun (_, _, _, symbolUses) -> 
+    |> Option.map (fun (_, _, symbolUses) -> 
         symbolUses |> Array.map (fun x -> 
                         let r = x.RangeAlternate
                         ((r.StartLine-1, r.StartColumn), (r.EndLine-1, r.EndColumn))))
@@ -86,7 +87,7 @@ let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
 let checkGetSymbol line col lineStr expected =
-    vsLanguageService.GetSymbol(source, line, col, lineStr, args)
+    SymbolParser.getSymbol source line col lineStr args
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
         text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected

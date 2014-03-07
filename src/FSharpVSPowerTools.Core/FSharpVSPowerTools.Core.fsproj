@@ -58,8 +58,7 @@
   <ItemGroup>
     <Compile Include="Utils.fs" />
     <Compile Include="CompilerLocationUtils.fs" />
-    <Compile Include="Parser.fs" />
-    <Compile Include="LanguageService2.fs" />
+    <Compile Include="SymbolParser.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
