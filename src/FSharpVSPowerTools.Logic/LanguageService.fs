@@ -12,7 +12,7 @@ open FSharp.CompilerBinding
 type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider) =
     // TODO: we should reparse the stale document and cache it
     let instance = LanguageService(fun _ -> ())
-
+    let solutionEvents = SolutionEvents(serviceProvider)
     do ProjectCache.listen(solutionEvents)
     do ProjectCache.projectChanged.Add (fun p -> 
         debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
