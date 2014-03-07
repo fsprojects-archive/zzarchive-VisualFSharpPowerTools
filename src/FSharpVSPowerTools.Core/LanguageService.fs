@@ -272,6 +272,23 @@ type LanguageService (dirtyNotify) =
     let refs = projectResults.GetUsesOfSymbol(symbol)
     return refs }
 
+  /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
+  member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework) =
+     async { 
+         match SymbolParser.getSymbol source line col lineStr args with
+         | Some sym ->
+             let! checkResults = x.GetTypedParseResultAsync(projectFilename, fileName, source, files, args, stale= AllowStaleResults.MatchingSource, targetFramework=targetFramework)
+         
+             match checkResults.GetSymbolAtLocation(line+1, sym.RightColumn, lineStr, [sym.Text]) with
+             | Some symbol ->
+                 let projectOptions = x.GetCheckerOptions(fileName, projectFilename, source, files, args, targetFramework)
+                 let! projectResults = checker.ParseAndCheckProject(projectOptions) 
+                 let refs = projectResults.GetUsesOfSymbol(symbol)
+                 return Some(symbol, sym.Text, refs)
+             | None -> return None
+         | None -> return None 
+     }
+
   member x.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)
 
   // additions

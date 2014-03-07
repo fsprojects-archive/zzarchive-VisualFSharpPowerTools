@@ -64,13 +64,13 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 return! 
-                    //match scope with
-                    ///| File -> 
+                    match scope with
+                    | File -> 
                         instance.GetUsesOfSymbolAtLocationInFile (projectFileName, currentFile, source, sourceFiles, 
                                                                   endLine, endCol, currentLine, args, framework)
-//                    | Project ->
-                        //instance.GetUsesOfSymbolInProject (projectFileName, currentFile, source, sourceFiles, 
-                          //                                 endLine, endCol, currentLine, args, framework)
+                    | Project ->
+                        instance.GetUsesOfSymbolInProjectAtLocationInFile (projectFileName, currentFile, source, sourceFiles, 
+                                                                           endLine, endCol, currentLine, args, framework)
 
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
