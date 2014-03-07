@@ -87,11 +87,11 @@ open Microsoft.VisualStudio.ComponentModelHost
 
 type DocumentUpdater(serviceProvider: IServiceProvider) = 
     member x.OpenDocument(fileName: string, [<Out>] viewAdapter: byref<IVsTextView>, pWindowFrame: byref<IVsWindowFrame>) = 
-        let _textMgr = Package.GetGlobalService(typedefof<SVsTextManager>) :?> IVsTextManager
-        let _uiShellOpenDocument = Package.GetGlobalService(typedefof<SVsUIShellOpenDocument>) :?> IVsUIShellOpenDocument
+        let _ = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+        let _ = serviceProvider.GetService<IVsUIShellOpenDocument, SVsUIShellOpenDocument>()
         let hierarchy = ref null
-        let itemid = ref 0u
-        VsShellUtilities.OpenDocument(serviceProvider, fileName, Guid.Empty, hierarchy, itemid, &pWindowFrame, &viewAdapter)
+        let itemId = ref 0u
+        VsShellUtilities.OpenDocument(serviceProvider, fileName, Guid.Empty, hierarchy, itemId, &pWindowFrame, &viewAdapter)
 
     member x.GetBufferForDocument(fileName: string) = 
         let viewAdapter = ref null
@@ -101,12 +101,12 @@ type DocumentUpdater(serviceProvider: IServiceProvider) =
         let lines = ref null
         ErrorHandler.ThrowOnFailure((!viewAdapter).GetBuffer(lines)) |> ignore
 
-        let componentModel = Package.GetGlobalService(typedefof<SComponentModel>) :?> IComponentModel
+        let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
         let adapter = componentModel.GetService<IVsEditorAdaptersFactoryService>()
         adapter.GetDocumentBuffer(!lines)
 
     member x.BeginGlobalUndo(key: string) = 
-        let linkedUndo = Package.GetGlobalService(typedefof<SVsLinkedUndoTransactionManager>) :?> IVsLinkedUndoTransactionManager
+        let linkedUndo = serviceProvider.GetService<IVsLinkedUndoTransactionManager, SVsLinkedUndoTransactionManager>()
         ErrorHandler.ThrowOnFailure(linkedUndo.OpenLinkedUndo(uint32 LinkedTransactionFlags2.mdtGlobal, key)) |> ignore
         linkedUndo
 
@@ -131,7 +131,6 @@ type DTE with
         | _ -> ()
         doc
     
-
 type ProjectItem with
     member x.VSProject =
         Option.ofNull x

@@ -22,20 +22,23 @@ namespace FSharpVSPowerTools
     public class XmlDocCommandFilterProvider : IVsTextViewCreationListener
     {
         [Import]
-        internal ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
+        private ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
-        internal IVsEditorAdaptersFactoryService EditorFactory { get; set; }
+        private IVsEditorAdaptersFactoryService editorFactory = null;
 
         [Import]
-        internal VSLanguageService FSharpLanguageService { get; set; }
+        private VSLanguageService fsharpVsLanguageService = null;
+
+        [Import(typeof(SVsServiceProvider))]
+        private System.IServiceProvider serviceProvider = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            var wpfTextView = EditorFactory.GetWpfTextView(textViewAdapter);
+            var wpfTextView = editorFactory.GetWpfTextView(textViewAdapter);
             if (wpfTextView == null) return;
 
-            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.XMLDocEnabled)
             {
                 Debug.WriteLine("[XMLDoc] The feature is disabled in General option page.");
@@ -43,9 +46,9 @@ namespace FSharpVSPowerTools
             }
 
             ITextDocument doc;
-            if (TextDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
+            if (textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, FSharpLanguageService);
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, fsharpVsLanguageService);
             }
         }
     }
