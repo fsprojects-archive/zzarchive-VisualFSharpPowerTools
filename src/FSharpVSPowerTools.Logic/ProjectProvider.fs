@@ -178,7 +178,7 @@ module ProjectCache =
 
     agent.Error.Add (fail "%O")
     // attaches listener to the given instance of VSUtils.SolutionEvents
-    let connect (solutionEvents: VSUtils.SolutionEvents) = solutionEvents.ProjectChanged.Add(Update >> agent.Post)
+    let listen (solutionEvents: VSUtils.SolutionEvents) = solutionEvents.ProjectChanged.Add(Update >> agent.Post)
     /// Returns ProjectProvider for given Document.
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))
     /// Returns ProjectProvider for given Project.
