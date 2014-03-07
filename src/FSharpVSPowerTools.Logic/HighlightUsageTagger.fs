@@ -42,7 +42,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.FindUsages(newWord, fileName, projectProvider)
+                    let! res = vsLanguageService.FindUsagesInFile(newWord, fileName, projectProvider)
                     let results =
                         res
                         |> Option.map (fun (_, lastIdent, _, refs) -> 

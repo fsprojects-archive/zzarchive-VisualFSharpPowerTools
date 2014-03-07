@@ -62,6 +62,14 @@ type DraftToken =
     static member Create kind token = 
         { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
 
+type LanguageServiceRequest =
+    { FileName: string
+      ProjFileName: string
+      Source: string
+      Files: string array
+      CompilerOptions: string array
+      TargetFramework: FSharpTargetFramework }
+
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService(dirtyNotify) =
   let debug msg = Printf.kprintf Debug.WriteLine msg
@@ -298,53 +306,83 @@ type LanguageService(dirtyNotify) =
             Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
-  member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
-    let ext = Path.GetExtension(fileName)
-    let opts = 
-      if (ext = ".fsx" || ext = ".fsscript") then
-        // We are in a stand-alone file or we are in a project, but currently editing a script file
-        try 
-          let fileName = fixFileName(fileName)
-          debug "CheckOptions: Creating for stand-alone file or script: '%s'" fileName
-          let opts = checker.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
-          
-          // The InteractiveChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
-          if opts.ProjectOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then opts
+  let getCheckerOptions req = 
+      let ext = Path.GetExtension(req.FileName)
+  
+      let opts = 
+          if (ext = ".fsx" || ext = ".fsscript") then 
+              // We are in a stand-alone file or we are in a project, but currently editing a script file
+              try 
+                  let fileName = fixFileName (req.FileName)
+                  debug "CheckOptions: Creating for stand-alone file or script: '%s'" fileName
+                  let opts = 
+                      checker.GetProjectOptionsFromScript
+                          (fileName, req.Source, fakeDateTimeRepresentingTimeLoaded req.ProjFileName)
+                  // The InteractiveChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
+                  if opts.ProjectOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then opts
+                  else 
+                      // Add assemblies that may be missing in the standard assembly resolution
+                      debug "CheckOptions: Adding missing core assemblies."
+                      let dirs = 
+                          FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, req.TargetFramework)
+                      { opts with ProjectOptions = 
+                                      [| yield! opts.ProjectOptions
+                                         match FSharpEnvironment.resolveAssembly dirs "FSharp.Core" with
+                                         | Some fn -> yield sprintf "-r:%s" fn
+                                         | None -> debug "Resolution: FSharp.Core assembly resolution failed!"
+                                     
+                                         match FSharpEnvironment.resolveAssembly dirs 
+                                                   "FSharp.Compiler.Interactive.Settings" with
+                                         | Some fn -> yield sprintf "-r:%s" fn
+                                         | None -> 
+                                             debug 
+                                                 "Resolution: FSharp.Compiler.Interactive.Settings assembly resolution failed!" |] }
+              with e -> failwithf "Exception when getting check options for '%s'\n.Details: %A" req.FileName e
+          // We are in a project - construct options using current properties
           else 
-            // Add assemblies that may be missing in the standard assembly resolution
-            debug "CheckOptions: Adding missing core assemblies."
-            let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework )
-            {opts with ProjectOptions = [| yield! opts.ProjectOptions
-                                           match FSharpEnvironment.resolveAssembly dirs "FSharp.Core" with
-                                           | Some fn -> yield sprintf "-r:%s" fn
-                                           | None -> debug "Resolution: FSharp.Core assembly resolution failed!"
-                                           match FSharpEnvironment.resolveAssembly dirs "FSharp.Compiler.Interactive.Settings" with
-                                           | Some fn -> yield sprintf "-r:%s" fn
-                                           | None -> debug "Resolution: FSharp.Compiler.Interactive.Settings assembly resolution failed!" |]}
-        with e -> failwithf "Exception when getting check options for '%s'\n.Details: %A" fileName e
-          
-      // We are in a project - construct options using current properties
-      else
-        debug "GetCheckerOptions: Creating for file '%s' in project '%s'" fileName projFilename
+              debug "GetCheckerOptions: Creating for file '%s' in project '%s'" req.FileName req.ProjFileName
+              { ProjectFileName = req.ProjFileName
+                ProjectFileNames = req.Files
+                ProjectOptions = req.CompilerOptions
+                IsIncompleteTypeCheckEnvironment = false
+                UseScriptResolutionRules = false
+                LoadTime = fakeDateTimeRepresentingTimeLoaded req.ProjFileName
+                UnresolvedReferences = None }
+      // Print contents of check option for debugging purposes
+      debug 
+          "GetCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
+          opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment 
+          opts.UseScriptResolutionRules
+      opts
 
-        {ProjectFileName = projFilename
-         ProjectFileNames = files
-         ProjectOptions = args
-         IsIncompleteTypeCheckEnvironment = false
-         UseScriptResolutionRules = false   
-         LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
-         UnresolvedReferences = None } 
+  let getUsesOfSymbolAtLocation createSymbolUsesGetter req (line: int) col lineStr = 
+      async { 
+          let projectOptions = getCheckerOptions req
+          // Parse and retrieve Checked Project results, this has the entity graph and errors etc
+          let! usesGetter = createSymbolUsesGetter projectOptions
+          // Get the parse results for the current file
+          let! _, checkFileResults = 
+              // Note this operates on the file system so the file needs to be current
+              checker.GetBackgroundCheckResultsForFileInProject(req.FileName, projectOptions)
+          return maybe { 
+                     let! symbol = getSymbol req.Source line col lineStr req.CompilerOptions
+                     // We only look up identifiers and operators, everything else isn't of interest       
+                     debug "Parsing: Passed in the following symbol '%s'" symbol.Text
+                     // Note we advance the caret to 'rightCol' ** due to GetSymbolAtLocation only working at the beginning/end **
+                     let! fsharpSymbol = checkFileResults.GetSymbolAtLocationAlternate
+                                             (line + 1, symbol.RightColumn, lineStr, [ symbol.Text ])
+                     let symRangeOpt = tryGetSymbolRange fsharpSymbol.DeclarationLocation
+                     let refs = usesGetter checkFileResults fsharpSymbol
+                     return fsharpSymbol, symbol.Text, symRangeOpt, refs
+                 }
+      }
 
-    // Print contents of check option for debugging purposes
-    debug "GetCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-          opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions 
-          opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
-    opts
+  member x.GetCheckerOptions req = getCheckerOptions req
 
-  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
+  member x.ProcessParseTrees(req, openDocuments, parseTreeHandler, ct: System.Threading.CancellationToken) = 
     let rec loop i options = 
-        if not ct.IsCancellationRequested && i < files.Length then
-            let file = files.[i]
+        if not ct.IsCancellationRequested && i < req.Files.Length then
+            let file = req.Files.[i]
             let source = 
                 match Map.tryFind file openDocuments with
                 | None -> try Some(File.ReadAllText file) with _ -> None 
@@ -354,8 +392,7 @@ type LanguageService(dirtyNotify) =
                 | Some source ->
                     let opts = 
                         match options with
-                        | None -> 
-                            x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
+                        | None -> getCheckerOptions req
                         | Some opts -> opts
                     let parseResults = checker.ParseFileInProject(file, source, opts)
                     match parseResults.ParseTree with
@@ -369,66 +406,51 @@ type LanguageService(dirtyNotify) =
 
   /// Parses and type-checks the given file in the given project under the given configuration. The callback
   /// is called after the complete typecheck has been performed.
-  member x.TriggerParse(projectFilename, fileName:string, src, files, args, targetFramework, afterCompleteTypeCheckCallback) = 
-    let opts = x.GetCheckerOptions(fileName, projectFilename,  src, files , args, targetFramework)
-    debug "Parsing: Trigger parse (fileName=%s)" fileName
-    mbox.Post(TriggerRequest(ParseRequest(fileName, src, opts, true, Some afterCompleteTypeCheckCallback)))
+  member x.TriggerParse (req, afterCompleteTypeCheckCallback) = 
+      let opts = getCheckerOptions req
+      debug "Parsing: Trigger parse (fileName=%s)" req.FileName
+      mbox.Post(TriggerRequest(ParseRequest(req.FileName, req.Source, opts, true, Some afterCompleteTypeCheckCallback)))
 
-  member x.GetUntypedParseResult(projectFilename, fileName:string, src, files, args, targetFramework) = 
-        let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
-        debug "Parsing: Get untyped parse result (fileName=%s)" fileName
-        let _req = ParseRequest(fileName, src, opts, false, None)
-        checker.ParseFileInProject(fileName, src, opts)
+  member x.GetUntypedParseResult req = 
+      let opts = getCheckerOptions req
+      debug "Parsing: Get untyped parse result (fileName=%s)" req.FileName
+      let _req = ParseRequest (req.FileName, req.Source, opts, false, None)
+      checker.ParseFileInProject (req.FileName, req.Source, opts)
 
-  member x.GetTypedParseResult(projectFilename, fileName:string, src, files, args, allowRecentTypeCheckResults, timeout, targetFramework) : TypedParseResult = 
-    let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
-    debug "Parsing: Get typed parse result, fileName=%s" fileName
-    let req = ParseRequest(fileName, src, opts, false, None)
+  member x.GetTypedParseResult (req, allowRecentTypeCheckResults, timeout) : TypedParseResult = 
+    let opts = getCheckerOptions req
+    debug "Parsing: Get typed parse result, fileName=%s" req.FileName
+    let parseReq = ParseRequest(req.FileName, req.Source, opts, false, None)
     // Try to get recent results from the F# service
-    match checker.TryGetRecentTypeCheckResultsForFile(fileName, req.Options) with
+    match checker.TryGetRecentTypeCheckResultsForFile(req.FileName, parseReq.Options) with
     | Some(untyped, typed, _) when typed.HasFullTypeCheckInfo && allowRecentTypeCheckResults ->
         debug "Worker: Quick parse completed - success"
         TypedParseResult(typed, untyped)
     | _ -> debug "Worker: No TryGetRecentTypeCheckResultsForFile - trying typecheck with timeout"
            // If we didn't get a recent set of type checking results, we put in a request and wait for at most 'timeout' for a response
-           mbox.PostAndReply((fun repl -> UpdateAndGetTypedInfo(req, repl)), timeout = timeout)
+           mbox.PostAndReply((fun repl -> UpdateAndGetTypedInfo(parseReq, repl)), timeout = timeout)
 
   /// Returns symbol at a given position.
   member x.GetSymbol (source, line, col, lineStr, args) = getSymbol source line col lineStr args
 
-  member x.GetUsesOfSymbolAtLocation(projectFilename, file, source, files, line:int, col, lineStr, args, framework) = async { 
-      let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
-      
-      // Parse and retrieve Checked Project results, this has the entity graph and errors etc
-      let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-      debug "There are %i error(s)." projectResults.Errors.Length
-      Debug.Assert(not projectResults.HasCriticalErrors, "Should abort on critical errors.")
-      // Get the parse results for the current file
-      let! _, backgroundTypedParse = 
-          // Note this operates on the file system so the file needs to be current
-          checker.GetBackgroundCheckResultsForFileInProject(file, projectOptions) 
-             
-      return 
-          match getSymbol source line col lineStr args with
-          | Some symbol ->
-              // We only look up identifiers and operators, everything else isn't of interest       
-              debug "Parsing: Passed in the following symbol '%s'" symbol.Text
-              // Note we advance the caret to 'rightCol' ** due to GetSymbolAtLocation only working at the beginning/end **
-              match backgroundTypedParse.GetSymbolAtLocationAlternate(line+1, symbol.RightColumn, lineStr, [symbol.Text]) with
-              | Some fsharpSymbol ->
-                  let symRangeOpt = tryGetSymbolRange fsharpSymbol.DeclarationLocation
-                  let refs = projectResults.GetUsesOfSymbol(fsharpSymbol)
-                  Some(fsharpSymbol, symbol.Text, symRangeOpt, refs)
-              | _ -> None
-          | _ -> None }
+  member x.GetUsesOfSymbolAtLocation (req, line: int, col, lineStr) = 
+      let symbolUsesGetter projectOptions = async {
+          let! projectResults = checker.ParseAndCheckProject projectOptions
+          debug "There are %i error(s)." projectResults.Errors.Length
+          Debug.Assert(not projectResults.HasCriticalErrors, "Should abort on critical errors.") 
+          return fun _ symbol -> projectResults.GetUsesOfSymbol symbol }
+            
+      getUsesOfSymbolAtLocation symbolUsesGetter req line col lineStr
 
-  member x.GetUsesOfSymbol(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
+  member x.GetUsesOfSymbolAtLocationInFile (req, line: int, col, lineStr) = 
+      let symbolUsesGetter _ = async { return fun (checkFileResults: CheckFileResults) -> checkFileResults.GetUsesOfSymbolInFile }
+      getUsesOfSymbolAtLocation symbolUsesGetter req line col lineStr
+
+  member x.GetUsesOfSymbol (req, symbol: FSharpSymbol) =
       async { 
-          let projectOptions = x.GetCheckerOptions(file, projectFilename, source, files, args, framework)
-          
+          let projectOptions = getCheckerOptions req
           //parse and retrieve Checked Project results, this has the entity graph and errors etc
           let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-          
           let symDeclRangeOpt = tryGetSymbolRange symbol.DeclarationLocation
           let refs = projectResults.GetUsesOfSymbol(symbol)
           return (symDeclRangeOpt, refs) }

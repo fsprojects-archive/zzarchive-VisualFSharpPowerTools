@@ -18,21 +18,23 @@ open FSharp.CompilerBinding
 open FSharpVSPowerTools.ProjectSystem
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tutorial.fs")
-let source = File.ReadAllText(fileName)
-let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 
-let sourceFiles = [| fileName |]
-let args = 
-  [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
+let req = 
+    { FileName = fileName
+      Source = File.ReadAllText fileName
+      ProjFileName = Path.ChangeExtension(fileName, ".fsproj")
+      Files = [| fileName |]
+      CompilerOptions =
+          [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
+      TargetFramework = FSharpTargetFramework.NET_4_5 }
 
-let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
@@ -70,8 +72,7 @@ let allUsesOfAllSymbols =
 #endif
 
 let getUsesOfSymbol line col lineStr =
-    vsLanguageService.GetUsesOfSymbolAtLocation(projectFileName, fileName, source, sourceFiles, 
-                                                                   line, col, lineStr, args, framework)
+    vsLanguageService.GetUsesOfSymbolAtLocation (req, line, col, lineStr)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, _, symbolUses) -> 
         symbolUses |> Array.map (fun x -> 
@@ -86,7 +87,7 @@ let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
 let checkGetSymbol line col lineStr expected =
-    vsLanguageService.GetSymbol(source, line, col, lineStr, args)
+    vsLanguageService.GetSymbol(req.Source, line, col, lineStr, req.CompilerOptions)
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
         text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected
@@ -283,11 +284,8 @@ let ``ProcessParseTree should be called for all files in project``() =
     use f2 = tempSource "module M2"
     let seen = ResizeArray()
     vsLanguageService.ProcessParseTrees(
-        projectFileName, 
-        Map.empty, 
-        [| f1.FilePath; f2.FilePath |], 
-        args, 
-        framework, 
+        { req with Files = [| f1.FilePath; f2.FilePath |]}, 
+        Map.empty,
         seen.Add,
         System.Threading.CancellationToken.None)
 
@@ -300,11 +298,8 @@ let ``ProcessParseTree should prefer open documents``() =
     use f1 = tempSource "module Foo"
     let seen = ResizeArray()
     vsLanguageService.ProcessParseTrees(
-        projectFileName,
+        { req with Files = [| f1.FilePath|] },
         [f1.FilePath, "module Bar"] |> Map.ofList, 
-        [| f1.FilePath|], 
-        args, 
-        framework, 
         seen.Add,
         System.Threading.CancellationToken.None)
 
@@ -326,11 +321,8 @@ let ``ProcessParseTree should react on cancellation``() =
     let cts = new System.Threading.CancellationTokenSource();
     cts.Cancel()
     vsLanguageService.ProcessParseTrees(
-        projectFileName,
+        { req with Files = [| f1.FilePath|] },
         Map.empty, 
-        [| f1.FilePath|], 
-        args, 
-        framework, 
         seen.Add,
         cts.Token)
 
