@@ -14,8 +14,8 @@ namespace FSharpVSPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideOptionPage(typeof(GeneralOptionsPage), "F# Power Tools", "General", 0, 0, true, 0)]
-    [ProvideOptionPage(typeof(FantomasOptionsPage), "F# Power Tools", "Formatting", 0, 0, true, 0)]
+    [ProvideOptionPage(typeof(GeneralOptionsPage), Resource.vsPackageTitle, "General", 0, 0, true, 0)]
+    [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", 0, 0, true, 0)]
     [Guid("f152487e-9a22-4cf9-bee6-a8f7c77f828d")]
     [ProvideService(typeof(GeneralOptionsPage))]
     [ProvideService(typeof(FantomasOptionsPage))]
@@ -24,8 +24,6 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package
     {
-        private VSUtils.SolutionEvents solutionEvents;
-
         protected override void Initialize()
         {
             base.Initialize();
@@ -36,9 +34,6 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
-
-            solutionEvents = new VSUtils.SolutionEvents(this);
-            ProjectCache.connect(solutionEvents);
         }
     }
 }

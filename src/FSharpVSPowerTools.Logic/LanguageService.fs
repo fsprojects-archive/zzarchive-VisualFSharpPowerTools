@@ -5,11 +5,14 @@ open Microsoft.VisualStudio.Text
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Shell
 
 [<Export>]
-type VSLanguageService() =
+type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider) =
     // TODO: we should reparse the stale document and cache it
     let instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
+    let solutionEvents = SolutionEvents(serviceProvider)
+    do ProjectCache.listen(solutionEvents)
     do ProjectCache.projectChanged.Add (fun p -> 
         debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
         let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
