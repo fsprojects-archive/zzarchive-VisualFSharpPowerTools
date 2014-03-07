@@ -15,6 +15,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
+open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 
@@ -94,7 +95,11 @@ and
     let runSearch(projects: IProjectProvider list, openDocuments: Map<string, string>, searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
         let processNavigableItems (navigationItems: seq<Navigation.NavigableItem>) = 
             for item in navigationItems do
-                let name = item.Name
+                let isOperator, name = 
+                    if PrettyNaming.IsMangledOpName item.Name then 
+                        true, PrettyNaming.DecompileOpName item.Name 
+                    else 
+                        false, item.Name 
                 let index = name.IndexOf(searchValue, StringComparison.CurrentCultureIgnoreCase)
                 let matchKind = 
                     if index = -1 then MatchKind.None
@@ -121,15 +126,18 @@ and
                         let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
                         let fileName, range01 = Microsoft.FSharp.Compiler.Range.Range.toFileZ item.Range
                         let extraData = { FileName = fileName; Span = range01; Description = textKind; }
-                        let navigateToItem = NavigateToItem(item.Name, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
+                        let itemName = if isOperator then "(" + name + ")" else name
+                        let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
                         callback.AddItem navigateToItem
                     | _ -> ()
 
         Tasks.Task.Run(fun() ->
-            for p in projects do
-                if not ct.IsCancellationRequested then
-                    do fsharpLanguageService.ProcessNavigableItemsInProject(openDocuments, p, processNavigableItems, ct)
-            callback.Done()
+            try
+                for p in projects do
+                    if not ct.IsCancellationRequested then
+                        do fsharpLanguageService.ProcessNavigableItemsInProject(openDocuments, p, processNavigableItems, ct)
+            finally
+                callback.Done()
         )
         |> ignore
 
