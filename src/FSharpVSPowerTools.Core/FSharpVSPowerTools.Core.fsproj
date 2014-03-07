@@ -58,9 +58,12 @@
   <ItemGroup>
     <Compile Include="Utils.fs" />
     <Compile Include="CompilerLocationUtils.fs" />
+    <Compile Include="Parser.fs" />
+    <Compile Include="LanguageService2.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
@@ -74,9 +77,6 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
