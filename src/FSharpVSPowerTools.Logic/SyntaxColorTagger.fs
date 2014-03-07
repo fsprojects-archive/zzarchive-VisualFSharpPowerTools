@@ -21,7 +21,7 @@ type SyntaxColorTagger(view: ITextView,
     let tagsChanged = Event<_, _>()
 
     let lockObject = new Object()
-    let mutable wordSpans: NormalizedSnapshotSpanCollection = null
+    let mutable wordSpans = NormalizedSnapshotSpanCollection()
 
     let synchronousUpdate (newSpans: NormalizedSnapshotSpanCollection) =
         lock
@@ -57,7 +57,7 @@ type SyntaxColorTagger(view: ITextView,
             seq {
                 // Hold on to a "snapshot" of the word spans and current word, so that we maintain the same
                 // collection throughout
-                if (spans.Count > 0 || wordSpans.Count > 0) then
+                if (spans.Count > 0 && wordSpans.Count > 0) then
                     let wordSpansSnapshot =
                         // If the requested snapshot isn't the same as the one our words are on, translate our spans to the expected snapshot 
                         if spans.[0].Snapshot <> wordSpans.[0].Snapshot then
