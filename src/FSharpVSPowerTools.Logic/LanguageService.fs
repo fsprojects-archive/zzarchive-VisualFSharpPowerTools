@@ -7,6 +7,10 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 
+type Scope = 
+    | File
+    | Project
+
 [<Export>]
 type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider) =
     // TODO: we should reparse the stale document and cache it
@@ -17,7 +21,7 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
         debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
         let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
                                                p.CompilerOptions, p.TargetFramework)
-        instance.Checker.InvalidateConfiguration opts)
+        instance.InvalidateConfiguration(opts))
     
     member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
@@ -28,7 +32,7 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
         let col = point.Position - point.GetContainingLine().Start.Position
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions                
-        instance.GetSymbol (source, line, col, lineStr, args)
+        SymbolParser.getSymbol source line col lineStr args
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
     member x.ProcessNavigableItemsInProject(openDocuments, (projectProvider: IProjectProvider), processNavigableItems, ct) =
@@ -41,7 +45,7 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)
 
-    member x.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider, scope) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
@@ -59,8 +63,15 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                return! instance.GetUsesOfSymbolAtLocation(projectFileName, currentFile, source, sourceFiles, 
-                                                           endLine, endCol, currentLine, args, framework)
+                return! 
+                    match scope with
+                    | File -> 
+                        instance.GetUsesOfSymbolAtLocationInFile (projectFileName, currentFile, source, sourceFiles, 
+                                                                  endLine, endCol, currentLine, args, framework)
+                    | Project ->
+                        instance.GetUsesOfSymbolInProjectAtLocationInFile (projectFileName, currentFile, source, sourceFiles, 
+                                                                           endLine, endCol, currentLine, args, framework)
+
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
