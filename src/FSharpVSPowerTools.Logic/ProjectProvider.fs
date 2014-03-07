@@ -13,8 +13,8 @@ type IProjectProvider =
     abstract UniqueName: string
     abstract TargetFSharpCoreVersion: string
     abstract TargetFramework: FSharpTargetFramework
-    abstract CompilerOptions: string array
-    abstract SourceFiles: string array
+    abstract CompilerOptions: string []
+    abstract SourceFiles: string []
 
 type ProjectProvider(project: VSProject) = 
     do Debug.Assert(project <> null && project.Project <> null, "Input project should be well-formed.")
@@ -177,11 +177,15 @@ module ProjectCache =
         loop Map.empty)
 
     agent.Error.Add (fail "%O")
-    // attaches listener to the given instance of VSUtils.SolutionEvents
+
+    /// Attaches listener to the given instance of VSUtils.SolutionEvents
     let listen (solutionEvents: VSUtils.SolutionEvents) = solutionEvents.ProjectChanged.Add(Update >> agent.Post)
+
     /// Returns ProjectProvider for given Document.
     let getProject document = agent.PostAndReply (fun r -> Get (document, r))
+
     /// Returns ProjectProvider for given Project.
     let putProject project = agent.PostAndReply (fun r -> Put (project, r))
+
     /// Raised when a project is changed.
     let projectChanged = projectUpdated.Publish

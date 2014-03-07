@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.CodeFormatting.Commands
+﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
 open System.IO

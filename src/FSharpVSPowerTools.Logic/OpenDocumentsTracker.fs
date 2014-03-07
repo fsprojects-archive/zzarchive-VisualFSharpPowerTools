@@ -12,7 +12,6 @@ type OpenDocumentsTracker
     [<ImportingConstructor>]
     (
         textDocumentFactoryService: ITextDocumentFactoryService
-
     ) =
     [<VolatileField>]    
     let mutable openDocuments = Map.empty

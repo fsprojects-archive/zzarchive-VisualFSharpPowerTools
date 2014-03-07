@@ -14,6 +14,7 @@ open System.Windows.Controls
 open Microsoft.Win32
 open EnvDTE
 open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
 
 // an inexpensive-to-render rectangular adornment
 type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self = 
@@ -34,7 +35,7 @@ type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self =
 
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works
-type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<DepthRegionTag>) = 
+type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<DepthRegionTag>, serviceProvider: System.IServiceProvider) = 
     let LayerName = "FSharpDepthFullLineAdornment" // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
     
@@ -65,7 +66,7 @@ type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<
                (70uy, 70uy, 70uy, 30uy, 30uy, 30uy) |]
         
         try 
-            let dte = Package.GetGlobalService(typedefof<DTE>) :?> DTE
+            let dte = serviceProvider.GetService<DTE, DTE>()
             let fontsAndColors = 
                 dte.Properties("FontsAndColors", "TextEditor").Item("FontsAndColorsItems").Object :?> FontsAndColorsItems
             let background = System.Drawing.ColorTranslator.FromOle(int (fontsAndColors.Item("Plain Text").Background))

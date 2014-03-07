@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
+using FSharpVSPowerTools.CodeFormatting;
 
 namespace FSharpVSPowerTools
 {

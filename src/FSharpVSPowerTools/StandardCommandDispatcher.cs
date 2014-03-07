@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Fantomas;
-using FSharpVSPowerTools.CodeFormatting.Commands;
+using FSharpVSPowerTools.CodeFormatting;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.OLE.Interop;

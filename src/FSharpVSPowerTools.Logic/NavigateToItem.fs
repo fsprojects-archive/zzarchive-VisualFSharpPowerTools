@@ -17,6 +17,7 @@ open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 module Constants = 
@@ -27,7 +28,7 @@ module Constants =
 type NavigateToItemExtraData = 
     {
         FileName: string
-        Span: Microsoft.FSharp.Compiler.Range.Range01
+        Span: Range01
         Description: string
     }
 
@@ -44,11 +45,11 @@ type NavigateToItemProviderFactory
     ) =
     
     let dte = serviceProvider.GetService<DTE, SDTE>()
-    let currentVersion = VisualStudioVersion.FromDTEVersion dte.Version
+    let currentVersion = VisualStudioVersion.fromDTEVersion dte.Version
     let itemDisplayFactory = 
         let candidate =
             itemDisplayFactories
-            |> Seq.tryFind (fun f -> VisualStudioVersion.Matches currentVersion f.Metadata.Version)
+            |> Seq.tryFind (fun f -> VisualStudioVersion.matches currentVersion f.Metadata.Version)
 
         match candidate with
         | Some l -> l.Value
@@ -61,8 +62,19 @@ type NavigateToItemProviderFactory
 
     interface INavigateToItemProviderFactory with
         member x.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
-            provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory)
-            true
+            let navigateToEnabled = 
+                try
+                    // If this class is in the main project, we will use a more type-safe way to get options
+                    let props = dte.Properties(Resource.vsPackageTitle, "General")
+                    props.["NavigateToEnabled"].Value :?> bool
+                with _ -> false
+            if not navigateToEnabled then
+                debug "[NavigateTo] The feature is disabled in General option page."
+                provider <- null
+                false
+            else
+                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory)
+                true
 and
     NavigateToItemProvider
         (
