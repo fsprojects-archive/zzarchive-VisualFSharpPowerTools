@@ -6,7 +6,6 @@ open System.Windows
 open System.Windows.Input
 open System.ComponentModel
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharp.CompilerBinding
@@ -26,11 +25,17 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
         | _ ->
             match symbol.Kind, fSharpSymbol with
             | _, :? FSharpUnionCase ->
-                // Union case shouldn't be lowercase
+                // Union cases shouldn't be lowercase
                 if isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0])) then
                     Choice1Of2()
                 else
                     Choice2Of2 Resource.validatingUnionCase
+            | _, :? FSharpActivePatternCase ->
+                    // Different from union cases, active patterns don't accept double-backtick identifiers
+                    if isIdentifier name && not (String.IsNullOrEmpty name) && Char.IsUpper(name.[0]) then
+                        Choice1Of2()
+                    else
+                        Choice2Of2 Resource.validatingActivePattern
             | Operator, _ ->
                 if isOperator name then Choice1Of2() 
                 else Choice2Of2 Resource.validatingOperator
@@ -40,7 +45,7 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
             | StaticallyResolvedTypeParameter, _ ->
                 if isStaticallyResolvedTypeParameter name then Choice1Of2()
                 else Choice2Of2 Resource.validatingStaticallyResolvedTypeParameter
-            | (Ident | Other), _ -> 
+            | (Ident | Other), _ ->
                 if isIdentifier name then Choice1Of2()
                 else Choice2Of2 Resource.validatingIdentifier
 
