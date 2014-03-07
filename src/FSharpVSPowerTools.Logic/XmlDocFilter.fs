@@ -20,7 +20,7 @@ open Microsoft.VisualStudio.Utilities
 open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 
-type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: string) as self =
+type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: string, fsharpLanguageService: VSLanguageService) as self =
     let mutable passThruToEditor: IOleCommandTarget = null
     do
         if ErrorHandler.Succeeded(textView.AddCommandFilter(self, &passThruToEditor)) then
@@ -45,7 +45,7 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                         match XmlDocComment.isBlank (curLine + (string lastChar)) with
                         | Some i when i = indexOfCaret ->
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 // XmlDocable line #1 are 1-based, editor is 0-based
-                            let xmldocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, VSLanguageService.instance.Checker)
+                            let xmldocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, fsharpLanguageService.Checker)
                             let xmlDocablesBelowThisLine = 
                                 xmldocables 
                                 |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'

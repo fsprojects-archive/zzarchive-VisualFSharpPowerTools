@@ -17,7 +17,7 @@ type DepthRegionTag(info: int * int * int * int) =
     // because we might have range info for indent coloring on a blank line, and there are no chars to tag there, so we put a tag in column 0 and carry all this info as metadata
     member x.Info = info
 
-type DepthTagger(sourceBuffer: ITextBuffer, filename: string) as self = 
+type DepthTagger(sourceBuffer: ITextBuffer, filename: string, fsharpLanguageService: VSLanguageService) as self =
     // computed periodically on a background thread
     let mutable results: _ [] = null
     let resultsLock = obj() // lock for reading/writing "results"
@@ -42,9 +42,7 @@ type DepthTagger(sourceBuffer: ITextBuffer, filename: string) as self =
                 if not doSync then do! Async.SwitchToThreadPool()
                 do let sourceCodeOfTheFile = ss.GetText()
                    // Reuse the instance of InteractiveChecker
-                   let ranges = 
-                       DepthParser.GetNonoverlappingDepthRanges
-                           (sourceCodeOfTheFile, filename, VSLanguageService.instance.Checker)
+                   let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService. Checker)
                    let tempResults = new ResizeArray<_>()
                    for (line, sc, ec, d) as info in ranges do
                        try 

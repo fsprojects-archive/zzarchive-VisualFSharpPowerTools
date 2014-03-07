@@ -19,13 +19,13 @@ module PkgCmdIDList =
     let CmdidBuiltinRenameCommand = 1550u // ECMD_RENAME
     let GuidBuiltinCmdSet = typedefof<VSConstants.VSStd2KCmdID>.GUID
 
-[<NoComparison>]
+[<NoEquality; NoComparison>]
 type DocumentState =
     { Word: (SnapshotSpan * Symbol) option
       File: string
       Project: IProjectProvider }
 
-type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServiceProvider) =
+type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider : System.IServiceProvider) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 
@@ -41,12 +41,13 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
             match state with
             | Some { Word = Some (cw,_) } when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
             | _ ->
-                let! doc = Dte.getActiveDocument()
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let! doc = Dte.getActiveDocument(dte)
                 let! project = ProjectCache.getProject doc
                 state <- Some
                     { File = doc.FullName
                       Project =  project
-                      Word = VSLanguageService.getSymbol point project }} |> ignore
+                      Word = vsLanguageService.GetSymbol(point, project) }} |> ignore
 
     let _ = DocumentEventsListener (view, updateAtCaretPosition)
 
@@ -54,7 +55,8 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
         try
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
-                Dte.getActiveDocument()
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                Dte.getActiveDocument(dte)
                 |> Option.iter (fun doc ->
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
@@ -87,7 +89,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
             let! state = state
             let! cw, sym = state.Word
             let! (symbol, currentName, references) = 
-                  VSLanguageService.findUsages cw state.File state.Project
+                  vsLanguageService.FindUsages(cw, state.File, state.Project)
                   |> Async.RunSynchronously
                   |> Option.map (fun (symbol, lastIdent, _, refs) -> 
                         symbol, lastIdent,
@@ -98,7 +100,7 @@ type RenameCommandFilter(view: IWpfTextView, serviceProvider: System.IServicePro
                             |> Seq.toList)
 
             let isSymbolDeclaredInCurrentProject =
-                match VSLanguageService.tryGetLocation symbol with
+                match vsLanguageService.TryGetLocation symbol with
                 | Some loc ->
                     let filePath = Path.GetFullPath loc.FileName
                     // NB: this isn't a foolproof way to match two paths

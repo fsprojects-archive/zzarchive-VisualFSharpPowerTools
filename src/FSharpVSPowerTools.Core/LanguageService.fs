@@ -17,6 +17,7 @@ type TypedParseResult(info:CheckFileResults, untyped: ParseFileResults) =
 // --------------------------------------------------------------------------------------
 /// Represents request send to the background worker
 /// We need information about the current file and project (options)
+[<NoEquality; NoComparison>]
 type internal ParseRequest (file:string, source:string, options:ProjectOptions, fullCompile:bool, afterCompleteTypeCheckCallback: (string * ErrorInfo [] -> unit) option) =
   member x.File  = file
   member x.Source = source
@@ -31,7 +32,7 @@ type internal ParseRequest (file:string, source:string, options:ProjectOptions, 
 // All processing in the mailbox is quick - however, if we don't have required info
 // we post ourselves a message that will be handled when the info becomes available
 
-[<NoComparison>]
+[<NoEquality; NoComparison>]
 type internal LanguageServiceMessage = 
   // Trigger parse request in ParserWorker
   | TriggerRequest of ParseRequest
@@ -339,7 +340,33 @@ type LanguageService(dirtyNotify) =
           opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions 
           opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
     opts
-  
+
+  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
+    let rec loop i options = 
+        if not ct.IsCancellationRequested && i < files.Length then
+            let file = files.[i]
+            let source = 
+                match Map.tryFind file openDocuments with
+                | None -> try Some(File.ReadAllText file) with _ -> None 
+                | x -> x
+            let options = 
+                match source with
+                | Some source ->
+                    let opts = 
+                        match options with
+                        | None -> 
+                            x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
+                        | Some opts -> opts
+                    let parseResults = checker.ParseFileInProject(file, source, opts)
+                    match parseResults.ParseTree with
+                    | Some tree -> parseTreeHandler tree
+                    | None -> ()
+                    Some opts
+                | None -> 
+                    options
+            loop (i + 1) options
+    loop 0 None
+
   /// Parses and type-checks the given file in the given project under the given configuration. The callback
   /// is called after the complete typecheck has been performed.
   member x.TriggerParse(projectFilename, fileName:string, src, files, args, targetFramework, afterCompleteTypeCheckCallback) = 
@@ -407,4 +434,3 @@ type LanguageService(dirtyNotify) =
           return (symDeclRangeOpt, refs) }
 
   member x.Checker = checker
-           

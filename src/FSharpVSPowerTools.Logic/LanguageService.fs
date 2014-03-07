@@ -4,9 +4,10 @@ open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.ComponentModel.Composition
 
-[<RequireQualifiedAccess>]
-module VSLanguageService =
+[<Export>]
+type VSLanguageService() =
     // TODO: we should reparse the stale document and cache it
     let instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
     do ProjectCache.projectChanged.Add (fun p -> 
@@ -15,10 +16,10 @@ module VSLanguageService =
                                                p.CompilerOptions, p.TargetFramework)
         instance.Checker.InvalidateConfiguration opts)
     
-    let tryGetLocation (symbol: FSharpSymbol) =
+    member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 
-    let getSymbol (point: SnapshotPoint) (projectProvider: IProjectProvider) =
+    member x.GetSymbol(point: SnapshotPoint, projectProvider : IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
@@ -27,7 +28,17 @@ module VSLanguageService =
         instance.GetSymbol (source, line, col, lineStr, args)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
-    let findUsages (word: SnapshotSpan) (currentFile: string) (projectProvider: IProjectProvider) =
+    member x.ProcessNavigableItemsInProject(openDocuments, (projectProvider: IProjectProvider), processNavigableItems, ct) =
+        instance.ProcessParseTrees(
+            projectProvider.ProjectFileName, 
+            openDocuments, 
+            projectProvider.SourceFiles, 
+            projectProvider.CompilerOptions, 
+            projectProvider.TargetFramework, 
+            (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
+            ct)
+
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
@@ -50,3 +61,5 @@ module VSLanguageService =
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
+
+    member x.Checker = instance.Checker
