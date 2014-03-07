@@ -15,8 +15,8 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
-
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpVSPowerTools
 
 module Constants = 
     let LogicalViewTextGuid = Guid(LogicalViewID.TextView)
@@ -138,8 +138,15 @@ and
             let openedDocuments = 
                 openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path,snapshot)) -> path, snapshot.GetText())
                 |> Map.ofSeq
-            // TODO enable for loose files
-            let projects = listFSharpProjectsInSolution();
+
+            let projects = 
+                match listFSharpProjectsInSolution() with
+                | [] -> maybe {
+                          let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
+                          let! doc = dte.GetActiveDocument()
+                          return! ProjectCache.getProject doc }
+                          |> Option.toList
+                | xs -> xs
             runSearch(projects, openedDocuments, searchValue, callback, cts.Token)
         member x.StopSearch() = 
             cts.Cancel()

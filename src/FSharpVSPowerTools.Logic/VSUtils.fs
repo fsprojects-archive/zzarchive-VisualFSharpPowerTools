@@ -118,11 +118,11 @@ open EnvDTE
 open VSLangProj
 open System.Diagnostics
 
-module Dte =
-    let getActiveDocument(dte: DTE) =
+type DTE with
+    member x.GetActiveDocument() =
         let doc =
             maybe {
-                let! doc = Option.ofNull dte.ActiveDocument
+                let! doc = Option.ofNull x.ActiveDocument
                 let! item = Option.ofNull doc.ProjectItem 
                 let! _ = Option.ofNull item.ContainingProject 
                 return doc }
