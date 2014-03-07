@@ -42,7 +42,7 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
             | Some { Word = Some (cw,_) } when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
             | _ ->
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = Dte.getActiveDocument(dte)
+                let! doc = dte.GetActiveDocument()
                 let! project = ProjectCache.getProject doc
                 state <- Some
                     { File = doc.FullName
@@ -56,7 +56,7 @@ type RenameCommandFilter(view : IWpfTextView, vsLanguageService: VSLanguageServi
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                Dte.getActiveDocument(dte)
+                dte.GetActiveDocument()
                 |> Option.iter (fun doc ->
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
