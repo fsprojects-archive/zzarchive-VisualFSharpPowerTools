@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.CodeFormatting.Commands
+﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
 open System.Collections.Generic
@@ -10,7 +10,6 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
-open FSharpVSPowerTools.CodeFormatting.Utils
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 

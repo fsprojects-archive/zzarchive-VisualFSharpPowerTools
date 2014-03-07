@@ -17,22 +17,18 @@ namespace FSharpVSPowerTools.Refactoring
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal class RenameCommandFilterProvider : IVsTextViewCreationListener
     {
-#pragma warning disable 0649
-
         [Import]
-        internal IVsEditorAdaptersFactoryService EditorFactory { get; set; }
-
-#pragma warning restore 0649
+        private IVsEditorAdaptersFactoryService editorFactory = null;
 
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private System.IServiceProvider  serviceProvider = null;
+        private System.IServiceProvider serviceProvider = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            var textView = EditorFactory.GetWpfTextView(textViewAdapter);
+            var textView = editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
             GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));

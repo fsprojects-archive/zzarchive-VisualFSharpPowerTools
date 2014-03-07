@@ -44,11 +44,11 @@ type NavigateToItemProviderFactory
     ) =
     
     let dte = serviceProvider.GetService<DTE, SDTE>()
-    let currentVersion = VisualStudioVersion.FromDTEVersion dte.Version
+    let currentVersion = VisualStudioVersion.fromDTEVersion dte.Version
     let itemDisplayFactory = 
         let candidate =
             itemDisplayFactories
-            |> Seq.tryFind (fun f -> VisualStudioVersion.Matches currentVersion f.Metadata.Version)
+            |> Seq.tryFind (fun f -> VisualStudioVersion.matches currentVersion f.Metadata.Version)
 
         match candidate with
         | Some l -> l.Value
