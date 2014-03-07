@@ -333,7 +333,8 @@ type LanguageService(dirtyNotify) =
          IsIncompleteTypeCheckEnvironment = false
          UseScriptResolutionRules = false   
          LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
-         UnresolvedReferences = None } 
+         UnresolvedReferences = None
+         ReferencedProjects = [||] } 
 
     // Print contents of check option for debugging purposes
     debug "GetCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
