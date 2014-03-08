@@ -149,3 +149,21 @@ module Pervasive =
         static member GetFullPathSafe path =
             try Path.GetFullPath path
             with _ -> path
+
+    open Microsoft.FSharp.Compiler.SourceCodeServices
+
+    type SymbolScope = 
+        | File
+        | Project
+
+    type FSharpSymbol with
+        member x.Scope =
+            let isPrivateToFile = 
+                match x with 
+                | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || m.Accessibility.IsPrivate
+                | :? FSharpEntity as m -> m.Accessibility.IsPrivate
+                | :? FSharpGenericParameter -> true
+                | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
+                | :? FSharpField as m -> m.Accessibility.IsPrivate
+                | _ -> false
+            if isPrivateToFile then SymbolScope.File else SymbolScope.Project

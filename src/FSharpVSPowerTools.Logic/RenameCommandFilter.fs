@@ -88,7 +88,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         maybe {
             let! state = state
             let! cw, sym = state.Word
-            let! symbol = 
+            let! symbol, fileScopedCheckResults = 
                 vsLanguageService.GetFSharpSymbol(cw, sym, state.File, state.Project)
                 |> Async.RunSynchronously
 
@@ -108,28 +108,18 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 wnd.Owner <- hostWnd
                 let! res = x.ShowDialog wnd
                 if res then 
-
-                    let isPrivateToFile = 
-                        match symbol with 
-                        | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember  || m.Accessibility.IsPrivate
-                        | :? FSharpEntity as m -> m.Accessibility.IsPrivate
-                        | :? FSharpGenericParameter -> true
-                        | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
-                        | :? FSharpField as m -> m.Accessibility.IsPrivate
-                        | _ -> false
-
-                    let scope = if isPrivateToFile then Scope.File else Scope.Project
-
-                    let! (_, currentName, references) = 
-                            vsLanguageService.FindUsages(cw, state.File, state.Project, scope)
-                            |> Async.RunSynchronously
-                            |> Option.map (fun (symbol, lastIdent, refs) -> 
-                                symbol, lastIdent,
-                                    refs 
-                                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                    |> Seq.groupBy (fst >> Path.GetFullPath)
-                                    |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
-                                    |> Seq.toList)
+                    let! (_, currentName, references) =
+                        match symbol.Scope with
+                        | File -> vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
+                        | Project -> vsLanguageService.FindUsages (cw, state.File, state.Project) 
+                                     |> Async.RunSynchronously   
+                        |> Option.map (fun (symbol, lastIdent, refs) -> 
+                            symbol, lastIdent,
+                                refs 
+                                |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
+                                |> Seq.groupBy (fst >> Path.GetFullPath)
+                                |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                                |> Seq.toList)
 
                     rename currentName model.Name references
             else

@@ -54,6 +54,13 @@ type AllowStaleResults =
     // Don't allow stale results
     | No
 
+type ParseAndCheckResults with
+    member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
+        match x.GetSymbolAtLocation(line+1, col, lineStr, [ident]) with
+        | Some symbol ->
+            let refs = x.GetUsesOfSymbolInFile(symbol)
+            Some(symbol, ident, refs)
+        | None -> None
   
 // --------------------------------------------------------------------------------------
 // Language service 
@@ -245,7 +252,6 @@ type LanguageService (dirtyNotify) =
     | None -> return! mbox.PostAndAsyncReply(fun reply -> (fileName, src, opts, reply))
    }
 
-
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework) =
    async { 
@@ -255,11 +261,7 @@ type LanguageService (dirtyNotify) =
             x.GetTypedParseResultAsync(projectFilename, fileName, source, files, args, 
                                        stale = AllowStaleResults.MatchingSource, targetFramework = targetFramework)
 
-        match checkResults.GetSymbolAtLocation(line+1, sym.RightColumn, lineStr, [sym.Text]) with
-        | Some symbol ->
-            let refs = checkResults.GetUsesOfSymbolInFile(symbol)
-            return Some(symbol, sym.Text, refs)
-        | None -> return None
+        return checkResults.GetUsesOfSymbolInFileAtLocation (line, sym.RightColumn, lineStr, sym.Text)
     | None -> return None 
    }
 
