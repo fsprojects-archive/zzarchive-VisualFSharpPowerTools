@@ -41,7 +41,7 @@ type ProjectProvider(project: VSProject) =
         |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
         // Since project references are resolved automatically, we include it here
         // Path.GetFullPath will escape path strings correctly
-        |> Seq.map (Path.GetFullPath >> sprintf "-r:%s")
+        |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
 
     interface IProjectProvider with
         member x.ProjectFileName = projectFileName
@@ -77,21 +77,23 @@ type ProjectProvider(project: VSProject) =
                 |]
 
         member x.SourceFiles = 
-            match projectOpt with
-            | Some p ->
-                ProjectParser.getFiles p
-            | None ->
-                debug "[Project System] Can't read project file. Fall back to incomplete source files."
-                let projectItems = project.Project.ProjectItems
-                Debug.Assert (Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
-                projectItems
-                |> Seq.cast<ProjectItem>
-                |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
-                |> Seq.choose (fun item -> 
-                    let buildAction = item.Properties.["BuildAction"].Value.ToString()
-                    if buildAction = "BuildAction=Compile" then Some item else None)    
-                |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
-                |> Seq.toArray
+            let files = 
+                match projectOpt with
+                | Some p ->
+                    ProjectParser.getFiles p
+                | None ->
+                    debug "[Project System] Can't read project file. Fall back to incomplete source files."
+                    let projectItems = project.Project.ProjectItems
+                    Debug.Assert (Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
+                    projectItems
+                    |> Seq.cast<ProjectItem>
+                    |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
+                    |> Seq.choose (fun item -> 
+                        let buildAction = item.Properties.["BuildAction"].Value.ToString()
+                        if buildAction = "BuildAction=Compile" then Some item else None)    
+                    |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
+                    |> Seq.toArray
+            files |> Array.map Path.GetFullPathSafe
 
 type VirtualProjectProvider (doc: Document) = 
     do Debug.Assert (doc <> null, "Input document should not be null.")

@@ -46,7 +46,7 @@ type DepthTagger(sourceBuffer: ITextBuffer, filename: string, fsharpLanguageServ
                    let tempResults = new ResizeArray<_>()
                    for (line, sc, ec, d) as info in ranges do
                        try 
-                           System.Diagnostics.Debug.WriteLine("{0},{1},{2},{3}", line, sc, ec, d)
+                           //System.Diagnostics.Debug.WriteLine("{0},{1},{2},{3}", line, sc, ec, d)
                            // -1 because F# reports 1-based line nums, whereas VS wants 0-based
                            let startLine = ss.GetLineFromLineNumber(Math.Min(line - 1, ss.LineCount - 1))
                            let start = startLine.Start.Add(Math.Min(sc, startLine.Length))

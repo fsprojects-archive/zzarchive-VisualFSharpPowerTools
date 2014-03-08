@@ -88,16 +88,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         maybe {
             let! state = state
             let! cw, sym = state.Word
-            let! (symbol, currentName, references) = 
-                  vsLanguageService.FindUsages(cw, state.File, state.Project, Scope.Project)
-                  |> Async.RunSynchronously
-                  |> Option.map (fun (symbol, lastIdent, refs) -> 
-                        symbol, lastIdent,
-                            refs 
-                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                            |> Seq.groupBy (fst >> Path.GetFullPath)
-                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
-                            |> Seq.toList)
+            let! symbol = 
+                vsLanguageService.GetFSharpSymbol(cw, sym, state.File, state.Project)
+                |> Async.RunSynchronously
 
             let isSymbolDeclaredInCurrentProject =
                 match vsLanguageService.TryGetLocation symbol with
@@ -114,7 +107,19 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
                 wnd.Owner <- hostWnd
                 let! res = x.ShowDialog wnd
-                if res then rename currentName model.Name references
+                if res then 
+                    let! (_, currentName, references) = 
+                            vsLanguageService.FindUsages(cw, state.File, state.Project, Scope.Project)
+                            |> Async.RunSynchronously
+                            |> Option.map (fun (symbol, lastIdent, refs) -> 
+                                symbol, lastIdent,
+                                    refs 
+                                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
+                                    |> Seq.groupBy (fst >> Path.GetFullPath)
+                                    |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                                    |> Seq.toList)
+
+                    rename currentName model.Name references
             else
                 MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
                     MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 

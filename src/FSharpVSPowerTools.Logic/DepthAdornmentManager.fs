@@ -118,7 +118,7 @@ type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<
     let mutable pixelsPerChar = 7.0 // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.
     
     let refreshLine(line: ITextViewLine) = 
-        trace ("refresh line {0}", line.TextTop)
+        //trace ("refresh line {0}", line.TextTop)
         let tags = tagAggregator.GetTags(line.Extent)
         
         let tagSpans = 
