@@ -2,7 +2,7 @@
 
 [<RequireQualifiedAccess>] 
 module Resource =
-    let [<Literal>] vsPackageTitle = "Visual F# Power Tools"
+    let [<Literal>] vsPackageTitle = "F# Power Tools"
     
     let [<Literal>] formattingErrorMessage = "Unable to format. "
 
