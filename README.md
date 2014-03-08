@@ -18,8 +18,10 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Navigation bar (see [this article](http://tomasp.net/blog/regions-navigation.aspx/))
  - Highlight references
  - Rename refactoring
+ - Depth colorizer
+ - NavigateTo
 
-For user guides, please take a look at [the home page](http://fsprojects.github.io/FSharpVSPowerTools/).
+For user guides, please take a look at [the home page](http://fsprojects.github.io/VisualFSharpPowerTools/).
 
 ### Build [![Build Status](https://ci-beta.appveyor.com/api/projects/status/aab9drboxx8mxegt)](https://ci-beta.appveyor.com/project/dungpa/fsharpvspowertools)
 

@@ -24,3 +24,8 @@
 #### 0.3.2 - February 26 2013
 * Fix the NRE when there is no project or solution
 
+#### 0.4.0 - Unreleased
+* Import Depth Colorizer
+* Implement NavigateTo command
+
+

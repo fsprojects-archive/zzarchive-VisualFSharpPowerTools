@@ -21,7 +21,7 @@ open System
 
 // The name of the project 
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
-let project = "FSharpVSPowerTools"
+let project = "VisualFSharpPowerTools"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
@@ -38,7 +38,7 @@ let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 
 // File system information 
 // (<solutionFile>.sln is built during the building process)
-let solutionFile  = "FSharpVSPowerTools"
+let solutionFile  = "VisualFSharpPowerTools"
 // Pattern specifying assemblies to be tested using NUnit
 let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 
@@ -46,8 +46,8 @@ let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 // The profile where the project is posted 
 let gitHome = "https://github.com/fsprojects"
 // The name of the project on GitHub
-let gitName = "FSharpVSPowerTools"
-let cloneUrl = "git@github.com:fsprojects/FSharpVSPowerTools.git"
+let gitName = "VisualFSharpPowerTools"
+let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps 

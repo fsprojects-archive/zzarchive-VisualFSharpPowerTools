@@ -8,7 +8,7 @@ let referenceBinaries = []
 // Web site location for the generated documentation
 let website = "."
 
-let githubLink = "http://github.com/fsprojects/FSharpVSPowerTools"
+let githubLink = "http://github.com/fsprojects/VisualFSharpPowerTools"
 
 // Specify more information about your project
 let info =
@@ -16,15 +16,15 @@ let info =
     "project-author", "Anh-Dung Phan, Vasily Kirichenko"
     "project-summary", "Visual F# Power Tools (by F# Community) "
     "project-github", githubLink
-    "project-nuget", "http://nuget.com/packages/FSharpVSPowerTools" ]
+    "project-nuget", "http://nuget.com/packages/VisualFSharpPowerTools" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below
 // --------------------------------------------------------------------------------------
 
-#I "../../packages/FSharp.Formatting.2.3.10-beta/lib/net40"
+#I "../../packages/FSharp.Formatting.2.4.0/lib/net40"
 #I "../../packages/RazorEngine.3.3.0/lib/net40"
-#I "../../packages/FSharp.Compiler.Service.0.0.31/lib/net40"
+#I "../../packages/FSharp.Compiler.Service.0.0.26/lib/net40"
 #r "../../packages/Microsoft.AspNet.Razor.2.0.30506.0/lib/net40/System.Web.Razor.dll"
 #r "../../packages/FAKE/tools/FakeLib.dll"
 #r "RazorEngine.dll"
@@ -52,7 +52,7 @@ let content    = __SOURCE_DIRECTORY__ @@ "../content"
 let output     = __SOURCE_DIRECTORY__ @@ "../output"
 let files      = __SOURCE_DIRECTORY__ @@ "../files"
 let templates  = __SOURCE_DIRECTORY__ @@ "templates"
-let formatting = __SOURCE_DIRECTORY__ @@ "../../packages/FSharp.Formatting.2.3.10-beta/"
+let formatting = __SOURCE_DIRECTORY__ @@ "../../packages/FSharp.Formatting.2.4.0/"
 let docTemplate = formatting @@ "templates/docpage.cshtml"
 
 // Where to look for *.csproj templates (in this order)

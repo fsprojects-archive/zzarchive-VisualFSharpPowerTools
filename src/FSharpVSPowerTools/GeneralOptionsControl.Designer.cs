@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbNavigateTo = new System.Windows.Forms.CheckBox();
             this.chbDepthColorizer = new System.Windows.Forms.CheckBox();
             this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
             this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
@@ -38,7 +39,6 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
-            this.chbNavigateTo = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -60,6 +60,18 @@
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbNavigateTo
+            // 
+            this.chbNavigateTo.AutoSize = true;
+            this.chbNavigateTo.Checked = true;
+            this.chbNavigateTo.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbNavigateTo.Location = new System.Drawing.Point(16, 168);
+            this.chbNavigateTo.Name = "chbNavigateTo";
+            this.chbNavigateTo.Size = new System.Drawing.Size(82, 17);
+            this.chbNavigateTo.TabIndex = 10;
+            this.chbNavigateTo.Text = "NavigateTo";
+            this.chbNavigateTo.UseVisualStyleBackColor = true;
             // 
             // chbDepthColorizer
             // 
@@ -129,10 +141,10 @@
             this.lblHome.AutoSize = true;
             this.lblHome.Location = new System.Drawing.Point(101, 231);
             this.lblHome.Name = "lblHome";
-            this.lblHome.Size = new System.Drawing.Size(240, 13);
+            this.lblHome.Size = new System.Drawing.Size(254, 13);
             this.lblHome.TabIndex = 3;
             this.lblHome.TabStop = true;
-            this.lblHome.Text = "http://fsprojects.github.io/FSharpVSPowerTools/";
+            this.lblHome.Text = "http://fsprojects.github.io/VisualFSharpPowerTools/";
             this.lblHome.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lblHome_LinkClicked);
             // 
             // chbFormatting
@@ -159,18 +171,6 @@
             this.chbXMLDoc.TabIndex = 1;
             this.chbXMLDoc.Text = "Auto-generating XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
-            // 
-            // chbNavigateTo
-            // 
-            this.chbNavigateTo.AutoSize = true;
-            this.chbNavigateTo.Checked = true;
-            this.chbNavigateTo.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbNavigateTo.Location = new System.Drawing.Point(16, 168);
-            this.chbNavigateTo.Name = "chbNavigateTo";
-            this.chbNavigateTo.Size = new System.Drawing.Size(82, 17);
-            this.chbNavigateTo.TabIndex = 10;
-            this.chbNavigateTo.Text = "NavigateTo";
-            this.chbNavigateTo.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
