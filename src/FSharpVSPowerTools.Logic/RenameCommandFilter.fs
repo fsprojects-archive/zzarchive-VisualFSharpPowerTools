@@ -88,7 +88,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         maybe {
             let! state = state
             let! cw, sym = state.Word
-            let! symbol = 
+            let! symbol, fileScopedCheckResults = 
                 vsLanguageService.GetFSharpSymbol(cw, sym, state.File, state.Project)
                 |> Async.RunSynchronously
 
@@ -109,15 +109,17 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 let! res = x.ShowDialog wnd
                 if res then 
                     let! (_, currentName, references) =
-                            vsLanguageService.FindUsages(cw, state.File, state.Project, symbol.Scope)
-                            |> Async.RunSynchronously
-                            |> Option.map (fun (symbol, lastIdent, refs) -> 
-                                symbol, lastIdent,
-                                    refs 
-                                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                    |> Seq.groupBy (fst >> Path.GetFullPath)
-                                    |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
-                                    |> Seq.toList)
+                        match symbol.Scope with
+                        | File -> vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
+                        | Project -> vsLanguageService.FindUsages (cw, state.File, state.Project) 
+                                     |> Async.RunSynchronously   
+                        |> Option.map (fun (symbol, lastIdent, refs) -> 
+                            symbol, lastIdent,
+                                refs 
+                                |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
+                                |> Seq.groupBy (fst >> Path.GetFullPath)
+                                |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                                |> Seq.toList)
 
                     rename currentName model.Name references
             else

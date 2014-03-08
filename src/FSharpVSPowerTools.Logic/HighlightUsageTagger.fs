@@ -37,12 +37,16 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                 let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let doUpdate (currentRequest: SnapshotPoint, newWord: SnapshotSpan, newWordSpans: SnapshotSpan seq, 
+    let doUpdate (currentRequest: SnapshotPoint, sym, newWord: SnapshotSpan, newWordSpans: SnapshotSpan seq, 
                   fileName: string, projectProvider: IProjectProvider) =
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.FindUsages(newWord, fileName, projectProvider, SymbolScope.File)
+                    let! res = vsLanguageService.GetFSharpSymbol (newWord, sym, fileName, projectProvider)
+                    let res = 
+                        res
+                        |> Option.bind (fun (_, checkResults) ->
+                            vsLanguageService.FindUsagesInFile (newWord, sym, checkResults))
                     let results =
                         res
                         |> Option.map (fun (_,lastIdent, refs) -> 
@@ -83,7 +87,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
             let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
             let! doc = dte.GetActiveDocument()
             let! project = ProjectCache.getProject doc
-            let! newWord, _ = vsLanguageService.GetSymbol(currentRequest, project)
+            let! newWord, sym = vsLanguageService.GetSymbol(currentRequest, project)
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
             match currentWord with
             | Some cw when cw = newWord -> ()
@@ -93,7 +97,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                     FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
                     |> textSearchService.FindAll
                 // If we are still up-to-date (another change hasn't happened yet), do a real update
-                doUpdate (currentRequest, newWord, newSpans, doc.FullName, project) }
+                doUpdate (currentRequest, sym, newWord, newSpans, doc.FullName, project) }
         |> function
            | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
            | _ -> ()
