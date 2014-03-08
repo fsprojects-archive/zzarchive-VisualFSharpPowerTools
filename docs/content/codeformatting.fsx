@@ -48,7 +48,7 @@ module Version2 =
          | TyCon(s, ts) -> s
 
 (**
-The main formatting options are available under "Tools --> Options --> Visual F# Power Tools --> Formatting" dialog. 
+The main formatting options are available under "Tools --> Options --> F# Power Tools --> Formatting" dialog. 
 
 ![Fantomas options](img/fantomas_options.png)
 
