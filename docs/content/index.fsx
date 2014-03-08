@@ -35,9 +35,9 @@ The extension is available under Apache 2.0 license, which allows modification a
 redistribution for both commercial and non-commercial purposes. For more information see the 
 [License file][license] in the GitHub repository. 
 
-  [content]: https://github.com/fsprojects/FSharpVSPowerTools/tree/master/docs/content
-  [gh]: https://github.com/fsprojects/FSharpVSPowerTools
-  [issues]: https://github.com/fsprojects/FSharpVSPowerTools/issues
-  [readme]: https://github.com/fsprojects/FSharpVSPowerTools/tree/master/README.md
-  [license]: https://github.com/fsprojects/FSharpVSPowerTools/tree/master/LICENSE.txt
+  [content]: https://github.com/fsprojects/VisualFSharpPowerTools/tree/master/docs/content
+  [gh]: https://github.com/fsprojects/VisualFSharpPowerTools
+  [issues]: https://github.com/fsprojects/VisualFSharpPowerTools/issues
+  [readme]: https://github.com/fsprojects/VisualFSharpPowerTools/tree/master/README.md
+  [license]: https://github.com/fsprojects/VisualFSharpPowerTools/tree/master/LICENSE.txt
 *)

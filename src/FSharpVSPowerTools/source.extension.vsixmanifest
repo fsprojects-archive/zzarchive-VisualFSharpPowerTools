@@ -4,9 +4,9 @@
     <Identity Id="FSharpVSPowerTools.68b42cfe-c752-4094-8dba-ed48aa81cac8" Version="0.3.3" Language="en-US" Publisher="fsharp.org" />
     <DisplayName>Visual F# Power Tools</DisplayName>
     <Description xml:space="preserve">A colllection of additional commands for F# in Visual Studio</Description>
-    <MoreInfo>https://github.com/fsprojects/FSharpVSPowerTools</MoreInfo>
+    <MoreInfo>https://github.com/fsprojects/VisualFSharpPowerTools</MoreInfo>
     <License>LICENSE.txt</License>
-    <GettingStartedGuide>http://fsprojects.github.io/FSharpVSPowerTools/</GettingStartedGuide>
+    <GettingStartedGuide>http://fsprojects.github.io/VisualFSharpPowerTools/</GettingStartedGuide>
     <ReleaseNotes>RELEASE_NOTES.md</ReleaseNotes>
     <Icon>logo.png</Icon>
     <PreviewImage>preview.png</PreviewImage>
