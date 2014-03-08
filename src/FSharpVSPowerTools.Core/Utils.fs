@@ -142,3 +142,10 @@ module Pervasive =
                     and remover1: IDisposable = ev1.Subscribe(callback1)
                     and remover2: IDisposable = ev2.Subscribe(callback2)
                     ())))
+
+    open System.IO
+
+    type Path with
+        static member GetFullPathSafe path =
+            try Path.GetFullPath path
+            with _ -> path

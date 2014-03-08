@@ -89,40 +89,40 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             let! state = state
             let! cw, sym = state.Word
             let! symbol = 
-                vsLanguageService.GetFSharpSymbol(cw, sym.Text, state.File, state.Project)
+                vsLanguageService.GetFSharpSymbol(cw, sym, state.File, state.Project)
                 |> Async.RunSynchronously
 
-            let model = RenameDialogModel (cw.GetText(), sym, symbol)
-            let wnd = UI.loadRenameDialog model
-            let hostWnd = Window.GetWindow(view.VisualElement)
-            wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
-            wnd.Owner <- hostWnd
-            let! res = x.ShowDialog wnd
-            if res then 
-                let! (symbol, currentName, references) = 
-                        vsLanguageService.FindUsages(cw, state.File, state.Project, Scope.Project)
-                        |> Async.RunSynchronously
-                        |> Option.map (fun (symbol, lastIdent, refs) -> 
-                            symbol, lastIdent,
-                                refs 
-                                |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                |> Seq.groupBy (fst >> Path.GetFullPath)
-                                |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
-                                |> Seq.toList)
+            let isSymbolDeclaredInCurrentProject =
+                match vsLanguageService.TryGetLocation symbol with
+                | Some loc ->
+                    let filePath = Path.GetFullPath loc.FileName
+                    // NB: this isn't a foolproof way to match two paths
+                    state.Project.SourceFiles |> Array.exists ((=) filePath)
+                | _ -> false
 
-                let isSymbolDeclaredInCurrentProject =
-                    match vsLanguageService.TryGetLocation symbol with
-                    | Some loc ->
-                        let filePath = Path.GetFullPath loc.FileName
-                        // NB: this isn't a foolproof way to match two paths
-                        state.Project.SourceFiles |> Array.exists ((=) filePath)
-                    | _ -> false
+            if isSymbolDeclaredInCurrentProject then
+                let model = RenameDialogModel (cw.GetText(), sym, symbol)
+                let wnd = UI.loadRenameDialog model
+                let hostWnd = Window.GetWindow(view.VisualElement)
+                wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
+                wnd.Owner <- hostWnd
+                let! res = x.ShowDialog wnd
+                if res then 
+                    let! (_, currentName, references) = 
+                            vsLanguageService.FindUsages(cw, state.File, state.Project, Scope.Project)
+                            |> Async.RunSynchronously
+                            |> Option.map (fun (symbol, lastIdent, refs) -> 
+                                symbol, lastIdent,
+                                    refs 
+                                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
+                                    |> Seq.groupBy (fst >> Path.GetFullPath)
+                                    |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                                    |> Seq.toList)
 
-                if isSymbolDeclaredInCurrentProject then
                     rename currentName model.Name references
-                else
-                    MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
-                        MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 
+            else
+                MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
+                    MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 
         } |> ignore
 
     member x.ShowDialog (wnd: Window) =
