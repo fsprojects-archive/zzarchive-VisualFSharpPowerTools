@@ -25,7 +25,10 @@
 * Fix the NRE when there is no project or solution
 
 #### 0.4.0 - Unreleased
-* Import Depth Colorizer
+* Import depth colorizer
 * Implement NavigateTo command
+* Fix performance issues with highlight references and rename refactoring
+* Support highlight references, rename refactoring and NavigateTo on standalone files
+* Listen to events due to project changes
 
 

@@ -21,7 +21,7 @@ open System
 
 // The name of the project 
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
-let project = "VisualFSharpPowerTools"
+let project = "FSharpVSPowerTools"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
@@ -30,7 +30,7 @@ let summary = "Visual F# Power Tools (by F# Community)"
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
 let description = """
-  F# Community Power Tools (for Visual Studio)"""
+  Visual F# Power Tools (by F# Community)"""
 // List of author names (for NuGet package)
 let authors = [ "Anh-Dung Phan", "Vasily Kirichenko" ]
 // Tags for your project (for NuGet package)
@@ -38,7 +38,7 @@ let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 
 // File system information 
 // (<solutionFile>.sln is built during the building process)
-let solutionFile  = "VisualFSharpPowerTools"
+let solutionFile  = "FSharpVSPowerTools"
 // Pattern specifying assemblies to be tested using NUnit
 let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 

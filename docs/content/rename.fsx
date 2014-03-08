@@ -4,7 +4,7 @@
 #I "../../bin"
 
 (**
-Rename refactoring (experimental)
+Rename refactoring
 -----------------------
 
 We currently support rename identifiers and operators which are defined in current project.

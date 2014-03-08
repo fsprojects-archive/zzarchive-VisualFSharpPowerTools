@@ -8,7 +8,8 @@ Highlight references
 -----------------------
 
 The color of the highlighted marker could be customized in  "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> Highlighted References".
-Since v0.3.0 we also support operator highlighting.
+Since version 0.3.0 we also support operator highlighting.
+
 ![Highlight operators](img/highlight_operators.png)
 
 Here is a demo screencast.
