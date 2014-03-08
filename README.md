@@ -1,10 +1,10 @@
-F# Power Tools
-============
+Visual F# Power Tools
+=====================
 
-F# Community Power Tools (for Visual Studio)
+Visual F# Community Power Tools (for Visual Studio)
 
-### Why F# Power Tools?
-F# Power Tools is a community effort to bring useful F# VS extensions into a single home for the following purposes:
+### Why Visual F# Power Tools?
+Visual F# Power Tools is a community effort to bring useful F# VS extensions into a single home for the following purposes:
  - Easy maintenance and upgrade
  - Sharing common functionalities and reducing conflicts between F# VS extensions
  - Adding new features which complement Visual F# Tools for VS

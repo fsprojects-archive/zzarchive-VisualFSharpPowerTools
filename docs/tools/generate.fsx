@@ -12,9 +12,9 @@ let githubLink = "http://github.com/fsprojects/FSharpVSPowerTools"
 
 // Specify more information about your project
 let info =
-  [ "project-name", "F# Power Tools"
-    "project-author", "Anh-Dung Phan, Don Syme, Vasily Kirichenko"
-    "project-summary", "F# Community Power Tools (for Visual Studio) "
+  [ "project-name", "Visual F# Power Tools"
+    "project-author", "Anh-Dung Phan, Vasily Kirichenko"
+    "project-summary", "Visual F# Power Tools (by F# Community) "
     "project-github", githubLink
     "project-nuget", "http://nuget.com/packages/FSharpVSPowerTools" ]
 
@@ -24,7 +24,7 @@ let info =
 
 #I "../../packages/FSharp.Formatting.2.3.10-beta/lib/net40"
 #I "../../packages/RazorEngine.3.3.0/lib/net40"
-#I "../../packages/FSharp.Compiler.Service.0.0.20/lib/net40"
+#I "../../packages/FSharp.Compiler.Service.0.0.31/lib/net40"
 #r "../../packages/Microsoft.AspNet.Razor.2.0.30506.0/lib/net40/System.Web.Razor.dll"
 #r "../../packages/FAKE/tools/FakeLib.dll"
 #r "RazorEngine.dll"

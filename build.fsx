@@ -25,14 +25,14 @@ let project = "FSharpVSPowerTools"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "F# Community Power Tools (for Visual Studio)"
+let summary = "Visual F# Power Tools (by F# Community)"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
 let description = """
   F# Community Power Tools (for Visual Studio)"""
 // List of author names (for NuGet package)
-let authors = [ "Anh-Dung Phan, Don Syme", "Vasily Kirichenko" ]
+let authors = [ "Anh-Dung Phan", "Vasily Kirichenko" ]
 // Tags for your project (for NuGet package)
 let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 
