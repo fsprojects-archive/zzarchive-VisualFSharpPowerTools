@@ -62,6 +62,7 @@
     <Compile Include="LanguageService.fs" />
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
+    <Compile Include="NavigableItemsCollector.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

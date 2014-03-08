@@ -29,7 +29,8 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
-            this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();            
+            this.chbDepthColorizer = new System.Windows.Forms.CheckBox();
+            this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
             this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
             this.chbNavBar = new System.Windows.Forms.CheckBox();
             this.lblInfo = new System.Windows.Forms.Label();
@@ -37,12 +38,13 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
-            this.chbDepthColorizer = new System.Windows.Forms.CheckBox();
+            this.chbNavigateTo = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbNavigateTo);
             this.grbOptions.Controls.Add(this.chbDepthColorizer);
             this.grbOptions.Controls.Add(this.chbRenameRefactoring);
             this.grbOptions.Controls.Add(this.chbHighlightUsage);
@@ -59,6 +61,16 @@
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
             // 
+            // chbDepthColorizer
+            // 
+            this.chbDepthColorizer.AutoSize = true;
+            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 145);
+            this.chbDepthColorizer.Name = "chbDepthColorizer";
+            this.chbDepthColorizer.Size = new System.Drawing.Size(97, 17);
+            this.chbDepthColorizer.TabIndex = 9;
+            this.chbDepthColorizer.Text = "Depth colorizer";
+            this.chbDepthColorizer.UseVisualStyleBackColor = true;
+            // 
             // chbRenameRefactoring
             // 
             this.chbRenameRefactoring.AutoSize = true;
@@ -66,10 +78,10 @@
             this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 122);
             this.chbRenameRefactoring.Name = "chbRenameRefactoring";
-            this.chbRenameRefactoring.Size = new System.Drawing.Size(187, 17);
+            this.chbRenameRefactoring.Size = new System.Drawing.Size(119, 17);
             this.chbRenameRefactoring.TabIndex = 8;
-            this.chbRenameRefactoring.Text = "Rename refactoring (experimental)";
-            this.chbRenameRefactoring.UseVisualStyleBackColor = true;  
+            this.chbRenameRefactoring.Text = "Rename refactoring";
+            this.chbRenameRefactoring.UseVisualStyleBackColor = true;
             // 
             // chbHighlightUsage
             // 
@@ -148,17 +160,17 @@
             this.chbXMLDoc.Text = "Auto-generating XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
             // 
-            // checkBox1
+            // chbNavigateTo
             // 
-            this.chbDepthColorizer.AutoSize = true;
-            this.chbDepthColorizer.Checked = true;
-            this.chbDepthColorizer.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 145);
-            this.chbDepthColorizer.Name = "checkBox1";
-            this.chbDepthColorizer.Size = new System.Drawing.Size(97, 17);
-            this.chbDepthColorizer.TabIndex = 9;
-            this.chbDepthColorizer.Text = "Depth colorizer";
-            this.chbDepthColorizer.UseVisualStyleBackColor = true;
+            this.chbNavigateTo.AutoSize = true;
+            this.chbNavigateTo.Checked = true;
+            this.chbNavigateTo.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbNavigateTo.Location = new System.Drawing.Point(16, 168);
+            this.chbNavigateTo.Name = "chbNavigateTo";
+            this.chbNavigateTo.Size = new System.Drawing.Size(82, 17);
+            this.chbNavigateTo.TabIndex = 10;
+            this.chbNavigateTo.Text = "NavigateTo";
+            this.chbNavigateTo.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -186,5 +198,6 @@
         private System.Windows.Forms.CheckBox chbHighlightUsage;
         private System.Windows.Forms.CheckBox chbRenameRefactoring;
         private System.Windows.Forms.CheckBox chbDepthColorizer;
+        private System.Windows.Forms.CheckBox chbNavigateTo;
     }
 }

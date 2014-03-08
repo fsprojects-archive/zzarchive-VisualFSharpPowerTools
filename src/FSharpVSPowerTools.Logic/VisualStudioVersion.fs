@@ -20,7 +20,7 @@ type ExportWithMinimalVisualStudioVersionAttribute(contractType: Type) =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module VisualStudioVersion =
     
-    let FromDTEVersion(s: string) =
+    let fromDTEVersion(s: string) =
         if String.IsNullOrEmpty s then 
             VisualStudioVersion.Unknown
         else
@@ -33,5 +33,6 @@ module VisualStudioVersion =
                 | "12" -> VisualStudioVersion.VS2013
                 | _ -> VisualStudioVersion.Unknown
     
-    let Matches (currentVersion: VisualStudioVersion) (featureVersion : VisualStudioVersion) = currentVersion = featureVersion
+    let matches (currentVersion: VisualStudioVersion) (featureVersion : VisualStudioVersion) = 
+        currentVersion = featureVersion
 

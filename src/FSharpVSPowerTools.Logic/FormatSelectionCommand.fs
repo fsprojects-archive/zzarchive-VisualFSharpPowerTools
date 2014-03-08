@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.CodeFormatting.Commands
+﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
 open System.Collections.Generic
@@ -6,7 +6,6 @@ open System.Linq
 open System.Text
 open System.Threading.Tasks
 open System.Windows
-open FSharpVSPowerTools.CodeFormatting.Utils
 open Microsoft.FSharp.Compiler
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor

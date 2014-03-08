@@ -9,7 +9,6 @@ using System.Windows.Media;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-
 using FSharpVSPowerTools.DepthColorizer;
 using Microsoft.VisualStudio.Shell;
 using System.Diagnostics;
@@ -23,25 +22,28 @@ namespace FSharpVSPowerTools
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
         [Import]
-        internal ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
+        private ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
-        internal VSLanguageService FSharpLanguageService { get; set; }
+        private VSLanguageService fsharpVsLanguageService = null;
+
+        [Import(typeof(SVsServiceProvider))]
+        private IServiceProvider serviceProvider = null;
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             ITextDocument doc;
 
-            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.DepthColorizerEnabled)
             {
                 Debug.WriteLine("[Depth Colorizer] The feature is disabled in General option page.");
                 return null;
             }
 
-            if (TextDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new DepthTagger(buffer, doc.FilePath, FSharpLanguageService) as ITagger<T>;
+                return new DepthTagger(buffer, doc.FilePath, fsharpVsLanguageService) as ITagger<T>;
             }
 
             return null;
@@ -56,17 +58,20 @@ namespace FSharpVSPowerTools
         [Export]
         [Name("FSharpDepthFullLineAdornment")]
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
-        internal AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
+        private AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
         [Import]
-        internal IViewTagAggregatorFactoryService ViewTagAggregatorFactoryService { get; set; }
+        private IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
+
+        [Import(typeof(SVsServiceProvider))]
+        private IServiceProvider serviceProvider = null;
 
         public void TextViewCreated(IWpfTextView textView)
         {
             if (textView == null) return;
 
-            var tagAggregator = ViewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
-            new FullLineAdornmentManager(textView, tagAggregator);
+            var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
+            new FullLineAdornmentManager(textView, tagAggregator, serviceProvider);
         }
     }
 }
