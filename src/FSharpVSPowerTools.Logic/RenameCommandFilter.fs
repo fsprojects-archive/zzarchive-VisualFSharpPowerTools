@@ -108,8 +108,20 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 wnd.Owner <- hostWnd
                 let! res = x.ShowDialog wnd
                 if res then 
+
+                    let isPrivateToFile = 
+                        match symbol with 
+                        | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember  || m.Accessibility.IsPrivate
+                        | :? FSharpEntity as m -> m.Accessibility.IsPrivate
+                        | :? FSharpGenericParameter -> true
+                        | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
+                        | :? FSharpField as m -> m.Accessibility.IsPrivate
+                        | _ -> false
+
+                    let scope = if isPrivateToFile then Scope.File else Scope.Project
+
                     let! (_, currentName, references) = 
-                            vsLanguageService.FindUsages(cw, state.File, state.Project, Scope.Project)
+                            vsLanguageService.FindUsages(cw, state.File, state.Project, scope)
                             |> Async.RunSynchronously
                             |> Option.map (fun (symbol, lastIdent, refs) -> 
                                 symbol, lastIdent,
