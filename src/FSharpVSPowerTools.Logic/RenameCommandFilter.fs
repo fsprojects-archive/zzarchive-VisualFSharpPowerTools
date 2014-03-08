@@ -120,9 +120,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
                 if isSymbolDeclaredInCurrentProject then
                     rename currentName model.Name references
-            else
-                MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
-                    MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 
+                else
+                    MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
+                        MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 
         } |> ignore
 
     member x.ShowDialog (wnd: Window) =
