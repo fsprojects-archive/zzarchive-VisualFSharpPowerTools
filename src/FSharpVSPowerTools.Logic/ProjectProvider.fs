@@ -92,6 +92,7 @@ type ProjectProvider(project: VSProject) =
                     if buildAction = "BuildAction=Compile" then Some item else None)    
                 |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
                 |> Seq.toArray
+            |> Array.map Path.GetFullPath
 
 type VirtualProjectProvider (doc: Document) = 
     do Debug.Assert (doc <> null, "Input document should not be null.")

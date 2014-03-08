@@ -76,4 +76,21 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
 
+    member x.GetFSharpSymbol (word: SnapshotSpan, ident: string, currentFile: string, projectProvider: IProjectProvider) = 
+        async {
+            let (_, _, endLine, endCol) = word.ToRange()
+            let projectFileName = projectProvider.ProjectFileName
+            let source = word.Snapshot.GetText()
+            let currentLine = word.Start.GetContainingLine().GetText()
+            let framework = projectProvider.TargetFramework
+            let args = projectProvider.CompilerOptions
+            let sourceFiles = 
+                match projectProvider.SourceFiles with
+                // If there is no source file, use currentFile as an independent script
+                | [||] -> [| currentFile |] 
+                | files -> files
+            let! r = instance.ParseAndCheckFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework)
+            return r.GetSymbolAtLocation (endLine+1, endCol, currentLine, [ident])
+        }
+
     member x.Checker = instance.Checker
