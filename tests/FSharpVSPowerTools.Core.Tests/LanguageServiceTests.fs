@@ -244,6 +244,12 @@ let ``should find usages of statically resolved method names``() =
         [ (754, 54), (754, 62)
           (755, 32), (755, 44) ]
 
+[<Test>]
+let ``should find usages of property initializers``() =
+    checkSymbolUsage 759 19 """        member val Prop = "" with get, set"""
+        [ (759, 19), (759, 23)
+          (761, 14), (761, 18) ]
+
 type ITempSource = 
     inherit System.IDisposable
     abstract FilePath: string

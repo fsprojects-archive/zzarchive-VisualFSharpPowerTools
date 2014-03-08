@@ -755,3 +755,8 @@ let p = 1
     let inline checkIt< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =
         if (^T : (static member IsInfinity: ^T -> bool) (num)) then None
         else Some num
+
+    type T() =
+        member val Prop = "" with get, set
+
+    let t = T(Prop="a")
