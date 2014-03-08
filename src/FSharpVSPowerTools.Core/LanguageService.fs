@@ -312,7 +312,7 @@ type LanguageService (dirtyNotify) =
                           | None -> 
                               x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
                           | Some opts -> opts
-                      let parseResults = x.ParseFileInProject (projectFilename, file, source, files, args, targetFramework)
+                      let parseResults = checker.ParseFileInProject(file, source, opts)
                       match parseResults.ParseTree with
                       | Some tree -> parseTreeHandler tree
                       | None -> ()
