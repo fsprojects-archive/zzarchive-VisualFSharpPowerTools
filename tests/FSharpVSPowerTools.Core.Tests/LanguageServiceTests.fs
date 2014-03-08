@@ -228,41 +228,27 @@ let ``should find usages of statically resolved type parameters``() =
 let ``should find usages of named discriminated union fields``() =
     checkSymbolUsage 735 15 "        | B of field1: int * field2: string" 
         [ (735, 15), (735, 21)
-          (737, 15), (737, 21) ]
+          (737, 15), (737, 21)
+          (740, 13), (740, 19) ]
 
 [<Test>]
-let ``should find operators``() =
-    checkGetSymbol 693 10 "    let (>>=) x y = ()" (Some (">>=", (693, 9), (693, 12), Operator))
-    checkGetSymbol 695 12 "    let (>~>>) x y = ()" (Some (">~>>", (695, 9), (695, 13), Operator))
-    checkGetSymbol 701 12 "    let ( >>. ) x y = x" (Some (">>.", (701, 10), (701, 13), Operator))
-    checkGetSymbol 704 15 "    let x = 1 >>. ws >>. 2 >>. ws" (Some (">>.", (704, 14), (704, 17), Operator))
-    checkGetSymbol 728 9 "    M.N.(+.) 1 2" (Some ("+.", (728, 9), (728, 11), Operator))
+let ``should find usages of active patterns``() =
+    checkSymbolUsage 744 10 "    let (|A|Bb|Ccc|) (x: int) =" 
+        [ (744, 10), (744, 11)
+          (745, 22), (745, 23)
+          (749, 10), (749, 11) ]
+
+[<Test; Ignore "FCS does not support this yet">]
+let ``should find usages of statically resolved method names``() =
+    checkSymbolUsage 754 54 "    let inline checkIt< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
+        [ (754, 54), (754, 62)
+          (755, 32), (755, 44) ]
 
 [<Test>]
-let ``should find identifiers``() =
-    checkGetSymbol 703 8 "    let ws x = x" (Some ("ws", (703, 8), (703, 10), Ident))
-    checkGetSymbol 702 24 "    1 >>. 2 >>. 3 |> ignore" (Some ("ignore", (702, 21), (702, 27), Ident))
-    
-    checkGetSymbol 722 14 "    Nested.``long name``()" (Some ("``long name``", (722, 11), (722, 24), Ident))
-
-    checkGetSymbol 582 59 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        (Some ("map", (582, 57), (582, 60), Ident))
-
-    checkGetSymbol 582 48 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        (Some ("Parallel", (582, 48), (582, 56), Ident))
-
-    checkGetSymbol 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
-        (Some ("Parallel", (582, 48), (582, 56), Ident))
-
-[<Test>]
-let ``should find generic parameters``() =
-    checkGetSymbol 707 12 "    type C<'a> = C of 'a" (Some ("'a", (707, 11), (707, 13), GenericTypeParameter))
-    checkGetSymbol 707 22 "    type C<'a> = C of 'a" (Some ("'a", (707, 22), (707, 24), GenericTypeParameter))
-
-[<Test>]
-let ``should find statically resolved type parameters``() =
-    checkGetSymbol 730 22 "    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
-        (Some ("^T", (730, 22), (730, 24), StaticallyResolvedTypeParameter))
+let ``should find usages of property initializers``() =
+    checkSymbolUsage 759 19 """        member val Prop = "" with get, set"""
+        [ (759, 19), (759, 23)
+          (761, 14), (761, 18) ]
 
 type ITempSource = 
     inherit System.IDisposable
