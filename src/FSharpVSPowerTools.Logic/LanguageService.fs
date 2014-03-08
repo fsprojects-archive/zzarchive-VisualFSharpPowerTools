@@ -7,10 +7,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 
-type Scope = 
-    | File
-    | Project
-
 [<Export>]
 type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider) =
     // TODO: we should reparse the stale document and cache it
