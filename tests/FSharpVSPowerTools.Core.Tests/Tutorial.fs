@@ -736,3 +736,22 @@ let p = 1
         | B of field1: int * field2: string
 
     let a = B (field1 = 1, field2 = "2")
+    let b = 
+        match a with
+        | B (field1 = 1) -> ()
+        | B (field2 = "3") -> ()
+        | _ -> ()
+
+    let (|A|Bb|Ccc|) (x: int) =
+        if x < 0 then A elif x < 1 then Bb true else Ccc "ok"
+
+    let _ = 
+        match 1 with
+        | A -> ()
+        | Bb false -> ()
+        | Ccc "ok" -> ()
+        | _ -> ()
+
+    let inline checkIt< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =
+        if (^T : (static member IsInfinity: ^T -> bool) (num)) then None
+        else Some num
