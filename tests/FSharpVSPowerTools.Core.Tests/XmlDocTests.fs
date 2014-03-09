@@ -4,7 +4,7 @@
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.XMLDocTests
+module FSharpVSPowerTools.Core.Tests.XmlDocTests
 #endif
 
 open System.IO
