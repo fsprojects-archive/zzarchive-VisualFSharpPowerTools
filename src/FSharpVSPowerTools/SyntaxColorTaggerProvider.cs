@@ -14,60 +14,60 @@ namespace FSharpVSPowerTools
 {
     //[Export(typeof(IClassifierProvider))]
     //[ContentType("F#")]
-    public class SyntaxConstructClassifierProvider : IClassifierProvider
-    {
-        [Import]
-        internal IClassificationTypeRegistryService ClassificationRegistry { get; set; }
+    //public class SyntaxConstructClassifierProvider : IClassifierProvider
+    //{
+    //    [Import]
+    //    internal IClassificationTypeRegistryService ClassificationRegistry { get; set; }
 
-        public IClassifier GetClassifier(ITextBuffer buffer)
-        {
-            return buffer.Properties.GetOrCreateSingletonProperty(() => new SyntaxConstructClassifier(buffer, ClassificationRegistry));
-        }
-    }
+    //    public IClassifier GetClassifier(ITextBuffer buffer)
+    //    {
+    //        return buffer.Properties.GetOrCreateSingletonProperty(() => new SyntaxConstructClassifier(buffer, ClassificationRegistry));
+    //    }
+    //}
 
-    internal class SyntaxConstructClassifier : IClassifier
-    {
-        IClassificationTypeRegistryService classificationRegistry;
-        ITextBuffer buffer;
+    //internal class SyntaxConstructClassifier : IClassifier
+    //{
+    //    IClassificationTypeRegistryService classificationRegistry;
+    //    ITextBuffer buffer;
 
-        public SyntaxConstructClassifier(ITextBuffer buffer, IClassificationTypeRegistryService classificationRegistry)
-        {
-            classificationRegistry = classificationRegistry;
-            buffer = buffer;
+    //    public SyntaxConstructClassifier(ITextBuffer buffer, IClassificationTypeRegistryService classificationRegistry)
+    //    {
+    //        classificationRegistry = classificationRegistry;
+    //        buffer = buffer;
 
-            buffer.Changed += BufferChanged;
-        }
+    //        buffer.Changed += BufferChanged;
+    //    }
 
-        /// <summary>
-        /// When the buffer changes, check to see if any of the edits were in a paragraph with multi-line tokens.
-        /// If so, we need to send out a classification changed event for those paragraphs.
-        /// </summary>
-        void BufferChanged(object sender, TextContentChangedEventArgs e)
-        {
-            int eventsSent = 0;
+    //    /// <summary>
+    //    /// When the buffer changes, check to see if any of the edits were in a paragraph with multi-line tokens.
+    //    /// If so, we need to send out a classification changed event for those paragraphs.
+    //    /// </summary>
+    //    void BufferChanged(object sender, TextContentChangedEventArgs e)
+    //    {
+    //        int eventsSent = 0;
 
-            foreach (var change in e.Changes)
-            {
-                //SnapshotSpan paragraph = GetEnclosingParagraph(new SnapshotSpan(e.After, change.NewSpan));
+    //        foreach (var change in e.Changes)
+    //        {
+    //            //SnapshotSpan paragraph = GetEnclosingParagraph(new SnapshotSpan(e.After, change.NewSpan));
 
-                //if (MarkdownParser.ParagraphContainsMultilineTokens(paragraph.GetText()))
-                //{
-                //    eventsSent++;
+    //            //if (MarkdownParser.ParagraphContainsMultilineTokens(paragraph.GetText()))
+    //            //{
+    //            //    eventsSent++;
 
-                //    var temp = this.ClassificationChanged;
-                //    if (temp != null)
-                //        temp(this, new ClassificationChangedEventArgs(paragraph));
-                //}
-            }
-        }
+    //            //    var temp = this.ClassificationChanged;
+    //            //    if (temp != null)
+    //            //        temp(this, new ClassificationChangedEventArgs(paragraph));
+    //            //}
+    //        }
+    //    }
 
-        public event System.EventHandler<ClassificationChangedEventArgs> ClassificationChanged;
+    //    public event System.EventHandler<ClassificationChangedEventArgs> ClassificationChanged;
 
-        public System.Collections.Generic.IList<ClassificationSpan> GetClassificationSpans(SnapshotSpan span)
-        {
-            throw new System.NotImplementedException();
-        }
-    }
+    //    public System.Collections.Generic.IList<ClassificationSpan> GetClassificationSpans(SnapshotSpan span)
+    //    {
+    //        throw new System.NotImplementedException();
+    //    }
+    //}
 
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
