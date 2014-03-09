@@ -188,6 +188,12 @@ let ``should find usages of symbols contacting with a special symbol on the righ
         [ (708, 8), (708, 9); (709, 4), (709, 5) ]
 
 [<Test>]
+let ``should find all symbols in combined match patterns``() =
+    checkSymbolUsage
+        763 27 "    let _ = match [] with [h] | [_; h] | [_; _; h] -> h | _ -> 0"
+        [(763, 27), (763, 28); (763, 36), (763, 37); (763, 42), (763, 43); (763, 51), (763, 52)]
+
+[<Test>]
 let ``should not find usages inside comments``() =
     hasNoSymbolUsage 478 11 "    // List.length ref"
 

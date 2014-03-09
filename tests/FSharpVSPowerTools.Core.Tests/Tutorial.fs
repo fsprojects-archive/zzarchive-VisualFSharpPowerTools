@@ -760,3 +760,5 @@ let p = 1
         member val Prop = "" with get, set
 
     let t = T(Prop="a")
+
+    let _ = match [] with [h] | [_; h] | [h; _] -> h | _ -> 0
