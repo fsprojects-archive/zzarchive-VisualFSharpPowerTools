@@ -70,6 +70,13 @@ namespace FSharpVSPowerTools
         {
             if (textView == null) return;
 
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (!generalOptions.DepthColorizerEnabled)
+            {
+                Debug.WriteLine("[Depth Colorizer] The feature is disabled in General option page.");
+                return;
+            }
+
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
             new FullLineAdornmentManager(textView, tagAggregator, serviceProvider);
         }
