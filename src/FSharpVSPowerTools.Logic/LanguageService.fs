@@ -1,15 +1,18 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
-open FSharpVSPowerTools
-open Microsoft.VisualStudio.Text
-open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.ComponentModel.Composition
+open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Editor
+open Microsoft.VisualStudio.TextManager.Interop
 open FSharp.CompilerBinding
+open FSharpVSPowerTools
 
 [<Export>]
-type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider) =
+type VSLanguageService [<ImportingConstructor>] 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider, editorFactory: IVsEditorAdaptersFactoryService) =
     // TODO: we should reparse the stale document and cache it
     let instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
     let solutionEvents = SolutionEvents(serviceProvider)
@@ -23,16 +26,26 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
     member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 
-    member x.GetSymbol(point: SnapshotPoint, projectProvider : IProjectProvider) =
+    member x.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
         let lineStr = point.GetContainingLine().GetText()                
-        let args = projectProvider.CompilerOptions                
-        SymbolParser.getSymbol source line col lineStr args
+        let args = projectProvider.CompilerOptions
+
+        let queryLexState source defines line =
+            try
+                let vsColorState = editorFactory.GetBufferAdapter(point.Snapshot.TextBuffer) :?> IVsTextColorState
+                let colorState = VsTextColorState.GetColorStateAtStartOfLine(vsColorState, line)
+                ColorStateLookup.LexStateOfColorState(colorState)
+            with e ->
+                debug "[Language Service] %O exception occurs." e
+                SymbolParser.queryLexState source defines line
+                                
+        SymbolParser.getSymbol source line col lineStr args (Some queryLexState)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
-    member x.ProcessNavigableItemsInProject(openDocuments, (projectProvider: IProjectProvider), processNavigableItems, ct) =
+    member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
         instance.ProcessParseTrees(
             projectProvider.ProjectFileName, 
             openDocuments, 

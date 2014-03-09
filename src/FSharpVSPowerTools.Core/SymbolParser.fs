@@ -66,7 +66,9 @@ module SymbolParser =
             lexStates.[line]
 
     // Returns symbol at a given position.
-    let getSymbol source line col lineStr (args: string array): Symbol option =
+    let getSymbol source line col lineStr (args: string array) queryFunc: Symbol option =
+        let queryLexState = defaultArg queryFunc queryLexState
+
         let defines =
             args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
                  |> Seq.toList

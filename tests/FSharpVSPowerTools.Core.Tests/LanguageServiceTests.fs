@@ -87,7 +87,7 @@ let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
 let checkGetSymbol line col lineStr expected =
-    SymbolParser.getSymbol source line col lineStr args
+    SymbolParser.getSymbol source line col lineStr args None
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
         text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected

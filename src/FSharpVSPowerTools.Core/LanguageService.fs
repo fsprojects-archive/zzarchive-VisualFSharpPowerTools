@@ -256,7 +256,7 @@ type LanguageService (dirtyNotify) =
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale) =
    async { 
-    match SymbolParser.getSymbol source line col lineStr args with
+    match SymbolParser.getSymbol source line col lineStr args None with
     | Some sym ->
         let! checkResults = 
             x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, stale)
@@ -278,7 +278,7 @@ type LanguageService (dirtyNotify) =
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework) =
      async { 
-         match SymbolParser.getSymbol source line col lineStr args with
+         match SymbolParser.getSymbol source line col lineStr args None with
          | Some sym ->
              let! checkResults = x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, AllowStaleResults.MatchingSource)
          
