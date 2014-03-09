@@ -59,6 +59,13 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
                 validationResult <- validate name
                 errorsChanged.Trigger(x :> obj, DataErrorsChangedEventArgs("Name"))
 
+    member x.Location =  
+        match fSharpSymbol with
+        | :? FSharpMemberFunctionOrValue as v -> Option.attempt (fun _ -> v.EnclosingEntity.FullName)
+        | :? FSharpEntity as e -> Some e.AccessPath
+        | _ -> None
+        |> function Some x -> x | None -> ""
+    
     interface INotifyDataErrorInfo with
         member x.GetErrors _ = 
             match validationResult with
