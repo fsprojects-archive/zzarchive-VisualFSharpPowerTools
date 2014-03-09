@@ -228,16 +228,17 @@ let visitTypeRepr =
         ]
     | repr -> printfn " - doesn't support object model yet"; []
 
-let visitAttribute (attr: SynAttribute) =
-    let (LongIdentWithDots(ident, _)) = attr.TypeName
+let visitAttributes (attrs: SynAttributes) =
     [
-        yield TypeLocation.FromIdentAndRange ident attr.TypeName.Range
-        yield! visitExpression attr.ArgExpr
+        for attr in attrs do
+            let (LongIdentWithDots(ident, _)) = attr.TypeName
+            yield TypeLocation.FromIdentAndRange ident attr.TypeName.Range
+            yield! visitExpression attr.ArgExpr
     ]
 
 let visitComponentInfo (SynComponentInfo.ComponentInfo(attrs, _, _, ident, _, _, _, range)) (isTypeDefinition: bool) =
     [
-        yield! attrs |> List.collect visitAttribute
+        yield! visitAttributes attrs
         
         if isTypeDefinition then
             yield TypeLocation.FromIdentAndRange ident range
@@ -251,6 +252,7 @@ let rec visitDeclarations decls =
             // as an expression (in visitExpression), but has no body
             for binding in bindings do
                 let (Binding(access, kind, inlin, mutabl, attrs, xmlDoc, data, pat, retInfo, body, m, sp)) = binding
+                yield! visitAttributes attrs
                 yield! visitPattern pat
                 yield! visitExpression body
         | SynModuleDecl.Types(typeDefnList, range) ->
@@ -274,6 +276,6 @@ let visitModulesAndNamespaces modulesOrNss =
     [ for moduleOrNs in modulesOrNss do
         let (SynModuleOrNamespace(lid, isMod, decls, xml, attrs, _, m)) = moduleOrNs
         printfn "Namespace or module: %A" lid
-        yield! attrs |> List.collect visitAttribute
+        yield! visitAttributes attrs
         yield! visitDeclarations decls
     ]
