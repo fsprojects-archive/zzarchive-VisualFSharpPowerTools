@@ -127,7 +127,8 @@ type DTE with
                 let! _ = Option.ofNull item.ContainingProject 
                 return doc }
         match doc with
-        | None -> fail "Should be able to find active document and active project."
+        // When solution is unloading, doc can be None which is OK
+        | None -> debug "Should be able to find active document and active project."
         | _ -> ()
         doc
     

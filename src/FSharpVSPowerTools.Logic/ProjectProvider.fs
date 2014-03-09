@@ -37,8 +37,14 @@ type ProjectProvider(project: VSProject) =
     let references = 
         project.References
         |> Seq.cast<Reference>
-        // Somethimes references are empty strings
-        |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
+        |> Seq.choose (fun r -> 
+            // Somethimes (when a project/solution is reloading) Reference.Path raises COM exception
+            try
+                // Somethimes references are empty strings
+                if String.IsNullOrWhiteSpace r.Path then None else Some r.Path
+            with e -> 
+                debug "%O" e
+                None)
         // Since project references are resolved automatically, we include it here
         // Path.GetFullPath will escape path strings correctly
         |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
