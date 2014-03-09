@@ -21,7 +21,8 @@ module PkgCmdIDList =
 
 [<NoEquality; NoComparison>]
 type DocumentState =
-    { Word: (SnapshotSpan * Symbol) option
+    { Point: SnapshotPoint
+      Word: (SnapshotSpan * Symbol) option
       File: string
       Project: IProjectProvider }
 
@@ -30,8 +31,8 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     let documentUpdater = DocumentUpdater(serviceProvider)
 
     let canRename() = 
-        // TODO: it should be a symbol and is defined in current project
-        state |> Option.bind (fun x -> x.Word) |> Option.isSome
+        state <- Option.map (fun s -> { s with Word = vsLanguageService.GetSymbol(s.Point, s.Project) } ) state
+        state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
     let updateAtCaretPosition () =
         maybe {
@@ -45,9 +46,10 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectCache.getProject doc
                 state <- Some
-                    { File = doc.FullName
-                      Project =  project
-                      Word = vsLanguageService.GetSymbol(point, project) }} |> ignore
+                    { Project =  project
+                      File = doc.FullName
+                      Word = None
+                      Point = point } } |> ignore
 
     let _ = DocumentEventsListener (view, updateAtCaretPosition)
 
@@ -87,6 +89,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     member x.HandleRename() =
         maybe {
             let! state = state
+            // We have to use it after canRename() in order to get word correctly
             let! cw, sym = state.Word
             let! symbol, fileScopedCheckResults = 
                 // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,

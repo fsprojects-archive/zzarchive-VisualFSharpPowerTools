@@ -11,10 +11,13 @@ open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
 [<Export>]
-type VSLanguageService [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider, editorFactory: IVsEditorAdaptersFactoryService) =
-    // TODO: we should reparse the stale document and cache it
-    let instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
+type VSLanguageService
+    [<ImportingConstructor>] 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider, 
+     editorFactory: IVsEditorAdaptersFactoryService,
+     fsharpLanguageService: FSharpLanguageService) =
+
+    let instance = LanguageService(fun _ -> ())
     let solutionEvents = SolutionEvents(serviceProvider)
     do ProjectCache.listen(solutionEvents)
     do ProjectCache.projectChanged.Add (fun p -> 
@@ -22,6 +25,15 @@ type VSLanguageService [<ImportingConstructor>]
         let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
                                                p.CompilerOptions, p.TargetFramework)
         instance.InvalidateConfiguration(opts))
+
+    let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
+        try
+            let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
+            let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
+            fsharpLanguageService.LexStateOfColorState(colorState)
+        with e ->
+            debug "[Language Service] %O exception occurs while getting symbol." e
+            SymbolParser.queryLexState source defines line
     
     member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
@@ -32,17 +44,8 @@ type VSLanguageService [<ImportingConstructor>]
         let col = point.Position - point.GetContainingLine().Start.Position
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions
-
-        let queryLexState source defines line =
-            try
-                let vsColorState = editorFactory.GetBufferAdapter(point.Snapshot.TextBuffer) :?> IVsTextColorState
-                let colorState = VsTextColorState.GetColorStateAtStartOfLine(vsColorState, line)
-                ColorStateLookup.LexStateOfColorState(colorState)
-            with e ->
-                debug "[Language Service] %O exception occurs." e
-                SymbolParser.queryLexState source defines line
                                 
-        SymbolParser.getSymbol source line col lineStr args (Some queryLexState)
+        SymbolParser.getSymbol source line col lineStr args (Some <| buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
     member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
@@ -64,18 +67,15 @@ type VSLanguageService [<ImportingConstructor>]
                 let currentLine = word.Start.GetContainingLine().GetText()
                 let framework = projectProvider.TargetFramework
                 let args = projectProvider.CompilerOptions
-                let sourceFiles = 
-                    match projectProvider.SourceFiles with
-                    // If there is no source file, use currentFile as an independent script
-                    | [||] -> [| currentFile |] 
-                    | files -> files
+                let sourceFiles = projectProvider.SourceFiles
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 return! 
-                    instance.GetUsesOfSymbolInProjectAtLocationInFile (projectFileName, currentFile, source, sourceFiles, 
-                                                                       endLine, endCol, currentLine, args, framework)
+                    instance.GetUsesOfSymbolInProjectAtLocationInFile
+                        (projectFileName, currentFile, source, sourceFiles, endLine, endCol, currentLine, 
+                        args, framework, buildQueryLexState word.Snapshot.TextBuffer)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
@@ -115,11 +115,7 @@ type VSLanguageService [<ImportingConstructor>]
             let currentLine = word.Start.GetContainingLine().GetText()
             let framework = projectProvider.TargetFramework
             let args = projectProvider.CompilerOptions
-            let sourceFiles = 
-                match projectProvider.SourceFiles with
-                // If there is no source file, use currentFile as an independent script
-                | [||] -> [| currentFile |] 
-                | files -> files
+            let sourceFiles = projectProvider.SourceFiles
             let! results = instance.ParseAndCheckFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework, stale)
             let symbol = results.GetSymbolAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)

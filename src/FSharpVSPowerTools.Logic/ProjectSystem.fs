@@ -62,22 +62,32 @@ module Reflection =
             meth.Invoke(instance, [||]) |> unbox<'R>
 
 open Reflection
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 
 exception AssemblyMissingException of string
 
-type internal FSharpLanguageService private () =      
-    static let asm = 
-      lazy try Assembly.Load("FSharp.LanguageService, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")
-           with _ -> raise (AssemblyMissingException "FSharp.LanguageService")
-    static member VsTextColorState = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
-    static member ColorStateLookup = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
+[<Export>]
+type FSharpLanguageService [<ImportingConstructor>] 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) = 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let assemblyInfo =
+        match VisualStudioVersion.fromDTEVersion dte.Version with
+        | VisualStudioVersion.VS2012 ->
+            "FSharp.LanguageService, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+        | _ ->
+            "FSharp.LanguageService, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
+    let asm =  lazy try Assembly.Load(assemblyInfo)
+                    with _ -> raise (AssemblyMissingException "FSharp.LanguageService")
 
-type internal VsTextColorState =
-    static member GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
-        FSharpLanguageService.VsTextColorState?GetColorStateAtStartOfLine(vsColorState, line)
+    member x.VsTextColorStateType = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
+    member x.ColorStateLookupType = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
 
-type internal ColorStateLookup =
-    static member LexStateOfColorState(colorState: int): int64 =
-        FSharpLanguageService.ColorStateLookup?LexStateOfColorState(colorState)
+    member x.GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
+        x.VsTextColorStateType?GetColorStateAtStartOfLine(vsColorState, line)
+
+    member x.LexStateOfColorState(colorState: int): int64 =
+        x.ColorStateLookupType?LexStateOfColorState(colorState)
         
