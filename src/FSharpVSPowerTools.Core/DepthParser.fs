@@ -357,7 +357,7 @@ type DepthParser private () =
 
     // TODO, consider perf, way just to consider viewport and do as little work as necessary?
 
-    member internal x.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, ?checker: InteractiveChecker) =
+    member internal x.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker: InteractiveChecker option) =
         let mindents = computeMinIndentArray sourceCodeLinesOfTheFile
         let indent startLine endLine =
             let mutable i, n = mindents.[startLine-1], startLine+1
@@ -369,7 +369,7 @@ type DepthParser private () =
         let checker = defaultArg checker x.Checker
         // Get compiler options for the 'project' implied by a single script file
         let projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
-        let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
+        let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions) |> Async.RunSynchronously
     
         match input.ParseTree with
         | Some tree -> 
@@ -388,7 +388,7 @@ type DepthParser private () =
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
     static member GetRanges(sourceCodeOfTheFile: string, filename, ?checker: InteractiveChecker) =
         let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split [|'\n'|]
-        DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, ?checker = checker)
+        DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
 
     /////////////////////////////////////////////////////
 
@@ -403,7 +403,7 @@ type DepthParser private () =
         let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split([|"\r\n";"\n"|], StringSplitOptions.None)
         let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
         let len line = lineLens.[line-1]  // line #s are 1-based
-        let nestedRanges = DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, ?checker = checker)
+        let nestedRanges = DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
         let q = System.Collections.Generic.SortedSet<_>(qevComp)  // priority queue
         for r in nestedRanges do
             System.Diagnostics.Debug.WriteLine(sprintf "%A" r)
