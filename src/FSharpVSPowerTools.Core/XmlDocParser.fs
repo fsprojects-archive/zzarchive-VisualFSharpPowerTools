@@ -142,7 +142,7 @@ module internal XmlDocParsing =
 
         // Get compiler options for the 'project' implied by a single script file
         let projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
-        let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
+        let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions) |> Async.RunSynchronously
     
         match input.ParseTree with
         | Some input -> getXmlDocablesInput input

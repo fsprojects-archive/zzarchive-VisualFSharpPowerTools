@@ -117,11 +117,8 @@ type LanguageService (dirtyNotify) =
             
             let fileName = fixFileName(fileName)            
             
-            Debug.WriteLine("Worker: Request received, fileName = {0}, parsing...", box fileName)
-            let parseResults = checker.ParseFileInProject(fileName, source, options) 
-              
-            Debug.WriteLine("Worker: Typecheck source...")
-            let! checkAnswer = checker.CheckFileInProject(parseResults, fileName, 0, source,options, IsResultObsolete(fun () -> false), null )
+            Debug.WriteLine("Worker: Parse and typecheck source...")
+            let! parseResults, checkAnswer = checker.ParseAndCheckFileInProject(fileName, 0, source,options, IsResultObsolete(fun () -> false), null )
               
             Debug.WriteLine(sprintf "Worker: Parse completed")
 
@@ -314,7 +311,7 @@ type LanguageService (dirtyNotify) =
                           | None -> 
                               x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
                           | Some opts -> opts
-                      let parseResults = checker.ParseFileInProject(file, source, opts)
+                      let parseResults = checker.ParseFileInProject(file, source, opts) |> Async.RunSynchronously
                       match parseResults.ParseTree with
                       | Some tree -> parseTreeHandler tree
                       | None -> ()
