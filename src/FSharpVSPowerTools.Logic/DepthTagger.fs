@@ -44,7 +44,7 @@ type DepthTagger(sourceBuffer: ITextBuffer, filename: string, fsharpLanguageServ
                    // Reuse the instance of InteractiveChecker
                    let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService. Checker)
                    let tempResults = new ResizeArray<_>()
-                   for (line, sc, ec, d) as info in ranges do
+                   for (line, sc, ec, _d) as info in ranges do
                        try 
                            //System.Diagnostics.Debug.WriteLine("{0},{1},{2},{3}", line, sc, ec, d)
                            // -1 because F# reports 1-based line nums, whereas VS wants 0-based

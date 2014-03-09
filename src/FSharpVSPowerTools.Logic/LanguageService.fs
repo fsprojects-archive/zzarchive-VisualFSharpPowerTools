@@ -67,25 +67,17 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
 
-    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, currentFile: string, projectProvider: IProjectProvider) =
+    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
-                let projectFileName = projectProvider.ProjectFileName
-                let source = word.Snapshot.GetText()
-                let currentLine = word.Start.GetContainingLine().GetText()
                 let framework = projectProvider.TargetFramework
                 let args = projectProvider.CompilerOptions
-                let sourceFiles = 
-                    match projectProvider.SourceFiles with
-                    // If there is no source file, use currentFile as an independent script
-                    | [||] -> [| currentFile |] 
-                    | files -> files
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                let! res = x.GetFSharpSymbol (word, sym, currentFile, projectProvider)
+                let! res = x.GetFSharpSymbol (word, sym, currentFile, projectProvider, stale)
                 return res |> Option.map (fun (_, checkResults) -> x.FindUsagesInFile (word, sym, checkResults))
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
@@ -102,7 +94,7 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
             debug "[Language Service] %O exception occurs while updating." e
             None
 
-    member x.GetFSharpSymbol (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider) = 
+    member x.GetFSharpSymbol (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
             let (_, _, endLine, _) = word.ToRange()
             let projectFileName = projectProvider.ProjectFileName
@@ -115,7 +107,7 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
                 // If there is no source file, use currentFile as an independent script
                 | [||] -> [| currentFile |] 
                 | files -> files
-            let! results = instance.ParseAndCheckFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework)
+            let! results = instance.ParseAndCheckFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework, stale)
             let symbol = results.GetSymbolAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
         }

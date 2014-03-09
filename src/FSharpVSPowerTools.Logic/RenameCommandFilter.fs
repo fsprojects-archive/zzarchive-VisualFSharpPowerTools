@@ -89,7 +89,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             let! state = state
             let! cw, sym = state.Word
             let! symbol, fileScopedCheckResults = 
-                vsLanguageService.GetFSharpSymbol(cw, sym, state.File, state.Project)
+                // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
+                // in order to by able to make accurate symbol comparisons during renaming.
+                vsLanguageService.GetFSharpSymbol(cw, sym, state.File, state.Project, AllowStaleResults.No)
                 |> Async.RunSynchronously
 
             let isSymbolDeclaredInCurrentProject =

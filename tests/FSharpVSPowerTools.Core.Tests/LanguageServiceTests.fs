@@ -72,7 +72,7 @@ let allUsesOfAllSymbols =
 
 let getUsesOfSymbol line col lineStr =
     vsLanguageService.GetUsesOfSymbolAtLocationInFile(projectFileName, fileName, source, sourceFiles, 
-                                                      line, col, lineStr, args, framework)
+                                                      line, col, lineStr, args, framework, AllowStaleResults.No)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, symbolUses) -> 
         symbolUses |> Array.map (fun x -> 

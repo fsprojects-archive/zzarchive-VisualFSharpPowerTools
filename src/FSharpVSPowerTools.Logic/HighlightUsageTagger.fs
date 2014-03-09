@@ -10,6 +10,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open FSharp.CompilerBinding
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 
@@ -42,7 +43,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.GetFSharpSymbol (newWord, sym, fileName, projectProvider)
+                    let! res = vsLanguageService.GetFSharpSymbol (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
                     let res = 
                         res
                         |> Option.bind (fun (_, checkResults) ->
