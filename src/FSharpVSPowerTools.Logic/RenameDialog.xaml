@@ -42,8 +42,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="173" />
         </Grid.RowDefinitions>
-        <Button Content="Cancel" Height="23" HorizontalAlignment="Right" Margin="0,0,109,25" VerticalAlignment="Bottom" Width="75" Name="btnCancel" IsCancel="True" RenderTransformOrigin="0.72,2.174" />
-        <Button Content="Ok" Height="23" HorizontalAlignment="Right" Margin="0,0,20,25" VerticalAlignment="Bottom" Width="75" Name="btnOk" IsDefault="true" IsEnabled="False"/>
+        <Button Content="Cancel" Height="25" HorizontalAlignment="Right" Margin="0,0,20,25" VerticalAlignment="Bottom" Width="85" Name="btnCancel" IsCancel="True" RenderTransformOrigin="0.72,2.174" />
+        <Button Content="OK" Height="25" HorizontalAlignment="Right" Margin="0,0,114,25" VerticalAlignment="Bottom" Width="81" Name="btnOk" IsDefault="true" IsEnabled="False"/>
         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,0,0,63">
             <Grid.Background>
                 <SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
