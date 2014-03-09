@@ -111,7 +111,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     let! (_, currentName, references) =
                         match symbol.Scope with
                         | File -> vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
-                        | Project -> vsLanguageService.FindUsages (cw, state.File, state.Project) 
+                        | Project -> vsLanguageService.FindUsages (cw, state.File, state.Project, SymbolScope.Project) 
                                      |> Async.RunSynchronously   
                         |> Option.map (fun (symbol, lastIdent, refs) -> 
                             symbol, lastIdent,
