@@ -5,6 +5,7 @@ open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
@@ -14,16 +15,9 @@ open FSharpVSPowerTools.ProjectSystem
 open System.Net
 open System.Net.Sockets
 
-
-// Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
-type TypeColorTag() = 
-    inherit TextMarkerTag("SymbolDefinitionClassificationFormat")
-
-// Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
-type SyntaxColorTagger(view: ITextView,
-                       sourceBuffer: ITextBuffer) as self =
-    let tagsChanged = Event<_, _>()
-
+type SyntaxConstructClassifier(buffer: ITextBuffer,
+                               classificationRegistry: IClassificationTypeRegistryService) as self =
+    let classificationChanged = Event<_, _>()
     let lockObject = new Object()
     let mutable lastSnapshot: ITextSnapshot = null
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
@@ -49,15 +43,16 @@ type SyntaxColorTagger(view: ITextView,
             (fun () ->
                 wordSpans <- newSpans
 
-                tagsChanged.Trigger(self, 
-                                    new SnapshotSpanEventArgs(
-                                        new SnapshotSpan(
-                                            sourceBuffer.CurrentSnapshot,
-                                            0,
-                                            sourceBuffer.CurrentSnapshot.Length))))
+                classificationChanged.Trigger(
+                    self, 
+                    new ClassificationChangedEventArgs(
+                        new SnapshotSpan(
+                            buffer.CurrentSnapshot,
+                            0,
+                            buffer.CurrentSnapshot.Length))))
 
-    let updateSyntaxTags callerName =
-        let snapshot = sourceBuffer.CurrentSnapshot
+    let updateSyntaxConstructClassifiers callerName =
+        let snapshot = buffer.CurrentSnapshot
 
         if isWorking = false && snapshot <> lastSnapshot then
             sendMsg "%s - Effective update" callerName
@@ -83,7 +78,7 @@ type SyntaxColorTagger(view: ITextView,
                     match tree with
                     | ParsedInput.ImplFile(implFile) -> 
                        // Extract declarations and walk over them
-                       let (ParsedImplFileInput(fn, script, name, _, _, modules, _)) = implFile
+                       let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
                        SourceCodeClassifier.visitModulesAndNamespaces modules
                     | _ -> []
 
@@ -107,37 +102,24 @@ type SyntaxColorTagger(view: ITextView,
             |> Async.Start
 
     do
-        EventHandler<_>(fun _ _ -> updateSyntaxTags "CaretPosChanged")
-        |> view.Caret.PositionChanged.AddHandler
-
-        EventHandler<_>(fun _ _ -> updateSyntaxTags "TextBufferChanged")
-        |> view.TextBuffer.Changed.AddHandler
+        EventHandler<_>(fun _ _ -> updateSyntaxConstructClassifiers "Buffer changed")
+        |> buffer.Changed.AddHandler
 
         // Execute it the first time
-        updateSyntaxTags "FirstExecution"
+        updateSyntaxConstructClassifiers "[SyntaxConstructClassifier] First execution"
 
-    interface ITagger<TypeColorTag> with
-        member x.GetTags (spans: NormalizedSnapshotSpanCollection): seq<ITagSpan<TypeColorTag>> =
-            seq {
-                // Hold on to a "snapshot" of the word spans and current word, so that we maintain the same
-                // collection throughout
-                if (spans.Count > 0 && wordSpans.Count > 0) then
-                    let wordSpansSnapshot =
-                        // If the requested snapshot isn't the same as the one our words are on, translate our spans to the expected snapshot 
-                        if spans.[0].Snapshot <> wordSpans.[0].Snapshot then
-                            new NormalizedSnapshotSpanCollection(
-                                wordSpans |> Seq.map (fun span -> span.TranslateTo(spans.[0].Snapshot, SpanTrackingMode.EdgeExclusive)))
-                        else
-                            wordSpans
+    interface IClassifier with
+        member x.GetClassificationSpans(snapshotSpan: SnapshotSpan): IList<ClassificationSpan> =
+            // And now return classification spans for everything
+            [|
+                for (span: SnapshotSpan) in wordSpans do
+                    let classificationType =
+                        "FSharp.TypeName"
+                        |> classificationRegistry.GetClassificationType
 
-                    // Second, yield all the other words in the file 
-                    for (span: SnapshotSpan) in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpansSnapshot) do
-                        yield (new TagSpan<_>(span, new TypeColorTag()) :> ITagSpan<_>)
-            }
+                    yield new ClassificationSpan(span, classificationType)
+            |]
+            :> _
 
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
-
-    interface IDisposable with
-        member x.Dispose() =
-            udpClient.Close()
+        member x.ClassificationChanged = classificationChanged.Publish
