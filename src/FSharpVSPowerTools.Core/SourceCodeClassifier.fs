@@ -30,7 +30,10 @@ let getUntypedTree (input: string) =
     // Get compiler options for the 'project' implied by a single script file
     let projOptions = checker.GetProjectOptionsFromScript(file, input)
     // Run the first phase (untyped parsing) of the compiler
-    let parseFileResults = checker.ParseFileInProject(file, input, projOptions)
+    let parseFileResults =
+        checker.ParseFileInProject(file, input, projOptions)
+        |> Async.RunSynchronously
+
     match parseFileResults.ParseTree with
     | Some tree -> tree
     | None -> failwith "Something went wrong during parsing!"
@@ -121,9 +124,22 @@ let rec visitSimplePats =
             yield! visitType synType
         ]
 
-let rec visitBinding (Binding(_, _, _, _, attrs, _, _, pat, _, init, _, _)) =
-    [ yield! visitPattern pat
-      yield! visitExpression init ]
+let rec visitAttributes (attrs: SynAttributes) =
+    [
+        for attr in attrs do
+            let (LongIdentWithDots(ident, _)) = attr.TypeName
+            yield TypeLocation.FromIdentAndRange ident attr.TypeName.Range
+            yield! visitExpression attr.ArgExpr
+    ]
+
+and visitBindings (bindings: SynBinding list) =
+    [
+        for binding in bindings do
+            let (Binding(access, _, _, _, attrs, _, _, pat, _, body, _, _)) = binding
+            yield! visitAttributes attrs
+            yield! visitPattern pat
+            yield! visitExpression body
+    ]
 
 /// Walk over an expression - if expression contains two or three 
 /// sub-expressions (two if the 'else' branch is missing), let expression
@@ -171,16 +187,14 @@ and visitExpression =
         ]
         |> List.concat
     | SynExpr.LetOrUse(_, _, bindings, body, _) -> 
-        // Visit bindings (there may be multiple 
-        // for 'let .. = .. and .. = .. in ...'
-        printfn "LetOrUse with the following bindings:"
-        let bindingsTypeLocations =
-            bindings
-            |> List.collect visitBinding
+        // for 'let <binding> = .. and .. = .. in <body>'
+        [
+            // Visit bindings (there may be multiple 
+            yield! visitBindings bindings
 
-        // Visit the body expression
-        printfn "And the following body:"
-        bindingsTypeLocations @ (visitExpression body)
+            // Visit the body expression
+            yield! visitExpression body
+        ]
     | expr -> printfn " - not supported expression: %A" expr; []
 
 let visitField (SynField.Field(_, _, _, fieldType, _, _, _, range)) =
@@ -191,18 +205,26 @@ let visitUnionCase (SynUnionCase.UnionCase(_, _, caseType, _, _, _)) =
     | UnionCaseFields(synFields) -> synFields |> List.collect visitField
     | t -> printfn " - not supported union case type: %A" t; []
 
-let visitMemberDefn =
+let rec visitMemberDefn =
     function
     | SynMemberDefn.ImplicitCtor(_, _, patList, _, _) ->
         patList
         |> List.collect visitSimplePat
-    // TODO: inherit
     // TODO: implicit inherit
-    // TODO: interface
     | SynMemberDefn.LetBindings(bindings, _, _, _) ->
-        bindings
-        |> List.collect visitBinding
-    | SynMemberDefn.Member(binding, _) -> visitBinding binding
+        visitBindings bindings
+    | SynMemberDefn.Inherit(synType, _, _) -> visitType synType
+    | SynMemberDefn.Interface(synType, defns0, _) ->
+        [
+            yield! visitType synType
+
+            match defns0 with
+            | Some defns ->
+                for defn in defns do
+                    yield! visitMemberDefn defn
+            | _ -> ()
+        ]
+    | SynMemberDefn.Member(binding, _) -> visitBindings [binding]
     | def -> printfn " - not supported member definition: %A" def; []
 
 let visitTypeRepr =
@@ -227,14 +249,6 @@ let visitTypeRepr =
                 yield! visitMemberDefn def
         ]
     | repr -> printfn " - doesn't support object model yet"; []
-
-let visitAttributes (attrs: SynAttributes) =
-    [
-        for attr in attrs do
-            let (LongIdentWithDots(ident, _)) = attr.TypeName
-            yield TypeLocation.FromIdentAndRange ident attr.TypeName.Range
-            yield! visitExpression attr.ArgExpr
-    ]
 
 let visitComponentInfo (SynComponentInfo.ComponentInfo(attrs, _, _, ident, _, _, _, range)) (isTypeDefinition: bool) =
     [

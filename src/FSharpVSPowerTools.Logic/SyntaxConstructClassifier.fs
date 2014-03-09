@@ -22,18 +22,19 @@ type SyntaxConstructClassifier(buffer: ITextBuffer,
     let mutable lastSnapshot: ITextSnapshot = null
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
     let mutable isWorking = false
-    let udpClient = new UdpClient()
+//    let udpClient = new UdpClient()
 
     let sendMsg format =
         let sendString (msg: string) =
-            let bytes =
-                sprintf "[%s] %s" (DateTime.UtcNow.ToString("hh:mm:ss.s")) msg
-                |> System.Text.Encoding.UTF8.GetBytes
+            let msg = sprintf "[SyntaxConstructClassifier][%s] %s" (DateTime.UtcNow.ToString("hh:mm:ss.s")) msg
 
-            udpClient.SendAsync(bytes, bytes.Length, "localhost", 2009)
-            |> Async.AwaitTask
-            |> Async.Ignore
-            |> Async.Start
+            System.Diagnostics.Debug.WriteLine(msg)
+
+//            let bytes = System.Text.Encoding.UTF8.GetBytes(msg)
+//            udpClient.SendAsync(bytes, bytes.Length, "localhost", 2009)
+//            |> Async.AwaitTask
+//            |> Async.Ignore
+//            |> Async.Start
 
         Printf.ksprintf sendString format
 
@@ -106,7 +107,7 @@ type SyntaxConstructClassifier(buffer: ITextBuffer,
         |> buffer.Changed.AddHandler
 
         // Execute it the first time
-        updateSyntaxConstructClassifiers "[SyntaxConstructClassifier] First execution"
+        updateSyntaxConstructClassifiers "First execution"
 
     interface IClassifier with
         member x.GetClassificationSpans(snapshotSpan: SnapshotSpan): IList<ClassificationSpan> =

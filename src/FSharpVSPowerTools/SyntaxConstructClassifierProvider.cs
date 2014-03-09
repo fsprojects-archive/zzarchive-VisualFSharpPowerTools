@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.Text.Classification;
 
 namespace FSharpVSPowerTools
 {
-    static class MarkdownClassificationTypes
+    static class ClassificationTypes
     {
         // Base definition for all other classification types
         [Export]
