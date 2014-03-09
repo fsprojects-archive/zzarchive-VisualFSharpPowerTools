@@ -12,7 +12,6 @@ open FSharpVSPowerTools
 /// various IntelliSense functions (such as completion & tool tips). Provides default
 /// empty/negative results if information is missing.
 type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults) option) =
-    let token = Parser.tagOfToken(Parser.token.IDENT("")) 
 
     new (checkResults, parseResults) = ParseAndCheckResults(Some (checkResults, parseResults))
 
@@ -21,23 +20,23 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
     member x.GetSymbolAtLocation(line, col, lineStr, identIsland) =
         match infoOpt with 
         | None -> None
-        | Some (checkResults, parseResults) -> 
+        | Some (checkResults, _parseResults) -> 
             checkResults.GetSymbolAtLocationAlternate(line, col, lineStr, identIsland)
 
     member x.GetUsesOfSymbolInFile(symbol) =
         match infoOpt with 
         | None -> [| |]
-        | Some (checkResults, parseResults) -> checkResults.GetUsesOfSymbolInFile(symbol)
+        | Some (checkResults, _parseResults) -> checkResults.GetUsesOfSymbolInFile(symbol)
 
     member x.GetErrors() =
         match infoOpt with 
         | None -> None
-        | Some (checkResults, parseResults) -> Some checkResults.Errors
+        | Some (checkResults, _parseResults) -> Some checkResults.Errors
 
     member x.GetNavigationItems() =
         match infoOpt with 
         | None -> [| |]
-        | Some (checkResults, parseResults) -> 
+        | Some (_checkResults, parseResults) -> 
            // GetNavigationItems is not 100% solid and throws occasional exceptions
             try parseResults.GetNavigationItems().Declarations
             with _ -> 
@@ -47,11 +46,16 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
 [<RequireQualifiedAccess>]
 type AllowStaleResults = 
-    // Allow checker results where the source doesn't even match
+    /// Allow checker results where the source doesn't even match
     | MatchingFileName
-    // Allow checker results where the source matches but where the background builder may not have caught up yet after some other change
+    /// Allow checker results where the source matches but where the background builder may not have caught up yet after some other change
+    /// (such as a saved change in an earlier file in the compilation order, or a saved change in a project or DLL this project depends on).
+    ///
+    /// This gives good, fast, accurate results for repeated requests to the same file text. Semantic responsiveness will be degraded
+    /// during eiting of the file.
     | MatchingSource
-    // Don't allow stale results
+    /// Don't allow stale results. This waits for all background changes relevant to the file to propagate, and forces a recheck of the file text
+    /// regardless of whether if has been recently checked or not.
     | No
 
 type ParseAndCheckResults with
@@ -67,9 +71,6 @@ type ParseAndCheckResults with
 
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService (dirtyNotify) =
-  let tryGetSymbolRange (range: Range.range option) = 
-        range |> Option.map (fun dec -> dec.FileName, ((dec.StartLine-1, dec.StartColumn), (dec.EndLine-1, dec.EndColumn)))
-
   /// Load times used to reset type checking properly on script/project load/unload. It just has to be unique for each project load/reload.
   /// Not yet sure if this works for scripts.
   let fakeDateTimeRepresentingTimeLoaded proj = DateTime(abs (int64 (match proj with null -> 0 | _ -> proj.GetHashCode())) % 103231L)
@@ -148,12 +149,11 @@ type LanguageService (dirtyNotify) =
           
       // We are in a project - construct options using current properties
       else
-        x.GetProjectCheckerOptions(projFilename, files, args, targetFramework)
+        x.GetProjectCheckerOptions(projFilename, files, args)
     opts
    
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
   member x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework) =
-    let ext = Path.GetExtension(fileName)
     let opts = 
         // We are in a stand-alone file or we are in a project, but currently editing a script file
         try 
@@ -182,7 +182,7 @@ type LanguageService (dirtyNotify) =
     opts
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
-  member x.GetProjectCheckerOptions(projFilename, files, args, targetFramework) =
+  member x.GetProjectCheckerOptions(projFilename, files, args) =
     let opts = 
       
       // We are in a project - construct options using current properties
@@ -203,17 +203,6 @@ type LanguageService (dirtyNotify) =
     opts
     
   
-  /// Parses and checks the given file in the given project under the given configuration. Asynchronously
-  /// returns the results of checking the file.
-  member x.ParseAndCheckFileInProject(projectFilename, fileName:string, src, files, args, targetFramework) = 
-   async {
-    let opts = x.GetCheckerOptions(fileName, projectFilename,  src, files , args, targetFramework)
-    Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
-    let! results = mbox.PostAndAsyncReply(fun r -> fileName, src, opts, r)
-    Debug.WriteLine(sprintf "Worker: Starting background compilations")
-    checker.StartBackgroundCompile(opts)
-    return results
-   }
 
   member x.ParseFileInProject(projectFilename, fileName:string, src, files, args, targetFramework) = 
     let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
@@ -231,6 +220,9 @@ type LanguageService (dirtyNotify) =
     | Some (untyped,typed,_) when typed.HasFullTypeCheckInfo  -> Some (ParseAndCheckResults(typed, untyped))
     | _ -> None
 
+(*
+ // This is currently unused, but could be used in the future to ensure reactivity and analysis-responsiveness in some situations.
+ // The method in the corresponding fsharpbinding code is used by Xamarin Studio.
   member x.GetTypedParseResultWithTimeout(projectFilename, fileName:string, src, files, args, stale, timeout, targetFramework)  : ParseAndCheckResults = 
     let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
     Debug.WriteLine("Parsing: Get typed parse result, fileName={0}", [|fileName|])
@@ -243,23 +235,31 @@ type LanguageService (dirtyNotify) =
         Debug.WriteLine(sprintf "Worker: Not using stale results - trying typecheck with timeout")
         // If we didn't get a recent set of type checking results, we put in a request and wait for at most 'timeout' for a response
         mbox.PostAndReply((fun reply -> (fileName, src, opts, reply)), timeout = timeout)
+*)
 
-  member x.GetTypedParseResultAsync(projectFilename, fileName:string, src, files, args, stale, targetFramework) = 
-   async { 
+  /// Parses and checks the given file in the given project under the given configuration. Asynchronously
+  /// returns the results of checking the file.
+  member x.ParseAndCheckFileInProject(projectFilename, fileName:string, src, files, args, targetFramework, stale) = 
+   async {
     let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
     match x.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
     | Some results -> return results
-    | None -> return! mbox.PostAndAsyncReply(fun reply -> (fileName, src, opts, reply))
+    | None -> 
+        let opts = x.GetCheckerOptions(fileName, projectFilename,  src, files , args, targetFramework)
+        Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
+        let! results = mbox.PostAndAsyncReply(fun r -> fileName, src, opts, r)
+        Debug.WriteLine(sprintf "Worker: Starting background compilations")
+        checker.StartBackgroundCompile(opts)
+        return results
    }
 
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework) =
+  member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale) =
    async { 
     match SymbolParser.getSymbol source line col lineStr args with
     | Some sym ->
         let! checkResults = 
-            x.GetTypedParseResultAsync(projectFilename, fileName, source, files, args, 
-                                       stale = AllowStaleResults.MatchingSource, targetFramework = targetFramework)
+            x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, stale)
 
         return checkResults.GetUsesOfSymbolInFileAtLocation (line, sym.RightColumn, lineStr, sym.Text)
     | None -> return None 
@@ -280,7 +280,7 @@ type LanguageService (dirtyNotify) =
      async { 
          match SymbolParser.getSymbol source line col lineStr args with
          | Some sym ->
-             let! checkResults = x.GetTypedParseResultAsync(projectFilename, fileName, source, files, args, stale= AllowStaleResults.MatchingSource, targetFramework=targetFramework)
+             let! checkResults = x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, AllowStaleResults.MatchingSource)
          
              match checkResults.GetSymbolAtLocation(line+1, sym.RightColumn, lineStr, [sym.Text]) with
              | Some symbol ->
