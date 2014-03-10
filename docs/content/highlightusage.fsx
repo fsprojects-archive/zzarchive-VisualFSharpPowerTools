@@ -9,6 +9,10 @@ Highlight references
 
 The color of the highlighted marker could be customized in  "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> Highlighted References".
 
+Here is a demo screencast.
+
+![Highlight references](img/highlight_references.gif)
+
 We support operator highlighting
 
 ![Highlight operators](img/highlight_operators.png)
@@ -24,9 +28,5 @@ Statically resolved type parameters
 Active patterns
 
 ![Highlight operators](img/highlight_active_patterns.png)
-
-Here is a demo screencast.
-
-![Highlight references](img/highlight_references.gif)
 
 *)
