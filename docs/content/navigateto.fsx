@@ -10,7 +10,7 @@ NavigateTo (Ctrl + ,) command
 This feature can also be activated through Edit --> NavigateTo menu. 
 It performs quick search to navigate between different locations in the source files.
 
-Here is a screenshot in VS2013 where symbols are returned from both C# and F# projects.
+Here is a screencast in VS2013 where symbols are returned from both C# and F# projects.
 
-![NavigateTo](img/navigate_to.png)
+![NavigateTo](img/navigate_to.gif)
 *)
