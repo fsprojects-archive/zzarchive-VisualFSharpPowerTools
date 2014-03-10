@@ -28,7 +28,7 @@ type DraftToken =
 
 module SymbolParser =
     /// Get the array of all lex states in current source
-    let getLexStates defines (source: string) =
+    let internal getLexStates defines (source: string) =
         [|
             /// Iterate through the whole line to get the final lex state
             let rec loop (lineTokenizer: LineTokenizer) lexState =
@@ -46,8 +46,8 @@ module SymbolParser =
                 lexState := loop lineTokenizer !lexState
         |]
 
-    // Until F.C.S returns lex states of current file, we cache lex states of the current document.
-    // We assume that current document will be queried repeatedly
+    // Provide a default implementation where we cache lex states of the current document.
+    // Assume that current document will be queried repeatedly
     let queryLexState =
         let currentDocumentState = ref None
         fun source defines line ->
@@ -66,9 +66,7 @@ module SymbolParser =
             lexStates.[line]
 
     // Returns symbol at a given position.
-    let getSymbol source line col lineStr (args: string array) queryFunc: Symbol option =
-        let queryLexState = defaultArg queryFunc queryLexState
-
+    let getSymbol source line col lineStr (args: string array) queryLexState: Symbol option =
         let defines =
             args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
                  |> Seq.toList

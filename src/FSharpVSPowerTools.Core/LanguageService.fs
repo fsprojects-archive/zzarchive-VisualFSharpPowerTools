@@ -251,7 +251,7 @@ type LanguageService (dirtyNotify) =
    }
 
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale, ?queryLexState) =
+  member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale, queryLexState) =
    async { 
     match SymbolParser.getSymbol source line col lineStr args queryLexState with
     | Some sym ->
@@ -273,7 +273,7 @@ type LanguageService (dirtyNotify) =
     return refs }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, ?queryLexState) =
+  member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, queryLexState) =
      async { 
          match SymbolParser.getSymbol source line col lineStr args queryLexState with
          | Some sym ->

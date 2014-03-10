@@ -45,7 +45,7 @@ type VSLanguageService
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions
                                 
-        SymbolParser.getSymbol source line col lineStr args (Some <| buildQueryLexState point.Snapshot.TextBuffer)
+        SymbolParser.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
     member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
