@@ -23,6 +23,7 @@ Here are currently supported features:
  * [Highlight references](highlightusage.html)
  * [Rename refactoring](rename.html)
  * [Depth colorizer](depthcolorizer.html)
+ * [NavigateTo](navigateto.html)
  
 Contributing and copyright
 --------------------------
