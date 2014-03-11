@@ -88,8 +88,7 @@ and
     let listFSharpProjectsInSolution() = 
         let rec handleProject (p: Project) =
             if p === null then []
-            elif p.Kind.ToUpperInvariant() = FSharpProjectKind then 
-                [ProjectProvider.createForProject p]
+            elif isFSharpProject p then [ProjectProvider.createForProject p]
             elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
             else []
         and handleProjectItems(items: ProjectItems) = 

@@ -46,7 +46,7 @@ module ProjectProvider =
     
         let getSourcesAndFlags = 
             // warning! this place is very brittle because of assumption it makes about the underlying structure of F# DTE project
-            // code below will work in VS2011\VS2012 but compatibility with further versions are guaranteed
+            // code below will work in VS2011\VS2012 but compatibility with further versions are not guaranteed
             let underlyingProjectField = project.GetType().GetField("project", InstanceNonPublic)
             let underlyingProject = underlyingProjectField.GetValue(project)
 
