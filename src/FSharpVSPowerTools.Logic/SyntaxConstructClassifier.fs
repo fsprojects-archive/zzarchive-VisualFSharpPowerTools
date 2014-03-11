@@ -73,15 +73,16 @@ type SyntaxConstructClassifier(buffer: ITextBuffer,
                     |]
 
                 let snapshotText = snapshot.GetText()
-                let typeLocations =
+//                let typeLocations =
+//                    let tree = SourceCodeClassifier.getUntypedTree (snapshotText)
+//                    match tree with
+//                    | ParsedInput.ImplFile(implFile) -> 
+//                       // Extract declarations and walk over them
+//                       let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
+//                       SourceCodeClassifier.visitModulesAndNamespaces modules
+//                    | _ -> []
 
-                    let tree = SourceCodeClassifier.getUntypedTree (snapshotText)
-                    match tree with
-                    | ParsedInput.ImplFile(implFile) -> 
-                       // Extract declarations and walk over them
-                       let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
-                       SourceCodeClassifier.visitModulesAndNamespaces modules
-                    | _ -> []
+                let typeLocations = SourceCodeClassifier.getTypeLocations snapshotText
 
                 let wordSpans =
                     NormalizedSnapshotSpanCollection

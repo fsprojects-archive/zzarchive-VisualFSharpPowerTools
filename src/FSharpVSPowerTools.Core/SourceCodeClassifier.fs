@@ -1,6 +1,7 @@
 ﻿module FSharpVSPowerTools.Core.SourceCodeClassifier
 
 open System
+open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -22,6 +23,61 @@ type TypeLocation =
 
         { TypeName = name; Range = range }
 
+
+let typeResults (src: string) =
+    let file = @"/file.fs"
+    let checker = InteractiveChecker.Create()
+    let projectOptions = checker.GetProjectOptionsFromScript(file, src)
+    let parseResult =
+        checker.ParseFileInProject(file, src, projectOptions)
+        |> Async.RunSynchronously
+
+    let checkAnswer =
+        checker.CheckFileInProject(parseResult, file, 0, src, projectOptions)
+        |> Async.RunSynchronously
+
+    match checkAnswer with
+    | CheckFileAnswer.Succeeded(suc) -> suc
+    | _ -> failwith "Could not check file"
+
+let isTypeSymbol (symbolUse: FSharpSymbolUse) =
+    let symbol = symbolUse.Symbol
+
+    match symbol with
+    | :? FSharpEntity as e ->
+        printfn "%A (type: %s)" e (e.GetType().Name)
+        e.IsFSharpModule = false
+    | :? FSharpMemberFunctionOrValue as mfov ->
+        printfn "%A (type: %s)" mfov (mfov.GetType().Name)
+        symbolUse.IsDefinition = false && mfov.IsImplicitConstructor
+    | :? FSharpUnionCase
+    | :? FSharpField -> false
+    | _ ->
+        printfn "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
+        if (symbol.DeclarationLocation.IsNone && symbol.ImplementationLocation.IsNone
+            && symbol.DisplayName <> ".ctor") then
+            false
+        else
+            true
+
+let getTypeLocations src =
+    let comparer =
+        { new IEqualityComparer<FSharpSymbolUse> with
+            member this.Equals(x, y): bool =
+                x.IsDefinition = y.IsDefinition &&
+                x.RangeAlternate = y.RangeAlternate &&
+                x.Symbol.DisplayName = y.Symbol.DisplayName
+            member this.GetHashCode(x): int =
+                let xx = x.IsDefinition, x.RangeAlternate, x.Symbol.DisplayName
+                hash xx }
+
+    let typeCheckResults = typeResults src
+
+    typeCheckResults.GetAllUsesOfAllSymbolsInFile()
+    |> (fun x -> new HashSet<_>(x, comparer))
+    |> Seq.filter isTypeSymbol
+    |> Array.ofSeq
+    |> Array.map (fun x -> { TypeName = x.Symbol.DisplayName; Range = x.RangeAlternate })
 
 /// Get untyped tree for a specified input
 let getUntypedTree (input: string) = 
