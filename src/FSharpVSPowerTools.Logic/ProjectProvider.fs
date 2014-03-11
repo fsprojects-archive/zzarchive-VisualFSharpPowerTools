@@ -4,190 +4,116 @@ open System
 open System.IO
 open System.Diagnostics
 open EnvDTE
-open VSLangProj
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
 type IProjectProvider =
     abstract ProjectFileName: string
-    abstract UniqueName: string
     abstract TargetFSharpCoreVersion: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
 
-type ProjectProvider(project: VSProject) = 
-    do Debug.Assert(project <> null && project.Project <> null, "Input project should be well-formed.")
+module ProjectProvider =
+    open System.Reflection
     
-    let getProperty (tag: string) =
-        let prop = try project.Project.Properties.[tag] with _ -> null
-        match prop with
-        | null -> null
-        | _ -> prop.Value.ToString()
+    type private E = System.Linq.Expressions.Expression
 
-    let currentDir = getProperty "FullPath"
+    [<Literal>]
+    let private InstanceNonPublic = BindingFlags.Instance ||| BindingFlags.NonPublic
     
-    let projectFileName = 
-        let fileName = getProperty "FileName"
-        Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
-        Path.Combine(currentDir, fileName)
+    let private precompileFieldGet<'R>(f : FieldInfo) =
+        let p = E.Parameter(typeof<obj>)
+        let lambda = E.Lambda<Func<obj, 'R>>(E.Field(E.Convert(p, f.DeclaringType) :> E, f) :> E, p)
+        lambda.Compile().Invoke
 
-    let projectOpt = ProjectParser.load projectFileName
+    type private ProjectProvider(project: Project) =
+        static let mutable getField = None
+        do Debug.Assert(project <> null, "Input project should be well-formed.")
+    
+        let getProperty (tag: string) =
+            let prop = try project.Properties.[tag] with _ -> null
+            match prop with
+            | null -> null
+            | _ -> prop.Value.ToString()
 
-    let references = 
-        project.References
-        |> Seq.cast<Reference>
-        // Somethimes references are empty strings
-        |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
-        // Since project references are resolved automatically, we include it here
-        // Path.GetFullPath will escape path strings correctly
-        |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
+        let currentDir = getProperty "FullPath"
+    
+        let projectFileName = 
+            let fileName = getProperty "FileName"
+            Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
+            Path.Combine(currentDir, fileName)
+    
+        let getSourcesAndFlags = 
+            // warning! this place is very brittle because of assumption it makes about the underlying structure of F# DTE project
+            // code below will work in VS2011\VS2012 but compatibility with further versions are guaranteed
+            let underlyingProjectField = project.GetType().GetField("project", InstanceNonPublic)
+            let underlyingProject = underlyingProjectField.GetValue(project)
 
-    interface IProjectProvider with
-        member x.ProjectFileName = projectFileName
-        member x.UniqueName = project.Project.UniqueName
-
-        member x.TargetFSharpCoreVersion = 
-            getProperty "TargetFSharpCoreVersion"
-
-        member x.TargetFramework = 
-            match getProperty "TargetFrameworkVersion" with
-            | null | "v4.5" | "v4.5.1" -> FSharpTargetFramework.NET_4_5
-            | "v4.0" -> FSharpTargetFramework.NET_4_0
-            | "v3.5" -> FSharpTargetFramework.NET_3_5
-            | "v3.0" -> FSharpTargetFramework.NET_3_5
-            | "v2.0" -> FSharpTargetFramework.NET_2_0
-            | _ -> invalidArg "prop" "Unsupported .NET framework version"
-
-        member x.CompilerOptions = 
-            match projectOpt with
-            | Some p ->
-                [| 
-                    yield! ProjectParser.getOptionsWithoutReferences p
-                    yield! references 
-                |]
-            | None ->
-                debug "[Project System] Can't read project file. Fall back to default compiler flags."
-                [|  
-                   yield "--noframework"
-                   yield "--debug-"
-                   yield "--optimize-"
-                   yield "--tailcalls-"
-                   yield! references
-                |]
-
-        member x.SourceFiles = 
-            let files = 
-                match projectOpt with
-                | Some p ->
-                    ProjectParser.getFiles p
+            let getter =
+                match getField with
                 | None ->
-                    debug "[Project System] Can't read project file. Fall back to incomplete source files."
-                    let projectItems = project.Project.ProjectItems
-                    Debug.Assert (Seq.cast<ProjectItem> projectItems <> null && projectItems.Count > 0, "Should have file names in the project.")
-                    projectItems
-                    |> Seq.cast<ProjectItem>
-                    |> Seq.filter (fun item -> try item.Document <> null with _ -> false)
-                    |> Seq.choose (fun item -> 
-                        let buildAction = item.Properties.["BuildAction"].Value.ToString()
-                        if buildAction = "BuildAction=Compile" then Some item else None)    
-                    |> Seq.map (fun item -> Path.Combine(currentDir, item.Properties.["FileName"].Value.ToString()))
-                    |> Seq.toArray
-            files |> Array.map Path.GetFullPathSafe
+                    let sourcesAndFlagsField = underlyingProject.GetType().GetField("sourcesAndFlags", InstanceNonPublic)
+                    let getter = precompileFieldGet<option<string[] * string[]>> sourcesAndFlagsField
+                    getField <- Some getter
+                    getter
+                | Some getter -> getter
+            fun() -> getter underlyingProject
 
-type VirtualProjectProvider (doc: Document) = 
-    do Debug.Assert (doc <> null, "Input document should not be null.")
+        interface IProjectProvider with
+            member x.ProjectFileName = projectFileName
+
+            member x.TargetFSharpCoreVersion = 
+                getProperty "TargetFSharpCoreVersion"
+
+            member x.TargetFramework = 
+                match getProperty "TargetFrameworkVersion" with
+                | null | "v4.5" | "v4.5.1" -> FSharpTargetFramework.NET_4_5
+                | "v4.0" -> FSharpTargetFramework.NET_4_0
+                | "v3.5" -> FSharpTargetFramework.NET_3_5
+                | "v3.0" -> FSharpTargetFramework.NET_3_5
+                | "v2.0" -> FSharpTargetFramework.NET_2_0
+                | _ -> invalidArg "prop" "Unsupported .NET framework version"
+
+            member x.CompilerOptions = 
+                match getSourcesAndFlags() with
+                | Some(_, flags) -> flags
+                | _ -> [||]
+            member x.SourceFiles = 
+                match getSourcesAndFlags() with
+                | Some(sources, _) -> sources
+                | _ -> [||]
+
+    type private VirtualProjectProvider (doc: Document) = 
+        do Debug.Assert (doc <> null, "Input document should not be null.")
     
-    interface IProjectProvider with
-        member x.ProjectFileName = null
-        member x.UniqueName = "DummyProject-for-" + doc.FullName
-        member x.TargetFSharpCoreVersion = null
-        member x.TargetFramework = FSharpTargetFramework.NET_4_5
+        interface IProjectProvider with
+            member x.ProjectFileName = null
+            member x.TargetFSharpCoreVersion = null
+            member x.TargetFramework = FSharpTargetFramework.NET_4_5
 
-        member x.CompilerOptions = 
-            [|  
-                yield "--noframework"
-                yield "--debug-"
-                yield "--optimize-"
-                yield "--tailcalls-"
-            |]
+            member x.CompilerOptions = 
+                [|  
+                    yield "--noframework"
+                    yield "--debug-"
+                    yield "--optimize-"
+                    yield "--tailcalls-"
+                |]
 
-        member x.SourceFiles = [|doc.FullName|]
-
-/// Cache of ProjectProviders. Listens for projects changes and invalidates itself.
-module ProjectCache =
-    type UniqueProjectName = string
-    type Projects = Map<UniqueProjectName, IProjectProvider>
-
-    [<NoEquality; NoComparison>]
-    type private Message = 
-        | Get of Document * AsyncReplyChannel<IProjectProvider option>
-        | Update of VSProject
-        | Put of Project * AsyncReplyChannel<IProjectProvider option>
+            member x.SourceFiles = [|doc.FullName|]
     
-    let projectUpdated = Event<_>()
+    let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 
-    let private agent = MailboxProcessor.Start(fun inbox ->
-        let obtainProject (projects: Projects) (vsProject: VSProject option) = 
-            let project = maybe {
-                let! vsProject = vsProject
-                let! project = Option.ofNull vsProject.Project
-                return! 
-                    match projects |> Map.tryFind project.UniqueName with
-                    | None -> 
-                        try
-                            debug "[ProjectsCache] Creating new project provider."
-                            Some (ProjectProvider vsProject :> IProjectProvider)
-                        with _ -> 
-                            debug "[ProjectsCache] Can't find containing project. Probably the document is opened in an ad-hoc way."
-                            None
-                    | x -> debug "[ProjectsCache] Found cached project provider."; x }
-            let projects =
-                match project with
-                | Some p -> projects |> Map.add p.UniqueName p
-                | _ -> projects
-            projects, project
-
-        let removeProject (projects: Projects) (vsProject: VSProject) =
-            match Option.ofNull vsProject.Project with
-            | Some project ->
-                debug "[ProjectsCache] %s has been removed from cache." project.UniqueName
-                projects |> Map.remove project.UniqueName
-            | None -> projects
-
-        let rec loop (projects: Projects) = async {
-            let! msg = inbox.Receive()
-            match msg with
-            | Put(project, r) ->
-                let projects, project =
-                    let vsProject = try Option.ofNull (project.Object :?> VSProject) with _ -> None
-                    match vsProject with
-                    | None -> projects, None
-                    | x -> obtainProject projects x
-                r.Reply project
-                return! loop projects
-            | Get (doc, r) ->
-                let projects, project = obtainProject projects doc.ProjectItem.VSProject
-                let project = project |> Option.orElse (Some (VirtualProjectProvider doc :> _))
-                r.Reply project
-                return! loop projects
-            | Update vsProject -> 
-                let projects = removeProject projects vsProject
-                let projects, project = obtainProject projects (Some vsProject)
-                project |> Option.iter projectUpdated.Trigger
-                return! loop projects }
-        loop Map.empty)
-
-    agent.Error.Add (fail "%O")
-
-    /// Attaches listener to the given instance of VSUtils.SolutionEvents
-    let listen (solutionEvents: VSUtils.SolutionEvents) = solutionEvents.ProjectChanged.Add(Update >> agent.Post)
-
-    /// Returns ProjectProvider for given Document.
-    let getProject document = agent.PostAndReply (fun r -> Get (document, r))
-
-    /// Returns ProjectProvider for given Project.
-    let putProject project = agent.PostAndReply (fun r -> Put (project, r))
-
-    /// Raised when a project is changed.
-    let projectChanged = projectUpdated.Publish
+    let createForDocument (doc: Document): IProjectProvider option =
+        let project = doc.ProjectItem.ContainingProject
+        if not (project === null) && isFSharpProject project then
+            Some (ProjectProvider(project) :> _)
+        elif not (doc.FullName === null) then
+            let ext = Path.GetExtension doc.FullName
+            if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
+               String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) then
+                Some (VirtualProjectProvider(doc) :> _)
+            else 
+                None
+        else 
+            None
