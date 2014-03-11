@@ -1,25 +1,34 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
-open FSharpVSPowerTools
-open Microsoft.VisualStudio.Text
-open FSharpVSPowerTools
-open Microsoft.FSharp.Compiler.SourceCodeServices
+open System
 open System.ComponentModel.Composition
-open Microsoft.VisualStudio.Shell
+
+open FSharpVSPowerTools
 open FSharp.CompilerBinding
+open Microsoft.VisualStudio.Text
+open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.VisualStudio.Shell
 
 [<Export>]
-type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider) =
+type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
     // TODO: we should reparse the stale document and cache it
     let instance = FSharp.CompilerBinding.LanguageService(fun _ -> ())
-    let solutionEvents = SolutionEvents(serviceProvider)
-    do ProjectCache.listen(solutionEvents)
-    do ProjectCache.projectChanged.Add (fun p -> 
-        debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-        let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
-                                               p.CompilerOptions, p.TargetFramework)
-        instance.InvalidateConfiguration(opts))
-    
+    let invalidateProject (projectItem: EnvDTE.ProjectItem) =
+        let project = projectItem.ContainingProject
+        if box project <> null && isFSharpProject project then
+            let p = ProjectProvider.createForProject project
+            debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
+            let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
+                                                   p.CompilerOptions, p.TargetFramework)
+            instance.InvalidateConfiguration(opts)
+
+    let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
+    let events = dte.Events :?> EnvDTE80.Events2
+    let projectItemsEvents = events.ProjectItemsEvents
+    do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
+    do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
+    do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
+
     member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 

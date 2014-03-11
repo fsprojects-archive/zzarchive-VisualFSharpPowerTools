@@ -60,7 +60,6 @@
     <Compile Include="Resource.fs" />
     <Compile Include="VSUtils.fs" />
     <Compile Include="VisualStudioVersion.fs" />
-    <Compile Include="ProjectParser.fs" />
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="OpenDocumentsTracker.fs" />

@@ -18,6 +18,12 @@ let fromFSharpPos (snapshot: ITextSnapshot) (r: range) =
     let endPos = snapshot.GetLineFromLineNumber(r.EndLine - 1).Start.Position + r.EndColumn
     SnapshotSpan(snapshot, startPos, endPos - startPos)
 
+let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
+
+let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
+let isFSharpProject (project: EnvDTE.Project) = 
+    project <> null && project.Kind <> null && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
+
 open Microsoft.FSharp.Compiler.PrettyNaming
 
 let private isDoubleBacktickIdent (s: string) =
@@ -87,8 +93,6 @@ open Microsoft.VisualStudio.ComponentModelHost
 
 type DocumentUpdater(serviceProvider: IServiceProvider) = 
     member x.OpenDocument(fileName: string, [<Out>] viewAdapter: byref<IVsTextView>, pWindowFrame: byref<IVsWindowFrame>) = 
-        let _ = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
-        let _ = serviceProvider.GetService<IVsUIShellOpenDocument, SVsUIShellOpenDocument>()
         let hierarchy = ref null
         let itemId = ref 0u
         VsShellUtilities.OpenDocument(serviceProvider, fileName, Guid.Empty, hierarchy, itemId, &pWindowFrame, &viewAdapter)
@@ -137,33 +141,9 @@ type ProjectItem with
         |> Option.bind (fun item ->
             try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
 
-type SolutionEvents (serviceProvider: IServiceProvider) =
-    let projectChanged = Event<_>()
-    // we must keep a reference to the events in order to prevent GC to collect it
-    let dte = serviceProvider.GetService<DTE, SDTE>()
-    let events: EnvDTE80.Events2 option = tryCast dte.Events
-    
-    let onProjectChanged (projectItem: ProjectItem) =
-        projectItem.VSProject
-        |> Option.iter (fun item ->
-            debug "[ProjectsCache] %s changed." projectItem.Name
-            item.Project.Save()
-            projectChanged.Trigger item)
-
-    do match events with
-       | Some events ->
-           events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-           events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
-           events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
-           debug "[SolutionEvents] Subscribed for ProjectItemsEvents"
-       | _ -> fail "[SolutionEvents] Cannot subscribe for ProjectItemsEvents"
-    
-    /// Raised when any project in solution has changed.
-    member x.ProjectChanged = projectChanged.Publish
-
 let inline ensureSucceded hr = 
     ErrorHandler.ThrowOnFailure hr
-    |> ignore        
+    |> ignore
 
 open System.ComponentModel.Composition
 
