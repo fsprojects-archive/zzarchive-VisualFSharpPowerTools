@@ -24,12 +24,16 @@
 #### 0.3.2 - February 26 2014
 * Fix the NRE when there is no project or solution
 
-#### 0.4.0 - March 13 2014
+#### 0.4.0 - March 11 2014
 * Import depth colorizer
 * Implement NavigateTo command
 * Fix performance issues with highlight references and rename refactoring
 * Support highlight references, rename refactoring and NavigateTo on standalone files
 * Listen to events due to project changes
 * Improve F# project system
+
+#### 0.4.1 - March 13 2014
+* Fix the issue with standalone fs files
+* Fix the issue with failing source code formatting feature
 
 
