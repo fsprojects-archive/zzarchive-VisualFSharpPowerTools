@@ -244,11 +244,13 @@ let ``should find usages of active patterns``() =
           (745, 22), (745, 23)
           (749, 10), (749, 11) ]
 
-[<Test; Ignore "FCS does not support this yet">]
+[<Test>]
 let ``should find usages of statically resolved method names``() =
     checkSymbolUsage 754 54 "    let inline checkIt< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
-        [ (754, 54), (754, 62)
-          (755, 32), (755, 44) ]
+        [ (754, 52), (754, 62) ]
+    
+    checkSymbolUsage 755 32 "        if (^T : (static member IsInfinity: ^T -> bool) (num)) then None" 
+        [ (755, 32), (755, 42) ]
 
 [<Test>]
 let ``should find usages of property initializers``() =
