@@ -80,13 +80,13 @@
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
+    <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="FantomasLib">
-      <HintPath>..\..\packages\Fantomas.1.0.5.1\lib\FantomasLib.dll</HintPath>
+      <HintPath>..\..\packages\Fantomas.1.0.7\lib\FantomasLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.33\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.36\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
