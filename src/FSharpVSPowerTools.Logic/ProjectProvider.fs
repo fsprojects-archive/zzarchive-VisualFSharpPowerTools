@@ -111,7 +111,8 @@ module ProjectProvider =
         elif not (doc.FullName === null) then
             let ext = Path.GetExtension doc.FullName
             if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
-               String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) then
+               String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
+               String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
                 Some (VirtualProjectProvider(doc) :> _)
             else 
                 None
