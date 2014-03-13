@@ -19,8 +19,10 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
     let location = 
         let fullName = fSharpSymbol.FullName
         let displayName = fSharpSymbol.DisplayName
-        let locationLength = max 0 (fullName.Length - (displayName.Length + 1))
-        fullName.Substring (0, locationLength)
+        if fullName.EndsWith displayName then
+            let locationLength = max 0 (fullName.Length - (displayName.Length + 1))
+            fullName.Remove locationLength
+        else fullName
 
     let validate name = 
         debug "[Rename Refactoring] Check the following name: %s" name
