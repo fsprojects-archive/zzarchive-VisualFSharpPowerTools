@@ -5,67 +5,71 @@
              xmlns:local="clr-namespace:FSharpVSPowerTools.Refactoring;assembly=FSharpVSPowerTools.Logic" 
              mc:Ignorable="d" 
         WindowStyle="ToolWindow"
-        MinHeight="190"
-        MaxHeight="190"
+        MinHeight="220"
         MinWidth="450"
+        MaxHeight="220"
         Width="450" 
-        Height="188.189" 
+        Height="220"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" 
         FocusManager.FocusedElement="{Binding ElementName=txtName}" 
         ResizeMode="CanResizeWithGrip" 
         Title="F# Power Tools - Rename" 
-        
         ShowInTaskbar="False">
-
-    <Grid Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Margin="0,0,-0.132,-2.792">
-        <Grid.Resources>
-            <ControlTemplate x:Key="InputErrorTemplate">
-                <DockPanel>
-                    <Ellipse DockPanel.Dock="Right" Margin="2,0" ToolTip="Contains invalid data" Width="10" Height="10">
-                        <Ellipse.Fill>
-                            <LinearGradientBrush>
-                                <GradientStop Color="#11FF1111" Offset="0" />
-                                <GradientStop Color="#FFFF0000" Offset="1" />
-                            </LinearGradientBrush>
-                        </Ellipse.Fill>
-                    </Ellipse>
-                    <AdornedElementPlaceholder />
-                </DockPanel>
-            </ControlTemplate>
-            <Style TargetType="TextBox">
-                <Setter Property="Margin" Value="4,4,15,4" />
-                <Setter Property="Validation.ErrorTemplate" Value="{StaticResource InputErrorTemplate}" />
-                <Style.Triggers>
-                    <Trigger Property="Validation.HasError" Value="True">
-                        <Setter Property="ToolTip">
-                            <Setter.Value>
-                                <Binding 
-                            Path="(Validation.Errors).CurrentItem.ErrorContent"
-                            RelativeSource="{x:Static RelativeSource.Self}"
-                            />
-                            </Setter.Value>
-                        </Setter>
-                    </Trigger>
-                </Style.Triggers>
-            </Style>
-        </Grid.Resources>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="173" />
-        </Grid.RowDefinitions>
-        <Button Content="Cancel" Height="25" HorizontalAlignment="Right" Margin="0,0,20,28.981" VerticalAlignment="Bottom" Width="85" Name="btnCancel" IsCancel="True" RenderTransformOrigin="0.72,2.174" />
-        <Button Content="OK" Height="25" HorizontalAlignment="Right" Margin="0,0,114,28.981" Width="81" Name="btnOk" IsDefault="true" IsEnabled="False" VerticalAlignment="Bottom" VerticalContentAlignment="Center"/>
-        <TextBox Height="23" HorizontalAlignment="Stretch" Margin="20,28,20,121.981" x:Name="txtName" VerticalAlignment="Center" 
-        		Text="{Binding Name, NotifyOnValidationError=True, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, ValidatesOnExceptions=True}"/>
-        <Label Content="Location:" Height="28" HorizontalAlignment="Left" Margin="15,52,0,0" VerticalAlignment="Top" />
-        <TextBox Height="23" HorizontalAlignment="Stretch" Margin="20,77,20,72.981" VerticalAlignment="Center" 
-        		Padding="3,2,0,0"
-                IsReadOnly="True"
-                IsEnabled="True"
-        		Text="{Binding Location, ValidatesOnDataErrors=False, ValidatesOnExceptions=False, ValidatesOnNotifyDataErrors=False}" >
-            <TextBox.Background>
-                <SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
-            </TextBox.Background>
-        </TextBox>
-        <Label Content="New name:" Height="28" HorizontalAlignment="Left" Margin="15,4,0,0" VerticalAlignment="Top" />
-    </Grid>
+    <Window.Resources>
+        <Style TargetType="HeaderedContentControl">
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="Padding" Value="0,5,0,0"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Width" Value="100"/>
+            <Setter Property="Height" Value="30"/>
+        </Style>
+    </Window.Resources>
+    <DockPanel Margin="20">
+        <HeaderedContentControl DockPanel.Dock="Top">
+            <HeaderedContentControl.Header>
+                <Label Content="_New name:" Target="{Binding ElementName=txtName}"/>
+            </HeaderedContentControl.Header>
+            <TextBox x:Name="txtName" Text="{Binding Name, NotifyOnValidationError=True, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, ValidatesOnExceptions=True}">
+                <TextBox.Resources>
+                    <ControlTemplate x:Key="InputErrorTemplate">
+                        <DockPanel>
+                            <Ellipse DockPanel.Dock="Right" Margin="2,0" ToolTip="Contains invalid data" Width="10" Height="10">
+                                <Ellipse.Fill>
+                                    <LinearGradientBrush>
+                                        <GradientStop Color="#11FF1111" Offset="0" />
+                                        <GradientStop Color="#FFFF0000" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <AdornedElementPlaceholder />
+                        </DockPanel>
+                    </ControlTemplate>
+                </TextBox.Resources>
+                <TextBox.Style>
+                    <Style TargetType="TextBox">
+                        <Setter Property="Validation.ErrorTemplate" Value="{StaticResource InputErrorTemplate}" />
+                        <Style.Triggers>
+                            <Trigger Property="Validation.HasError" Value="True">
+                                <Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+        </HeaderedContentControl>
+        <HeaderedContentControl DockPanel.Dock="Top">
+            <HeaderedContentControl.Header>
+                <Label Content="Location:" />
+            </HeaderedContentControl.Header>
+            <TextBox IsEnabled="False" Text="{Binding Location, ValidatesOnDataErrors=False, ValidatesOnExceptions=False, ValidatesOnNotifyDataErrors=False}" />
+        </HeaderedContentControl>
+        <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button Name="btnOk" IsDefault="True">OK</Button>
+            <Button Name="btnCancel" IsCancel="True" Margin="10,0,0,0">Cancel</Button>
+        </StackPanel>
+    </DockPanel>
 </Window>
