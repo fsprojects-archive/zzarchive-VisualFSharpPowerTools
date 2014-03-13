@@ -4,10 +4,20 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:FSharpVSPowerTools.Refactoring;assembly=FSharpVSPowerTools.Logic" 
              mc:Ignorable="d" 
-            WindowStyle="ToolWindow"
-            Width="512" Height="215" Background="White" FocusManager.FocusedElement="{Binding ElementName=txtName}">
-    
-    <Grid>
+        WindowStyle="ToolWindow"
+        MinHeight="190"
+        MaxHeight="190"
+        MinWidth="450"
+        Width="450" 
+        Height="188.189" 
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" 
+        FocusManager.FocusedElement="{Binding ElementName=txtName}" 
+        ResizeMode="CanResizeWithGrip" 
+        Title="F# Power Tools - Rename" 
+        
+        ShowInTaskbar="False">
+
+    <Grid Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Margin="0,0,-0.132,-2.792">
         <Grid.Resources>
             <ControlTemplate x:Key="InputErrorTemplate">
                 <DockPanel>
@@ -40,23 +50,22 @@
             </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
-            <RowDefinition Height="32" />
-            <RowDefinition Height="110" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="173" />
         </Grid.RowDefinitions>
-        <Button Content="Cancel" Height="23" HorizontalAlignment="Right" Margin="0,0,100,6" VerticalAlignment="Bottom" Width="75" Grid.Row="2" Name="btnCancel" IsCancel="True" />
-        <Button Content="Ok" Height="23" HorizontalAlignment="Right" Margin="0,0,12,6" VerticalAlignment="Bottom" Width="75" Grid.Row="2" Name="btnOk" IsDefault="true" IsEnabled="False"/>
-        <Grid Background="LightGray" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <TextBox Height="23" HorizontalAlignment="Stretch" Margin="20,43,20.453,43.585" Name="txtName" VerticalAlignment="Center" 
-                     Text="{Binding Path=Name, 
-                                    UpdateSourceTrigger=PropertyChanged, 
-                                    ValidatesOnExceptions=True,
-                                    ValidatesOnDataErrors=True,
-                                    NotifyOnValidationError=True}">
-            </TextBox>
-            <Label Content="Enter a new name:" Height="28" HorizontalAlignment="Left" Margin="5,16,0,0" VerticalAlignment="Top" />
-        </Grid>
-        <Label Content="F# Power Tools - Rename" HorizontalAlignment="Left" Margin="12,0,0,0" VerticalAlignment="Top" FontWeight="Bold" />
+        <Button Content="Cancel" Height="25" HorizontalAlignment="Right" Margin="0,0,20,28.981" VerticalAlignment="Bottom" Width="85" Name="btnCancel" IsCancel="True" RenderTransformOrigin="0.72,2.174" />
+        <Button Content="OK" Height="25" HorizontalAlignment="Right" Margin="0,0,114,28.981" Width="81" Name="btnOk" IsDefault="true" IsEnabled="False" VerticalAlignment="Bottom" VerticalContentAlignment="Center"/>
+        <TextBox Height="23" HorizontalAlignment="Stretch" Margin="20,28,20,121.981" x:Name="txtName" VerticalAlignment="Center" 
+        		Text="{Binding Name, NotifyOnValidationError=True, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, ValidatesOnExceptions=True}"/>
+        <Label Content="Location:" Height="28" HorizontalAlignment="Left" Margin="15,52,0,0" VerticalAlignment="Top" />
+        <TextBox Height="23" HorizontalAlignment="Stretch" Margin="20,77,20,72.981" VerticalAlignment="Center" 
+        		Padding="3,2,0,0"
+                IsReadOnly="True"
+                IsEnabled="True"
+        		Text="{Binding Location, ValidatesOnDataErrors=False, ValidatesOnExceptions=False, ValidatesOnNotifyDataErrors=False}" >
+            <TextBox.Background>
+                <SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+            </TextBox.Background>
+        </TextBox>
+        <Label Content="New name:" Height="28" HorizontalAlignment="Left" Margin="15,4,0,0" VerticalAlignment="Top" />
     </Grid>
 </Window>
-
