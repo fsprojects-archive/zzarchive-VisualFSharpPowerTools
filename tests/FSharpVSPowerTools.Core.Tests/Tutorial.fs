@@ -762,3 +762,8 @@ let p = 1
     let t = T(Prop="a")
 
     let _ = match [] with [h] | [_; h] | [h; _] -> h | _ -> 0
+
+    type TypeWithProperties() =
+        member x.Name
+            with get() = 0
+            and set (v: int) = ()

@@ -258,6 +258,11 @@ let ``should find usages of property initializers``() =
         [ (759, 19), (759, 23)
           (761, 14), (761, 18) ]
 
+[<Test; Ignore "FCS 0.0.36 does not support this">]
+let ``should find usages of properties with explicit getters and setters``() =
+    checkSymbolUsage 766 17 """        member x.Name"""
+        [ (766, 17), (766, 21)]
+
 type ITempSource = 
     inherit System.IDisposable
     abstract FilePath: string
