@@ -15,6 +15,12 @@ type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
 type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) =
     let mutable name = originalName
     let errorsChanged = Event<_,_>()
+    
+    let location = 
+        let fullName = fSharpSymbol.FullName
+        let displayName = fSharpSymbol.DisplayName
+        let locationLength = max 0 (fullName.Length - (displayName.Length + 1))
+        fullName.Substring (0, locationLength)
 
     let validate name = 
         debug "[Rename Refactoring] Check the following name: %s" name
@@ -59,12 +65,9 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
                 validationResult <- validate name
                 errorsChanged.Trigger(x :> obj, DataErrorsChangedEventArgs("Name"))
 
-    member x.Location =  
-        match fSharpSymbol with
-        | :? FSharpMemberFunctionOrValue as v -> Option.attempt (fun _ -> v.EnclosingEntity.FullName)
-        | :? FSharpEntity as e -> Some e.AccessPath
-        | _ -> None
-        |> function Some x -> x | None -> ""
+    member x.Location
+        with get() = location
+        and set (_: string) = ()
     
     interface INotifyDataErrorInfo with
         member x.GetErrors _ = 
