@@ -28,12 +28,17 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
     | :? FSharpEntity as e ->
         debug "%A (type: %s)" e (e.GetType().Name)
-        if e.IsClass || e.IsDelegate || e.IsFSharpAbbreviation || e.IsFSharpExceptionDeclaration
+        if e.IsEnum || e.IsValueType then
+            ValueType
+        elif e.IsFSharpAbbreviation then
+            let typ = e.AbbreviatedType
+            if typ.HasTypeDefinition && (typ.TypeDefinition.IsEnum || typ.TypeDefinition.IsValueType) then
+                ValueType
+            else ReferenceType
+        elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
            || e.IsProvidedAndErased || e.IsProvidedAndGenerated then
             ReferenceType
-        elif e.IsEnum || e.IsValueType then
-            ValueType
         else Other
     
     | :? FSharpMemberFunctionOrValue as mfov ->

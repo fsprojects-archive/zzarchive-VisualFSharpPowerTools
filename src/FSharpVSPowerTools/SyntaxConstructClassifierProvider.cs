@@ -71,20 +71,6 @@ namespace FSharpVSPowerTools
         }
 
         [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = "FSharp.TypeParameter")]
-        [Name("FSharp.TypeParameter")]
-        [UserVisible(true)]
-        sealed class FSharpTypeParameterFormat : ClassificationFormatDefinition
-        {
-            public FSharpTypeParameterFormat()
-            {
-                this.DisplayName = "F# Type Parameters";
-                var color = System.Drawing.Color.FromArgb(0x00C4716C);
-                this.ForegroundColor = Color.FromArgb(color.A, color.R, color.G, color.B);
-            }
-        }
-
-        [Export(typeof(EditorFormatDefinition))]
         [ClassificationType(ClassificationTypeNames = "FSharp.PatternCase")]
         [Name("FSharp.PatternCase")]
         [UserVisible(true)]

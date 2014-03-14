@@ -21,15 +21,14 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     
     let referenceType = classificationRegistry.GetClassificationType "FSharp.ReferenceType"
     let valueType = classificationRegistry.GetClassificationType "FSharp.ValueType"
-    let parameterType = classificationRegistry.GetClassificationType "FSharp.TypeParameter"
     let patternType = classificationRegistry.GetClassificationType "FSharp.PatternCase"
 
     let getClassficationType cat =
         match cat with
         | ReferenceType -> Some referenceType
         | ValueType -> Some valueType
-        | TypeParameter -> Some parameterType
         | PatternCase -> Some patternType
+        | TypeParameter -> None
         | Other -> None
     
     let synchronousUpdate (newSpans: (Category * SnapshotSpan) []) = 
