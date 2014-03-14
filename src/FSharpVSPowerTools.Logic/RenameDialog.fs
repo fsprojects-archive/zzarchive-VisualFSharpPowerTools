@@ -69,7 +69,6 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
 
     member x.Location
         with get() = location
-        and set (_: string) = ()
     
     interface INotifyDataErrorInfo with
         member x.GetErrors _ = 
