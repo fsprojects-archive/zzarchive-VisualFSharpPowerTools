@@ -14,7 +14,7 @@ type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
 
 type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) =
     let mutable name = originalName
-    let errorsChanged = Event<_,_>()
+    let errorsChanged = Event<_,_>() 
     
     let location = 
         let fullName = fSharpSymbol.FullName
