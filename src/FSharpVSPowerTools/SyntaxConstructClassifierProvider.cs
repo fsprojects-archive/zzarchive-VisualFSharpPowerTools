@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -8,6 +9,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.SyntaxColoring;
 using Microsoft.VisualStudio.Text.Classification;
+using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
@@ -16,13 +18,13 @@ namespace FSharpVSPowerTools
         // Base definition for all other classification types
         [Export]
         [Name("FSharp")]
-        internal static ClassificationTypeDefinition FSharpDefinition;
+        internal static ClassificationTypeDefinition FSharpDefinition = null;
 
         // Type names
         [Export]
         [Name("FSharp.TypeName")]
         [BaseDefinition("FSharp")]
-        internal static ClassificationTypeDefinition FSharpTypeNameDefinition;
+        internal static ClassificationTypeDefinition FSharpTypeNameDefinition = null;
     }
 
     static class ClassificationFormats
@@ -45,11 +47,18 @@ namespace FSharpVSPowerTools
     public class SyntaxConstructClassifierProvider : IClassifierProvider
     {
         [Import]
-        internal IClassificationTypeRegistryService ClassificationRegistry { get; set; }
+        private IClassificationTypeRegistryService ClassificationRegistry = null;
+
+        [Import(typeof(SVsServiceProvider))]
+        private IServiceProvider serviceProvider = null;
+
+        [Import]
+        private VSLanguageService fsharpVsLanguageService = null;
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
-            return buffer.Properties.GetOrCreateSingletonProperty(() => new SyntaxConstructClassifier(buffer, ClassificationRegistry));
+            return buffer.Properties.GetOrCreateSingletonProperty(() => 
+                new SyntaxConstructClassifier(buffer, ClassificationRegistry, fsharpVsLanguageService, serviceProvider));
         }
     }
 }
