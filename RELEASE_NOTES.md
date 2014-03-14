@@ -36,4 +36,7 @@
 * Fix the issue with standalone fs files
 * Fix the issue with failing source code formatting feature
 
+#### 0.5.0 - Unreleased
+* Improve Rename dialog
+
 

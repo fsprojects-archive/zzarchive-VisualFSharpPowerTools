@@ -23,7 +23,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
 
 For user guides, please take a look at [the home page](http://fsprojects.github.io/VisualFSharpPowerTools/).
 
-### Build [![Build Status](https://ci-beta.appveyor.com/api/projects/status/aab9drboxx8mxegt)](https://ci-beta.appveyor.com/project/dungpa/fsharpvspowertools)
+### Build [![Build status](https://ci.appveyor.com/api/projects/status/9ii93nkif8hc6cdv)](https://ci.appveyor.com/project/dungpa/visualfsharppowertools)
 
 Require Visual Studio 2013 and Visual Studio SDK 2013. 
 Run the `build.cmd` script or `FSharpVSPowerTools.sln` to build the solution.
