@@ -121,4 +121,19 @@ type VSLanguageService [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvi
             return symbol |> Option.map (fun s -> s, results)
         }
 
+    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider, stale) = 
+        async {
+            let projectFileName = projectProvider.ProjectFileName
+            let source = snapshot.GetText()
+            let framework = projectProvider.TargetFramework
+            let args = projectProvider.CompilerOptions
+            let sourceFiles = 
+                match projectProvider.SourceFiles with
+                // If there is no source file, use currentFile as an independent script
+                | [||] -> [| currentFile |] 
+                | files -> files
+            let! results = instance.ParseAndCheckFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework, stale)
+            return results.GetAllUsesOfAllSymbolsInFile()
+        }
+
     member x.Checker = instance.Checker
