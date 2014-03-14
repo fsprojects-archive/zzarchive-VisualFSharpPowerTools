@@ -19,7 +19,7 @@ let isTypeSymbol (symbolUse: FSharpSymbolUse) =
     | :? FSharpEntity as e ->
         debug "%A (type: %s)" e (e.GetType().Name)
         e.IsClass || e.IsDelegate || e.IsEnum || e.IsFSharpAbbreviation || e.IsFSharpExceptionDeclaration
-        || e.IsFSharpModule || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
+        || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
         || e.IsProvidedAndErased || e.IsProvidedAndGenerated || e.IsValueType
     
     | :? FSharpMemberFunctionOrValue as mfov ->
