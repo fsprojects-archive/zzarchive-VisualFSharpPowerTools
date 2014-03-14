@@ -9,35 +9,91 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.SyntaxColoring;
 using Microsoft.VisualStudio.Text.Classification;
+using System.Windows.Media;
 using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
     static class ClassificationTypes
     {
-        // Base definition for all other classification types
         [Export]
-        [Name("FSharp")]
-        internal static ClassificationTypeDefinition FSharpDefinition = null;
+        [Name("FSharp.ReferenceType")]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpReferenceClassfierType = null;
 
-        // Type names
         [Export]
-        [Name("FSharp.TypeName")]
-        [BaseDefinition("FSharp")]
-        internal static ClassificationTypeDefinition FSharpTypeNameDefinition = null;
+        [Name("FSharp.ValueType")]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpValueClassfierType = null;
+
+        [Export]
+        [Name("FSharp.TypeParameter")]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpTypeParameterClassfierType = null;
+
+        [Export]
+        [Name("FSharp.PatternCase")]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpPatternCaseClassfierType = null;
+
     }
+
+    // These colors are defined differently for debugging purpose
+    // They are taken from https://github.com/leddt/visualstudio-colors-solarized/blob/master/vs2013/solarized-light.vssettings
+    // In the final version, we should probably set a default theme with less number of colors.
 
     static class ClassificationFormats
     {
-        // TypeName
         [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = "FSharp.TypeName")]
-        [Name("FSharp.TypeName")]
-        sealed class FSharpTypeNameFormat : ClassificationFormatDefinition
+        [ClassificationType(ClassificationTypeNames = "FSharp.ReferenceType")]
+        [Name("FSharp.ReferenceType")]
+        [UserVisible(true)]
+        sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
         {
-            public FSharpTypeNameFormat()
+            public FSharpReferenceTypeFormat()
             {
-                this.ForegroundColor = System.Windows.Media.Colors.Teal;
+                this.DisplayName = "F# User Types";
+                this.ForegroundColor = Colors.Teal;
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = "FSharp.ValueType")]
+        [Name("FSharp.ValueType")]
+        [UserVisible(true)]
+        sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
+        {
+            public FSharpValueTypeFormat()
+            {
+                this.DisplayName = "F# User Types (Value types)";
+                this.ForegroundColor = Color.FromRgb(49, 190, 239);
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = "FSharp.TypeParameter")]
+        [Name("FSharp.TypeParameter")]
+        [UserVisible(true)]
+        sealed class FSharpTypeParameterFormat : ClassificationFormatDefinition
+        {
+            public FSharpTypeParameterFormat()
+            {
+                this.DisplayName = "F# Type Parameters";
+                var color = System.Drawing.Color.FromArgb(0x00C4716C);
+                this.ForegroundColor = Color.FromArgb(color.A, color.R, color.G, color.B);
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = "FSharp.PatternCase")]
+        [Name("FSharp.PatternCase")]
+        [UserVisible(true)]
+        sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
+        {
+            public FSharpPatternCaseFormat()
+            {
+                this.DisplayName = "F# Patterns";
+                this.ForegroundColor = Colors.Purple;
             }
         }
     }
@@ -47,7 +103,7 @@ namespace FSharpVSPowerTools
     public class SyntaxConstructClassifierProvider : IClassifierProvider
     {
         [Import]
-        private IClassificationTypeRegistryService ClassificationRegistry = null;
+        private IClassificationTypeRegistryService classificationRegistry = null;
 
         [Import(typeof(SVsServiceProvider))]
         private IServiceProvider serviceProvider = null;
@@ -58,7 +114,7 @@ namespace FSharpVSPowerTools
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
             return buffer.Properties.GetOrCreateSingletonProperty(() => 
-                new SyntaxConstructClassifier(buffer, ClassificationRegistry, fsharpVsLanguageService, serviceProvider));
+                new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService, serviceProvider));
         }
     }
 }
