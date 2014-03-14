@@ -7,24 +7,6 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 
-[<NoComparison>]
-type TypeLocation = 
-    { TypeName: string
-      Range: Range.range }
-
-    static member FromLongIdentWithDots ((LongIdentWithDots(ident, _) as i)) =
-        TypeLocation.FromIdentAndRange ident i.Range
-        
-    static member FromIdentAndRange (ident: LongIdent) _range =
-        let name, range =
-            ident
-            |> List.rev
-            |> (function
-                | h :: _ -> h.idText, h.idRange
-                | [] -> "", Range.range())
-
-        { TypeName = name; Range = range }
-
 let isTypeSymbol (symbolUse: FSharpSymbolUse) =
     let symbol = symbolUse.Symbol
 
@@ -46,16 +28,6 @@ let isTypeSymbol (symbolUse: FSharpSymbolUse) =
             true
 
 let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
-    let comparer =
-        { new IEqualityComparer<FSharpSymbolUse> with
-            member this.Equals(x, y): bool =
-                x.IsDefinition = y.IsDefinition &&
-                x.RangeAlternate = y.RangeAlternate &&
-                x.Symbol.DisplayName = y.Symbol.DisplayName
-            member this.GetHashCode(x): int =
-                hash (x.IsDefinition, x.RangeAlternate, x.Symbol.DisplayName) }
-
-    HashSet<_>(allSymbolsUses, comparer) 
-    |> Seq.filter isTypeSymbol
-    |> Seq.map (fun x -> { TypeName = x.Symbol.DisplayName; Range = x.RangeAlternate })
-    |> Seq.toArray
+    allSymbolsUses
+    |> Array.filter isTypeSymbol
+    |> Array.map (fun x -> x.RangeAlternate)

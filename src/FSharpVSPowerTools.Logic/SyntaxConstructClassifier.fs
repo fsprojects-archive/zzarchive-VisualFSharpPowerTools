@@ -35,25 +35,11 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                 lastSnapshot <- snapshot
                 async {
                     try
-                        let linesFirstCharIndex = 
-                            [| let lines = lastSnapshot.GetText().Split([| '\n' |])
-                               let index = ref 0
-                               for line in lines do
-                                   yield !index
-                                   index := !index + line.Length + 1 |]
-                    
-                        let! allSymbolsUses = 
+                        let! allSymbolsUses =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
                 
                         let typeLocations = SourceCodeClassifier.getTypeLocations allSymbolsUses
-                    
-                        let wordSpans = 
-                            NormalizedSnapshotSpanCollection 
-                                [| for loc in typeLocations do
-                                       let lineStartIndex = linesFirstCharIndex.[loc.Range.StartLine - 1]
-                                       let span = Span (lineStartIndex + loc.Range.StartColumn, loc.Range.EndColumn - loc.Range.StartColumn)
-                                       yield SnapshotSpan(snapshot, span) |]
-
+                        let wordSpans = NormalizedSnapshotSpanCollection (typeLocations |> Array.map (fromFSharpPos snapshot))
                         synchronousUpdate wordSpans
                     finally
                         isWorking <- false
