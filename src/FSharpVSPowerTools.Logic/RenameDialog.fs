@@ -14,7 +14,7 @@ type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 
 type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) =
     let mutable name = originalName
-    let errorsChanged = Event<_,_>()
+    let errorsChanged = Event<_,_>() 
     
     let location = 
         let fullName = fSharpSymbol.FullName
@@ -67,9 +67,7 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
                 validationResult <- validate name
                 errorsChanged.Trigger(x :> obj, DataErrorsChangedEventArgs("Name"))
 
-    member x.Location
-        with get() = location
-        and set (_: string) = ()
+    member x.Location = location
     
     interface INotifyDataErrorInfo with
         member x.GetErrors _ = 
