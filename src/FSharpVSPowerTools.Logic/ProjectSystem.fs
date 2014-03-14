@@ -79,15 +79,15 @@ type FSharpLanguageService [<ImportingConstructor>]
             "FSharp.LanguageService, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
         | _ ->
             "FSharp.LanguageService, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
-    let asm =  lazy try Assembly.Load(assemblyInfo)
-                    with _ -> raise (AssemblyMissingException "FSharp.LanguageService")
+    let asm = lazy try Assembly.Load(assemblyInfo)
+                   with _ -> raise (AssemblyMissingException "FSharp.LanguageService")
 
-    member x.VsTextColorStateType = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
-    member x.ColorStateLookupType = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
+    let vsTextColorStateType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
+    let colorStateLookupType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
 
     member x.GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
-        x.VsTextColorStateType?GetColorStateAtStartOfLine(vsColorState, line)
+        vsTextColorStateType.Value?GetColorStateAtStartOfLine(vsColorState, line)
 
     member x.LexStateOfColorState(colorState: int): int64 =
-        x.ColorStateLookupType?LexStateOfColorState(colorState)
+        colorStateLookupType.Value?LexStateOfColorState(colorState)
         
