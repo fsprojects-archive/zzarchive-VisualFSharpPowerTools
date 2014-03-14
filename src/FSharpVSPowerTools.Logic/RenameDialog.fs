@@ -10,7 +10,7 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharp.CompilerBinding
 
-type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
+type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 
 type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) =
     let mutable name = originalName
@@ -83,7 +83,7 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
 [<RequireQualifiedAccess>]
 module UI =
     let loadRenameDialog (viewModel: RenameDialogModel) =
-        let window = RenameDialog()
+        let window = RenameDialog.Accessor (RenameDialog().CreateRoot())
         // Use this until we are able to do validation directly
         window.txtName.TextChanged.Add(fun _ ->
             window.btnOk.IsEnabled <- not (viewModel :> INotifyDataErrorInfo).HasErrors
