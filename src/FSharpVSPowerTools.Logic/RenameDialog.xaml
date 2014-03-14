@@ -61,7 +61,7 @@
         		Padding="3,2,0,0"
                 IsReadOnly="True"
                 IsEnabled="True"
-        		Text="{Binding Location, ValidatesOnDataErrors=False, ValidatesOnExceptions=False, ValidatesOnNotifyDataErrors=False}" >
+        		Text="{Binding Location, Mode=OneWay, ValidatesOnDataErrors=False, ValidatesOnExceptions=False, ValidatesOnNotifyDataErrors=False}" >
             <TextBox.Background>
                 <SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
             </TextBox.Background>
