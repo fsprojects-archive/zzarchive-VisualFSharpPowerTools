@@ -14,7 +14,8 @@ let isTypeSymbol (symbolUse: FSharpSymbolUse) =
     | :? FSharpGenericParameter
     | :? FSharpStaticParameter
     | :? FSharpUnionCase
-    | :? FSharpField -> false
+    | :? FSharpField 
+    | :? FSharpActivePatternCase -> false
 
     | :? FSharpEntity as e ->
         debug "%A (type: %s)" e (e.GetType().Name)
