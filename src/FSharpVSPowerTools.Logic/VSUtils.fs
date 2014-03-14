@@ -12,11 +12,14 @@ open Microsoft.VisualStudio.Utilities
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
-/// Retrieve snapshot from VS zero-based positions
-let fromFSharpPos (snapshot: ITextSnapshot) (r: range) =
-    let startPos = snapshot.GetLineFromLineNumber(r.StartLine - 1).Start.Position + r.StartColumn
-    let endPos = snapshot.GetLineFromLineNumber(r.EndLine - 1).Start.Position + r.EndColumn
+let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
+    let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
+    let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
     SnapshotSpan(snapshot, startPos, endPos - startPos)
+
+/// Retrieve snapshot from VS zero-based positions
+let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
+    fromPos snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
 
 let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
 

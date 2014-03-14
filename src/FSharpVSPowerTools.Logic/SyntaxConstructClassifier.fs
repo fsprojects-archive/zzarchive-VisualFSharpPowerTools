@@ -14,7 +14,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     let lockObject = new Object()
     let mutable lastSnapshot: ITextSnapshot = null
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
-    let mutable isWorking = false
+    let mutable isWorking = false 
     
     let synchronousUpdate (newSpans: NormalizedSnapshotSpanCollection) = 
         lock lockObject <| fun _ -> 
@@ -39,7 +39,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
                 
                         let typeLocations = SourceCodeClassifier.getTypeLocations allSymbolsUses
-                        let wordSpans = NormalizedSnapshotSpanCollection (typeLocations |> Array.map (fromFSharpPos snapshot))
+                        let wordSpans = NormalizedSnapshotSpanCollection (typeLocations |> Array.map (fromPos snapshot))
                         synchronousUpdate wordSpans
                     finally
                         isWorking <- false
