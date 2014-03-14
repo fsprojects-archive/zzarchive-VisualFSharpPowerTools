@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
+open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System
 open System.ComponentModel.Composition
@@ -43,7 +44,7 @@ type VSLanguageService
         with e ->
             debug "[Language Service] %O exception occurs while getting symbol." e
             SymbolParser.queryLexState source defines line
-    
+
     member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 
