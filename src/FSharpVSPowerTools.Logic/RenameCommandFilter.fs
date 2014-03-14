@@ -44,7 +44,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             | _ ->
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
-                let! project = ProjectCache.getProject doc
+                let! project = ProjectProvider.createForDocument doc
                 state <- Some
                     { Project =  project
                       File = doc.FullName

@@ -30,7 +30,7 @@ type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self =
         context.Close()
         self.AddVisualChild(child)
     
-    override x.GetVisualChild(_index) = upcast child
+    override x.GetVisualChild _ = upcast child
     override x.VisualChildrenCount = 1
 
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
@@ -118,7 +118,7 @@ type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<
     let mutable pixelsPerChar = 7.0 // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.
     
     let refreshLine(line: ITextViewLine) = 
-        //trace ("refresh line {0}", line.TextTop)
+        trace ("refresh line {0}", line.TextTop)
         let tags = tagAggregator.GetTags(line.Extent)
         
         let tagSpans = 
@@ -147,8 +147,9 @@ type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<
             
             let depth = abs d
             let color = getFadeColor(depth, (right - left) / pixelsPerChar)
-            let width = max (right - left) 0.0 // sometimes at startup these calculations go funky and I get a negative number for (right-left), hmm...
-            //System.Diagnostics.Debug.WriteLine("Rect: line.Top {0} left {1} width {2} color {3}", line.Top, left, width, depth)
+            // sometimes at startup these calculations go funky and I get a negative number for (right-left), hmm...
+            let width = max (right - left) 0.0 
+            debug "Rect: line.Top %f left %f width %f color %i" line.Top left width depth
             let rectangle = 
                 new RectangleGeometry(new Rect(new Size(width, adornmentHeight + adornmentHeightFudgeFactor)))
             let adornment = new RectangleAdornment(color, rectangle)

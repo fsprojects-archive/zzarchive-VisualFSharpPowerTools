@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
+open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio
@@ -13,18 +14,26 @@ open FSharpVSPowerTools
 [<Export>]
 type VSLanguageService
     [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider, 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider, 
      editorFactory: IVsEditorAdaptersFactoryService,
      fsharpLanguageService: FSharpLanguageService) =
 
     let instance = LanguageService(fun _ -> ())
-    let solutionEvents = SolutionEvents(serviceProvider)
-    do ProjectCache.listen(solutionEvents)
-    do ProjectCache.projectChanged.Add (fun p -> 
-        debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-        let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
-                                               p.CompilerOptions, p.TargetFramework)
-        instance.InvalidateConfiguration(opts))
+    let invalidateProject (projectItem: EnvDTE.ProjectItem) =
+        let project = projectItem.ContainingProject
+        if box project <> null && isFSharpProject project then
+            let p = ProjectProvider.createForProject project
+            debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
+            let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
+                                                   p.CompilerOptions, p.TargetFramework)
+            instance.InvalidateConfiguration(opts)
+
+    let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
+    let events = dte.Events :?> EnvDTE80.Events2
+    let projectItemsEvents = events.ProjectItemsEvents
+    do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
+    do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
+    do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
@@ -34,7 +43,7 @@ type VSLanguageService
         with e ->
             debug "[Language Service] %O exception occurs while getting symbol." e
             SymbolParser.queryLexState source defines line
-    
+
     member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 

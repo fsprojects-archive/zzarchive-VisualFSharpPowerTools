@@ -23,7 +23,6 @@ open FSharpVSPowerTools
 module Constants = 
     let LogicalViewTextGuid = Guid(LogicalViewID.TextView)
     let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||]); 
-    let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 
 type NavigateToItemExtraData = 
     {
@@ -88,11 +87,8 @@ and
     
     let listFSharpProjectsInSolution() = 
         let rec handleProject (p: Project) =
-            if LanguagePrimitives.PhysicalEquality p null then []
-            elif p.Kind.ToUpperInvariant() = Constants.FSharpProjectKind then 
-                match ProjectCache.putProject p with
-                | Some provider -> [provider]
-                | _ -> []
+            if p === null then []
+            elif isFSharpProject p then [ProjectProvider.createForProject p]
             elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
             else []
         and handleProjectItems(items: ProjectItems) = 
@@ -104,7 +100,7 @@ and
             for p in dte.Solution.Projects do yield! handleProject p
         ]
 
-    let runSearch(projects: IProjectProvider list, openDocuments: Map<string, string>, searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
+    let runSearch(projects: IProjectProvider[], openDocuments: Map<string, string>, searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
         let processNavigableItems (navigationItems: seq<Navigation.NavigableItem>) = 
             for item in navigationItems do
                 let isOperator, name = 
@@ -145,9 +141,10 @@ and
 
         Tasks.Task.Run(fun() ->
             try
-                for p in projects do
+                for i = 0 to projects.Length - 1 do
                     if not ct.IsCancellationRequested then
-                        do fsharpLanguageService.ProcessNavigableItemsInProject(openDocuments, p, processNavigableItems, ct)
+                        do fsharpLanguageService.ProcessNavigableItemsInProject(openDocuments, projects.[i], processNavigableItems, ct)
+                    callback.ReportProgress(i, projects.Length)
             finally
                 callback.Done()
         )
@@ -164,9 +161,9 @@ and
                 | [] -> maybe {
                           let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
                           let! doc = dte.GetActiveDocument()
-                          return! ProjectCache.getProject doc }
-                          |> Option.toList
-                | xs -> xs
+                          return! ProjectProvider.createForDocument doc }
+                          |> Option.toArray
+                | xs -> List.toArray xs
             runSearch(projects, openedDocuments, searchValue, callback, cts.Token)
         member x.StopSearch() = 
             cts.Cancel()
@@ -226,7 +223,7 @@ and
         interface IDisposable with
             member x.Dispose() = 
                 for (KeyValue(_, (icon, bitmap))) in iconCache do
-                    if not (LanguagePrimitives.PhysicalEquality icon null) then
+                    if not (icon === null) then
                         icon.Dispose()
                         bitmap.Dispose()
                 iconCache.Clear()

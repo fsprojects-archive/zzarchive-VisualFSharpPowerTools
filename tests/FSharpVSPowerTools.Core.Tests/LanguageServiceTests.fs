@@ -244,17 +244,24 @@ let ``should find usages of active patterns``() =
           (745, 22), (745, 23)
           (749, 10), (749, 11) ]
 
-[<Test; Ignore "FCS does not support this yet">]
+[<Test>]
 let ``should find usages of statically resolved method names``() =
     checkSymbolUsage 754 54 "    let inline checkIt< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
-        [ (754, 54), (754, 62)
-          (755, 32), (755, 44) ]
+        [ (754, 52), (754, 62) ]
+    
+    checkSymbolUsage 755 32 "        if (^T : (static member IsInfinity: ^T -> bool) (num)) then None" 
+        [ (755, 32), (755, 42) ]
 
 [<Test>]
 let ``should find usages of property initializers``() =
     checkSymbolUsage 759 19 """        member val Prop = "" with get, set"""
         [ (759, 19), (759, 23)
           (761, 14), (761, 18) ]
+
+[<Test; Ignore "FCS 0.0.36 does not support this">]
+let ``should find usages of properties with explicit getters and setters``() =
+    checkSymbolUsage 766 17 """        member x.Name"""
+        [ (766, 17), (766, 21)]
 
 type ITempSource = 
     inherit System.IDisposable

@@ -1,7 +1,7 @@
 Visual F# Power Tools
 =====================
 
-Visual F# Community Power Tools (for Visual Studio)
+Power commands for F# in Visual Studio
 
 ### Why Visual F# Power Tools?
 Visual F# Power Tools is a community effort to bring useful F# VS extensions into a single home for the following purposes:
