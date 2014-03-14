@@ -93,11 +93,11 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="FsXaml.Wpf">
-      <HintPath>..\..\packages\FsXaml.Wpf.0.9.0\lib\net45\FsXaml.Wpf.dll</HintPath>
+      <HintPath>..\..\packages\FsXaml.Wpf.0.9.1\lib\net45\FsXaml.Wpf.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FsXaml.Wpf.TypeProvider">
-      <HintPath>..\..\packages\FsXaml.Wpf.0.9.0\lib\net45\FsXaml.Wpf.TypeProvider.dll</HintPath>
+      <HintPath>..\..\packages\FsXaml.Wpf.0.9.1\lib\net45\FsXaml.Wpf.TypeProvider.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Build" />
