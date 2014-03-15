@@ -36,6 +36,11 @@ namespace FSharpVSPowerTools
         [BaseDefinition("identifier")]
         internal static ClassificationTypeDefinition FSharpPatternCaseClassfierType = null;
 
+        [Export]
+        [Name("FSharp.Function")]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpFunctionClassfierType = null;
+
     }
 
     // These colors are defined differently for debugging purpose
@@ -80,6 +85,19 @@ namespace FSharpVSPowerTools
             {
                 this.DisplayName = "F# Patterns";
                 this.ForegroundColor = Colors.Purple;
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = "FSharp.Function")]
+        [Name("FSharp.Function")]
+        [UserVisible(true)]
+        sealed class FSharpFunctionFormat : ClassificationFormatDefinition
+        {
+            public FSharpFunctionFormat()
+            {
+                this.DisplayName = "F# Functions";
+                this.ForegroundColor = Colors.Navy;
             }
         }
     }
