@@ -72,8 +72,8 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         }
         |> Async.StartImmediate
     
-    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], fun _ -> refreshFileImpl false) 
-    do refreshFileImpl true
+    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], TimeSpan.FromMilliseconds 500., 
+                                    fun initial -> refreshFileImpl initial) 
     
     interface ITagger<DepthRegionTag> with
         

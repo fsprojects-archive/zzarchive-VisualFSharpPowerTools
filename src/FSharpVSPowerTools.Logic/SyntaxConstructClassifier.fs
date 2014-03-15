@@ -40,7 +40,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
             let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
             classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
     
-    let updateSyntaxConstructClassifiers callerName = 
+    let updateSyntaxConstructClassifiers() = 
         let snapshot = buffer.CurrentSnapshot
         if not isWorking && snapshot <> lastSnapshot then 
             maybe {
@@ -48,7 +48,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
 
-                debug "[SyntaxConstructClassifier] %s - Effective update" callerName
+                debug "[SyntaxConstructClassifier] - Effective update"
                 isWorking <- true
                 lastSnapshot <- snapshot
                 async {
@@ -65,9 +65,8 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
             } |> ignore
     
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 
-                                    fun _ -> updateSyntaxConstructClassifiers "Buffer changed")
-    // Execute it the first time
-    do updateSyntaxConstructClassifiers "First execution"
+                                    TimeSpan.FromMilliseconds 200.,
+                                    fun _ -> updateSyntaxConstructClassifiers())
     
     interface IClassifier with
         member x.GetClassificationSpans(_snapshotSpan: SnapshotSpan) = 

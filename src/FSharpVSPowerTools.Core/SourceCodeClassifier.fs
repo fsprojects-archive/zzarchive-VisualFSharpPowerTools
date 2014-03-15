@@ -75,5 +75,5 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
             else 
                 r.StartLine, r.StartColumn, r.EndLine, r.EndColumn
         let category = getCategory x
-        debug "-=O=- %A: FullName = %s, Name = %s, range = %A, symbol = %A" category visibleName name location x.Symbol
+        //debug "-=O=- %A: FullName = %s, Name = %s, range = %A, symbol = %A" category visibleName name location x.Symbol
         category, location)
