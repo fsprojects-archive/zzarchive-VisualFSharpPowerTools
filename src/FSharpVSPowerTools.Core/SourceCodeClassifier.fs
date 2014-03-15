@@ -13,7 +13,9 @@ type Category =
     | PatternCase
     | TypeParameter
     | Function
+    | PublicField
     | Other
+    override x.ToString() = sprintf "%A" x
 
 let internal getCategory (symbolUse: FSharpSymbolUse) =
     let symbol = symbolUse.Symbol
@@ -23,9 +25,11 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | :? FSharpStaticParameter -> 
         TypeParameter
     | :? FSharpUnionCase
-    //| :? FSharpField 
     | :? FSharpActivePatternCase -> 
         PatternCase
+
+    | :? FSharpField as f ->
+        if f.Accessibility.IsPublic then PublicField else Other
 
     | :? FSharpEntity as e ->
         //debug "%A (type: %s)" e (e.GetType().Name)
@@ -61,8 +65,14 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
     |> Array.map (fun x ->
         let r = x.RangeAlternate
         let symbolLength = r.EndColumn - r.StartColumn
-        let visibleName = x.Symbol.FullName.Substring (max 0 (x.Symbol.FullName.Length - symbolLength))
         let name = x.Symbol.DisplayName
+        let fullName =
+            if name = "( .ctor )" then 
+                x.Symbol.FullName.Remove (x.Symbol.FullName.Length - name.Length)
+            else
+                x.Symbol.FullName
+        let visibleName = fullName.Substring (max 0 (fullName.Length - symbolLength))
+        
         let namespaceLength = visibleName.Length - name.Length
         
         let location = 
@@ -75,5 +85,8 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
             else 
                 r.StartLine, r.StartColumn, r.EndLine, r.EndColumn
         let category = getCategory x
-        //debug "-=O=- %A: FullName = %s, Name = %s, range = %A, symbol = %A" category visibleName name location x.Symbol
+        //debug "-=O=- %A: FullName = %s, VisibleName = %s, Name = %s, range = %A, symbol = %A" 
+        //      category x.Symbol.FullName visibleName name location x.Symbol
         category, location)
+    |> Seq.distinct
+    |> Seq.toArray

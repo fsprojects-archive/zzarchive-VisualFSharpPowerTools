@@ -97,7 +97,7 @@ namespace FSharpVSPowerTools
             public FSharpFunctionFormat()
             {
                 this.DisplayName = "F# Functions";
-                this.ForegroundColor = Colors.Navy;
+                this.ForegroundColor = Color.FromRgb(0, 0, 160);
             }
         }
     }
