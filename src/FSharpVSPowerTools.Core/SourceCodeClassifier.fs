@@ -12,6 +12,7 @@ type Category =
     | ValueType
     | PatternCase
     | TypeParameter
+    | Function
     | Other
 
 let internal getCategory (symbolUse: FSharpSymbolUse) =
@@ -22,12 +23,12 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | :? FSharpStaticParameter -> 
         TypeParameter
     | :? FSharpUnionCase
-    | :? FSharpField 
+    //| :? FSharpField 
     | :? FSharpActivePatternCase -> 
         PatternCase
 
     | :? FSharpEntity as e ->
-        debug "%A (type: %s)" e (e.GetType().Name)
+        //debug "%A (type: %s)" e (e.GetType().Name)
         if e.IsEnum || e.IsValueType then
             ValueType
         elif e.IsFSharpAbbreviation then
@@ -42,11 +43,14 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         else Other
     
     | :? FSharpMemberFunctionOrValue as mfov ->
-        debug "%A (type: %s)" mfov (mfov.GetType().Name)
-        if not symbolUse.IsDefinition && mfov.IsImplicitConstructor then 
-            ReferenceType
-        else
-            Other
+        //debug "%A (type: %s)" mfov (mfov.GetType().Name)
+        if mfov.CompiledName = ".ctor" then ReferenceType
+        elif mfov.FullType.IsFunctionType then 
+            if mfov.DisplayName.StartsWith "( " && mfov.DisplayName.EndsWith " )" then
+                Other
+            else
+                Function
+        else Other
     
     | _ ->
         debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
@@ -56,12 +60,13 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
     allSymbolsUses
     |> Array.map (fun x ->
         let r = x.RangeAlternate
-        let fullName = x.Symbol.FullName
-        let name = x.Symbol.DisplayName
-        let namespaceLength = fullName.Length - name.Length
         let symbolLength = r.EndColumn - r.StartColumn
+        let visibleName = x.Symbol.FullName.Substring (max 0 (x.Symbol.FullName.Length - symbolLength))
+        let name = x.Symbol.DisplayName
+        let namespaceLength = visibleName.Length - name.Length
+        
         let location = 
-            if namespaceLength > 0 && symbolLength > name.Length && fullName.EndsWith name then
+            if namespaceLength > 0 && symbolLength > name.Length && visibleName.EndsWith name then
                 let startCol = r.StartColumn + namespaceLength
                 let startCol = 
                     if startCol < r.EndColumn then startCol
@@ -69,5 +74,6 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
                 r.StartLine, startCol, r.EndLine, r.EndColumn
             else 
                 r.StartLine, r.StartColumn, r.EndLine, r.EndColumn
-        //debug "-=O=- FullName = %s, Name = %s, range = %A" fullName name res
-        getCategory x, location)
+        let category = getCategory x
+        debug "-=O=- %A: FullName = %s, Name = %s, range = %A, symbol = %A" category visibleName name location x.Symbol
+        category, location)

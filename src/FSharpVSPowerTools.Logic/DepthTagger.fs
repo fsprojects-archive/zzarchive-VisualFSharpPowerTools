@@ -3,6 +3,7 @@
 open System
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Utilities
 open System.Windows.Threading
@@ -17,7 +18,7 @@ type DepthRegionTag(info: int * int * int * int) =
     // because we might have range info for indent coloring on a blank line, and there are no chars to tag there, so we put a tag in column 0 and carry all this info as metadata
     member x.Info = info
 
-type DepthTagger(sourceBuffer: ITextBuffer, filename: string, fsharpLanguageService: VSLanguageService) as self =
+type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: VSLanguageService) as self =
     // computed periodically on a background thread
     let mutable results: _ [] = null
     let resultsLock = obj() // lock for reading/writing "results"
@@ -38,7 +39,7 @@ type DepthTagger(sourceBuffer: ITextBuffer, filename: string, fsharpLanguageServ
         async { 
             try 
                 let syncContext = System.Threading.SynchronizationContext.Current
-                let ss = sourceBuffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
+                let ss = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
                 if not doSync then do! Async.SwitchToThreadPool()
                 do let sourceCodeOfTheFile = ss.GetText()
                    // Reuse the instance of InteractiveChecker
@@ -71,37 +72,8 @@ type DepthTagger(sourceBuffer: ITextBuffer, filename: string, fsharpLanguageServ
         }
         |> Async.StartImmediate
     
-    do 
-        // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
-        sourceBuffer.Changed.Add(fun _ -> trace ("source changed event"))
-        let timeSpan = TimeSpan.FromMilliseconds(500.)
-        
-        let startNewTimer() = 
-            let t = new DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = timeSpan)
-            t.Start()
-            t
-        
-        let rec awaitPauseAfterChange (timer: DispatcherTimer) = 
-            async { 
-                let! e = Async.EitherEvent(sourceBuffer.Changed, timer.Tick)
-                match e with
-                | Choice1Of2 _ -> 
-                    timer.Stop()
-                    do! awaitPauseAfterChange (startNewTimer())
-                | _ -> ()
-            }
-        
-        async { 
-            while true do
-                trace ("about to subscribe")
-                let! _ = Async.AwaitEvent sourceBuffer.Changed
-                do! awaitPauseAfterChange (startNewTimer())
-                trace ("about to refresh")
-                refreshFileImpl (false)
-        }
-        |> Async.StartImmediate
-        // go ahead and synchronously get the first bit of info for the original rendering
-        refreshFileImpl (true)
+    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], fun _ -> refreshFileImpl false) 
+    do refreshFileImpl true
     
     interface ITagger<DepthRegionTag> with
         

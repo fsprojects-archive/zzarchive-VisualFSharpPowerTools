@@ -49,7 +49,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                       Project =  project
                       Word = vsLanguageService.GetSymbol(point, project) }} |> ignore
 
-    let _ = DocumentEventsListener (view, updateAtCaretPosition)
+    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], updateAtCaretPosition)
 
     let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
         try

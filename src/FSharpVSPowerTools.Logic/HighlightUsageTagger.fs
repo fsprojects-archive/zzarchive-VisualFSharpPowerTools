@@ -115,7 +115,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                 updateWordAdornments()
         | _ -> ()
 
-    let _ = DocumentEventsListener (view, updateAtCaretPosition)
+    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], updateAtCaretPosition)
 
     interface ITagger<HighlightUsageTag> with
         member x.GetTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq =

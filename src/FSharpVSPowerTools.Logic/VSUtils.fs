@@ -167,15 +167,18 @@ type ForegroundThreadGuard private() =
 
 open System.Windows.Threading
 
-type DocumentEventsListener (view: ITextView, update: unit -> unit) =
+module ViewChange =
+    let layoutEvent (view: ITextView) = 
+        view.LayoutChanged |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
+    let caretEvent (view: ITextView) = view.Caret.PositionChanged |> Event.map (fun _ -> ())
+    let bufferChangedEvent (buffer: ITextBuffer) = buffer.Changed |> Event.map (fun _ -> ())
+
+type DocumentEventsListener (events: IEvent<unit> list, update: unit -> unit) =
     // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     let timeSpan = TimeSpan.FromMilliseconds 200.
+    do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
+    let events = events |> List.reduce Event.merge 
 
-    let events =
-        view.LayoutChanged
-        |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
-        |> Event.merge (view.Caret.PositionChanged |> Event.map (fun _ -> ()))
-        
     let startNewTimer() = 
         let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = timeSpan)
         timer.Start()
