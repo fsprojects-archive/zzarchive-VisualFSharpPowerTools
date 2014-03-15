@@ -3,20 +3,35 @@
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Classification
+open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Core
+open FSharpVSPowerTools.Core.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 
 type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self = 
     let classificationChanged = Event<_,_>()
-    let lockObject = new Object()
+    let lockObject = Object()
     let mutable lastSnapshot: ITextSnapshot = null
-    let mutable wordSpans = NormalizedSnapshotSpanCollection()
+    let mutable wordSpans = [||]
     let mutable isWorking = false 
+
     
-    let synchronousUpdate (newSpans: NormalizedSnapshotSpanCollection) = 
+    let referenceType = classificationRegistry.GetClassificationType "FSharp.ReferenceType"
+    let valueType = classificationRegistry.GetClassificationType "FSharp.ValueType"
+    let patternType = classificationRegistry.GetClassificationType "FSharp.PatternCase"
+
+    let getClassficationType cat =
+        match cat with
+        | ReferenceType -> Some referenceType
+        | ValueType -> Some valueType
+        | PatternCase -> Some patternType
+        | TypeParameter -> None
+        | Other -> None
+    
+    let synchronousUpdate (newSpans: (Category * SnapshotSpan) []) = 
         lock lockObject <| fun _ -> 
             wordSpans <- newSpans
             classificationChanged.Trigger
@@ -24,9 +39,9 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     
     let updateSyntaxConstructClassifiers callerName = 
         let snapshot = buffer.CurrentSnapshot
-        if isWorking = false && snapshot <> lastSnapshot then 
+        if not isWorking && snapshot <> lastSnapshot then 
             maybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
 
@@ -38,9 +53,9 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                         let! allSymbolsUses =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
                 
-                        let typeLocations = SourceCodeClassifier.getTypeLocations allSymbolsUses
-                        let wordSpans = NormalizedSnapshotSpanCollection (typeLocations |> Array.map (fromPos snapshot))
-                        synchronousUpdate wordSpans
+                        getTypeLocations allSymbolsUses
+                        |> Array.map (fun (category, location) -> category, fromPos snapshot location)
+                        |> synchronousUpdate
                     finally
                         isWorking <- false
                 } |> Async.Start
@@ -53,9 +68,11 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     interface IClassifier with
         member x.GetClassificationSpans(_snapshotSpan: SnapshotSpan) = 
             [| // And now return classification spans for everything
-               for (span: SnapshotSpan) in wordSpans do
-                   let classificationType = classificationRegistry.GetClassificationType "FSharp.TypeName"
-                   yield ClassificationSpan(span, classificationType) |] :> _
+               for (category, span) in wordSpans do
+                   match getClassficationType category with
+                   | Some classificationType ->
+                        yield ClassificationSpan(span, classificationType)
+                   | None -> () |] :> _
         
         [<CLIEvent>]
         member x.ClassificationChanged = classificationChanged.Publish
