@@ -18,7 +18,6 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     let mutable lastSnapshot: ITextSnapshot = null
     let mutable wordSpans = [||]
     let mutable isWorking = false 
-
     
     let referenceType = classificationRegistry.GetClassificationType "FSharp.ReferenceType"
     let valueType = classificationRegistry.GetClassificationType "FSharp.ValueType"
@@ -32,7 +31,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
         | PatternCase -> Some patternType
         | TypeParameter -> None
         | Function -> Some functionType
-        | Other -> None
+        | PublicField | Other -> None
     
     let synchronousUpdate (newSpans: (Category * SnapshotSpan) []) = 
         lock lockObject <| fun _ -> 
