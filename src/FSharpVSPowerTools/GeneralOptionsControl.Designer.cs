@@ -112,9 +112,9 @@
             this.chbNavBar.AutoSize = true;
             this.chbNavBar.Location = new System.Drawing.Point(16, 76);
             this.chbNavBar.Name = "chbNavBar";
-            this.chbNavBar.Size = new System.Drawing.Size(95, 17);
+            this.chbNavBar.Size = new System.Drawing.Size(221, 17);
             this.chbNavBar.TabIndex = 6;
-            this.chbNavBar.Text = "Navigation bar";
+            this.chbNavBar.Text = "Navigation bar (Admin privileges required)";
             this.chbNavBar.UseVisualStyleBackColor = true;
             // 
             // lblInfo
