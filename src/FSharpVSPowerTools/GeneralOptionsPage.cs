@@ -21,10 +21,18 @@ namespace FSharpVSPowerTools
         
         private bool GetNavigationBarConfig()
         {
-            var b = ConfigurationManager.AppSettings.Get(navBarConfig);
-            bool result;
-            if (b != null && bool.TryParse(b, out result)) return result;
-            return false;
+            try
+            {
+                var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+                var b = config.AppSettings.Settings[navBarConfig].Value;
+                bool result;
+                if (b != null && bool.TryParse(b, out result)) return result;
+                return false;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private bool IsUserAdministrator()
