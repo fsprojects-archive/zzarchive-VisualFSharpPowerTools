@@ -10,7 +10,7 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharp.CompilerBinding
 
-type RenameDialog = FSharpx.XAML<"RenameDialog.xaml">
+type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 
 type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) =
     let mutable name = originalName
@@ -83,23 +83,27 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
 [<RequireQualifiedAccess>]
 module UI =
     let loadRenameDialog (viewModel: RenameDialogModel) =
-        let window = RenameDialog()
+        let window = RenameDialog().CreateRoot()
+
+        // Provides access to "code behind" style work
+        let accessor = RenameDialog.Accessor(window)
+
         // Use this until we are able to do validation directly
-        window.txtName.TextChanged.Add(fun _ ->
-            window.btnOk.IsEnabled <- not (viewModel :> INotifyDataErrorInfo).HasErrors
+        accessor.txtName.TextChanged.Add(fun _ ->
+            accessor.btnOk.IsEnabled <- not (viewModel :> INotifyDataErrorInfo).HasErrors
              )
-        window.btnOk.Click.Add(fun _ -> 
+        accessor.btnOk.Click.Add(fun _ -> 
             match viewModel.Result with
             | Choice1Of2 _ ->
-                window.Root.DialogResult <- Nullable true
-                window.Root.Close()
+                window.DialogResult <- Nullable true
+                window.Close()
             | Choice2Of2 errorMsg ->
-                window.Root.DialogResult <- Nullable false
+                window.DialogResult <- Nullable false
                 MessageBox.Show(errorMsg, Resource.vsPackageTitle, MessageBoxButton.OK, MessageBoxImage.Error) |> ignore)
-        window.btnCancel.Click.Add(fun _ -> 
-            window.Root.DialogResult <- Nullable false
-            window.Root.Close())
-        window.Root.DataContext <- viewModel
-        window.Root.Loaded.Add (fun _ -> window.txtName.SelectAll())
-        window.Root
+        accessor.btnCancel.Click.Add(fun _ -> 
+            window.DialogResult <- Nullable false
+            window.Close())
+        window.DataContext <- viewModel
+        window.Loaded.Add (fun _ -> accessor.txtName.SelectAll())
+        window
  
