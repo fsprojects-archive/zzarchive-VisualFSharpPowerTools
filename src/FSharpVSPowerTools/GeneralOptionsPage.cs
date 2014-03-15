@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Principal;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -26,17 +27,42 @@ namespace FSharpVSPowerTools
             return false;
         }
 
-        // Return true if set navigation bar config successfully
+        private bool IsUserAdministrator()
+        {
+            bool isAdmin;
+            try
+            {
+                // Get the currently logged in user
+                WindowsIdentity user = WindowsIdentity.GetCurrent();
+                WindowsPrincipal principal = new WindowsPrincipal(user);
+                isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                isAdmin = false;
+            }
+
+            return isAdmin;
+        }
+
+        // Return true if navigation bar config is set successfully
         private bool SetNavigationBarConfig(bool v)
         {
             try
             {
-                // Strangely it doesn't work when debugging inside VS but it works in normal circumstances
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                config.AppSettings.Settings.Remove(navBarConfig);
-                config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
-                config.Save(ConfigurationSaveMode.Minimal);
-                return true;
+                if (IsUserAdministrator())
+                {
+                    var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+                    config.AppSettings.Settings.Remove(navBarConfig);
+                    config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
+                    config.Save(ConfigurationSaveMode.Minimal);
+                    return true;
+                }
+                else
+                {
+                    MessageBox.Show(Resource.navBarUnauthorizedMessage, Resource.vsPackageTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
             }
             catch (Exception)
             {
@@ -107,7 +133,7 @@ namespace FSharpVSPowerTools
                 XMLDocEnabled = _optionsControl.XMLDocEnabled;
                 FormattingEnabled = _optionsControl.FormattingEnabled;
 
-                if (SetNavigationBarConfig(_optionsControl.NavBarEnabled))
+                if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
                 {
                     NavBarEnabled = _optionsControl.NavBarEnabled;
                 };
