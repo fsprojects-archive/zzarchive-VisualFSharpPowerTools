@@ -44,17 +44,16 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
             if currentRequest = requestedPoint then
                 try
                     let! res = vsLanguageService.GetFSharpSymbol (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
-                    let res = 
-                        res
-                        |> Option.bind (fun (_, checkResults) ->
-                            vsLanguageService.FindUsagesInFile (newWord, sym, checkResults))
                     let results =
                         res
-                        |> Option.map (fun (_,lastIdent, refs) -> 
+                        |> Option.bind (fun (_, checkResults) -> 
+                            vsLanguageService.FindUsagesInFile (newWord, sym, checkResults))
+                        |> Option.map (fun (_, lastIdent, refs) -> 
+                            let filePath = Path.GetFullPathSafe(fileName)
                             refs 
                             |> Seq.choose (fun symbolUse -> 
                                 // We have to filter by full paths otherwise the range is invalid wrt current snapshot
-                                if Path.GetFullPath(symbolUse.FileName) = Path.GetFullPath(fileName) then
+                                if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
                                     Some (fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate)
                                 else None)
                             |> Seq.map (fun span -> 
