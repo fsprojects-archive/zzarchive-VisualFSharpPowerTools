@@ -39,8 +39,10 @@ module FolderMenuResources =
         | Action.Rename -> "F# Power Tools - Rename Folder"
 
 type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : IVsUIShell) = 
+
     let xn = XName.Get
     let xns name = XName.Get(name, "http://schemas.microsoft.com/developer/msbuild/2003")
+
     let getSelectedItems() = SolutionExplorerHelper.getSelectedItems dte |> List.ofSeq
     let getSelectedProjects() = SolutionExplorerHelper.getSelectedProjects dte |> List.ofSeq
     
@@ -110,7 +112,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
                 |> Seq.last
             last.AddAfterSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
     
-    let addNewFolderAbove (project : Project) item newFolderName (filesItemGroup : XContainer) = 
+    let addNewFolderAboveOrBelow (project : Project) item newFolderName (filesItemGroup : XContainer) action = 
         let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
         let fullPath = Path.GetDirectoryName(getFullPath item)
         let newFolderFullPath = Path.Combine(Path.GetDirectoryName(fullPath), newFolderName)
@@ -118,24 +120,19 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
         let relative = fullPath.Replace(projectAbsolutePath, "")
         if not (Directory.Exists newFolderFullPath) then
             Directory.CreateDirectory newFolderFullPath |> ignore
-            let first = 
-                filesItemGroup.Elements()
-                |> Seq.find (fun e -> e.Attribute(xn "Include").Value.StartsWith(relative))
-            first.AddBeforeSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
-
-    let addNewFolderBelow (project : Project) item newFolderName (filesItemGroup : XContainer) = 
-        let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
-        let fullPath = Path.GetDirectoryName(getFullPath item)
-        let newFolderFullPath = Path.Combine(Path.GetDirectoryName(fullPath), newFolderName)
-        let newFolder = newFolderFullPath.Replace(projectAbsolutePath, "")
-        let relative = fullPath.Replace(projectAbsolutePath, "")
-        if not (Directory.Exists newFolderFullPath) then
-            Directory.CreateDirectory newFolderFullPath |> ignore
-            let last = 
-                filesItemGroup.Elements()
-                |> Seq.filter (fun e -> e.Attribute(xn "Include").Value.StartsWith(relative))
-                |> Seq.last
-            last.AddAfterSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
+            match action with
+            | Action.NewAbove ->
+                let first = 
+                    filesItemGroup.Elements()
+                    |> Seq.find (fun e -> e.Attribute(xn "Include").Value.StartsWith(relative))
+                first.AddBeforeSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
+            | Action.NewBelow ->
+                let last = 
+                    filesItemGroup.Elements()
+                    |> Seq.filter (fun e -> e.Attribute(xn "Include").Value.StartsWith(relative))
+                    |> Seq.last
+                last.AddAfterSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
+            | _ -> ()
     
     let performAction action (newFolderName : string) = 
         let items = getSelectedItems()
@@ -153,8 +150,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
                 match items.Length with
                 | 1 -> addNewSubFolder project items.[0] newFolderName group
                 | _ -> addNewFolder project newFolderName group
-            | Action.NewAbove -> addNewFolderAbove project items.[0] newFolderName group
-            | Action.NewBelow -> addNewFolderBelow project items.[0] newFolderName group
+            | Action.NewAbove | Action.NewBelow -> addNewFolderAboveOrBelow project items.[0] newFolderName group action
             projectXml.Save(project.FileName)
         | None -> ()
     
