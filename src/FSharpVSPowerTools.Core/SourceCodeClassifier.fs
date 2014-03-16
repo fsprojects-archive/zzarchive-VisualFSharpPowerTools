@@ -11,7 +11,6 @@ type Category =
     | ReferenceType
     | ValueType
     | PatternCase
-    | TypeParameter
     | Function
     | PublicField
     | Other
@@ -21,9 +20,6 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     let symbol = symbolUse.Symbol
 
     match symbol with
-    | :? FSharpGenericParameter
-    | :? FSharpStaticParameter -> 
-        TypeParameter
     | :? FSharpUnionCase
     | :? FSharpActivePatternCase -> 
         PatternCase
@@ -62,7 +58,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
 let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
     allSymbolsUses
-    |> Array.map (fun x ->
+    |> Seq.map (fun x ->
         let r = x.RangeAlternate
         let symbolLength = r.EndColumn - r.StartColumn
         let name = x.Symbol.DisplayName

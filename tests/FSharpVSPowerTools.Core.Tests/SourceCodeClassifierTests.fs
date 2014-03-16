@@ -106,7 +106,7 @@ let ``fully qualified F# type constructor``() =
 
 [<Test>]
 let ``generic class declaration``() = 
-    checkCategories 34 [ ReferenceType, 5, 17; TypeParameter, 18, 20 ]
+    checkCategories 34 [ ReferenceType, 5, 17; Other, 18, 20 ]
 
 [<Test>]
 let ``generic class instantiation``() = 
