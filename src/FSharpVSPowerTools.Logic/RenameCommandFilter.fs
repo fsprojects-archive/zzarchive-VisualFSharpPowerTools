@@ -21,8 +21,7 @@ module PkgCmdIDList =
 
 [<NoEquality; NoComparison>]
 type DocumentState =
-    { Point: SnapshotPoint
-      Word: (SnapshotSpan * Symbol) option
+    { Word: (SnapshotSpan * Symbol) option
       File: string
       Project: IProjectProvider }
 
@@ -31,27 +30,16 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     let documentUpdater = DocumentUpdater(serviceProvider)
 
     let canRename() = 
-        state <- Option.map (fun s -> { s with Word = vsLanguageService.GetSymbol(s.Point, s.Project) } ) state
-        state |> Option.bind (fun s -> s.Word) |> Option.isSome
-
-    let updateAtCaretPosition () =
-        maybe {
-            let! point = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-            // If the new cursor position is still within the current word (and on the same snapshot),
-            // we don't need to check it.
-            match state with
-            | Some { Word = Some (cw,_) } when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
-            | _ ->
+        let s =
+            maybe {
+                let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
-                state <- Some
-                    { Project =  project
-                      File = doc.FullName
-                      Word = None
-                      Point = point } } |> ignore
-
-    let _ = DocumentEventsListener (view, updateAtCaretPosition)
+                return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
+            }
+        state <- s
+        state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
     let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
         try
@@ -89,7 +77,6 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     member x.HandleRename() =
         maybe {
             let! state = state
-            // We have to use it after canRename() in order to get word correctly
             let! cw, sym = state.Word
             let! symbol, fileScopedCheckResults = 
                 // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
@@ -115,9 +102,11 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 if res then 
                     let! (_, currentName, references) =
                         match symbol.Scope with
-                        | File -> vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
-                        | Project -> vsLanguageService.FindUsages (cw, state.File, state.Project) 
-                                     |> Async.RunSynchronously   
+                        | File -> 
+                            vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
+                        | Project -> 
+                            vsLanguageService.FindUsages (cw, state.File, state.Project) 
+                            |> Async.RunSynchronously   
                         |> Option.map (fun (symbol, lastIdent, refs) -> 
                             symbol, lastIdent,
                                 refs 
