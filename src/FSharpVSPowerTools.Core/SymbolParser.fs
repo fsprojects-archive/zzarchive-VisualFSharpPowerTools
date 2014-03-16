@@ -143,4 +143,3 @@ module SymbolParser =
               RightColumn = token.RightColumn + 1
               Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
     
-    

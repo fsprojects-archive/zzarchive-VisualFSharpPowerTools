@@ -37,3 +37,15 @@ let genericClassOfUserFSharpType = GenericClass<M1.M2.Type>()
 let genericClassOfCLIType = GenericClass<System.DateTime>()
 
 type Record = { IntField: int; UserTypeField: M1.M2.Type }
+
+let valueTypeAbbriviation: int = 1
+let valueType: System.Int32 = 2
+let valueTypeConstructor = System.DateTime()
+type UserValueType = struct end
+type UserValueTypeAbbriviation = UserValueType
+let userValueType = UserValueType()
+let userValueTypeAbbriviation: UserValueTypeAbbriviation = UserValueTypeAbbriviation()
+
+type DUWithFunction = FuncCase of (unit -> unit)
+let (FuncCase funcCase) = FuncCase (fun() -> ())
+match FuncCase (fun() -> ()) with FuncCase func -> func()

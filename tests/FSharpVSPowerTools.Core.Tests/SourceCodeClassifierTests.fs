@@ -122,3 +122,22 @@ let ``record``() =
             PublicField, 16, 24; ReferenceType, 26, 29
             PublicField, 31, 44; ReferenceType, 52, 56 
         ]
+
+[<Test>]
+let ``value type``() = 
+    checkCategories 41 [ ReferenceType, 27, 30 ] // FCS 0.0.36 bug, should be ValueType instead
+    checkCategories 42 [ ValueType, 22, 27 ]
+    checkCategories 43 [ ] // FCS 0.0.36 bug, should be ValueType, 34, 42
+    checkCategories 44 [ ValueType, 5, 18 ]
+    checkCategories 45 [ ValueType, 5, 30; ValueType, 33, 46 ]
+    checkCategories 46 [] // FCS 0.0.36 bug, should be ValueType, 20, 33
+    checkCategories 47 [ ValueType, 31, 56 ] // FCS 0.0.36 bug, should be additionaly ValueType, 59, 84 
+
+[<Test>]
+let ``DU case of function``() =
+    checkCategories 49 [ ReferenceType, 5, 19; PatternCase, 22, 30; ReferenceType, 35, 39; ReferenceType, 43, 47 ]
+    checkCategories 50 [ PatternCase, 5, 13; Function, 14, 22; PatternCase, 26, 34 ]
+    checkCategories 51 [ PatternCase, 6, 14; PatternCase, 34, 42; Function, 43, 47; Function, 51, 55 ]
+
+
+
