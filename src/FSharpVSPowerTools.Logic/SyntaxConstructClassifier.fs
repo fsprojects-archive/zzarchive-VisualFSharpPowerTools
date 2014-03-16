@@ -16,7 +16,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     let classificationChanged = Event<_,_>()
     let lockObject = Object()
     let mutable lastSnapshot: ITextSnapshot = null
-    let mutable wordSpans = [||]
+    let mutable locations = [||]
     let mutable isWorking = false 
     
     let referenceType = classificationRegistry.GetClassificationType "FSharp.ReferenceType"
@@ -33,9 +33,9 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
         | Function -> Some functionType
         | PublicField | Other -> None
     
-    let synchronousUpdate (newSpans: (Category * SnapshotSpan) []) = 
+    let synchronousUpdate (newLocations: (Category * (int * int * int * int)) []) = 
         lock lockObject <| fun _ -> 
-            wordSpans <- newSpans
+            locations <- newLocations
             let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
             classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
     
@@ -57,7 +57,6 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                 
                         getTypeLocations allSymbolsUses
                         |> Array.sortBy (fun (_, (startLine, startCol, _, _)) -> startLine, startCol)
-                        |> Array.map (fun (category, location) -> category, fromPos snapshot location)
                         |> synchronousUpdate
                     finally
                         isWorking <- false
@@ -69,15 +68,20 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                                     fun _ -> updateSyntaxConstructClassifiers())
     
     interface IClassifier with
+        // it's called for each visible line of code
         member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) = 
-            // And now return classification spans for everything
+            let spanStartLine = snapshotSpan.Start.GetContainingLine().LineNumber + 1
+            let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
+
             let spans = 
-                wordSpans
-                |> Seq.skipWhile (fun (_, span) -> not (span.IntersectsWith snapshotSpan))
-                |> Seq.takeWhile (fun (_, span) -> span.IntersectsWith snapshotSpan)
-                |> Seq.choose (fun (category, span) -> 
+                locations
+                // locations are sorted, so we can safely filter them efficently
+                |> Seq.skipWhile (fun (_, (startLine, _, _, _)) -> startLine < spanStartLine)
+                |> Seq.takeWhile (fun (_, (startLine, _, _, _)) -> startLine <= spanEndLine)
+                |> Seq.choose (fun (category, location) -> 
                     getClassficationType category 
-                    |> Option.map (fun classificationType -> ClassificationSpan(span, classificationType)))
+                    |> Option.map (fun classificationType -> 
+                         ClassificationSpan(fromPos snapshotSpan.Snapshot location, classificationType)))
                 |> Seq.toArray
             upcast spans
         
