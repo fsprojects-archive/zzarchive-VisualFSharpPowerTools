@@ -28,6 +28,11 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
         | None -> [| |]
         | Some (checkResults, _parseResults) -> checkResults.GetUsesOfSymbolInFile(symbol)
 
+    member x.GetAllUsesOfAllSymbolsInFile() =
+        match infoOpt with
+        | None -> [| |]
+        | Some (checkResults, _) -> checkResults.GetAllUsesOfAllSymbolsInFile()
+
     member x.GetErrors() =
         match infoOpt with 
         | None -> None

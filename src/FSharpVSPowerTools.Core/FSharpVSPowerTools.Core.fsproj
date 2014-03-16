@@ -63,6 +63,7 @@
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
     <Compile Include="NavigableItemsCollector.fs" />
+    <Compile Include="SourceCodeClassifier.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
