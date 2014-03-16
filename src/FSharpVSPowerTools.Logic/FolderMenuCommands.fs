@@ -64,7 +64,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
     let getProperty (item:ProjectItem) name =
         let property = item.Properties |> Seq.cast<Property> |> Seq.tryFind (fun p -> p.Name = name)
         match property with
-        | Some(p) -> p.Value :?> string
+        | Some p -> p.Value :?> string
         | None -> ""        
 
     let getCurrentName action = 
@@ -143,7 +143,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
             projectXml.Root.Elements(xns "ItemGroup") 
             |> Seq.tryFind (fun ig -> ig.Element(xns "Compile") <> null || ig.Element(xns "Folder") <> null)
         match filesItemGroup with
-        | Some(group) -> 
+        | Some group -> 
             match action with
             | Action.Rename -> renameFolder project items.[0] newFolderName group
             | Action.New -> 
@@ -160,7 +160,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
         wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
         let res = wnd.ShowDialog() |> Option.ofNullable
         match res with
-        | Some true -> Some(model.Name)
+        | Some true -> Some model.Name
         | _ -> None
     
     let executeCommand action = 

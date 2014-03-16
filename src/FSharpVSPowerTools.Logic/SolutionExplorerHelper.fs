@@ -13,10 +13,10 @@ module SolutionExplorerHelper =
     let private getSelected<'T> (dte:DTE2) =
         let items = dte.ToolWindows.SolutionExplorer.SelectedItems :?> UIHierarchyItem[]
         items
-        |> Seq.map (fun i -> i.Object)
-        |> Seq.map (fun o -> match o with | :? 'T as p -> Some(p) | _ -> None)
-        |> Seq.filter (fun o -> match o with | Some _ -> true | None -> false)
-        |> Seq.map (fun o -> o.Value)
+        |> Seq.choose (fun x -> 
+                match x.Object with
+                | :? 'T as p -> Some p
+                | _ -> None)
 
     let getSelectedItems dte =
         getSelected<ProjectItem> dte
