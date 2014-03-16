@@ -77,6 +77,10 @@
     <Resource Include="RenameDialog.xaml" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
+    <Compile Include="SolutionExplorerHelper.fs" />
+    <Resource Include="NewFolderNameDialog.xaml" />
+    <Compile Include="NewFolderNameDialog.fs" />
+    <Compile Include="FolderMenuCommands.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -153,6 +157,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Interactivity">
@@ -161,6 +166,7 @@
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
     <Reference Include="UIAutomationTypes" />
     <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
