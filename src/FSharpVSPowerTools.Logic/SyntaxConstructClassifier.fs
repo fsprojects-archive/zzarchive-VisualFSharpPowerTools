@@ -37,16 +37,16 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
         let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
         classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
     
-    let updateSyntaxConstructClassifiers() = 
+    let updateSyntaxConstructClassifiers() =
         let snapshot = buffer.CurrentSnapshot
         if not isWorking && snapshot <> lastSnapshot.Value then 
+            isWorking <- true
             maybe {
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
 
                 debug "[SyntaxConstructClassifier] - Effective update"
-                isWorking <- true
                 lastSnapshot.Swap (fun _ -> snapshot) |> ignore
                 async {
                     try
@@ -64,6 +64,8 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 
                                     TimeSpan.FromMilliseconds 200.,
                                     fun _ -> updateSyntaxConstructClassifiers())
+
+    do buffer.Changed.Add (fun _ -> locations.Swap (fun _ -> [||]) |> ignore)
     
     interface IClassifier with
         // it's called for each visible line of code
