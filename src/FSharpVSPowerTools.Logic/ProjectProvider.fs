@@ -19,7 +19,6 @@ module ProjectProvider =
     
     type private E = System.Linq.Expressions.Expression
 
-    [<Literal>]
     let private InstanceNonPublic = BindingFlags.Instance ||| BindingFlags.NonPublic
     
     let private precompileFieldGet<'R>(f : FieldInfo) =
