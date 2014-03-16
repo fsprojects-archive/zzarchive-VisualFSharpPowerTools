@@ -14,9 +14,8 @@ open FSharp.CompilerBinding
 type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self = 
     let classificationChanged = Event<_,_>()
-    let lockObject = Object()
-    let mutable lastSnapshot: ITextSnapshot = null
-    let mutable locations = [||]
+    let lastSnapshot = Atom null
+    let locations = Atom [||]
     let mutable isWorking = false 
     
     let referenceType = classificationRegistry.GetClassificationType "FSharp.ReferenceType"
@@ -34,14 +33,13 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
         | PublicField | Other -> None
     
     let synchronousUpdate (newLocations: (Category * (int * int * int * int)) []) = 
-        lock lockObject <| fun _ -> 
-            locations <- newLocations
-            let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-            classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
+        locations.Swap(fun _ -> newLocations) |> ignore
+        let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+        classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
     
     let updateSyntaxConstructClassifiers() = 
         let snapshot = buffer.CurrentSnapshot
-        if not isWorking && snapshot <> lastSnapshot then 
+        if not isWorking && snapshot <> lastSnapshot.Value then 
             maybe {
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
@@ -49,7 +47,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
 
                 debug "[SyntaxConstructClassifier] - Effective update"
                 isWorking <- true
-                lastSnapshot <- snapshot
+                lastSnapshot.Swap (fun _ -> snapshot) |> ignore
                 async {
                     try
                         let! allSymbolsUses =
@@ -74,7 +72,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
 
             let spans = 
-                locations
+                locations.Value
                 // locations are sorted, so we can safely filter them efficently
                 |> Seq.skipWhile (fun (_, (startLine, _, _, _)) -> startLine < spanStartLine)
                 |> Seq.takeWhile (fun (_, (startLine, _, _, _)) -> startLine <= spanEndLine)
