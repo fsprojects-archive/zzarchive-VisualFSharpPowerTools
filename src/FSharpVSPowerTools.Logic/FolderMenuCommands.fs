@@ -47,38 +47,33 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
     let isCommandEnabled action = 
         let items = getSelectedItems()
         let projects = getSelectedProjects()
-        match items.Length, projects.Length with
-        | 1, 0 -> 
-            let item = items.[0]
+        match items, projects with
+        | [item], [] -> 
             SolutionExplorerHelper.isFSharpProject item.ContainingProject.Kind 
             && (SolutionExplorerHelper.isPhysicalFolder item.Kind || action = Action.NewAbove || action = Action.NewBelow)
-        | 0, 1 -> SolutionExplorerHelper.isFSharpProject projects.[0].Kind && action = Action.New
+        | [], [project] -> SolutionExplorerHelper.isFSharpProject project.Kind && action = Action.New
         | _, _ -> false
     
     let getCurrentProject (items : ProjectItem list) (projects : Project list) = 
-        match items.Length with
-        | 1 -> items.[0].ContainingProject
+        match items with
+        | [item] -> item.ContainingProject
         | _ -> projects.[0]
     
+    let getProperty (item:ProjectItem) name =
+        let property = item.Properties |> Seq.cast<Property> |> Seq.tryFind (fun p -> p.Name = name)
+        match property with
+        | Some(p) -> p.Value :?> string
+        | None -> ""        
+
     let getCurrentName action = 
         match action with
         | Action.Rename -> 
-            let items = SolutionExplorerHelper.getSelectedItems dte |> List.ofSeq
+            let items = getSelectedItems()
             let item = items.[0]
-            
-            let nameProperty = 
-                item.Properties
-                |> Seq.cast<Property>
-                |> Seq.find (fun p -> p.Name = "FileName")
-            nameProperty.Value :?> string
+            getProperty item "FileName"
         | _ -> ""
     
-    let getFullPath (item : ProjectItem) = 
-        let fullPathProperty = 
-            item.Properties
-            |> Seq.cast<Property>
-            |> Seq.find (fun p -> p.Name = "FullPath")
-        fullPathProperty.Value :?> string
+    let getFullPath item = getProperty item "FullPath"
     
     let renameFolder (project : Project) item newFolderName (filesItemGroup : XContainer) = 
         let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
@@ -97,9 +92,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
     let addNewFolder (project : Project) newFolderName (filesItemGroup : XContainer) = 
         let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
         let newFolderFullPath = Path.Combine(projectAbsolutePath, newFolderName)
-        match Directory.Exists newFolderFullPath with
-        | true -> ()
-        | false -> 
+        if not (Directory.Exists newFolderFullPath) then
             Directory.CreateDirectory newFolderFullPath |> ignore
             filesItemGroup.Add(new XElement(xns "Folder", new XAttribute(xn "Include", newFolderName + "\\")))
     
@@ -109,9 +102,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
         let newFolderFullPath = Path.Combine(fullPath, newFolderName)
         let newFolder = newFolderFullPath.Replace(projectAbsolutePath, "")
         let parent = Path.GetDirectoryName(newFolder)
-        match Directory.Exists newFolderFullPath with
-        | true -> ()
-        | false -> 
+        if not (Directory.Exists newFolderFullPath) then
             Directory.CreateDirectory newFolderFullPath |> ignore
             let last = 
                 filesItemGroup.Elements()
@@ -125,9 +116,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
         let newFolderFullPath = Path.Combine(Path.GetDirectoryName(fullPath), newFolderName)
         let newFolder = newFolderFullPath.Replace(projectAbsolutePath, "")
         let relative = fullPath.Replace(projectAbsolutePath, "")
-        match Directory.Exists newFolderFullPath with
-        | true -> ()
-        | false -> 
+        if not (Directory.Exists newFolderFullPath) then
             Directory.CreateDirectory newFolderFullPath |> ignore
             let first = 
                 filesItemGroup.Elements()
@@ -140,9 +129,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
         let newFolderFullPath = Path.Combine(Path.GetDirectoryName(fullPath), newFolderName)
         let newFolder = newFolderFullPath.Replace(projectAbsolutePath, "")
         let relative = fullPath.Replace(projectAbsolutePath, "")
-        match Directory.Exists newFolderFullPath with
-        | true -> ()
-        | false -> 
+        if not (Directory.Exists newFolderFullPath) then
             Directory.CreateDirectory newFolderFullPath |> ignore
             let last = 
                 filesItemGroup.Elements()
@@ -150,7 +137,7 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
                 |> Seq.last
             last.AddAfterSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
     
-    let performAction action (newFolderName : string) (originalFolderName : string) = 
+    let performAction action (newFolderName : string) = 
         let items = getSelectedItems()
         let projects = getSelectedProjects()
         let project = getCurrentProject items projects
@@ -177,20 +164,15 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
         wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
         let res = wnd.ShowDialog() |> Option.ofNullable
         match res with
-        | Some(x) when x = true -> Some(model.Name)
+        | Some true -> Some(model.Name)
         | _ -> None
     
     let executeCommand action = 
         let currentName = getCurrentName action
-        
         let resources = 
             { WindowTitle = FolderMenuResources.getWindowTitle action
               OriginalName = currentName }
-        
-        let newFolderName = askForNewFolderName resources
-        match newFolderName with
-        | Some(x) -> performAction action x currentName
-        | None -> ()
+        askForNewFolderName resources |> Option.iter (performAction action)
     
     let setupCommand guid id action = 
         let command = new CommandID(guid, id)
