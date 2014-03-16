@@ -56,6 +56,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
                 
                         getTypeLocations allSymbolsUses
+                        |> Array.sortBy (fun (_, (startLine, startCol, _, _)) -> startLine, startCol)
                         |> Array.map (fun (category, location) -> category, fromPos snapshot location)
                         |> synchronousUpdate
                     finally
@@ -72,10 +73,12 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
             // And now return classification spans for everything
             let spans = 
                 wordSpans
-                |> Array.filter (fun (_, span) -> span.IntersectsWith snapshotSpan)
-                |> Array.choose (fun (category, span) -> 
+                |> Seq.skipWhile (fun (_, span) -> not (span.IntersectsWith snapshotSpan))
+                |> Seq.takeWhile (fun (_, span) -> span.IntersectsWith snapshotSpan)
+                |> Seq.choose (fun (category, span) -> 
                     getClassficationType category 
                     |> Option.map (fun classificationType -> ClassificationSpan(span, classificationType)))
+                |> Seq.toArray
             upcast spans
         
         [<CLIEvent>]
