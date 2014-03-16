@@ -68,13 +68,15 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                                     fun _ -> updateSyntaxConstructClassifiers())
     
     interface IClassifier with
-        member x.GetClassificationSpans(_snapshotSpan: SnapshotSpan) = 
-            [| // And now return classification spans for everything
-               for (category, span) in wordSpans do
-                   match getClassficationType category with
-                   | Some classificationType ->
-                        yield ClassificationSpan(span, classificationType)
-                   | None -> () |] :> _
+        member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) = 
+            // And now return classification spans for everything
+            let spans = 
+                wordSpans
+                |> Array.filter (fun (_, span) -> span.IntersectsWith snapshotSpan)
+                |> Array.choose (fun (category, span) -> 
+                    getClassficationType category 
+                    |> Option.map (fun classificationType -> ClassificationSpan(span, classificationType)))
+            upcast spans
         
         [<CLIEvent>]
         member x.ClassificationChanged = classificationChanged.Publish
