@@ -46,11 +46,11 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             ReferenceType
         else Other
     
-    | :? FSharpMemberFunctionOrValue as mfov ->
+    | :? FSharpMemberFunctionOrValue as func ->
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
-        if mfov.CompiledName = ".ctor" then ReferenceType
-        elif mfov.FullType.IsFunctionType then 
-            if mfov.DisplayName.StartsWith "( " && mfov.DisplayName.EndsWith " )" then
+        if func.CompiledName = ".ctor" then ReferenceType
+        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod then 
+            if func.DisplayName.StartsWith "( " && func.DisplayName.EndsWith " )" then
                 Other
             else
                 Function
@@ -62,6 +62,8 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
 let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
     allSymbolsUses
+    // FCS can return multi-line ranges, let's ignore them
+    |> Array.filter (fun x -> x.RangeAlternate.StartLine = x.RangeAlternate.EndLine)
     |> Array.map (fun x ->
         let r = x.RangeAlternate
         let symbolLength = r.EndColumn - r.StartColumn
@@ -78,10 +80,10 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
         let location = 
             if namespaceLength > 0 && symbolLength > name.Length && visibleName.EndsWith name then
                 let startCol = r.StartColumn + namespaceLength
-                let startCol = 
+                let startCol' = 
                     if startCol < r.EndColumn then startCol
                     else r.StartColumn
-                r.StartLine, startCol, r.EndLine, r.EndColumn
+                r.StartLine, startCol', r.EndLine, r.EndColumn
             else 
                 r.StartLine, r.StartColumn, r.EndLine, r.EndColumn
         let category = getCategory x

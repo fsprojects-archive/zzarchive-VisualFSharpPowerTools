@@ -61,23 +61,23 @@ let ``class let function``() = checkCategories 12 [ Function, 8, 24 ]
 let ``class method``() = checkCategories 13 [ Function, 13, 19 ]
 
 [<Test>]
-let ``class property``() = checkCategories 14 [ Function, 13, 21 ]
+let ``class property``() = checkCategories 14 []
 
 [<Test>]
 let ``static method``() = checkCategories 15 [ Function, 18, 30 ]
 
 [<Test>]
-let ``static property``() = checkCategories 16 [ Function, 18, 32 ]
+let ``static property``() = checkCategories 16 []
 
 [<Test>]
 let ``event``() = 
     checkCategories 9 [ ReferenceType, 16, 21 ]
-    checkCategories 17 [ Function, 13, 18; Function, 27, 34 ]
+    checkCategories 17 []
 
 [<Test>]
 let ``static event``() = 
     checkCategories 10 [ ReferenceType, 29, 34 ]
-    checkCategories 18 [ Function, 18, 29; Function, 44, 51 ]
+    checkCategories 18 []
 
 [<Test>]
 let ``constructors``() = 
@@ -91,10 +91,9 @@ let ``interface implemented in a class``() =
 
 [<Test>]
 let ``property with explicit accessors``() = 
-    // this is commented because FCS 0.0.36 does not return FSharpSymbolUse for this case
-    // checkCategories 22 [ Function, 13, 36 ] 
-    checkCategories 23 [ Function, 21, 24 ]
-    checkCategories 24 [ Function, 20, 23; ReferenceType, 31, 34 ]
+    checkCategories 22 [] 
+    checkCategories 23 []
+    checkCategories 24 [ ReferenceType, 31, 34 ]
 
 [<Test; Ignore "FCS 0.0.36 does not return FSharpSymbolUse for this case">]
 let ``fully qualified CLI type constructor``() = 
@@ -138,3 +137,6 @@ let ``DU case of function``() =
     checkCategories 49 [ ReferenceType, 5, 19; PatternCase, 22, 30; ReferenceType, 35, 39; ReferenceType, 43, 47 ]
     checkCategories 50 [ PatternCase, 5, 13; Function, 14, 22; PatternCase, 26, 34 ]
     checkCategories 51 [ PatternCase, 6, 14; PatternCase, 34, 42; Function, 43, 47; Function, 51, 55 ]
+
+[<Test; Ignore "We cannot get this pass without FCS providing hierarchical FullName">]
+let ``double quoted function without spaces``() = checkCategories 52 [ Function, 4, 45 ]
