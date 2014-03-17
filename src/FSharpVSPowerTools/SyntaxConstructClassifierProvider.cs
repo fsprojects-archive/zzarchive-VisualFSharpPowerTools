@@ -58,7 +58,7 @@ namespace FSharpVSPowerTools
             public FSharpReferenceTypeFormat()
             {
                 this.DisplayName = "F# User Types";
-                this.ForegroundColor = Colors.Teal;
+                this.ForegroundColor = Color.FromRgb(43, 145, 175);
             }
         }
 

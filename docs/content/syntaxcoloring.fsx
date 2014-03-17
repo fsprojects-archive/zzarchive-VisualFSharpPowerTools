@@ -12,6 +12,14 @@ We currently support:
 - type coloring
 - function coloring
 
+Here is how colors can be customized:
+
+![Syntax coloring](img/syntax_coloring_demo.png) 
+
+
+How to customize colors
+-----------------------
+
 Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:
 
 - F# User Types
