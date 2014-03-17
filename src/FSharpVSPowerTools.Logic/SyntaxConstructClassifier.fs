@@ -28,7 +28,6 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
         | ReferenceType -> Some referenceType
         | ValueType -> Some valueType
         | PatternCase -> Some patternType
-        | TypeParameter -> None
         | Function -> Some functionType
         | PublicField | Other -> None
     

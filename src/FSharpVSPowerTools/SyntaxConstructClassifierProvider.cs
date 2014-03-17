@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Windows.Media;
 using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -7,97 +8,125 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.SyntaxColoring;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text.Classification;
-using System.Windows.Media;
+using Microsoft.VisualStudio.Language.StandardClassification;
 using FSharpVSPowerTools.ProjectSystem;
+using FSharpVSPowerTools.SyntaxColoring;
 
 namespace FSharpVSPowerTools
 {
     static class ClassificationTypes
     {
+        public const string FSharpReferenceType = "FSharp.ReferenceType";
+        public const string FSharpValueType = "FSharp.ValueType";
+        public const string FSharpPatternCase = "FSharp.PatternCase";
+        public const string FSharpFunction = "FSharp.Function";
+
+        public const string FSharpReferenceDefinition = PredefinedClassificationTypeNames.SymbolDefinition;
+        public const string FSharpValueDefinition = PredefinedClassificationTypeNames.SymbolDefinition;
+        public const string FSharpPatternCaseDefinition = "HtmlClientTemplateValue";
+        public const string FSharpFunctionDefinition = "HtmlClientTemplateValue";
+
         [Export]
-        [Name("FSharp.ReferenceType")]
-        [BaseDefinition("identifier")]
+        [Name(FSharpReferenceType)]
+        [BaseDefinition(FSharpReferenceDefinition)]
         internal static ClassificationTypeDefinition FSharpReferenceClassfierType = null;
 
         [Export]
-        [Name("FSharp.ValueType")]
-        [BaseDefinition("identifier")]
+        [Name(FSharpValueType)]
+        [BaseDefinition(FSharpValueDefinition)]
         internal static ClassificationTypeDefinition FSharpValueClassfierType = null;
 
         [Export]
-        [Name("FSharp.TypeParameter")]
-        [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpTypeParameterClassfierType = null;
-
-        [Export]
-        [Name("FSharp.PatternCase")]
-        [BaseDefinition("identifier")]
+        [Name(FSharpPatternCase)]
+        [BaseDefinition(FSharpPatternCaseDefinition)]
         internal static ClassificationTypeDefinition FSharpPatternCaseClassfierType = null;
 
         [Export]
-        [Name("FSharp.Function")]
-        [BaseDefinition("identifier")]
+        [Name(FSharpFunction)]
+        [BaseDefinition(FSharpFunctionDefinition)]
         internal static ClassificationTypeDefinition FSharpFunctionClassfierType = null;
-
     }
-
-    // These colors are defined differently for debugging purpose
-    // They are taken from https://github.com/leddt/visualstudio-colors-solarized/blob/master/vs2013/solarized-light.vssettings
-    // In the final version, we should probably set a default theme with less number of colors.
 
     static class ClassificationFormats
     {
-        [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = "FSharp.ReferenceType")]
-        [Name("FSharp.ReferenceType")]
-        [UserVisible(true)]
-        sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
+        internal static Color? GetColor(IClassificationTypeRegistryService classificationRegistry,
+                IClassificationFormatMapService formatMap, string tag)
         {
-            public FSharpReferenceTypeFormat()
+            var map = formatMap.GetClassificationFormatMap(FontsAndColorsCategory.TextEditor);
+            var functionType = classificationRegistry.GetClassificationType(tag);
+            if (functionType == null) return null;
+            var functionProp = map.GetExplicitTextProperties(functionType);
+            Color? color = (functionProp.ForegroundBrush as SolidColorBrush).Color;
+            return color;
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpReferenceType)]
+        [Name("F# User Types")]
+        [DisplayName("F# User Types")]
+        [UserVisible(true)]
+        [Order(After = Priority.Default, Before = Priority.High)]
+        internal sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpReferenceTypeFormat(
+                IClassificationTypeRegistryService classificationRegistry,
+                IClassificationFormatMapService formatMap) 
             {
-                this.DisplayName = "F# User Types";
-                this.ForegroundColor = Colors.Teal;
+                this.ForegroundColor = GetColor(classificationRegistry, formatMap, ClassificationTypes.FSharpReferenceDefinition);
             }
         }
 
         [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = "FSharp.ValueType")]
-        [Name("FSharp.ValueType")]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpValueType)]
+        [Name("F# User Types (Value types)")]
+        [DisplayName("F# User Types (Value types)")]
         [UserVisible(true)]
-        sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
+        [Order(After = Priority.Default, Before = Priority.High)]
+        internal sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
         {
-            public FSharpValueTypeFormat()
+            [ImportingConstructor]
+            public FSharpValueTypeFormat(
+                IClassificationTypeRegistryService classificationRegistry,
+                IClassificationFormatMapService formatMap) 
             {
-                this.DisplayName = "F# User Types (Value types)";
-                this.ForegroundColor = Color.FromRgb(49, 190, 239);
+                this.ForegroundColor = GetColor(classificationRegistry, formatMap, ClassificationTypes.FSharpValueDefinition);
             }
         }
 
         [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = "FSharp.PatternCase")]
-        [Name("FSharp.PatternCase")]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpPatternCase)]
+        [Name("F# Patterns")]
+        [DisplayName("F# Patterns")]
         [UserVisible(true)]
-        sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
+        [Order(After = Priority.Default, Before = Priority.High)]
+        internal sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
         {
-            public FSharpPatternCaseFormat()
+            [ImportingConstructor]
+            public FSharpPatternCaseFormat(
+                IClassificationTypeRegistryService classificationRegistry,
+                IClassificationFormatMapService formatMap) 
             {
-                this.DisplayName = "F# Patterns";
-                this.ForegroundColor = Colors.Purple;
+                this.ForegroundColor = GetColor(classificationRegistry, formatMap, ClassificationTypes.FSharpPatternCaseDefinition);
             }
         }
 
         [Export(typeof(EditorFormatDefinition))]
-        [ClassificationType(ClassificationTypeNames = "FSharp.Function")]
-        [Name("FSharp.Function")]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpFunction)]
+        [Name("F# Functions")]
+        [DisplayName("F# Functions")]
         [UserVisible(true)]
-        sealed class FSharpFunctionFormat : ClassificationFormatDefinition
+        [Order(After = Priority.Default, Before = Priority.High)]
+        internal sealed class FSharpFunctionFormat : ClassificationFormatDefinition
         {
-            public FSharpFunctionFormat()
+            [ImportingConstructor]
+            public FSharpFunctionFormat(
+                IClassificationTypeRegistryService classificationRegistry,
+                IClassificationFormatMapService formatMap) 
             {
-                this.DisplayName = "F# Functions";
-                this.ForegroundColor = Color.FromRgb(0, 0, 160);
+                this.ForegroundColor = GetColor(classificationRegistry, formatMap, ClassificationTypes.FSharpFunctionDefinition);
             }
         }
     }

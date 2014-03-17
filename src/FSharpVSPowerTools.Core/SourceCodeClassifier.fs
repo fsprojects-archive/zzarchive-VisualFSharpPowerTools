@@ -11,7 +11,6 @@ type Category =
     | ReferenceType
     | ValueType
     | PatternCase
-    | TypeParameter
     | Function
     | PublicField
     | Other
@@ -21,9 +20,6 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     let symbol = symbolUse.Symbol
 
     match symbol with
-    | :? FSharpGenericParameter
-    | :? FSharpStaticParameter -> 
-        TypeParameter
     | :? FSharpUnionCase
     | :? FSharpActivePatternCase -> 
         PatternCase
@@ -63,8 +59,8 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
     allSymbolsUses
     // FCS can return multi-line ranges, let's ignore them
-    |> Array.filter (fun x -> x.RangeAlternate.StartLine = x.RangeAlternate.EndLine)
-    |> Array.map (fun x ->
+    |> Seq.filter (fun x -> x.RangeAlternate.StartLine = x.RangeAlternate.EndLine)
+    |> Seq.map (fun x ->
         let r = x.RangeAlternate
         let symbolLength = r.EndColumn - r.StartColumn
         let name = x.Symbol.DisplayName
