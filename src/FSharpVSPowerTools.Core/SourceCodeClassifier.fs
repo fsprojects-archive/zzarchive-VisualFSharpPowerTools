@@ -46,11 +46,11 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             ReferenceType
         else Other
     
-    | :? FSharpMemberFunctionOrValue as mfov ->
+    | :? FSharpMemberFunctionOrValue as func ->
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
-        if mfov.CompiledName = ".ctor" then ReferenceType
-        elif mfov.FullType.IsFunctionType then 
-            if mfov.DisplayName.StartsWith "( " && mfov.DisplayName.EndsWith " )" then
+        if func.CompiledName = ".ctor" then ReferenceType
+        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod then 
+            if func.DisplayName.StartsWith "( " && func.DisplayName.EndsWith " )" then
                 Other
             else
                 Function
@@ -85,8 +85,8 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
             else 
                 r.StartLine, r.StartColumn, r.EndLine, r.EndColumn
         let category = getCategory x
-        //debug "-=O=- %A: FullName = %s, VisibleName = %s, Name = %s, range = %A, symbol = %A" 
-        //      category x.Symbol.FullName visibleName name location x.Symbol
+        debug "-=O=- %A: FullName = %s, VisibleName = %s, Name = %s, range = %A, symbol = %A" 
+              category x.Symbol.FullName visibleName name location x.Symbol
         category, location)
     |> Seq.distinct
     |> Seq.toArray
