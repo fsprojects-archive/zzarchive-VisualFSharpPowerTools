@@ -106,7 +106,6 @@ module Pervasive =
         | :? 'a as a -> Some a
         | _ -> fail "Cannot cast %O to %O" (o.GetType()) typeof<'a>.Name; None
 
-
     open System.Threading
     
     let synchronize f = 
@@ -143,6 +142,20 @@ module Pervasive =
                     and remover2: IDisposable = ev2.Subscribe(callback2)
                     ())))
 
+    type Atom<'T when 'T: not struct>(value: 'T) = 
+        let refCell = ref value
+        
+        let rec swap f = 
+            let currentValue = !refCell
+            let result = Interlocked.CompareExchange<'T>(refCell, f currentValue, currentValue)
+            if obj.ReferenceEquals(result, currentValue) then result
+            else 
+                Thread.SpinWait 20
+                swap f
+        
+        member self.Value with get () = !refCell
+        member self.Swap(f: 'T -> 'T) = swap f
+
     open System.IO
 
     type Path with
@@ -167,3 +180,4 @@ module Pervasive =
                 | :? FSharpField as m -> m.Accessibility.IsPrivate
                 | _ -> false
             if isPrivateToFile then SymbolScope.File else SymbolScope.Project
+

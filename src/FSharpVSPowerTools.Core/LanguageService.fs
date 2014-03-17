@@ -28,6 +28,11 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
         | None -> [| |]
         | Some (checkResults, _parseResults) -> checkResults.GetUsesOfSymbolInFile(symbol)
 
+    member x.GetAllUsesOfAllSymbolsInFile() =
+        match infoOpt with
+        | None -> [| |]
+        | Some (checkResults, _) -> checkResults.GetAllUsesOfAllSymbolsInFile()
+
     member x.GetErrors() =
         match infoOpt with 
         | None -> None
@@ -251,9 +256,9 @@ type LanguageService (dirtyNotify) =
    }
 
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale) =
+  member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale, queryLexState) =
    async { 
-    match SymbolParser.getSymbol source line col lineStr args with
+    match SymbolParser.getSymbol source line col lineStr args queryLexState with
     | Some sym ->
         let! checkResults = 
             x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, stale)
@@ -273,9 +278,9 @@ type LanguageService (dirtyNotify) =
     return refs }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework) =
+  member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, queryLexState) =
      async { 
-         match SymbolParser.getSymbol source line col lineStr args with
+         match SymbolParser.getSymbol source line col lineStr args queryLexState with
          | Some sym ->
              let! checkResults = x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, AllowStaleResults.MatchingSource)
          

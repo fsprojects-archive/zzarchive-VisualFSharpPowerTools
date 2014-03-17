@@ -58,8 +58,9 @@
     <Compile Include="TestHelpers.fs" />
     <Compile Include="SymbolParserTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
-    <Compile Include="XMLDocTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
+    <Compile Include="XmlDocTests.fs" />
+    <Compile Include="SourceCodeClassifierTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
