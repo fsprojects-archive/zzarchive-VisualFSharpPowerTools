@@ -38,5 +38,7 @@
 
 #### 0.5.0 - Unreleased
 * Improve Rename dialog
+* Add indexing for NavigateTo command
+* Implement semantic highlighting
 
 
