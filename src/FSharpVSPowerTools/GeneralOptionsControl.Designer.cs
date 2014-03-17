@@ -38,7 +38,7 @@
             this.lblTitle = new System.Windows.Forms.Label();
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
-            this.chbXMLDoc = new System.Windows.Forms.CheckBox();
+            this.chbXmlDoc = new System.Windows.Forms.CheckBox();
             this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
@@ -55,7 +55,7 @@
             this.grbOptions.Controls.Add(this.lblTitle);
             this.grbOptions.Controls.Add(this.lblHome);
             this.grbOptions.Controls.Add(this.chbFormatting);
-            this.grbOptions.Controls.Add(this.chbXMLDoc);
+            this.grbOptions.Controls.Add(this.chbXmlDoc);
             this.grbOptions.Location = new System.Drawing.Point(3, 3);
             this.grbOptions.Name = "grbOptions";
             this.grbOptions.Size = new System.Drawing.Size(424, 254);
@@ -161,18 +161,18 @@
             this.chbFormatting.Text = "Source code formatting";
             this.chbFormatting.UseVisualStyleBackColor = true;
             // 
-            // chbXMLDoc
+            // chbXmlDoc
             // 
-            this.chbXMLDoc.AutoSize = true;
-            this.chbXMLDoc.Checked = true;
-            this.chbXMLDoc.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbXMLDoc.Location = new System.Drawing.Point(16, 30);
-            this.chbXMLDoc.Name = "chbXMLDoc";
-            this.chbXMLDoc.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.chbXMLDoc.Size = new System.Drawing.Size(146, 17);
-            this.chbXMLDoc.TabIndex = 1;
-            this.chbXMLDoc.Text = "Auto-generating XMLDoc";
-            this.chbXMLDoc.UseVisualStyleBackColor = true;
+            this.chbXmlDoc.AutoSize = true;
+            this.chbXmlDoc.Checked = true;
+            this.chbXmlDoc.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbXmlDoc.Location = new System.Drawing.Point(16, 30);
+            this.chbXmlDoc.Name = "chbXmlDoc";
+            this.chbXmlDoc.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.chbXmlDoc.Size = new System.Drawing.Size(146, 17);
+            this.chbXmlDoc.TabIndex = 1;
+            this.chbXmlDoc.Text = "Auto-generating XMLDoc";
+            this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
             // chbSyntaxColoring
             // 
@@ -204,7 +204,7 @@
 
         private System.Windows.Forms.GroupBox grbOptions;
         private System.Windows.Forms.CheckBox chbFormatting;
-        private System.Windows.Forms.CheckBox chbXMLDoc;
+        private System.Windows.Forms.CheckBox chbXmlDoc;
         private System.Windows.Forms.Label lblTitle;
         private System.Windows.Forms.LinkLabel lblHome;
         private System.Windows.Forms.Label lblInfo;

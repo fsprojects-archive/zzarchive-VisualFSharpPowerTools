@@ -82,7 +82,7 @@ namespace FSharpVSPowerTools
         // We are letting Visual Studio know that these property value needs to be persisted	       
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool XMLDocEnabled { get; set; }
+        public bool XmlDocEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FormattingEnabled { get; set; }
@@ -113,7 +113,7 @@ namespace FSharpVSPowerTools
             {
                 _optionsControl = new GeneralOptionsControl();
                 _optionsControl.OptionsPage = this;
-                _optionsControl.XMLDocEnabled = XMLDocEnabled;
+                _optionsControl.XmlDocEnabled = this.XmlDocEnabled;
                 _optionsControl.FormattingEnabled = FormattingEnabled;
                 _optionsControl.NavBarEnabled = NavBarEnabled;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
@@ -126,7 +126,7 @@ namespace FSharpVSPowerTools
         }
         public GeneralOptionsPage()
         {
-            XMLDocEnabled = true;
+            this.XmlDocEnabled = true;
             FormattingEnabled = true;
             NavBarEnabled = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
@@ -141,7 +141,7 @@ namespace FSharpVSPowerTools
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
             {
-                XMLDocEnabled = _optionsControl.XMLDocEnabled;
+                this.XmlDocEnabled = _optionsControl.XmlDocEnabled;
                 FormattingEnabled = _optionsControl.FormattingEnabled;
 
                 if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
