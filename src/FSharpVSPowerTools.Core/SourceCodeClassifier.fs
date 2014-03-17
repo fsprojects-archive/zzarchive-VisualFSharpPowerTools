@@ -62,6 +62,8 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
 let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
     allSymbolsUses
+    // FCS can return multi-line ranges, let's ignore them
+    |> Array.filter (fun x -> x.RangeAlternate.StartLine = x.RangeAlternate.EndLine)
     |> Array.map (fun x ->
         let r = x.RangeAlternate
         let symbolLength = r.EndColumn - r.StartColumn
