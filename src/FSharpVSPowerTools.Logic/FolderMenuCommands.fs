@@ -96,7 +96,7 @@ type FolderMenuCommandsFilter(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUISh
     let replaceIncludePaths oldFolder newFolder (itemGroup: XContainer) =
         itemGroup.Elements()
         |> Seq.map (fun e -> e.Attribute(xn "Include"))
-        |> Seq.filter (fun a -> a.Value.Equals(oldFolder) || a.Value.StartsWith(oldFolder + "\\"))
+        |> Seq.filter (fun a -> a <> null && (a.Value.Equals(oldFolder) || a.Value.StartsWith(oldFolder + "\\")))
         |> Seq.iter (fun a -> a.Value <- newFolder + a.Value.Substring(oldFolder.Length))
 
     let replaceIncludeGroup (xDoc: XDocument) oldFolder newFolder elementName  =
