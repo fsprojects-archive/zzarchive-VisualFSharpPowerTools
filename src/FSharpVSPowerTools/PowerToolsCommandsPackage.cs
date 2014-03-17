@@ -9,6 +9,10 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using FSharpVSPowerTools.ProjectSystem;
+using FSharpVSPowerTools.Folders;
+using System.Diagnostics;
+using EnvDTE80;
+using EnvDTE;
 
 namespace FSharpVSPowerTools
 {
@@ -24,6 +28,9 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package
     {
+        internal static Lazy<DTE2> DTE
+            = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
+
         protected override void Initialize()
         {
             base.Initialize();
@@ -34,6 +41,16 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
+
+            OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+
+            if (mcs != null)
+            {
+                var newFolderMenu = new FolderMenuCommandsFilter(DTE.Value, mcs, shell);
+                newFolderMenu.SetupCommands();
+            }
+
         }
     }
 }

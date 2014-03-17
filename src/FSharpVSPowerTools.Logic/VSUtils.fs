@@ -28,6 +28,9 @@ let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 let isFSharpProject (project: EnvDTE.Project) = 
     project <> null && project.Kind <> null && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
 
+let isPhysicalFolder (item: EnvDTE.ProjectItem) =
+    item <> null && item.Kind <> null && item.Kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFolder, StringComparison.OrdinalIgnoreCase)
+
 open Microsoft.FSharp.Compiler.PrettyNaming
 
 let private isDoubleBacktickIdent (s: string) =
@@ -121,8 +124,8 @@ type DocumentUpdater(serviceProvider: IServiceProvider) =
     member x.EndGlobalUndo(linkedUndo: IVsLinkedUndoTransactionManager) = 
         ErrorHandler.ThrowOnFailure(linkedUndo.CloseLinkedUndo()) |> ignore
 
-open Microsoft.VisualStudio.Shell
 open EnvDTE
+open Microsoft.VisualStudio.Shell
 open VSLangProj
 open System.Diagnostics
 
@@ -148,6 +151,20 @@ type ProjectItem with
 let inline ensureSucceded hr = 
     ErrorHandler.ThrowOnFailure hr
     |> ignore
+
+let private getSelectedFromSolutionExplorer<'T> (dte:EnvDTE80.DTE2) =
+    let items = dte.ToolWindows.SolutionExplorer.SelectedItems :?> UIHierarchyItem[]
+    items
+    |> Seq.choose (fun x -> 
+            match x.Object with
+            | :? 'T as p -> Some p
+            | _ -> None)
+
+let getSelectedItemsFromSolutionExplorer dte =
+    getSelectedFromSolutionExplorer<ProjectItem> dte
+
+let getSelectedProjectsFromSolutionExplorer dte =
+    getSelectedFromSolutionExplorer<Project> dte
 
 open System.ComponentModel.Composition
 
