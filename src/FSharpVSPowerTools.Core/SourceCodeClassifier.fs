@@ -78,15 +78,15 @@ let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
         let location = 
             if namespaceLength > 0 && symbolLength > name.Length && visibleName.EndsWith name then
                 let startCol = r.StartColumn + namespaceLength
-                let startCol = 
+                let startCol' = 
                     if startCol < r.EndColumn then startCol
                     else r.StartColumn
-                r.StartLine, startCol, r.EndLine, r.EndColumn
+                r.StartLine, startCol', r.EndLine, r.EndColumn
             else 
                 r.StartLine, r.StartColumn, r.EndLine, r.EndColumn
         let category = getCategory x
-        debug "-=O=- %A: FullName = %s, VisibleName = %s, Name = %s, range = %A, symbol = %A" 
-              category x.Symbol.FullName visibleName name location x.Symbol
+        //debug "-=O=- %A: FullName = %s, VisibleName = %s, Name = %s, range = %A, symbol = %A" 
+        //      category x.Symbol.FullName visibleName name location x.Symbol
         category, location)
     |> Seq.distinct
     |> Seq.toArray

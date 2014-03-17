@@ -49,3 +49,4 @@ let userValueTypeAbbriviation: UserValueTypeAbbriviation = UserValueTypeAbbrivia
 type DUWithFunction = FuncCase of (unit -> unit)
 let (FuncCase funcCase) = FuncCase (fun() -> ())
 match FuncCase (fun() -> ()) with FuncCase func -> func()
+let ``double_quoted_function_without_spaces`` () = ()
