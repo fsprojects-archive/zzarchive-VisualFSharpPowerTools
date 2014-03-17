@@ -12,9 +12,11 @@ We currently support:
 - type coloring
 - function coloring
 
-Here is how colors can be customized:
+Here is how colors can be customized (in blue & dark theme):
 
-![Syntax coloring](img/syntax_coloring_demo.png) 
+![Syntax coloring](img/syntax_coloring_demo_blue.png)
+
+![Syntax coloring](img/syntax_coloring_demo_dark.png)
 
 
 How to customize colors
