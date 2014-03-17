@@ -126,7 +126,7 @@ namespace FSharpVSPowerTools
         }
         public GeneralOptionsPage()
         {
-            this.XmlDocEnabled = true;
+            XmlDocEnabled = true;
             FormattingEnabled = true;
             NavBarEnabled = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
