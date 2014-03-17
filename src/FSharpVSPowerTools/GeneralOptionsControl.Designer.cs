@@ -39,11 +39,13 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXMLDoc = new System.Windows.Forms.CheckBox();
+            this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbSyntaxColoring);
             this.grbOptions.Controls.Add(this.chbNavigateTo);
             this.grbOptions.Controls.Add(this.chbDepthColorizer);
             this.grbOptions.Controls.Add(this.chbRenameRefactoring);
@@ -172,6 +174,18 @@
             this.chbXMLDoc.Text = "Auto-generating XMLDoc";
             this.chbXMLDoc.UseVisualStyleBackColor = true;
             // 
+            // chbSyntaxColoring
+            // 
+            this.chbSyntaxColoring.AutoSize = true;
+            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 192);
+            this.chbSyntaxColoring.Name = "chbSyntaxColoring";
+            this.chbSyntaxColoring.Size = new System.Drawing.Size(80, 17);
+            this.chbSyntaxColoring.TabIndex = 11;
+            this.chbSyntaxColoring.Text = "Syntax coloring";
+            this.chbSyntaxColoring.UseVisualStyleBackColor = true;
+            this.chbSyntaxColoring.Checked = true;
+            this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
+            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -199,5 +213,6 @@
         private System.Windows.Forms.CheckBox chbRenameRefactoring;
         private System.Windows.Forms.CheckBox chbDepthColorizer;
         private System.Windows.Forms.CheckBox chbNavigateTo;
+        private System.Windows.Forms.CheckBox chbSyntaxColoring;
     }
 }

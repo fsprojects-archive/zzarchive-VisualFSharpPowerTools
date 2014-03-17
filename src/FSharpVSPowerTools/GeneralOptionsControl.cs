@@ -59,6 +59,12 @@ namespace FSharpVSPowerTools
             set { chbNavigateTo.Checked = value; }
         }
 
+        public bool SyntaxColoringEnabled
+        {
+            get { return chbSyntaxColoring.Checked; }
+            set { chbSyntaxColoring.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXMLDoc.Checked = OptionsPage.XMLDocEnabled;
@@ -74,6 +80,5 @@ namespace FSharpVSPowerTools
         {
             System.Diagnostics.Process.Start(lblHome.Text);
         }
-
     }
 }

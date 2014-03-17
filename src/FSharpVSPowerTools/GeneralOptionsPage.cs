@@ -102,6 +102,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool NavigateToEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool SyntaxColoringEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -150,6 +153,7 @@ namespace FSharpVSPowerTools
                 RenameRefactoringEnabled = _optionsControl.RenameRefactoringEnabled;
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
+                SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
             }
 
             base.OnApply(e);

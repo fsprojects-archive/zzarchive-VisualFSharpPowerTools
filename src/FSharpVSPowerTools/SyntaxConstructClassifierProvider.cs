@@ -117,6 +117,13 @@ namespace FSharpVSPowerTools
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (!generalOptions.SyntaxColoringEnabled)
+            {
+                Debug.WriteLine("[Syntax Coloring] The feature is disabled in General option page.");
+                return null;
+            }
+
             return buffer.Properties.GetOrCreateSingletonProperty(() => 
                 new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService, serviceProvider));
         }
