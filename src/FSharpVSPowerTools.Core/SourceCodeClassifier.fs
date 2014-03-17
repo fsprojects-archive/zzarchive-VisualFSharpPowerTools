@@ -60,7 +60,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
         Other
 
-let getTypeLocations (allSymbolsUses: FSharpSymbolUse[]) =
+let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[]) =
     allSymbolsUses
     // FCS can return multi-line ranges, let's ignore them
     |> Array.filter (fun x -> x.RangeAlternate.StartLine = x.RangeAlternate.EndLine)

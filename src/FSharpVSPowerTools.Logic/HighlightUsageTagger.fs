@@ -38,7 +38,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                 let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let doUpdate (currentRequest: SnapshotPoint, sym, newWord: SnapshotSpan, newWordSpans: SnapshotSpan seq, 
+    let doUpdate (currentRequest: SnapshotPoint, sym, newWord: SnapshotSpan, newWordSpans: seq<SnapshotSpan>, 
                   fileName: string, projectProvider: IProjectProvider) =
         async {
             if currentRequest = requestedPoint then

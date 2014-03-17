@@ -53,7 +53,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                         let! allSymbolsUses =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
                 
-                        getTypeLocations allSymbolsUses
+                        getCategoriesAndLocations allSymbolsUses
                         |> Array.sortBy (fun (_, (startLine, startCol, _, _)) -> startLine, startCol)
                         |> synchronousUpdate
                     finally
