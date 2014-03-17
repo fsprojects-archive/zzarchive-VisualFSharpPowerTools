@@ -6,7 +6,7 @@ open System
 open FSharp
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools.Helpers
+open FSharpVSPowerTools.ProjectSystem
 open System.ComponentModel.Design
 open System.Xml.Linq
 open System.Xml
@@ -23,137 +23,141 @@ module PkgCmdConst =
     let cmdNewFolderBelow = 0x1073
     let cmdFolderRename = 0x1074
 
-// NewFolder 'mode'
 type Action = 
     | New
-    | NewAbove
-    | NewBelow
     | Rename
+
+[<NoEquality; NoComparison>]
+type actionInfo =
+    { item : ProjectItem option
+      project : Project
+      action : Action }
+
+[<NoEquality; NoComparison>]
+type actionInfoWithItem =
+    { item : ProjectItem
+      project : Project
+      newFolderName : string
+      action : Action}
 
 module FolderMenuResources = 
     let getWindowTitle action = 
         match action with
         | Action.New -> "F# Power Tools - New Folder"
-        | Action.NewAbove -> "F# Power Tools - New Folder Above"
-        | Action.NewBelow -> "F# Power Tools - New Folder Below"
         | Action.Rename -> "F# Power Tools - Rename Folder"
 
-type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : IVsUIShell) = 
+type FolderMenuCommandsFilter(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) = 
 
     let xn = XName.Get
     let xns name = XName.Get(name, "http://schemas.microsoft.com/developer/msbuild/2003")
 
-    let getSelectedItems() = SolutionExplorerHelper.getSelectedItems dte |> List.ofSeq
-    let getSelectedProjects() = SolutionExplorerHelper.getSelectedProjects dte |> List.ofSeq
+    let getSelectedItems() = VSUtils.getSelectedItemsFromSolutionExplorer dte |> List.ofSeq
+    let getSelectedProjects() = VSUtils.getSelectedProjectsFromSolutionExplorer dte |> List.ofSeq
     
-    let isCommandEnabled action = 
+    let stripEndSlash (x:string) = x.TrimEnd(char "\\")
+
+    let getActionInfo action =
         let items = getSelectedItems()
         let projects = getSelectedProjects()
         match items, projects with
-        | [item], [] -> 
-            SolutionExplorerHelper.isFSharpProject item.ContainingProject.Kind 
-            && (SolutionExplorerHelper.isPhysicalFolder item.Kind || action = Action.NewAbove || action = Action.NewBelow)
-        | [], [project] -> SolutionExplorerHelper.isFSharpProject project.Kind && action = Action.New
-        | _, _ -> false
-    
-    let getCurrentProject (items : ProjectItem list) (projects : Project list) = 
-        match items with
-        | [item] -> item.ContainingProject
-        | _ -> projects.[0]
+        | [item], [] -> Some { actionInfo.item=Some(item); project=item.ContainingProject; action=action }  // just one item selected
+        | [], [project] -> Some { item=None; project=project; action=action }                    // just one project selected
+        | _, _ -> None
+
+    let isCommandEnabled (actionInfo: actionInfo option) = 
+        match actionInfo with
+        | Some info ->
+            if VSUtils.isFSharpProject info.project then
+                match info.item with
+                | Some item -> VSUtils.isPhysicalFolder item
+                | None -> info.action = Action.New
+            else
+                false
+        | None -> false
     
     let getProperty (item:ProjectItem) name =
         let property = item.Properties |> Seq.cast<Property> |> Seq.tryFind (fun p -> p.Name = name)
         match property with
         | Some p -> p.Value :?> string
-        | None -> ""        
+        | None -> ""
 
-    let getCurrentName action = 
-        match action with
+    let getCurrentName (actionInfo: actionInfo) = 
+        match actionInfo.action with
         | Action.Rename -> 
-            let items = getSelectedItems()
-            let item = items.[0]
-            getProperty item "FileName"
-        | _ -> ""
+            match actionInfo.item with
+            | Some item -> getProperty item "FileName"
+            | None ->
+                System.Diagnostics.Debug.Fail("item is None for Action.Rename")
+                ""
+        | _-> ""
     
     let getFullPath item = getProperty item "FullPath"
     
-    let renameFolder (project : Project) item newFolderName (filesItemGroup : XContainer) = 
-        let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
-        let fullPath = getFullPath item
+    let replaceIncludePaths oldFolder newFolder (itemGroup: XContainer) =
+        itemGroup.Elements()
+        |> Seq.map (fun e -> e.Attribute(xn "Include"))
+        |> Seq.filter (fun a -> a.Value.Equals(oldFolder) || a.Value.StartsWith(oldFolder + "\\"))
+        |> Seq.iter (fun a -> a.Value <- newFolder + a.Value.Substring(oldFolder.Length))
+
+    let replaceIncludeGroup (xDoc: XDocument) oldFolder newFolder elementName  =
+        xDoc.Root.Elements(xns "ItemGroup")
+        |> Seq.tryFind (fun ig -> ig.Element(xns elementName) <> null)
+        |> Option.iter (replaceIncludePaths oldFolder newFolder)
+
+    let renameFolder info = 
+        let projectAbsolutePath = (Path.GetDirectoryName info.project.FullName) + "\\"
+        let fullPath = getFullPath info.item
         let oldFolderFullPath = Path.GetDirectoryName fullPath
-        let newFolderFullPath = Path.Combine(Path.GetDirectoryName(oldFolderFullPath), newFolderName)
-        let oldFolder = oldFolderFullPath.Replace(projectAbsolutePath, "")
-        let newFolder = newFolderFullPath.Replace(projectAbsolutePath, "")
-        let oldLength = oldFolder.Length
-        filesItemGroup.Elements()
-        |> Seq.filter (fun e -> e.Attribute(xn "Include").Value.StartsWith(oldFolder))
-        |> Seq.iter 
-               (fun e -> 
-               e.Attribute(xn "Include").Value <- newFolder + e.Attribute(xn "Include").Value.Substring(oldLength))
-    
-    let addNewFolder (project : Project) newFolderName (filesItemGroup : XContainer) = 
-        let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
-        let newFolderFullPath = Path.Combine(projectAbsolutePath, newFolderName)
+        let newFolderFullPath = Path.Combine(Path.GetDirectoryName(oldFolderFullPath), info.newFolderName)
+        let oldFolder = stripEndSlash(oldFolderFullPath.Replace(projectAbsolutePath, ""))
+        let newFolder = stripEndSlash(newFolderFullPath.Replace(projectAbsolutePath, ""))
         if not (Directory.Exists newFolderFullPath) then
-            Directory.CreateDirectory newFolderFullPath |> ignore
-            filesItemGroup.Add(new XElement(xns "Folder", new XAttribute(xn "Include", newFolderName + "\\")))
-    
-    let addNewSubFolder (project : Project) item newFolderName (filesItemGroup : XContainer) = 
+            Directory.Move(oldFolderFullPath, newFolderFullPath)
+            let xDoc = XDocument.Load(info.project.FileName)
+            replaceIncludeGroup xDoc oldFolder newFolder "Compile"
+            replaceIncludeGroup xDoc oldFolder newFolder "Folder"
+            xDoc.Save(info.project.FileName)
+
+    let createNewFolder relativePath fullPath (projectFile: string) =
+        if not (Directory.Exists fullPath) then
+            Directory.CreateDirectory fullPath |> ignore
+            let xDoc = XDocument.Load(projectFile)
+            let filesItemGroup = xDoc.Root.Elements(xns "ItemGroup") |> Seq.tryFind (fun ig -> ig.Element(xns "Folder") <> null)
+            let group =
+                match filesItemGroup with
+                | Some x -> x
+                | None ->
+                    let x = new XElement(xns "ItemGroup")
+                    xDoc.Root.Add x
+                    x
+            group.Add(new XElement(xns "Folder", new XAttribute(xn "Include", relativePath)))
+            xDoc.Save(projectFile)
+
+    let addNewFolder (project : Project) newFolderName = 
         let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
-        let fullPath = getFullPath item
-        let newFolderFullPath = Path.Combine(fullPath, newFolderName)
-        let newFolder = newFolderFullPath.Replace(projectAbsolutePath, "")
-        let parent = Path.GetDirectoryName(newFolder)
-        if not (Directory.Exists newFolderFullPath) then
-            Directory.CreateDirectory newFolderFullPath |> ignore
-            let last = 
-                filesItemGroup.Elements()
-                |> Seq.filter (fun e -> e.Attribute(xn "Include").Value.StartsWith(parent))
-                |> Seq.last
-            last.AddAfterSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
+        let newFolderFullPath = stripEndSlash(Path.Combine(projectAbsolutePath, newFolderName))
+        createNewFolder newFolderName newFolderFullPath project.FileName
     
-    let addNewFolderAboveOrBelow (project : Project) item newFolderName (filesItemGroup : XContainer) action = 
-        let projectAbsolutePath = (Path.GetDirectoryName project.FileName) + "\\"
-        let fullPath = Path.GetDirectoryName(getFullPath item)
-        let newFolderFullPath = Path.Combine(Path.GetDirectoryName(fullPath), newFolderName)
-        let newFolder = newFolderFullPath.Replace(projectAbsolutePath, "")
-        let relative = fullPath.Replace(projectAbsolutePath, "")
-        if not (Directory.Exists newFolderFullPath) then
-            Directory.CreateDirectory newFolderFullPath |> ignore
-            match action with
-            | Action.NewAbove ->
-                let first = 
-                    filesItemGroup.Elements()
-                    |> Seq.find (fun e -> e.Attribute(xn "Include").Value.StartsWith(relative))
-                first.AddBeforeSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
-            | Action.NewBelow ->
-                let last = 
-                    filesItemGroup.Elements()
-                    |> Seq.filter (fun e -> e.Attribute(xn "Include").Value.StartsWith(relative))
-                    |> Seq.last
-                last.AddAfterSelf(new XElement(xns "Folder", new XAttribute(xn "Include", newFolder + "\\")))
-            | _ -> ()
+    let addNewSubFolder info = 
+        let projectAbsolutePath = (Path.GetDirectoryName info.project.FileName) + "\\"
+        let fullPath = getFullPath info.item
+        let newFolderFullPath = Path.Combine(fullPath, info.newFolderName)
+        let newFolder = stripEndSlash(newFolderFullPath.Replace(projectAbsolutePath, ""))
+        createNewFolder newFolder newFolderFullPath info.project.FileName
     
-    let performAction action (newFolderName : string) = 
-        let items = getSelectedItems()
-        let projects = getSelectedProjects()
-        let project = getCurrentProject items projects
-        let projectXml = XDocument.Load(project.FileName)
-        let filesItemGroup = 
-            projectXml.Root.Elements(xns "ItemGroup") 
-            |> Seq.tryFind (fun ig -> ig.Element(xns "Compile") <> null || ig.Element(xns "Folder") <> null)
-        match filesItemGroup with
-        | Some group -> 
-            match action with
-            | Action.Rename -> renameFolder project items.[0] newFolderName group
-            | Action.New -> 
-                match items.Length with
-                | 1 -> addNewSubFolder project items.[0] newFolderName group
-                | _ -> addNewFolder project newFolderName group
-            | Action.NewAbove | Action.NewBelow -> addNewFolderAboveOrBelow project items.[0] newFolderName group action
-            projectXml.Save(project.FileName)
-        | None -> ()
-    
+    let performAction (info: actionInfo) (newFolderName: string) = 
+        match info.action with
+        | Action.Rename ->
+            match info.item with
+            | Some item ->
+                renameFolder { item=item; project=info.project; action=info.action; newFolderName=newFolderName }
+            | None ->
+                System.Diagnostics.Debug.Fail("addNewFolderAboveOrBelow called with action = Action.Rename and info = None")
+        | Action.New -> 
+            match info.item with
+            | Some item -> addNewSubFolder { item=item; project=info.project; action=info.action; newFolderName=newFolderName }
+            | None -> addNewFolder info.project newFolderName
+
     let askForNewFolderName resources = 
         let model = NewFolderNameDialogModel(resources)
         let wnd = UI.loadDialog model
@@ -164,24 +168,28 @@ type FolderMenuCommandsFilter(dte : DTE2, mcs : OleMenuCommandService, shell : I
         | _ -> None
     
     let executeCommand action = 
-        let currentName = getCurrentName action
-        let resources = 
-            { WindowTitle = FolderMenuResources.getWindowTitle action
-              OriginalName = currentName }
-        askForNewFolderName resources |> Option.iter (performAction action)
+        let actionInfo = getActionInfo action
+        match actionInfo with 
+        | Some info ->
+            let currentName = getCurrentName info
+            let resources = 
+                { WindowTitle = FolderMenuResources.getWindowTitle action
+                  OriginalName = currentName }
+            askForNewFolderName resources |> Option.iter (performAction info)
+        | None ->
+            System.Diagnostics.Debug.Fail("actionInfo is None")
+            ()
     
     let setupCommand guid id action = 
         let command = new CommandID(guid, id)
         let menuCommand = new OleMenuCommand((fun s e -> executeCommand action), command)
-        menuCommand.BeforeQueryStatus.AddHandler(fun s e -> (s :?> OleMenuCommand).Enabled <- isCommandEnabled action)
+        menuCommand.BeforeQueryStatus.AddHandler(fun s e -> (s :?> OleMenuCommand).Enabled <- (getActionInfo action |> isCommandEnabled))
         mcs.AddCommand(menuCommand)
     
     let setupNewFolderCommand = setupCommand PkgCmdConst.guidNewFolderCmdSet
     
     member x.SetupCommands() = 
         setupNewFolderCommand PkgCmdConst.cmdNewFolder Action.New
-        setupNewFolderCommand PkgCmdConst.cmdNewFolderAbove Action.NewAbove
-        setupNewFolderCommand PkgCmdConst.cmdNewFolderBelow Action.NewBelow
         setupNewFolderCommand PkgCmdConst.cmdFolderRename Action.Rename
     
     member x.ShowDialog(wnd : Window) = 

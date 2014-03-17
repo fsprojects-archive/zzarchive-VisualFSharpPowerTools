@@ -17,8 +17,7 @@ type NewFolderNameDialogResources =
     { WindowTitle : string
       OriginalName : string }
 
-type NewFolderNameDialogModel(_resources :NewFolderNameDialogResources) =
-    let resources  = _resources
+type NewFolderNameDialogModel(resources :NewFolderNameDialogResources) =
 
     let mutable name = resources.OriginalName
 
