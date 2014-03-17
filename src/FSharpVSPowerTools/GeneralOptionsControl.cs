@@ -21,7 +21,7 @@ namespace FSharpVSPowerTools
         public bool XmlDocEnabled 
         {
             get { return this.chbXmlDoc.Checked; }
-            set { this.chbXmlDoc.Checked = value;  }
+            set { chbXmlDoc.Checked = value;  }
         }
 
         public bool FormattingEnabled
@@ -67,7 +67,7 @@ namespace FSharpVSPowerTools
 
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
-            this.chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
+            chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
             chbFormatting.Checked = OptionsPage.FormattingEnabled;
             chbNavBar.Checked = OptionsPage.NavBarEnabled;
             chbHighlightUsage.Checked = OptionsPage.HighlightUsageEnabled;
