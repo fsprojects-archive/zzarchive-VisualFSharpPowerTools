@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
             this.chbNavigateTo = new System.Windows.Forms.CheckBox();
             this.chbDepthColorizer = new System.Windows.Forms.CheckBox();
             this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
@@ -39,7 +40,6 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -58,17 +58,29 @@
             this.grbOptions.Controls.Add(this.chbXmlDoc);
             this.grbOptions.Location = new System.Drawing.Point(3, 3);
             this.grbOptions.Name = "grbOptions";
-            this.grbOptions.Size = new System.Drawing.Size(424, 254);
+            this.grbOptions.Size = new System.Drawing.Size(424, 272);
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbSyntaxColoring
+            // 
+            this.chbSyntaxColoring.AutoSize = true;
+            this.chbSyntaxColoring.Checked = true;
+            this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 99);
+            this.chbSyntaxColoring.Name = "chbSyntaxColoring";
+            this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
+            this.chbSyntaxColoring.TabIndex = 11;
+            this.chbSyntaxColoring.Text = "Syntax coloring";
+            this.chbSyntaxColoring.UseVisualStyleBackColor = true;
             // 
             // chbNavigateTo
             // 
             this.chbNavigateTo.AutoSize = true;
             this.chbNavigateTo.Checked = true;
             this.chbNavigateTo.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbNavigateTo.Location = new System.Drawing.Point(16, 168);
+            this.chbNavigateTo.Location = new System.Drawing.Point(16, 191);
             this.chbNavigateTo.Name = "chbNavigateTo";
             this.chbNavigateTo.Size = new System.Drawing.Size(82, 17);
             this.chbNavigateTo.TabIndex = 10;
@@ -78,7 +90,7 @@
             // chbDepthColorizer
             // 
             this.chbDepthColorizer.AutoSize = true;
-            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 145);
+            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 168);
             this.chbDepthColorizer.Name = "chbDepthColorizer";
             this.chbDepthColorizer.Size = new System.Drawing.Size(97, 17);
             this.chbDepthColorizer.TabIndex = 9;
@@ -90,7 +102,7 @@
             this.chbRenameRefactoring.AutoSize = true;
             this.chbRenameRefactoring.Checked = true;
             this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 122);
+            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 145);
             this.chbRenameRefactoring.Name = "chbRenameRefactoring";
             this.chbRenameRefactoring.Size = new System.Drawing.Size(119, 17);
             this.chbRenameRefactoring.TabIndex = 8;
@@ -102,7 +114,7 @@
             this.chbHighlightUsage.AutoSize = true;
             this.chbHighlightUsage.Checked = true;
             this.chbHighlightUsage.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 99);
+            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 122);
             this.chbHighlightUsage.Name = "chbHighlightUsage";
             this.chbHighlightUsage.Size = new System.Drawing.Size(120, 17);
             this.chbHighlightUsage.TabIndex = 7;
@@ -123,7 +135,7 @@
             // 
             this.lblInfo.AutoSize = true;
             this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.lblInfo.Location = new System.Drawing.Point(13, 215);
+            this.lblInfo.Location = new System.Drawing.Point(13, 228);
             this.lblInfo.Name = "lblInfo";
             this.lblInfo.Size = new System.Drawing.Size(331, 13);
             this.lblInfo.TabIndex = 5;
@@ -132,7 +144,7 @@
             // lblTitle
             // 
             this.lblTitle.AutoSize = true;
-            this.lblTitle.Location = new System.Drawing.Point(13, 231);
+            this.lblTitle.Location = new System.Drawing.Point(13, 244);
             this.lblTitle.Name = "lblTitle";
             this.lblTitle.Size = new System.Drawing.Size(95, 13);
             this.lblTitle.TabIndex = 4;
@@ -141,7 +153,7 @@
             // lblHome
             // 
             this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(101, 231);
+            this.lblHome.Location = new System.Drawing.Point(101, 244);
             this.lblHome.Name = "lblHome";
             this.lblHome.Size = new System.Drawing.Size(254, 13);
             this.lblHome.TabIndex = 3;
@@ -173,18 +185,6 @@
             this.chbXmlDoc.TabIndex = 1;
             this.chbXmlDoc.Text = "Auto-generating XMLDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
-            // 
-            // chbSyntaxColoring
-            // 
-            this.chbSyntaxColoring.AutoSize = true;
-            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 192);
-            this.chbSyntaxColoring.Name = "chbSyntaxColoring";
-            this.chbSyntaxColoring.Size = new System.Drawing.Size(80, 17);
-            this.chbSyntaxColoring.TabIndex = 11;
-            this.chbSyntaxColoring.Text = "Syntax coloring";
-            this.chbSyntaxColoring.UseVisualStyleBackColor = true;
-            this.chbSyntaxColoring.Checked = true;
-            this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
             // 
             // GeneralOptionsControl
             // 

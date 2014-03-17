@@ -13,7 +13,10 @@ We currently support:
 - function coloring
 
 Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:
+
 - F# User Types
-- F# functions
+- F# Functions
+
+![Syntax coloring](img/syntax_coloring_options.png)
 
 *)
