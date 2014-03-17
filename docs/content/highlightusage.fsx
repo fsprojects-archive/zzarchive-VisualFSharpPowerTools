@@ -7,26 +7,26 @@
 Highlight references
 -----------------------
 
-The color of the highlighted marker could be customized in  "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> Highlighted References".
+The color of the highlighted marker could be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items --> Highlighted References".
 
 Here is a demo screencast.
 
 ![Highlight references](img/highlight_references.gif)
 
-We support operator highlighting
+We support Operator highlighting
 
 ![Highlight operators](img/highlight_operators.png)
 
 Generic type parameters
 
-![Highlight operators](img/highlight_generic_parameters.png)
+![Highlight generic parameters](img/highlight_generic_parameters.png)
 
 Statically resolved type parameters
 
-![Highlight operators](img/highlight_statically_resolved_type_parameters.png)
+![Highlight statically resolved type parameters](img/highlight_statically_resolved_type_parameters.png)
 
 Active patterns
 
-![Highlight operators](img/highlight_active_patterns.png)
+![Highlight active patterns](img/highlight_active_patterns.png)
 
 *)

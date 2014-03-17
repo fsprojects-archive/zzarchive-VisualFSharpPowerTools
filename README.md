@@ -33,4 +33,4 @@ Contributions are always welcome.
 The maintainers don't have much experience with Visual Studio Extensibility; any help is much appreciated.
 
 ### License
-The extension is available under Apache 2.0 license. For more information see the [License file](License.txt).
+The extension is available under Apache 2.0 license. For more information see the [License file](LICENSE.txt).
