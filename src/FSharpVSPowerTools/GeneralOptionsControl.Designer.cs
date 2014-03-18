@@ -68,7 +68,7 @@
             this.chbSyntaxColoring.AutoSize = true;
             this.chbSyntaxColoring.Checked = true;
             this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 99);
+            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 191);
             this.chbSyntaxColoring.Name = "chbSyntaxColoring";
             this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
             this.chbSyntaxColoring.TabIndex = 11;
@@ -80,7 +80,7 @@
             this.chbNavigateTo.AutoSize = true;
             this.chbNavigateTo.Checked = true;
             this.chbNavigateTo.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbNavigateTo.Location = new System.Drawing.Point(16, 191);
+            this.chbNavigateTo.Location = new System.Drawing.Point(16, 168);
             this.chbNavigateTo.Name = "chbNavigateTo";
             this.chbNavigateTo.Size = new System.Drawing.Size(82, 17);
             this.chbNavigateTo.TabIndex = 10;
@@ -90,7 +90,7 @@
             // chbDepthColorizer
             // 
             this.chbDepthColorizer.AutoSize = true;
-            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 168);
+            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 145);
             this.chbDepthColorizer.Name = "chbDepthColorizer";
             this.chbDepthColorizer.Size = new System.Drawing.Size(97, 17);
             this.chbDepthColorizer.TabIndex = 9;
@@ -102,7 +102,7 @@
             this.chbRenameRefactoring.AutoSize = true;
             this.chbRenameRefactoring.Checked = true;
             this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 145);
+            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 122);
             this.chbRenameRefactoring.Name = "chbRenameRefactoring";
             this.chbRenameRefactoring.Size = new System.Drawing.Size(119, 17);
             this.chbRenameRefactoring.TabIndex = 8;
@@ -114,7 +114,7 @@
             this.chbHighlightUsage.AutoSize = true;
             this.chbHighlightUsage.Checked = true;
             this.chbHighlightUsage.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 122);
+            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 99);
             this.chbHighlightUsage.Name = "chbHighlightUsage";
             this.chbHighlightUsage.Size = new System.Drawing.Size(120, 17);
             this.chbHighlightUsage.TabIndex = 7;

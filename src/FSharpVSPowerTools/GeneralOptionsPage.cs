@@ -109,13 +109,14 @@ namespace FSharpVSPowerTools
             {
                 _optionsControl = new GeneralOptionsControl();
                 _optionsControl.OptionsPage = this;
-                _optionsControl.XmlDocEnabled = this.XmlDocEnabled;
+                _optionsControl.XmlDocEnabled = XmlDocEnabled;
                 _optionsControl.FormattingEnabled = FormattingEnabled;
                 _optionsControl.NavBarEnabled = NavBarEnabled;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
                 _optionsControl.RenameRefactoringEnabled = RenameRefactoringEnabled;
                 _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
                 _optionsControl.NavigateToEnabled = NavigateToEnabled;
+                _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
 
                 return _optionsControl;
             }
@@ -129,6 +130,7 @@ namespace FSharpVSPowerTools
             RenameRefactoringEnabled = true;
             DepthColorizerEnabled = false;
             NavigateToEnabled = true;
+            SyntaxColoringEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         

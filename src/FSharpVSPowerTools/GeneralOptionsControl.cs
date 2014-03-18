@@ -20,7 +20,7 @@ namespace FSharpVSPowerTools
 
         public bool XmlDocEnabled 
         {
-            get { return this.chbXmlDoc.Checked; }
+            get { return chbXmlDoc.Checked; }
             set { chbXmlDoc.Checked = value;  }
         }
 
@@ -74,6 +74,7 @@ namespace FSharpVSPowerTools
             chbRenameRefactoring.Checked = OptionsPage.RenameRefactoringEnabled;
             chbDepthColorizer.Checked = OptionsPage.DepthColorizerEnabled;
             chbNavigateTo.Checked = OptionsPage.NavigateToEnabled;
+            chbSyntaxColoring.Checked = OptionsPage.SyntaxColoringEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

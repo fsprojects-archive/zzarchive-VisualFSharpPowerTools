@@ -122,7 +122,9 @@ namespace FSharpVSPowerTools
             }
 
             return buffer.Properties.GetOrCreateSingletonProperty(() => 
-                new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService, serviceProvider));
+                {
+                    return new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService, serviceProvider);
+                });
         }
     }
 }
