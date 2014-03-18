@@ -1,14 +1,10 @@
-﻿using System;
-using System.Security.Principal;
-using System.Collections.Generic;
+﻿using Microsoft.VisualStudio.Shell;
+using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.VisualStudio.Shell;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using System.Configuration;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+using System.Windows.Forms;
 
 namespace FSharpVSPowerTools
 {
@@ -147,7 +143,7 @@ namespace FSharpVSPowerTools
                 if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
                 {
                     NavBarEnabled = _optionsControl.NavBarEnabled;
-                };
+                }
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
                 RenameRefactoringEnabled = _optionsControl.RenameRefactoringEnabled;
