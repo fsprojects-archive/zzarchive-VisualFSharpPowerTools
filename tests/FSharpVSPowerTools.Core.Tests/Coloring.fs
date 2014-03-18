@@ -50,3 +50,7 @@ type DUWithFunction = FuncCase of (unit -> unit)
 let (FuncCase funcCase) = FuncCase (fun() -> ())
 match FuncCase (fun() -> ()) with FuncCase func -> func()
 let ``double_quoted_function_without_spaces`` () = ()
+let ``double quoted function with spaces`` () = ()
+let sequence = seq { 1..10 }
+[<System.Diagnostics.DebuggerDisplay "name">]
+type TypeWithAttribute() = class end
