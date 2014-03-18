@@ -141,7 +141,7 @@ namespace FSharpVSPowerTools
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
             {
-                this.XmlDocEnabled = _optionsControl.XmlDocEnabled;
+                XmlDocEnabled = _optionsControl.XmlDocEnabled;
                 FormattingEnabled = _optionsControl.FormattingEnabled;
 
                 if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
