@@ -28,6 +28,24 @@ let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 let isFSharpProject (project: EnvDTE.Project) = 
     project <> null && project.Kind <> null && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
 
+let isPhysicalFolderKind (kind: string) =
+    kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFolder, StringComparison.OrdinalIgnoreCase)
+
+let isPhysicalFileKind (kind: string) =
+    kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFile, StringComparison.OrdinalIgnoreCase)
+
+let isPhysicalFileOrFolderKind kind =
+    kind <> null && (isPhysicalFolderKind kind) || (isPhysicalFileKind kind)
+
+let isPhysicalFolder (item: EnvDTE.ProjectItem) =
+    item <> null && item.Kind <> null && (isPhysicalFolderKind item.Kind)
+
+let isPhysicalFile (item: EnvDTE.ProjectItem) =
+    item <> null && item.Kind <> null && (isPhysicalFileKind item.Kind)
+
+let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
+    item <> null && isPhysicalFileOrFolderKind item.Kind
+
 open Microsoft.FSharp.Compiler.PrettyNaming
 
 let private isDoubleBacktickIdent (s: string) =
@@ -145,9 +163,35 @@ type ProjectItem with
         |> Option.bind (fun item ->
             try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
 
+    member x.TryGetProperty name = 
+        let property = x.Properties |> Seq.cast<Property> |> Seq.tryFind (fun p -> p.Name = name)
+        match property with
+        | Some p -> Some (p.Value :?> string)
+        | None -> None
+
+    member x.GetProperty name = 
+        let property = x.TryGetProperty name
+        match property with
+        | Some p -> p
+        | None -> raise(new ArgumentException("name"))
+
 let inline ensureSucceded hr = 
     ErrorHandler.ThrowOnFailure hr
     |> ignore
+
+let private getSelectedFromSolutionExplorer<'T> (dte:EnvDTE80.DTE2) =
+    let items = dte.ToolWindows.SolutionExplorer.SelectedItems :?> UIHierarchyItem[]
+    items
+    |> Seq.choose (fun x -> 
+            match x.Object with
+            | :? 'T as p -> Some p
+            | _ -> None)
+
+let getSelectedItemsFromSolutionExplorer dte =
+    getSelectedFromSolutionExplorer<ProjectItem> dte
+
+let getSelectedProjectsFromSolutionExplorer dte =
+    getSelectedFromSolutionExplorer<Project> dte
 
 open System.ComponentModel.Composition
 

@@ -50,6 +50,7 @@
    -->
 
    <Menus>
+     
      <Menu guid="guidSHLMainMenu" id="IDM_VS_MENU_REFACTORING" priority="0x0100" type="Menu">
       <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_REFACTORING"/>
       <Strings>
@@ -57,6 +58,15 @@
         <CommandName>&amp;Refactor</CommandName>
       </Strings>
     </Menu>
+     
+     <Menu guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup" priority="0x202" type="Menu">
+       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" />
+       <Strings>
+         <ButtonText>F# Power Tools</ButtonText>
+         <CommandName>F# Power Tools</CommandName>
+       </Strings>
+     </Menu>
+     
    </Menus>
 
    <!--
@@ -74,6 +84,14 @@
       <Group guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" priority="0x0100">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_EDIT"/>
       </Group>
+
+     <Group guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0001">
+       <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
+     </Group>
+
+     <Group guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup" priority="0x0002">
+       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup"/>
+     </Group>
    
    </Groups>
 
@@ -86,6 +104,35 @@
      An element inside this section is defined by its ID and must specify a parent group, a display
      priority, an image, a type, some visibility flags (optional) and a default text.
      -->
+
+     <Button guid="guidNewFolderCmdSet" id="cmdNewFolder" priority="0x0101" type="Button">
+       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
+       <Strings>
+         <ButtonText>New Folder</ButtonText>
+       </Strings>
+     </Button>
+
+     <Button guid="guidNewFolderCmdSet" id="cmdFolderRename" priority="0x0104" type="Button">
+       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
+       <Strings>
+         <ButtonText>Rename Folder</ButtonText>
+       </Strings>
+     </Button>
+
+     <Button guid="guidNewFolderCmdSet" id="cmdMoveFolderUp" priority="0x0105" type="Button">
+       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
+       <Strings>
+         <ButtonText>Move Folder Up</ButtonText>
+       </Strings>
+     </Button>
+
+     <Button guid="guidNewFolderCmdSet" id="cmdMoveFolderDown" priority="0x0106" type="Button">
+       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
+       <Strings>
+         <ButtonText>Move Folder Down</ButtonText>
+       </Strings>
+     </Button>     
+
    </Buttons>   
  </Commands>
 
@@ -96,9 +143,29 @@
  For instance, it is possible to place one of VisualStudio's menus or commands inside one of our
  groups or one of our groups inside a menu defined somewhere else.
  -->
- <CommandPlacements>
-   <!--Here we place two commands inside the empty menu group we created in the Groups section.-->
- </CommandPlacements>
+  <CommandPlacements>
+    <!--Here we place two commands inside the empty menu group we created in the Groups section.-->
+    
+    <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0010">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_WEBITEMNODE"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0010">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_WEBFOLDER"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0010">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0100">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_WEBPROJECT"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0100">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_PROJNODE"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0100">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_SOLNNODE"/>
+    </CommandPlacement>
+    
+  </CommandPlacements>
 
 
  
@@ -146,7 +213,7 @@
    -->
    
    <!--The first GUID defined here is the one for the package. It does not contains numeric IDs.-->
-   <GuidSymbol name="guidMenuAndCommandsPkg" value="{472c687b-a8c7-43bb-8eba-3228005f7015}" />
+   <GuidSymbol name="guidMenuAndCommandsPkg" value="{f152487e-9a22-4cf9-bee6-a8f7c77f828d}" />
    
    <!--The GUID for the command set is the one that contains the numeric IDs used in this sample
        with the only exception of the one used for the bitmap.-->
@@ -155,6 +222,21 @@
      <IDSymbol name="PowerToolsCtxGroup" value="0x1013" />
      <!--Commands-->
     
-   </GuidSymbol>        
+   </GuidSymbol>
+
+   <GuidSymbol name="guidSolutionExplorerCmdSet" value="{e396b698-e00e-444b-9f5f-3dcb1ef74e62}">
+     <IDSymbol name="FSPowerToolsMenuGroup" value="0x1060" />
+     <IDSymbol name="FSPowerToolsSubMenuGroup" value="0x1061" />
+     <IDSymbol name="FSPowerToolsNewFolderGroup" value="0x1063" />
+   </GuidSymbol>
+
+   <GuidSymbol name="guidNewFolderCmdSet" value="{e396b698-e00e-444b-9f5f-3dcb1ef74e63}">
+     <IDSymbol name="FSPowerToolsMenuGroup" value="0x1070" />
+     <IDSymbol name="cmdNewFolder" value="0x1071" />
+     <IDSymbol name="cmdFolderRename" value="0x1072"/>
+     <IDSymbol name="cmdMoveFolderUp" value="0x1073"/>
+     <IDSymbol name="cmdMoveFolderDown" value="0x1074"/>
+   </GuidSymbol>
+
  </Symbols>
 </CommandTable>

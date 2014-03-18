@@ -61,6 +61,9 @@ module Reflection =
             if prop = null then failwithf "Property '%s' found, but doesn't have 'get' method." name
             meth.Invoke(instance, [||]) |> unbox<'R>
 
+    let (?<-) (o: obj) name value =
+      o.GetType().GetProperty(name).SetValue(o, value, null)
+
 open Reflection
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
@@ -90,4 +93,3 @@ type FSharpLanguageService [<ImportingConstructor>]
 
     member x.LexStateOfColorState(colorState: int): int64 =
         colorStateLookupType.Value?LexStateOfColorState(colorState)
-        
