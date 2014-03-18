@@ -1,14 +1,10 @@
-﻿using System;
-using System.Security.Principal;
-using System.Collections.Generic;
+﻿using Microsoft.VisualStudio.Shell;
+using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.VisualStudio.Shell;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using System.Configuration;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+using System.Windows.Forms;
 
 namespace FSharpVSPowerTools
 {
@@ -82,7 +78,7 @@ namespace FSharpVSPowerTools
         // We are letting Visual Studio know that these property value needs to be persisted	       
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool XMLDocEnabled { get; set; }
+        public bool XmlDocEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FormattingEnabled { get; set; }
@@ -102,6 +98,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool NavigateToEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool SyntaxColoringEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -110,7 +109,7 @@ namespace FSharpVSPowerTools
             {
                 _optionsControl = new GeneralOptionsControl();
                 _optionsControl.OptionsPage = this;
-                _optionsControl.XMLDocEnabled = XMLDocEnabled;
+                _optionsControl.XmlDocEnabled = this.XmlDocEnabled;
                 _optionsControl.FormattingEnabled = FormattingEnabled;
                 _optionsControl.NavBarEnabled = NavBarEnabled;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
@@ -123,7 +122,7 @@ namespace FSharpVSPowerTools
         }
         public GeneralOptionsPage()
         {
-            XMLDocEnabled = true;
+            XmlDocEnabled = true;
             FormattingEnabled = true;
             NavBarEnabled = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
@@ -138,18 +137,19 @@ namespace FSharpVSPowerTools
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
             {
-                XMLDocEnabled = _optionsControl.XMLDocEnabled;
+                XmlDocEnabled = _optionsControl.XmlDocEnabled;
                 FormattingEnabled = _optionsControl.FormattingEnabled;
 
                 if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
                 {
                     NavBarEnabled = _optionsControl.NavBarEnabled;
-                };
+                }
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
                 RenameRefactoringEnabled = _optionsControl.RenameRefactoringEnabled;
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
+                SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
             }
 
             base.OnApply(e);

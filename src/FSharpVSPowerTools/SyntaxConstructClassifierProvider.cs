@@ -1,16 +1,13 @@
-﻿using System;
-using System.Diagnostics;
-using System.ComponentModel.Composition;
-using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Operations;
-using Microsoft.VisualStudio.Text.Tagging;
-using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Shell;
+﻿using FSharpVSPowerTools.ProjectSystem;
 using FSharpVSPowerTools.SyntaxColoring;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Utilities;
+using System;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Windows.Media;
-using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
@@ -58,7 +55,7 @@ namespace FSharpVSPowerTools
             public FSharpReferenceTypeFormat()
             {
                 this.DisplayName = "F# User Types";
-                this.ForegroundColor = Colors.Teal;
+                this.ForegroundColor = Color.FromRgb(43, 145, 175);
             }
         }
 
@@ -117,6 +114,13 @@ namespace FSharpVSPowerTools
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (!generalOptions.SyntaxColoringEnabled)
+            {
+                Debug.WriteLine("[Syntax Coloring] The feature is disabled in General option page.");
+                return null;
+            }
+
             return buffer.Properties.GetOrCreateSingletonProperty(() => 
                 new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService, serviceProvider));
         }

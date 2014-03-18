@@ -30,7 +30,7 @@ let checkCategories line expected =
         vsLanguageService.ParseAndCheckFileInProject
             (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
-    SourceCodeClassifier.getTypeLocations (results.GetAllUsesOfAllSymbolsInFile())
+    SourceCodeClassifier.getCategoriesAndLocations (results.GetAllUsesOfAllSymbolsInFile())
     |> Array.choose (fun (category, (startLine, startCol, _, endCol)) -> 
         match category with 
         | Other -> None
