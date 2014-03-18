@@ -19,7 +19,7 @@ type Category =
 
 let internal getCategory (symbolUse: FSharpSymbolUse) =
     let symbol = symbolUse.Symbol
-
+    
     match symbol with
     | :? FSharpGenericParameter
     | :? FSharpStaticParameter -> 
@@ -60,35 +60,53 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
         Other
 
+type ColumnSpan = 
+    { Start: int 
+      End: int }
+
+type CategorizedColumnSpan =
+    { Category: Category
+      Line: int
+      ColumnSpan: ColumnSpan }
+
+// If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
+// Example: for ReferenceType symbol "System.Diagnostics.DebuggerDisplay" there are "System", "Diagnostics" and "DebuggerDisplay"
+// plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
+// after excluding "Diagnostics", we get "DebuggerDisplay" and we are done.
+let excludeColumnSpan from what =
+    if what.End < from.End && what.Start >= from.Start then
+        { from with Start = what.End + 1 } // the dot between parts
+    else from
+
 let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[]) =
+    let allSymbolsUses =
+        allSymbolsUses
+        // FCS can return multi-line ranges, let's ignore them
+        |> Array.filter (fun symbolUse -> symbolUse.RangeAlternate.StartLine = symbolUse.RangeAlternate.EndLine)
+
+    // index all symbol usages by LineNumber 
+    let wordSpans = 
+        allSymbolsUses
+        |> Array.map (fun su -> 
+            su.RangeAlternate.StartLine, 
+            { Start = su.RangeAlternate.StartColumn; End = su.RangeAlternate.EndColumn })
+        |> Seq.groupBy fst
+        |> Seq.map (fun (line, words) -> line, words |> Seq.map snd)
+        |> Map.ofSeq
+
     allSymbolsUses
-    // FCS can return multi-line ranges, let's ignore them
-    |> Array.filter (fun x -> x.RangeAlternate.StartLine = x.RangeAlternate.EndLine)
     |> Array.map (fun x ->
         let r = x.RangeAlternate
-        let symbolLength = r.EndColumn - r.StartColumn
-        let name = x.Symbol.DisplayName
-        let fullName =
-            if name = "( .ctor )" then 
-                x.Symbol.FullName.Remove (x.Symbol.FullName.Length - name.Length)
-            else
-                x.Symbol.FullName
-        let visibleName = fullName.Substring (max 0 (fullName.Length - symbolLength))
+        let span = { Start = r.StartColumn; End = r.EndColumn }
         
-        let namespaceLength = visibleName.Length - name.Length
-        
-        let location = 
-            if namespaceLength > 0 && symbolLength > name.Length && visibleName.EndsWith name then
-                let startCol = r.StartColumn + namespaceLength
-                let startCol' = 
-                    if startCol < r.EndColumn then startCol
-                    else r.StartColumn
-                r.StartLine, startCol', r.EndLine, r.EndColumn
-            else 
-                r.StartLine, r.StartColumn, r.EndLine, r.EndColumn
+        let span = 
+            match wordSpans.TryFind x.RangeAlternate.StartLine with
+            | Some spans -> spans |> Seq.fold (fun result span -> excludeColumnSpan result span) span
+            | _ -> span
+
         let category = getCategory x
-        //debug "-=O=- %A: FullName = %s, VisibleName = %s, Name = %s, range = %A, symbol = %A" 
-        //      category x.Symbol.FullName visibleName name location x.Symbol
-        category, location)
+        //debug "-=O=- %A: %s, FullName = %s, Name = %s, Range = %s, Location = %A" 
+        //      x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName name (x.RangeAlternate.ToShortString()) location
+        { Category = category; Line = r.StartLine; ColumnSpan = span })
     |> Seq.distinct
     |> Seq.toArray

@@ -31,11 +31,11 @@ let checkCategories line expected =
             (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
     SourceCodeClassifier.getCategoriesAndLocations (results.GetAllUsesOfAllSymbolsInFile())
-    |> Array.choose (fun (category, (startLine, startCol, _, endCol)) -> 
-        match category with 
+    |> Array.choose (fun loc -> 
+        match loc.Category with 
         | Other -> None
-        | _ when startLine <> line -> None
-        | _ -> Some (category, startCol, endCol))
+        | _ when loc.Line <> line -> None
+        | _ -> Some (loc.Category, loc.ColumnSpan.Start, loc.ColumnSpan.End))
     |> Array.toList
     |> Collection.assertEquiv expected
 
@@ -138,5 +138,17 @@ let ``DU case of function``() =
     checkCategories 50 [ PatternCase, 5, 13; Function, 14, 22; PatternCase, 26, 34 ]
     checkCategories 51 [ PatternCase, 6, 14; PatternCase, 34, 42; Function, 43, 47; Function, 51, 55 ]
 
-[<Test; Ignore "We cannot get this pass without FCS providing hierarchical FullName">]
+[<Test>]
 let ``double quoted function without spaces``() = checkCategories 52 [ Function, 4, 45 ]
+
+[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
+let ``double quoted function with spaces``() = checkCategories 53 [ Function, 4, 42 ]
+
+[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
+let ``computation expressions``() = checkCategories 54 []
+
+[<Test>]
+let ``fully qualified attribute``() = checkCategories 55 [ ReferenceType, 21, 36 ]
+
+[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
+let ``async type``() = checkCategories 57 [ Function, 4, 16; ReferenceType, 19, 24; Function, 25, 41 ]

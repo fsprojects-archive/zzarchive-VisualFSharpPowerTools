@@ -32,7 +32,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
         | Function -> Some functionType
         | PublicField | Other -> None
     
-    let synchronousUpdate (newLocations: (Category * (int * int * int * int)) []) = 
+    let synchronousUpdate (newLocations: CategorizedColumnSpan[]) = 
         locations.Swap(fun _ -> newLocations) |> ignore
         let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
         classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
@@ -54,7 +54,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
                 
                         getCategoriesAndLocations allSymbolsUses
-                        |> Array.sortBy (fun (_, (startLine, startCol, _, _)) -> startLine, startCol)
+                        |> Array.sortBy (fun { Line = line } -> line)
                         |> synchronousUpdate
                     finally
                         isWorking <- false
@@ -76,12 +76,13 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
             let spans = 
                 locations.Value
                 // locations are sorted, so we can safely filter them efficently
-                |> Seq.skipWhile (fun (_, (startLine, _, _, _)) -> startLine < spanStartLine)
-                |> Seq.takeWhile (fun (_, (startLine, _, _, _)) -> startLine <= spanEndLine)
-                |> Seq.choose (fun (category, location) -> 
-                    getClassficationType category 
+                |> Seq.skipWhile (fun { Line = line } -> line < spanStartLine)
+                |> Seq.takeWhile (fun { Line = line } -> line <= spanEndLine)
+                |> Seq.choose (fun loc -> 
+                    getClassficationType loc.Category
                     |> Option.map (fun classificationType -> 
-                         ClassificationSpan(fromPos snapshotSpan.Snapshot location, classificationType)))
+                        let range = loc.Line, loc.ColumnSpan.Start, loc.Line, loc.ColumnSpan.End
+                        ClassificationSpan(fromPos snapshotSpan.Snapshot range, classificationType)))
                 |> Seq.toArray
             upcast spans
         
