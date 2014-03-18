@@ -35,7 +35,7 @@ let checkCategories line expected =
         match loc.Category with 
         | Other -> None
         | _ when loc.Line <> line -> None
-        | _ -> Some (loc.Category, loc.Range.StartCol, loc.Range.EndCol))
+        | _ -> Some (loc.Category, loc.ColumnSpan.Start, loc.ColumnSpan.End))
     |> Array.toList
     |> Collection.assertEquiv expected
 
@@ -149,3 +149,6 @@ let ``computation expressions``() = checkCategories 54 []
 
 [<Test>]
 let ``fully qualified attribute``() = checkCategories 55 [ ReferenceType, 21, 36 ]
+
+[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
+let ``async type``() = checkCategories 57 [ Function, 4, 16; ReferenceType, 19, 24; Function, 25, 41 ]

@@ -54,3 +54,4 @@ let ``double quoted function with spaces`` () = ()
 let sequence = seq { 1..10 }
 [<System.Diagnostics.DebuggerDisplay "name">]
 type TypeWithAttribute() = class end
+let asyncRunSync = Async.RunSynchronously

@@ -32,7 +32,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
         | Function -> Some functionType
         | PublicField | Other -> None
     
-    let synchronousUpdate (newLocations: CategorizedRange[]) = 
+    let synchronousUpdate (newLocations: CategorizedColumnSpan[]) = 
         locations.Swap(fun _ -> newLocations) |> ignore
         let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
         classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
@@ -81,7 +81,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                 |> Seq.choose (fun loc -> 
                     getClassficationType loc.Category
                     |> Option.map (fun classificationType -> 
-                        let range = loc.Line, loc.Range.StartCol, loc.Line, loc.Range.EndCol
+                        let range = loc.Line, loc.ColumnSpan.Start, loc.Line, loc.ColumnSpan.End
                         ClassificationSpan(fromPos snapshotSpan.Snapshot range, classificationType)))
                 |> Seq.toArray
             upcast spans

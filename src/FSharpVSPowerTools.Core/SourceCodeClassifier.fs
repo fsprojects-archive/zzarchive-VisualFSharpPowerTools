@@ -60,36 +60,36 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
         Other
 
-type Range = 
-    { StartCol: int 
-      EndCol: int }
+type ColumnSpan = 
+    { Start: int 
+      End: int }
 
-type CategorizedRange =
+type CategorizedColumnSpan =
     { Category: Category
       Line: int
-      Range: Range }
+      ColumnSpan: ColumnSpan }
 
-// If "what" range is completely included by "from" one, then truncate "from" to the end of "what".
+// If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
 // Example: for ReferenceType symbol "System.Diagnostics.DebuggerDisplay" there are "System", "Diagnostics" and "DebuggerDisplay"
 // plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
 // after excluding "Diagnostics", we get "DebuggerDisplay" and we are done.
-let excludeRange from what =
-    if what.EndCol < from.EndCol && what.StartCol >= from.StartCol then
-        { from with StartCol = what.EndCol + 1 } // the dot between parts
+let excludeColumnSpan from what =
+    if what.End < from.End && what.Start >= from.Start then
+        { from with Start = what.End + 1 } // the dot between parts
     else from
 
 let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[]) =
     let allSymbolsUses =
         allSymbolsUses
         // FCS can return multi-line ranges, let's ignore them
-        |> Array.filter (fun x -> x.RangeAlternate.StartLine = x.RangeAlternate.EndLine)
+        |> Array.filter (fun symbolUse -> symbolUse.RangeAlternate.StartLine = symbolUse.RangeAlternate.EndLine)
 
     // index all symbol usages by LineNumber 
-    let wordRanges = 
+    let wordSpans = 
         allSymbolsUses
         |> Array.map (fun su -> 
             su.RangeAlternate.StartLine, 
-            { StartCol = su.RangeAlternate.StartColumn; EndCol = su.RangeAlternate.EndColumn })
+            { Start = su.RangeAlternate.StartColumn; End = su.RangeAlternate.EndColumn })
         |> Seq.groupBy fst
         |> Seq.map (fun (line, words) -> line, words |> Seq.map snd)
         |> Map.ofSeq
@@ -97,16 +97,16 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[]) =
     allSymbolsUses
     |> Array.map (fun x ->
         let r = x.RangeAlternate
-        let range = { StartCol = r.StartColumn; EndCol = r.EndColumn }
+        let span = { Start = r.StartColumn; End = r.EndColumn }
         
-        let range = 
-            match wordRanges.TryFind x.RangeAlternate.StartLine with
-            | Some ranges -> ranges |> Seq.fold (fun res r -> excludeRange res r) range
-            | _ -> range
+        let span = 
+            match wordSpans.TryFind x.RangeAlternate.StartLine with
+            | Some spans -> spans |> Seq.fold (fun result span -> excludeColumnSpan result span) span
+            | _ -> span
 
         let category = getCategory x
         //debug "-=O=- %A: %s, FullName = %s, Name = %s, Range = %s, Location = %A" 
         //      x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName name (x.RangeAlternate.ToShortString()) location
-        { Category = category; Line = r.StartLine; Range = range })
+        { Category = category; Line = r.StartLine; ColumnSpan = span })
     |> Seq.distinct
     |> Seq.toArray
