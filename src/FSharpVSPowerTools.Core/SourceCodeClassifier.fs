@@ -20,6 +20,11 @@ type Category =
 let internal getCategory (symbolUse: FSharpSymbolUse) =
     let symbol = symbolUse.Symbol
     
+    let isOperator (name: string) =
+        if name.StartsWith "( " && name.EndsWith " )" && name.Length > 4 then
+            name.Substring (2, name.Length - 4) |> String.forall (fun c -> c <> ' ')
+        else false
+
     match symbol with
     | :? FSharpGenericParameter
     | :? FSharpStaticParameter -> 
@@ -50,7 +55,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
         if func.CompiledName = ".ctor" then ReferenceType
         elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod then 
-            if func.DisplayName.StartsWith "( " && func.DisplayName.EndsWith " )" then
+            if isOperator func.DisplayName then
                 Other
             else
                 Function
