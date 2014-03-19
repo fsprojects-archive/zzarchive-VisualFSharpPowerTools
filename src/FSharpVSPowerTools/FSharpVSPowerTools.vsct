@@ -112,12 +112,12 @@
        </Strings>
      </Button>
 
-     <Button guid="guidNewFolderCmdSet" id="cmdFolderRename" priority="0x0104" type="Button">
+     <!--<Button guid="guidNewFolderCmdSet" id="cmdFolderRename" priority="0x0104" type="Button">
        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
        <Strings>
          <ButtonText>Rename Folder</ButtonText>
        </Strings>
-     </Button>
+     </Button>-->
 
      <Button guid="guidNewFolderCmdSet" id="cmdMoveFolderUp" priority="0x0105" type="Button">
        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>

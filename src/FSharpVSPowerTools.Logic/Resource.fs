@@ -15,6 +15,7 @@ module Resource =
     let [<Literal>] validatingGenericTypeParameter = "Invalid name for generic type parameters."
     let [<Literal>] validatingStaticallyResolvedTypeParameter = "Invalid name for statically resolved type parameters."
     let [<Literal>] validatingOperator ="Invalid name for operators."
+    let [<Literal>] validationFolderWithGivenNameAlreadyExists = "Folder with given name already exists in the project."
 
     let [<Literal>] navBarUnauthorizedMessage = "Unauthorized access to navigation bar configuration. Please try again after restarting Visual Studio from Administrator."
     let [<Literal>] navBarErrorMessage = "Error occurs while saving navigation bar configuration."

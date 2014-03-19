@@ -23,24 +23,26 @@ module PkgCmdConst =
     let cmdMoveFolderUp = 0x1073
     let cmdMoveFolderDown = 0x1074
 
-type Action = 
-    | New
-    | Rename
+type MoveAction =
     | MoveUp
     | MoveDown
 
+type NameAction = 
+    | New
+
+type Action =
+    | NameAction of NameAction
+    | MoveAction of MoveAction
+
 [<NoEquality; NoComparison>]
-type actionInfo =
+type ActionInfo =
     { item : ProjectItem option
-      project : Project
-      action : Action }
+      project : Project }
 
 module FolderMenuResources = 
     let getWindowTitle action = 
         match action with
-        | Action.New -> Resource.newFolderDialogTitle
-        | Action.Rename -> Resource.renameFolderDialogTitle
-        | _ -> ""
+        | NameAction.New -> Resource.newFolderDialogTitle
 
 [<Export>]
 type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) = 
@@ -66,35 +68,35 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
     let getSelectedItems() = VSUtils.getSelectedItemsFromSolutionExplorer dte |> List.ofSeq
     let getSelectedProjects() = VSUtils.getSelectedProjectsFromSolutionExplorer dte |> List.ofSeq
 
-    let getActionInfo action =
+    let rec getFolderNames (item:ProjectItem) =
+        let current = item.Name
+        let subFolders = 
+            item.ProjectItems
+            |> Seq.cast<ProjectItem>
+            |> Seq.filter (fun i -> VSUtils.isPhysicalFolder i)
+            |> Seq.collect (fun f -> getFolderNames f)
+        Seq.singleton current |> Seq.append subFolders
+
+    let getfolderNamesFromProject (project: Project) =
+        let names =
+            project.ProjectItems
+            |> Seq.cast<ProjectItem>
+            |> Seq.filter (fun i -> VSUtils.isPhysicalFolder i)
+            |> Seq.map (fun f -> getFolderNames f)
+            |> Seq.collect (fun n -> n)
+        Set names
+
+    let getActionInfo() =
         let items = getSelectedItems()
         let projects = getSelectedProjects()
         match items, projects with
-        | [item], [] -> Some { actionInfo.item=Some(item); project=item.ContainingProject; action=action }
-        | [], [project] -> Some { item=None; project=project; action=action }
+        | [item], [] -> Some { ActionInfo.item=Some(item); project=item.ContainingProject }
+        | [], [project] -> Some { item=None; project=project }
         | _, _ -> None
 
     let createFolder (items: ProjectItems) (name: string) = 
         items.AddFolder name |> ignore
         ()
-
-    let renameFolder (item: ProjectItem) (name:string) = 
-   //    item?Node?RenameDirectory(name)
-
-        let s = item?Node
-        ()
-
-    let performActionWithName (info: actionInfo) (name: string) = 
-        match info.action with
-        | Action.New ->
-            match info.item with
-            | Some item -> createFolder item.ProjectItems name
-            | None -> createFolder info.project.ProjectItems name
-        | Action.Rename ->
-            match info.item with
-            | Some item -> renameFolder item name
-            | None -> Debug.Fail "Action.Rename called with item = None"
-        | _ -> Debug.Fail (sprintf "performActionWithName called with action = %s" (string info.action))
 
     let getNextItemImpl node parent =
         if parent?FirstChild = node then
@@ -143,15 +145,14 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
 
     let getNextItem = getItem getNextItemImpl
 
-    let performMoveAction (info: actionInfo) =
+    let performMoveAction (info: ActionInfo) action =
         let service = new FSharpProjectSystemService(dte :?> DTE)
         let node = info.item.Value?Node
         let project = info.project?Project
 
-        match info.action with
-        | Action.MoveUp -> service.MoveFolderUp node (getPreviousItem node) project
-        | Action.MoveDown -> service.MoveFolderDown node (getNextItem node) project
-        | _ -> Debug.Fail (sprintf "performMoveAction called with action = %s" (string info.action))
+        match action with
+        | MoveAction.MoveUp -> service.MoveFolderUp node (getPreviousItem node) project
+        | MoveAction.MoveDown -> service.MoveFolderDown node (getNextItem node) project
 
         project?SetProjectFileDirty(true)
         project?ComputeSourcesAndFlags()
@@ -175,49 +176,57 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
         | Some true -> Some model.Name
         | _ -> None
 
-    let getCurrentName (actionInfo: actionInfo) = 
-        match actionInfo.action with
-        | Action.Rename -> 
-            match actionInfo.item with
-            | Some item -> item.GetProperty "FileName"
-            | None ->
-                System.Diagnostics.Debug.Fail("item is None for Action.Rename")
-                ""
-        | _-> ""
+    let getCurrentName (actionInfo: ActionInfo) action = 
+        match action with
+        | NameAction.New -> ""
 
-    let executeCommand action = 
-        let actionInfo = getActionInfo action
+    let performNameAction info action name =
+        match action with
+        | NameAction.New ->
+            match info.item with
+            | Some item -> createFolder item.ProjectItems name
+            | None -> createFolder info.project.ProjectItems name
+
+    let executeCommand (action:Action) = 
+        let actionInfo = getActionInfo()
         match actionInfo with 
         | Some info ->
-            match info.action with
-            | Action.New | Action.Rename ->
-                let currentName = getCurrentName info
+            match action with
+            | Action.NameAction a ->
                 let resources = 
-                    { WindowTitle = FolderMenuResources.getWindowTitle action
-                      OriginalName = currentName }
-                askForNewFolderName resources |> Option.iter (performActionWithName info)
-            | Action.MoveDown | Action.MoveUp ->
-                performMoveAction info
+                    { WindowTitle = FolderMenuResources.getWindowTitle a
+                      OriginalName = getCurrentName info a
+                      FolderNames = getfolderNamesFromProject info.project }
+                askForNewFolderName resources |> Option.iter (performNameAction info a)
+            | Action.MoveAction a -> performMoveAction info a
         | None ->
             System.Diagnostics.Debug.Fail("actionInfo is None")
             ()
         ()
 
-    let isCommandEnabled (actionInfo: actionInfo option) = 
+    let isMoveCommandEnabled item action =
+        match item with
+        | Some item ->
+            if not (VSUtils.isPhysicalFolder item) then false
+            else
+                let checkItem item = item <> null && VSUtils.isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString("B"))
+                match action with
+                | MoveAction.MoveUp -> checkItem item?Node?PreviousSibling
+                | MoveAction.MoveDown -> checkItem item?Node?NextSibling
+        | None -> false
+
+    let isNameCommandEnabled item action =
+        match item with 
+        | Some item -> VSUtils.isPhysicalFolder item
+        | None -> action = NameAction.New
+
+    let isCommandEnabled (actionInfo: ActionInfo option) (action:Action) = 
         match actionInfo with
         | Some info ->
             if VSUtils.isFSharpProject info.project then
-                match info.item with
-                | Some item ->
-                    if not (VSUtils.isPhysicalFolder item) then false
-                    else
-                        let checkItem item = item <> null && VSUtils.isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString("B"))
-                        match info.action with
-                        | Action.MoveUp -> checkItem item?Node?PreviousSibling
-                        | Action.MoveDown -> checkItem item?Node?NextSibling
-                        | Action.Rename -> false // doesn't work now
-                        | Action.New -> true
-                | None -> info.action = Action.New
+                match action with
+                | Action.NameAction a -> isNameCommandEnabled info.item a
+                | Action.MoveAction a -> isMoveCommandEnabled info.item a
             else
                 false
         | None -> false
@@ -225,14 +234,13 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
     let setupCommand guid id action = 
         let command = new CommandID(guid, id)
         let menuCommand = new OleMenuCommand((fun s e -> executeCommand action), command)
-        menuCommand.BeforeQueryStatus.AddHandler(fun s e -> (s :?> OleMenuCommand).Enabled <- (getActionInfo action |> isCommandEnabled))
+        menuCommand.BeforeQueryStatus.AddHandler(fun s e -> (s :?> OleMenuCommand).Enabled <- (isCommandEnabled (getActionInfo()) action))
         mcs.AddCommand(menuCommand)
     
     let setupNewFolderCommand = setupCommand PkgCmdConst.guidNewFolderCmdSet
 
     member x.SetupCommands() = 
-        setupNewFolderCommand PkgCmdConst.cmdNewFolder Action.New
-        setupNewFolderCommand PkgCmdConst.cmdFolderRename Action.Rename
-        setupNewFolderCommand PkgCmdConst.cmdMoveFolderUp Action.MoveUp
-        setupNewFolderCommand PkgCmdConst.cmdMoveFolderDown Action.MoveDown
+        setupNewFolderCommand PkgCmdConst.cmdNewFolder (NameAction NameAction.New)
+        setupNewFolderCommand PkgCmdConst.cmdMoveFolderUp (MoveAction MoveAction.MoveUp)
+        setupNewFolderCommand PkgCmdConst.cmdMoveFolderDown (MoveAction MoveAction.MoveDown)
 
