@@ -141,7 +141,7 @@ let ``DU case of function``() =
 [<Test>]
 let ``double quoted function without spaces``() = checkCategories 52 [ Function, 4, 45 ]
 
-[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
+[<Test>]
 let ``double quoted function with spaces``() = checkCategories 53 [ Function, 4, 42 ]
 
 [<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
