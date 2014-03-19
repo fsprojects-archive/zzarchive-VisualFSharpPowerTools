@@ -767,3 +767,6 @@ let p = 1
         member x.Name
             with get() = 0
             and set (v: int) = ()
+
+    type Record = { Field: int }
+    let r = { Record.Field = 1 }

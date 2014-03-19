@@ -260,8 +260,18 @@ let ``should find usages of property initializers``() =
 
 [<Test; Ignore "FCS 0.0.36 does not support this">]
 let ``should find usages of properties with explicit getters and setters``() =
-    checkSymbolUsage 766 17 """        member x.Name"""
+    checkSymbolUsage 766 17 "        member x.Name"
         [ (766, 17), (766, 21)]
+
+[<Test>] 
+let ``should find usages of fully qualified record fields``() =
+    checkSymbolUsage 770 9 "    type Record = { Field: int }"
+        [ (770, 9), (770, 15) ]
+          // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
+
+    checkSymbolUsage 771 14 "    let r = { Record.Field = 1 }"
+        [ (770, 9), (770, 15) ]
+          // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
 
 type ITempSource = 
     inherit System.IDisposable
