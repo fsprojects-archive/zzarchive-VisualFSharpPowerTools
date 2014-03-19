@@ -14,18 +14,20 @@ namespace FSharpVSPowerTools
     {   
         private GeneralOptionsControl _optionsControl;
         private const string navBarConfig = "fsharp-navigationbar-enabled";
-        
+        private bool _navBarEnabledInAppConfig;
+
         private bool GetNavigationBarConfig()
         {
             try
             {
                 var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
-                var b = config.AppSettings.Settings[navBarConfig].Value;
+                var configValue = config.AppSettings.Settings[navBarConfig];
+                var b = configValue.Value;
                 bool result;
-                if (b != null && bool.TryParse(b, out result)) return result;
-                return false;
+                var res = b != null && bool.TryParse(b, out result) ? result : false;
+                return res;
             }
-            catch (Exception)
+            catch
             {
                 return false;
             }
@@ -111,7 +113,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.OptionsPage = this;
                 _optionsControl.XmlDocEnabled = XmlDocEnabled;
                 _optionsControl.FormattingEnabled = FormattingEnabled;
-                _optionsControl.NavBarEnabled = NavBarEnabled;
+                _optionsControl.NavBarEnabled = NavBarEnabled && _navBarEnabledInAppConfig;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
                 _optionsControl.RenameRefactoringEnabled = RenameRefactoringEnabled;
                 _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
@@ -125,7 +127,7 @@ namespace FSharpVSPowerTools
         {
             XmlDocEnabled = true;
             FormattingEnabled = true;
-            NavBarEnabled = GetNavigationBarConfig();
+            _navBarEnabledInAppConfig = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
             RenameRefactoringEnabled = true;
             DepthColorizerEnabled = false;
@@ -145,6 +147,7 @@ namespace FSharpVSPowerTools
                 if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
                 {
                     NavBarEnabled = _optionsControl.NavBarEnabled;
+                    _navBarEnabledInAppConfig = _optionsControl.NavBarEnabled;
                 }
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
