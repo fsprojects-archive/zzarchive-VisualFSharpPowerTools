@@ -141,8 +141,13 @@ type VSLanguageService
                 // If there is no source file, use currentFile as an independent script
                 | [||] -> [| currentFile |] 
                 | files -> files
-            let! results = instance.ParseAndCheckFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework, stale)
-            return results.GetAllUsesOfAllSymbolsInFile()
+            return! instance.GetAllUsesOfAllSymbolsInFile(
+                                projectFileName, currentFile, source, 
+                                (fun line -> 
+                                    let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+                                    let lineNumber = line - lineStart
+                                    snapshot.GetLineFromLineNumber(lineNumber).GetText()), 
+                                sourceFiles, args, framework, stale, buildQueryLexState snapshot.TextBuffer)
         }
 
     member x.Checker = instance.Checker

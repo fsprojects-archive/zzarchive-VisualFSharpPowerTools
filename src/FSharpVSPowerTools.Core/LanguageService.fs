@@ -188,7 +188,7 @@ type LanguageService (dirtyNotify) =
     let opts = 
       
       // We are in a project - construct options using current properties
-        Debug.WriteLine (sprintf "GetProjectCheckerOptions: Creating for project '%s'" projFilename )
+        //Debug.WriteLine (sprintf "GetProjectCheckerOptions: Creating for project '%s'" projFilename )
 
         {ProjectFileName = projFilename
          ProjectFileNames = files
@@ -200,8 +200,8 @@ type LanguageService (dirtyNotify) =
          ReferencedProjects = [||] } 
 
     // Print contents of check option for debugging purposes
-    Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-                         opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
+    //Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
+    //                     opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
     opts
     
   
@@ -325,3 +325,10 @@ type LanguageService (dirtyNotify) =
                       options
               loop (i + 1) options
       loop 0 None
+
+    member x.GetAllUsesOfAllSymbolsInFile (projectFilename, fileName:string, src, getLineStr, files, args, targetFramework, stale, queryLexState) =
+        async {
+            let! results = x.ParseAndCheckFileInProject (projectFilename, fileName, src, files, args, targetFramework, stale)
+            let symbolUses = results.GetAllUsesOfAllSymbolsInFile()
+            return symbolUses, fun line col -> SymbolParser.getSymbol src line col (getLineStr line) args queryLexState
+        }

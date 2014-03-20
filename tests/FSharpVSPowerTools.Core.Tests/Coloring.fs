@@ -66,3 +66,6 @@ type CustomBuilder() =
 let customComputationExpression = CustomBuilder()
 
 let _ = customComputationExpression { add "str" }
+let _ = System.Environment.MachineName.ToLower()
+let _ = System.Guid.NewGuid().ToString("N").Substring(1)
+let _ = list<_>.Empty
