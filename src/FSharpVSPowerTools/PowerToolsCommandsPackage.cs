@@ -34,8 +34,7 @@ namespace FSharpVSPowerTools
         private IVsShell shellService;
         private uint broadcastEventCookie;
         
-        private ClassificationColorManager classificationColorManager = null;
-        private ThemeManager themeManager = null;
+        private ClassificationColorManager classificationColorManager;
 
         protected override void Initialize()
         {

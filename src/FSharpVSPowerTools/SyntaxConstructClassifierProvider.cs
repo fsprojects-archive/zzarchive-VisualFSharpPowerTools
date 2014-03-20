@@ -56,10 +56,10 @@ namespace FSharpVSPowerTools
             // Light/Blue theme colors
             var lightAndBlueColors = new Dictionary<string, Color>()
             {
-                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(43, 145, 175) },
-                { ClassificationTypes.FSharpValueType, Color.FromRgb(43, 145, 175)},
-                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(71, 32, 96) },
-                { ClassificationTypes.FSharpFunction, Colors.Olive }
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(0, 0, 140) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(0, 0, 140)},
+                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(132, 0, 132) },
+                { ClassificationTypes.FSharpFunction, Color.FromRgb(49, 140, 140) }
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -69,10 +69,10 @@ namespace FSharpVSPowerTools
             // Dark theme colors
             var darkColors = new Dictionary<string, Color>()
             {
-                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(78, 201, 176) },
-                { ClassificationTypes.FSharpValueType, Color.FromRgb(78, 201, 176) },
-                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(163, 126, 188) },
-                { ClassificationTypes.FSharpFunction, Color.FromRgb(255, 128, 64) }
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(173, 222, 231) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(173, 222, 231) },
+                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(181, 132, 181) },
+                { ClassificationTypes.FSharpFunction, Color.FromRgb(0, 255, 255) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
