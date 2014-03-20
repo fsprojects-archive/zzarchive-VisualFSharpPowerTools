@@ -58,3 +58,11 @@ seq {
     let func x = x
     yield func 1
 } |> ignore
+
+type CustomBuilder() =
+    member x.Yield (()) = ()
+    [<CustomOperation ("add", MaintainsVariableSpace = true)>]
+    member x.Add (_, pattern: string) = pattern
+let customComputationExpression = CustomBuilder()
+
+let _ = customComputationExpression { add "str" }

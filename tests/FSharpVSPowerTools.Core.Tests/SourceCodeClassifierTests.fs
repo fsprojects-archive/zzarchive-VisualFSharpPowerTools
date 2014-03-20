@@ -147,11 +147,14 @@ let ``double quoted function with spaces``() = checkCategories 53 [ Function, 4,
 [<Test>]
 let ``fully qualified attribute``() = checkCategories 54 [ ReferenceType, 21, 36 ]
 
-[<Test; Ignore "FCS 0.0.39 limitation">]
+[<Test>]
 let ``async type``() = checkCategories 56 [ Function, 4, 16; ReferenceType, 19, 24; Function, 25, 41 ]
 
 [<Test>]
-let ``computation expression``() = 
+let ``standard computation expression``() = 
     checkCategories 57 []
     checkCategories 58 [ Function, 8, 12 ]
     checkCategories 59 [ Function, 10, 14 ]
+
+[<Test>]
+let ``user defined computation expression``() = checkCategories 68 []
