@@ -82,8 +82,7 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
             project.ProjectItems
             |> Seq.cast<ProjectItem>
             |> Seq.filter (fun i -> VSUtils.isPhysicalFolder i)
-            |> Seq.map (fun f -> getFolderNames f)
-            |> Seq.collect (fun n -> n)
+            |> Seq.collect (fun f -> getFolderNames f)
         Set names
 
     let getActionInfo() =
@@ -120,7 +119,7 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
             let prev = parent?FirstChild
             parent?FirstChild <- node
             prev?NextSibling <- node?NextSibling
-            prev?NextSibling <- prev
+            node?NextSibling <- prev
             if parent?LastChild = node then
                 parent?LastChild <- prev
             prev
@@ -142,7 +141,6 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
         item
 
     let getPreviousItem = getItem getPreviousItemImpl
-
     let getNextItem = getItem getNextItemImpl
 
     let performMoveAction (info: ActionInfo) action =
@@ -199,17 +197,15 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
                       FolderNames = getfolderNamesFromProject info.project }
                 askForNewFolderName resources |> Option.iter (performNameAction info a)
             | Action.MoveAction a -> performMoveAction info a
-        | None ->
-            System.Diagnostics.Debug.Fail("actionInfo is None")
-            ()
-        ()
+        | None -> fail "actionInfo is None"
 
     let isMoveCommandEnabled item action =
         match item with
         | Some item ->
             if not (VSUtils.isPhysicalFolder item) then false
             else
-                let checkItem item = item <> null && VSUtils.isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString("B"))
+                let checkItem item =
+                    item <> null && VSUtils.isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString("B"))
                 match action with
                 | MoveAction.MoveUp -> checkItem item?Node?PreviousSibling
                 | MoveAction.MoveDown -> checkItem item?Node?NextSibling
