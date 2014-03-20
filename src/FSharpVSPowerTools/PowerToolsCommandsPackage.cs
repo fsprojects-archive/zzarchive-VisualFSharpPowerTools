@@ -34,7 +34,7 @@ namespace FSharpVSPowerTools
         private IVsShell shellService;
         private uint broadcastEventCookie;
         
-        private ClassificationColorManager colorManager = null;
+        private ClassificationColorManager classificationColorManager = null;
         private ThemeManager themeManager = null;
 
         protected override void Initialize()
@@ -43,9 +43,8 @@ namespace FSharpVSPowerTools
             VSUtils.ForegroundThreadGuard.BindThread();
 
             var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
-            colorManager = componentModel.DefaultExportProvider.GetExportedValue<ClassificationColorManager>();
-            themeManager = componentModel.DefaultExportProvider.GetExportedValue<ThemeManager>();
-
+            classificationColorManager = componentModel.DefaultExportProvider.GetExportedValue<ClassificationColorManager>();
+            
             shellService = GetService(typeof(SVsShell)) as IVsShell;
 
             if (shellService != null)
@@ -62,7 +61,7 @@ namespace FSharpVSPowerTools
         {
             if (msg == WM_SYSCOLORCHANGE)
             {
-                colorManager.UpdateColors(themeManager.GetCurrentTheme());
+                classificationColorManager.UpdateColors();
             }
             return VSConstants.S_OK;
         }
