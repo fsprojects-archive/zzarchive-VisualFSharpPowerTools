@@ -770,3 +770,4 @@ let p = 1
 
     type Record = { Field: int }
     let r = { Record.Field = 1 }
+    

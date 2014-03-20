@@ -187,7 +187,7 @@ let ``should find usages of symbols contacting with a special symbol on the righ
         709 5 "    g(2)"
         [ (708, 8), (708, 9); (709, 4), (709, 5) ]
 
-[<Test; Ignore "To activate when fixed">]
+[<Test>]
 let ``should find all symbols in combined match patterns``() =
     checkSymbolUsage
         763 27 "    let _ = match [] with [h] | [_; h] | [_; _; h] -> h | _ -> 0"

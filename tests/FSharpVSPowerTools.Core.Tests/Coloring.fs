@@ -51,7 +51,18 @@ let (FuncCase funcCase) = FuncCase (fun() -> ())
 match FuncCase (fun() -> ()) with FuncCase func -> func()
 let ``double_quoted_function_without_spaces`` () = ()
 let ``double quoted function with spaces`` () = ()
-let sequence = seq { 1..10 }
 [<System.Diagnostics.DebuggerDisplay "name">]
 type TypeWithAttribute() = class end
 let asyncRunSync = Async.RunSynchronously
+seq {
+    let func x = x
+    yield func 1
+} |> ignore
+
+type CustomBuilder() =
+    member x.Yield (()) = ()
+    [<CustomOperation ("add", MaintainsVariableSpace = true)>]
+    member x.Add (_, pattern: string) = pattern
+let customComputationExpression = CustomBuilder()
+
+let _ = customComputationExpression { add "str" }
