@@ -29,12 +29,14 @@ let vsLanguageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 let checkCategories line expected = 
     let results = 
         vsLanguageService.GetAllUsesOfAllSymbolsInFile
-            (projectFileName, fileName, source, 
-            (fun line -> sourceLines.[line]),
-            sourceFiles, args, framework, AllowStaleResults.MatchingSource, SymbolParser.queryLexState) 
+            (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
 
-    SourceCodeClassifier.getCategoriesAndLocations results
+    let getLexerSymbol line col =
+        let lineStr = sourceLines.[line]
+        SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
+
+    SourceCodeClassifier.getCategoriesAndLocations (results, getLexerSymbol)
     |> Array.choose (fun loc -> 
         match loc.Category with 
         | Other -> None

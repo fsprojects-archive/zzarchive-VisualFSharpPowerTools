@@ -326,9 +326,9 @@ type LanguageService (dirtyNotify) =
               loop (i + 1) options
       loop 0 None
 
-    member x.GetAllUsesOfAllSymbolsInFile (projectFilename, fileName:string, src, getLineStr, files, args, targetFramework, stale, queryLexState) =
+    member x.GetAllUsesOfAllSymbolsInFile (projectFilename, fileName, src, files, args, targetFramework, stale) =
         async {
             let! results = x.ParseAndCheckFileInProject (projectFilename, fileName, src, files, args, targetFramework, stale)
             let symbolUses = results.GetAllUsesOfAllSymbolsInFile()
-            return symbolUses, fun line col -> SymbolParser.getSymbol src line col (getLineStr line) args queryLexState
+            return symbolUses
         }
