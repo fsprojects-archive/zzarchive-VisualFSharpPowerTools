@@ -47,14 +47,15 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             else ReferenceType
         elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
-           || e.IsProvidedAndErased || e.IsProvidedAndGenerated then
+           || e.IsProvidedAndErased || e.IsProvidedAndGenerated (*|| e.IsOpaque*) then
             ReferenceType
         else Other
     
     | :? FSharpMemberFunctionOrValue as func ->
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
         if func.CompiledName = ".ctor" then ReferenceType
-        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod then 
+        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod
+             && not symbolUse.IsFromComputationExpression then 
             if isOperator func.DisplayName then
                 Other
             else
