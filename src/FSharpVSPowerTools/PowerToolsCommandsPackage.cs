@@ -1,14 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Design;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
+using EnvDTE;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.ComponentModelHost;
 using FSharpVSPowerTools.ProjectSystem;
+using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Formatting;
 
 namespace FSharpVSPowerTools
 {
@@ -22,18 +28,50 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
-    public class PowerToolsCommandsPackage : Package
+    public class PowerToolsCommandsPackage : Package, IVsBroadcastMessageEvents, IDisposable
     {
+        private const uint WM_SYSCOLORCHANGE = 0x0015;
+        private IVsShell shellService;
+        private uint broadcastEventCookie;
+        
+        private ClassificationColorManager classificationColorManager;
+
         protected override void Initialize()
         {
             base.Initialize();
             VSUtils.ForegroundThreadGuard.BindThread();
+
+            var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
+            classificationColorManager = componentModel.DefaultExportProvider.GetExportedValue<ClassificationColorManager>();
+            
+            shellService = GetService(typeof(SVsShell)) as IVsShell;
+
+            if (shellService != null)
+                ErrorHandler.ThrowOnFailure(shellService.AdviseBroadcastMessages(this, out broadcastEventCookie));
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(GeneralOptionsPage),
                 delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
+        }
+
+        public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            if (msg == WM_SYSCOLORCHANGE)
+            {
+                classificationColorManager.UpdateColors();
+            }
+            return VSConstants.S_OK;
+        }
+
+        public void Dispose()
+        {
+            if (shellService != null && broadcastEventCookie != 0)
+            {
+                shellService.UnadviseBroadcastMessages(broadcastEventCookie);
+                broadcastEventCookie = 0;
+            }
         }
     }
 }
