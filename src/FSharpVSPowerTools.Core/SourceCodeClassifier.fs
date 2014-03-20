@@ -88,13 +88,13 @@ let excludeColumnSpan from what =
     if what.End < from.End && what.End >= from.Start then
         { from with Start = what.End + 1 } // the dot between parts
     else from
-
+ 
 let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol: int -> int -> Symbol option) =
     let allSymbolsUses =
         allSymbolsUses
         // FCS can return multi-line ranges, let's ignore them
         |> Array.filter (fun symbolUse -> symbolUse.RangeAlternate.StartLine = symbolUse.RangeAlternate.EndLine)
-
+      
     // index all symbol usages by LineNumber 
     let wordSpans = 
         allSymbolsUses
@@ -116,8 +116,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
             | _ -> span
 
         let span' = 
-            match (span.End - span.Start) - x.Symbol.DisplayName.Length with
-            | diff when diff > 0 ->
+            if (span.End - span.Start) - x.Symbol.DisplayName.Length > 0 then
                 // The span is wider that the simbol's display name.
                 // This means that we have not managed to extract last part of a long ident accurately.
                 // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
@@ -127,11 +126,11 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
                     match s.Kind with
                     | Ident -> 
                         // Lexer says that our span is too wide. Adjust it's left column.
-                        if span.Start < s.LeftColumn then { span with Start = span.Start + diff }
+                        if span.Start < s.LeftColumn then { span with Start = s.LeftColumn }
                         else span
                     | _ -> span
                 | _ -> span
-            | _ -> span
+            else span
 
         let categorizedSpan = { Category = getCategory x; Line = r.StartLine; ColumnSpan = span' } 
         //debug "-=O=- %A: %s, FullName = %s, Range = %s, Span = %A" 

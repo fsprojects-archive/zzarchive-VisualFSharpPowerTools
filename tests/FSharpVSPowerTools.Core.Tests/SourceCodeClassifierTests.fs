@@ -183,3 +183,6 @@ let ``F# namespace``() =
         ReferenceType, 37, 41; ReferenceType, 42, 45
         ReferenceType, 46, 46 ] // the last one is bug
        
+[<Test>]
+let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
+
