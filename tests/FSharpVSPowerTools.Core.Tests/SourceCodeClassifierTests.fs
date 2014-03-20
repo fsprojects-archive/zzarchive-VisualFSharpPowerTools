@@ -174,4 +174,7 @@ let ``complex method chain``() =
 
 [<Test; Ignore "Bug">]
 let ``generic type with ignored type parameter``() = checkCategories 71 [ ReferenceType, 8, 12 ]
-        
+
+[<Test; Ignore "Bug">]
+let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ValueType, 42, 45 ]
+       
