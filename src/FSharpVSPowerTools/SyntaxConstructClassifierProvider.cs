@@ -43,33 +43,15 @@ namespace FSharpVSPowerTools
 
     }
 
-    // These colors are defined differently for debugging purpose
-    // They are taken from https://github.com/leddt/visualstudio-colors-solarized/blob/master/vs2013/solarized-light.vssettings
-    // In the final version, we should probably set a default theme with less number of colors.
-    public enum VsTheme
+    [Export]
+    public class ClassificationColorManager 
     {
-        Unknown = 0,
-        Light,
-        Dark,
-        Blue
-    }
+        private readonly IDictionary<VisualStudioTheme, IDictionary<string, Color>> themeColors =
+            new Dictionary<VisualStudioTheme, IDictionary<string, Color>>();
 
-    static class ClassificationFormats
-    {
-        private static readonly IDictionary<Guid, VsTheme> Themes = new Dictionary<Guid, VsTheme>()
-        {
-            {new Guid("de3dbbcd-f642-433c-8353-8f1df4370aba"), VsTheme.Light},
-            {new Guid("1ded0138-47ce-435e-84ef-9ec1f439b749"), VsTheme.Dark},
-            {new Guid("a4d6a176-b948-4b29-8c66-53c97a1ed7d0"), VsTheme.Blue}
-        };
+        private VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
 
-        private static readonly IDictionary<VsTheme, IDictionary<string, Color>> ThemeColors =
-            new Dictionary<VsTheme, IDictionary<string, Color>>();
-
-        internal static VisualStudioVersion VSVersion = VisualStudioVersion.Unknown;
-        internal static VsTheme LastVsTheme = VsTheme.Unknown;
-
-        static ClassificationFormats()
+        public ClassificationColorManager()
         {
             // Light/Blue theme colors
             var lightAndBlueColors = new Dictionary<string, Color>()
@@ -80,9 +62,9 @@ namespace FSharpVSPowerTools
                 {"FSharp.Function", Colors.Olive}
             };
 
-            ThemeColors.Add(VsTheme.Blue, lightAndBlueColors);
-            ThemeColors.Add(VsTheme.Light, lightAndBlueColors);
-            ThemeColors.Add(VsTheme.Unknown, lightAndBlueColors);
+            themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
+            themeColors.Add(VisualStudioTheme.Light, lightAndBlueColors);
+            themeColors.Add(VisualStudioTheme.Unknown, lightAndBlueColors);
 
             // Dark theme colors
             var darkColors = new Dictionary<string, Color>()
@@ -93,23 +75,49 @@ namespace FSharpVSPowerTools
                 {"FSharp.Function", Color.FromRgb(255, 128, 64)}
             };
 
-            ThemeColors.Add(VsTheme.Dark, darkColors);
+            themeColors.Add(VisualStudioTheme.Dark, darkColors);
         }
 
-        public static void UpdateThemeColors(IClassificationFormatMap formatMap, IClassificationTypeRegistryService classificationTypeRegistry)
-        {
-            VsTheme currentTheme = GetCurrentTheme();
+        [Import]
+        private IClassificationFormatMapService classificationFormatMapService = null;
 
-            if (currentTheme != VsTheme.Unknown && currentTheme != LastVsTheme)
+        [Import]
+        private IClassificationTypeRegistryService classificationTypeRegistry = null;
+
+        public Color GetDefaultColor(VisualStudioTheme currentTheme, string category) 
+        {   
+            bool result = false;
+            var color = Colors.Black;
+            switch (currentTheme)
             {
-                LastVsTheme = currentTheme;
+                case VisualStudioTheme.Dark:
+                    color = Colors.White;
+                    result = themeColors[currentTheme].TryGetValue(category, out color);
+                    if (!result) Debug.WriteLine("Classification theme manager can't read colors correctly.");
+                    return color;
+                case VisualStudioTheme.Light:
+                case VisualStudioTheme.Blue:
+                default:
+                    color = Colors.Black;
+                    result = themeColors[currentTheme].TryGetValue(category, out color);
+                    if (!result) Debug.WriteLine("Classification theme manager can't read colors correctly.");
+                    return color;
+            }
+        }
 
-                IDictionary<string, Color> themeColors = ThemeColors[currentTheme];
+        public void UpdateColors(VisualStudioTheme currentTheme)
+        {
+            if (currentTheme != VisualStudioTheme.Unknown && currentTheme != lastTheme)
+            {
+                lastTheme = currentTheme;
 
+                IDictionary<string, Color> colors = themeColors[currentTheme];
+                IClassificationFormatMap formatMap = classificationFormatMapService.GetClassificationFormatMap(category: "text");
+                    
                 try
                 {
                     formatMap.BeginBatchUpdate();
-                    foreach (var pair in themeColors)
+                    foreach (var pair in colors)
                     {
                         string type = pair.Key;
                         Color color = pair.Value;
@@ -128,64 +136,21 @@ namespace FSharpVSPowerTools
                 }
             }
         }
+    }
 
-        public static VsTheme GetCurrentTheme()
-        {
-            string themeId = GetThemeId();
-            Guid guidThemeId;
-            if (Guid.TryParse(themeId, out guidThemeId))
-            {
-                VsTheme theme;
-                if (Themes.TryGetValue(guidThemeId, out theme))
-                {
-                    return theme;
-                }
-            }
-
-            return VsTheme.Unknown;
-        }
-
-        public static string GetThemeId()
-        {
-            const string CategoryName = "General";
-            const string ThemePropertyName = "CurrentTheme";
-            string keyName = null;
-
-            if (VisualStudioVersionModule.matches(VSVersion, VisualStudioVersion.VS2012))
-            {
-                keyName = string.Format(@"Software\Microsoft\VisualStudio\11.0\{0}", CategoryName);
-            }
-            else if (VisualStudioVersionModule.matches(VSVersion, VisualStudioVersion.VS2013))
-            {
-                keyName = string.Format(@"Software\Microsoft\VisualStudio\12.0\{0}", CategoryName);
-            }
-            else
-            {
-                Debug.WriteLine("Unknown Visual Studio version detected while updating theme colors: {0}", VSVersion);
-                return null;
-            }
-
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(keyName))
-            {
-                if (key != null)
-                {
-                    return (string)key.GetValue(ThemePropertyName, string.Empty);
-                }
-            }
-
-            return null;
-        }
+    static class ClassificationFormats
+    {
         [Export(typeof(EditorFormatDefinition))]
         [ClassificationType(ClassificationTypeNames = "FSharp.ReferenceType")]
         [Name("FSharp.ReferenceType")]
         [UserVisible(true)]
         sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
         {
-            public FSharpReferenceTypeFormat()
+            [ImportingConstructor]
+            public FSharpReferenceTypeFormat(ClassificationColorManager colorManager)
             {
                 this.DisplayName = "F# User Types";
-                // TODO: extract string constant
-                this.ForegroundColor = ThemeColors[VsTheme.Blue]["FSharp.ReferenceType"];
+                this.ForegroundColor = colorManager.GetDefaultColor(VisualStudioTheme.Blue, "FSharp.ReferenceType");
             }
         }
 
@@ -195,11 +160,12 @@ namespace FSharpVSPowerTools
         [UserVisible(true)]
         sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
         {
-            public FSharpValueTypeFormat()
+            [ImportingConstructor]
+            public FSharpValueTypeFormat(ClassificationColorManager colorManager)
             {
                 this.DisplayName = "F# User Types (Value types)";
                 // TODO: extract string constant
-                this.ForegroundColor = ThemeColors[VsTheme.Blue]["FSharp.ValueType"];
+                this.ForegroundColor = colorManager.GetDefaultColor(VisualStudioTheme.Blue, "FSharp.ValueType");
             }
         }
 
@@ -209,11 +175,12 @@ namespace FSharpVSPowerTools
         [UserVisible(true)]
         sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
         {
-            public FSharpPatternCaseFormat()
+            [ImportingConstructor]
+            public FSharpPatternCaseFormat(ClassificationColorManager colorManager)
             {
                 this.DisplayName = "F# Patterns";
                 // TODO: extract string constant
-                this.ForegroundColor = ThemeColors[VsTheme.Blue]["FSharp.PatternCase"];
+                this.ForegroundColor = colorManager.GetDefaultColor(VisualStudioTheme.Blue, "FSharp.PatternCase");
             }
         }
 
@@ -223,11 +190,12 @@ namespace FSharpVSPowerTools
         [UserVisible(true)]
         sealed class FSharpFunctionFormat : ClassificationFormatDefinition
         {
-            public FSharpFunctionFormat()
+            [ImportingConstructor]
+            public FSharpFunctionFormat(ClassificationColorManager colorManager)
             {
                 this.DisplayName = "F# Functions";
                 // TODO: extract string constant
-                this.ForegroundColor = ThemeColors[VsTheme.Blue]["FSharp.Function"];
+                this.ForegroundColor = colorManager.GetDefaultColor(VisualStudioTheme.Blue, "FSharp.Function");
             }
         }
     }
@@ -235,12 +203,15 @@ namespace FSharpVSPowerTools
     [Export(typeof(IClassifierProvider))]
     [ContentType("F#")]
     public class SyntaxConstructClassifierProvider : IClassifierProvider
-    {
-        [Import]
-        private IClassificationFormatMapService classificationFormatMapService = null;
-
+    { 
         [Import]
         private IClassificationTypeRegistryService classificationRegistry = null;
+
+        [Import]
+        private ClassificationColorManager colorManager = null;
+
+        [Import]
+        private ThemeManager themeManager = null;
 
         [Import(typeof(SVsServiceProvider))]
         private IServiceProvider serviceProvider = null;
@@ -257,8 +228,7 @@ namespace FSharpVSPowerTools
                 return null;
             }
 
-            IClassificationFormatMap formatMap = classificationFormatMapService.GetClassificationFormatMap(category: "text");
-            ClassificationFormats.UpdateThemeColors(formatMap, classificationRegistry);
+            colorManager.UpdateColors(themeManager.GetCurrentTheme());
 
             return buffer.Properties.GetOrCreateSingletonProperty(() =>
             {

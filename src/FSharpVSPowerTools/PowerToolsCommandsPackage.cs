@@ -11,6 +11,7 @@ using EnvDTE;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.ComponentModelHost;
 using FSharpVSPowerTools.ProjectSystem;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Formatting;
@@ -27,26 +28,28 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
-    public class PowerToolsCommandsPackage : Package, IVsShellPropertyEvents
+    public class PowerToolsCommandsPackage : Package, IVsBroadcastMessageEvents, IDisposable
     {
-        private DTE dte;
-        private uint cookie;
-
-        [Import] private IClassificationFormatMapService classificationFormatMapService;
-
-        [Import] private IClassificationTypeRegistryService classificationTypeRegistry;
+        private const uint WM_SYSCOLORCHANGE = 0x0015;
+        private IVsShell shellService;
+        private uint broadcastEventCookie;
+        
+        private ClassificationColorManager colorManager = null;
+        private ThemeManager themeManager = null;
 
         protected override void Initialize()
         {
             base.Initialize();
             VSUtils.ForegroundThreadGuard.BindThread();
 
-            IVsShell shellService = GetService(typeof(SVsShell)) as IVsShell;
+            var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
+            colorManager = componentModel.DefaultExportProvider.GetExportedValue<ClassificationColorManager>();
+            themeManager = componentModel.DefaultExportProvider.GetExportedValue<ThemeManager>();
 
-            dte = GetService(typeof (Microsoft.VisualStudio.Shell.Interop.SDTE)) as DTE;
+            shellService = GetService(typeof(SVsShell)) as IVsShell;
 
             if (shellService != null)
-                ErrorHandler.ThrowOnFailure(shellService.AdviseShellPropertyChanges(this, out cookie));
+                ErrorHandler.ThrowOnFailure(shellService.AdviseBroadcastMessages(this, out broadcastEventCookie));
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(GeneralOptionsPage),
@@ -55,35 +58,22 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
         }
 
-        public int OnShellPropertyChange(int propid, object var)
+        public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)
         {
-            // when zombie state changes to false, finish package initialization
-            if ((int)__VSSPROPID.VSSPROPID_Zombie == propid)
+            if (msg == WM_SYSCOLORCHANGE)
             {
-                if ((bool)var == false)
-                {
-                    // zombie state dependent code
-                    this.dte = GetService(typeof(SDTE)) as DTE;
-
-                    // eventlistener no longer needed
-                    IVsShell shellService = GetService(typeof(SVsShell)) as IVsShell;
-
-                    if (shellService != null)
-                        ErrorHandler.ThrowOnFailure(shellService.UnadviseShellPropertyChanges(this.cookie));
-
-                    this.cookie = 0;
-
-                    // Update colors with the correct theme for the current Visual Studio version
-                    InitializeSyntaxColoring(dte);
-                }
+                colorManager.UpdateColors(themeManager.GetCurrentTheme());
             }
-
             return VSConstants.S_OK;
         }
 
-        private void InitializeSyntaxColoring(DTE dte)
+        public void Dispose()
         {
-            ClassificationFormats.VSVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+            if (shellService != null && broadcastEventCookie != 0)
+            {
+                shellService.UnadviseBroadcastMessages(broadcastEventCookie);
+                broadcastEventCookie = 0;
+            }
         }
     }
 }
