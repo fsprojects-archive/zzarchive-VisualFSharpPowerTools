@@ -47,7 +47,8 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             else ReferenceType
         elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
-           || e.IsProvidedAndErased || e.IsProvidedAndGenerated || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule) then
+           || e.IsProvidedAndErased || e.IsProvidedAndGenerated 
+           || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace) then
             ReferenceType
         else Other
     
