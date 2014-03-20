@@ -20,6 +20,11 @@ type Category =
 let internal getCategory (symbolUse: FSharpSymbolUse) =
     let symbol = symbolUse.Symbol
     
+    let isOperator (name: string) =
+        if name.StartsWith "( " && name.EndsWith " )" && name.Length > 4 then
+            name.Substring (2, name.Length - 4) |> String.forall (fun c -> c <> ' ')
+        else false
+
     match symbol with
     | :? FSharpGenericParameter
     | :? FSharpStaticParameter -> 
@@ -42,15 +47,16 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             else ReferenceType
         elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
-           || e.IsProvidedAndErased || e.IsProvidedAndGenerated then
+           || e.IsProvidedAndErased || e.IsProvidedAndGenerated || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule) then
             ReferenceType
         else Other
     
     | :? FSharpMemberFunctionOrValue as func ->
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
         if func.CompiledName = ".ctor" then ReferenceType
-        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod then 
-            if func.DisplayName.StartsWith "( " && func.DisplayName.EndsWith " )" then
+        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod
+             && not symbolUse.IsFromComputationExpression then 
+            if isOperator func.DisplayName then
                 Other
             else
                 Function

@@ -124,13 +124,13 @@ let ``record``() =
 
 [<Test>]
 let ``value type``() = 
-    checkCategories 41 [ ReferenceType, 27, 30 ] // FCS 0.0.36 bug, should be ValueType instead
+    checkCategories 41 [ ReferenceType, 27, 30 ] // FCS 0.0.39 bug, should be ValueType instead
     checkCategories 42 [ ValueType, 22, 27 ]
-    checkCategories 43 [ ] // FCS 0.0.36 bug, should be ValueType, 34, 42
+    checkCategories 43 [ ReferenceType, 34, 42 ] // FCS 0.0.39 bug, should be ValueType, 34, 42
     checkCategories 44 [ ValueType, 5, 18 ]
     checkCategories 45 [ ValueType, 5, 30; ValueType, 33, 46 ]
-    checkCategories 46 [] // FCS 0.0.36 bug, should be ValueType, 20, 33
-    checkCategories 47 [ ValueType, 31, 56 ] // FCS 0.0.36 bug, should be additionaly ValueType, 59, 84 
+    checkCategories 46 [ ReferenceType, 20, 33 ] // FCS 0.0.39 bug, should be ValueType, 20, 33
+    checkCategories 47 [ ValueType, 31, 56; ReferenceType, 59, 84 ] // FCS 0.0.39 bug, should be ValueType, 59, 84 
 
 [<Test>]
 let ``DU case of function``() =
@@ -141,14 +141,20 @@ let ``DU case of function``() =
 [<Test>]
 let ``double quoted function without spaces``() = checkCategories 52 [ Function, 4, 45 ]
 
-[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
+[<Test>]
 let ``double quoted function with spaces``() = checkCategories 53 [ Function, 4, 42 ]
 
-[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
-let ``computation expressions``() = checkCategories 54 []
+[<Test>]
+let ``fully qualified attribute``() = checkCategories 54 [ ReferenceType, 21, 36 ]
 
 [<Test>]
-let ``fully qualified attribute``() = checkCategories 55 [ ReferenceType, 21, 36 ]
+let ``async type``() = checkCategories 56 [ Function, 4, 16; ReferenceType, 19, 24; Function, 25, 41 ]
 
-[<Test; Ignore "We cannot get this pass without FCS providing addititional symbol info">]
-let ``async type``() = checkCategories 57 [ Function, 4, 16; ReferenceType, 19, 24; Function, 25, 41 ]
+[<Test>]
+let ``standard computation expression``() = 
+    checkCategories 57 []
+    checkCategories 58 [ Function, 8, 12 ]
+    checkCategories 59 [ Function, 10, 14 ]
+
+[<Test>]
+let ``user defined computation expression``() = checkCategories 68 []
