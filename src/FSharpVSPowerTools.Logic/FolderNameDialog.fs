@@ -15,18 +15,16 @@ type NewFolderNameDialog = FsXaml.XAML<"FolderNameDialog.xaml">
 [<NoEquality; NoComparison>]
 type NewFolderNameDialogResources =
     { WindowTitle : string
-      OriginalName : string
       FolderNames : Set<string> }
 
 type NewFolderNameDialogModel(resources :NewFolderNameDialogResources) =
 
-    let mutable name = resources.OriginalName
+    let mutable name = ""
 
     let validate (name :string) =
         let name = name.Trim()
         match name with
         | "" -> Choice2Of2 Resource.validatingEmptyName
-        | _ when name = resources.OriginalName -> Choice2Of2 Resource.validatingOriginalName
         | a when resources.FolderNames.Contains a -> Choice2Of2 Resource.validationFolderWithGivenNameAlreadyExists
         | _ -> Choice1Of2()
 
