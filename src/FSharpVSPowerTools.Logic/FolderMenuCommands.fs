@@ -60,18 +60,16 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
     let getSelectedItems() = VSUtils.getSelectedItemsFromSolutionExplorer dte |> List.ofSeq
     let getSelectedProjects() = VSUtils.getSelectedProjectsFromSolutionExplorer dte |> List.ofSeq
 
-    let rec getFolderNamesFromItem (item:ProjectItem) =
+    let rec getFolderNamesFromItems (items:ProjectItems) =
         seq { 
-            yield item.Name
-            for item in item.ProjectItems do
-                if VSUtils.isPhysicalFolder item then yield! getFolderNamesFromItem item
+            for item in items do
+                if VSUtils.isPhysicalFolder item then
+                    yield item.Name
+                    yield! getFolderNamesFromItems item.ProjectItems
         }
 
     let getfolderNamesFromProject (project: Project) =
-        Set (seq { 
-                 for item in project.ProjectItems do
-                     if VSUtils.isPhysicalFolder item then yield! getFolderNamesFromItem item
-             })
+        Set (getFolderNamesFromItems project.ProjectItems)
 
     let getActionInfo() =
         let items = getSelectedItems()
