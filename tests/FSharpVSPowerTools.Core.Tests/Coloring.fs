@@ -66,3 +66,10 @@ type CustomBuilder() =
 let customComputationExpression = CustomBuilder()
 
 let _ = customComputationExpression { add "str" }
+let _ = System.Environment.MachineName.ToLower()
+let _ = System.Guid.NewGuid().ToString("N").Substring(1)
+let _ = list<_>.Empty
+let _ = Microsoft.FSharp.Collections.List<int>.Empty
+type System.String with
+    member x.``Long func``() = "x"
+let _ = "x".``Long func``().Substring(3)

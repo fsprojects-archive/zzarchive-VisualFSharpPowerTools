@@ -47,13 +47,18 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             else ReferenceType
         elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
-           || e.IsProvidedAndErased || e.IsProvidedAndGenerated || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule) then
+           || e.IsProvidedAndErased || e.IsProvidedAndGenerated 
+           || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace) then
             ReferenceType
         else Other
     
     | :? FSharpMemberFunctionOrValue as func ->
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
-        if func.CompiledName = ".ctor" then ReferenceType
+        if func.CompiledName = ".ctor" then 
+            if func.EnclosingEntity.IsValueType || func.EnclosingEntity.IsEnum then
+                ValueType
+            else
+                ReferenceType
         elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod
              && not symbolUse.IsFromComputationExpression then 
             if isOperator func.DisplayName then
@@ -80,16 +85,16 @@ type CategorizedColumnSpan =
 // plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
 // after excluding "Diagnostics", we get "DebuggerDisplay" and we are done.
 let excludeColumnSpan from what =
-    if what.End < from.End && what.Start >= from.Start then
+    if what.End < from.End && what.End >= from.Start then
         { from with Start = what.End + 1 } // the dot between parts
     else from
-
-let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[]) =
+ 
+let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol: int -> int -> Symbol option) =
     let allSymbolsUses =
         allSymbolsUses
         // FCS can return multi-line ranges, let's ignore them
         |> Array.filter (fun symbolUse -> symbolUse.RangeAlternate.StartLine = symbolUse.RangeAlternate.EndLine)
-
+      
     // index all symbol usages by LineNumber 
     let wordSpans = 
         allSymbolsUses
@@ -110,9 +115,27 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[]) =
             | Some spans -> spans |> Seq.fold (fun result span -> excludeColumnSpan result span) span
             | _ -> span
 
-        let category = getCategory x
-        //debug "-=O=- %A: %s, FullName = %s, Name = %s, Range = %s, Location = %A" 
-        //      x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName name (x.RangeAlternate.ToShortString()) location
-        { Category = category; Line = r.StartLine; ColumnSpan = span })
+        let span' = 
+            if (span.End - span.Start) - x.Symbol.DisplayName.Length > 0 then
+                // The span is wider that the simbol's display name.
+                // This means that we have not managed to extract last part of a long ident accurately.
+                // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
+                // So we get ident from the lexer.
+                match getLexerSymbol (r.StartLine - 1) (span.End - 1) with
+                | Some s ->
+                    match s.Kind with
+                    | Ident -> 
+                        // Lexer says that our span is too wide. Adjust it's left column.
+                        if span.Start < s.LeftColumn then { span with Start = s.LeftColumn }
+                        else span
+                    | _ -> span
+                | _ -> span
+            else span
+
+        let categorizedSpan = { Category = getCategory x; Line = r.StartLine; ColumnSpan = span' } 
+        //debug "-=O=- %A: %s, FullName = %s, Range = %s, Span = %A" 
+        //  x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName (x.RangeAlternate.ToShortString()) categorizedSpan
+        categorizedSpan
+        )
     |> Seq.distinct
     |> Seq.toArray

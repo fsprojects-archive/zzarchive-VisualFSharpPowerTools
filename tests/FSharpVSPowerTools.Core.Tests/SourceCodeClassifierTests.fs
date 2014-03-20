@@ -9,6 +9,7 @@ open FSharpVSPowerTools.Core.SourceCodeClassifier
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Coloring.fs")
 let source = File.ReadAllText(fileName)
+let sourceLines = source.Split([|"\n"|], System.StringSplitOptions.None)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 
 let sourceFiles = [| fileName |]
@@ -27,10 +28,15 @@ let vsLanguageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
 let checkCategories line expected = 
     let results = 
-        vsLanguageService.ParseAndCheckFileInProject
+        vsLanguageService.GetAllUsesOfAllSymbolsInFile
             (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
-    SourceCodeClassifier.getCategoriesAndLocations (results.GetAllUsesOfAllSymbolsInFile())
+
+    let getLexerSymbol line col =
+        let lineStr = sourceLines.[line]
+        SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
+
+    SourceCodeClassifier.getCategoriesAndLocations (results, getLexerSymbol)
     |> Array.choose (fun loc -> 
         match loc.Category with 
         | Other -> None
@@ -124,13 +130,13 @@ let ``record``() =
 
 [<Test>]
 let ``value type``() = 
-    checkCategories 41 [ ReferenceType, 27, 30 ] // FCS 0.0.39 bug, should be ValueType instead
+    checkCategories 41 [ ReferenceType, 27, 30 ] // FCS 0.0.39 bug
     checkCategories 42 [ ValueType, 22, 27 ]
-    checkCategories 43 [ ReferenceType, 34, 42 ] // FCS 0.0.39 bug, should be ValueType, 34, 42
+    checkCategories 43 [ ValueType, 34, 42 ]
     checkCategories 44 [ ValueType, 5, 18 ]
     checkCategories 45 [ ValueType, 5, 30; ValueType, 33, 46 ]
-    checkCategories 46 [ ReferenceType, 20, 33 ] // FCS 0.0.39 bug, should be ValueType, 20, 33
-    checkCategories 47 [ ValueType, 31, 56; ReferenceType, 59, 84 ] // FCS 0.0.39 bug, should be ValueType, 59, 84 
+    checkCategories 46 [ ValueType, 20, 33 ] 
+    checkCategories 47 [ ValueType, 31, 56; ValueType, 59, 84 ]
 
 [<Test>]
 let ``DU case of function``() =
@@ -158,3 +164,25 @@ let ``standard computation expression``() =
 
 [<Test>]
 let ``user defined computation expression``() = checkCategories 68 []
+
+[<Test>]
+let ``method chain``() =
+    checkCategories 69 [ ReferenceType, 15, 26; Function, 39, 46 ]
+    
+[<Test>]
+let ``complex method chain``() =
+    checkCategories 70 
+        [ ValueType, 15, 19; Function, 20, 27; Function, 30, 38; Function, 44, 53 ]
+
+[<Test; Ignore "Bug">]
+let ``generic type with ignored type parameter``() = checkCategories 71 [ ReferenceType, 8, 12 ]
+
+[<Test>]
+let ``F# namespace``() = 
+    checkCategories 72 [ 
+        ReferenceType, 37, 41; ReferenceType, 42, 45
+        ReferenceType, 46, 46 ] // the last one is bug
+       
+[<Test>]
+let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
+
