@@ -18,10 +18,10 @@ namespace FSharpVSPowerTools
         }
         public GeneralOptionsPage OptionsPage { get; set; }
 
-        public bool XMLDocEnabled 
+        public bool XmlDocEnabled 
         {
-            get { return chbXMLDoc.Checked; }
-            set { chbXMLDoc.Checked = value;  }
+            get { return chbXmlDoc.Checked; }
+            set { chbXmlDoc.Checked = value;  }
         }
 
         public bool FormattingEnabled
@@ -59,21 +59,27 @@ namespace FSharpVSPowerTools
             set { chbNavigateTo.Checked = value; }
         }
 
+        public bool SyntaxColoringEnabled
+        {
+            get { return chbSyntaxColoring.Checked; }
+            set { chbSyntaxColoring.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
-            chbXMLDoc.Checked = OptionsPage.XMLDocEnabled;
+            chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
             chbFormatting.Checked = OptionsPage.FormattingEnabled;
             chbNavBar.Checked = OptionsPage.NavBarEnabled;
             chbHighlightUsage.Checked = OptionsPage.HighlightUsageEnabled;
             chbRenameRefactoring.Checked = OptionsPage.RenameRefactoringEnabled;
             chbDepthColorizer.Checked = OptionsPage.DepthColorizerEnabled;
             chbNavigateTo.Checked = OptionsPage.NavigateToEnabled;
+            chbSyntaxColoring.Checked = OptionsPage.SyntaxColoringEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             System.Diagnostics.Process.Start(lblHome.Text);
         }
-
     }
 }

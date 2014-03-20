@@ -8,7 +8,7 @@ Rename refactoring
 -----------------------
 
 We currently support rename identifiers and operators which are defined in current project.
-Rename dialog can be activated via Edit --> Refactor --> Rename menu, context menu or Ctrl + R R key binding.
+Rename dialog can be activated via Edit --> Refactor --> Rename menu, context menu or Ctrl + R, Ctrl + R key binding.
 
 Here is a demo screencast.
 

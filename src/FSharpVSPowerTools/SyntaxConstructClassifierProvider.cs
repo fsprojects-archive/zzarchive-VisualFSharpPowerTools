@@ -1,0 +1,236 @@
+﻿using FSharpVSPowerTools.ProjectSystem;
+using FSharpVSPowerTools.SyntaxColoring;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Formatting;
+using Microsoft.VisualStudio.Utilities;
+using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
+using System.Windows.Media;
+
+namespace FSharpVSPowerTools
+{
+    static class ClassificationTypes
+    {
+        public const string FSharpReferenceType = "FSharp.ReferenceType";
+        public const string FSharpValueType = "FSharp.ValueType";
+        public const string FSharpPatternCase = "FSharp.PatternCase";
+        public const string FSharpFunction = "FSharp.Function";
+
+        [Export]
+        [Name(FSharpReferenceType)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpReferenceClassfierType = null;
+
+        [Export]
+        [Name(FSharpValueType)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpValueClassfierType = null;
+
+        [Export]
+        [Name(FSharpPatternCase)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpPatternCaseClassfierType = null;
+
+        [Export]
+        [Name(FSharpFunction)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpFunctionClassfierType = null;
+
+    }
+
+    [Export]
+    public class ClassificationColorManager 
+    {
+        private readonly IDictionary<VisualStudioTheme, IDictionary<string, Color>> themeColors =
+            new Dictionary<VisualStudioTheme, IDictionary<string, Color>>();
+
+        private VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
+
+        public ClassificationColorManager()
+        {
+            // Light/Blue theme colors
+            var lightAndBlueColors = new Dictionary<string, Color>()
+            {
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(0, 0, 140) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(0, 0, 140)},
+                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(132, 0, 132) },
+                { ClassificationTypes.FSharpFunction, Color.FromRgb(49, 140, 140) }
+            };
+
+            themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
+            themeColors.Add(VisualStudioTheme.Light, lightAndBlueColors);
+            themeColors.Add(VisualStudioTheme.Unknown, lightAndBlueColors);
+
+            // Dark theme colors
+            var darkColors = new Dictionary<string, Color>()
+            {
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(173, 222, 231) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(173, 222, 231) },
+                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(181, 132, 181) },
+                { ClassificationTypes.FSharpFunction, Color.FromRgb(0, 255, 255) }
+            };
+
+            themeColors.Add(VisualStudioTheme.Dark, darkColors);
+        }
+
+        [Import]
+        private ThemeManager themeManager = null;
+
+        [Import]
+        private IClassificationFormatMapService classificationFormatMapService = null;
+
+        [Import]
+        private IClassificationTypeRegistryService classificationTypeRegistry = null;
+
+        public Color GetDefaultColor(string category) 
+        {
+            var currentTheme = themeManager.GetCurrentTheme();
+
+            bool success = false;
+            var color = Colors.Black;
+            switch (currentTheme)
+            {
+                case VisualStudioTheme.Dark:
+                    color = Colors.White;
+                    success = themeColors[currentTheme].TryGetValue(category, out color);
+                    if (!success) Debug.WriteLine("Classification theme manager can't read colors correctly.");
+                    return color;
+                case VisualStudioTheme.Light:
+                case VisualStudioTheme.Blue:
+                default:
+                    color = Colors.Black;
+                    success = themeColors[currentTheme].TryGetValue(category, out color);
+                    if (!success) Debug.WriteLine("Classification theme manager can't read colors correctly.");
+                    return color;
+            }
+        }
+
+        public void UpdateColors()
+        {
+            var currentTheme = themeManager.GetCurrentTheme();
+
+            if (currentTheme != VisualStudioTheme.Unknown && currentTheme != lastTheme)
+            {
+                lastTheme = currentTheme;
+
+                IDictionary<string, Color> colors = themeColors[currentTheme];
+                IClassificationFormatMap formatMap = classificationFormatMapService.GetClassificationFormatMap(category: "text");
+                    
+                try
+                {
+                    formatMap.BeginBatchUpdate();
+                    foreach (var pair in colors)
+                    {
+                        string type = pair.Key;
+                        Color color = pair.Value;
+
+                        var classificationType = classificationTypeRegistry.GetClassificationType(type);
+                        var oldProp = formatMap.GetTextProperties(classificationType);
+                        var newProp = TextFormattingRunProperties.CreateTextFormattingRunProperties(oldProp.Typeface,
+                            oldProp.FontRenderingEmSize, color);
+
+                        formatMap.SetTextProperties(classificationType, newProp);
+                    }
+                }
+                finally
+                {
+                    formatMap.EndBatchUpdate();
+                }
+            }
+        }
+    }
+
+    static class ClassificationFormats
+    {
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpReferenceType)]
+        [Name(ClassificationTypes.FSharpReferenceType)]
+        [UserVisible(true)]
+        sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpReferenceTypeFormat(ClassificationColorManager colorManager)
+            {
+                this.DisplayName = "F# User Types";
+                this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpReferenceType);
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpValueType)]
+        [Name(ClassificationTypes.FSharpValueType)]
+        [UserVisible(true)]
+        sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpValueTypeFormat(ClassificationColorManager colorManager)
+            {
+                this.DisplayName = "F# User Types (Value types)";
+                this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpValueType);
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpPatternCase)]
+        [Name(ClassificationTypes.FSharpPatternCase)]
+        [UserVisible(true)]
+        sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpPatternCaseFormat(ClassificationColorManager colorManager)
+            {
+                this.DisplayName = "F# Patterns";
+                this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpPatternCase);
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpFunction)]
+        [Name(ClassificationTypes.FSharpFunction)]
+        [UserVisible(true)]
+        sealed class FSharpFunctionFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpFunctionFormat(ClassificationColorManager colorManager)
+            {
+                this.DisplayName = "F# Functions";
+                this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpFunction);
+            }
+        }
+    }
+
+    [Export(typeof(IClassifierProvider))]
+    [ContentType("F#")]
+    public class SyntaxConstructClassifierProvider : IClassifierProvider
+    { 
+        [Import]
+        private IClassificationTypeRegistryService classificationRegistry = null;
+
+        [Import(typeof(SVsServiceProvider))]
+        private IServiceProvider serviceProvider = null;
+
+        [Import]
+        private VSLanguageService fsharpVsLanguageService = null;
+
+        public IClassifier GetClassifier(ITextBuffer buffer)
+        {
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (!generalOptions.SyntaxColoringEnabled)
+            {
+                Debug.WriteLine("[Syntax Coloring] The feature is disabled in General option page.");
+                return null;
+            }
+
+            return buffer.Properties.GetOrCreateSingletonProperty(() =>
+            {
+                return new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService,
+                    serviceProvider);
+            });
+        }
+    }
+}

@@ -8,15 +8,19 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
+open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
-/// Retrieve snapshot from VS zero-based positions
-let fromFSharpPos (snapshot: ITextSnapshot) (r: range) =
-    let startPos = snapshot.GetLineFromLineNumber(r.StartLine - 1).Start.Position + r.StartColumn
-    let endPos = snapshot.GetLineFromLineNumber(r.EndLine - 1).Start.Position + r.EndColumn
+let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
+    let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
+    let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
     SnapshotSpan(snapshot, startPos, endPos - startPos)
+
+/// Retrieve snapshot from VS zero-based positions
+let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
+    fromPos snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
 
 let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
 
@@ -164,17 +168,19 @@ type ForegroundThreadGuard private() =
 
 open System.Windows.Threading
 
-type DocumentEventsListener (view: ITextView, update: unit -> unit) =
-    // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
-    let timeSpan = TimeSpan.FromMilliseconds 200.
+module ViewChange =
+    let layoutEvent (view: ITextView) = 
+        view.LayoutChanged |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
+    let caretEvent (view: ITextView) = view.Caret.PositionChanged |> Event.map (fun _ -> ())
+    let bufferChangedEvent (buffer: ITextBuffer) = buffer.Changed |> Event.map (fun _ -> ())
 
-    let events =
-        view.LayoutChanged
-        |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
-        |> Event.merge (view.Caret.PositionChanged |> Event.map (fun _ -> ()))
-        
+type DocumentEventsListener (events: IEvent<unit> list, delay: TimeSpan, update: bool -> unit) =
+    // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
+    do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
+    let events = events |> List.reduce Event.merge 
+
     let startNewTimer() = 
-        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = timeSpan)
+        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = delay)
         timer.Start()
         timer
         
@@ -192,7 +198,7 @@ type DocumentEventsListener (view: ITextView, update: unit -> unit) =
         while true do
             do! Async.AwaitEvent events
             do! awaitPauseAfterChange (startNewTimer())
-            update() }
+            update false }
        |> Async.StartImmediate
        // go ahead and synchronously get the first bit of info for the original rendering
-       update() 
+       update true

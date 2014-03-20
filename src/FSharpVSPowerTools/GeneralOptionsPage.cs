@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.VisualStudio.Shell;
+using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.VisualStudio.Shell;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using System.Configuration;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+using System.Windows.Forms;
 
 namespace FSharpVSPowerTools
 {
@@ -17,26 +14,61 @@ namespace FSharpVSPowerTools
     {   
         private GeneralOptionsControl _optionsControl;
         private const string navBarConfig = "fsharp-navigationbar-enabled";
-        
+        private bool _navBarEnabledInAppConfig;
+
         private bool GetNavigationBarConfig()
         {
-            var b = ConfigurationManager.AppSettings.Get(navBarConfig);
-            bool result;
-            if (b != null && bool.TryParse(b, out result)) return result;
-            return false;
+            try
+            {
+                var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+                var configValue = config.AppSettings.Settings[navBarConfig];
+                var b = configValue.Value;
+                bool result;
+                var res = b != null && bool.TryParse(b, out result) ? result : false;
+                return res;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
-        // Return true if set navigation bar config successfully
+        private bool IsUserAdministrator()
+        {
+            bool isAdmin;
+            try
+            {
+                // Get the currently logged in user
+                WindowsIdentity user = WindowsIdentity.GetCurrent();
+                WindowsPrincipal principal = new WindowsPrincipal(user);
+                isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                isAdmin = false;
+            }
+
+            return isAdmin;
+        }
+
+        // Return true if navigation bar config is set successfully
         private bool SetNavigationBarConfig(bool v)
         {
             try
             {
-                // Strangely it doesn't work when debugging inside VS but it works in normal circumstances
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                config.AppSettings.Settings.Remove(navBarConfig);
-                config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
-                config.Save(ConfigurationSaveMode.Minimal);
-                return true;
+                if (IsUserAdministrator())
+                {
+                    var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+                    config.AppSettings.Settings.Remove(navBarConfig);
+                    config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
+                    config.Save(ConfigurationSaveMode.Minimal);
+                    return true;
+                }
+                else
+                {
+                    MessageBox.Show(Resource.navBarUnauthorizedMessage, Resource.vsPackageTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
             }
             catch (Exception)
             {
@@ -48,7 +80,7 @@ namespace FSharpVSPowerTools
         // We are letting Visual Studio know that these property value needs to be persisted	       
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool XMLDocEnabled { get; set; }
+        public bool XmlDocEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FormattingEnabled { get; set; }
@@ -68,6 +100,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool NavigateToEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool SyntaxColoringEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -76,26 +111,28 @@ namespace FSharpVSPowerTools
             {
                 _optionsControl = new GeneralOptionsControl();
                 _optionsControl.OptionsPage = this;
-                _optionsControl.XMLDocEnabled = XMLDocEnabled;
+                _optionsControl.XmlDocEnabled = XmlDocEnabled;
                 _optionsControl.FormattingEnabled = FormattingEnabled;
-                _optionsControl.NavBarEnabled = NavBarEnabled;
+                _optionsControl.NavBarEnabled = NavBarEnabled && _navBarEnabledInAppConfig;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
                 _optionsControl.RenameRefactoringEnabled = RenameRefactoringEnabled;
                 _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
                 _optionsControl.NavigateToEnabled = NavigateToEnabled;
+                _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
 
                 return _optionsControl;
             }
         }
         public GeneralOptionsPage()
         {
-            XMLDocEnabled = true;
+            XmlDocEnabled = true;
             FormattingEnabled = true;
-            NavBarEnabled = GetNavigationBarConfig();
+            _navBarEnabledInAppConfig = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
             RenameRefactoringEnabled = true;
             DepthColorizerEnabled = false;
             NavigateToEnabled = true;
+            SyntaxColoringEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
@@ -104,18 +141,20 @@ namespace FSharpVSPowerTools
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
             {
-                XMLDocEnabled = _optionsControl.XMLDocEnabled;
+                XmlDocEnabled = _optionsControl.XmlDocEnabled;
                 FormattingEnabled = _optionsControl.FormattingEnabled;
 
-                if (SetNavigationBarConfig(_optionsControl.NavBarEnabled))
+                if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
                 {
                     NavBarEnabled = _optionsControl.NavBarEnabled;
-                };
+                    _navBarEnabledInAppConfig = _optionsControl.NavBarEnabled;
+                }
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
                 RenameRefactoringEnabled = _optionsControl.RenameRefactoringEnabled;
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
+                SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
             }
 
             base.OnApply(e);

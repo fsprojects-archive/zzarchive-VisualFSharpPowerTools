@@ -63,11 +63,12 @@
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
     <Compile Include="NavigableItemsCollector.fs" />
+    <Compile Include="SourceCodeClassifier.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.36\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.40\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />

@@ -9,10 +9,10 @@ Source code formatting
 
 Two main formatting commands are available:
  
- - *Formatting Document*, available under **Ctrl + K D** key combination.
- - *Formatting Selection / Formatting Cursor Position*, available under **Ctrl + K F** key combination.
+ - *Formatting Document*, available under **Ctrl + K, Ctrl + D** key combination.
+ - *Formatting Selection / Formatting Cursor Position*, available under **Ctrl + K, Ctrl + F** key combination.
 
-Using **Ctrl + K F** combination without a selection, 
+Using **Ctrl + K, Ctrl + F** combination without a selection, 
 the smallest parseable block (inside `[` and `]`, `[|` and `|]`, `{` and `}` or `(` and `)`) will be formatted.
 
 To illustrate, the following example

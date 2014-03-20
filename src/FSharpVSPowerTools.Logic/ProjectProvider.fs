@@ -17,14 +17,13 @@ type IProjectProvider =
 module ProjectProvider =
     open System.Reflection
     
-    type private E = System.Linq.Expressions.Expression
+    type private Expr = System.Linq.Expressions.Expression
 
-    [<Literal>]
     let private InstanceNonPublic = BindingFlags.Instance ||| BindingFlags.NonPublic
     
     let private precompileFieldGet<'R>(f : FieldInfo) =
-        let p = E.Parameter(typeof<obj>)
-        let lambda = E.Lambda<Func<obj, 'R>>(E.Field(E.Convert(p, f.DeclaringType) :> E, f) :> E, p)
+        let p = Expr.Parameter(typeof<obj>)
+        let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
         lambda.Compile().Invoke
 
     type private ProjectProvider(project: Project) =

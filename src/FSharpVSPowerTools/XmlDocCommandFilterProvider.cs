@@ -39,7 +39,7 @@ namespace FSharpVSPowerTools
             if (wpfTextView == null) return;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.XMLDocEnabled)
+            if (!generalOptions.XmlDocEnabled)
             {
                 Debug.WriteLine("[XMLDoc] The feature is disabled in General option page.");
                 return;

@@ -30,26 +30,16 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     let documentUpdater = DocumentUpdater(serviceProvider)
 
     let canRename() = 
-        // TODO: it should be a symbol and is defined in current project
-        state |> Option.bind (fun x -> x.Word) |> Option.isSome
-
-    let updateAtCaretPosition () =
-        maybe {
-            let! point = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-            // If the new cursor position is still within the current word (and on the same snapshot),
-            // we don't need to check it.
-            match state with
-            | Some { Word = Some (cw,_) } when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
-            | _ ->
+        let s =
+            maybe {
+                let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
-                state <- Some
-                    { File = doc.FullName
-                      Project =  project
-                      Word = vsLanguageService.GetSymbol(point, project) }} |> ignore
-
-    let _ = DocumentEventsListener (view, updateAtCaretPosition)
+                return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
+            }
+        state <- s
+        state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
     let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
         try
@@ -112,9 +102,11 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 if res then 
                     let! (_, currentName, references) =
                         match symbol.Scope with
-                        | File -> vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
-                        | Project -> vsLanguageService.FindUsages (cw, state.File, state.Project) 
-                                     |> Async.RunSynchronously   
+                        | File -> 
+                            vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
+                        | Project -> 
+                            vsLanguageService.FindUsages (cw, state.File, state.Project) 
+                            |> Async.RunSynchronously   
                         |> Option.map (fun (symbol, lastIdent, refs) -> 
                             symbol, lastIdent,
                                 refs 

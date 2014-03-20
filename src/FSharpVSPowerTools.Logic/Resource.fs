@@ -16,5 +16,6 @@ module Resource =
     let [<Literal>] validatingStaticallyResolvedTypeParameter = "Invalid name for statically resolved type parameters."
     let [<Literal>] validatingOperator ="Invalid name for operators."
 
+    let [<Literal>] navBarUnauthorizedMessage = "Unauthorized access to navigation bar configuration. Please try again after restarting Visual Studio from Administrator."
     let [<Literal>] navBarErrorMessage = "Error occurs while saving navigation bar configuration."
 
