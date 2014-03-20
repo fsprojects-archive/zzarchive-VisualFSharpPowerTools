@@ -15,6 +15,9 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using FSharpVSPowerTools.ProjectSystem;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Formatting;
+using EnvDTE;
+using EnvDTE80;
+using FSharpVSPowerTools.Folders;
 
 namespace FSharpVSPowerTools
 {
@@ -34,6 +37,9 @@ namespace FSharpVSPowerTools
         private IVsShell shellService;
         private uint broadcastEventCookie;
         
+        internal static Lazy<DTE2> DTE
+            = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
+
         private ClassificationColorManager classificationColorManager;
 
         protected override void Initialize()
@@ -54,6 +60,16 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
+
+            OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+
+            if (mcs != null)
+            {
+                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
+                newFolderMenu.SetupCommands();
+            }
+
         }
 
         public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)
