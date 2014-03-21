@@ -109,11 +109,18 @@ Target "UnitTests" (fun _ ->
 // Run the integration tests using test runner
 
 Target "IntegrationTests" (fun _ ->
-    !! testAssemblies 
+    !! "tests/**/bin/Release/FSharpVSPowerTools.Tests.dll"
     |> MSTest.MSTest (fun p ->
         { p with
             TimeOut = TimeSpan.FromMinutes 20.
-            // ErrorLevel = MSTest.ErrorLevel.DontFailBuild 
+        })
+)
+
+Target "ExtraIntegrationTests" (fun _ ->
+    !! "tests/**/bin/Release/FSharpVSPowerTools.IntegrationTests.dll" 
+    |> MSTest.MSTest (fun p ->
+        { p with
+            TimeOut = TimeSpan.FromMinutes 20.
         })
 )
 
@@ -144,6 +151,8 @@ Target "Release" DoNothing
 // --------------------------------------------------------------------------------------
 // Run all targets by default. Invoke 'build <Target>' to override
 
+Target "Main" DoNothing
+
 Target "All" DoNothing
 
 "Clean"
@@ -152,6 +161,10 @@ Target "All" DoNothing
   ==> "Build"
   ==> "UnitTests"
   ==> "IntegrationTests"
+  ==> "Main"
+
+"Main"
+  =?> ("ExtraIntegrationTests", isLocalBuild)
   ==> "All"
 
 "All" 

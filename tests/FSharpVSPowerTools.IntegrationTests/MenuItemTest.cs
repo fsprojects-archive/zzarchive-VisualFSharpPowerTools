@@ -36,7 +36,7 @@ namespace FSharpVSPowerTools.IntegrationTests
         /// <summary>
         ///A test for lauching the command and closing the associated dialogbox
         ///</summary>
-        [TestMethod()]
+        [TestMethod(), Ignore()]
         [HostType("VS IDE")]
         public void LaunchCommand()
         {
