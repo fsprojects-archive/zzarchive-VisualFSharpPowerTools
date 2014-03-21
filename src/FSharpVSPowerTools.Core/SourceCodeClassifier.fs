@@ -106,7 +106,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
         |> Map.ofSeq
 
     allSymbolsUses
-    |> Seq.map (fun x ->
+    |> Seq.choose (fun x ->
         let r = x.RangeAlternate
         let span = { Start = r.StartColumn; End = r.EndColumn }
         
@@ -126,17 +126,20 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
                     match s.Kind with
                     | Ident -> 
                         // Lexer says that our span is too wide. Adjust it's left column.
-                        if span.Start < s.LeftColumn && s.LeftColumn > span.Start 
+                        if span.Start < s.LeftColumn && s.LeftColumn > span.Start
                             then { span with Start = s.LeftColumn }
                         else span
                     | _ -> span
                 | _ -> span
             else span
 
-        let categorizedSpan = { Category = getCategory x; Line = r.StartLine; ColumnSpan = span' } 
+        let categorizedSpan =
+            if span'.End <= span'.Start then None
+            else Some { Category = getCategory x; Line = r.StartLine; ColumnSpan = span' }
+        
         //debug "-=O=- %A: %s, FullName = %s, Range = %s, Span = %A" 
-        //  x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName (x.RangeAlternate.ToShortString()) categorizedSpan
-        categorizedSpan
-        )
+          //  x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName (x.RangeAlternate.ToShortString()) categorizedSpan
+        
+        categorizedSpan)
     |> Seq.distinct
     |> Seq.toArray
