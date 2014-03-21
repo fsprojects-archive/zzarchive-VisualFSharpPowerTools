@@ -104,21 +104,6 @@ module ProjectProvider =
     let createForProject (project: Project): IProjectProvider = 
         ProjectProvider project :> _
 
-    let createForDocument (doc: Document): IProjectProvider option =
-        let project = doc.ProjectItem.ContainingProject
-        if not (project === null) && isFSharpProject project then
-            Some (ProjectProvider(project) :> _)
-        elif not (doc.FullName === null) then
-            let ext = Path.GetExtension doc.FullName
-            if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
-               String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
-               String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
-                Some (VirtualProjectProvider(doc.FullName) :> _)
-            else 
-                None
-        else 
-            None
-
     let createForFileInProject (filePath: string) project: IProjectProvider option =
         if not (project === null) && isFSharpProject project then
             Some (ProjectProvider(project) :> _)
@@ -132,3 +117,9 @@ module ProjectProvider =
                 None
         else 
             None
+
+    let createForDocument (doc: Document): IProjectProvider option =
+        let project = doc.ProjectItem.ContainingProject
+        createForFileInProject doc.FullName project
+
+    
