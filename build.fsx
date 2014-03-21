@@ -112,7 +112,9 @@ Target "IntegrationTests" (fun _ ->
     !! testAssemblies 
     |> MSTest.MSTest (fun p ->
         { p with
-            TimeOut = TimeSpan.FromMinutes 20. })
+            TimeOut = TimeSpan.FromMinutes 20.
+            // ErrorLevel = MSTest.ErrorLevel.DontFailBuild 
+        })
 )
 
 // --------------------------------------------------------------------------------------
