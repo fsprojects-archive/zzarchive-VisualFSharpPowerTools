@@ -106,7 +106,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
         |> Map.ofSeq
 
     allSymbolsUses
-    |> Seq.map (fun x ->
+    |> Seq.choose (fun x ->
         let r = x.RangeAlternate
         let span = { Start = r.StartColumn; End = r.EndColumn }
         
@@ -122,7 +122,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
                 // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
                 // So we get ident from the lexer.
                 match getLexerSymbol (r.StartLine - 1) (span.End - 1) with
-                | Some s ->
+                | Some s -> 
                     match s.Kind with
                     | Ident -> 
                         // Lexer says that our span is too wide. Adjust it's left column.
@@ -132,10 +132,13 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
                 | _ -> span
             else span
 
-        let categorizedSpan = { Category = getCategory x; Line = r.StartLine; ColumnSpan = span' } 
+        let categorizedSpan =
+            if span'.End <= span'.Start then None
+            else Some { Category = getCategory x; Line = r.StartLine; ColumnSpan = span' }
+        
         //debug "-=O=- %A: %s, FullName = %s, Range = %s, Span = %A" 
-        //  x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName (x.RangeAlternate.ToShortString()) categorizedSpan
-        categorizedSpan
-        )
+          //  x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName (x.RangeAlternate.ToShortString()) categorizedSpan
+        
+        categorizedSpan)
     |> Seq.distinct
     |> Seq.toArray
