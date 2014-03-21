@@ -163,7 +163,7 @@ type ForegroundThreadGuard private() =
     static let mutable threadId = UnassignedThreadId
     static member BindThread() =
         if threadId <> UnassignedThreadId then 
-            fail "Thread is already set"
+            () // fail "Thread is already set"
         threadId <- System.Threading.Thread.CurrentThread.ManagedThreadId
     static member CheckThread() =
         if threadId = UnassignedThreadId then 
