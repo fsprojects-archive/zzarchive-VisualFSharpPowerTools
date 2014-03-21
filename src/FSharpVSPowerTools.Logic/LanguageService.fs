@@ -18,24 +18,16 @@ type VSLanguageService
      editorFactory: IVsEditorAdaptersFactoryService,
      fsharpLanguageService: FSharpLanguageService) =
 
-    let instance = Atom None
+    let mutable instance = LanguageService (fun _ -> ())
     
-    let getInstance() = 
-        match instance.Value with
-        | Some x -> x
-        | None -> 
-            instance.Swap (fun _ -> Some (LanguageService (fun _ -> ()))) |> ignore
-            debug "Checker created."
-            instance.Value.Value
-
     let invalidateProject (projectItem: EnvDTE.ProjectItem) =
         let project = projectItem.ContainingProject
         if box project <> null && isFSharpProject project then
             let p = ProjectProvider.createForProject project
             debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-            let opts = getInstance().GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
+            let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
                                                    p.CompilerOptions, p.TargetFramework)
-            getInstance().InvalidateConfiguration(opts)
+            instance.InvalidateConfiguration(opts)
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
     let events = dte.Events :?> EnvDTE80.Events2
@@ -44,9 +36,9 @@ type VSLanguageService
     do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
     
-    do events.SolutionEvents.add_AfterClosing (fun _ -> 
-        debug "[Language Service] Solution closed. Remove Checker."
-        instance.Swap (fun _ -> None) |> ignore)
+    do events.SolutionEvents.add_Opened (fun _ -> 
+        debug "[Language Service] Solution opened. Create Checker."
+        instance <- LanguageService (fun _ -> ()))
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
@@ -71,7 +63,7 @@ type VSLanguageService
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
     member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
-        getInstance().ProcessParseTrees(
+        instance.ProcessParseTrees(
             projectProvider.ProjectFileName, 
             openDocuments, 
             projectProvider.SourceFiles, 
@@ -95,7 +87,7 @@ type VSLanguageService
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 return! 
-                    getInstance().GetUsesOfSymbolInProjectAtLocationInFile
+                    instance.GetUsesOfSymbolInProjectAtLocationInFile
                         (projectFileName, currentFile, source, sourceFiles, endLine, endCol, currentLine, 
                         args, framework, buildQueryLexState word.Snapshot.TextBuffer)
             with e ->
@@ -138,7 +130,7 @@ type VSLanguageService
             let framework = projectProvider.TargetFramework
             let args = projectProvider.CompilerOptions
             let sourceFiles = projectProvider.SourceFiles
-            let! results = getInstance().ParseAndCheckFileInProject(   
+            let! results = instance.ParseAndCheckFileInProject(   
                                projectFileName, currentFile, source, sourceFiles, args, framework, stale)
             let symbol = results.GetSymbolAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
@@ -163,9 +155,9 @@ type VSLanguageService
                     snapshot.GetLineFromLineNumber(lineNumber).GetText() 
                 SymbolParser.getSymbol source line col (getLineStr line) args (buildQueryLexState snapshot.TextBuffer)
 
-            let! symbolUses = getInstance().GetAllUsesOfAllSymbolsInFile(
+            let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(
                                 projectFileName, currentFile, source, sourceFiles, args, framework, stale)
             return symbolUses, getLexerSymbol
         }
 
-    member x.Checker = getInstance().Checker
+    member x.Checker = instance.Checker
