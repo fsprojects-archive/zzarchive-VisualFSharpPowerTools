@@ -57,8 +57,8 @@ namespace FSharpVSPowerTools
             var lightAndBlueColors = new Dictionary<string, Color>()
             {
                 { ClassificationTypes.FSharpReferenceType, Color.FromRgb(0, 0, 140) },
-                { ClassificationTypes.FSharpValueType, Color.FromRgb(0, 0, 140)},
-                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(132, 0, 132) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(0, 0, 140) },
+                { ClassificationTypes.FSharpPatternCase, Colors.Black },
                 { ClassificationTypes.FSharpFunction, Color.FromRgb(49, 140, 140) }
             };
 
@@ -71,7 +71,7 @@ namespace FSharpVSPowerTools
             {
                 { ClassificationTypes.FSharpReferenceType, Color.FromRgb(173, 222, 231) },
                 { ClassificationTypes.FSharpValueType, Color.FromRgb(173, 222, 231) },
-                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(181, 132, 181) },
+                { ClassificationTypes.FSharpPatternCase, Color.FromRgb(220, 220, 220) },
                 { ClassificationTypes.FSharpFunction, Color.FromRgb(0, 255, 255) }
             };
 

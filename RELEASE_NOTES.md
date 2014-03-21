@@ -38,7 +38,10 @@
 
 #### 0.5.0 - Unreleased
 * Improve Rename dialog
-* Add indexing for NavigateTo command
+* Improve performance of NavigateTo feature
 * Implement semantic highlighting
+* Migrate to FsXaml
+* Improve lexing performance
+* Fix intermittent navigation bar configration 
 
 
