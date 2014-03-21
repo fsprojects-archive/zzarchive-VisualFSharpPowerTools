@@ -98,7 +98,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
     // index all symbol usages by LineNumber 
     let wordSpans = 
         allSymbolsUses
-        |> Array.map (fun su -> 
+        |> Seq.map (fun su -> 
             su.RangeAlternate.StartLine, 
             { Start = su.RangeAlternate.StartColumn; End = su.RangeAlternate.EndColumn })
         |> Seq.groupBy fst
@@ -106,7 +106,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
         |> Map.ofSeq
 
     allSymbolsUses
-    |> Array.map (fun x ->
+    |> Seq.map (fun x ->
         let r = x.RangeAlternate
         let span = { Start = r.StartColumn; End = r.EndColumn }
         
