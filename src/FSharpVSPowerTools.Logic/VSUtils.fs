@@ -135,7 +135,7 @@ type DTE with
     member x.GetActiveDocument() =
         let doc =
             maybe {
-                let! doc = Option.ofNull x.ActiveDocument
+                let! doc = Option.attempt (fun _ -> x.ActiveDocument) |> Option.bind Option.ofNull
                 let! item = Option.ofNull doc.ProjectItem 
                 let! _ = Option.ofNull item.ContainingProject 
                 return doc }
