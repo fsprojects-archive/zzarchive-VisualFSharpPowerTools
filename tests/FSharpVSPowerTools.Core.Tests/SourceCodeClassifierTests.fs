@@ -178,11 +178,11 @@ let ``complex method chain``() =
 let ``generic type with ignored type parameter``() = checkCategories 71 [ ReferenceType, 8, 12 ]
 
 [<Test>]
-let ``F# namespace``() = 
-    checkCategories 72 [ 
-        ReferenceType, 37, 41; ReferenceType, 42, 45
-        ReferenceType, 46, 46 ] // the last one is bug
+let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ReferenceType, 42, 45 ]
        
 [<Test>]
 let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
+
+[<Test>]
+let ``indexer``() = checkCategories 77 []
 

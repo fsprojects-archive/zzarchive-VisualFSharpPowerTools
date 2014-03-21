@@ -2,6 +2,7 @@
 module FSharpVSPowerTools.ProjectSystem.VSUtils
 
 open System
+open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -14,10 +15,14 @@ open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
+    Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
+    Debug.Assert(startLine <> endLine || startColumn < endColumn, 
+                 sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
     let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
     let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
+    Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
     SnapshotSpan(snapshot, startPos, endPos - startPos)
-
+    
 /// Retrieve snapshot from VS zero-based positions
 let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
     fromPos snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)

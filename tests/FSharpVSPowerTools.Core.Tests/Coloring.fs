@@ -73,3 +73,5 @@ let _ = Microsoft.FSharp.Collections.List<int>.Empty
 type System.String with
     member x.``Long func``() = "x"
 let _ = "x".``Long func``().Substring(3)
+let arr = [|1|]
+let _ = arr.[0]
