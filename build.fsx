@@ -94,7 +94,7 @@ Target "Build" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
 
-Target "RunTests" (fun _ ->
+Target "UnitTests" (fun _ ->
     !! testAssemblies 
     |> NUnit (fun p ->
         { p with
@@ -103,6 +103,16 @@ Target "RunTests" (fun _ ->
             Framework = "4.5"
             Domain = "Multiple"
             OutputFile = "TestResults.xml" })
+)
+
+// --------------------------------------------------------------------------------------
+// Run the integration tests using test runner
+
+Target "IntegrationTests" (fun _ ->
+    !! testAssemblies 
+    |> MSTest.MSTest (fun p ->
+        { p with
+            TimeOut = TimeSpan.FromMinutes 20. })
 )
 
 // --------------------------------------------------------------------------------------
@@ -138,7 +148,8 @@ Target "All" DoNothing
   ==> "RestorePackages"
   =?> ("AssemblyInfo", not isLocalBuild)
   ==> "Build"
-  ==> "RunTests"
+  ==> "UnitTests"
+  ==> "IntegrationTests"
   ==> "All"
 
 "All" 
