@@ -126,7 +126,8 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
                     match s.Kind with
                     | Ident -> 
                         // Lexer says that our span is too wide. Adjust it's left column.
-                        if span.Start < s.LeftColumn then { span with Start = s.LeftColumn }
+                        if span.Start < s.LeftColumn && s.LeftColumn > span.Start 
+                            then { span with Start = s.LeftColumn }
                         else span
                     | _ -> span
                 | _ -> span

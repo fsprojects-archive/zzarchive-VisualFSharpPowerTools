@@ -34,6 +34,10 @@ type VSLanguageService
     do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
+    
+    do events.SolutionEvents.add_Opened (fun _ -> 
+        debug "[Language Service] InvalidateAll"
+        instance.Checker.InvalidateAll())
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
