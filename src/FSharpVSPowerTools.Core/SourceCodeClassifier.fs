@@ -122,12 +122,11 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
                 // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
                 // So we get ident from the lexer.
                 match getLexerSymbol (r.StartLine - 1) (span.End - 1) with
-                | Some s ->
+                | Some s -> 
                     match s.Kind with
                     | Ident -> 
                         // Lexer says that our span is too wide. Adjust it's left column.
-                        if span.Start < s.LeftColumn && s.LeftColumn > span.Start
-                            then { span with Start = s.LeftColumn }
+                        if span.Start < s.LeftColumn then { span with Start = s.LeftColumn }
                         else span
                     | _ -> span
                 | _ -> span

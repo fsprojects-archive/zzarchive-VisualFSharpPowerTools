@@ -16,7 +16,7 @@ open FSharpVSPowerTools
 
 let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
     Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
-    Debug.Assert((if startLine = endLine then startColumn < endColumn else true), 
+    Debug.Assert(startLine <> endLine || startColumn < endColumn, 
                  sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
     let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
     let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
