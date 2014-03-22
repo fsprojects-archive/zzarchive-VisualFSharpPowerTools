@@ -229,15 +229,12 @@ namespace FSharpVSPowerTools
                 return null;
             }
 
-            return buffer.Properties.GetOrCreateSingletonProperty(() =>
-            {
-                ITextDocument doc;
-                if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                {
-                    return new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider);
-                }
-                else throw new Exception("Cannot obtain ITextDocument");
-            });
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+                return buffer.Properties.GetOrCreateSingletonProperty(() =>
+                    new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider));
+
+            return null;
         }
     }
 }

@@ -101,8 +101,7 @@ module ProjectProvider =
 
             member x.SourceFiles = [| filePath |]
     
-    let createForProject (project: Project): IProjectProvider = 
-        ProjectProvider project :> _
+    let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 
     let createForFileInProject (filePath: string) project: IProjectProvider option =
         if not (project === null) && isFSharpProject project then
@@ -118,8 +117,7 @@ module ProjectProvider =
         else 
             None
 
-    let createForDocument (doc: Document): IProjectProvider option =
-        let project = doc.ProjectItem.ContainingProject
-        createForFileInProject doc.FullName project
+    let createForDocument (doc: Document) =
+        createForFileInProject doc.FullName doc.ProjectItem.ContainingProject
 
     
