@@ -64,6 +64,7 @@
     <Compile Include="DepthParser.fs" />
     <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="SourceCodeClassifier.fs" />
+    <Compile Include="InterfaceStubGenerator.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

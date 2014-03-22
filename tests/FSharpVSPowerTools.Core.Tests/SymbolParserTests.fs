@@ -1,8 +1,6 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../bin/FSharpXmlDoc.dll"
 #r "../../bin/FSharpVSPowerTools.Core.dll"
-#r "../../bin/FSharpVSPowerTools.Logic.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
