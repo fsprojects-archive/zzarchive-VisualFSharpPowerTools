@@ -217,6 +217,9 @@ namespace FSharpVSPowerTools
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
 
+        [Import]
+        private ITextDocumentFactoryService textDocumentFactoryService = null;
+
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
@@ -226,11 +229,12 @@ namespace FSharpVSPowerTools
                 return null;
             }
 
-            return buffer.Properties.GetOrCreateSingletonProperty(() =>
-            {
-                return new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService,
-                    serviceProvider);
-            });
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+                return buffer.Properties.GetOrCreateSingletonProperty(() =>
+                    new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider));
+
+            return null;
         }
     }
 }

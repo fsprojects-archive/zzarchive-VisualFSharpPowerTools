@@ -11,12 +11,12 @@ open FSharpVSPowerTools.Core.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 
-type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
+type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self = 
     let classificationChanged = Event<_,_>()
     let lastSnapshot = Atom null
     let locations = Atom [||]
-    let mutable isWorking = false 
+    let mutable isWorking = false
     
     let referenceType = classificationRegistry.GetClassificationType "FSharp.ReferenceType"
     let valueType = classificationRegistry.GetClassificationType "FSharp.ValueType"
@@ -34,24 +34,24 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
     
     let synchronousUpdate (newLocations: CategorizedColumnSpan[]) = 
         locations.Swap(fun _ -> newLocations) |> ignore
-        let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+        let snapshot = SnapshotSpan(doc.TextBuffer.CurrentSnapshot, 0, doc.TextBuffer.CurrentSnapshot.Length)
         classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
     
     let updateSyntaxConstructClassifiers() =
-        let snapshot = buffer.CurrentSnapshot
+        let snapshot = doc.TextBuffer.CurrentSnapshot
         if not isWorking && snapshot <> lastSnapshot.Value then 
             isWorking <- true
             maybe {
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument()
-                let! project = ProjectProvider.createForDocument doc
+                let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath)
+                let! project = ProjectProvider.createForFileInProject doc.FilePath projectItem.ContainingProject
 
                 debug "[SyntaxConstructClassifier] - Effective update"
                 lastSnapshot.Swap (fun _ -> snapshot) |> ignore
                 async {
                     try
                         let! allSymbolsUses =
-                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
+                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
                 
                         getCategoriesAndLocations allSymbolsUses
                         |> Array.sortBy (fun { Line = line } -> line)
@@ -61,11 +61,11 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
                 } |> Async.Start
             } |> ignore
     
-    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 
+    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 
                                     TimeSpan.FromMilliseconds 200.,
                                     fun _ -> updateSyntaxConstructClassifiers())
 
-    do buffer.Changed.Add (fun _ -> locations.Swap (fun _ -> [||]) |> ignore)
+    do doc.TextBuffer.Changed.Add (fun _ -> locations.Swap (fun _ -> [||]) |> ignore)
     
     interface IClassifier with
         // it's called for each visible line of code
@@ -73,7 +73,7 @@ type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: ICl
             let spanStartLine = snapshotSpan.Start.GetContainingLine().LineNumber + 1
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
 
-            let spans = 
+            let spans =
                 locations.Value
                 // locations are sorted, so we can safely filter them efficently
                 |> Seq.skipWhile (fun { Line = line } -> line < spanStartLine)
