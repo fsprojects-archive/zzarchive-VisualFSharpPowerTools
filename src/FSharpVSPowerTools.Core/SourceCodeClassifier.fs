@@ -26,6 +26,13 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             name.Substring (2, name.Length - 4) |> String.forall (fun c -> c <> ' ')
         else false
 
+    let rec getAbbreviatedType (entity: FSharpEntity) =
+        if entity.IsFSharpAbbreviation then
+            let typ = entity.AbbreviatedType
+            if typ.HasTypeDefinition then getAbbreviatedType typ.TypeDefinition
+            else entity
+        else entity
+
     match symbol with
     | :? FSharpGenericParameter
     | :? FSharpStaticParameter -> 
@@ -41,13 +48,9 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
     | :? FSharpEntity as e ->
         //debug "%A (type: %s)" e (e.GetType().Name)
+        let e = getAbbreviatedType e
         if e.IsEnum || e.IsValueType then
             ValueType
-        elif e.IsFSharpAbbreviation then
-            let typ = e.AbbreviatedType
-            if typ.HasTypeDefinition && (typ.TypeDefinition.IsEnum || typ.TypeDefinition.IsValueType) then
-                ValueType
-            else ReferenceType
         elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
            || e.IsProvidedAndErased || e.IsProvidedAndGenerated 
@@ -76,7 +79,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         Other
 
 type ColumnSpan = 
-    { Start: int 
+    { Start: int
       End: int }
 
 type CategorizedColumnSpan =
