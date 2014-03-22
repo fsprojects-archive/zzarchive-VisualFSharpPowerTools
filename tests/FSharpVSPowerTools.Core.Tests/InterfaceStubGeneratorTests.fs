@@ -87,25 +87,29 @@ let checkInterfaceStub line col lineStr idents (expected: string) =
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> assertEqual (Some <| expected.Replace("\r\n", "\n"))
 
+[<Test>]
 let ``should generate stubs for simple interface``() =
     checkInterfaceStub 5 24 "   interface IPrintable with " ["IPrintable"] """
 member x.Print(): unit = 
     raise (System.NotImplementedException())
 """
 
+[<Test>]
 let ``should generate stubs for simple interface in object expressions``() =
     checkInterfaceStub 9 21 "    { new IPrintable with" ["IPrintable"] """
 member x.Print(): unit = 
     raise (System.NotImplementedException())
 """
 
+[<Test>]
 let ``should generate stubs for non-F# interface in object expressions``() =
     checkInterfaceStub 16 29 "    { new System.IDisposable with" ["System"; "IDisposable"] """
 member x.Dispose(): unit = 
     raise (System.NotImplementedException())
 """
 
-[<Ignore>]
+[<Ignore("Probably a bug in interface inheritance in FCS. Need to check.")>]
+[<Test>]
 let ``should generate stubs for composite interface``() =
     checkInterfaceStub 31 25 "    interface Interface3 with " ["Interface3"] """
 member x.Method1(arg1: int): int = 

@@ -2,11 +2,12 @@
 
 open System
 open System.IO
+open System.Diagnostics
 open System.Collections.Generic
 open System.CodeDom.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type ColumnIndentedTextWriter() =
+type internal ColumnIndentedTextWriter() =
     let stringWriter = new StringWriter()
     let indentWriter = new IndentedTextWriter(stringWriter, " ")
 
@@ -33,7 +34,7 @@ type ColumnIndentedTextWriter() =
             indentWriter.Dispose()  
 
 [<NoComparison>]
-type Context =
+type internal Context =
     {
         Writer: ColumnIndentedTextWriter
         Indentation: int
@@ -43,51 +44,50 @@ type Context =
 
 // Adapt from MetadataFormat module in FSharp.Formatting 
 
-let (|AllAndLast|_|) (list:'T list) = 
+let internal (|AllAndLast|_|) (list:'T list) = 
     if list.IsEmpty then 
         None
     else 
         let revd = List.rev list
         Some(List.rev revd.Tail, revd.Head)
 
-let isAttrib<'T> (attrib: FSharpAttribute)  =
+let internal isAttrib<'T> (attrib: FSharpAttribute)  =
     attrib.AttributeType.CompiledName = typeof<'T>.Name
 
-let hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
+let internal hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
     attribs |> Seq.exists (fun a -> isAttrib<'T>(a))
 
-let (|MeasureProd|_|) (typ : FSharpType) = 
+let internal (|MeasureProd|_|) (typ : FSharpType) = 
     if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "*" && typ.GenericArguments.Count = 2 then
         Some (typ.GenericArguments.[0], typ.GenericArguments.[1])
     else None
 
-let (|MeasureInv|_|) (typ : FSharpType) = 
+let internal (|MeasureInv|_|) (typ : FSharpType) = 
     if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "/" && typ.GenericArguments.Count = 1 then 
         Some typ.GenericArguments.[0]
     else None
 
-let (|MeasureOne|_|) (typ: FSharpType) = 
+let internal (|MeasureOne|_|) (typ: FSharpType) = 
     if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "1" && typ.GenericArguments.Count = 0 then 
         Some ()
     else None
 
-let formatTypeArgument (typar: FSharpGenericParameter) =
+let internal formatTypeArgument (typar: FSharpGenericParameter) =
     (if typar.IsSolveAtCompileTime then "^" else "'") + typar.Name
 
-let formatTypeArguments (typars:seq<FSharpGenericParameter>) =
+let internal formatTypeArguments (typars:seq<FSharpGenericParameter>) =
     Seq.map formatTypeArgument typars |> List.ofSeq
 
-let bracket (str: string) = 
+let internal bracket (str: string) = 
     if str.Contains(" ") then "(" + str + ")" else str
 
-let bracketIf cond str = 
+let internal bracketIf cond str = 
     if cond then "(" + str + ")" else str
 
-let formatTyconRef (tcref:FSharpEntity) = 
-    // TODO: layoutTyconRef generates hyperlinks 
+let internal formatTyconRef (tcref:FSharpEntity) = 
     tcref.DisplayName
 
-let rec formatTypeApplication typeName prec prefix args =
+let rec internal formatTypeApplication typeName prec prefix args =
     if prefix then 
         match args with
         | [] -> typeName
@@ -137,11 +137,11 @@ and formatTypeWithPrec prec (typ:FSharpType) =
         formatTypeArgument typ.GenericParameter
     | _ -> failwith "Can't format type annotation" 
 
-let formatType typ = 
+let internal formatType typ = 
     formatTypeWithPrec 5 typ
 
 // Format each argument, including its name and type 
-let formatArgUsage hasTypeAnnotation i (arg: FSharpParameter) = 
+let internal formatArgUsage hasTypeAnnotation i (arg: FSharpParameter) = 
     let nm = 
         match arg.Name with 
         | None -> 
@@ -155,7 +155,7 @@ let formatArgUsage hasTypeAnnotation i (arg: FSharpParameter) =
         argName + ": " + formatTypeWithPrec 2 arg.Type
     else argName
 
-let formatArgsUsage hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
+let internal formatArgsUsage hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
     let isItemIndexer = (v.IsInstanceMember && v.DisplayName = "Item")
     let counter = let n = ref 0 in fun () -> incr n; !n
     let unit, argSep, tupSep = "()", " ", ", "
@@ -169,7 +169,7 @@ let formatArgsUsage hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
         | args -> bracket (String.concat tupSep args))
     |> String.concat argSep
   
-let formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
+let internal formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
     let buildUsage (argInfos: FSharpParameter list list) = 
         let args =
             match argInfos with
@@ -198,10 +198,19 @@ let formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) =
           // Skip dispatch slot because we generate stub implementation
           if v.IsDispatchSlot then () ]
 
-    let argInfos = v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
+    let argInfos = 
+        // It might be a bug in FCS
+        try v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
+        with _ -> 
+            Debug.WriteLine("FSharpMemberFunctionOrValue.CurriedParameterGroups throws an exception.")
+            [[]]
+
     let retType =
-        // It might be a bug of FCS 
-        try Some v.ReturnParameter.Type with _ -> None
+        try Some v.ReturnParameter.Type 
+        with _ -> 
+            Debug.WriteLine("FSharpMemberFunctionOrValue.ReturnParameter throws an exception.")
+            None
+
     let argInfos, retType = 
         match argInfos, v.IsGetterMethod, v.IsSetterMethod with
         | [ AllAndLast(args, last) ], _, true -> [ args ], Some last.Type
@@ -233,7 +242,7 @@ let formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) =
     ctx.Writer.Unindent ctx.Indentation
 
 /// Get members in the decreasing order of inheritance chain
-let rec private getMembers (e: FSharpEntity) = 
+let rec internal getMembers (e: FSharpEntity) = 
     seq {
         match e.BaseType with
         | Some baseType ->
@@ -245,9 +254,9 @@ let rec private getMembers (e: FSharpEntity) =
 let formatInterface startColumn indentation objectIdent (methodBody: string) (e: FSharpEntity) =
     assert e.IsInterface
     use writer = new ColumnIndentedTextWriter()
-    writer.Indent startColumn
     let lines = methodBody.Replace("\r\n", "\n").Split('\n')
     let ctx = { Writer = writer; Indentation = indentation; ObjectIdent = objectIdent; MethodBody = lines }
+    writer.Indent startColumn
     for v in getMembers e do
         formatMember ctx v
     writer.Dump()
