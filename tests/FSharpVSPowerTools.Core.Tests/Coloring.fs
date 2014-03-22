@@ -75,3 +75,11 @@ type System.String with
 let _ = "x".``Long func``().Substring(3)
 let arr = [|1|]
 let _ = arr.[0]
+let mutable mutableValue = 1
+type MutableRecord = 
+    { mutable MutableField: int }
+type MutableClass() = 
+    let mutable mutableField = 0
+let func() =
+    let mutable mutableLocalVar = 1
+    ()

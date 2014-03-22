@@ -14,6 +14,7 @@ type Category =
     | TypeParameter
     | Function
     | PublicField
+    | MutableVar
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -34,7 +35,9 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         PatternCase
 
     | :? FSharpField as f ->
-        if f.Accessibility.IsPublic then PublicField else Other
+        if f.IsMutable then MutableVar
+        elif f.Accessibility.IsPublic then PublicField 
+        else Other
 
     | :? FSharpEntity as e ->
         //debug "%A (type: %s)" e (e.GetType().Name)
@@ -65,6 +68,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
                 Other
             else
                 Function
+        elif func.IsMutable then MutableVar 
         else Other
     
     | _ ->

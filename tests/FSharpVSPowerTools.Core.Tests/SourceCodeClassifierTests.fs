@@ -186,3 +186,12 @@ let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function
 [<Test>]
 let ``indexer``() = checkCategories 77 []
 
+[<Test>]
+let ``mutable value``() = checkCategories 78 [ MutableVar, 12, 24 ]
+
+[<Test>]
+let ``mutable field``() = 
+    checkCategories 80 [ MutableVar, 14, 26; ReferenceType, 28, 31 ]
+    checkCategories 82 [ MutableVar, 16, 28 ]
+    checkCategories 84 [ MutableVar, 16, 31 ]
+
