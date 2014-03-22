@@ -32,10 +32,13 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | Function -> Some functionType
         | PublicField | Other -> None
     
-    let synchronousUpdate (newLocations: CategorizedColumnSpan[]) = 
+    let synchronousUpdate (newLocations: CategorizedColumnSpan []) = 
         locations.Swap(fun _ -> newLocations) |> ignore
-        let snapshot = SnapshotSpan(doc.TextBuffer.CurrentSnapshot, 0, doc.TextBuffer.CurrentSnapshot.Length)
-        classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
+        // TextBuffer is null if a solution is closed at this moment
+        if doc.TextBuffer <> null then
+            let currentSnapshot = doc.TextBuffer.CurrentSnapshot
+            let snapshot = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+            classificationChanged.Trigger(self, ClassificationChangedEventArgs(snapshot))
     
     let updateSyntaxConstructClassifiers() =
         let snapshot = doc.TextBuffer.CurrentSnapshot

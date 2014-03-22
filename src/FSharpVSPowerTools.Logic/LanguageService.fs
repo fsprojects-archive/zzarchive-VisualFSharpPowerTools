@@ -40,6 +40,13 @@ type VSLanguageService
         debug "[Language Service] Solution opened. Create Checker."
         instance <- LanguageService (fun _ -> ()))
 
+    do events.SolutionEvents.add_AfterClosing (fun _ ->
+           // If checker is doing something at the moment, the following call would block the main thread.
+           // As a result, closing the solution would hang VS until checker finishes whatever it does. 
+           // That's why the async here.
+           async { return instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients() } 
+           |> Async.Start)
+
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
             let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
