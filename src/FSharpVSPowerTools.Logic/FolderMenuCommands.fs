@@ -46,7 +46,7 @@ type FSharpProjectSystemService(dte: DTE, logger : Logger) =
     let asm = lazy try Assembly.Load(assemblyInfo)
                    with _ ->
                         let ex = AssemblyMissingException "FSharp.ProjectSystem.FSharp"
-                        logger.LogException ex
+                        logger.LogException ex |> ignore
                         raise ex
 
     let MSBuildUtilitiesType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.ProjectSystem.MSBuildUtilities")

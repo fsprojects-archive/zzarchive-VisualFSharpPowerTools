@@ -25,7 +25,7 @@ type Logger
             | LogType.Information -> __ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION
             | LogType.Warning -> __ACTIVITYLOG_ENTRYTYPE.ALE_WARNING
             | LogType.Error -> __ACTIVITYLOG_ENTRYTYPE.ALE_ERROR
-        Convert.ToUInt32(value) :> UInt32
+        Convert.ToUInt32(value)
 
     let getIcon logType =
         match logType with
