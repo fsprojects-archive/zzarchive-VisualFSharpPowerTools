@@ -21,7 +21,14 @@ let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColum
     let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
     let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
     Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
-    SnapshotSpan(snapshot, startPos, endPos - startPos)
+    let length = endPos - startPos
+    try 
+        SnapshotSpan(snapshot, startPos, length)
+    with e ->
+        let msg = 
+            sprintf "Attempt to create a SnapshotSpan with wrong arguments (StartPos = %d, Length = %d). Snapshot.Lenght = %d" 
+                    startPos length snapshot.Length
+        raise (Exception (msg, e))
     
 /// Retrieve snapshot from VS zero-based positions
 let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
