@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>navigateto</title>
+    <title>syntaxcoloring</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Visual F# Power Tools (by F# Community) ">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko">
@@ -32,14 +32,39 @@
       <div class="row">
         <div class="span9" id="main">
           
-<h2>NavigateTo (Ctrl + ,) command</h2>
+<h2>Syntax coloring</h2>
 
-<p>This feature can also be activated through Edit --> NavigateTo menu. 
-It performs quick search to navigate between different locations in the source files.</p>
+<p>We currently support coloring:</p>
 
-<p>Here is a screencast in VS2013 where symbols are returned from both C# and F# projects.</p>
+<ul>
+<li>types</li>
+<li>functions / methods</li>
+<li>value types</li>
+<li>patterns (off by default)</li>
+<li>mutable variables / reference cells (off by default)</li>
+</ul>
 
-<p><img src="img/navigate_to.gif" alt="NavigateTo" /></p>
+<p>Here is how the editor looks like in blue &amp; dark theme:</p>
+
+<p><img src="img/syntax_coloring_demo_blue.png" alt="Syntax coloring" /></p>
+
+<p><img src="img/syntax_coloring_demo_dark.png" alt="Syntax coloring" /></p>
+
+<h2>How to customize colors</h2>
+
+<p>Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:</p>
+
+<ul>
+<li>F# Types</li>
+<li>F# Functions / Methods</li>
+<li>F# Value Types</li>
+<li>F# Patterns</li>
+<li>F# Mutable Variables / Reference Cells</li>
+</ul>
+
+<p>You can press Ctrl + F in 'Display items' to quickly navigate to these colors.</p>
+
+<p><img src="img/syntax_coloring_options.png" alt="Syntax coloring" /></p>
 
 
         </div>
