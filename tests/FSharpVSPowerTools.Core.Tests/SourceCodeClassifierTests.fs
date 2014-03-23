@@ -184,7 +184,7 @@ let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ValueType, 
 let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
 
 [<Test>]
-let ``indexer``() = checkCategories 77 []
+let ``indexer``() = checkCategories 77 [ Function, 11, 12 ]
 
 [<Test>]
 let ``mutable value``() = checkCategories 78 [ MutableVar, 12, 24 ]
@@ -195,3 +195,13 @@ let ``mutable field``() =
     checkCategories 82 [ MutableVar, 16, 28 ]
     checkCategories 84 [ MutableVar, 16, 31 ]
 
+[<Test>]
+let ``reference value``() = 
+    checkCategories 86 [ MutableVar, 4, 12; Function, 15, 18 ]
+    checkCategories 87 [ MutableVar, 0, 8; MutableVar, 13, 21 ]
+
+[<Test>]
+let ``reference field``() = 
+    checkCategories 89 [ Function, 19, 22; MutableVar, 8, 16 ]
+    checkCategories 90 [ MutableVar, 13, 21 ]
+    checkCategories 92 [ MutableVar, 6, 11; ValueType, 13, 16; ReferenceType, 17, 20 ]

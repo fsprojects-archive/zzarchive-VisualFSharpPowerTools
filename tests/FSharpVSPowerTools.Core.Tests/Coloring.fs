@@ -83,3 +83,10 @@ type MutableClass() =
 let func() =
     let mutable mutableLocalVar = 1
     ()
+let refValue = ref 1
+refValue := !refValue + 1
+type ClassWithRefValue() =
+    let refValue = ref 1
+    let _ = !refValue
+type RecordWithRefValue = 
+    { Field: int ref }
