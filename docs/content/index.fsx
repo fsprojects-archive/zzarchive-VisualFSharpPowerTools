@@ -20,12 +20,12 @@ Here are currently supported features:
  * [Auto-generating XMLDoc](xmldoc.html)
  * [Source code formatting](codeformatting.html)
  * [Navigation bar](navbar.html)
- * [Syntax coloring](syntaxcoloring.html)
  * [Highlight references](highlightusage.html)
  * [Rename refactoring](rename.html)
  * [Depth colorizer](depthcolorizer.html)
  * [NavigateTo](navigateto.html)
- 
+ * [Syntax coloring](syntaxcoloring.html)
+  
 Contributing and copyright
 --------------------------
 
