@@ -14,6 +14,7 @@ type Category =
     | TypeParameter
     | Function
     | PublicField
+    | MutableVar
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -25,6 +26,26 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
             name.Substring (2, name.Length - 4) |> String.forall (fun c -> c <> ' ')
         else false
 
+    let rec getEntityAbbreviatedType (entity: FSharpEntity) =
+        if entity.IsFSharpAbbreviation then
+            let typ = entity.AbbreviatedType
+            if typ.HasTypeDefinition then getEntityAbbreviatedType typ.TypeDefinition
+            else entity
+        else entity
+
+    let rec getAbbreviatedType (fsharpType: FSharpType) =
+        if fsharpType.IsAbbreviation then
+            let typ = fsharpType.AbbreviatedType
+            if typ.HasTypeDefinition then getAbbreviatedType typ
+            else fsharpType
+        else fsharpType
+
+    let isReferenceCell (fsharpType: FSharpType) = 
+        let ty = getAbbreviatedType fsharpType
+        ty.HasTypeDefinition 
+        && ty.TypeDefinition.IsFSharpRecord
+        && ty.TypeDefinition.FullName = "Microsoft.FSharp.Core.FSharpRef`1"
+
     match symbol with
     | :? FSharpGenericParameter
     | :? FSharpStaticParameter -> 
@@ -34,17 +55,14 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         PatternCase
 
     | :? FSharpField as f ->
-        if f.Accessibility.IsPublic then PublicField else Other
+        if f.IsMutable || isReferenceCell f.FieldType then MutableVar
+        elif f.Accessibility.IsPublic then PublicField 
+        else Other
 
     | :? FSharpEntity as e ->
         //debug "%A (type: %s)" e (e.GetType().Name)
-        if e.IsEnum || e.IsValueType then
-            ValueType
-        elif e.IsFSharpAbbreviation then
-            let typ = e.AbbreviatedType
-            if typ.HasTypeDefinition && (typ.TypeDefinition.IsEnum || typ.TypeDefinition.IsValueType) then
-                ValueType
-            else ReferenceType
+        let e = getEntityAbbreviatedType e
+        if e.IsEnum || e.IsValueType then ValueType
         elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
            || e.IsProvidedAndErased || e.IsProvidedAndGenerated 
@@ -55,16 +73,13 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | :? FSharpMemberFunctionOrValue as func ->
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
         if func.CompiledName = ".ctor" then 
-            if func.EnclosingEntity.IsValueType || func.EnclosingEntity.IsEnum then
-                ValueType
-            else
-                ReferenceType
+            if func.EnclosingEntity.IsValueType || func.EnclosingEntity.IsEnum then ValueType
+            else ReferenceType
         elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod
              && not symbolUse.IsFromComputationExpression then 
-            if isOperator func.DisplayName then
-                Other
-            else
-                Function
+            if isOperator func.DisplayName then Other
+            else Function
+        elif func.IsMutable || isReferenceCell func.FullType then MutableVar
         else Other
     
     | _ ->
@@ -72,7 +87,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         Other
 
 type ColumnSpan = 
-    { Start: int 
+    { Start: int
       End: int }
 
 type CategorizedColumnSpan =
@@ -85,7 +100,7 @@ type CategorizedColumnSpan =
 // plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
 // after excluding "Diagnostics", we get "DebuggerDisplay" and we are done.
 let excludeColumnSpan from what =
-    if what.End < from.End && what.End >= from.Start then
+    if what.End < from.End && what.End > from.Start then
         { from with Start = what.End + 1 } // the dot between parts
     else from
  
@@ -137,7 +152,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], getLexerSymbol
             else Some { Category = getCategory x; Line = r.StartLine; ColumnSpan = span' }
         
         //debug "-=O=- %A: %s, FullName = %s, Range = %s, Span = %A" 
-          //  x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName (x.RangeAlternate.ToShortString()) categorizedSpan
+        //      x.Symbol (x.Symbol.GetType().Name) x.Symbol.FullName (x.RangeAlternate.ToShortString()) categorizedSpan
         
         categorizedSpan)
     |> Seq.distinct

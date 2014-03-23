@@ -22,6 +22,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     let valueType = classificationRegistry.GetClassificationType "FSharp.ValueType"
     let patternType = classificationRegistry.GetClassificationType "FSharp.PatternCase"
     let functionType = classificationRegistry.GetClassificationType "FSharp.Function"
+    let mutableVarType = classificationRegistry.GetClassificationType "FSharp.MutableVar"
 
     let getClassficationType cat =
         match cat with
@@ -30,6 +31,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | PatternCase -> Some patternType
         | TypeParameter -> None
         | Function -> Some functionType
+        | MutableVar -> Some mutableVarType
         | PublicField | Other -> None
     
     let synchronousUpdate (newLocations: CategorizedColumnSpan[]) = 
