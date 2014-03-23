@@ -149,7 +149,7 @@ Target "ReleaseDocs" (fun _ ->
 Target "Release" DoNothing
 
 // --------------------------------------------------------------------------------------
-// Run all targets by default. Invoke 'build <Target>' to override
+// Run main targets by default. Invoke 'build <Target>' to override
 
 Target "Main" DoNothing
 
@@ -167,10 +167,10 @@ Target "All" DoNothing
   =?> ("ExtraIntegrationTests", isLocalBuild)
   ==> "All"
 
-"All" 
+"Main" 
   ==> "CleanDocs"
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
   ==> "Release"
 
-RunTargetOrDefault "All"
+RunTargetOrDefault "Main"
