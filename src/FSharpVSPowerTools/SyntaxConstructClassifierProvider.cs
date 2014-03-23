@@ -164,7 +164,7 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpReferenceTypeFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# User Types";
+                this.DisplayName = "F# Types";
                 this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpReferenceType);
             }
         }
@@ -178,7 +178,7 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpValueTypeFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# User Types (Value types)";
+                this.DisplayName = "F# Value Types";
                 this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpValueType);
             }
         }
@@ -206,7 +206,7 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpFunctionFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Functions";
+                this.DisplayName = "F# Functions / Methods";
                 this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpFunction);
             }
         }
@@ -220,7 +220,7 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpMutableVarFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Mutable variables";
+                this.DisplayName = "F# Mutable Variables / Reference Cells";
                 this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpMutableVar);
             }
         }

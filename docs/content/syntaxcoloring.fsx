@@ -9,10 +9,11 @@ Syntax coloring
 
 We currently support coloring:
 
-- reference/value types
-- functions
-- mutable variables/fields (off by default)
+- types
+- functions / methods
+- value types
 - patterns (off by default)
+- mutable variables / reference cells (off by default)
 
 Here is how the editor looks like in blue & dark theme:
 
@@ -26,11 +27,11 @@ How to customize colors
 
 Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:
 
-- F# User Types
-- F# Functions
-- F# User Types (Value types)
+- F# Types
+- F# Functions / Methods
+- F# Value Types
 - F# Patterns
-- F# Mutable variables
+- F# Mutable Variables / Reference Cells
 
 You can press Ctrl + F in 'Display items' to quickly navigate to these colors.
 
