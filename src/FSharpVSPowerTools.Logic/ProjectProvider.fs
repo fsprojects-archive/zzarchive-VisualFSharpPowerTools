@@ -83,8 +83,8 @@ module ProjectProvider =
                 | Some(sources, _) -> sources
                 | _ -> [||]
 
-    type private VirtualProjectProvider (doc: Document) = 
-        do Debug.Assert (doc <> null, "Input document should not be null.")
+    type private VirtualProjectProvider (filePath: string) = 
+        do Debug.Assert (filePath <> null, "FilePath should not be null.")
     
         interface IProjectProvider with
             member x.ProjectFileName = null
@@ -99,21 +99,25 @@ module ProjectProvider =
                     yield "--tailcalls-"
                 |]
 
-            member x.SourceFiles = [|doc.FullName|]
+            member x.SourceFiles = [| filePath |]
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 
-    let createForDocument (doc: Document): IProjectProvider option =
-        let project = doc.ProjectItem.ContainingProject
+    let createForFileInProject (filePath: string) project: IProjectProvider option =
         if not (project === null) && isFSharpProject project then
             Some (ProjectProvider(project) :> _)
-        elif not (doc.FullName === null) then
-            let ext = Path.GetExtension doc.FullName
+        elif not (filePath === null) then
+            let ext = Path.GetExtension filePath
             if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
                String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
                String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
-                Some (VirtualProjectProvider(doc) :> _)
+                Some (VirtualProjectProvider(filePath) :> _)
             else 
                 None
         else 
             None
+
+    let createForDocument (doc: Document) =
+        createForFileInProject doc.FullName doc.ProjectItem.ContainingProject
+
+    

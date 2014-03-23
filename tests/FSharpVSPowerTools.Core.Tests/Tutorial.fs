@@ -770,4 +770,5 @@ let p = 1
 
     type Record = { Field: int }
     let r = { Record.Field = 1 }
-    
+    let refValue = ref 1
+    refValue := !refValue + 1

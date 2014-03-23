@@ -55,6 +55,9 @@ let ``should find identifiers``() =
     checkGetSymbol 582 56 "    let computeResults() = oneBigArray |> Array.Parallel.map (fun x -> computeSomeFunction (x % 20))"
         (Some ("Parallel", (582, 48), (582, 56), Ident))
 
+    checkGetSymbol 773 17 "    refValue := !refValue + 1" (Some ("refValue", (773, 17), (773, 25), Ident))
+    checkGetSymbol 773 25 "    refValue := !refValue + 1" (Some ("refValue", (773, 17), (773, 25), Ident))
+
 [<Test>]
 let ``should find generic parameters``() =
     checkGetSymbol 707 12 "    type C<'a> = C of 'a" (Some ("'a", (707, 11), (707, 13), GenericTypeParameter))

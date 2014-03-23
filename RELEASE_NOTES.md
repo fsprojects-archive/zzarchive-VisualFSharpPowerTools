@@ -40,8 +40,9 @@
 * Improve Rename dialog
 * Improve performance of NavigateTo feature
 * Implement semantic highlighting
-* Migrate to FsXaml
+* Migrate to XAML provider in FsXaml
 * Improve lexing performance
 * Fix intermittent navigation bar configration 
+* Setup integration tests
 
 

@@ -35,10 +35,7 @@ type VSLanguageService
     do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
-    
-    do events.SolutionEvents.add_Opened (fun _ -> 
-        debug "[Language Service] Solution opened. Create Checker."
-        instance <- LanguageService (fun _ -> ()))
+    do events.SolutionEvents.add_AfterClosing (fun _ -> instance <- LanguageService (fun _ -> ()))
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
