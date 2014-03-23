@@ -17,12 +17,14 @@ namespace FSharpVSPowerTools
         private IOleCommandTarget _commandChain;
         private readonly CommandMapping[] Commands;
 
+        private static Logger logger = new Logger(ServiceProvider.GlobalProvider);
+
         public static void Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
             GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
             if (!generalOptions.FormattingEnabled)
             {
-                Debug.WriteLine("[Formatting] The feature is disabled in General option page.");
+                logger.Log(LogType.Information, "Formatting feature is disabled in General option page.");
                 return;
             }
 

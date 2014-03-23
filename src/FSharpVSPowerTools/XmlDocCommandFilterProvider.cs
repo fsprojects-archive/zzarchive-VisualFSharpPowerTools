@@ -33,6 +33,9 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         private System.IServiceProvider serviceProvider = null;
 
+        [Import]
+        private Logger logger = null;
+
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
             var wpfTextView = editorFactory.GetWpfTextView(textViewAdapter);
@@ -41,7 +44,7 @@ namespace FSharpVSPowerTools
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.XmlDocEnabled)
             {
-                Debug.WriteLine("[XMLDoc] The feature is disabled in General option page.");
+                logger.Log(LogType.Information, "XMLDoc feature is disabled in General option page.");
                 return;
             }
 

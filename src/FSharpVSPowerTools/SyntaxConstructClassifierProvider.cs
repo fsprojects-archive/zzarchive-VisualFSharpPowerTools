@@ -217,12 +217,15 @@ namespace FSharpVSPowerTools
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
 
+        [Import]
+        private Logger logger = null;
+
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.SyntaxColoringEnabled)
             {
-                Debug.WriteLine("[Syntax Coloring] The feature is disabled in General option page.");
+                logger.Log(LogType.Information, "Syntax Coloring feature is disabled in General option page.");
                 return null;
             }
 

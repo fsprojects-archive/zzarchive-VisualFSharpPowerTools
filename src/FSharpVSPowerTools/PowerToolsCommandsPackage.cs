@@ -63,10 +63,11 @@ namespace FSharpVSPowerTools
 
             OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+            var logger = new Logger(ServiceProvider.GlobalProvider);
 
             if (mcs != null)
             {
-                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
+                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell, logger);
                 newFolderMenu.SetupCommands();
             }
 

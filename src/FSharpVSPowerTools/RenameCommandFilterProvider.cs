@@ -26,6 +26,9 @@ namespace FSharpVSPowerTools.Refactoring
         [Import(typeof(SVsServiceProvider))]
         private System.IServiceProvider serviceProvider = null;
 
+        [Import(typeof(Logger))]
+        private Logger logger = null;
+
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
             var textView = editorFactory.GetWpfTextView(textViewAdapter);
@@ -34,7 +37,7 @@ namespace FSharpVSPowerTools.Refactoring
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.RenameRefactoringEnabled)
             {
-                Debug.WriteLine("[Rename Refactoring] The feature is disabled in General option page.");
+                logger.Log(LogType.Information, "Rename Refactoring feature is disabled in General option page.");
                 return;
             }
 

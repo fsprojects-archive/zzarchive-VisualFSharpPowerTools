@@ -3,6 +3,7 @@
 open System
 open System.Reflection
 open Microsoft.FSharp.Reflection
+open FSharpVSPowerTools
 
 module Reflection = 
     // Various flags configurations for Reflection
@@ -74,7 +75,8 @@ exception AssemblyMissingException of string
 
 [<Export>]
 type FSharpLanguageService [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) = 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+     [<Import(typeof<Logger>)>] logger : Logger) = 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let assemblyInfo =
         match VisualStudioVersion.fromDTEVersion dte.Version with
@@ -83,7 +85,10 @@ type FSharpLanguageService [<ImportingConstructor>]
         | _ ->
             "FSharp.LanguageService, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
     let asm = lazy try Assembly.Load(assemblyInfo)
-                   with _ -> raise (AssemblyMissingException "FSharp.LanguageService")
+                   with _ ->
+                    let ex = AssemblyMissingException "FSharp.LanguageService"
+                    logger.LogException ex |> ignore
+                    raise ex
 
     let vsTextColorStateType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
     let colorStateLookupType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")

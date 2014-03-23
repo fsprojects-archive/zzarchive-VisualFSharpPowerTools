@@ -16,6 +16,9 @@ type Logger
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
+    [<Literal>]
+    let source = "F# Power Tools"
+
     let getEntryType logType =
         let value =
             match logType with
@@ -38,14 +41,18 @@ type Logger
         | null -> None
         | x -> Some x
 
-    member x.Log message source logType =
+    member x.Log logType message =
         getActivityLogService()
         |> Option.iter (fun s -> s.LogEntry((getEntryType logType), source, message) |> ignore)
 
-    member x.LogException message source (e:Exception) =
+    member x.LogExceptionWithMessage message (e:Exception) =
         let message =
             sprintf "Message: %s\nException Message: %s\nStack Trace: %s" message e.Message e.StackTrace
-        x.Log message source LogType.Error
+        x.Log LogType.Error message
+
+    member x.LogException (e:Exception) =
+        let message = sprintf "Exception Message: %s\mStart Trace: %s" e.Message e.StackTrace
+        x.Log LogType.Error message
                 
     member x.MessageBox title message logType =
         let icon = getIcon logType

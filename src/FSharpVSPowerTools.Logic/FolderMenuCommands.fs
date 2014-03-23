@@ -36,8 +36,7 @@ type ActionInfo =
     { Item : ProjectItem option
       Project : Project }
 
-[<Export>]
-type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) = 
+type FSharpProjectSystemService(dte: DTE, logger : Logger) = 
     let assemblyInfo =
         match VisualStudioVersion.fromDTEVersion dte.Version with
         | VisualStudioVersion.VS2012 ->
@@ -45,7 +44,10 @@ type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) =
         | _ ->
             "FSharp.ProjectSystem.FSharp, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
     let asm = lazy try Assembly.Load(assemblyInfo)
-                   with _ -> raise (AssemblyMissingException "FSharp.ProjectSystem.FSharp")
+                   with _ ->
+                        let ex = AssemblyMissingException "FSharp.ProjectSystem.FSharp"
+                        logger.LogException ex
+                        raise ex
 
     let MSBuildUtilitiesType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.ProjectSystem.MSBuildUtilities")
 
@@ -55,7 +57,7 @@ type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) =
     member x.MoveFolderUp item next project :unit = 
         MSBuildUtilitiesType.Value?MoveFolderUp(item, next, project)
 
-type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) = 
+type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell, logger:Logger) = 
 
     let getSelectedItems() = VSUtils.getSelectedItemsFromSolutionExplorer dte |> List.ofSeq
     let getSelectedProjects() = VSUtils.getSelectedProjectsFromSolutionExplorer dte |> List.ofSeq
@@ -126,7 +128,7 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
     let getNextItem = getItem getNextItemImpl
 
     let performMoveAction (info: ActionInfo) action =
-        let service = new FSharpProjectSystemService(dte :?> DTE)
+        let service = new FSharpProjectSystemService(dte :?> DTE, logger)
         let node = info.Item.Value?Node
         let project = info.Project?Project
 
