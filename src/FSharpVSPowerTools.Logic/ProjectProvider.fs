@@ -66,13 +66,19 @@ module ProjectProvider =
                 getProperty "TargetFSharpCoreVersion"
 
             member x.TargetFramework = 
-                match getProperty "TargetFrameworkVersion" with
-                | null | "v4.5" | "v4.5.1" -> FSharpTargetFramework.NET_4_5
-                | "v4.0" -> FSharpTargetFramework.NET_4_0
-                | "v3.5" -> FSharpTargetFramework.NET_3_5
-                | "v3.0" -> FSharpTargetFramework.NET_3_5
-                | "v2.0" -> FSharpTargetFramework.NET_2_0
-                | _ -> invalidArg "prop" "Unsupported .NET framework version"
+                match getProperty "TargetFrameworkMoniker" with
+                | null -> FSharpTargetFramework.NET_4_5
+                | x -> 
+                    try
+                        let frameworkName = new Runtime.Versioning.FrameworkName(x)
+                        match frameworkName.Version.Major, frameworkName.Version.Minor with
+                        | 4, 5 -> FSharpTargetFramework.NET_4_5
+                        | 4, 0 -> FSharpTargetFramework.NET_4_0
+                        | 3, 5 -> FSharpTargetFramework.NET_3_5
+                        | 3, 0 -> FSharpTargetFramework.NET_3_0
+                        | 2, 0 -> FSharpTargetFramework.NET_2_0
+                        | _ -> invalidArg "prop" "Unsupported .NET framework version" 
+                    with :? ArgumentException -> FSharpTargetFramework.NET_4_5
 
             member x.CompilerOptions = 
                 match getSourcesAndFlags() with
