@@ -6,6 +6,7 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open FSharp.CompilerBinding
 
 type Category =
     | ReferenceType
@@ -87,32 +88,20 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
         Other
 
-type Point = 
-    { Line: int
-      Col: int }
-
-type Range = 
-    { Start: Point
-      End: Point }
-    static member FromRange (r: Range.range) = 
-        { Start = { Line = r.StartLine; Col = r.StartColumn }
-          End = { Line = r.EndLine; Col = r.EndColumn }}
-
 type CategorizedColumnSpan =
     { Category: Category
-      Range: Range }
+      WordSpan: WordSpan }
 
 // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
 // Example: for ReferenceType symbol "System.Diagnostics.DebuggerDisplay" there are "System", "Diagnostics" and "DebuggerDisplay"
 // plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
 // after excluding "Diagnostics", we get "DebuggerDisplay" and we are done.
-let excludeRange from what =
-    if what.End.Col < from.End.Col && what.End.Col > from.Start.Col then
-        { from with Start = { from.Start with Col = what.End.Col + 1 }} // the dot between parts
+let excludeWordSpan from what =
+    if what.EndCol < from.EndCol && what.EndCol > from.StartCol then
+        { from with StartCol = what.EndCol + 1 } // the dot between parts
     else from
  
-let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, 
-                               getLexerSymbol: int -> int -> Symbol option) =
+let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, lexer: ILexer) =
     let allSymbolsUses =
         allSymbolsUses
         // FCS can return multi-line ranges, let's ignore them
@@ -121,42 +110,41 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
     // index all symbol usages by LineNumber 
     let wordSpans = 
         allSymbolsUses
-        |> Seq.map (fun su -> Range.FromRange su.RangeAlternate)
-        |> Seq.groupBy (fun r -> r.Start.Line)
+        |> Seq.map (fun su -> WordSpan.FromRange su.RangeAlternate)
+        |> Seq.groupBy (fun r -> r.Line)
         |> Seq.map (fun (line, ranges) -> line, ranges)
         |> Map.ofSeq
 
     let spansBasedOnSymbolsUses = 
         allSymbolsUses
         |> Seq.choose (fun x ->
-            let range = Range.FromRange x.RangeAlternate
+            let span = WordSpan.FromRange x.RangeAlternate
         
-            let range = 
+            let span = 
                 match wordSpans.TryFind x.RangeAlternate.StartLine with
-                | Some spans -> spans |> Seq.fold (fun result span -> excludeRange result span) range
-                | _ -> range
+                | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
+                | _ -> span
 
-            let range' = 
-                if (range.End.Col - range.Start.Col) - x.Symbol.DisplayName.Length > 0 then
+            let span' = 
+                if (span.EndCol - span.StartCol) - x.Symbol.DisplayName.Length > 0 then
                     // The span is wider that the simbol's display name.
                     // This means that we have not managed to extract last part of a long ident accurately.
                     // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
                     // So we get ident from the lexer.
-                    match getLexerSymbol (x.RangeAlternate.Start.Line - 1) (range.End.Col - 1) with
+                    match lexer.GetSymbolAtLocation (x.RangeAlternate.Start.Line - 1) (span.EndCol - 1) with
                     | Some s -> 
                         match s.Kind with
                         | Ident -> 
                             // Lexer says that our span is too wide. Adjust it's left column.
-                            if range.Start.Col < s.LeftColumn then 
-                                { range with Start = { range.Start with Col = s.LeftColumn }}
-                            else range
-                        | _ -> range
-                    | _ -> range
-                else range
+                            if span.StartCol < s.LeftColumn then { span with StartCol = s.LeftColumn }
+                            else span
+                        | _ -> span
+                    | _ -> span
+                else span
 
             let categorizedSpan =
-                if range'.End.Col <= range'.Start.Col then None
-                else Some { Category = getCategory x; Range = range' }
+                if span'.EndCol <= span'.StartCol then None
+                else Some { Category = getCategory x; WordSpan = span' }
         
             categorizedSpan)
         |> Seq.distinct
@@ -226,15 +214,50 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
     )
 
     //printfn "AST: %A" untypedAst
-    let qoutations = 
-        !quotationRanges |> Seq.map (fun r -> 
-            { Category = Quotation
-              Range = Range.FromRange r })
+    let quotations =
+        !quotationRanges 
+        |> Seq.map (fun (r: Range.range) -> 
+            [r.StartLine..r.EndLine]
+            |> Seq.map (fun line ->
+                 let tokens = lexer.GetAllTokens (line - 1)
+
+                 let tokens = 
+                    match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
+                    | Some lquote -> tokens |> Seq.skipWhile (fun t -> t <> lquote) |> Seq.toList
+                    | _ ->
+                        match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
+                        | Some rquote -> 
+                            tokens 
+                            |> List.rev
+                            |> Seq.skipWhile (fun t -> t <> rquote)
+                            |> Seq.toList
+                            |> List.rev
+                            |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
+                            |> Seq.toList
+                        | _ ->
+                            tokens
+                            |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
+                            |> Seq.toList
+
+                 let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
+                 
+                 let maxCol = 
+                    match tokens with
+                    | [] -> 0
+                    | xs ->
+                        let tok = xs |> List.maxBy (fun t -> t.RightColumn) 
+                        tok.LeftColumn + tok.FullMatchedLength
+
+                 { Category = Quotation
+                   WordSpan = { Line = line
+                                StartCol = minCol
+                                EndCol = maxCol }}))
+        |> Seq.concat
         |> Seq.toArray
 
-    let allSpans = spansBasedOnSymbolsUses |> Array.append qoutations
+    let allSpans = spansBasedOnSymbolsUses |> Array.append quotations
 
     //for span in allSpans do
-        //debug "-=O=- %A" span
+       // debug "-=O=- %A" span
 
     allSpans

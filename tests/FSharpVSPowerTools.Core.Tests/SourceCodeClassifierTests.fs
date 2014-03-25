@@ -26,39 +26,31 @@ let args =
 let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
-let checkCategoriesMultiline (expected: (Category * (int * int) * (int * int)) list) =
+let checkCategories line (expected: (Category * int * int) list)  =
     let symbolsUses, ast =
         vsLanguageService.GetAllUsesOfAllSymbolsInFile
             (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
 
-    let getLexerSymbol line col =
-        let lineStr = sourceLines.[line]
-        SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
+    let lexer = 
+        { new ILexer with
+            member x.GetSymbolAtLocation line col =
+                let lineStr = sourceLines.[line]
+                Lexer.getSymbol source line col lineStr args Lexer.queryLexState 
+            member x.GetAllTokens line =
+                let lineStr = sourceLines.[line]
+                Lexer.getAllTokens source line lineStr args Lexer.queryLexState }
 
-    let minLine, maxLine = 
-        match expected with 
-        | [] -> 0, 0
-        | xs ->     
-            xs |> List.map (fun (_,(line,_),_) -> line) |> List.min,
-            xs |> List.map (fun (_,_,(line,_)) -> line) |> List.max
-
-    SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, ast, getLexerSymbol)
+    SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, ast, lexer)
     |> Array.choose (fun loc -> 
         match loc.Category with 
         | Other -> None
-        | _ when loc.Range.Start.Line <= minLine && loc.Range.End.Line >= maxLine ->
-                Some (loc.Category, (loc.Range.Start.Line, loc.Range.Start.Col),
-                     (loc.Range.End.Line, loc.Range.End.Col))
+        | _ when loc.WordSpan.Line = line ->
+            let span = loc.WordSpan
+            Some (loc.Category, span.StartCol, span.EndCol)
         | _ -> None)
-
     |> Array.toList
     |> Collection.assertEquiv expected
-
-let checkCategories line (expected: (Category * int * int) list) = 
-    expected
-    |> List.map (fun (cat, startCol, endCol) -> cat, (line, startCol), (line, endCol))
-    |> checkCategoriesMultiline 
 
 [<Test>]
 let ``module value``() = 
@@ -225,4 +217,6 @@ let ``reference field``() =
 let ``single line quotation``() = checkCategories 93 [ Quotation, 8, 19 ]
 
 [<Test>]
-let ``multi line quotation``() = checkCategoriesMultiline [ Quotation, (94, 8), (95, 22) ]
+let ``multi line quotation``() = 
+    checkCategories 94 [ Quotation, 8, 16 ]
+    checkCategories 95 [ Quotation, 11, 22 ]

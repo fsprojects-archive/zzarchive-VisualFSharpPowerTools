@@ -56,7 +56,7 @@
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
-    <Compile Include="SymbolParserTests.fs" />
+    <Compile Include="LexerTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
     <Compile Include="XmlDocTests.fs" />

@@ -44,7 +44,7 @@ type VSLanguageService
             fsharpLanguageService.LexStateOfColorState(colorState)
         with e ->
             debug "[Language Service] %O exception occurs while querying lexing states." e
-            SymbolParser.queryLexState source defines line
+            Lexer.queryLexState source defines line
     
     member x.TryGetLocation (symbol: FSharpSymbol) =
         Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
@@ -56,7 +56,7 @@ type VSLanguageService
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions
                                 
-        SymbolParser.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
+        Lexer.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
     member x.TokenizeLine(textBuffer: ITextBuffer, defines, line) =
@@ -160,16 +160,21 @@ type VSLanguageService
                 | [||] -> [| currentFile |] 
                 | files -> files
 
-            let getLexerSymbol line col = 
+            let lexer = 
                 let getLineStr line =
                     let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
                     let lineNumber = line - lineStart
                     snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-                SymbolParser.getSymbol source line col (getLineStr line) args (buildQueryLexState snapshot.TextBuffer)
+
+                { new ILexer with
+                    member x.GetSymbolAtLocation line col =
+                        Lexer.getSymbol source line col (getLineStr line) args (buildQueryLexState snapshot.TextBuffer) 
+                    member x.GetAllTokens line =
+                        Lexer.getAllTokens source line (getLineStr line) args (buildQueryLexState snapshot.TextBuffer) }
 
             let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(
                                 projectFileName, currentFile, source, sourceFiles, args, framework, stale)
-            return symbolUses, getLexerSymbol
+            return symbolUses, lexer
         }
 
     member x.Checker = instance.Checker

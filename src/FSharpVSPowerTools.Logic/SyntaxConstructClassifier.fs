@@ -57,11 +57,12 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 lastSnapshot.Swap (fun _ -> snapshot) |> ignore
                 async {
                     try
-                        let! (allSymbolsUses, ast), getSymbol =
-                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
+                        let! (allSymbolsUses, ast), lexer =
+                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (
+                                snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
                         
-                        getCategoriesAndLocations (allSymbolsUses, ast, getSymbol)
-                        |> Array.sortBy (fun { Range = { Start = { Line = line }}} -> line)
+                        getCategoriesAndLocations (allSymbolsUses, ast, lexer)
+                        |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         |> synchronousUpdate
                     finally
                         isWorking <- false
@@ -81,15 +82,15 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let spans =
                 locations.Value
                 // locations are sorted, so we can safely filter them efficently
-                |> Seq.skipWhile (fun { Range = { End = { Line = line }}} -> line < spanStartLine)
-                |> Seq.takeWhile (fun { Range = { Start = { Line = line }}} -> line <= spanEndLine)
+                |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
+                |> Seq.takeWhile (fun { WordSpan = { Line = line }} -> line <= spanEndLine)
                 |> Seq.choose (fun loc -> maybe {
                      let! classificationType = getClassficationType loc.Category
                      let range = 
-                        loc.Range.Start.Line, 
-                        loc.Range.Start.Col,
-                        loc.Range.End.Line,
-                        loc.Range.End.Col
+                        loc.WordSpan.Line, 
+                        loc.WordSpan.StartCol,
+                        loc.WordSpan.Line,
+                        loc.WordSpan.EndCol
                      let! span = fromPos snapshotSpan.Snapshot range
                      return ClassificationSpan(span, classificationType) })
                 |> Seq.toArray
