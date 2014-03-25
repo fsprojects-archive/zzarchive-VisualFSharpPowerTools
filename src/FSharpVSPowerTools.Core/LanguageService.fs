@@ -6,6 +6,7 @@ open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open Microsoft.FSharp.Compiler.Ast
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -30,8 +31,8 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     member x.GetAllUsesOfAllSymbolsInFile() =
         match infoOpt with
-        | None -> [| |]
-        | Some (checkResults, _) -> checkResults.GetAllUsesOfAllSymbolsInFile()
+        | None -> [||], None
+        | Some (checkResults, parseResults) -> checkResults.GetAllUsesOfAllSymbolsInFile(), parseResults.ParseTree
 
     member x.GetErrors() =
         match infoOpt with 
@@ -329,6 +330,5 @@ type LanguageService (dirtyNotify) =
     member x.GetAllUsesOfAllSymbolsInFile (projectFilename, fileName, src, files, args, targetFramework, stale) =
         async {
             let! results = x.ParseAndCheckFileInProject (projectFilename, fileName, src, files, args, targetFramework, stale)
-            let symbolUses = results.GetAllUsesOfAllSymbolsInFile()
-            return symbolUses
+            return results.GetAllUsesOfAllSymbolsInFile()
         }

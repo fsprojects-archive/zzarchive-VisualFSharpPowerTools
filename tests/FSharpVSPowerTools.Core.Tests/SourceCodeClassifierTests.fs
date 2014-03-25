@@ -26,8 +26,8 @@ let args =
 let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
-let checkCategories line expected = 
-    let results = 
+let checkCategories line expected =
+    let symbolsUses, ast =
         vsLanguageService.GetAllUsesOfAllSymbolsInFile
             (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
@@ -36,12 +36,12 @@ let checkCategories line expected =
         let lineStr = sourceLines.[line]
         SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
 
-    SourceCodeClassifier.getCategoriesAndLocations (results, getLexerSymbol)
+    SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, ast, getLexerSymbol)
     |> Array.choose (fun loc -> 
         match loc.Category with 
         | Other -> None
-        | _ when loc.Line <> line -> None
-        | _ -> Some (loc.Category, loc.ColumnSpan.Start, loc.ColumnSpan.End))
+        | _ when loc.Range.Start.Line <> line || loc.Range.End.Line <> line -> None
+        | _ -> Some (loc.Category, loc.Range.Start.Col, loc.Range.End.Col))
     |> Array.toList
     |> Collection.assertEquiv expected
 
@@ -205,3 +205,6 @@ let ``reference field``() =
     checkCategories 89 [ Function, 19, 22; MutableVar, 8, 16 ]
     checkCategories 90 [ MutableVar, 13, 21 ]
     checkCategories 92 [ MutableVar, 6, 11; ValueType, 13, 16; ReferenceType, 17, 20 ]
+
+[<Test>]
+let ``typed quotation``() = checkCategories 94 [ Quotation, 4, 15 ]

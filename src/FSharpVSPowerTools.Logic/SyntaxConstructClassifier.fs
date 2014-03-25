@@ -23,6 +23,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     let patternType = classificationRegistry.GetClassificationType "FSharp.PatternCase"
     let functionType = classificationRegistry.GetClassificationType "FSharp.Function"
     let mutableVarType = classificationRegistry.GetClassificationType "FSharp.MutableVar"
+    let quotationType = classificationRegistry.GetClassificationType "FSharp.Quotation"
 
     let getClassficationType cat =
         match cat with
@@ -32,6 +33,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | TypeParameter -> None
         | Function -> Some functionType
         | MutableVar -> Some mutableVarType
+        | Quotation -> Some quotationType
         | PublicField | Other -> None
     
     let synchronousUpdate (newLocations: CategorizedColumnSpan []) = 
@@ -55,11 +57,11 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 lastSnapshot.Swap (fun _ -> snapshot) |> ignore
                 async {
                     try
-                        let! allSymbolsUses =
+                        let! (allSymbolsUses, ast), getSymbol =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
-                
-                        getCategoriesAndLocations allSymbolsUses
-                        |> Array.sortBy (fun { Line = line } -> line)
+                        
+                        getCategoriesAndLocations (allSymbolsUses, ast, getSymbol)
+                        |> Array.sortBy (fun { Range = { Start = { Line = line }}} -> line)
                         |> synchronousUpdate
                     finally
                         isWorking <- false
@@ -79,11 +81,15 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let spans =
                 locations.Value
                 // locations are sorted, so we can safely filter them efficently
-                |> Seq.skipWhile (fun { Line = line } -> line < spanStartLine)
-                |> Seq.takeWhile (fun { Line = line } -> line <= spanEndLine)
+                |> Seq.skipWhile (fun { Range = { Start = { Line = line }}} -> line < spanStartLine)
+                |> Seq.takeWhile (fun { Range = { Start = { Line = line }}} -> line <= spanEndLine)
                 |> Seq.choose (fun loc -> maybe {
                      let! classificationType = getClassficationType loc.Category
-                     let range = loc.Line, loc.ColumnSpan.Start, loc.Line, loc.ColumnSpan.End
+                     let range = 
+                        loc.Range.Start.Line, 
+                        loc.Range.Start.Col,
+                        loc.Range.End.Line,
+                        loc.Range.End.Col
                      let! span = fromPos snapshotSpan.Snapshot range
                      return ClassificationSpan(span, classificationType) })
                 |> Seq.toArray
