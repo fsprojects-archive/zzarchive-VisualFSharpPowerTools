@@ -41,7 +41,7 @@ type VSLanguageService
             let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
             fsharpLanguageService.LexStateOfColorState(colorState)
         with e ->
-            debug "[Language Service] %O exception occurs while getting symbol." e
+            debug "[Language Service] %O exception occurs while querying lexing states." e
             SymbolParser.queryLexState source defines line
     
     member x.TryGetLocation (symbol: FSharpSymbol) =
@@ -56,6 +56,21 @@ type VSLanguageService
                                 
         SymbolParser.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
+
+    member x.TokenizeLine(textBuffer: ITextBuffer, defines, line) =
+        let snapshot = textBuffer.CurrentSnapshot
+        let source = snapshot.GetText()
+        let lineStr = snapshot.GetLineFromLineNumber(line).GetText()
+        SymbolParser.tokenizeLine source defines line lineStr (buildQueryLexState textBuffer)
+
+    member x.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
+       instance.ParseFileInProject(
+            projectProvider.ProjectFileName,
+            currentFile,
+            source,
+            projectProvider.SourceFiles,
+            projectProvider.CompilerOptions,
+            projectProvider.TargetFramework) 
 
     member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
         instance.ProcessParseTrees(

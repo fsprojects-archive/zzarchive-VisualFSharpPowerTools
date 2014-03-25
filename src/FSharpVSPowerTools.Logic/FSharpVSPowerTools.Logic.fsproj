@@ -63,7 +63,7 @@
     <Compile Include="ThemeManager.fs" />
     <Compile Include="ProjectSystem.fs" />
     <Compile Include="ProjectProvider.fs" />
-    <Compile Include="LanguageService.fs" />
+    <Compile Include="VSLanguageService.fs" />
     <Compile Include="OpenDocumentsTracker.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="NavigateToItem.fs" />

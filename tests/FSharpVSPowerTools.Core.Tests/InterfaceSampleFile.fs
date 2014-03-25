@@ -32,3 +32,6 @@ type MyClass() =
         member this.Method1(n) = 2 * n
         member this.Method2(n) = n + 100
         member this.Method3(n) = n / 10
+
+//let _ =
+//    { new System.Collections.Generic.IList<'a> with }
