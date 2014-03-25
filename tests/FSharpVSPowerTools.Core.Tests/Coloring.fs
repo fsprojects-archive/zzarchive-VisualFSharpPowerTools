@@ -99,3 +99,8 @@ let _ = f <@ 1 = 1 @> <@ 2 = 2 @>
 type TypeWithQuotations() =
     let x = <@ 1 = 1 @>
     member x.F() = <@ 1 = 1 @>
+    member x.P = <@ 1 + 1 @>
+let _ = <@@ 1 @@>
+let _  = f <@ 1  
+              + 2 
+              + 3 @> <@@ 1 @@>

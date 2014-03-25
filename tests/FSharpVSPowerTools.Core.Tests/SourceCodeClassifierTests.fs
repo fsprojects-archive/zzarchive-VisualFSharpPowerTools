@@ -230,3 +230,13 @@ let ``quotation as function argument``() =
 let ``quotation in type``() = 
     checkCategories 100 [ Quotation, 12, 23 ]
     checkCategories 101 [ Function, 13, 14; Quotation, 19, 30 ]
+    checkCategories 102 [ Quotation, 17, 28 ]
+
+[<Test>]
+let ``untyped quotation``() = checkCategories 103 [ Quotation, 8, 17 ]
+
+[<Test>]
+let ``complicated quotation layout``() = 
+    checkCategories 104 [ Function, 9, 10; Quotation, 11, 15 ]
+    checkCategories 105 [ Quotation, 14, 17 ]
+    checkCategories 106 [ Quotation, 14, 20; Quotation, 21, 30 ]

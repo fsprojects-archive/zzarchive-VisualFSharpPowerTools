@@ -227,6 +227,9 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
 
     //printfn "AST: %A" untypedAst
     
+    let trimWhitespaces = 
+        Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace) >> Seq.toList
+
     let quotations =
         !quotationRanges 
         |> Seq.map (fun (r: Range.range) -> 
@@ -241,23 +244,19 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
                      let tokens = lexer.GetAllTokens (line - 1)
 
                      let tokens =
-                        match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
-                        | Some lquote -> tokens |> Seq.skipWhile (fun t -> t <> lquote) |> Seq.toList
-                        | _ ->
-                            match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
-                            | Some rquote -> 
-                                tokens 
-                                |> List.rev
-                                |> Seq.skipWhile (fun t -> t <> rquote)
-                                |> Seq.toList
-                                |> List.rev
-                                |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
-                                |> Seq.toList
-                            | _ ->
-                                tokens
-                                |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
-                                |> Seq.toList
+                        match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
+                        | Some rquote -> 
+                            tokens 
+                            |> List.rev
+                            |> Seq.skipWhile (fun t -> t <> rquote)
+                            |> Seq.toList
+                            |> List.rev
+                        | _ -> 
+                            match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
+                            | Some lquote -> tokens |> Seq.skipWhile (fun t -> t <> lquote) |> Seq.toList
+                            | _ -> tokens 
 
+                     let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
                      let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
                  
                      let maxCol = 
