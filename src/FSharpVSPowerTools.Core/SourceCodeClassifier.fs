@@ -156,10 +156,6 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         | SynPat.Wild(_) -> ()
         | SynPat.Named(pat, _, _, _, _) ->
             visitPattern pat
-        | SynPat.LongIdent(LongIdentWithDots(_, _), _, _, _, _, _) ->
-            //let names = String.concat "." [ for i in ident -> i.idText ]
-            //printfn "  .. identifier: %s" names
-            ()
         | _ -> () // printfn "  .. other pattern: %A" pat
 
     let rec visitExpression = function
@@ -169,28 +165,47 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
             visitExpression cond
             visitExpression trueBranch
             falseBranchOpt |> Option.iter visitExpression 
-    
-        | SynExpr.LetOrUse(_, _, bindings, body, _) ->
-            // Visit bindings (there may be multiple 
-            // for 'let .. = .. and .. = .. in ...'
-            //printfn "LetOrUse with the following bindings:"
-            for binding in bindings do
-                let (Binding (_, _, _, _, _, _, _, pat, _, init, _, _)) = binding
-                visitPattern pat 
-                visitExpression init
-            // Visit the body expression
-            //printfn "And the following body:"
+        | SynExpr.LetOrUse (_, _, bindings, body, _) ->
+            for b in bindings do visitBinding b
+            visitExpression body
+        | SynExpr.LetOrUseBang (_, _, _, pat, _, body, _) ->
+            visitPattern pat 
             visitExpression body
         | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) ->
             (!quotationRanges).Add range
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpression argExpr
             visitExpression funcExpr
-        | x -> () // printfn " - not supported expression: %A" x
+        | SynExpr.Lambda (_, _, _, expr, _) -> visitExpression expr
+        | SynExpr.Record (_, _, fields, _) ->
+            fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpression
+        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) -> visitExpression expr
+        | SynExpr.CompExpr (_, _, expr, _) -> visitExpression expr
+        | SynExpr.ForEach (_, _, _, _, _, body, _) -> visitExpression body
+        | SynExpr.YieldOrReturn (_, expr, _) -> visitExpression expr
+        | SynExpr.YieldOrReturnFrom (_, expr, _) -> visitExpression expr
+        | SynExpr.Do (expr, _) -> visitExpression expr
+        | SynExpr.DoBang (expr, _) -> visitExpression expr
+        | SynExpr.Downcast (expr, _, _) -> visitExpression expr
+        | SynExpr.For (_, _, _, _, _, expr, _) -> visitExpression expr
+        | SynExpr.Lazy (expr, _) -> visitExpression expr
+        | SynExpr.Match (_, expr, clauses, _, _) -> 
+            visitExpression expr
+            for SynMatchClause.Clause (pat, _, expr, _, _) in clauses do
+                visitPattern pat
+                visitExpression expr
+        | SynExpr.MatchLambda (_, _, clauses, _, _) ->
+            for SynMatchClause.Clause (pat, _, expr, _, _) in clauses do
+                visitPattern pat
+                visitExpression expr
+        | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> 
+            for b in bindings do visitBinding b
+        | SynExpr.Typed (expr, _, _) -> visitExpression expr
+        | _ -> () // printfn " - not supported expression: %A" x
 
-    let visitBinding (Binding(_, _, _, _, _, _, _, pat, _, body, _, _)) =
+    and visitBinding (Binding(_, _, _, _, _, _, _, pat, _, body, _, _)) =
         visitPattern pat 
-        visitExpression body         
+        visitExpression body             
 
     let visitMember = function
         | SynMemberDefn.LetBindings (bindings, _, _, _) -> for b in bindings do visitBinding b

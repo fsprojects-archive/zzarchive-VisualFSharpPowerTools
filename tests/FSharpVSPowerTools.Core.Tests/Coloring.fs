@@ -104,3 +104,13 @@ let _ = <@@ 1 @@>
 let _  = f <@ 1  
               + 2 
               + 3 @> <@@ 1 @@>
+let _ = fun() -> <@ 1 @>
+type RecordWithQuotation = { Field: Microsoft.FSharp.Quotations.Expr<int> }
+let _ = { Field = <@ 1 @> }
+let _ = [ <@ 1 @> ]
+let _ = seq { for i in [1..10] -> <@ i @> }
+type ITypeWithQuotes = abstract Method: unit -> Microsoft.FSharp.Quotations.Expr<int>
+let _ = { new ITypeWithQuotes with 
+            member x.Method() = <@ 1 @> }
+let qf() : Microsoft.FSharp.Quotations.Expr<int> =
+    <@ 1 @>

@@ -240,3 +240,20 @@ let ``complicated quotation layout``() =
     checkCategories 104 [ Function, 9, 10; Quotation, 11, 15 ]
     checkCategories 105 [ Quotation, 14, 17 ]
     checkCategories 106 [ Quotation, 14, 20; Quotation, 21, 30 ]
+
+[<Test>]
+let ``quotation in lambda``() = checkCategories 107 [ Quotation, 17, 24 ]
+
+[<Test>]
+let ``quotation in record``() = checkCategories 109 [ PublicField, 10, 15; Quotation, 18, 25 ]
+
+[<Test>]
+let ``quotation in list expression``() = checkCategories 110 [ Quotation, 10, 17 ]
+
+[<Test>]
+let ``quotation in seq for expression``() = checkCategories 111 [ Quotation, 34, 41 ]
+
+[<Test>]
+let ``quotation as a result of function``() = checkCategories 116 [ Quotation, 4, 11 ]
+
+ 
