@@ -234,7 +234,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
 
     let allSpans = spansBasedOnSymbolsUses |> Array.append qoutations
 
-    for span in allSpans do
-        debug "-=O=- %A" span
+    //for span in allSpans do
+        //debug "-=O=- %A" span
 
     allSpans

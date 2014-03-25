@@ -81,7 +81,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let spans =
                 locations.Value
                 // locations are sorted, so we can safely filter them efficently
-                |> Seq.skipWhile (fun { Range = { Start = { Line = line }}} -> line < spanStartLine)
+                |> Seq.skipWhile (fun { Range = { End = { Line = line }}} -> line < spanStartLine)
                 |> Seq.takeWhile (fun { Range = { Start = { Line = line }}} -> line <= spanEndLine)
                 |> Seq.choose (fun loc -> maybe {
                      let! classificationType = getClassficationType loc.Category

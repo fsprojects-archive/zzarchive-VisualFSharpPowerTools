@@ -90,5 +90,6 @@ type ClassWithRefValue() =
     let _ = !refValue
 type RecordWithRefValue = 
     { Field: int ref }
-let _ =
-    <@ 1 = 1 @>
+let _ = <@ 1 = 1 @>
+let _ = <@ 1 = 1
+           && 2 = 2 @>

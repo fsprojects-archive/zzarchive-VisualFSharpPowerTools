@@ -26,7 +26,7 @@ let args =
 let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
-let checkCategories line expected =
+let checkCategoriesMultiline (expected: (Category * (int * int) * (int * int)) list) =
     let symbolsUses, ast =
         vsLanguageService.GetAllUsesOfAllSymbolsInFile
             (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
@@ -36,14 +36,29 @@ let checkCategories line expected =
         let lineStr = sourceLines.[line]
         SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
 
+    let minLine, maxLine = 
+        match expected with 
+        | [] -> 0, 0
+        | xs ->     
+            xs |> List.map (fun (_,(line,_),_) -> line) |> List.min,
+            xs |> List.map (fun (_,_,(line,_)) -> line) |> List.max
+
     SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, ast, getLexerSymbol)
     |> Array.choose (fun loc -> 
         match loc.Category with 
         | Other -> None
-        | _ when loc.Range.Start.Line <> line || loc.Range.End.Line <> line -> None
-        | _ -> Some (loc.Category, loc.Range.Start.Col, loc.Range.End.Col))
+        | _ when loc.Range.Start.Line <= minLine && loc.Range.End.Line >= maxLine ->
+                Some (loc.Category, (loc.Range.Start.Line, loc.Range.Start.Col),
+                     (loc.Range.End.Line, loc.Range.End.Col))
+        | _ -> None)
+
     |> Array.toList
     |> Collection.assertEquiv expected
+
+let checkCategories line (expected: (Category * int * int) list) = 
+    expected
+    |> List.map (fun (cat, startCol, endCol) -> cat, (line, startCol), (line, endCol))
+    |> checkCategoriesMultiline 
 
 [<Test>]
 let ``module value``() = 
@@ -207,4 +222,7 @@ let ``reference field``() =
     checkCategories 92 [ MutableVar, 6, 11; ValueType, 13, 16; ReferenceType, 17, 20 ]
 
 [<Test>]
-let ``typed quotation``() = checkCategories 94 [ Quotation, 4, 15 ]
+let ``single line quotation``() = checkCategories 93 [ Quotation, 8, 19 ]
+
+[<Test>]
+let ``multi line quotation``() = checkCategoriesMultiline [ Quotation, (94, 8), (95, 22) ]
