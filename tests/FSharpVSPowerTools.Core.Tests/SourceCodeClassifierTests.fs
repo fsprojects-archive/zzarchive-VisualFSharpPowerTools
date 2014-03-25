@@ -220,3 +220,13 @@ let ``single line quotation``() = checkCategories 93 [ Quotation, 8, 19 ]
 let ``multi line quotation``() = 
     checkCategories 94 [ Quotation, 8, 16 ]
     checkCategories 95 [ Quotation, 11, 22 ]
+
+[<Test>]
+let ``quotation as function argument``() = 
+    checkCategories 96 [ Function, 8, 10; Quotation, 11, 22 ]
+    checkCategories 98 [ Function, 8, 9; Quotation, 10, 21; Quotation, 22, 33 ]
+
+[<Test>]
+let ``quotation in type``() = 
+    checkCategories 100 [ Quotation, 12, 23 ]
+    checkCategories 101 [ Function, 13, 14; Quotation, 19, 30 ]

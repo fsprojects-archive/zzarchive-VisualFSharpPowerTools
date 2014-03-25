@@ -154,13 +154,13 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
 
     let rec visitPattern = function
         | SynPat.Wild(_) -> ()
-        | SynPat.Named(pat, name, _, _, _) ->
+        | SynPat.Named(pat, _, _, _, _) ->
             visitPattern pat
-        | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, _, _, _) ->
+        | SynPat.LongIdent(LongIdentWithDots(_, _), _, _, _, _, _) ->
             //let names = String.concat "." [ for i in ident -> i.idText ]
             //printfn "  .. identifier: %s" names
             ()
-        | pat -> () // printfn "  .. other pattern: %A" pat
+        | _ -> () // printfn "  .. other pattern: %A" pat
 
     let rec visitExpression = function
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
@@ -175,28 +175,40 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
             // for 'let .. = .. and .. = .. in ...'
             //printfn "LetOrUse with the following bindings:"
             for binding in bindings do
-              let (Binding(access, kind, inlin, mutabl, attrs, xmlDoc, 
-                           data, pat, retInfo, init, m, sp)) = binding
-              visitPattern pat 
-              visitExpression init
+                let (Binding (_, _, _, _, _, _, _, pat, _, init, _, _)) = binding
+                visitPattern pat 
+                visitExpression init
             // Visit the body expression
             //printfn "And the following body:"
             visitExpression body
-        | SynExpr.Quote (op, isRaw, quotedExpr, isFromQueryExpression, range) ->
+        | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) ->
             (!quotationRanges).Add range
+        | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
+            visitExpression argExpr
+            visitExpression funcExpr
         | x -> () // printfn " - not supported expression: %A" x
+
+    let visitBinding (Binding(_, _, _, _, _, _, _, pat, _, body, _, _)) =
+        visitPattern pat 
+        visitExpression body         
+
+    let visitMember = function
+        | SynMemberDefn.LetBindings (bindings, _, _, _) -> for b in bindings do visitBinding b
+        | SynMemberDefn.Member (binding, _) -> visitBinding binding
+        | _ -> () //printfn "Unknown type member: %A" x
+
+    let visitType ty =
+        let (SynTypeDefn.TypeDefn (_, repr, _, _)) = ty
+        match repr with
+        | SynTypeDefnRepr.ObjectModel (_, defns, _) ->
+            for d in defns do visitMember d
+        | _ -> ()
 
     let visitDeclarations decls = 
         for declaration in decls do
             match declaration with
-            | SynModuleDecl.Let(isRec, bindings, range) ->
-                // Let binding as a declaration is similar to let binding
-                // as an expression (in visitExpression), but has no body
-                for binding in bindings do
-                    let (Binding(access, kind, inlin, mutabl, attrs, xmlDoc, 
-                                data, pat, retInfo, body, m, sp)) = binding
-                    visitPattern pat 
-                    visitExpression body         
+            | SynModuleDecl.Let (_, bindings, _) -> for b in bindings do visitBinding b
+            | SynModuleDecl.Types (types, _) -> for ty in types do visitType ty
             | _ -> () // printfn " - not supported declaration: %A" declaration
 
     let visitModulesAndNamespaces modulesOrNss =
@@ -214,50 +226,57 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
     )
 
     //printfn "AST: %A" untypedAst
+    
     let quotations =
         !quotationRanges 
         |> Seq.map (fun (r: Range.range) -> 
-            [r.StartLine..r.EndLine]
-            |> Seq.map (fun line ->
-                 let tokens = lexer.GetAllTokens (line - 1)
+            if r.EndLine = r.StartLine then
+                seq [ { Category = Quotation
+                        WordSpan = { Line = r.StartLine
+                                     StartCol = r.StartColumn
+                                     EndCol = r.EndColumn }} ]
+            else
+                [r.StartLine..r.EndLine]
+                |> Seq.map (fun line ->
+                     let tokens = lexer.GetAllTokens (line - 1)
 
-                 let tokens = 
-                    match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
-                    | Some lquote -> tokens |> Seq.skipWhile (fun t -> t <> lquote) |> Seq.toList
-                    | _ ->
-                        match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
-                        | Some rquote -> 
-                            tokens 
-                            |> List.rev
-                            |> Seq.skipWhile (fun t -> t <> rquote)
-                            |> Seq.toList
-                            |> List.rev
-                            |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
-                            |> Seq.toList
+                     let tokens =
+                        match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
+                        | Some lquote -> tokens |> Seq.skipWhile (fun t -> t <> lquote) |> Seq.toList
                         | _ ->
-                            tokens
-                            |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
-                            |> Seq.toList
+                            match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
+                            | Some rquote -> 
+                                tokens 
+                                |> List.rev
+                                |> Seq.skipWhile (fun t -> t <> rquote)
+                                |> Seq.toList
+                                |> List.rev
+                                |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
+                                |> Seq.toList
+                            | _ ->
+                                tokens
+                                |> Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace)
+                                |> Seq.toList
 
-                 let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
+                     let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
                  
-                 let maxCol = 
-                    match tokens with
-                    | [] -> 0
-                    | xs ->
-                        let tok = xs |> List.maxBy (fun t -> t.RightColumn) 
-                        tok.LeftColumn + tok.FullMatchedLength
+                     let maxCol = 
+                        match tokens with
+                        | [] -> 0
+                        | xs ->
+                            let tok = xs |> List.maxBy (fun t -> t.RightColumn) 
+                            tok.LeftColumn + tok.FullMatchedLength
 
-                 { Category = Quotation
-                   WordSpan = { Line = line
-                                StartCol = minCol
-                                EndCol = maxCol }}))
+                     { Category = Quotation
+                       WordSpan = { Line = line
+                                    StartCol = minCol
+                                    EndCol = maxCol }}))
         |> Seq.concat
         |> Seq.toArray
 
     let allSpans = spansBasedOnSymbolsUses |> Array.append quotations
-
+    
     //for span in allSpans do
-       // debug "-=O=- %A" span
+       //debug "-=O=- %A" span
 
     allSpans
