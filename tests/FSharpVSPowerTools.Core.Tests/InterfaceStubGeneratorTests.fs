@@ -77,7 +77,7 @@ let getInterfaceStub line col lineStr idents =
     | Some s when (s :? FSharpEntity) ->
         let e = s :?> FSharpEntity
         if e.IsInterface then
-            Some (InterfaceStubGenerator.formatInterface 0 4 "x" "raise (System.NotImplementedException())" e)
+            Some (InterfaceStubGenerator.formatInterface 0 4 [||] "x" "raise (System.NotImplementedException())" e)
         else 
             None
     | _ -> None

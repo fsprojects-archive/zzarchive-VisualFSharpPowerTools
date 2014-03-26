@@ -77,10 +77,12 @@ let f () =
 
 type IA<'a> = 
     abstract M: 'a
+    abstract N: 'a
 
 let _ =
-    { new IA<'T> with
-        member x.M = Unchecked.defaultof<'T> }
+    { new IA<int> with
+        member x.M = Unchecked.defaultof<int>
+        member x.N = Unchecked.defaultof<int> }
 
-let _ =
-    { new System.Collections.Generic.IList<'a> }
+//let _ =
+//    { new System.Collections.Generic.IList<'a> }

@@ -128,6 +128,27 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         | InterfaceData.ObjExpr(_, bindings) ->
             List.length bindings
 
+    let getTypeParameters = function
+        | InterfaceData.Interface(typ, _)
+        | InterfaceData.ObjExpr(typ, _) ->
+            match typ with
+            | SynType.App(_, _, ts, _, _, _, _)
+            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
+                let (|TypeIdent|_|) = function
+                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
+                        match req with
+                        | NoStaticReq -> 
+                            Some ("'" + s.idText)
+                        | HeadTypeStaticReq -> 
+                            Some ("^" + s.idText)
+                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
+                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
+                    | _ -> 
+                        None
+                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
+            | _ ->
+                [||]
+
     // Check whether the interface has been fully implemented
     let shouldImplementInterface (interfaceData, _) (entity: FSharpEntity) =
         // TODO: counting members is not enough.
@@ -145,8 +166,9 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         let startColumn = inferStartColumn lineStr interfaceData
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
+        let typeParams = getTypeParameters interfaceData
         let stub = InterfaceStubGenerator.formatInterface 
-                        startColumn indentSize "x" "raise (System.NotImplementedException())" entity
+                        startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" entity
 
         use transaction = textUndoHistory.CreateTransaction("Implement Interface Explicitly")
         match posOpt with

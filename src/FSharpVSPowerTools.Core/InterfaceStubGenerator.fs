@@ -48,6 +48,8 @@ module InterfaceStubGenerator =
     type internal Context =
         {
             Writer: ColumnIndentedTextWriter
+            /// Map generic types to specific instances for specialized interface implementation
+            TypeInstantations: Map<string, string>
             /// Indentation inside method bodies
             Indentation: int
             /// Object identifier of the interface e.g. 'x', 'this', '__', etc.
@@ -87,11 +89,19 @@ module InterfaceStubGenerator =
             Some ()
         else None
 
-    let internal formatTypeArgument (typar: FSharpGenericParameter) =
+    let internal getTypeParameterName (typar: FSharpGenericParameter) =
         (if typar.IsSolveAtCompileTime then "^" else "'") + typar.Name
 
-    let internal formatTypeArguments (typars:seq<FSharpGenericParameter>) =
-        Seq.map formatTypeArgument typars |> List.ofSeq
+    let internal formatTypeArgument (ctx: Context) (typar: FSharpGenericParameter) =
+        let genericName = getTypeParameterName typar
+        match ctx.TypeInstantations.TryFind(genericName) with
+        | Some specificName ->
+            specificName
+        | None ->
+            genericName
+
+    let internal formatTypeArguments ctx (typars:seq<FSharpGenericParameter>) =
+        Seq.map (formatTypeArgument ctx) typars |> List.ofSeq
 
     let internal bracket (str: string) = 
         if str.Contains(" ") then "(" + str + ")" else str
@@ -99,64 +109,64 @@ module InterfaceStubGenerator =
     let internal bracketIf cond str = 
         if cond then "(" + str + ")" else str
 
-    let internal formatTyconRef (tcref:FSharpEntity) = 
+    let internal formatTyconRef (tcref: FSharpEntity) = 
         tcref.DisplayName
 
-    let rec internal formatTypeApplication typeName prec prefix args =
+    let rec internal formatTypeApplication ctx typeName prec prefix args =
         if prefix then 
             match args with
             | [] -> typeName
-            | [arg] -> typeName + "<" + (formatTypeWithPrec 4 arg) + ">"
-            | args -> bracketIf (prec <= 1) (typeName + "<" + (formatTypesWithPrec 2 "," args) + ">")
+            | [arg] -> typeName + "<" + (formatTypeWithPrec ctx 4 arg) + ">"
+            | args -> bracketIf (prec <= 1) (typeName + "<" + (formatTypesWithPrec ctx 2 "," args) + ">")
         else
             match args with
             | [] -> typeName
-            | [arg] -> (formatTypeWithPrec 2 arg) + " " + typeName 
-            | args -> bracketIf (prec <= 1) ((bracket (formatTypesWithPrec 2 "," args)) + typeName)
+            | [arg] -> (formatTypeWithPrec ctx 2 arg) + " " + typeName 
+            | args -> bracketIf (prec <= 1) ((bracket (formatTypesWithPrec ctx 2 "," args)) + typeName)
 
-    and formatTypesWithPrec prec sep typs = 
-        String.concat sep (typs |> Seq.map (formatTypeWithPrec prec))
+    and internal formatTypesWithPrec ctx prec sep typs = 
+        String.concat sep (typs |> Seq.map (formatTypeWithPrec ctx prec))
 
-    and formatTypeWithPrec prec (typ: FSharpType) =
+    and internal formatTypeWithPrec ctx prec (typ: FSharpType) =
         // Measure types are stored as named types with 'fake' constructors for products, "1" and inverses
         // of measures in a normalized form (see Andrew Kennedy technical reports). Here we detect this 
         // embedding and use an approximate set of rules for layout out normalized measures in a nice way. 
         match typ with 
         | MeasureProd (ty, MeasureOne) 
-        | MeasureProd (MeasureOne, ty) -> formatTypeWithPrec prec ty
+        | MeasureProd (MeasureOne, ty) -> formatTypeWithPrec ctx prec ty
         | MeasureProd (ty1, MeasureInv ty2) 
         | MeasureProd (ty1, MeasureProd (MeasureInv ty2, MeasureOne)) -> 
-            (formatTypeWithPrec 2 ty1) + "/" + (formatTypeWithPrec 2 ty2)
+            (formatTypeWithPrec ctx 2 ty1) + "/" + (formatTypeWithPrec ctx 2 ty2)
         | MeasureProd (ty1, MeasureProd(ty2,MeasureOne)) 
         | MeasureProd (ty1, ty2) -> 
-            (formatTypeWithPrec 2 ty1) + "*" + (formatTypeWithPrec 2 ty2)
-        | MeasureInv ty -> "/" + (formatTypeWithPrec 1 ty)
+            (formatTypeWithPrec ctx 2 ty1) + "*" + (formatTypeWithPrec ctx 2 ty2)
+        | MeasureInv ty -> "/" + (formatTypeWithPrec ctx 1 ty)
         | MeasureOne  -> "1" 
         | _ when typ.HasTypeDefinition -> 
             let tcref = typ.TypeDefinition 
             let tyargs = typ.GenericArguments |> Seq.toList
             // layout postfix array types
-            formatTypeApplication (formatTyconRef tcref) prec tcref.UsesPrefixDisplay tyargs 
+            formatTypeApplication ctx (formatTyconRef tcref) prec tcref.UsesPrefixDisplay tyargs 
         | _ when typ.IsTupleType ->
             let tyargs = typ.GenericArguments |> Seq.toList
-            bracketIf (prec <= 2) (formatTypesWithPrec 2 " * " tyargs)
+            bracketIf (prec <= 2) (formatTypesWithPrec ctx 2 " * " tyargs)
         | _ when typ.IsFunctionType ->
             let rec loop soFar (typ:FSharpType) = 
                 if typ.IsFunctionType then 
                     let _domainType, retType = typ.GenericArguments.[0], typ.GenericArguments.[1]
-                    loop (soFar + (formatTypeWithPrec 4 typ.GenericArguments.[0]) + " -> ") retType
+                    loop (soFar + (formatTypeWithPrec ctx 4 typ.GenericArguments.[0]) + " -> ") retType
                 else 
-                    soFar + formatTypeWithPrec 5 typ
+                    soFar + formatTypeWithPrec ctx 5 typ
             bracketIf (prec <= 4) (loop "" typ)
         | _ when typ.IsGenericParameter ->
-            formatTypeArgument typ.GenericParameter
+            formatTypeArgument ctx typ.GenericParameter
         | _ -> failwith "Can't format type annotation" 
 
-    let internal formatType typ = 
-        formatTypeWithPrec 5 typ
+    let internal formatType ctx typ = 
+        formatTypeWithPrec ctx 5 typ
 
     // Format each argument, including its name and type 
-    let internal formatArgUsage hasTypeAnnotation i (arg: FSharpParameter) = 
+    let internal formatArgUsage ctx hasTypeAnnotation i (arg: FSharpParameter) = 
         let nm = 
             match arg.Name with 
             | None -> 
@@ -167,15 +177,15 @@ module InterfaceStubGenerator =
         let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
         if hasTypeAnnotation && argName <> "()" then 
-            argName + ": " + formatTypeWithPrec 2 arg.Type
+            argName + ": " + formatTypeWithPrec ctx 2 arg.Type
         else argName
 
-    let internal formatArgsUsage hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
+    let internal formatArgsUsage ctx hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
         let isItemIndexer = (v.IsInstanceMember && v.DisplayName = "Item")
         let counter = let n = ref 0 in fun () -> incr n; !n
         let unit, argSep, tupSep = "()", " ", ", "
         args
-        |> List.map (List.map (fun x -> formatArgUsage hasTypeAnnotation (counter()) x))
+        |> List.map (List.map (fun x -> formatArgUsage ctx hasTypeAnnotation (counter()) x))
         |> List.map (function 
             | [] -> unit 
             | [arg] when arg = unit -> unit
@@ -190,7 +200,7 @@ module InterfaceStubGenerator =
                 match argInfos with
                 | [[x]] when v.IsGetterMethod && x.Name.IsNone 
                             && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> ""
-                | _  -> formatArgsUsage true v argInfos
+                | _  -> formatArgsUsage ctx true v argInfos
             let parArgs = 
                 if String.IsNullOrWhiteSpace(args) then "" 
                 elif args.StartsWith("(") then args
@@ -233,9 +243,7 @@ module InterfaceStubGenerator =
             | [[]], true, _ -> [], retType
             | _, _, _ -> argInfos, retType
 
-        let _typars = formatTypeArguments v.GenericParameters 
-
-        let retType = defaultArg (retType |> Option.map formatType) "unit"
+        let retType = defaultArg (Option.map (formatType ctx) retType) "unit"
         let usage = buildUsage argInfos
     
         ctx.Writer.WriteLine("")
@@ -257,7 +265,7 @@ module InterfaceStubGenerator =
                 yield! getInterfaceMembers iface.TypeDefinition
             yield! e.MembersFunctionsAndValues |> Seq.filter (fun m -> 
                        let v = m.DisplayName
-                       // FIXME: temporary filter out get/set properties because properties have also been included
+                       // FIXME: temporary filter out get/set properties because combined properties have also been included
                        not (v.StartsWith "get_" || v.StartsWith "set_"))
          }
 
@@ -265,11 +273,14 @@ module InterfaceStubGenerator =
         getInterfaceMembers e |> Seq.length
 
     /// Generate stub implementation of an interface at a start column
-    let formatInterface startColumn indentation objectIdent (methodBody: string) (e: FSharpEntity) =
+    let formatInterface startColumn indentation (typeInstances: string []) objectIdent (methodBody: string) (e: FSharpEntity) =
         assert e.IsInterface
         use writer = new ColumnIndentedTextWriter()
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
-        let ctx = { Writer = writer; Indentation = indentation; ObjectIdent = objectIdent; MethodBody = lines }
+        let typeParams = Seq.map getTypeParameterName e.GenericParameters
+        let instantiations = Seq.zip typeParams typeInstances |> Map.ofSeq
+        let ctx = { Writer = writer; TypeInstantations = instantiations; Indentation = indentation; 
+                    ObjectIdent = objectIdent; MethodBody = lines }
         writer.Indent startColumn
         for v in getInterfaceMembers e do
             formatMember ctx v
@@ -327,8 +338,8 @@ module InterfaceStubGenerator =
             match memberDefn with
             | SynMemberDefn.AbstractSlot(_synValSig, _memberFlags, _range) ->
                 None
-            | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, rhs, _r1, _r2) ->
-                walkExpr rhs
+            | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, expr, _r1, _r2) ->
+                walkExpr expr
             | SynMemberDefn.Interface(interfaceType, members, _range) ->
                 if inRange interfaceType.Range pos then
                     Some(InterfaceData.Interface(interfaceType, members))
