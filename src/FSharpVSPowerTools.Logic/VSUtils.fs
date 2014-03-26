@@ -229,13 +229,14 @@ module ViewChange =
     let caretEvent (view: ITextView) = view.Caret.PositionChanged |> Event.map (fun _ -> ())
     let bufferChangedEvent (buffer: ITextBuffer) = buffer.Changed |> Event.map (fun _ -> ())
 
-type DocumentEventsListener (events: IEvent<unit> list, delay: TimeSpan, update: bool -> unit) =
+type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
     // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
     let events = events |> List.reduce Event.merge 
 
     let startNewTimer() = 
-        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = delay)
+        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, 
+                                        Interval = TimeSpan.FromMilliseconds (float delayMillis))
         timer.Start()
         timer
         
@@ -253,7 +254,7 @@ type DocumentEventsListener (events: IEvent<unit> list, delay: TimeSpan, update:
         while true do
             do! Async.AwaitEvent events
             do! awaitPauseAfterChange (startNewTimer())
-            update false }
+            update() }
        |> Async.StartImmediate
        // go ahead and synchronously get the first bit of info for the original rendering
-       update true
+       update()
