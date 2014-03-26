@@ -261,4 +261,11 @@ let ``quotation as a result of function``() = checkCategories 116 [ Quotation, 4
 let ``quotation as default constructor arguments``() = 
     checkCategories 118 [ ReferenceType, 8, 39; Quotation, 40, 47 ]
 
+[<Test>]
+let ``quotation as initialization of auto property``() = 
+    checkCategories 125 [ MutableVar, 15, 19; MutableVar, 22, 31; Quotation, 22, 31 ]
+
+[<Test>]
+let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40 ]
+
  

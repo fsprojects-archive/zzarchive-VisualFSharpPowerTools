@@ -205,6 +205,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         | SynExpr.Sequential (_, _, expr1, expr2, _) ->
             visitExpression expr1
             visitExpression expr2
+        | SynExpr.LongIdentSet (_, expr, _) -> visitExpression expr
         | _ -> () // printfn " - not supported expression: %A" x
 
     and visitBinding (Binding(_, _, _, _, _, _, _, pat, _, body, _, _)) =
@@ -214,6 +215,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
     let visitMember = function
         | SynMemberDefn.LetBindings (bindings, _, _, _) -> for b in bindings do visitBinding b
         | SynMemberDefn.Member (binding, _) -> visitBinding binding
+        | SynMemberDefn.AutoProperty (_, _, _, _, _, _, _, _, expr, _, _) -> visitExpression expr
         | _ -> () //printfn "Unknown type member: %A" x
 
     let visitType ty =
@@ -227,6 +229,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         for declaration in decls do
             match declaration with
             | SynModuleDecl.Let (_, bindings, _) -> for b in bindings do visitBinding b
+            | SynModuleDecl.DoExpr (_, expr, _) -> visitExpression expr
             | SynModuleDecl.Types (types, _) -> for ty in types do visitType ty
             | _ -> () // printfn " - not supported declaration: %A" declaration
 

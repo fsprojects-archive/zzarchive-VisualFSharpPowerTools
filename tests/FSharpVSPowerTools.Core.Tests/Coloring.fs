@@ -121,3 +121,7 @@ let _ =
     [] 
     |> List.fold (fun acc x -> acc
     ) <@@ () @@>
+type ClassWithWritableProperty() =
+    member val Prop = <@@ 1 @@> with get, set
+let clWithWritableProperty = ClassWithWritableProperty()
+clWithWritableProperty.Prop <- <@@ 2 @@>
