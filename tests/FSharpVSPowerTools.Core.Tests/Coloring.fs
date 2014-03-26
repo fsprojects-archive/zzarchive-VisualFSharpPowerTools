@@ -125,3 +125,5 @@ type ClassWithWritableProperty() =
     member val Prop = <@@ 1 @@> with get, set
 let clWithWritableProperty = ClassWithWritableProperty()
 clWithWritableProperty.Prop <- <@@ 2 @@>
+let qf1 (n, e1) = ()
+let _ = qf1 (1, <@ 1 @>)

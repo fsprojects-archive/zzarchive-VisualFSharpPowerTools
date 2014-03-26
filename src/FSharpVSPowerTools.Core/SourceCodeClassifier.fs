@@ -206,6 +206,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
             visitExpression expr1
             visitExpression expr2
         | SynExpr.LongIdentSet (_, expr, _) -> visitExpression expr
+        | SynExpr.Tuple (exprs, _, _) -> for e in exprs do visitExpression e
         | _ -> () // printfn " - not supported expression: %A" x
 
     and visitBinding (Binding(_, _, _, _, _, _, _, pat, _, body, _, _)) =

@@ -226,6 +226,7 @@ let ``quotation as function argument``() =
     checkCategories 96 [ Function, 8, 10; Quotation, 11, 22 ]
     checkCategories 98 [ Function, 8, 9; Quotation, 10, 21; Quotation, 22, 33 ]
     checkCategories 123 [ Quotation, 6, 16 ]
+    checkCategories 129 [ Function, 8, 11; Quotation, 16, 23 ]
 
 [<Test>]
 let ``quotation in type``() = 
