@@ -34,70 +34,81 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let mutable interfaceDefinition = None
 
     let collectInterfaceData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
-        let line = point.Snapshot.GetLineNumberFromPosition point.Position
-        let column = point.Position - point.GetContainingLine().Start.Position
-        let lineStr = point.GetContainingLine().GetText()
-        let source = point.Snapshot.GetText()
-        let defines = 
-            project.CompilerOptions
-            |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-            |> Seq.toList
-        let tokens = vsLanguageService.TokenizeLine(buffer, defines, line) 
-        let endPosOfWith =
-            tokens |> List.tryPick (fun (t: TokenInformation) ->
-                        if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column then
-                            let text = lineStr.[t.LeftColumn..t.RightColumn]
-                            match text with
-                            | "with" -> Some (Pos.fromZ line (t.RightColumn + 1))
-                            | _ -> None
-                        else None)
-        let ast = 
-            vsLanguageService.ParseFileInProject(doc.FullName, source, project)
-            |> Async.RunSynchronously
-        let pos = Pos.fromZ line column
-        ast.ParseTree
-        |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)
-        |> Option.map (fun iface -> iface, endPosOfWith)
+        async {
+            let line = point.Snapshot.GetLineNumberFromPosition point.Position
+            let column = point.Position - point.GetContainingLine().Start.Position
+            let source = point.Snapshot.GetText()
+            let syncContext = System.Threading.SynchronizationContext.Current
+            do! Async.SwitchToThreadPool()
+            let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
+            do! Async.SwitchToContext syncContext
+            let pos = Pos.fromZ line column
+            let data =
+                ast.ParseTree
+                |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)
+                |> Option.map (fun iface -> 
+                    let lineStr = point.GetContainingLine().GetText()
+                    let defines = 
+                        project.CompilerOptions
+                        |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
+                        |> Seq.toList
+                    let tokens = vsLanguageService.TokenizeLine(buffer, defines, line) 
+                    let endPosOfWith =
+                        tokens |> List.tryPick (fun (t: TokenInformation) ->
+                                    if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column then
+                                        let text = lineStr.[t.LeftColumn..t.RightColumn]
+                                        match text with
+                                        | "with" -> Some (Pos.fromZ line (t.RightColumn + 1))
+                                        | _ -> None
+                                    else None)
+                    iface, endPosOfWith)
+            return data
+        }
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position with
         | Some point ->
-            // If the new cursor position is still within the current word (and on the same snapshot),
-            // we don't need to check it.
-            match currentWord with
-            | Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
-            | _ ->
-                maybe {
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
-                    let! project = ProjectProvider.createForDocument doc
-                    let! newWord, symbol = vsLanguageService.GetSymbol(point, project)
-                    match symbol.Kind with
-                    | SymbolKind.Ident ->
-                        match collectInterfaceData point doc project with
-                        | Some interfaceData ->
-                            let results = 
-                                vsLanguageService.GetFSharpSymbol (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
-                                |> Async.RunSynchronously
-                            match results with
-                            | Some (fsSymbol, _) when (fsSymbol :? FSharpEntity) ->
-                                let entity = fsSymbol :?> FSharpEntity
-                                if entity.IsInterface then
-                                    interfaceDefinition <- Some (interfaceData, entity)
-                                    currentWord <- Some newWord
-                                    let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                                    tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-                                else
-                                    interfaceDefinition <- None
-                            | _ ->
-                                interfaceDefinition <- None
-                        | None ->
-                            interfaceDefinition <- None 
-                    | _ ->
-                       interfaceDefinition <- None 
-                }
-                |> ignore
-        | _ -> ()
+            maybe {
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let! doc = dte.GetActiveDocument()
+                let! project = ProjectProvider.createForDocument doc
+                let! newWord, symbol = vsLanguageService.GetSymbol(point, project)
+                return newWord, symbol, doc, project
+            }
+            |> function
+                | Some (newWord, symbol, doc, project) ->
+                    async {
+                        match symbol.Kind with
+                        | SymbolKind.Ident ->
+                            let! interfaceData = collectInterfaceData point doc project
+                            match interfaceData with
+                            | Some interfaceData ->
+                                let syncContext = System.Threading.SynchronizationContext.Current
+                                do! Async.SwitchToThreadPool()
+                                let! results = vsLanguageService.GetFSharpSymbol (newWord, symbol, doc.FullName, project, 
+                                                    AllowStaleResults.MatchingSource)
+                                do! Async.SwitchToContext syncContext
+                                match results with
+                                | Some (fsSymbol, _) when (fsSymbol :? FSharpEntity) ->
+                                    let entity = fsSymbol :?> FSharpEntity
+                                    if entity.IsInterface then
+                                        interfaceDefinition <- Some (interfaceData, entity)
+                                        currentWord <- Some newWord
+                                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                                        return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
+                                    else
+                                        return interfaceDefinition <- None
+                                | _ ->
+                                    return interfaceDefinition <- None
+                            | None ->
+                                return interfaceDefinition <- None 
+                        | _ ->
+                            return interfaceDefinition <- None 
+
+                    } |> Async.StartImmediate
+                | None ->
+                    interfaceDefinition <- None 
+        | None -> ()
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     TimeSpan.FromMilliseconds 200.,
@@ -122,7 +133,8 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             lineStr.Length - lineStr.TrimStart(' ').Length + indentSize
 
     let countMembers = function
-        | InterfaceData.Interface(_, None) -> 0
+        | InterfaceData.Interface(_, None) -> 
+            0
         | InterfaceData.Interface(_, Some members) -> 
             List.length members
         | InterfaceData.ObjExpr(_, bindings) ->
@@ -154,11 +166,8 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         // TODO: counting members is not enough.
         // We should match member signatures, 
         // it will be tricky in case of specialized interface implementation
-        let c = InterfaceStubGenerator.countInterfaceMembers entity
-        if c = 0 then false
-        else
-            let c' = countMembers interfaceData
-            c' < c
+        let count = InterfaceStubGenerator.countInterfaceMembers entity
+        count > 0 && count > countMembers interfaceData
 
     let handleImplementInterface (span: SnapshotSpan) (interfaceData, posOpt: pos option) entity = 
         let line = span.Start.GetContainingLine()

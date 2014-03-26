@@ -300,71 +300,87 @@ module InterfaceStubGenerator =
         let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
             List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, _range)) =
-            List.tryPick walkSynModuleDecl decls
+        and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, range)) =
+            if not <| inRange range pos then
+                None
+            else
+                List.tryPick walkSynModuleDecl decls
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
-            match decl with
-            | SynModuleDecl.Exception(ExceptionDefn(_repr, synMembers, _defnRange), _range) -> 
-                List.tryPick walkSynMemberDefn synMembers
-            | SynModuleDecl.Let(_isRecursive, bindings, _range) ->
-                List.tryPick walkBinding bindings
-            | SynModuleDecl.ModuleAbbrev(_lhs, _rhs, _range) ->
+            if not <| inRange decl.Range pos then
                 None
-            | SynModuleDecl.NamespaceFragment(fragment) ->
-                walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(_componentInfo, modules, _isContinuing, _range) ->
-                List.tryPick walkSynModuleDecl modules
-            | SynModuleDecl.Types(typeDefs, _range) ->
-                List.tryPick walkSynTypeDefn typeDefs
-            | SynModuleDecl.DoExpr _
-            | SynModuleDecl.Attributes _
-            | SynModuleDecl.HashDirective _
-            | SynModuleDecl.Open _ -> 
-                None
+            else
+                match decl with
+                | SynModuleDecl.Exception(ExceptionDefn(_repr, synMembers, _defnRange), _range) -> 
+                    List.tryPick walkSynMemberDefn synMembers
+                | SynModuleDecl.Let(_isRecursive, bindings, _range) ->
+                    List.tryPick walkBinding bindings
+                | SynModuleDecl.ModuleAbbrev(_lhs, _rhs, _range) ->
+                    None
+                | SynModuleDecl.NamespaceFragment(fragment) ->
+                    walkSynModuleOrNamespace fragment
+                | SynModuleDecl.NestedModule(_componentInfo, modules, _isContinuing, _range) ->
+                    List.tryPick walkSynModuleDecl modules
+                | SynModuleDecl.Types(typeDefs, _range) ->
+                    List.tryPick walkSynTypeDefn typeDefs
+                | SynModuleDecl.DoExpr _
+                | SynModuleDecl.Attributes _
+                | SynModuleDecl.HashDirective _
+                | SynModuleDecl.Open _ -> 
+                    None
 
-        and walkSynTypeDefn(TypeDefn(_componentInfo, representation, members, _range)) = 
-            walkSynTypeDefnRepr representation
-            |> Option.orElse (List.tryPick walkSynMemberDefn members)        
+        and walkSynTypeDefn(TypeDefn(_componentInfo, representation, members, range)) = 
+            if not <| inRange range pos then
+                None
+            else
+                walkSynTypeDefnRepr representation
+                |> Option.orElse (List.tryPick walkSynMemberDefn members)        
 
         and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
-            match typeDefnRepr with
-            | SynTypeDefnRepr.ObjectModel(_kind, members, _range) ->
-                List.tryPick walkSynMemberDefn members
-            | SynTypeDefnRepr.Simple(_repr, _range) -> 
+            if not <| inRange typeDefnRepr.Range pos then
                 None
+            else
+                match typeDefnRepr with
+                | SynTypeDefnRepr.ObjectModel(_kind, members, _range) ->
+                    List.tryPick walkSynMemberDefn members
+                | SynTypeDefnRepr.Simple(_repr, _range) -> 
+                    None
 
         and walkSynMemberDefn (memberDefn: SynMemberDefn) =
-            match memberDefn with
-            | SynMemberDefn.AbstractSlot(_synValSig, _memberFlags, _range) ->
+            if not <| inRange memberDefn.Range pos then
                 None
-            | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, expr, _r1, _r2) ->
-                walkExpr expr
-            | SynMemberDefn.Interface(interfaceType, members, _range) ->
-                if inRange interfaceType.Range pos then
-                    Some(InterfaceData.Interface(interfaceType, members))
-                else
-                    Option.bind (List.tryPick walkSynMemberDefn) members
-            | SynMemberDefn.Member(binding, _range) ->
-                walkBinding binding
-            | SynMemberDefn.NestedType(typeDef, _access, _range) -> 
-                walkSynTypeDefn typeDef
-            | SynMemberDefn.ValField(_field, _range) ->
-                None
-            | SynMemberDefn.LetBindings _
-            | SynMemberDefn.Open _
-            | SynMemberDefn.ImplicitInherit _
-            | SynMemberDefn.Inherit _
-            | SynMemberDefn.ImplicitCtor _ -> None
+            else
+                match memberDefn with
+                | SynMemberDefn.AbstractSlot(_synValSig, _memberFlags, _range) ->
+                    None
+                | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, expr, _r1, _r2) ->
+                    walkExpr expr
+                | SynMemberDefn.Interface(interfaceType, members, _range) ->
+                    if inRange interfaceType.Range pos then
+                        Some(InterfaceData.Interface(interfaceType, members))
+                    else
+                        Option.bind (List.tryPick walkSynMemberDefn) members
+                | SynMemberDefn.Member(binding, _range) ->
+                    walkBinding binding
+                | SynMemberDefn.NestedType(typeDef, _access, _range) -> 
+                    walkSynTypeDefn typeDef
+                | SynMemberDefn.ValField(_field, _range) ->
+                    None
+                | SynMemberDefn.LetBindings _
+                | SynMemberDefn.Open _
+                | SynMemberDefn.ImplicitInherit _
+                | SynMemberDefn.Inherit _
+                | SynMemberDefn.ImplicitCtor _ -> 
+                    None
 
         and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, _retTy, expr, _bindingRange, _seqPoint)) =
             walkExpr expr
 
-        and walkExpr e =
-            if not <| inRange e.Range pos then 
+        and walkExpr expr =
+            if not <| inRange expr.Range pos then 
                 None
             else
-                match e with
+                match expr with
                 | SynExpr.Quote(_synExpr1, _, _synExpr2, _, _range) ->
                     None
                 | SynExpr.Const(_synConst, _range) -> 
@@ -386,13 +402,16 @@ module InterfaceStubGenerator =
                     walkExpr synExpr
 
                 | SynExpr.ObjExpr(ty, baseCallOpt, binds, ifaces, _range1, _range2) -> 
-                    match baseCallOpt, ifaces with
-                    | None, [] -> 
+                    match baseCallOpt with
+                    | None -> 
                         if inRange ty.Range pos then
                             Some (InterfaceData.ObjExpr(ty, binds))
                         else
-                            None
-                    | _ -> 
+                            ifaces |> List.tryPick (fun (InterfaceImpl(ty, binds, range)) ->
+                                if inRange range pos then 
+                                    Some (InterfaceData.ObjExpr(ty, binds))
+                                else None)
+                    | Some _ -> 
                         // Ignore object expressions of normal objects
                         None
 
@@ -491,7 +510,8 @@ module InterfaceStubGenerator =
                     walkExpr synExpr
 
                 | SynExpr.Null(_range)
-                | SynExpr.ImplicitZero(_range) -> None
+                | SynExpr.ImplicitZero(_range) -> 
+                    None
 
                 | SynExpr.YieldOrReturn(_, synExpr, _range)
                 | SynExpr.YieldOrReturnFrom(_, synExpr, _range) 
