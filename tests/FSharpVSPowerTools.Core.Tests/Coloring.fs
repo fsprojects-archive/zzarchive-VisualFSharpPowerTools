@@ -73,3 +73,20 @@ let _ = Microsoft.FSharp.Collections.List<int>.Empty
 type System.String with
     member x.``Long func``() = "x"
 let _ = "x".``Long func``().Substring(3)
+let arr = [|1|]
+let _ = arr.[0]
+let mutable mutableValue = 1
+type MutableRecord = 
+    { mutable MutableField: int }
+type MutableClass() = 
+    let mutable mutableField = 0
+let func() =
+    let mutable mutableLocalVar = 1
+    ()
+let refValue = ref 1
+refValue := !refValue + 1
+type ClassWithRefValue() =
+    let refValue = ref 1
+    let _ = !refValue
+type RecordWithRefValue = 
+    { Field: int ref }

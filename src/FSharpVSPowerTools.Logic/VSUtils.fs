@@ -2,6 +2,7 @@
 module FSharpVSPowerTools.ProjectSystem.VSUtils
 
 open System
+open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -14,10 +15,20 @@ open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
+    Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
+    Debug.Assert(startLine <> endLine || startColumn < endColumn, 
+                 sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
     let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
     let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
-    SnapshotSpan(snapshot, startPos, endPos - startPos)
-
+    Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
+    let length = endPos - startPos
+    try 
+        Some (SnapshotSpan(snapshot, startPos, length))
+    with e ->
+        fail "Attempt to create a SnapshotSpan with wrong arguments (StartPos = %d, Length = %d). Snapshot.Lenght = %d" 
+             startPos length snapshot.Length
+        None
+    
 /// Retrieve snapshot from VS zero-based positions
 let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
     fromPos snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
@@ -148,7 +159,7 @@ type DTE with
     member x.GetActiveDocument() =
         let doc =
             maybe {
-                let! doc = Option.ofNull x.ActiveDocument
+                let! doc = Option.ofNull x.ActiveDocument 
                 let! item = Option.ofNull doc.ProjectItem 
                 let! _ = Option.ofNull item.ContainingProject 
                 return doc }
@@ -202,7 +213,7 @@ type ForegroundThreadGuard private() =
     static let mutable threadId = UnassignedThreadId
     static member BindThread() =
         if threadId <> UnassignedThreadId then 
-            fail "Thread is already set"
+            () // fail "Thread is already set"
         threadId <- System.Threading.Thread.CurrentThread.ManagedThreadId
     static member CheckThread() =
         if threadId = UnassignedThreadId then 

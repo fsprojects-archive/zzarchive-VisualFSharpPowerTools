@@ -18,7 +18,8 @@ type VSLanguageService
      editorFactory: IVsEditorAdaptersFactoryService,
      fsharpLanguageService: FSharpLanguageService) =
 
-    let instance = LanguageService(fun _ -> ())
+    let mutable instance = LanguageService (fun _ -> ())
+    
     let invalidateProject (projectItem: EnvDTE.ProjectItem) =
         let project = projectItem.ContainingProject
         if box project <> null && isFSharpProject project then
@@ -34,6 +35,7 @@ type VSLanguageService
     do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
+    do events.SolutionEvents.add_AfterClosing (fun _ -> instance <- LanguageService (fun _ -> ()))
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
@@ -140,7 +142,8 @@ type VSLanguageService
             let framework = projectProvider.TargetFramework
             let args = projectProvider.CompilerOptions
             let sourceFiles = projectProvider.SourceFiles
-            let! results = instance.ParseAndCheckFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework, stale)
+            let! results = instance.ParseAndCheckFileInProject(   
+                               projectFileName, currentFile, source, sourceFiles, args, framework, stale)
             let symbol = results.GetSymbolAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
         }
@@ -164,7 +167,8 @@ type VSLanguageService
                     snapshot.GetLineFromLineNumber(lineNumber).GetText() 
                 SymbolParser.getSymbol source line col (getLineStr line) args (buildQueryLexState snapshot.TextBuffer)
 
-            let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(projectFileName, currentFile, source, sourceFiles, args, framework, stale)
+            let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(
+                                projectFileName, currentFile, source, sourceFiles, args, framework, stale)
             return symbolUses, getLexerSymbol
         }
 

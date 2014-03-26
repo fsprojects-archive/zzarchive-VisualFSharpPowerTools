@@ -36,8 +36,7 @@ type ActionInfo =
     { Item : ProjectItem option
       Project : Project }
 
-[<Export>]
-type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) = 
+type FSharpProjectSystemService(dte: DTE) = 
     let assemblyInfo =
         match VisualStudioVersion.fromDTEVersion dte.Version with
         | VisualStudioVersion.VS2012 ->
@@ -45,7 +44,8 @@ type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) =
         | _ ->
             "FSharp.ProjectSystem.FSharp, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
     let asm = lazy try Assembly.Load(assemblyInfo)
-                   with _ -> raise (AssemblyMissingException "FSharp.ProjectSystem.FSharp")
+                   with _ ->
+                        AssemblyMissingException "FSharp.ProjectSystem.FSharp" |> logException |> raise
 
     let MSBuildUtilitiesType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.ProjectSystem.MSBuildUtilities")
 

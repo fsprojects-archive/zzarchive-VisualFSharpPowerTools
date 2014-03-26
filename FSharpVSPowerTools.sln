@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
@@ -51,6 +51,10 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core", "
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic.VS2013", "src\FSharpVSPowerTools.Logic.VS2013\FSharpVSPowerTools.Logic.VS2013.fsproj", "{34D33ADF-B1EC-4227-B981-13C52F28D013}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.IntegrationTests", "tests\FSharpVSPowerTools.IntegrationTests\FSharpVSPowerTools.IntegrationTests.csproj", "{697E3311-F98F-4063-B20C-D59D44CB4FA8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.Tests", "tests\FSharpVSPowerTools.Tests\FSharpVSPowerTools.Tests.csproj", "{11D1DE7D-B08F-4524-BBB5-D729223F0396}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +81,14 @@ Global
 		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Any CPU.Build.0 = Release|Any CPU
+		{697E3311-F98F-4063-B20C-D59D44CB4FA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{697E3311-F98F-4063-B20C-D59D44CB4FA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{697E3311-F98F-4063-B20C-D59D44CB4FA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{697E3311-F98F-4063-B20C-D59D44CB4FA8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11D1DE7D-B08F-4524-BBB5-D729223F0396}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11D1DE7D-B08F-4524-BBB5-D729223F0396}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11D1DE7D-B08F-4524-BBB5-D729223F0396}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11D1DE7D-B08F-4524-BBB5-D729223F0396}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -85,5 +97,7 @@ Global
 		{83F16175-43B1-4C90-A1EE-8E351C33435D} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
 		{8E6D5255-776D-4B61-85F9-73C37AA1FB9A} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
 		{D751E684-285F-494D-B402-98772A541C31} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+		{697E3311-F98F-4063-B20C-D59D44CB4FA8} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+		{11D1DE7D-B08F-4524-BBB5-D729223F0396} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 	EndGlobalSection
 EndGlobal

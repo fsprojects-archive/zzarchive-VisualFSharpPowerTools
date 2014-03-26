@@ -52,13 +52,14 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
                         let spans =
                             ranges
-                            |> Seq.map (fun range ->
-                                let snapshotSpan = fromFSharpPos buffer.CurrentSnapshot range
+                            |> Seq.choose (fun range -> maybe {
+                                let! snapshotSpan = fromFSharpPos buffer.CurrentSnapshot range
                                 let i = snapshotSpan.GetText().LastIndexOf(oldText)
-                                if i > 0 then 
-                                    // Subtract lengths of qualified identifiers
-                                    SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
-                                else snapshotSpan)
+                                return
+                                    if i > 0 then 
+                                        // Subtract lengths of qualified identifiers
+                                        SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
+                                    else snapshotSpan })
                             |> Seq.toList
 
                         spans
@@ -117,8 +118,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
                     rename currentName model.Name references
             else
-                MessageBox.Show(Resource.renameErrorMessage, Resource.vsPackageTitle, 
-                    MessageBoxButton.OK, MessageBoxImage.Error) |> ignore 
+                msgboxErr Resource.renameErrorMessage
         } |> ignore
 
     member x.ShowDialog (wnd: Window) =
