@@ -16,9 +16,6 @@ type Logger
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    [<Literal>]
-    let source = "F# Power Tools"
-
     let getEntryType logType =
         let value =
             match logType with
@@ -43,9 +40,9 @@ type Logger
 
     member x.Log logType message =
         getActivityLogService()
-        |> Option.iter (fun s -> s.LogEntry((getEntryType logType), source, message) |> ignore)
+        |> Option.iter (fun s -> s.LogEntry((getEntryType logType), Resource.vsPackageTitle, message) |> ignore)
 
-    member x.LogExceptionWithMessage message (e:Exception) =
+    member x.LogExceptionWithMessage (e:Exception) message=
         let message =
             sprintf "Message: %s\nException Message: %s\nStack Trace: %s" message e.Message e.StackTrace
         x.Log LogType.Error message
@@ -54,8 +51,32 @@ type Logger
         let message = sprintf "Exception Message: %s\mStart Trace: %s" e.Message e.StackTrace
         x.Log LogType.Error message
                 
-    member x.MessageBox title message logType =
+    member x.MessageBox logType message =
         let icon = getIcon logType
         let service = getShellService()
         let result = 0
-        service.ShowMessageBox(0u, ref Guid.Empty, title, message, "", 0u, OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, ref result)
+        service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, ref result)
+
+[<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module Loggging =
+    let inline log logType msg = 
+        let logger = new Logger(ServiceProvider.GlobalProvider)
+        let log = logger.Log logType
+        Printf.kprintf log msg
+
+    let inline logInf msg = log LogType.Information msg
+    let inline logWar msg = log LogType.Warning msg
+    let inline logErr msg = log LogType.Error msg
+
+    let inline logException ex =
+        let logger = new Logger(ServiceProvider.GlobalProvider)
+        logger.LogException ex
+        ex
+
+    let inline msgbox logType msg =
+        let logger = new Logger(ServiceProvider.GlobalProvider)
+        logger.MessageBox logType msg |> ignore
+
+    let inline msgboxInf msg = msgbox LogType.Information msg
+    let inline msgboxWar msg = msgbox LogType.Warning msg
+    let inline msgboxErr msg = msgbox LogType.Error msg

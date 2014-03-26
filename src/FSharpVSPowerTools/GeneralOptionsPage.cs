@@ -71,13 +71,13 @@ namespace FSharpVSPowerTools
                 }
                 else
                 {
-                    logger.MessageBox(Resource.vsPackageTitle, Resource.navBarUnauthorizedMessage, LogType.Error);
+                    logger.MessageBox(LogType.Error, Resource.navBarUnauthorizedMessage);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                logger.MessageBox(Resource.vsPackageTitle, Resource.navBarErrorMessage, LogType.Error);
+                logger.MessageBox(LogType.Error, Resource.navBarErrorMessage);
                 logger.LogException(ex);
                 return false;
             }

@@ -36,7 +36,7 @@ type ActionInfo =
     { Item : ProjectItem option
       Project : Project }
 
-type FSharpProjectSystemService(dte: DTE, logger : Logger) = 
+type FSharpProjectSystemService(dte: DTE) = 
     let assemblyInfo =
         match VisualStudioVersion.fromDTEVersion dte.Version with
         | VisualStudioVersion.VS2012 ->
@@ -45,9 +45,7 @@ type FSharpProjectSystemService(dte: DTE, logger : Logger) =
             "FSharp.ProjectSystem.FSharp, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
     let asm = lazy try Assembly.Load(assemblyInfo)
                    with _ ->
-                        let ex = AssemblyMissingException "FSharp.ProjectSystem.FSharp"
-                        logger.LogException ex |> ignore
-                        raise ex
+                        AssemblyMissingException "FSharp.ProjectSystem.FSharp" |> logException |> raise
 
     let MSBuildUtilitiesType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.ProjectSystem.MSBuildUtilities")
 
@@ -128,7 +126,7 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell, l
     let getNextItem = getItem getNextItemImpl
 
     let performMoveAction (info: ActionInfo) action =
-        let service = new FSharpProjectSystemService(dte :?> DTE, logger)
+        let service = new FSharpProjectSystemService(dte :?> DTE)
         let node = info.Item.Value?Node
         let project = info.Project?Project
 

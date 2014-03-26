@@ -99,7 +99,7 @@ module UI =
                 window.Close()
             | Choice2Of2 errorMsg ->
                 window.DialogResult <- Nullable false
-                MessageBox.Show(errorMsg, Resource.vsPackageTitle, MessageBoxButton.OK, MessageBoxImage.Error) |> ignore)
+                msgboxErr errorMsg)
         accessor.btnCancel.Click.Add(fun _ -> 
             window.DialogResult <- Nullable false
             window.Close())
