@@ -225,6 +225,7 @@ let ``multi line quotation``() =
 let ``quotation as function argument``() = 
     checkCategories 96 [ Function, 8, 10; Quotation, 11, 22 ]
     checkCategories 98 [ Function, 8, 9; Quotation, 10, 21; Quotation, 22, 33 ]
+    checkCategories 123 [ Quotation, 6, 16 ]
 
 [<Test>]
 let ``quotation in type``() = 
@@ -255,5 +256,9 @@ let ``quotation in seq for expression``() = checkCategories 111 [ Quotation, 34,
 
 [<Test>]
 let ``quotation as a result of function``() = checkCategories 116 [ Quotation, 4, 11 ]
+
+[<Test>]
+let ``quotation as default constructor arguments``() = 
+    checkCategories 118 [ ReferenceType, 8, 39; Quotation, 40, 47 ]
 
  

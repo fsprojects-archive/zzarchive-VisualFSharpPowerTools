@@ -201,6 +201,10 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> 
             for b in bindings do visitBinding b
         | SynExpr.Typed (expr, _, _) -> visitExpression expr
+        | SynExpr.Paren (expr, _, _, _) -> visitExpression expr
+        | SynExpr.Sequential (_, _, expr1, expr2, _) ->
+            visitExpression expr1
+            visitExpression expr2
         | _ -> () // printfn " - not supported expression: %A" x
 
     and visitBinding (Binding(_, _, _, _, _, _, _, pat, _, body, _, _)) =

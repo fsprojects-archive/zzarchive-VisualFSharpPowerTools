@@ -114,3 +114,10 @@ let _ = { new ITypeWithQuotes with
             member x.Method() = <@ 1 @> }
 let qf() : Microsoft.FSharp.Quotations.Expr<int> =
     <@ 1 @>
+type ClassWithQuotationInConstructor(expr) = class end
+let _ = ClassWithQuotationInConstructor(<@ 1 @>)
+let _ =
+    assert true 
+    [] 
+    |> List.fold (fun acc x -> acc
+    ) <@@ () @@>
