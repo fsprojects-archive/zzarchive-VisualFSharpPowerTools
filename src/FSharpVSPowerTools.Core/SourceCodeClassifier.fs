@@ -226,12 +226,13 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
             for d in defns do visitMember d
         | _ -> ()
 
-    let visitDeclarations decls = 
+    let rec visitDeclarations decls = 
         for declaration in decls do
             match declaration with
             | SynModuleDecl.Let (_, bindings, _) -> for b in bindings do visitBinding b
             | SynModuleDecl.DoExpr (_, expr, _) -> visitExpression expr
             | SynModuleDecl.Types (types, _) -> for ty in types do visitType ty
+            | SynModuleDecl.NestedModule (_, decls, _, _) -> visitDeclarations decls
             | _ -> () // printfn " - not supported declaration: %A" declaration
 
     let visitModulesAndNamespaces modulesOrNss =

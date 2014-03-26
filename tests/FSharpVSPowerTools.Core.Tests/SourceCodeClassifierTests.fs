@@ -269,4 +269,7 @@ let ``quotation as initialization of auto property``() =
 [<Test>]
 let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40 ]
 
+[<Test>]
+let ``quotation in nested module``() = checkCategories 131 [ Quotation, 12, 19 ]
+
  
