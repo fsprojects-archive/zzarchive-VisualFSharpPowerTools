@@ -5,6 +5,7 @@ using System.Configuration;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
+using System.ComponentModel.Composition;
 
 namespace FSharpVSPowerTools
 {
@@ -16,6 +17,9 @@ namespace FSharpVSPowerTools
         private const string navBarConfig = "fsharp-navigationbar-enabled";
         private bool _navBarEnabledInAppConfig;
 
+        // I've tried using [Logger] here, but doesn't work. Anyone knows why? Feel free to fix!
+        private Logger logger = new Logger(ServiceProvider.GlobalProvider);
+
         private bool GetNavigationBarConfig()
         {
             try
@@ -25,8 +29,9 @@ namespace FSharpVSPowerTools
                 bool result;
                 return configValue != null && bool.TryParse(configValue.Value, out result) ? result : false;
             }
-            catch
+            catch(Exception ex)
             {
+                logger.LogException(ex);
                 return false;
             }
         }
@@ -64,13 +69,14 @@ namespace FSharpVSPowerTools
                 }
                 else
                 {
-                    MessageBox.Show(Resource.navBarUnauthorizedMessage, Resource.vsPackageTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    logger.MessageBox(LogType.Error, Resource.navBarUnauthorizedMessage);
                     return false;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show(Resource.navBarErrorMessage, Resource.vsPackageTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                logger.MessageBox(LogType.Error, Resource.navBarErrorMessage);
+                logger.LogException(ex);
                 return false;
             }
         }

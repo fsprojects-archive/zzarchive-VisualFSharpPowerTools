@@ -86,13 +86,13 @@ namespace FSharpVSPowerTools
         }
 
         [Import]
-        private ThemeManager themeManager;
+        private ThemeManager themeManager = null;
 
         [Import]
-        private IClassificationFormatMapService classificationFormatMapService;
+        private IClassificationFormatMapService classificationFormatMapService = null;
 
         [Import]
-        private IClassificationTypeRegistryService classificationTypeRegistry;
+        private IClassificationTypeRegistryService classificationTypeRegistry = null;
 
         public Color GetDefaultColor(string category) 
         {
@@ -240,6 +240,9 @@ namespace FSharpVSPowerTools
         private VSLanguageService fsharpVsLanguageService = null;
 
         [Import]
+        private Logger logger = null;
+        
+        [Import]
         private ITextDocumentFactoryService textDocumentFactoryService = null;
 
         public IClassifier GetClassifier(ITextBuffer buffer)
@@ -247,7 +250,7 @@ namespace FSharpVSPowerTools
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.SyntaxColoringEnabled)
             {
-                Debug.WriteLine("[Syntax Coloring] The feature is disabled in General option page.");
+                logger.Log(LogType.Information, "Syntax Coloring feature is disabled in General option page.");
                 return null;
             }
 
