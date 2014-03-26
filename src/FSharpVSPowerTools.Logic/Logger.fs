@@ -16,16 +16,14 @@ type Logger
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    let getEntryType logType =
-        let value =
-            match logType with
-            | LogType.Information -> __ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION
-            | LogType.Warning -> __ACTIVITYLOG_ENTRYTYPE.ALE_WARNING
-            | LogType.Error -> __ACTIVITYLOG_ENTRYTYPE.ALE_ERROR
-        Convert.ToUInt32(value)
+    let getEntryTypeInt = function
+        | LogType.Information -> __ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION
+        | LogType.Warning -> __ACTIVITYLOG_ENTRYTYPE.ALE_WARNING
+        | LogType.Error -> __ACTIVITYLOG_ENTRYTYPE.ALE_ERROR
 
-    let getIcon logType =
-        match logType with
+    let getEntryType logType = Convert.ToUInt32(getEntryTypeInt logType)
+
+    let getIcon = function
         | LogType.Information -> OLEMSGICON.OLEMSGICON_INFO
         | LogType.Warning -> OLEMSGICON.OLEMSGICON_WARNING
         | LogType.Error -> OLEMSGICON.OLEMSGICON_CRITICAL
@@ -34,9 +32,7 @@ type Logger
 
     let getActivityLogService() =
         let service = serviceProvider.GetService<IVsActivityLog, SVsActivityLog>()
-        match service with 
-        | null -> None
-        | x -> Some x
+        Option.ofNull service
 
     member x.Log logType message =
         getActivityLogService()
