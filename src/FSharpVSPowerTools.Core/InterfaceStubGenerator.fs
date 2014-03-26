@@ -58,11 +58,12 @@ module InterfaceStubGenerator =
 
     // Adapt from MetadataFormat module in FSharp.Formatting 
 
-    let internal (|AllAndLast|_|) (list:'T list) = 
-        if list.IsEmpty then 
+    let internal (|AllAndLast|_|) (xs: 'T list) = 
+        match xs with
+        | [] -> 
             None
-        else 
-            let revd = List.rev list
+        | _ -> 
+            let revd = List.rev xs
             Some(List.rev revd.Tail, revd.Head)
 
     let internal isAttrib<'T> (attrib: FSharpAttribute)  =
@@ -71,12 +72,12 @@ module InterfaceStubGenerator =
     let internal hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
         attribs |> Seq.exists (fun a -> isAttrib<'T>(a))
 
-    let internal (|MeasureProd|_|) (typ : FSharpType) = 
+    let internal (|MeasureProd|_|) (typ: FSharpType) = 
         if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "*" && typ.GenericArguments.Count = 2 then
             Some (typ.GenericArguments.[0], typ.GenericArguments.[1])
         else None
 
-    let internal (|MeasureInv|_|) (typ : FSharpType) = 
+    let internal (|MeasureInv|_|) (typ: FSharpType) = 
         if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "/" && typ.GenericArguments.Count = 1 then 
             Some typ.GenericArguments.[0]
         else None
@@ -116,7 +117,7 @@ module InterfaceStubGenerator =
     and formatTypesWithPrec prec sep typs = 
         String.concat sep (typs |> Seq.map (formatTypeWithPrec prec))
 
-    and formatTypeWithPrec prec (typ:FSharpType) =
+    and formatTypeWithPrec prec (typ: FSharpType) =
         // Measure types are stored as named types with 'fake' constructors for products, "1" and inverses
         // of measures in a normalized form (see Andrew Kennedy technical reports). Here we detect this 
         // embedding and use an approximate set of rules for layout out normalized measures in a nice way. 
@@ -142,7 +143,7 @@ module InterfaceStubGenerator =
         | _ when typ.IsFunctionType ->
             let rec loop soFar (typ:FSharpType) = 
                 if typ.IsFunctionType then 
-                    let _domainTyp, retType = typ.GenericArguments.[0], typ.GenericArguments.[1]
+                    let _domainType, retType = typ.GenericArguments.[0], typ.GenericArguments.[1]
                     loop (soFar + (formatTypeWithPrec 4 typ.GenericArguments.[0]) + " -> ") retType
                 else 
                     soFar + formatTypeWithPrec 5 typ
@@ -250,14 +251,18 @@ module InterfaceStubGenerator =
         ctx.Writer.Unindent ctx.Indentation
 
     /// Get members in the decreasing order of inheritance chain
-    let rec internal getMembers (e: FSharpEntity) = 
+    let rec internal getInterfaceMembers (e: FSharpEntity) = 
         seq {
-            match e.BaseType with
-            | Some baseType ->
-                yield! getMembers baseType.TypeDefinition
-            | None -> ()
-            yield! e.MembersFunctionsAndValues
+            for iface in e.DeclaredInterfaces do
+                yield! getInterfaceMembers iface.TypeDefinition
+            yield! e.MembersFunctionsAndValues |> Seq.filter (fun m -> 
+                       let v = m.DisplayName
+                       // FIXME: temporary filter out get/set properties because properties have also been included
+                       not (v.StartsWith "get_" || v.StartsWith "set_"))
          }
+
+    let countInterfaceMembers e =
+        getInterfaceMembers e |> Seq.length
 
     /// Generate stub implementation of an interface at a start column
     let formatInterface startColumn indentation objectIdent (methodBody: string) (e: FSharpEntity) =
@@ -266,7 +271,7 @@ module InterfaceStubGenerator =
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
         let ctx = { Writer = writer; Indentation = indentation; ObjectIdent = objectIdent; MethodBody = lines }
         writer.Indent startColumn
-        for v in getMembers e do
+        for v in getInterfaceMembers e do
             formatMember ctx v
         writer.Dump()
 
@@ -322,13 +327,13 @@ module InterfaceStubGenerator =
             match memberDefn with
             | SynMemberDefn.AbstractSlot(_synValSig, _memberFlags, _range) ->
                 None
-            | SynMemberDefn.AutoProperty(_attributes, _isStatic, id, _type, _memberKind, _memberFlags, _xmlDoc, _access, rhs, _r1, _r2) ->
+            | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, rhs, _r1, _r2) ->
                 walkExpr rhs
             | SynMemberDefn.Interface(interfaceType, members, _range) ->
                 if inRange interfaceType.Range pos then
                     Some(InterfaceData.Interface(interfaceType, members))
                 else
-                    members |> Option.bind (List.tryPick walkSynMemberDefn)
+                    Option.bind (List.tryPick walkSynMemberDefn) members
             | SynMemberDefn.Member(binding, _range) ->
                 walkBinding binding
             | SynMemberDefn.NestedType(typeDef, _access, _range) -> 

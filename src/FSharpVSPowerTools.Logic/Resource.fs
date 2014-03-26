@@ -22,3 +22,5 @@ module Resource =
 
     let [<Literal>] newFolderDialogTitle = "F# Power Tools - New Folder"
     let [<Literal>] renameFolderDialogTitle = "F# Power Tools - Rename Folder"
+
+    let [<Literal>] implementInterfaceErrorMessage = "All members of this interface have been implemented."
