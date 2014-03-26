@@ -25,28 +25,27 @@ namespace FSharpVSPowerTools
         [Export]
         [Name(FSharpReferenceType)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpReferenceClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpReferenceClassificationType = null;
 
         [Export]
         [Name(FSharpValueType)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpValueClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpValueClassificationType = null;
 
         [Export]
         [Name(FSharpPatternCase)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpPatternCaseClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpPatternCaseClassificationType = null;
 
         [Export]
         [Name(FSharpFunction)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpFunctionClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpFunctionClassificationType = null;
 
         [Export]
         [Name(FSharpMutableVar)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpMutableVarClassfierType = null;
-
+        internal static ClassificationTypeDefinition FSharpMutableVarClassificationType = null;
     }
 
     [Export]
@@ -60,12 +59,12 @@ namespace FSharpVSPowerTools
         public ClassificationColorManager()
         {
             // Light/Blue theme colors
-            var lightAndBlueColors = new Dictionary<string, Color>()
+            var lightAndBlueColors = new Dictionary<string, Color>
             {
-                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(0, 0, 140) },
-                { ClassificationTypes.FSharpValueType, Color.FromRgb(0, 0, 140) },
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(43, 145, 175) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(43, 145, 175) },
                 { ClassificationTypes.FSharpPatternCase, Colors.Black },
-                { ClassificationTypes.FSharpFunction, Color.FromRgb(49, 140, 140) },
+                { ClassificationTypes.FSharpFunction, Colors.Black },
                 { ClassificationTypes.FSharpMutableVar, Colors.Black }
             };
 
@@ -74,12 +73,12 @@ namespace FSharpVSPowerTools
             themeColors.Add(VisualStudioTheme.Unknown, lightAndBlueColors);
 
             // Dark theme colors
-            var darkColors = new Dictionary<string, Color>()
+            var darkColors = new Dictionary<string, Color>
             {
-                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(173, 222, 231) },
-                { ClassificationTypes.FSharpValueType, Color.FromRgb(173, 222, 231) },
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(78, 201, 176) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(78, 201, 176) },
                 { ClassificationTypes.FSharpPatternCase, Color.FromRgb(220, 220, 220) },
-                { ClassificationTypes.FSharpFunction, Color.FromRgb(0, 255, 255) },
+                { ClassificationTypes.FSharpFunction, Color.FromRgb(220, 220, 220) },
                 { ClassificationTypes.FSharpMutableVar, Color.FromRgb(220, 220, 220) }
             };
 
@@ -87,27 +86,28 @@ namespace FSharpVSPowerTools
         }
 
         [Import]
-        private ThemeManager themeManager = null;
+        private ThemeManager themeManager;
 
         [Import]
-        private IClassificationFormatMapService classificationFormatMapService = null;
+        private IClassificationFormatMapService classificationFormatMapService;
 
         [Import]
-        private IClassificationTypeRegistryService classificationTypeRegistry = null;
+        private IClassificationTypeRegistryService classificationTypeRegistry;
 
         public Color GetDefaultColor(string category) 
         {
             var currentTheme = themeManager.GetCurrentTheme();
 
-            bool success = false;
-            var color = Colors.Black;
+            bool success;
+            Color color;
             switch (currentTheme)
             {
                 case VisualStudioTheme.Dark:
-                    color = Colors.White;
+                    color = Color.FromRgb(220, 220, 220);
                     success = themeColors[currentTheme].TryGetValue(category, out color);
                     if (!success) Debug.WriteLine("Classification theme manager can't read colors correctly.");
                     return color;
+
                 case VisualStudioTheme.Light:
                 case VisualStudioTheme.Blue:
                 default:
