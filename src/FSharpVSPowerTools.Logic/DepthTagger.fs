@@ -20,7 +20,7 @@ type DepthRegionTag(info: int * int * int * int) =
 
 type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: VSLanguageService) as self =
     // computed periodically on a background thread
-    let mutable results: _ [] = null
+    let mutable results: _ [] = [||]
     let resultsLock = obj() // lock for reading/writing "results"
     // only updated on the UI thread in the GetTags method
     let mutable prevTags: ITagSpan<DepthRegionTag> [] = null
@@ -35,35 +35,34 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
         ()
     
-    let refreshFileImpl (doSync) = 
+    let refreshFileImpl _doSync = 
         async { 
             try 
-                let syncContext = System.Threading.SynchronizationContext.Current
                 let ss = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-                if not doSync then do! Async.SwitchToThreadPool()
-                do let sourceCodeOfTheFile = ss.GetText()
-                   // Reuse the instance of InteractiveChecker
-                   let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService. Checker)
-                   let tempResults = new ResizeArray<_>()
-                   for (line, sc, ec, _d) as info in ranges do
-                       try 
-                           //System.Diagnostics.Debug.WriteLine("{0},{1},{2},{3}", line, sc, ec, d)
-                           // -1 because F# reports 1-based line nums, whereas VS wants 0-based
-                           let startLine = ss.GetLineFromLineNumber(Math.Min(line - 1, ss.LineCount - 1))
-                           let start = startLine.Start.Add(Math.Min(sc, startLine.Length))
-                           let endLine = ss.GetLineFromLineNumber(Math.Min(line - 1, ss.LineCount - 1))
-                           let end_ = endLine.Start.Add(Math.Min(ec, endLine.Length))
-                           let span = 
-                               ss.CreateTrackingSpan
-                                   ((new SnapshotSpan(start, end_)).Span, SpanTrackingMode.EdgeExclusive)
-                           tempResults.Add(Tuple.Create(span, info))
-                       with e -> 
-                           System.Diagnostics.Debug.WriteLine(e)
-                           if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
-                   lock (resultsLock) (fun () -> 
-                       results <- Array.create tempResults.Count (null, (0, 0, 0, 0))
-                       tempResults.CopyTo(results))
-                if not doSync then do! Async.SwitchToContext(syncContext)
+                let sourceCodeOfTheFile = ss.GetText()
+                let syncContext = System.Threading.SynchronizationContext.Current
+                do! Async.SwitchToThreadPool()
+                let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService.Checker)
+                do! Async.SwitchToContext(syncContext)
+                let tempResults = new ResizeArray<_>()
+                for (line, sc, ec, _d) as info in ranges do
+                    try 
+                        //System.Diagnostics.Debug.WriteLine("{0},{1},{2},{3}", line, sc, ec, d)
+                        // -1 because F# reports 1-based line nums, whereas VS wants 0-based
+                        let startLine = ss.GetLineFromLineNumber(Math.Min(line - 1, ss.LineCount - 1))
+                        let start = startLine.Start.Add(Math.Min(sc, startLine.Length))
+                        let endLine = ss.GetLineFromLineNumber(Math.Min(line - 1, ss.LineCount - 1))
+                        let end_ = endLine.Start.Add(Math.Min(ec, endLine.Length))
+                        let span = 
+                            ss.CreateTrackingSpan
+                                ((new SnapshotSpan(start, end_)).Span, SpanTrackingMode.EdgeExclusive)
+                        tempResults.Add(Tuple.Create(span, info))
+                    with e -> 
+                        System.Diagnostics.Debug.WriteLine(e)
+                        if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
+                lock (resultsLock) (fun () -> 
+                    results <- Array.create tempResults.Count (null, (0, 0, 0, 0))
+                    tempResults.CopyTo(results))
                 trace ("firing tagschanged")
                 tagsChangedEvent.Trigger(self, new SnapshotSpanEventArgs(new SnapshotSpan(ss, 0, ss.Length)))
             with e -> 
