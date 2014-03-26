@@ -35,7 +35,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
         ()
     
-    let refreshFileImpl _doSync = 
+    let refreshFileImpl() = 
         async { 
             try 
                 let ss = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
@@ -71,8 +71,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         }
         |> Async.StartImmediate
     
-    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], TimeSpan.FromMilliseconds 500., 
-                                    fun initial -> refreshFileImpl initial) 
+    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 500us, refreshFileImpl) 
     
     interface ITagger<DepthRegionTag> with
         

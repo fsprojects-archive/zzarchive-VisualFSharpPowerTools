@@ -66,9 +66,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 } |> Async.Start
             } |> ignore
     
-    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 
-                                    TimeSpan.FromMilliseconds 200.,
-                                    fun _ -> updateSyntaxConstructClassifiers())
+    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, updateSyntaxConstructClassifiers)
 
     do doc.TextBuffer.Changed.Add (fun _ -> locations.Swap (fun _ -> [||]) |> ignore)
     
