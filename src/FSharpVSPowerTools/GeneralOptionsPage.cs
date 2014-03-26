@@ -26,10 +26,8 @@ namespace FSharpVSPowerTools
             {
                 var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
                 var configValue = config.AppSettings.Settings[navBarConfig];
-                var b = configValue.Value;
                 bool result;
-                var res = b != null && bool.TryParse(b, out result) ? result : false;
-                return res;
+                return configValue != null && bool.TryParse(configValue.Value, out result) ? result : false;
             }
             catch(Exception ex)
             {

@@ -54,7 +54,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                             |> Seq.choose (fun symbolUse -> 
                                 // We have to filter by full paths otherwise the range is invalid wrt current snapshot
                                 if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
-                                    Some (fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate)
+                                    fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate
                                 else None)
                             |> Seq.map (fun span -> 
                                 // Sometimes F.C.S returns a composite identifier which should be truncated

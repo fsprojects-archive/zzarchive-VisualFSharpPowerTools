@@ -77,7 +77,8 @@ let getUsesOfSymbol line col lineStr =
     |> Option.map (fun (_, _, symbolUses) -> 
         symbolUses |> Array.map (fun x -> 
                         let r = x.RangeAlternate
-                        ((r.StartLine-1, r.StartColumn), (r.EndLine-1, r.EndColumn))))
+                        if r.StartLine <> r.EndLine then failwithf "StartLine should be equal to EndLine"
+                        r.StartLine - 1, r.StartColumn, r.EndColumn))
     |> Option.map set
 
 let checkSymbolUsage line col lineStr expected =
@@ -96,75 +97,74 @@ let checkGetSymbol line col lineStr expected =
 let ``should find usages of arrays``() =
     checkSymbolUsage 
         126 29 "    let substring = helloWorld.[0..6]"
-        [ (126, 20), (126, 30); (123, 8), (123, 18); (132, 17), (132, 27) ]
+        [ (126, 20, 30); (123, 8, 18); (132, 17, 27) ]
 
 [<Test>]
 let ``should find usages of members``() =
     checkSymbolUsage
         217 26 "        member this.Length = length"
-        [ (217, 20), (217, 26); (227, 63), (227, 77); (227, 78), (227, 92) ]
+        [ (217, 20, 26); (227, 63, 77); (227, 78, 92) ]
 
     checkSymbolUsage
         610 35 "    eventForDelegateType.Publish.AddHandler("
-        [ (610, 4), (610, 43) ]
+        [ (610, 4, 43) ]
 
     checkSymbolUsage
         722 16 "    Nested.``long name``()"
-        [ (720, 12), (720, 25); (722, 4), (722, 24) ]
+        [ (720, 12, 25); (722, 4, 24) ]
 
 [<Test>]
 let ``should find usages of DU constructors named with single upper-case letter``() =
     checkSymbolUsage
         470 14 "    type A = B of int"
-        [ (470, 13), (470, 14); (471, 9), (471, 10); (471, 16), (471, 17) ]
+        [ (470, 13, 14); (471, 9, 10); (471, 16, 17) ]
 
 [<Test>]
 let ``should find usages of DU types named with single upper-case letter``() =
     checkSymbolUsage
         470 10 "    type A = B of int"
-        [ (470, 9), (470, 10); (472, 13), (472, 14) ]
+        [ (470, 9, 10); (472, 13, 14) ]
 
 [<Test>]
 let ``should find usages of operators``() =
     checkSymbolUsage
         690 22 "    let func1 x = x *. x + 3"
-        [ (689, 10), (689, 12); (690, 20), (690, 22); (691, 23), (691, 25) ]
+        [ (689, 10, 12); (690, 20, 22); (691, 23, 25) ]
 
 [<Test>]
 let ``should find usages of operators starting with '>' symbol``() =
     checkSymbolUsage
         693 11 "    let (>>=) x y = ()"
-        [ (693, 9), (693, 12); (694, 6), (694, 9) ]
+        [ (693, 9, 12); (694, 6, 9) ]
 
     checkSymbolUsage
         696 8 "    1 >~>> 2"
-        [ (695, 9), (695, 13); (696, 6), (696, 10) ]
+        [ (695, 9, 13); (696, 6, 10) ]
 
 [<Test>]
 let ``should find usages of operators containing dots``() =
     checkSymbolUsage
         697 11 "    let (.>>) x y = ()"
-        [ (697, 9), (697, 12); (698, 6), (698, 9) ]
+        [ (697, 9, 12); (698, 6, 9) ]
 
     checkSymbolUsage
         699 11 "    let (>.>) x y = ()"
-        [ (699, 9), (699, 12); (700, 6), (700, 9) ]
+        [ (699, 9, 12); (700, 6, 9) ]
 
     checkSymbolUsage
         701 11 "    let ( >>. ) x y = ()"
-        [ (701, 10), (701, 13); (702, 6), (702, 9); (702, 12), (702, 15); (704, 14), (704, 17); (704, 21), (704, 24); 
-          (704, 27), (704, 30) ]
+        [ (701, 10, 13); (702, 6, 9); (702, 12, 15); (704, 14, 17); (704, 21, 24); (704, 27, 30) ]
 
 [<Test>]
 let ``should find fully qualified operator``() =
     checkSymbolUsage 
         728 9 "    M.N.(+.) 1 2" 
-        [ (726, 17), (726, 19); (728, 4), (728, 11) ]
+        [ (726, 17, 19); (728, 4, 11) ]
 
 [<Test>]
 let ``should find usages of symbols if where are operators containing dots on the same line``() =
     let line = "    let x = 1 >>. ws >>. 2 >>. ws"
-    let usages = [ (703, 8), (703, 10); (704, 18), (704, 20); (704, 31), (704, 33) ]
+    let usages = [ (703, 8, 10); (704, 18, 20); (704, 31, 33) ]
     checkSymbolUsage 704 18 line usages
     checkSymbolUsage 704 19 line usages
     checkSymbolUsage 704 20 line usages
@@ -173,25 +173,25 @@ let ``should find usages of symbols if where are operators containing dots on th
 let ``should find usages of symbols contacting with a special symbol on the right``() =
     checkSymbolUsage
         706 12 "    let f (a, b) = a + b"
-        [ (706, 11), (706, 12); (706, 19), (706, 20) ]
+        [ (706, 11, 12); (706, 19, 20) ]
 
     checkSymbolUsage
         707 9 "    type C<'a> = C of 'a"
-        [ (707, 9), (707, 10) ]
+        [ (707, 9, 10) ]
 
     checkSymbolUsage
         707 10 "    type C<'a> = C of 'a"
-        [ (707, 9), (707, 10) ]
+        [ (707, 9, 10) ]
 
     checkSymbolUsage
         709 5 "    g(2)"
-        [ (708, 8), (708, 9); (709, 4), (709, 5) ]
+        [ (708, 8, 9); (709, 4, 5) ]
 
 [<Test>]
 let ``should find all symbols in combined match patterns``() =
     checkSymbolUsage
         763 27 "    let _ = match [] with [h] | [_; h] | [_; _; h] -> h | _ -> 0"
-        [(763, 27), (763, 28); (763, 36), (763, 37); (763, 42), (763, 43); (763, 51), (763, 52)]
+        [(763, 27, 28); (763, 36, 37); (763, 42, 43); (763, 51, 52)]
 
 [<Test>]
 let ``should not find usages inside comments``() =
@@ -216,61 +216,60 @@ let ``should not find usages inside compiler directives``() =
 [<Test>]
 let ``should find usages of generic parameters``() =
     checkSymbolUsage 707 12 "    type C<'a> = C of 'a" 
-        [ (707, 11), (707, 13)
-          (707, 22), (707, 24) ]
+        [ (707, 11, 13); (707, 22, 24) ]
 
 [<Test>]
 let ``should find usages of statically resolved type parameters``() =
     checkSymbolUsage 730 22 "    let inline check< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
-        [ (730, 22), (730, 24)
-          (730, 30), (730, 32) 
-          (730, 63), (730, 65) 
-          (730, 82), (730, 84) 
-          (730, 88), (730, 90)
-          (731, 12), (731, 14)
-          (731, 44), (731, 46) ] 
+        [ (730, 22, 24)
+          (730, 30, 32) 
+          (730, 63, 65) 
+          (730, 82, 84) 
+          (730, 88, 90)
+          (731, 12, 14)
+          (731, 44, 46) ] 
 
 [<Test>]
 let ``should find usages of named discriminated union fields``() =
     checkSymbolUsage 735 15 "        | B of field1: int * field2: string" 
-        [ (735, 15), (735, 21)
-          (737, 15), (737, 21)
-          (740, 13), (740, 19) ]
+        [ (735, 15, 21)
+          (737, 15, 21)
+          (740, 13, 19) ]
 
 [<Test>]
 let ``should find usages of active patterns``() =
     checkSymbolUsage 744 10 "    let (|A|Bb|Ccc|) (x: int) =" 
-        [ (744, 10), (744, 11)
-          (745, 22), (745, 23)
-          (749, 10), (749, 11) ]
+        [ (744, 10, 11)
+          (745, 22, 23)
+          (749, 10, 11) ]
 
 [<Test>]
 let ``should find usages of statically resolved method names``() =
     checkSymbolUsage 754 54 "    let inline checkIt< ^T when ^T : (static member IsInfinity : ^T -> bool)> (num: ^T) : ^T option =" 
-        [ (754, 52), (754, 62) ]
+        [ (754, 52, 62) ]
     
     checkSymbolUsage 755 32 "        if (^T : (static member IsInfinity: ^T -> bool) (num)) then None" 
-        [ (755, 32), (755, 42) ]
+        [ (755, 32, 42) ]
 
 [<Test>]
 let ``should find usages of property initializers``() =
     checkSymbolUsage 759 19 """        member val Prop = "" with get, set"""
-        [ (759, 19), (759, 23)
-          (761, 14), (761, 18) ]
+        [ (759, 19, 23)
+          (761, 14, 18) ]
 
 [<Test; Ignore "FCS 0.0.36 does not support this">]
 let ``should find usages of properties with explicit getters and setters``() =
     checkSymbolUsage 766 17 "        member x.Name"
-        [ (766, 17), (766, 21)]
+        [ (766, 17, 21)]
 
 [<Test>] 
 let ``should find usages of fully qualified record fields``() =
     checkSymbolUsage 770 9 "    type Record = { Field: int }"
-        [ (770, 9), (770, 15) ]
+        [ (770, 9, 15) ]
           // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
 
     checkSymbolUsage 771 14 "    let r = { Record.Field = 1 }"
-        [ (770, 9), (770, 15) ]
+        [ (770, 9, 15) ]
           // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
 
 type ITempSource = 

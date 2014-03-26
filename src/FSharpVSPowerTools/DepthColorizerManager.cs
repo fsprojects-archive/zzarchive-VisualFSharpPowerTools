@@ -69,6 +69,9 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         private IServiceProvider serviceProvider = null;
 
+        [Import]
+        private Logger logger = null;
+
         public void TextViewCreated(IWpfTextView textView)
         {
             if (textView == null) return;
@@ -76,7 +79,7 @@ namespace FSharpVSPowerTools
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.DepthColorizerEnabled)
             {
-                Debug.WriteLine("[Depth Colorizer] The feature is disabled in General option page.");
+                logger.Log(LogType.Information, "[Depth Colorizer] The feature is disabled in General option page.");
                 return;
             }
 

@@ -88,7 +88,7 @@ let ``static event``() =
 [<Test>]
 let ``constructors``() = 
     checkCategories 8 [ ReferenceType, 5, 10 ]
-    checkCategories 19 [ ReferenceType, 4, 7; ReferenceType, 12, 15; ReferenceType, 23, 28 ]
+    checkCategories 19 [ ReferenceType, 4, 7; ValueType, 12, 15; ReferenceType, 23, 28 ]
 
 [<Test>]
 let ``interface implemented in a class``() = 
@@ -99,9 +99,9 @@ let ``interface implemented in a class``() =
 let ``property with explicit accessors``() = 
     checkCategories 22 [] 
     checkCategories 23 []
-    checkCategories 24 [ ReferenceType, 31, 34 ]
+    checkCategories 24 [ ValueType, 31, 34 ]
 
-[<Test; Ignore "FCS 0.0.36 does not return FSharpSymbolUse for this case">]
+[<Test>]
 let ``fully qualified CLI type constructor``() = 
     checkCategories 26 [ ReferenceType, 30, 39 ]
 
@@ -115,7 +115,7 @@ let ``generic class declaration``() =
 
 [<Test>]
 let ``generic class instantiation``() = 
-    checkCategories 35 [ ReferenceType, 24, 36; ReferenceType, 37, 40 ]
+    checkCategories 35 [ ReferenceType, 24, 36; ValueType, 37, 40 ]
     checkCategories 36 [ ReferenceType, 35, 47; ReferenceType, 54, 58 ]
     checkCategories 37 [ ReferenceType, 28, 40; ValueType, 48, 56 ]
 
@@ -124,13 +124,13 @@ let ``record``() =
     checkCategories 39 
         [ 
             ReferenceType, 5, 11
-            PublicField, 16, 24; ReferenceType, 26, 29
+            PublicField, 16, 24; ValueType, 26, 29
             PublicField, 31, 44; ReferenceType, 52, 56 
         ]
 
 [<Test>]
 let ``value type``() = 
-    checkCategories 41 [ ReferenceType, 27, 30 ] // FCS 0.0.39 bug
+    checkCategories 41 [ ValueType, 27, 30 ]
     checkCategories 42 [ ValueType, 22, 27 ]
     checkCategories 43 [ ValueType, 34, 42 ]
     checkCategories 44 [ ValueType, 5, 18 ]
@@ -178,11 +178,30 @@ let ``complex method chain``() =
 let ``generic type with ignored type parameter``() = checkCategories 71 [ ReferenceType, 8, 12 ]
 
 [<Test>]
-let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ReferenceType, 42, 45 ]
+let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ValueType, 42, 45 ]
        
 [<Test>]
 let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
 
 [<Test>]
-let ``indexer``() = checkCategories 77 []
+let ``indexer``() = checkCategories 77 [ Function, 11, 12 ]
 
+[<Test>]
+let ``mutable value``() = checkCategories 78 [ MutableVar, 12, 24 ]
+
+[<Test>]
+let ``mutable field``() = 
+    checkCategories 80 [ MutableVar, 14, 26; ValueType, 28, 31 ]
+    checkCategories 82 [ MutableVar, 16, 28 ]
+    checkCategories 84 [ MutableVar, 16, 31 ]
+
+[<Test>]
+let ``reference value``() = 
+    checkCategories 86 [ MutableVar, 4, 12; Function, 15, 18 ]
+    checkCategories 87 [ MutableVar, 0, 8; MutableVar, 13, 21 ]
+
+[<Test>]
+let ``reference field``() = 
+    checkCategories 89 [ Function, 19, 22; MutableVar, 8, 16 ]
+    checkCategories 90 [ MutableVar, 13, 21 ]
+    checkCategories 92 [ MutableVar, 6, 11; ValueType, 13, 16; ReferenceType, 17, 20 ]

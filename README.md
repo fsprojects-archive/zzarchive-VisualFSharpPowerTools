@@ -20,6 +20,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Rename refactoring
  - Depth colorizer
  - NavigateTo
+ - Syntax coloring
 
 For user guides, please take a look at [the home page](http://fsprojects.github.io/VisualFSharpPowerTools/).
 

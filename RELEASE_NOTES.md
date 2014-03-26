@@ -36,12 +36,13 @@
 * Fix the issue with standalone fs files
 * Fix the issue with failing source code formatting feature
 
-#### 0.5.0 - Unreleased
+#### 0.5.0 - March 24 2014
 * Improve Rename dialog
 * Improve performance of NavigateTo feature
 * Implement semantic highlighting
-* Migrate to FsXaml
+* Migrate to XAML provider in FsXaml
 * Improve lexing performance
-* Fix intermittent navigation bar configration 
+* Fix intermittent navigation bar configuration 
+* Setup integration tests
 
 

@@ -20,27 +20,32 @@ namespace FSharpVSPowerTools
         public const string FSharpValueType = "FSharp.ValueType";
         public const string FSharpPatternCase = "FSharp.PatternCase";
         public const string FSharpFunction = "FSharp.Function";
+        public const string FSharpMutableVar = "FSharp.MutableVar";
 
         [Export]
         [Name(FSharpReferenceType)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpReferenceClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpReferenceClassificationType = null;
 
         [Export]
         [Name(FSharpValueType)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpValueClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpValueClassificationType = null;
 
         [Export]
         [Name(FSharpPatternCase)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpPatternCaseClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpPatternCaseClassificationType = null;
 
         [Export]
         [Name(FSharpFunction)]
         [BaseDefinition("identifier")]
-        internal static ClassificationTypeDefinition FSharpFunctionClassfierType = null;
+        internal static ClassificationTypeDefinition FSharpFunctionClassificationType = null;
 
+        [Export]
+        [Name(FSharpMutableVar)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpMutableVarClassificationType = null;
     }
 
     [Export]
@@ -54,12 +59,13 @@ namespace FSharpVSPowerTools
         public ClassificationColorManager()
         {
             // Light/Blue theme colors
-            var lightAndBlueColors = new Dictionary<string, Color>()
+            var lightAndBlueColors = new Dictionary<string, Color>
             {
-                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(0, 0, 140) },
-                { ClassificationTypes.FSharpValueType, Color.FromRgb(0, 0, 140) },
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(43, 145, 175) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(43, 145, 175) },
                 { ClassificationTypes.FSharpPatternCase, Colors.Black },
-                { ClassificationTypes.FSharpFunction, Color.FromRgb(49, 140, 140) }
+                { ClassificationTypes.FSharpFunction, Colors.Black },
+                { ClassificationTypes.FSharpMutableVar, Colors.Black }
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -67,12 +73,13 @@ namespace FSharpVSPowerTools
             themeColors.Add(VisualStudioTheme.Unknown, lightAndBlueColors);
 
             // Dark theme colors
-            var darkColors = new Dictionary<string, Color>()
+            var darkColors = new Dictionary<string, Color>
             {
-                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(173, 222, 231) },
-                { ClassificationTypes.FSharpValueType, Color.FromRgb(173, 222, 231) },
+                { ClassificationTypes.FSharpReferenceType, Color.FromRgb(78, 201, 176) },
+                { ClassificationTypes.FSharpValueType, Color.FromRgb(78, 201, 176) },
                 { ClassificationTypes.FSharpPatternCase, Color.FromRgb(220, 220, 220) },
-                { ClassificationTypes.FSharpFunction, Color.FromRgb(0, 255, 255) }
+                { ClassificationTypes.FSharpFunction, Color.FromRgb(220, 220, 220) },
+                { ClassificationTypes.FSharpMutableVar, Color.FromRgb(220, 220, 220) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
@@ -91,15 +98,16 @@ namespace FSharpVSPowerTools
         {
             var currentTheme = themeManager.GetCurrentTheme();
 
-            bool success = false;
-            var color = Colors.Black;
+            bool success;
+            Color color;
             switch (currentTheme)
             {
                 case VisualStudioTheme.Dark:
-                    color = Colors.White;
+                    color = Color.FromRgb(220, 220, 220);
                     success = themeColors[currentTheme].TryGetValue(category, out color);
                     if (!success) Debug.WriteLine("Classification theme manager can't read colors correctly.");
                     return color;
+
                 case VisualStudioTheme.Light:
                 case VisualStudioTheme.Blue:
                 default:
@@ -156,7 +164,7 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpReferenceTypeFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# User Types";
+                this.DisplayName = "F# Types";
                 this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpReferenceType);
             }
         }
@@ -170,7 +178,7 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpValueTypeFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# User Types (Value types)";
+                this.DisplayName = "F# Value Types";
                 this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpValueType);
             }
         }
@@ -198,8 +206,22 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpFunctionFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Functions";
+                this.DisplayName = "F# Functions / Methods";
                 this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpFunction);
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpMutableVar)]
+        [Name(ClassificationTypes.FSharpMutableVar)]
+        [UserVisible(true)]
+        sealed class FSharpMutableVarFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpMutableVarFormat(ClassificationColorManager colorManager)
+            {
+                this.DisplayName = "F# Mutable Variables / Reference Cells";
+                this.ForegroundColor = colorManager.GetDefaultColor(ClassificationTypes.FSharpMutableVar);
             }
         }
     }
@@ -219,6 +241,9 @@ namespace FSharpVSPowerTools
 
         [Import]
         private Logger logger = null;
+        
+        [Import]
+        private ITextDocumentFactoryService textDocumentFactoryService = null;
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
@@ -229,11 +254,12 @@ namespace FSharpVSPowerTools
                 return null;
             }
 
-            return buffer.Properties.GetOrCreateSingletonProperty(() =>
-            {
-                return new SyntaxConstructClassifier(buffer, classificationRegistry, fsharpVsLanguageService,
-                    serviceProvider);
-            });
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+                return buffer.Properties.GetOrCreateSingletonProperty(() =>
+                    new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider));
+
+            return null;
         }
     }
 }
