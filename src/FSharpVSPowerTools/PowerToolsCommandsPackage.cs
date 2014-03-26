@@ -66,7 +66,7 @@ namespace FSharpVSPowerTools
 
             if (mcs != null)
             {
-                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell, logger);
+                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
                 newFolderMenu.SetupCommands();
             }
 
