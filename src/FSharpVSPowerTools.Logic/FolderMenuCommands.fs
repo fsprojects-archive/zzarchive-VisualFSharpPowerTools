@@ -55,7 +55,7 @@ type FSharpProjectSystemService(dte: DTE) =
     member x.MoveFolderUp item next project :unit = 
         MSBuildUtilitiesType.Value?MoveFolderUp(item, next, project)
 
-type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell, logger:Logger) = 
+type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) = 
 
     let getSelectedItems() = VSUtils.getSelectedItemsFromSolutionExplorer dte |> List.ofSeq
     let getSelectedProjects() = VSUtils.getSelectedProjectsFromSolutionExplorer dte |> List.ofSeq
