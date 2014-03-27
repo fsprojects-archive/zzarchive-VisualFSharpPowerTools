@@ -84,5 +84,13 @@ let _ =
         member x.M = Unchecked.defaultof<int>
         member x.N = Unchecked.defaultof<int> }
 
+type Indexer =
+    abstract Item: string with get, set
+//    abstract Item: int 
+//    abstract Item: float with set
+
+//let _ =
+//    { new Indexer }
+
 //let _ =
 //    { new System.Collections.Generic.IList<'a> }

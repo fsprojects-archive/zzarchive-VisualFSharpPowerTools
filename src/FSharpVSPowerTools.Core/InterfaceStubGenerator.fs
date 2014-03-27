@@ -195,20 +195,24 @@ module InterfaceStubGenerator =
         |> String.concat argSep
   
     let internal formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
-        let buildUsage (argInfos: FSharpParameter list list) = 
+        let getParamArgs (argInfos: FSharpParameter list list) = 
             let args =
                 match argInfos with
                 | [[x]] when v.IsGetterMethod && x.Name.IsNone 
                             && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> ""
                 | _  -> formatArgsUsage ctx true v argInfos
-            let parArgs = 
-                if String.IsNullOrWhiteSpace(args) then "" 
-                elif args.StartsWith("(") then args
-                else sprintf "(%s)" args
+             
+            if String.IsNullOrWhiteSpace(args) then "" 
+            elif args.StartsWith("(") then args
+            else sprintf "(%s)" args
+
+        let buildUsage argInfos = 
+            let parArgs = getParamArgs argInfos
             match v.IsMember, v.IsInstanceMember, v.LogicalName, v.DisplayName with
-            // Constructors and indexers
+            // Constructors
             | _, _, ".ctor", _ -> "new" + parArgs 
-            | _, true, _, "Item" -> "[" + parArgs + "]"
+            // Properties (skipping arguments)
+            | _, true, _, name when v.IsProperty -> name
             // Ordinary instance members
             | _, true, _, name -> name + parArgs
             // Ordinary functions or values
@@ -251,12 +255,24 @@ module InterfaceStubGenerator =
         for modifier in modifiers do
             ctx.Writer.Write("{0} ", modifier)
         ctx.Writer.Write("{0}.", ctx.ObjectIdent)
-        ctx.Writer.Write(usage)
-        ctx.Writer.WriteLine(": {0} = ", retType)
-        ctx.Writer.Indent ctx.Indentation
-        for line in ctx.MethodBody do
-            ctx.Writer.WriteLine(line)
-        ctx.Writer.Unindent ctx.Indentation
+        
+        if v.IsSetterMethod then
+            ctx.Writer.WriteLine(usage)
+            ctx.Writer.Indent ctx.Indentation
+            ctx.Writer.WriteLine("with set (v: {0}): unit = ", retType)
+            ctx.Writer.Indent ctx.Indentation
+            for line in ctx.MethodBody do
+                ctx.Writer.WriteLine(line)
+            ctx.Writer.Unindent ctx.Indentation
+
+            ctx.Writer.Unindent ctx.Indentation
+        else
+            ctx.Writer.Write(usage)
+            ctx.Writer.WriteLine(": {0} = ", retType)
+            ctx.Writer.Indent ctx.Indentation
+            for line in ctx.MethodBody do
+                ctx.Writer.WriteLine(line)
+            ctx.Writer.Unindent ctx.Indentation
 
     /// Get members in the decreasing order of inheritance chain
     let rec internal getInterfaceMembers (e: FSharpEntity) = 

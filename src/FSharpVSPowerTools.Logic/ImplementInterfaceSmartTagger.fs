@@ -38,10 +38,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
             let column = point.Position - point.GetContainingLine().Start.Position
             let source = point.Snapshot.GetText()
-            let syncContext = System.Threading.SynchronizationContext.Current
-            do! Async.SwitchToThreadPool()
             let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
-            do! Async.SwitchToContext syncContext
             let pos = Pos.fromZ line column
             let data =
                 ast.ParseTree
@@ -83,13 +80,11 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                             let! interfaceData = collectInterfaceData point doc project
                             match interfaceData with
                             | Some interfaceData ->
-                                let syncContext = System.Threading.SynchronizationContext.Current
-                                do! Async.SwitchToThreadPool()
                                 let! results = vsLanguageService.GetFSharpSymbol (newWord, symbol, doc.FullName, project, 
                                                     AllowStaleResults.MatchingSource)
-                                do! Async.SwitchToContext syncContext
-                                match results with
-                                | Some (fsSymbol, _) when (fsSymbol :? FSharpEntity) ->
+                                // Recheck cursor position to ensure it's still in new word
+                                match results, buffer.GetSnapshotPoint view.Caret.Position with
+                                | Some (fsSymbol, _), Some point when (fsSymbol :? FSharpEntity) && point.InSpan newWord ->
                                     let entity = fsSymbol :?> FSharpEntity
                                     if entity.IsInterface then
                                         interfaceDefinition <- Some (interfaceData, entity)
@@ -115,8 +110,10 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                                     fun _ -> updateAtCaretPosition())
 
     let getRange = function
-        | InterfaceData.Interface(typ, _) -> typ.Range
-        | InterfaceData.ObjExpr(typ, _) -> typ.Range
+        | InterfaceData.Interface(typ, _) -> 
+            typ.Range
+        | InterfaceData.ObjExpr(typ, _) -> 
+            typ.Range
 
     let inferStartColumn (lineStr: string) = function
         | InterfaceData.Interface(_, Some (m :: _)) ->
