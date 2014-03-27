@@ -88,7 +88,7 @@ type WordSpan =
 
 type ILexer = 
     abstract GetSymbolAtLocation: line: int -> col: int -> Symbol option
-    abstract GetAllTokens: int -> TokenInformation list
+    abstract TokenizeLine: line: int -> TokenInformation list
   
 // --------------------------------------------------------------------------------------
 // Language service 

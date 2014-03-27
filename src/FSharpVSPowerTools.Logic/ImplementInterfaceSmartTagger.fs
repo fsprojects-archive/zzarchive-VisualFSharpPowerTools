@@ -45,11 +45,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                 |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)
                 |> Option.map (fun iface -> 
                     let lineStr = point.GetContainingLine().GetText()
-                    let defines = 
-                        project.CompilerOptions
-                        |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-                        |> Seq.toList
-                    let tokens = vsLanguageService.TokenizeLine(buffer, defines, line) 
+                    let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
                     let endPosOfWith =
                         tokens |> List.tryPick (fun (t: TokenInformation) ->
                                     if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column then

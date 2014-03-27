@@ -250,7 +250,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
             else
                 [r.StartLine..r.EndLine]
                 |> Seq.map (fun line ->
-                     let tokens = lexer.GetAllTokens (line - 1)
+                     let tokens = lexer.TokenizeLine (line - 1)
 
                      let tokens =
                         match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with

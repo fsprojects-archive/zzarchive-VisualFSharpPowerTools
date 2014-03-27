@@ -37,9 +37,9 @@ let checkCategories line (expected: (Category * int * int) list)  =
             member x.GetSymbolAtLocation line col =
                 let lineStr = sourceLines.[line]
                 Lexer.getSymbol source line col lineStr args Lexer.queryLexState 
-            member x.GetAllTokens line =
+            member x.TokenizeLine line =
                 let lineStr = sourceLines.[line]
-                Lexer.getAllTokens source line lineStr args Lexer.queryLexState }
+                Lexer.tokenizeLine source args line lineStr Lexer.queryLexState }
 
     let parseResults = 
         vsLanguageService.ParseFileInProject(projectFileName, fileName, source, sourceFiles, args, framework)

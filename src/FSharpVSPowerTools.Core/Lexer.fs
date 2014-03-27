@@ -66,7 +66,10 @@ module Lexer =
             lexStates.[line]
 
     /// Return all tokens of current line
-    let tokenizeLine source defines line lineStr queryLexState =
+    let tokenizeLine source (args: string[]) line lineStr queryLexState =
+        let defines =
+            args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
+                 |> Seq.toList
         let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
         let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
         let rec loop lexState acc =
@@ -75,17 +78,9 @@ module Lexer =
             | _ -> List.rev acc
         loop (queryLexState source defines line) []
 
-    /// Returns symbol at a given position.
-    let getSymbol source line col lineStr (args: string []) queryLexState: Symbol option =
-        // Get all tokens
-        let defines =
-            args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-                 |> Seq.toList
-        let tokens = tokenizeLine source defines line lineStr queryLexState
-
     // Returns symbol at a given position.
     let getSymbol source line col lineStr (args: string[]) queryLexState: Symbol option =
-        let tokens = getAllTokens source line lineStr args queryLexState
+        let tokens = tokenizeLine source args line lineStr queryLexState
         let isIdentifier t = t.CharClass = TokenCharKind.Identifier
         let isOperator t = t.ColorClass = TokenColorKind.Operator
     

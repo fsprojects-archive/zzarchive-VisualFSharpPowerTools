@@ -59,11 +59,11 @@ type VSLanguageService
         Lexer.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
 
-    member x.TokenizeLine(textBuffer: ITextBuffer, defines, line) =
+    member x.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
         let snapshot = textBuffer.CurrentSnapshot
         let source = snapshot.GetText()
         let lineStr = snapshot.GetLineFromLineNumber(line).GetText()
-        SymbolParser.tokenizeLine source defines line lineStr (buildQueryLexState textBuffer)
+        Lexer.tokenizeLine source args line lineStr (buildQueryLexState textBuffer)
 
     member x.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
        instance.ParseFileInProject(
@@ -169,8 +169,8 @@ type VSLanguageService
                 { new ILexer with
                     member x.GetSymbolAtLocation line col =
                         Lexer.getSymbol source line col (getLineStr line) args (buildQueryLexState snapshot.TextBuffer) 
-                    member x.GetAllTokens line =
-                        Lexer.getAllTokens source line (getLineStr line) args (buildQueryLexState snapshot.TextBuffer) }
+                    member x.TokenizeLine line =
+                        Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
             let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(
                                 projectFileName, currentFile, source, sourceFiles, args, framework, stale)
