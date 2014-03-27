@@ -106,8 +106,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         | None -> ()
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    TimeSpan.FromMilliseconds 200.,
-                                    fun _ -> updateAtCaretPosition())
+                                    200us, updateAtCaretPosition)
 
     let getRange = function
         | InterfaceData.Interface(typ, _) -> 
