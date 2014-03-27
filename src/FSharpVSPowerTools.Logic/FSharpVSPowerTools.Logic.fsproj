@@ -82,6 +82,9 @@
     <Compile Include="RenameCommandFilter.fs" />
     <Resource Include="FolderNameDialog.xaml" />
     <Compile Include="FolderNameDialog.fs" />
+    <Resource Include="MoveToFolderDialog.xaml" />
+    <Compile Include="MoveToFolderDialog.fs" />
+    <Compile Include="FolderMenuUI.fs" />
     <Compile Include="FolderMenuCommands.fs" />
     <Compile Include="ImplementInterfaceSmartTagger.fs" />
   </ItemGroup>
