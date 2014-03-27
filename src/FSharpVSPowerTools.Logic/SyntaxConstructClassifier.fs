@@ -57,11 +57,12 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 lastSnapshot.Swap (fun _ -> snapshot) |> ignore
                 async {
                     try
-                        let! (allSymbolsUses, ast), lexer =
+                        let! allSymbolsUses, lexer =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (
                                 snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
-                        
-                        getCategoriesAndLocations (allSymbolsUses, ast, lexer)
+                        let! parseResults = vsLanguageService.ParseFileInProject(snapshot, doc.FilePath, project)
+
+                        getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
                         |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         |> synchronousUpdate
                     finally

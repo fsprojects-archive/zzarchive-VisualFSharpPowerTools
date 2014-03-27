@@ -31,8 +31,13 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     member x.GetAllUsesOfAllSymbolsInFile() =
         match infoOpt with
-        | None -> [||], None
-        | Some (checkResults, parseResults) -> checkResults.GetAllUsesOfAllSymbolsInFile(), parseResults.ParseTree
+        | None -> [||]
+        | Some (checkResults, _) -> checkResults.GetAllUsesOfAllSymbolsInFile()
+
+    member x.GetUntypedAst() =
+        match infoOpt with 
+        | None -> None
+        | Some (_, parseResults) -> parseResults.ParseTree
 
     member x.GetErrors() =
         match infoOpt with 

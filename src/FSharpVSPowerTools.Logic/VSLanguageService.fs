@@ -177,4 +177,18 @@ type VSLanguageService
             return symbolUses, lexer
         }
 
+    member x.ParseFileInProject (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider) = 
+        async {
+            let projectFileName = projectProvider.ProjectFileName
+            let source = snapshot.GetText()
+            let framework = projectProvider.TargetFramework
+            let args = projectProvider.CompilerOptions
+            let sourceFiles = 
+                match projectProvider.SourceFiles with
+                | [||] -> [| currentFile |] 
+                | files -> files
+
+            return! instance.ParseFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework)
+        }
+
     member x.Checker = instance.Checker

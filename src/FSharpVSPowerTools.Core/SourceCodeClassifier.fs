@@ -152,72 +152,58 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
 
     let quotationRanges = ref (ResizeArray<_>())
 
-    let rec visitPattern = function
-        | SynPat.Wild(_) -> ()
-        | SynPat.Named(pat, _, _, _, _) ->
-            visitPattern pat
-        | _ -> () // printfn "  .. other pattern: %A" pat
-
-    let rec visitExpression = function
+    let rec visitExpr = function
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
-            // Visit all sub-expressions
-            //printfn "Conditional:"
-            visitExpression cond
-            visitExpression trueBranch
-            falseBranchOpt |> Option.iter visitExpression 
-        | SynExpr.LetOrUse (_, _, bindings, body, _) ->
-            for b in bindings do visitBinding b
-            visitExpression body
-        | SynExpr.LetOrUseBang (_, _, _, pat, _, body, _) ->
-            visitPattern pat 
-            visitExpression body
-        | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) ->
-            (!quotationRanges).Add range
+            visitExpr cond
+            visitExpr trueBranch
+            falseBranchOpt |> Option.iter visitExpr 
+        | SynExpr.LetOrUse (_, _, bindings, body, _) -> 
+            visitBindindgs bindings
+            visitExpr body
+        | SynExpr.LetOrUseBang (_, _, _, _, _, body, _) -> visitExpr body
+        | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) -> (!quotationRanges).Add range
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
-            visitExpression argExpr
-            visitExpression funcExpr
-        | SynExpr.Lambda (_, _, _, expr, _) -> visitExpression expr
+            visitExpr argExpr
+            visitExpr funcExpr
+        | SynExpr.Lambda (_, _, _, expr, _) -> visitExpr expr
         | SynExpr.Record (_, _, fields, _) ->
-            fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpression
-        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) -> visitExpression expr
-        | SynExpr.CompExpr (_, _, expr, _) -> visitExpression expr
-        | SynExpr.ForEach (_, _, _, _, _, body, _) -> visitExpression body
-        | SynExpr.YieldOrReturn (_, expr, _) -> visitExpression expr
-        | SynExpr.YieldOrReturnFrom (_, expr, _) -> visitExpression expr
-        | SynExpr.Do (expr, _) -> visitExpression expr
-        | SynExpr.DoBang (expr, _) -> visitExpression expr
-        | SynExpr.Downcast (expr, _, _) -> visitExpression expr
-        | SynExpr.For (_, _, _, _, _, expr, _) -> visitExpression expr
-        | SynExpr.Lazy (expr, _) -> visitExpression expr
+            fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpr
+        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) -> visitExpr expr
+        | SynExpr.CompExpr (_, _, expr, _) -> visitExpr expr
+        | SynExpr.ForEach (_, _, _, _, _, body, _) -> visitExpr body
+        | SynExpr.YieldOrReturn (_, expr, _) -> visitExpr expr
+        | SynExpr.YieldOrReturnFrom (_, expr, _) -> visitExpr expr
+        | SynExpr.Do (expr, _) -> visitExpr expr
+        | SynExpr.DoBang (expr, _) -> visitExpr expr
+        | SynExpr.Downcast (expr, _, _) -> visitExpr expr
+        | SynExpr.For (_, _, _, _, _, expr, _) -> visitExpr expr
+        | SynExpr.Lazy (expr, _) -> visitExpr expr
         | SynExpr.Match (_, expr, clauses, _, _) -> 
-            visitExpression expr
-            for SynMatchClause.Clause (pat, _, expr, _, _) in clauses do
-                visitPattern pat
-                visitExpression expr
-        | SynExpr.MatchLambda (_, _, clauses, _, _) ->
-            for SynMatchClause.Clause (pat, _, expr, _, _) in clauses do
-                visitPattern pat
-                visitExpression expr
-        | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> 
-            for b in bindings do visitBinding b
-        | SynExpr.Typed (expr, _, _) -> visitExpression expr
-        | SynExpr.Paren (expr, _, _, _) -> visitExpression expr
+            visitExpr expr
+            visitMatches clauses 
+        | SynExpr.MatchLambda (_, _, clauses, _, _) -> visitMatches clauses
+        | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> visitBindindgs bindings
+        | SynExpr.Typed (expr, _, _) -> visitExpr expr
+        | SynExpr.Paren (expr, _, _, _) -> visitExpr expr
         | SynExpr.Sequential (_, _, expr1, expr2, _) ->
-            visitExpression expr1
-            visitExpression expr2
-        | SynExpr.LongIdentSet (_, expr, _) -> visitExpression expr
-        | SynExpr.Tuple (exprs, _, _) -> for e in exprs do visitExpression e
-        | _ -> () // printfn " - not supported expression: %A" x
+            visitExpr expr1
+            visitExpr expr2
+        | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
+        | SynExpr.Tuple (exprs, _, _) -> 
+            for expr in exprs do 
+                visitExpr expr
+        | _ -> () 
 
-    and visitBinding (Binding(_, _, _, _, _, _, _, pat, _, body, _, _)) =
-        visitPattern pat 
-        visitExpression body             
-
+    and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
+    and visitBindindgs = List.iter visitBinding
+    and visitMatch (SynMatchClause.Clause (_, _, expr, _, _)) = visitExpr expr
+    and visitMatches = List.iter visitMatch
+    
     let visitMember = function
-        | SynMemberDefn.LetBindings (bindings, _, _, _) -> for b in bindings do visitBinding b
+        | SynMemberDefn.LetBindings (bindings, _, _, _) -> visitBindindgs bindings
         | SynMemberDefn.Member (binding, _) -> visitBinding binding
-        | SynMemberDefn.AutoProperty (_, _, _, _, _, _, _, _, expr, _, _) -> visitExpression expr
-        | _ -> () //printfn "Unknown type member: %A" x
+        | SynMemberDefn.AutoProperty (_, _, _, _, _, _, _, _, expr, _, _) -> visitExpr expr
+        | _ -> () 
 
     let visitType ty =
         let (SynTypeDefn.TypeDefn (_, repr, _, _)) = ty
@@ -229,11 +215,11 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
     let rec visitDeclarations decls = 
         for declaration in decls do
             match declaration with
-            | SynModuleDecl.Let (_, bindings, _) -> for b in bindings do visitBinding b
-            | SynModuleDecl.DoExpr (_, expr, _) -> visitExpression expr
+            | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
+            | SynModuleDecl.DoExpr (_, expr, _) -> visitExpr expr
             | SynModuleDecl.Types (types, _) -> for ty in types do visitType ty
             | SynModuleDecl.NestedModule (_, decls, _, _) -> visitDeclarations decls
-            | _ -> () // printfn " - not supported declaration: %A" declaration
+            | _ -> ()
 
     let visitModulesAndNamespaces modulesOrNss =
         for moduleOrNs in modulesOrNss do
@@ -243,7 +229,6 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
     untypedAst |> Option.iter (fun ast ->
         match ast with
         | ParsedInput.ImplFile(implFile) ->
-            // Extract declarations and walk over them
             let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
             visitModulesAndNamespaces modules
         | _ -> ()
