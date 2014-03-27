@@ -33,7 +33,8 @@ type MoveToFolderDialogModel(resources :MoveToFolderDialogResources) =
 
     member x.Result = validationResult
 
-    member x.WindowTitle = sprintf "Move %d item%s" resources.NbOfItems (match resources.NbOfItems with | 1 -> "" | _ -> "s")
+    member x.WindowTitle =
+        Resource.vsPackageTitle + (sprintf " - Move %d item%s" resources.NbOfItems (match resources.NbOfItems with | 1 -> "" | _ -> "s"))
 
     member x.Root = resources.Root
 
