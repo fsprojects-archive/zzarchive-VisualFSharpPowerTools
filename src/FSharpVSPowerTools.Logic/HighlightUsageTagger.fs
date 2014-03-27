@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
+open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
@@ -21,7 +22,7 @@ type HighlightUsageTag() =
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
-type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearchService: ITextSearchService, 
+type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchService: ITextSearchService, 
                           vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
@@ -35,7 +36,7 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
                 currentWord <- newWord
-                let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
+                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
     let doUpdate (currentRequest: SnapshotPoint, sym, newWord: SnapshotSpan, newWordSpans: seq<SnapshotSpan>, 
@@ -84,10 +85,10 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
         // Find all words in the buffer like the one the caret is on
 
         maybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetActiveDocument()
             let! project = ProjectProvider.createForDocument doc
-            let! newWord, sym = vsLanguageService.GetSymbol(currentRequest, project)
+            let! newWord, symbol = vsLanguageService.GetSymbol(currentRequest, project)
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
             match currentWord with
             | Some cw when cw = newWord -> ()
@@ -97,13 +98,13 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                     FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
                     |> textSearchService.FindAll
                 // If we are still up-to-date (another change hasn't happened yet), do a real update
-                doUpdate (currentRequest, sym, newWord, newSpans, doc.FullName, project) }
+                doUpdate (currentRequest, symbol, newWord, newSpans, doc.FullName, project) }
         |> function
            | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
            | _ -> ()
 
     let updateAtCaretPosition () =
-        match sourceBuffer.GetSnapshotPoint view.Caret.Position with
+        match buffer.GetSnapshotPoint view.Caret.Position with
         | Some point ->
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.

@@ -64,7 +64,7 @@
     <Compile Include="ThemeManager.fs" />
     <Compile Include="ProjectSystem.fs" />
     <Compile Include="ProjectProvider.fs" />
-    <Compile Include="LanguageService.fs" />
+    <Compile Include="VSLanguageService.fs" />
     <Compile Include="OpenDocumentsTracker.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="NavigateToItem.fs" />
@@ -83,6 +83,7 @@
     <Resource Include="FolderNameDialog.xaml" />
     <Compile Include="FolderNameDialog.fs" />
     <Compile Include="FolderMenuCommands.fs" />
+    <Compile Include="ImplementInterfaceSmartTagger.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
