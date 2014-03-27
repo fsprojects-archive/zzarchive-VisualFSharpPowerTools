@@ -249,7 +249,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
                                      EndCol = r.EndColumn }} ]
             else
                 [r.StartLine..r.EndLine]
-                |> Seq.map (fun line ->
+                |> Seq.choose (fun line ->
                      let tokens = lexer.TokenizeLine (line - 1)
 
                      let tokens =
@@ -266,19 +266,20 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
                             | _ -> tokens 
 
                      let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
-                     let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
+                     
+                     match tokens with
+                     | [] -> None
+                     | _ ->
+                        let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
                  
-                     let maxCol = 
-                        match tokens with
-                        | [] -> 0
-                        | xs ->
-                            let tok = xs |> List.maxBy (fun t -> t.RightColumn) 
+                        let maxCol = 
+                            let tok = tokens |> List.maxBy (fun t -> t.RightColumn) 
                             tok.LeftColumn + tok.FullMatchedLength
 
-                     { Category = Quotation
-                       WordSpan = { Line = line
-                                    StartCol = minCol
-                                    EndCol = maxCol }}))
+                        Some { Category = Quotation
+                               WordSpan = { Line = line
+                                            StartCol = minCol
+                                            EndCol = maxCol }}))
         |> Seq.concat
         |> Seq.toArray
 

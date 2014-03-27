@@ -34,7 +34,7 @@ module ProjectProvider =
             let prop = try project.Properties.[tag] with _ -> null
             match prop with
             | null -> null
-            | _ -> prop.Value.ToString()
+            | _ -> try prop.Value.ToString() with _ -> null
 
         let currentDir = getProperty "FullPath"
     
