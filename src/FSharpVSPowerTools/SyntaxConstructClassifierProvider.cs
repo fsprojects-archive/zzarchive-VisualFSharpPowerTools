@@ -83,7 +83,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpPatternCase, new FontColor(Colors.Black) },
                 { ClassificationTypes.FSharpFunction, new FontColor(Colors.Black) },
                 { ClassificationTypes.FSharpMutableVar, new FontColor(Colors.Black) },
-                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(236, 242, 245)) }
+                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(255, 242, 223)) }
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -98,7 +98,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpPatternCase, new FontColor(Color.FromRgb(220, 220, 220)) },
                 { ClassificationTypes.FSharpFunction, new FontColor(Color.FromRgb(220, 220, 220)) },
                 { ClassificationTypes.FSharpMutableVar, new FontColor(Color.FromRgb(220, 220, 220)) },
-                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(70, 70, 70)) }
+                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(98, 58, 0)) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
