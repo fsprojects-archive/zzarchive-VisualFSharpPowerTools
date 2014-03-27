@@ -38,8 +38,8 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
     let refreshFileImpl() = 
         async { 
             try 
-                let ss = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-                let sourceCodeOfTheFile = ss.GetText()
+                let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
+                let sourceCodeOfTheFile = snapshot.GetText()
                 let syncContext = System.Threading.SynchronizationContext.Current
                 do! Async.SwitchToThreadPool()
                 let ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService.Checker)
@@ -49,12 +49,12 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
                     try 
                         //System.Diagnostics.Debug.WriteLine("{0},{1},{2},{3}", line, sc, ec, d)
                         // -1 because F# reports 1-based line nums, whereas VS wants 0-based
-                        let startLine = ss.GetLineFromLineNumber(Math.Min(line - 1, ss.LineCount - 1))
+                        let startLine = snapshot.GetLineFromLineNumber(Math.Min(line - 1, snapshot.LineCount - 1))
                         let start = startLine.Start.Add(Math.Min(sc, startLine.Length))
-                        let endLine = ss.GetLineFromLineNumber(Math.Min(line - 1, ss.LineCount - 1))
+                        let endLine = snapshot.GetLineFromLineNumber(Math.Min(line - 1, snapshot.LineCount - 1))
                         let end_ = endLine.Start.Add(Math.Min(ec, endLine.Length))
                         let span = 
-                            ss.CreateTrackingSpan
+                            snapshot.CreateTrackingSpan
                                 ((new SnapshotSpan(start, end_)).Span, SpanTrackingMode.EdgeExclusive)
                         tempResults.Add(Tuple.Create(span, info))
                     with e -> 
@@ -64,7 +64,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
                     results <- Array.create tempResults.Count (null, (0, 0, 0, 0))
                     tempResults.CopyTo(results))
                 trace ("firing tagschanged")
-                tagsChangedEvent.Trigger(self, new SnapshotSpanEventArgs(new SnapshotSpan(ss, 0, ss.Length)))
+                tagsChangedEvent.Trigger(self, new SnapshotSpanEventArgs(new SnapshotSpan(snapshot, 0, snapshot.Length)))
             with e -> 
                 System.Diagnostics.Debug.WriteLine(e)
                 if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()

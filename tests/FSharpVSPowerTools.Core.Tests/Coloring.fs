@@ -90,3 +90,42 @@ type ClassWithRefValue() =
     let _ = !refValue
 type RecordWithRefValue = 
     { Field: int ref }
+let _ = <@ 1 = 1 @>
+let _ = <@ 1 = 1
+           && 2 = 2 @>
+let _ = id <@ 1 = 1 @>
+let f x y = ()
+let _ = f <@ 1 = 1 @> <@ 2 = 2 @>
+type TypeWithQuotations() =
+    let x = <@ 1 = 1 @>
+    member x.F() = <@ 1 = 1 @>
+    member x.P = <@ 1 + 1 @>
+let _ = <@@ 1 @@>
+let _  = f <@ 1  
+              + 2 
+              + 3 @> <@@ 1 @@>
+let _ = fun() -> <@ 1 @>
+type RecordWithQuotation = { Field: Microsoft.FSharp.Quotations.Expr<int> }
+let _ = { Field = <@ 1 @> }
+let _ = [ <@ 1 @> ]
+let _ = seq { for i in [1..10] -> <@ i @> }
+type ITypeWithQuotes = abstract Method: unit -> Microsoft.FSharp.Quotations.Expr<int>
+let _ = { new ITypeWithQuotes with 
+            member x.Method() = <@ 1 @> }
+let qf() : Microsoft.FSharp.Quotations.Expr<int> =
+    <@ 1 @>
+type ClassWithQuotationInConstructor(expr) = class end
+let _ = ClassWithQuotationInConstructor(<@ 1 @>)
+let _ =
+    assert true 
+    [] 
+    |> List.fold (fun acc x -> acc
+    ) <@@ () @@>
+type ClassWithWritableProperty() =
+    member val Prop = <@@ 1 @@> with get, set
+let clWithWritableProperty = ClassWithWritableProperty()
+clWithWritableProperty.Prop <- <@@ 2 @@>
+let qf1 (n, e1) = ()
+let _ = qf1 (1, <@ 1 @>)
+module NestedModule =
+    let _ = <@ 1 @>

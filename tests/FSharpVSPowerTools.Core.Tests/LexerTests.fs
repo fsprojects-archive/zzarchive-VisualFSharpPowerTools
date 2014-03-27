@@ -24,7 +24,7 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let checkGetSymbol line col lineStr expected =
-    SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
+    Lexer.getSymbol source line col lineStr args Lexer.queryLexState
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
         text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected

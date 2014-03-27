@@ -70,7 +70,8 @@ let allUsesOfAllSymbols =
 
 let getUsesOfSymbol line col lineStr =
     vsLanguageService.GetUsesOfSymbolAtLocationInFile(projectFileName, fileName, source, sourceFiles, 
-                                                      line, col, lineStr, args, framework, AllowStaleResults.No, SymbolParser.queryLexState)
+                                                      line, col, lineStr, args, framework, AllowStaleResults.No, 
+                                                      Lexer.queryLexState)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, symbolUses) -> 
         symbolUses |> Array.map (fun x -> 
@@ -86,7 +87,7 @@ let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
 let checkGetSymbol line col lineStr expected =
-    SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
+    Lexer.getSymbol source line col lineStr args Lexer.queryLexState
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
         text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected

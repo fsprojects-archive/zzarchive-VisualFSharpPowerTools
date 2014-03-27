@@ -6,6 +6,7 @@ open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open Microsoft.FSharp.Compiler.Ast
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -30,8 +31,13 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     member x.GetAllUsesOfAllSymbolsInFile() =
         match infoOpt with
-        | None -> [| |]
+        | None -> [||]
         | Some (checkResults, _) -> checkResults.GetAllUsesOfAllSymbolsInFile()
+
+    member x.GetUntypedAst() =
+        match infoOpt with 
+        | None -> None
+        | Some (_, parseResults) -> parseResults.ParseTree
 
     member x.GetErrors() =
         match infoOpt with 
@@ -70,6 +76,19 @@ type ParseAndCheckResults with
             let refs = x.GetUsesOfSymbolInFile(symbol)
             Some(symbol, ident, refs)
         | None -> None
+
+type WordSpan = 
+    { Line: int
+      StartCol: int
+      EndCol: int }
+    static member FromRange (r: Range.range) = 
+        { Line = r.StartLine
+          StartCol = r.StartColumn 
+          EndCol = r.EndColumn }
+
+type ILexer = 
+    abstract GetSymbolAtLocation: line: int -> col: int -> Symbol option
+    abstract TokenizeLine: line: int -> TokenInformation list
   
 // --------------------------------------------------------------------------------------
 // Language service 
@@ -258,7 +277,7 @@ type LanguageService (dirtyNotify) =
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale, queryLexState) =
    async { 
-    match SymbolParser.getSymbol source line col lineStr args queryLexState with
+    match Lexer.getSymbol source line col lineStr args queryLexState with
     | Some sym ->
         let! checkResults = 
             x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, stale)
@@ -280,7 +299,7 @@ type LanguageService (dirtyNotify) =
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, queryLexState) =
      async { 
-         match SymbolParser.getSymbol source line col lineStr args queryLexState with
+         match Lexer.getSymbol source line col lineStr args queryLexState with
          | Some sym ->
              let! checkResults = x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, AllowStaleResults.MatchingSource)
          
@@ -329,6 +348,5 @@ type LanguageService (dirtyNotify) =
     member x.GetAllUsesOfAllSymbolsInFile (projectFilename, fileName, src, files, args, targetFramework, stale) =
         async {
             let! results = x.ParseAndCheckFileInProject (projectFilename, fileName, src, files, args, targetFramework, stale)
-            let symbolUses = results.GetAllUsesOfAllSymbolsInFile()
-            return symbolUses
+            return results.GetAllUsesOfAllSymbolsInFile()
         }

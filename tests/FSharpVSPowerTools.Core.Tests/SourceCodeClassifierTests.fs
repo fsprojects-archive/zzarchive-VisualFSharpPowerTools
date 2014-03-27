@@ -26,22 +26,33 @@ let args =
 let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
-let checkCategories line expected = 
-    let results = 
+let checkCategories line (expected: (Category * int * int) list)  = 
+    let symbolsUses =
         vsLanguageService.GetAllUsesOfAllSymbolsInFile
             (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
 
-    let getLexerSymbol line col =
-        let lineStr = sourceLines.[line]
-        SymbolParser.getSymbol source line col lineStr args SymbolParser.queryLexState
+    let lexer = 
+        { new ILexer with
+            member x.GetSymbolAtLocation line col =
+                let lineStr = sourceLines.[line]
+                Lexer.getSymbol source line col lineStr args Lexer.queryLexState 
+            member x.TokenizeLine line =
+                let lineStr = sourceLines.[line]
+                Lexer.tokenizeLine source args line lineStr Lexer.queryLexState }
 
-    SourceCodeClassifier.getCategoriesAndLocations (results, getLexerSymbol)
+    let parseResults = 
+        vsLanguageService.ParseFileInProject(projectFileName, fileName, source, sourceFiles, args, framework)
+        |> Async.RunSynchronously
+
+    SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
     |> Array.choose (fun loc -> 
         match loc.Category with 
         | Other -> None
-        | _ when loc.Line <> line -> None
-        | _ -> Some (loc.Category, loc.ColumnSpan.Start, loc.ColumnSpan.End))
+        | _ when loc.WordSpan.Line = line ->
+            let span = loc.WordSpan
+            Some (loc.Category, span.StartCol, span.EndCol)
+        | _ -> None)
     |> Array.toList
     |> Collection.assertEquiv expected
 
@@ -205,3 +216,64 @@ let ``reference field``() =
     checkCategories 89 [ Function, 19, 22; MutableVar, 8, 16 ]
     checkCategories 90 [ MutableVar, 13, 21 ]
     checkCategories 92 [ MutableVar, 6, 11; ValueType, 13, 16; ReferenceType, 17, 20 ]
+
+[<Test>]
+let ``single line quotation``() = checkCategories 93 [ Quotation, 8, 19 ]
+
+[<Test>]
+let ``multi line quotation``() = 
+    checkCategories 94 [ Quotation, 8, 16 ]
+    checkCategories 95 [ Quotation, 11, 22 ]
+
+[<Test>]
+let ``quotation as function argument``() = 
+    checkCategories 96 [ Function, 8, 10; Quotation, 11, 22 ]
+    checkCategories 98 [ Function, 8, 9; Quotation, 10, 21; Quotation, 22, 33 ]
+    checkCategories 123 [ Quotation, 6, 16 ]
+    checkCategories 129 [ Function, 8, 11; Quotation, 16, 23 ]
+
+[<Test>]
+let ``quotation in type``() = 
+    checkCategories 100 [ Quotation, 12, 23 ]
+    checkCategories 101 [ Function, 13, 14; Quotation, 19, 30 ]
+    checkCategories 102 [ Quotation, 17, 28 ]
+
+[<Test>]
+let ``untyped quotation``() = checkCategories 103 [ Quotation, 8, 17 ]
+
+[<Test>]
+let ``complicated quotation layout``() = 
+    checkCategories 104 [ Function, 9, 10; Quotation, 11, 15 ]
+    checkCategories 105 [ Quotation, 14, 17 ]
+    checkCategories 106 [ Quotation, 14, 20; Quotation, 21, 30 ]
+
+[<Test>]
+let ``quotation in lambda``() = checkCategories 107 [ Quotation, 17, 24 ]
+
+[<Test>]
+let ``quotation in record``() = checkCategories 109 [ PublicField, 10, 15; Quotation, 18, 25 ]
+
+[<Test>]
+let ``quotation in list expression``() = checkCategories 110 [ Quotation, 10, 17 ]
+
+[<Test>]
+let ``quotation in seq for expression``() = checkCategories 111 [ Quotation, 34, 41 ]
+
+[<Test>]
+let ``quotation as a result of function``() = checkCategories 116 [ Quotation, 4, 11 ]
+
+[<Test>]
+let ``quotation as default constructor arguments``() = 
+    checkCategories 118 [ ReferenceType, 8, 39; Quotation, 40, 47 ]
+
+[<Test>]
+let ``quotation as initialization of auto property``() = 
+    checkCategories 125 [ MutableVar, 15, 19; MutableVar, 22, 31; Quotation, 22, 31 ]
+
+[<Test>]
+let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40 ]
+
+[<Test>]
+let ``quotation in nested module``() = checkCategories 131 [ Quotation, 12, 19 ]
+
+ 
