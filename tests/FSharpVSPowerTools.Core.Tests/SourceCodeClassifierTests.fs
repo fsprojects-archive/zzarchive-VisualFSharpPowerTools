@@ -276,4 +276,7 @@ let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40
 [<Test>]
 let ``quotation in nested module``() = checkCategories 131 [ Quotation, 12, 19 ]
 
- 
+[<Test>]
+let ``tuple alias``() = 
+    checkCategories 132 [ ReferenceType, 5, 10; ValueType, 13, 16; ReferenceType, 19, 25 ]    
+    checkCategories 133 [ Function, 4, 13; ReferenceType, 18, 23; ReferenceType, 27, 32 ]

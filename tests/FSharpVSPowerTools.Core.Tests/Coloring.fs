@@ -129,3 +129,5 @@ let qf1 (n, e1) = ()
 let _ = qf1 (1, <@ 1 @>)
 module NestedModule =
     let _ = <@ 1 @>
+type Tuple = int * string
+let tupleFunc (x: Tuple) : Tuple = x
