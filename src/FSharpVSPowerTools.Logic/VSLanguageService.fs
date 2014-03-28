@@ -21,13 +21,16 @@ type VSLanguageService
     let mutable instance = LanguageService (fun _ -> ())
     
     let invalidateProject (projectItem: EnvDTE.ProjectItem) =
-        let project = projectItem.ContainingProject
-        if box project <> null && isFSharpProject project then
-            let p = ProjectProvider.createForProject project
-            debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-            let opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
-                                                   p.CompilerOptions, p.TargetFramework)
-            instance.InvalidateConfiguration(opts)
+        async {
+            let project = projectItem.ContainingProject
+            if box project <> null && isFSharpProject project then
+                let p = ProjectProvider.createForProject project
+                debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
+                let! opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
+                                                       p.CompilerOptions, p.TargetFramework)
+                return instance.InvalidateConfiguration(opts)
+        }
+        |> Async.StartImmediate
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
     let events = dte.Events :?> EnvDTE80.Events2
@@ -82,7 +85,7 @@ type VSLanguageService
             projectProvider.CompilerOptions, 
             projectProvider.TargetFramework, 
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
-            ct)
+            ct)        
 
     member x.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
         async {
@@ -123,15 +126,17 @@ type VSLanguageService
                 return None }
 
     member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
-        try 
-            let (_, _, endLine, _) = word.ToRange()
-            let currentLine = word.Start.GetContainingLine().GetText()
+        async {
+            try 
+                let (_, _, endLine, _) = word.ToRange()
+                let currentLine = word.Start.GetContainingLine().GetText()
             
-            debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
-            fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
-        with e ->
-            debug "[Language Service] %O exception occurs while updating." e
-            None
+                debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
+                return! fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
+            with e ->
+                debug "[Language Service] %O exception occurs while finding usages in file." e
+                return None
+        }
 
     member x.GetFSharpSymbol (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
@@ -144,7 +149,7 @@ type VSLanguageService
             let sourceFiles = projectProvider.SourceFiles
             let! results = instance.ParseAndCheckFileInProject(   
                                projectFileName, currentFile, source, sourceFiles, args, framework, stale)
-            let symbol = results.GetSymbolAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
+            let! symbol = results.GetSymbolAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
         }
 
