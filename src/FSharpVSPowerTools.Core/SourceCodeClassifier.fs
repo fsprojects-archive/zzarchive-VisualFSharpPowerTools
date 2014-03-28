@@ -32,8 +32,8 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         if entity.IsFSharpAbbreviation then
             let typ = entity.AbbreviatedType
             if typ.HasTypeDefinition then getEntityAbbreviatedType typ.TypeDefinition
-            else entity
-        else entity
+            else entity, Some typ
+        else entity, None
 
     let rec getAbbreviatedType (fsharpType: FSharpType) =
         if fsharpType.IsAbbreviation then
@@ -63,14 +63,17 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
     | :? FSharpEntity as e ->
         //debug "%A (type: %s)" e (e.GetType().Name)
-        let e = getEntityAbbreviatedType e
+        let e, ty = getEntityAbbreviatedType e
         if e.IsEnum || e.IsValueType then ValueType
         elif e.IsClass || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure || e.IsProvided
-           || e.IsProvidedAndErased || e.IsProvidedAndGenerated 
+           || e.IsProvidedAndErased || e.IsProvidedAndGenerated
            || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace) then
             ReferenceType
-        else Other
+        else 
+            match ty with
+            | Some t when t.IsTupleType -> ReferenceType
+            | _ -> Other
     
     | :? FSharpMemberFunctionOrValue as func ->
         //debug "%A (type: %s)" mfov (mfov.GetType().Name)
