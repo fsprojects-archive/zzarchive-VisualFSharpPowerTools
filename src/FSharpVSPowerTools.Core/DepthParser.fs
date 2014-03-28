@@ -368,7 +368,7 @@ type DepthParser private () =
         
         let checker = defaultArg checker x.Checker
         // Get compiler options for the 'project' implied by a single script file
-        let projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
+        let projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile) |> Async.RunSynchronously
         let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions) |> Async.RunSynchronously
     
         match input.ParseTree with

@@ -22,17 +22,23 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
         match infoOpt with 
         | None -> None
         | Some (checkResults, _parseResults) -> 
-            checkResults.GetSymbolAtLocationAlternate(line, col, lineStr, identIsland)
+            checkResults.GetSymbolUseAtLocation(line, col, lineStr, identIsland)
+            |> Async.RunSynchronously
+            |> Option.map (fun symbolUse -> symbolUse.Symbol)
 
     member x.GetUsesOfSymbolInFile(symbol) =
         match infoOpt with 
         | None -> [| |]
-        | Some (checkResults, _parseResults) -> checkResults.GetUsesOfSymbolInFile(symbol)
+        | Some (checkResults, _parseResults) -> 
+            checkResults.GetUsesOfSymbolInFile(symbol)
+            |> Async.RunSynchronously
 
     member x.GetAllUsesOfAllSymbolsInFile() =
         match infoOpt with
         | None -> [||]
-        | Some (checkResults, _) -> checkResults.GetAllUsesOfAllSymbolsInFile()
+        | Some (checkResults, _) -> 
+            checkResults.GetAllUsesOfAllSymbolsInFile()
+            |> Async.RunSynchronously
 
     member x.GetUntypedAst() =
         match infoOpt with 
@@ -181,7 +187,7 @@ type LanguageService (dirtyNotify) =
           let fileName = fixFileName(fileName)
           Debug.WriteLine (sprintf "GetScriptCheckerOptions: Creating for stand-alone file or script: '%s'" fileName )
           let opts = checker.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
-          
+                     |> Async.RunSynchronously
           // The InteractiveChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
           if opts.ProjectOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then opts
           else 
@@ -307,7 +313,7 @@ type LanguageService (dirtyNotify) =
              | Some symbol ->
                  let projectOptions = x.GetCheckerOptions(fileName, projectFilename, source, files, args, targetFramework)
                  let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-                 let refs = projectResults.GetUsesOfSymbol(symbol)
+                 let! refs = projectResults.GetUsesOfSymbol(symbol)
                  return Some(symbol, sym.Text, refs)
              | None -> return None
          | None -> return None 
