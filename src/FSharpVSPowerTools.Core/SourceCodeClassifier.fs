@@ -107,34 +107,39 @@ let excludeWordSpan from what =
 let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, lexer: ILexer) =
     let allSymbolsUses =
         allSymbolsUses
-        // FCS can return multi-line ranges, let's ignore them
-        |> Array.filter (fun symbolUse -> symbolUse.RangeAlternate.StartLine = symbolUse.RangeAlternate.EndLine)
+        |> Array.choose (fun su ->
+            let r = su.RangeAlternate
+            // FCS returns inaccurate ranges for multiline method chains
+            // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+            if r.StartLine < r.EndLine then
+                lexer.GetSymbolAtLocation (r.End.Line - 1) (r.End.Column - 1)
+                |> Option.map (fun s -> 
+                      su, { Line = r.End.Line; StartCol = r.End.Column - s.Text.Length; EndCol = r.End.Column })
+            else Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column }))
       
     // index all symbol usages by LineNumber 
     let wordSpans = 
         allSymbolsUses
-        |> Seq.map (fun su -> WordSpan.FromRange su.RangeAlternate)
-        |> Seq.groupBy (fun r -> r.Line)
+        |> Seq.map snd
+        |> Seq.groupBy (fun span -> span.Line)
         |> Seq.map (fun (line, ranges) -> line, ranges)
         |> Map.ofSeq
 
     let spansBasedOnSymbolsUses = 
         allSymbolsUses
-        |> Seq.choose (fun x ->
-            let span = WordSpan.FromRange x.RangeAlternate
-        
+        |> Seq.choose (fun (symbolUse, span) ->
             let span = 
-                match wordSpans.TryFind x.RangeAlternate.StartLine with
+                match wordSpans.TryFind span.Line with
                 | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
                 | _ -> span
 
             let span' = 
-                if (span.EndCol - span.StartCol) - x.Symbol.DisplayName.Length > 0 then
+                if (span.EndCol - span.StartCol) - symbolUse.Symbol.DisplayName.Length > 0 then
                     // The span is wider that the simbol's display name.
                     // This means that we have not managed to extract last part of a long ident accurately.
                     // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
                     // So we get ident from the lexer.
-                    match lexer.GetSymbolAtLocation (x.RangeAlternate.Start.Line - 1) (span.EndCol - 1) with
+                    match lexer.GetSymbolAtLocation (span.Line - 1) (span.EndCol - 1) with
                     | Some s -> 
                         match s.Kind with
                         | Ident -> 
@@ -147,7 +152,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
 
             let categorizedSpan =
                 if span'.EndCol <= span'.StartCol then None
-                else Some { Category = getCategory x; WordSpan = span' }
+                else Some { Category = getCategory symbolUse; WordSpan = span' }
         
             categorizedSpan)
         |> Seq.distinct

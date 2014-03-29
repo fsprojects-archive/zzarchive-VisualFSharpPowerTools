@@ -131,3 +131,7 @@ module NestedModule =
     let _ = <@ 1 @>
 type Tuple = int * string
 let tupleFunc (x: Tuple) : Tuple = x
+let _ =
+    "string"
+        .Substring(1)
+        .Trim().Remove(1)

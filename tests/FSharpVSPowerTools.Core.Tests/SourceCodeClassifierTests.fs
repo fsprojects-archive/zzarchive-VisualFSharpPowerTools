@@ -280,3 +280,8 @@ let ``quotation in nested module``() = checkCategories 131 [ Quotation, 12, 19 ]
 let ``tuple alias``() = 
     checkCategories 132 [ ReferenceType, 5, 10; ValueType, 13, 16; ReferenceType, 19, 25 ]    
     checkCategories 133 [ Function, 4, 13; ReferenceType, 18, 23; ReferenceType, 27, 32 ]
+
+[<Test>]
+let ``multiline method chain``() = 
+    checkCategories 136 [ Function, 9, 18 ]
+    checkCategories 137 [ Function, 9, 13; Function, 16, 22 ]
