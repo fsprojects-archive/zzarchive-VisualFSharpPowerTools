@@ -12,6 +12,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 
@@ -39,6 +40,22 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
+    let symbolUsesToSpans fileName (lastIdent: string) (symbolUses: FSharpSymbolUse[]) =
+        let filePath = Path.GetFullPathSafe(fileName)
+        symbolUses
+        |> Seq.choose (fun symbolUse -> 
+            // We have to filter by full paths otherwise the range is invalid wrt current snapshot
+            if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
+                fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate
+            else None)
+        |> Seq.map (fun span -> 
+            // Sometimes F.C.S returns a composite identifier which should be truncated
+            let index = span.GetText().LastIndexOf (lastIdent)
+            if index > 0 then 
+                SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
+            else span)
+        |> Seq.toList
+
     let doUpdate (currentRequest: SnapshotPoint, sym, newWord: SnapshotSpan, newWordSpans: seq<SnapshotSpan>, 
                   fileName: string, projectProvider: IProjectProvider) =
         async {
@@ -48,39 +65,23 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                     match res with
                     | Some (_, checkResults) ->
                         let! results = vsLanguageService.FindUsagesInFile (newWord, sym, checkResults)
-                        let refs =
-                            results
-                            |> Option.map (fun (_, lastIdent, refs) -> 
-                                let filePath = Path.GetFullPathSafe(fileName)
-                                refs 
-                                |> Seq.choose (fun symbolUse -> 
-                                    // We have to filter by full paths otherwise the range is invalid wrt current snapshot
-                                    if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
-                                        fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate
-                                    else None)
-                                |> Seq.map (fun span -> 
-                                    // Sometimes F.C.S returns a composite identifier which should be truncated
-                                    let index = span.GetText().LastIndexOf (lastIdent)
-                                    if index > 0 then 
-                                        SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
-                                    else span)
-                                |> Seq.toList)
-                        return
-                            match refs with
-                            | Some references -> 
-                                let possibleSpans = HashSet(newWordSpans)
-                                let references = references |> List.filter possibleSpans.Contains
-                                // Ignore symbols without any use
-                                let word = if Seq.isEmpty references then None else Some newWord
-                                synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
-                            | None ->
-                                // Return empty values in order to clear up markers
-                                synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                        let refSpans =
+                            results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans fileName lastIdent refs)
+
+                        match refSpans with
+                        | Some references -> 
+                            let possibleSpans = HashSet(newWordSpans)
+                            let references = references |> List.filter possibleSpans.Contains
+                            // Ignore symbols without any use
+                            let word = if Seq.isEmpty references then None else Some newWord
+                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
                         | None ->
-                            return ()
+                            // Return empty values in order to clear up markers
+                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
-                debug "[Highlight Usage] %O exception occurs while updating." e
-                return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    debug "[Highlight Usage] %O exception occurs while updating." e
+                    synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             } |> Async.Start
 
     let updateWordAdornments() =
