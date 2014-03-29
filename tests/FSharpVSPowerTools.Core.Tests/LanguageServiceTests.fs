@@ -315,6 +315,7 @@ let ``ProcessParseTree should prefer open documents``() =
         framework, 
         seen.Add,
         System.Threading.CancellationToken.None)
+    |> Async.RunSynchronously
 
     assertTrue (seen.Count = 1)
     match seen.[0] with
@@ -341,5 +342,6 @@ let ``ProcessParseTree should react on cancellation``() =
         framework, 
         seen.Add,
         cts.Token)
+    |> Async.RunSynchronously
 
     assertTrue (seen.Count = 0)
