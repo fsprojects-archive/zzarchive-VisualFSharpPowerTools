@@ -210,7 +210,7 @@ module InterfaceStubGenerator =
             let parArgs = getParamArgs argInfos
             match v.IsMember, v.IsInstanceMember, v.LogicalName, v.DisplayName with
             // Constructors
-            | _, _, ".ctor", _ -> "new" + parArgs 
+            | _, _, ".ctor", _ -> "new" + parArgs
             // Properties (skipping arguments)
             | _, true, _, name when v.IsProperty -> name
             // Ordinary instance members
@@ -228,43 +228,57 @@ module InterfaceStubGenerator =
               if v.IsDispatchSlot then () ]
 
         let argInfos = 
-            // It might be a bug in FCS
-            try v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
-            with _ -> 
-                Debug.WriteLine("FSharpMemberFunctionOrValue.CurriedParameterGroups throws an exception.")
-                [[]]
-
-        let retType =
-            try Some v.ReturnParameter.Type 
-            with _ -> 
-                Debug.WriteLine("FSharpMemberFunctionOrValue.ReturnParameter throws an exception.")
-                None
+            v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
+            
+        let retType = v.ReturnParameter.Type
 
         let argInfos, retType = 
             match argInfos, v.IsGetterMethod, v.IsSetterMethod with
             | [ AllAndLast(args, last) ], _, true -> [ args ], Some last.Type
             | _, _, true -> argInfos, None
-            | [[]], true, _ -> [], retType
-            | _, _, _ -> argInfos, retType
+            | [[]], true, _ -> [], Some retType
+            | _, _, _ -> argInfos, Some retType
 
         let retType = defaultArg (Option.map (formatType ctx) retType) "unit"
         let usage = buildUsage argInfos
-    
+
+        let isSetterMethod (v: FSharpMemberFunctionOrValue) =
+            v.IsSetterMethod
+
+        let isGetterMethod (v: FSharpMemberFunctionOrValue) =
+            v.IsGetterMethod
+
         ctx.Writer.WriteLine("")
         ctx.Writer.Write("member ")
         for modifier in modifiers do
             ctx.Writer.Write("{0} ", modifier)
         ctx.Writer.Write("{0}.", ctx.ObjectIdent)
         
-        if v.IsSetterMethod then
+        if isSetterMethod v then
             ctx.Writer.WriteLine(usage)
             ctx.Writer.Indent ctx.Indentation
-            ctx.Writer.WriteLine("with set (v: {0}): unit = ", retType)
+            match getParamArgs argInfos with
+            | "" | "()" ->
+                ctx.Writer.WriteLine("with set v: unit = ")
+            | args ->
+                ctx.Writer.WriteLine("with set {0} v: unit = ", args)
             ctx.Writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
                 ctx.Writer.WriteLine(line)
             ctx.Writer.Unindent ctx.Indentation
-
+            ctx.Writer.Unindent ctx.Indentation
+        elif isGetterMethod v then
+            ctx.Writer.WriteLine(usage)
+            ctx.Writer.Indent ctx.Indentation
+            match getParamArgs argInfos with
+            | "" ->
+                ctx.Writer.WriteLine("with get () = ")
+            | args ->
+                ctx.Writer.WriteLine("with get {0} = ", args)
+            ctx.Writer.Indent ctx.Indentation
+            for line in ctx.MethodBody do
+                ctx.Writer.WriteLine(line)
+            ctx.Writer.Unindent ctx.Indentation
             ctx.Writer.Unindent ctx.Indentation
         else
             ctx.Writer.Write(usage)
@@ -280,9 +294,8 @@ module InterfaceStubGenerator =
             for iface in e.DeclaredInterfaces do
                 yield! getInterfaceMembers iface.TypeDefinition
             yield! e.MembersFunctionsAndValues |> Seq.filter (fun m -> 
-                       let v = m.DisplayName
-                       // FIXME: temporary filter out get/set properties because combined properties have also been included
-                       not (v.StartsWith "get_" || v.StartsWith "set_"))
+                       // Use this hack when FCS doesn't return enough information on .NET properties
+                       e.IsFSharp || not m.IsProperty)
          }
 
     let countInterfaceMembers e =

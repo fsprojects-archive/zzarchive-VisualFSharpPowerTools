@@ -45,36 +45,39 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
             if currentRequest = requestedPoint then
                 try
                     let! res = vsLanguageService.GetFSharpSymbol (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
-                    let results =
-                        res
-                        |> Option.bind (fun (_, checkResults) -> 
-                            vsLanguageService.FindUsagesInFile (newWord, sym, checkResults))
-                        |> Option.map (fun (_, lastIdent, refs) -> 
-                            let filePath = Path.GetFullPathSafe(fileName)
-                            refs 
-                            |> Seq.choose (fun symbolUse -> 
-                                // We have to filter by full paths otherwise the range is invalid wrt current snapshot
-                                if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
-                                    fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate
-                                else None)
-                            |> Seq.map (fun span -> 
-                                // Sometimes F.C.S returns a composite identifier which should be truncated
-                                let index = span.GetText().LastIndexOf (lastIdent)
-                                if index > 0 then 
-                                    SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
-                                else span)
-                            |> Seq.toList)
-                    return 
-                        match results with
-                        | Some references -> 
-                            let possibleSpans = HashSet(newWordSpans)
-                            let references = references |> List.filter possibleSpans.Contains
-                            // Ignore symbols without any use
-                            let word = if Seq.isEmpty references then None else Some newWord
-                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
+                    match res with
+                    | Some (_, checkResults) ->
+                        let! results = vsLanguageService.FindUsagesInFile (newWord, sym, checkResults)
+                        let refs =
+                            results
+                            |> Option.map (fun (_, lastIdent, refs) -> 
+                                let filePath = Path.GetFullPathSafe(fileName)
+                                refs 
+                                |> Seq.choose (fun symbolUse -> 
+                                    // We have to filter by full paths otherwise the range is invalid wrt current snapshot
+                                    if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
+                                        fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate
+                                    else None)
+                                |> Seq.map (fun span -> 
+                                    // Sometimes F.C.S returns a composite identifier which should be truncated
+                                    let index = span.GetText().LastIndexOf (lastIdent)
+                                    if index > 0 then 
+                                        SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
+                                    else span)
+                                |> Seq.toList)
+                        return
+                            match refs with
+                            | Some references -> 
+                                let possibleSpans = HashSet(newWordSpans)
+                                let references = references |> List.filter possibleSpans.Contains
+                                // Ignore symbols without any use
+                                let word = if Seq.isEmpty references then None else Some newWord
+                                synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
+                            | None ->
+                                // Return empty values in order to clear up markers
+                                synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                         | None ->
-                            // Return empty values in order to clear up markers
-                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                            return ()
                 with e ->
                 debug "[Highlight Usage] %O exception occurs while updating." e
                 return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)

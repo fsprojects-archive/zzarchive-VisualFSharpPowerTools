@@ -140,15 +140,18 @@ module internal XmlDocParsing =
                 l |> List.collect getXmlDocablesSynModuleOrNamespace
             | ParsedInput.SigFile _sigFile -> []
 
-        // Get compiler options for the 'project' implied by a single script file
-        let projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
-        let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions) |> Async.RunSynchronously
+        async {
+            // Get compiler options for the 'project' implied by a single script file
+            let! projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
+            let! input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
     
-        match input.ParseTree with
-        | Some input -> getXmlDocablesInput input
-        | None ->
-            // Should not fail here, just in case 
-            []
+            match input.ParseTree with
+            | Some input -> 
+                return getXmlDocablesInput input
+            | None ->
+                // Should not fail here, just in case 
+                return []
+        }
 
 module XmlDocComment =
     let private ws (s: string, pos) = 

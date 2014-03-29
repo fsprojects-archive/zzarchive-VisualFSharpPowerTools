@@ -189,6 +189,7 @@ and
 
                 while i < projects.Length && not processProjectsCTS.IsCancellationRequested do
                     do fsharpLanguageService.ProcessNavigableItemsInProject(openedDocuments, projects.[i], processNavigableItemsInFile, processProjectsCTS.Token)
+                       |> Async.RunSynchronously
                     i <- i + 1
             )
             |> ignore

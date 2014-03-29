@@ -297,7 +297,7 @@ let ``ProcessParseTree should be called for all files in project``() =
         args, 
         framework, 
         seen.Add,
-        System.Threading.CancellationToken.None)
+        System.Threading.CancellationToken.None) |> Async.RunSynchronously
 
     assertTrue (seen.Count = 2)
     assertEqual seen.[0].Range.FileName f1.FilePath
