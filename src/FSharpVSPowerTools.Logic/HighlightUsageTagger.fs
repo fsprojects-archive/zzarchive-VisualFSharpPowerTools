@@ -44,7 +44,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.GetFSharpSymbol (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
+                    let! res = vsLanguageService.GetFSharpSymbolUse (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
                     match res with
                     | Some (_, checkResults) ->
                         let! results = vsLanguageService.FindUsagesInFile (newWord, sym, checkResults)

@@ -34,7 +34,6 @@ type MyClass() =
         member this.Method3(n) = n / 10
 
 open System.Text
-open System.Collections.Generic
 
 type IDocument = interface end
 
@@ -84,13 +83,79 @@ let _ =
         member x.M = Unchecked.defaultof<int>
         member x.N = Unchecked.defaultof<int> }
 
-type Indexer =
+type Indexer1 =
+    abstract Item: int
+
+type Indexer2 =
+    abstract Item: float with set
+
+type Indexer3 =
+    inherit Indexer1
+    inherit Indexer2
     abstract Item: string with get, set
-//    abstract Item: int 
-//    abstract Item: float with set
 
-//let _ =
-//    { new Indexer }
+let _ =
+    { new Indexer3 with
+        member x.Item
+            with set (v: float): unit = 
+                raise (System.NotImplementedException())
+        
+        member x.Item
+            with get (): string = 
+                raise (System.NotImplementedException())
+        
+        member x.Item
+            with get (): int = 
+                raise (System.NotImplementedException())
+        
+        member x.Item
+            with set (v: string): unit = 
+                raise (System.NotImplementedException())
+ }
 
-//let _ =
-//    { new System.Collections.Generic.IList<'a> }
+open System.Collections.Generic
+
+let _ =
+    { new System.Collections.Generic.IList<'a> with
+        member x.get_Item(index: int): 'a = 
+            raise (System.NotImplementedException())
+        
+        member x.set_Item(index: int, value: 'a): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.IndexOf(item: 'a): int = 
+            raise (System.NotImplementedException())
+        
+        member x.Insert(index: int, item: 'a): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.RemoveAt(index: int): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.get_Count(): int = 
+            raise (System.NotImplementedException())
+        
+        member x.get_IsReadOnly(): bool = 
+            raise (System.NotImplementedException())
+        
+        member x.Add(item: 'a): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.Clear(): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.Contains(item: 'a): bool = 
+            raise (System.NotImplementedException())
+        
+        member x.CopyTo(array: 'a [], arrayIndex: int): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.Remove(item: 'a): bool = 
+            raise (System.NotImplementedException())
+        
+        member x.GetEnumerator(): IEnumerator<'a> = 
+            raise (System.NotImplementedException())
+        
+        member x.GetEnumerator(): System.Collections.IEnumerator = 
+            raise (System.NotImplementedException())
+ }

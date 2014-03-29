@@ -119,7 +119,7 @@ type VSLanguageService
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                let! res = x.GetFSharpSymbol (word, sym, currentFile, projectProvider, stale)
+                let! res = x.GetFSharpSymbolUse (word, sym, currentFile, projectProvider, stale)
                 return res |> Option.map (fun (_, checkResults) -> x.FindUsagesInFile (word, sym, checkResults))
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
@@ -138,7 +138,7 @@ type VSLanguageService
                 return None
         }
 
-    member x.GetFSharpSymbol (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
+    member x.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
             let (_, _, endLine, _) = word.ToRange()
             let projectFileName = projectProvider.ProjectFileName
@@ -149,7 +149,7 @@ type VSLanguageService
             let sourceFiles = projectProvider.SourceFiles
             let! results = instance.ParseAndCheckFileInProject(   
                                projectFileName, currentFile, source, sourceFiles, args, framework, stale)
-            let! symbol = results.GetSymbolAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
+            let! symbol = results.GetSymbolUseAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
         }
 

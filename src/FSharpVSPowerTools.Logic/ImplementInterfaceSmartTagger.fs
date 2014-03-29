@@ -76,14 +76,14 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                             let! interfaceData = collectInterfaceData point doc project
                             match interfaceData with
                             | Some interfaceData ->
-                                let! results = vsLanguageService.GetFSharpSymbol (newWord, symbol, doc.FullName, project, 
+                                let! results = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, 
                                                     AllowStaleResults.MatchingSource)
                                 // Recheck cursor position to ensure it's still in new word
                                 match results, buffer.GetSnapshotPoint view.Caret.Position with
-                                | Some (fsSymbol, _), Some point when (fsSymbol :? FSharpEntity) && point.InSpan newWord ->
-                                    let entity = fsSymbol :?> FSharpEntity
+                                | Some (fsSymbolUse, _), Some point when (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord ->
+                                    let entity = fsSymbolUse.Symbol :?> FSharpEntity
                                     if entity.IsInterface then
-                                        interfaceDefinition <- Some (interfaceData, entity)
+                                        interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
                                         currentWord <- Some newWord
                                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                                         return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
@@ -161,7 +161,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         let count = InterfaceStubGenerator.countInterfaceMembers entity
         count > 0 && count > countMembers interfaceData
 
-    let handleImplementInterface (span: SnapshotSpan) (interfaceData, posOpt: pos option) entity = 
+    let handleImplementInterface (span: SnapshotSpan) (interfaceData, posOpt: pos option) displayContext entity = 
         let line = span.Start.GetContainingLine()
         let lineStr = line.GetText()
         let startColumn = inferStartColumn lineStr interfaceData
@@ -169,7 +169,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let typeParams = getTypeParameters interfaceData
         let stub = InterfaceStubGenerator.formatInterface 
-                        startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" entity
+                        startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" displayContext entity
 
         use transaction = textUndoHistory.CreateTransaction("Implement Interface Explicitly")
         match posOpt with
@@ -183,7 +183,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             buffer.Insert(current + 5, stub) |> ignore
         transaction.Complete()
 
-    let implementInterface span data entity =
+    let implementInterface span data displayContext entity =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = "Implement Interface Explicitly"
@@ -191,19 +191,19 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             member x.IsEnabled = true
             member x.Invoke() = 
                 if shouldImplementInterface data entity then
-                    handleImplementInterface span data entity
+                    handleImplementInterface span data displayContext entity
                 else
                     MessageBox.Show(Resource.implementInterfaceErrorMessage, Resource.vsPackageTitle, 
                         MessageBoxButton.OK, MessageBoxImage.Error) |> ignore }
 
-    member x.GetSmartTagActions(span: SnapshotSpan, data, entity: FSharpEntity) =
+    member x.GetSmartTagActions(span: SnapshotSpan, data, displayContext, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
         let trackingSpan = span.Snapshot.CreateTrackingSpan(span.Span, SpanTrackingMode.EdgeInclusive)
         let _snapshot = trackingSpan.TextBuffer.CurrentSnapshot
 
-        actionList.Add(implementInterface span data entity)
+        actionList.Add(implementInterface span data displayContext entity)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -212,10 +212,10 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<ImplementInterfaceSmartTag> seq =
             seq {
                 match currentWord, interfaceDefinition with
-                | Some word, Some (data, entity) ->
+                | Some word, Some (data, displayContext, entity) ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<ImplementInterfaceSmartTag>(span, 
-                            ImplementInterfaceSmartTag(x.GetSmartTagActions(span, data, entity)))
+                            ImplementInterfaceSmartTag(x.GetSmartTagActions(span, data, displayContext, entity)))
                             :> ITagSpan<_>
                 | _ -> ()
             }

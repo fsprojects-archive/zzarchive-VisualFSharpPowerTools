@@ -78,23 +78,23 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
         match word with
-        | Some (state, cw, sym) ->
+        | Some (state, cw, symbol) ->
             async {
                 let! results = 
                     // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
                     // in order to by able to make accurate symbol comparisons during renaming.
-                    vsLanguageService.GetFSharpSymbol(cw, sym, state.File, state.Project, AllowStaleResults.No)
+                    vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
                 match results with
-                | Some(symbol, fileScopedCheckResults) ->
+                | Some(fsSymbolUse, fileScopedCheckResults) ->
                     let isSymbolDeclaredInCurrentProject =
-                        match vsLanguageService.TryGetLocation symbol with
+                        match vsLanguageService.TryGetLocation fsSymbolUse.Symbol with
                         | Some loc ->
                             let filePath = Path.GetFullPath loc.FileName
                             filePath = state.File || state.Project.SourceFiles |> Array.exists ((=) filePath)
                         | _ -> false
 
                     if isSymbolDeclaredInCurrentProject then
-                        let model = RenameDialogModel (cw.GetText(), sym, symbol)
+                        let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
                         let wnd = UI.loadRenameDialog model
                         let hostWnd = Window.GetWindow(view.VisualElement)
                         wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
@@ -103,9 +103,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         match res with
                         | Some _ -> 
                             let! results =
-                                match symbol.Scope with
+                                match fsSymbolUse.Symbol.Scope with
                                 | File -> 
-                                    vsLanguageService.FindUsagesInFile (cw, sym, fileScopedCheckResults)
+                                    vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
                                 | Project -> 
                                     vsLanguageService.FindUsages (cw, state.File, state.Project) 
                             let usages =

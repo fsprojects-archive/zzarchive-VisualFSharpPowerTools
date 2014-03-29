@@ -72,12 +72,12 @@ let getInterfaceStub line col lineStr idents =
     let results = 
         vsLanguageService.ParseAndCheckFileInProject(projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource)
         |> Async.RunSynchronously
-    let symbol = results.GetSymbolAtLocation(line, col, lineStr, idents) |> Async.RunSynchronously
-    match symbol with
-    | Some s when (s :? FSharpEntity) ->
-        let e = s :?> FSharpEntity
+    let symbolUse = results.GetSymbolUseAtLocation(line, col, lineStr, idents) |> Async.RunSynchronously
+    match symbolUse with
+    | Some s when (s.Symbol :? FSharpEntity) ->
+        let e = s.Symbol :?> FSharpEntity
         if e.IsInterface then
-            Some (InterfaceStubGenerator.formatInterface 0 4 [||] "x" "raise (System.NotImplementedException())" e)
+            Some (InterfaceStubGenerator.formatInterface 0 4 [||] "x" "raise (System.NotImplementedException())" s.DisplayContext e)
         else 
             None
     | _ -> None

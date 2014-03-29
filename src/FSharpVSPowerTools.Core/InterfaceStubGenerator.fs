@@ -56,6 +56,7 @@ module InterfaceStubGenerator =
             ObjectIdent: string
             /// A list of lines represents skeleton of each member
             MethodBody: string []
+            DisplayContext: FSharpDisplayContext
         }
 
     // Adapt from MetadataFormat module in FSharp.Formatting 
@@ -108,6 +109,11 @@ module InterfaceStubGenerator =
 
     let internal bracketIf cond str = 
         if cond then "(" + str + ")" else str
+
+    let internal formatTypeWithSubstitution ctx (typ: FSharpType) =
+        let genericDefinition = typ.Format(ctx.DisplayContext)
+        (genericDefinition, ctx.TypeInstantations)
+        ||> Map.fold (fun s k v -> s.Replace(k, v))
 
     let internal formatTyconRef (tcref: FSharpEntity) = 
         tcref.DisplayName
@@ -239,14 +245,8 @@ module InterfaceStubGenerator =
             | [[]], true, _ -> [], Some retType
             | _, _, _ -> argInfos, Some retType
 
-        let retType = defaultArg (Option.map (formatType ctx) retType) "unit"
+        let retType = defaultArg (retType |> Option.map (formatTypeWithSubstitution ctx)) "unit"
         let usage = buildUsage argInfos
-
-        let isSetterMethod (v: FSharpMemberFunctionOrValue) =
-            v.IsSetterMethod
-
-        let isGetterMethod (v: FSharpMemberFunctionOrValue) =
-            v.IsGetterMethod
 
         ctx.Writer.WriteLine("")
         ctx.Writer.Write("member ")
@@ -254,7 +254,7 @@ module InterfaceStubGenerator =
             ctx.Writer.Write("{0} ", modifier)
         ctx.Writer.Write("{0}.", ctx.ObjectIdent)
         
-        if isSetterMethod v then
+        if v.IsSetterMethod then
             ctx.Writer.WriteLine(usage)
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
@@ -267,7 +267,7 @@ module InterfaceStubGenerator =
                 ctx.Writer.WriteLine(line)
             ctx.Writer.Unindent ctx.Indentation
             ctx.Writer.Unindent ctx.Indentation
-        elif isGetterMethod v then
+        elif v.IsGetterMethod then
             ctx.Writer.WriteLine(usage)
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
@@ -288,28 +288,37 @@ module InterfaceStubGenerator =
                 ctx.Writer.WriteLine(line)
             ctx.Writer.Unindent ctx.Indentation
 
-    /// Get members in the decreasing order of inheritance chain
-    let rec internal getInterfaceMembers (e: FSharpEntity) = 
+    /// Filter out duplicated interfaces in inheritance chain
+    let rec internal getInterfaces (e: FSharpEntity) = 
         seq {
+            yield e
             for iface in e.DeclaredInterfaces do
-                yield! getInterfaceMembers iface.TypeDefinition
-            yield! e.MembersFunctionsAndValues |> Seq.filter (fun m -> 
-                       // Use this hack when FCS doesn't return enough information on .NET properties
-                       e.IsFSharp || not m.IsProperty)
+                yield! getInterfaces iface.TypeDefinition
+        }
+        |> Seq.distinct
+
+    /// Get members in the decreasing order of inheritance chain
+    let internal getInterfaceMembers (e: FSharpEntity) = 
+        seq {
+            for iface in getInterfaces e do
+                yield! iface.MembersFunctionsAndValues |> Seq.filter (fun m -> 
+                           // Use this hack when FCS doesn't return enough information on .NET properties
+                           iface.IsFSharp || not m.IsProperty)
          }
 
     let countInterfaceMembers e =
         getInterfaceMembers e |> Seq.length
 
     /// Generate stub implementation of an interface at a start column
-    let formatInterface startColumn indentation (typeInstances: string []) objectIdent (methodBody: string) (e: FSharpEntity) =
+    let formatInterface startColumn indentation (typeInstances: string []) objectIdent 
+        (methodBody: string) (displayContext: FSharpDisplayContext) (e: FSharpEntity) =
         assert e.IsInterface
         use writer = new ColumnIndentedTextWriter()
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
         let typeParams = Seq.map getTypeParameterName e.GenericParameters
         let instantiations = Seq.zip typeParams typeInstances |> Map.ofSeq
         let ctx = { Writer = writer; TypeInstantations = instantiations; Indentation = indentation; 
-                    ObjectIdent = objectIdent; MethodBody = lines }
+                    ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
         writer.Indent startColumn
         for v in getInterfaceMembers e do
             formatMember ctx v
