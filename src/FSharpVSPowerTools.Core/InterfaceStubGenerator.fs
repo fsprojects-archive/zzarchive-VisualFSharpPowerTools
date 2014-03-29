@@ -360,7 +360,8 @@ module InterfaceStubGenerator =
                     List.tryPick walkSynModuleDecl modules
                 | SynModuleDecl.Types(typeDefs, _range) ->
                     List.tryPick walkSynTypeDefn typeDefs
-                | SynModuleDecl.DoExpr _
+                | SynModuleDecl.DoExpr (_, expr, _) ->
+                    walkExpr expr
                 | SynModuleDecl.Attributes _
                 | SynModuleDecl.HashDirective _
                 | SynModuleDecl.Open _ -> 
@@ -403,7 +404,8 @@ module InterfaceStubGenerator =
                     walkSynTypeDefn typeDef
                 | SynMemberDefn.ValField(_field, _range) ->
                     None
-                | SynMemberDefn.LetBindings _
+                | SynMemberDefn.LetBindings(bindings, _isStatic, _isRec, _range) ->
+                    List.tryPick walkBinding bindings
                 | SynMemberDefn.Open _
                 | SynMemberDefn.ImplicitInherit _
                 | SynMemberDefn.Inherit _
@@ -418,8 +420,9 @@ module InterfaceStubGenerator =
                 None
             else
                 match expr with
-                | SynExpr.Quote(_synExpr1, _, _synExpr2, _, _range) ->
-                    None
+                | SynExpr.Quote(synExpr1, _, synExpr2, _, _range) ->
+                    List.tryPick walkExpr [synExpr1; synExpr2]
+
                 | SynExpr.Const(_synConst, _range) -> 
                     None
 
@@ -467,11 +470,12 @@ module InterfaceStubGenerator =
                 | SynExpr.Lambda(_, _, _synSimplePats, synExpr, _range) ->
                      walkExpr synExpr
 
-                | SynExpr.MatchLambda(_isExnMatch,_argm,_synMatchClauseList,_spBind,_wholem) -> 
-                    None
-
-                | SynExpr.Match(_sequencePointInfoForBinding, synExpr, _synMatchClauseList, _, _range) ->
+                | SynExpr.MatchLambda(_isExnMatch, _argm, synMatchClauseList, _spBind, _wholem) -> 
+                    synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e)
+                | SynExpr.Match(_sequencePointInfoForBinding, synExpr, synMatchClauseList, _, _range) ->
                     walkExpr synExpr
+                    |> Option.orElse (synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e))
+
                 | SynExpr.Lazy(synExpr, _range) ->
                     walkExpr synExpr
                 | SynExpr.Do(synExpr, _range) ->
