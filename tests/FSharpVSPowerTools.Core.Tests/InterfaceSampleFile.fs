@@ -97,19 +97,19 @@ type Indexer3 =
 let _ =
     { new Indexer3 with
         member x.Item
-            with set (v: float): unit = 
-                raise (System.NotImplementedException())
-        
-        member x.Item
             with get (): string = 
                 raise (System.NotImplementedException())
         
         member x.Item
-            with get (): int = 
+            with set (v: string): unit = 
                 raise (System.NotImplementedException())
         
         member x.Item
-            with set (v: string): unit = 
+            with set (v: float): unit = 
+                raise (System.NotImplementedException())
+        
+        member x.Item
+            with get (): int = 
                 raise (System.NotImplementedException())
  }
 

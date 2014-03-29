@@ -241,7 +241,6 @@ module InterfaceStubGenerator =
         let argInfos, retType = 
             match argInfos, v.IsGetterMethod, v.IsSetterMethod with
             | [ AllAndLast(args, last) ], _, true -> [ args ], Some last.Type
-            | _, _, true -> argInfos, None
             | [[]], true, _ -> [], Some retType
             | _, _, _ -> argInfos, Some retType
 
@@ -259,9 +258,9 @@ module InterfaceStubGenerator =
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
             | "" | "()" ->
-                ctx.Writer.WriteLine("with set v: unit = ")
+                ctx.Writer.WriteLine("with set (v: {0}): unit = ", retType)
             | args ->
-                ctx.Writer.WriteLine("with set {0} v: unit = ", args)
+                ctx.Writer.WriteLine("with set {0} (v: {1}): unit = ", args, retType)
             ctx.Writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
                 ctx.Writer.WriteLine(line)
@@ -272,9 +271,9 @@ module InterfaceStubGenerator =
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
             | "" ->
-                ctx.Writer.WriteLine("with get () = ")
+                ctx.Writer.WriteLine("with get (): {0} = ", retType)
             | args ->
-                ctx.Writer.WriteLine("with get {0} = ", args)
+                ctx.Writer.WriteLine("with get {0}: {1} = ", args, retType)
             ctx.Writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
                 ctx.Writer.WriteLine(line)
