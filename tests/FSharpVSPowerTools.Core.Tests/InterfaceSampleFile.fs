@@ -160,6 +160,20 @@ let _ =
             raise (System.NotImplementedException())
  }
 
+let _ =
+    { new IComparer<'a> with
+        member x.Compare(x1: 'a, y: 'a): int = 
+            raise (System.NotImplementedException())
+ }
+
+type IKeyword =
+    abstract Method: ``member``:int -> unit
+
+type OKeyword =
+    interface IKeyword with
+        member x.Method(``member``: int): unit = 
+            raise (System.NotImplementedException())
+
 let xx =
     { new System.Collections.ICollection with
         member x.CopyTo(array: System.Array, index: int): unit = 
@@ -188,4 +202,48 @@ let yy = { new IA<_> with
             raise (System.NotImplementedException())
 }
 
-
+let _ =
+    seq { for _ in 1..10 -> { new IList<int> with
+                                  member x.get_Item(index: int): int = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.set_Item(index: int, value: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.IndexOf(item: int): int = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Insert(index: int, item: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.RemoveAt(index: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.get_Count(): int = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.get_IsReadOnly(): bool = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Add(item: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Clear(): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Contains(item: int): bool = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.CopyTo(array: int [], arrayIndex: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Remove(item: int): bool = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.GetEnumerator(): IEnumerator<int> = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.GetEnumerator(): System.Collections.IEnumerator = 
+                                      raise (System.NotImplementedException())
+  }
+}

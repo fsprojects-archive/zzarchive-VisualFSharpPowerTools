@@ -68,7 +68,7 @@ let allUsesOfAllSymbols =
 allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
 
-let getInterfaceStub line col lineStr idents =
+let getInterfaceStub nonGeneric line col lineStr idents =
     let results = 
         vsLanguageService.ParseAndCheckFileInProject(projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource)
         |> Async.RunSynchronously
@@ -77,13 +77,20 @@ let getInterfaceStub line col lineStr idents =
     | Some s when (s.Symbol :? FSharpEntity) ->
         let e = s.Symbol :?> FSharpEntity
         if e.IsInterface then
-            Some (InterfaceStubGenerator.formatInterface 0 4 [|"'a"|] "x" "raise (System.NotImplementedException())" s.DisplayContext e)
+            let typeParams = if nonGeneric then [||] else [|"'a"|]
+            Some (InterfaceStubGenerator.formatInterface 0 4 typeParams "x" "raise (System.NotImplementedException())" s.DisplayContext e)
         else 
             None
     | _ -> None
 
 let checkInterfaceStub line col lineStr idents (expected: string) =
-    getInterfaceStub line col lineStr idents 
+    getInterfaceStub false line col lineStr idents 
+    |> Option.map (fun s -> s.Replace("\r\n", "\n"))
+    |> Option.get
+    |> assertEqual (expected.Replace("\r\n", "\n"))
+
+let checkInterfaceStubNonGeneric line col lineStr idents (expected: string) =
+    getInterfaceStub true line col lineStr idents 
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> Option.get
     |> assertEqual (expected.Replace("\r\n", "\n"))
@@ -182,6 +189,39 @@ member x.Remove(item: 'a): bool =
     raise (System.NotImplementedException())
 
 member x.GetEnumerator(): IEnumerator<'a> = 
+    raise (System.NotImplementedException())
+
+member x.GetEnumerator(): System.Collections.IEnumerator = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should avoid name capturing in arguments``() =
+    checkInterfaceStub 164 11 "    { new IComparer<'a> with" ["IComparer"] """
+member x.Compare(x1: 'a, y: 'a): int = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should escape keywords in arguments``() =
+    checkInterfaceStub 173 15 "    interface IKeyword with" ["IKeyword"] """
+member x.Method(``member``: int): unit = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test; Ignore("This test picks up generic version for some strange reason.")>]
+let ``should use qualified names when appropriate``() =
+    checkInterfaceStubNonGeneric 178 35 "    { new System.Collections.ICollection with" ["ICollection"] """
+member x.CopyTo(array: System.Array, index: int): unit = 
+    raise (System.NotImplementedException())
+
+member x.get_Count(): int = 
+    raise (System.NotImplementedException())
+
+member x.get_SyncRoot(): obj = 
+    raise (System.NotImplementedException())
+
+member x.get_IsSynchronized(): bool = 
     raise (System.NotImplementedException())
 
 member x.GetEnumerator(): System.Collections.IEnumerator = 
