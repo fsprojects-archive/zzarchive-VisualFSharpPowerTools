@@ -18,14 +18,13 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     static member Empty = ParseAndCheckResults(None)
 
-    member x.GetSymbolAtLocation(line, col, lineStr, identIsland) =
+    member x.GetSymbolUseAtLocation(line, col, lineStr, identIsland) =
         async {
             match infoOpt with 
             | None -> 
                 return None
             | Some (checkResults, _parseResults) -> 
-                let! results = checkResults.GetSymbolUseAtLocation(line, col, lineStr, identIsland)
-                return results |> Option.map (fun symbolUse -> symbolUse.Symbol)
+                return! checkResults.GetSymbolUseAtLocation(line, col, lineStr, identIsland)
         }
 
     member x.GetUsesOfSymbolInFile(symbol) =
@@ -84,11 +83,11 @@ type AllowStaleResults =
 type ParseAndCheckResults with
     member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
         async {
-            let! result = x.GetSymbolAtLocation(line+1, col, lineStr, [ident]) 
+            let! result = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
             match result with
-            | Some symbol ->
-                let! refs = x.GetUsesOfSymbolInFile(symbol)
-                return Some(symbol, ident, refs)
+            | Some symbolUse ->
+                let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol)
+                return Some(symbolUse.Symbol, ident, refs)
             | None -> 
                 return None
         }
@@ -323,16 +322,16 @@ type LanguageService (dirtyNotify) =
   member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, queryLexState) =
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
-         | Some sym ->
+         | Some symbol ->
              let! checkResults = x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, AllowStaleResults.MatchingSource)
          
-             let! result = checkResults.GetSymbolAtLocation(line+1, sym.RightColumn, lineStr, [sym.Text])
+             let! result = checkResults.GetSymbolUseAtLocation(line+1, symbol.RightColumn, lineStr, [symbol.Text])
              match result with
-             | Some symbol ->
+             | Some fsSymbolUse ->
                  let! projectOptions = x.GetCheckerOptions(fileName, projectFilename, source, files, args, targetFramework)
                  let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-                 let! refs = projectResults.GetUsesOfSymbol(symbol)
-                 return Some(symbol, sym.Text, refs)
+                 let! refs = projectResults.GetUsesOfSymbol(fsSymbolUse.Symbol)
+                 return Some(fsSymbolUse.Symbol, symbol.Text, refs)
              | None -> return None
          | None -> return None 
      }

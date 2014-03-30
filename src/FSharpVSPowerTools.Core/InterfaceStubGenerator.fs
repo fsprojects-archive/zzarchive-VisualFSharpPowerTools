@@ -56,6 +56,7 @@ module InterfaceStubGenerator =
             ObjectIdent: string
             /// A list of lines represents skeleton of each member
             MethodBody: string []
+            DisplayContext: FSharpDisplayContext
         }
 
     // Adapt from MetadataFormat module in FSharp.Formatting 
@@ -108,6 +109,11 @@ module InterfaceStubGenerator =
 
     let internal bracketIf cond str = 
         if cond then "(" + str + ")" else str
+
+    let internal formatTypeWithSubstitution ctx (typ: FSharpType) =
+        let genericDefinition = typ.Format(ctx.DisplayContext)
+        (genericDefinition, ctx.TypeInstantations)
+        ||> Map.fold (fun s k v -> s.Replace(k, v))
 
     let internal formatTyconRef (tcref: FSharpEntity) = 
         tcref.DisplayName
@@ -235,18 +241,11 @@ module InterfaceStubGenerator =
         let argInfos, retType = 
             match argInfos, v.IsGetterMethod, v.IsSetterMethod with
             | [ AllAndLast(args, last) ], _, true -> [ args ], Some last.Type
-            | _, _, true -> argInfos, None
             | [[]], true, _ -> [], Some retType
             | _, _, _ -> argInfos, Some retType
 
-        let retType = defaultArg (Option.map (formatType ctx) retType) "unit"
+        let retType = defaultArg (retType |> Option.map (formatTypeWithSubstitution ctx)) "unit"
         let usage = buildUsage argInfos
-
-        let isSetterMethod (v: FSharpMemberFunctionOrValue) =
-            v.IsSetterMethod
-
-        let isGetterMethod (v: FSharpMemberFunctionOrValue) =
-            v.IsGetterMethod
 
         ctx.Writer.WriteLine("")
         ctx.Writer.Write("member ")
@@ -254,27 +253,27 @@ module InterfaceStubGenerator =
             ctx.Writer.Write("{0} ", modifier)
         ctx.Writer.Write("{0}.", ctx.ObjectIdent)
         
-        if isSetterMethod v then
+        if v.IsSetterMethod then
             ctx.Writer.WriteLine(usage)
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
             | "" | "()" ->
-                ctx.Writer.WriteLine("with set v: unit = ")
+                ctx.Writer.WriteLine("with set (v: {0}): unit = ", retType)
             | args ->
-                ctx.Writer.WriteLine("with set {0} v: unit = ", args)
+                ctx.Writer.WriteLine("with set {0} (v: {1}): unit = ", args, retType)
             ctx.Writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
                 ctx.Writer.WriteLine(line)
             ctx.Writer.Unindent ctx.Indentation
             ctx.Writer.Unindent ctx.Indentation
-        elif isGetterMethod v then
+        elif v.IsGetterMethod then
             ctx.Writer.WriteLine(usage)
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
             | "" ->
-                ctx.Writer.WriteLine("with get () = ")
+                ctx.Writer.WriteLine("with get (): {0} = ", retType)
             | args ->
-                ctx.Writer.WriteLine("with get {0} = ", args)
+                ctx.Writer.WriteLine("with get {0}: {1} = ", args, retType)
             ctx.Writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
                 ctx.Writer.WriteLine(line)
@@ -288,28 +287,37 @@ module InterfaceStubGenerator =
                 ctx.Writer.WriteLine(line)
             ctx.Writer.Unindent ctx.Indentation
 
-    /// Get members in the decreasing order of inheritance chain
-    let rec internal getInterfaceMembers (e: FSharpEntity) = 
+    /// Filter out duplicated interfaces in inheritance chain
+    let rec internal getInterfaces (e: FSharpEntity) = 
         seq {
+            yield e
             for iface in e.DeclaredInterfaces do
-                yield! getInterfaceMembers iface.TypeDefinition
-            yield! e.MembersFunctionsAndValues |> Seq.filter (fun m -> 
-                       // Use this hack when FCS doesn't return enough information on .NET properties
-                       e.IsFSharp || not m.IsProperty)
+                yield! getInterfaces iface.TypeDefinition
+        }
+        |> Seq.distinct
+
+    /// Get members in the decreasing order of inheritance chain
+    let internal getInterfaceMembers (e: FSharpEntity) = 
+        seq {
+            for iface in getInterfaces e do
+                yield! iface.MembersFunctionsAndValues |> Seq.filter (fun m -> 
+                           // Use this hack when FCS doesn't return enough information on .NET properties
+                           iface.IsFSharp || not m.IsProperty)
          }
 
     let countInterfaceMembers e =
         getInterfaceMembers e |> Seq.length
 
     /// Generate stub implementation of an interface at a start column
-    let formatInterface startColumn indentation (typeInstances: string []) objectIdent (methodBody: string) (e: FSharpEntity) =
+    let formatInterface startColumn indentation (typeInstances: string []) objectIdent 
+        (methodBody: string) (displayContext: FSharpDisplayContext) (e: FSharpEntity) =
         assert e.IsInterface
         use writer = new ColumnIndentedTextWriter()
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
         let typeParams = Seq.map getTypeParameterName e.GenericParameters
         let instantiations = Seq.zip typeParams typeInstances |> Map.ofSeq
         let ctx = { Writer = writer; TypeInstantations = instantiations; Indentation = indentation; 
-                    ObjectIdent = objectIdent; MethodBody = lines }
+                    ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
         writer.Indent startColumn
         for v in getInterfaceMembers e do
             formatMember ctx v
@@ -352,7 +360,8 @@ module InterfaceStubGenerator =
                     List.tryPick walkSynModuleDecl modules
                 | SynModuleDecl.Types(typeDefs, _range) ->
                     List.tryPick walkSynTypeDefn typeDefs
-                | SynModuleDecl.DoExpr _
+                | SynModuleDecl.DoExpr (_, expr, _) ->
+                    walkExpr expr
                 | SynModuleDecl.Attributes _
                 | SynModuleDecl.HashDirective _
                 | SynModuleDecl.Open _ -> 
@@ -395,7 +404,8 @@ module InterfaceStubGenerator =
                     walkSynTypeDefn typeDef
                 | SynMemberDefn.ValField(_field, _range) ->
                     None
-                | SynMemberDefn.LetBindings _
+                | SynMemberDefn.LetBindings(bindings, _isStatic, _isRec, _range) ->
+                    List.tryPick walkBinding bindings
                 | SynMemberDefn.Open _
                 | SynMemberDefn.ImplicitInherit _
                 | SynMemberDefn.Inherit _
@@ -410,8 +420,9 @@ module InterfaceStubGenerator =
                 None
             else
                 match expr with
-                | SynExpr.Quote(_synExpr1, _, _synExpr2, _, _range) ->
-                    None
+                | SynExpr.Quote(synExpr1, _, synExpr2, _, _range) ->
+                    List.tryPick walkExpr [synExpr1; synExpr2]
+
                 | SynExpr.Const(_synConst, _range) -> 
                     None
 
@@ -459,11 +470,12 @@ module InterfaceStubGenerator =
                 | SynExpr.Lambda(_, _, _synSimplePats, synExpr, _range) ->
                      walkExpr synExpr
 
-                | SynExpr.MatchLambda(_isExnMatch,_argm,_synMatchClauseList,_spBind,_wholem) -> 
-                    None
-
-                | SynExpr.Match(_sequencePointInfoForBinding, synExpr, _synMatchClauseList, _, _range) ->
+                | SynExpr.MatchLambda(_isExnMatch, _argm, synMatchClauseList, _spBind, _wholem) -> 
+                    synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e)
+                | SynExpr.Match(_sequencePointInfoForBinding, synExpr, synMatchClauseList, _, _range) ->
                     walkExpr synExpr
+                    |> Option.orElse (synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e))
+
                 | SynExpr.Lazy(synExpr, _range) ->
                     walkExpr synExpr
                 | SynExpr.Do(synExpr, _range) ->
