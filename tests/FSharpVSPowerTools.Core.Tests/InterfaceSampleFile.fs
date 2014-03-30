@@ -159,3 +159,33 @@ let _ =
         member x.GetEnumerator(): System.Collections.IEnumerator = 
             raise (System.NotImplementedException())
  }
+
+let xx =
+    { new System.Collections.ICollection with
+        member x.CopyTo(array: System.Array, index: int): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.get_Count(): int = 
+            raise (System.NotImplementedException())
+        
+        member x.get_SyncRoot(): obj = 
+            raise (System.NotImplementedException())
+        
+        member x.get_IsSynchronized(): bool = 
+            raise (System.NotImplementedException())
+        
+        member x.GetEnumerator(): System.Collections.IEnumerator = 
+            raise (System.NotImplementedException())
+ }
+
+let yy = { new IA<_> with
+    member x.M
+        with get (): 'a = 
+            raise (System.NotImplementedException())
+    
+    member x.N
+        with get (): 'a = 
+            raise (System.NotImplementedException())
+}
+
+

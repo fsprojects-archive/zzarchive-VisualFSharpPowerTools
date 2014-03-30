@@ -110,11 +110,6 @@ module InterfaceStubGenerator =
     let internal bracketIf cond str = 
         if cond then "(" + str + ")" else str
 
-    let internal formatTypeWithSubstitution ctx (typ: FSharpType) =
-        let genericDefinition = typ.Format(ctx.DisplayContext)
-        (genericDefinition, ctx.TypeInstantations)
-        ||> Map.fold (fun s k v -> s.Replace(k, v))
-
     let internal formatTyconRef (tcref: FSharpEntity) = 
         tcref.DisplayName
 
@@ -168,8 +163,10 @@ module InterfaceStubGenerator =
             formatTypeArgument ctx typ.GenericParameter
         | _ -> failwith "Can't format type annotation" 
 
-    let internal formatType ctx typ = 
-        formatTypeWithPrec ctx 5 typ
+    let internal formatTypeWithSubstitution ctx (typ: FSharpType) =
+        let genericDefinition = typ.Format(ctx.DisplayContext)
+        (genericDefinition, ctx.TypeInstantations)
+        ||> Map.fold (fun s k v -> s.Replace(k, v))
 
     // Format each argument, including its name and type 
     let internal formatArgUsage ctx hasTypeAnnotation i (arg: FSharpParameter) = 
@@ -183,7 +180,7 @@ module InterfaceStubGenerator =
         let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
         if hasTypeAnnotation && argName <> "()" then 
-            argName + ": " + formatTypeWithPrec ctx 2 arg.Type
+            argName + ": " + formatTypeWithSubstitution ctx arg.Type
         else argName
 
     let internal formatArgsUsage ctx hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
@@ -315,7 +312,10 @@ module InterfaceStubGenerator =
         use writer = new ColumnIndentedTextWriter()
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
         let typeParams = Seq.map getTypeParameterName e.GenericParameters
-        let instantiations = Seq.zip typeParams typeInstances |> Map.ofSeq
+        let instantiations = 
+            Seq.zip typeParams typeInstances
+            |> Seq.filter(fun (t1, t2) -> t1 <> t2) 
+            |> Map.ofSeq
         let ctx = { Writer = writer; TypeInstantations = instantiations; Indentation = indentation; 
                     ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
         writer.Indent startColumn
