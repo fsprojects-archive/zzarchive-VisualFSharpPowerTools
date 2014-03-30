@@ -233,7 +233,7 @@ and
         member x.StartSearch(callback, searchValue) = 
             let token = searchCTS.Token
             let indexes = projectIndexes.Force()
-            runSearch(indexes, searchValue, callback, token)
+            runSearch(indexes, searchValue.Trim '`', callback, token)
         member x.StopSearch() = 
             searchCTS.Cancel()
             searchCTS <- CancellationTokenSource.CreateLinkedTokenSource(processProjectsCTS.Token)
