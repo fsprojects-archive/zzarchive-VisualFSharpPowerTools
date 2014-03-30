@@ -45,4 +45,8 @@
 * Fix intermittent navigation bar configuration 
 * Setup integration tests
 
+#### 0.6.0 - Unreleased
+* Add folder organization support
+* Add "Implement Interface" feature
+
 
