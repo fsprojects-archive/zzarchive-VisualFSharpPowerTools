@@ -111,7 +111,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         | InterfaceData.ObjExpr(typ, _) -> 
             typ.Range
 
-    let inferStartColumn (lineStr: string) = function
+    let inferStartColumn = function
         | InterfaceData.Interface(_, Some (m :: _)) ->
             let line = buffer.CurrentSnapshot.GetLineFromLineNumber(m.Range.StartLine-1)
             let str = line.GetText()
@@ -120,10 +120,9 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             let line = buffer.CurrentSnapshot.GetLineFromLineNumber(b.RangeOfBindingSansRhs.StartLine-1)
             let str = line.GetText()
             str.Length - str.TrimStart(' ').Length
-        | _ ->
-            let editorOptions = editorOptionsFactory.GetOptions(buffer)
-            let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-            lineStr.Length - lineStr.TrimStart(' ').Length + indentSize
+        | iface ->
+            // There is no implemented member, we indent the content at the start column of the interface
+            (getRange iface).StartColumn
 
     let countMembers = function
         | InterfaceData.Interface(_, None) -> 
@@ -163,9 +162,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         count > 0 && count > countMembers interfaceData
 
     let handleImplementInterface (span: SnapshotSpan) (interfaceData, posOpt: pos option) displayContext entity = 
-        let line = span.Start.GetContainingLine()
-        let lineStr = line.GetText()
-        let startColumn = inferStartColumn lineStr interfaceData
+        let startColumn = inferStartColumn interfaceData
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let typeParams = getTypeParameters interfaceData
