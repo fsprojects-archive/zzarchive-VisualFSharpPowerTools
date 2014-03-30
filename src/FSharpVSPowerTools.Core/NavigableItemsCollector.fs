@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem.Navigation
 
 open System
-
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 
@@ -83,12 +82,16 @@ module NavigableItemsCollector =
             | MemberKind.PropertyGetSet -> NavigableItemKind.Property
             | MemberKind.Member -> NavigableItemKind.Member
 
-        let addBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, valData, headPat, _retTy, _rhs, _bindingRange, _seqPoint)) =
+        let addBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, valData, headPat, _retTy, 
+                                _rhs, _bindingRange, _seqPoint)) itemKind =
             let (SynValData(memberFlagsOpt, _valInfo, _idOpt)) = valData
             let kind =
-                match memberFlagsOpt with
-                | Some mf -> mapMemberKind mf.MemberKind
-                | _ -> NavigableItemKind. ModuleValue
+                match itemKind with
+                | Some x -> x
+                | _ ->
+                    match memberFlagsOpt with
+                    | Some mf -> mapMemberKind mf.MemberKind
+                    | _ -> NavigableItemKind.ModuleValue
 
             match headPat with
             | SynPat.LongIdent(LongIdentWithDots([_this; id], _ranges), _, _typeArgs, _constructorDecls, _access, _range) ->
@@ -176,7 +179,7 @@ module NavigableItemsCollector =
                     walkSynMemberDefn m
             | SynModuleDecl.Let(_isRecursive, bindings, _range) ->
                 for binding in bindings do
-                    addBinding binding
+                    addBinding binding None
             | SynModuleDecl.ModuleAbbrev(lhs, _rhs, _range) ->
                 addModuleAbbreviation lhs false
             | SynModuleDecl.NamespaceFragment(fragment) ->
@@ -237,15 +240,16 @@ module NavigableItemsCollector =
                         walkSynMemberDefn m
                 | None -> ()
             | SynMemberDefn.Member(binding, _range) ->
-                addBinding binding
+                addBinding binding None
             | SynMemberDefn.NestedType(typeDef, _access, _range) -> 
                 walkSynTypeDefn typeDef
             | SynMemberDefn.ValField(field, _range) ->
                 addField field false
+            | SynMemberDefn.LetBindings (bindings, _, _, _) -> 
+                bindings |> List.iter (fun binding -> addBinding binding (Some NavigableItemKind.Field))
             | SynMemberDefn.Open _
             | SynMemberDefn.ImplicitInherit _
             | SynMemberDefn.Inherit _
-            | SynMemberDefn.LetBindings _
             | SynMemberDefn.ImplicitCtor _ -> ()
 
         match parsedInput with
