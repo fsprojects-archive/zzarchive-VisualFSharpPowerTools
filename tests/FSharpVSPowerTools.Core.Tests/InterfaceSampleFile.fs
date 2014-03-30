@@ -160,6 +160,20 @@ let _ =
             raise (System.NotImplementedException())
  }
 
+let _ =
+    { new IComparer<'a> with
+        member x.Compare(x1: 'a, y: 'a): int = 
+            raise (System.NotImplementedException())
+ }
+
+type IKeyword =
+    abstract Method: ``member``:int -> unit
+
+type OKeyword =
+    interface IKeyword with
+        member x.Method(``member``: int): unit = 
+            raise (System.NotImplementedException())
+
 let xx =
     { new System.Collections.ICollection with
         member x.CopyTo(array: System.Array, index: int): unit = 

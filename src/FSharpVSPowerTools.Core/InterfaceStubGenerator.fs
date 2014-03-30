@@ -168,6 +168,8 @@ module InterfaceStubGenerator =
         (genericDefinition, ctx.TypeInstantations)
         ||> Map.fold (fun s k v -> s.Replace(k, v))
 
+    let internal keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
+
     // Format each argument, including its name and type 
     let internal formatArgUsage ctx hasTypeAnnotation i (arg: FSharpParameter) = 
         let nm = 
@@ -175,7 +177,13 @@ module InterfaceStubGenerator =
             | None -> 
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
                 else "arg" + string i 
-            | Some nm -> nm
+            | Some nm -> 
+                // Avoid name capturing by object idents
+                if nm = ctx.ObjectIdent then
+                    sprintf "%s%i" nm i
+                elif Set.contains nm keywordSet then
+                    sprintf "``%s``" nm
+                else nm
         // Detect an optional argument 
         let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
