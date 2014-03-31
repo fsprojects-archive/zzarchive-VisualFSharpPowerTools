@@ -84,6 +84,18 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
     let getFoldersFromProject (project: Project) =
         [ { Name = project.Name; SubFolders = getFoldersFromItems project.ProjectItems } ]
 
+    let rec getFolderItems (items: ProjectItems) =
+        seq {
+            for item in items do
+                if VSUtils.isPhysicalFolder item then
+                    yield item
+                    yield! getFolderItems item.ProjectItems
+        }
+
+    let getFolderItemByName (project: Project) name =
+        getFolderItems project.ProjectItems
+        |> Seq.tryFind (fun i -> i.Name = name)
+
     let getActionInfo() =
         let items = getSelectedItems()
         let projects = getSelectedProjects()
@@ -183,6 +195,31 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
         | Some true -> Some model.Name
         | _ -> None
 
+    let performMoveToFolderAction (info: ActionInfo) name =
+        let project = info.Project?Project
+        let destination = 
+            if info.Project.Name = name then project
+            else
+                let item = getFolderItemByName info.Project name
+                match item with
+                | Some x -> x?Node
+                | None -> ArgumentException (sprintf "folder named %s not found." name) |> logException |> raise
+            
+        for item in info.Items do
+            let node = item?Node
+            node?OnItemDeleted()
+            let parent = node?Parent
+            let prev = node?PreviousSibling
+            if prev <> null then
+                prev?NextSibling <- node?NextSibling
+            if parent?LastChild = node then
+                parent?LastChild <- prev
+            destination?AddChild(node)
+
+        project?SetProjectFileDirty(true)
+        project?ComputeSourcesAndFlags()
+        ()
+
     let askForNewFolderName resources = 
         let model = NewFolderNameDialogModel resources
         let wnd = FolderMenuUI.loadNewFolderDialog model
@@ -191,10 +228,6 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
         match res with
         | Some true -> Some model.Name
         | _ -> None
-
-    let performMoveToFolderAction (info: ActionInfo) name =
-        msgboxInf name
-        ()
 
     let performNewFolderAction (info: ActionInfo) name =
         let items = 
@@ -244,7 +277,8 @@ type FolderMenuCommands(dte:DTE2, mcs:OleMenuCommandService, shell:IVsUIShell) =
         | [] -> false
         | _ ->
             let filesOnly = info.Items |> List.forall (fun i -> VSUtils.isPhysicalFile i)
-            filesOnly
+            let distinctByName = info.Items |> Seq.distinctBy (fun i -> i.Name)
+            filesOnly && (Seq.length distinctByName = List.length info.Items)
 
     let isCommandEnabled (actionInfo: ActionInfo option) (action:Action) = 
         match actionInfo with
