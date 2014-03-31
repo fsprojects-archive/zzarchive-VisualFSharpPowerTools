@@ -40,7 +40,7 @@ module FolderMenuUI =
 
         // Use this until we are able to do validation directly
         accessor.FoldersTree.SelectedItemChanged.Add(fun _ -> 
-            viewModel.Name <- (accessor.FoldersTree.SelectedItem :?> folder).Name
+            viewModel.SelectedFolder <- Some (accessor.FoldersTree.SelectedItem :?> Folder)
             accessor.btnOk.IsEnabled <- viewModel.Result = Choice1Of2()
         )
         accessor.btnOk.Click.Add(fun _ -> 

@@ -5,8 +5,8 @@
         xmlns:local="clr-namespace:FSharpVSPowerTools.Folders;assembly=FSharpVSPowerTools.Logic" 
         mc:Ignorable="d" 
         WindowStyle="ToolWindow"
-        Height="255"
-        Width="353"
+        Height="305.717"
+        Width="357.528"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" 
         FocusManager.FocusedElement="{Binding ElementName=txtName}" 
         ResizeMode="NoResize" 
@@ -25,12 +25,37 @@
             <Setter Property="Height" Value="30"/>
         </Style>
     </Window.Resources>
-    <DockPanel Margin="20">
+    <DockPanel Margin="0,20,4.774,19.755" HorizontalAlignment="Right" Width="333">
         <HeaderedContentControl DockPanel.Dock="Top">
             <HeaderedContentControl.Header>
                 <Label Content="_Destination folder:" Target="{Binding ElementName=txtName}" Margin="0,0,0,3"/>
             </HeaderedContentControl.Header>
-            <TreeView ItemsSource="{Binding Root, Mode=OneWay}" Name="FoldersTree" Height="113">
+            <TreeView ItemsSource="{Binding Root, Mode=OneWay, NotifyOnValidationError=True, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, ValidatesOnExceptions=True}" Name="FoldersTree" Height="175" Margin="0,0,0.283,0">
+                <TreeView.Resources>
+                    <ControlTemplate x:Key="InputErrorTemplate">
+                        <DockPanel>
+                            <Ellipse DockPanel.Dock="Right" Margin="2,0" ToolTip="Contains invalid data" Width="10" Height="10">
+                                <Ellipse.Fill>
+                                    <LinearGradientBrush>
+                                        <GradientStop Color="#11FF1111" Offset="0" />
+                                        <GradientStop Color="#FFFF0000" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <AdornedElementPlaceholder />
+                        </DockPanel>
+                    </ControlTemplate>
+                </TreeView.Resources>
+                <TreeView.Style>
+                    <Style TargetType="TreeView">
+                        <Setter Property="Validation.ErrorTemplate" Value="{StaticResource InputErrorTemplate}" />
+                        <Style.Triggers>
+                            <Trigger Property="Validation.HasError" Value="True">
+                                <Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TreeView.Style>
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="{x:Type TreeViewItem}">
                         <Setter Property="IsExpanded" Value="True" />
