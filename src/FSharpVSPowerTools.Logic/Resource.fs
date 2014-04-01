@@ -20,7 +20,7 @@ module Resource =
     let [<Literal>] navBarUnauthorizedMessage = "Unauthorized access to navigation bar configuration. Please try again after restarting Visual Studio from Administrator."
     let [<Literal>] navBarErrorMessage = "Error occurs while saving navigation bar configuration."
 
-    let [<Literal>] newFolderDialogTitle = "F# Power Tools - New Folder"
-    let [<Literal>] renameFolderDialogTitle = "F# Power Tools - Rename Folder"
+    let [<Literal>] newFolderDialogTitle = vsPackageTitle + " - New Folder"
+    let [<Literal>] renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
 
     let [<Literal>] implementInterfaceErrorMessage = "All members of this interface have been implemented."
