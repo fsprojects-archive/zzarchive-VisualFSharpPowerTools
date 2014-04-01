@@ -18,15 +18,17 @@ let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColum
     Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
     Debug.Assert(startLine <> endLine || startColumn < endColumn, 
                  sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
-    let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
-    let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
-    Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
-    let length = endPos - startPos
+
     try 
+        let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
+        let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
+        Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
+        let length = endPos - startPos
+
         Some (SnapshotSpan(snapshot, startPos, length))
     with e ->
-        fail "Attempt to create a SnapshotSpan with wrong arguments (StartPos = %d, Length = %d). Snapshot.Lenght = %d" 
-             startPos length snapshot.Length
+        fail "Attempt to create a SnapshotSpan with wrong arguments (StartLine = %d, StartColumn = %d, EndLine = %d, EndColumn = %d)"
+             startLine startColumn endLine endColumn
         None
     
 /// Retrieve snapshot from VS zero-based positions
