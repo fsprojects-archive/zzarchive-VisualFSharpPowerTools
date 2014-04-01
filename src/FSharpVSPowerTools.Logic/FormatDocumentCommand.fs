@@ -44,8 +44,10 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
             let newMaxLine = newCurrentSnapshot.LineCount
 
             // Scale caret positions in a linear way
-            let newLine = int (float line * (float newMaxLine) / (float maxLine))
-            let newCaretPos = newCurrentSnapshot.GetLineFromLineNumber(newLine).Start.Add(column)
+            let newLineNo = int (float line * (float newMaxLine) / (float maxLine))
+            let newLine = newCurrentSnapshot.GetLineFromLineNumber(newLineNo)
+            let newColumn = min column newLine.Length
+            let newCaretPos = newLine.Start.Add(newColumn)
             let caretPolet = VirtualSnapshotPoint(newCurrentSnapshot, int newCaretPos)
             x.TextView.Caret.MoveTo(caretPolet) |> ignore
 
