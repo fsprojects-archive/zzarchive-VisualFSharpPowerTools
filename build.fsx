@@ -101,7 +101,7 @@ Target "UnitTests" (fun _ ->
             DisableShadowCopy = true
             TimeOut = TimeSpan.FromMinutes 20.
             Framework = "4.5"
-            Domain = "Multiple"
+            Domain = NUnitDomainModel.MultipleDomainModel
             OutputFile = "TestResults.xml" })
 )
 
