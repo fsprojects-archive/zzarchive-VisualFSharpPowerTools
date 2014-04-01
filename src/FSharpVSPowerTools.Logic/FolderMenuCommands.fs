@@ -210,20 +210,20 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                     |> raise
         
         for item in info.Items do
-            let oldFilePath = item.Object?Url
-            let newFilePath = Path.Combine (folder.FullPath, Path.GetFileName oldFilePath)
+            //let oldFilePath = item.Object?Url
+            //let newFilePath = Path.Combine (folder.FullPath, Path.GetFileName oldFilePath)
             let node = item?Node
             node?OnItemDeleted ()
             let parent = node?Parent
             let prev = node?PreviousSibling
             if prev <> null then prev?NextSibling <- node?NextSibling
             if parent?LastChild = node then parent?LastChild <- prev
-            let win = item.Open Constants.vsViewKindPrimary 
-            let doc = win.Document
-            try doc.Save newFilePath |> ignore with _ -> ()
-            if File.Exists newFilePath
-            then File.Delete oldFilePath
-            else failwithf "Cannot save %s." newFilePath
+            //let win = item.Open Constants.vsViewKindPrimary 
+            //let doc = win.Document
+            //try doc.Save newFilePath |> ignore with _ -> ()
+            //if File.Exists newFilePath
+            //then File.Delete oldFilePath
+            //else failwithf "Cannot save %s." newFilePath
             destination?AddChild (node)
         
         project?SetProjectFileDirty (true)
