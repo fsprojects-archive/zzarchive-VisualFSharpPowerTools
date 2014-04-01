@@ -118,7 +118,7 @@ let ``fully qualified CLI type constructor``() =
 
 [<Test>]
 let ``fully qualified F# type constructor``() = 
-    checkCategories 32 [ ReferenceType, 21, 25 ]
+    checkCategories 32 [ Module, 18, 20; Module, 15, 17; ReferenceType, 21, 25 ]
 
 [<Test>]
 let ``generic class declaration``() = 
@@ -127,7 +127,7 @@ let ``generic class declaration``() =
 [<Test>]
 let ``generic class instantiation``() = 
     checkCategories 35 [ ReferenceType, 24, 36; ValueType, 37, 40 ]
-    checkCategories 36 [ ReferenceType, 35, 47; ReferenceType, 54, 58 ]
+    checkCategories 36 [ ReferenceType, 35, 47; Module, 51, 53; Module, 48, 50; ReferenceType, 54, 58 ]
     checkCategories 37 [ ReferenceType, 28, 40; ValueType, 48, 56 ]
 
 [<Test>]
@@ -136,7 +136,7 @@ let ``record``() =
         [ 
             ReferenceType, 5, 11
             PublicField, 16, 24; ValueType, 26, 29
-            PublicField, 31, 44; ReferenceType, 52, 56 
+            PublicField, 31, 44; Module, 49, 51; Module, 46, 48; ReferenceType, 52, 56 
         ]
 
 [<Test>]
@@ -195,7 +195,7 @@ let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ValueType, 
 let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
 
 [<Test>]
-let ``indexer``() = checkCategories 77 [ Function, 11, 12 ]
+let ``indexer``() = checkCategories 77 [ Module, 11, 12; Function, 11, 12 ]
 
 [<Test>]
 let ``mutable value``() = checkCategories 78 [ MutableVar, 12, 24 ]
@@ -285,3 +285,22 @@ let ``tuple alias``() =
 let ``multiline method chain``() = 
     checkCategories 136 [ Function, 9, 18 ]
     checkCategories 137 [ Function, 9, 13; Function, 16, 22 ]
+
+[<Test>]
+let ``module``() = 
+    checkCategories 1 [ Module, 7, 14 ]
+    checkCategories 138 [ Module, 7, 14 ]
+    checkCategories 139 [ Module, 11, 18 ]
+
+[<Test>]
+let ``static CLR class``() = checkCategories 141 [ ReferenceType, 20, 30; Function, 31, 36 ]
+
+[<Test>]
+let ``F# external modules``() = 
+    checkCategories 142 
+        [
+            Module, 15, 18; Function, 19, 23
+            Module, 27, 30; Function, 31, 37
+            Module, 41, 45; Function, 46, 49  
+        ]
+

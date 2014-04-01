@@ -17,6 +17,7 @@ type Category =
     | PublicField
     | MutableVar
     | Quotation
+    | Module
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -70,6 +71,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
            || e.IsProvidedAndErased || e.IsProvidedAndGenerated
            || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace) then
             ReferenceType
+        elif e.IsFSharpModule then Module
         else 
             match ty with
             | Some t when t.IsTupleType -> ReferenceType
