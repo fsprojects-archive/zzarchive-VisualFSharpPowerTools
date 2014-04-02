@@ -88,15 +88,13 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) = 
             match state.Value with
             | Some state ->
-                let snapshotChanged = state.SnapshotSpan.Snapshot <> snapshotSpan.Snapshot
-                let spanStartLine = state.SnapshotSpan.Start.GetContainingLine().LineNumber + 1
-                let spanEndLine = (state.SnapshotSpan.End - 1).GetContainingLine().LineNumber + 1
+                let snapshotLengthChanged = state.SnapshotSpan.Snapshot.LineCount <> snapshotSpan.Snapshot.LineCount
+                let spanStartLine = snapshotSpan.Start.GetContainingLine().LineNumber + 1
 
                 let spans =
                     state.Spans
                     // locations are sorted, so we can safely filter them efficently
                     |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
-                    |> Seq.takeWhile (fun { WordSpan = { Line = line }} -> line <= spanEndLine)
                     |> Seq.choose (fun loc -> maybe {
                          let! classificationType = getClassficationType loc.Category
                          let range = 
@@ -106,10 +104,11 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             loc.WordSpan.EndCol
                          let! span = fromPos state.SnapshotSpan.Snapshot range
                          let span =
-                            if snapshotChanged 
+                            if snapshotLengthChanged 
                             then span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)
                             else span
                          return ClassificationSpan(span, classificationType) })
+                    |> Seq.takeWhile (fun span -> span.Span.End.CompareTo(snapshotSpan.End) <= 0)
                     |> Seq.toArray
                 upcast spans
             | None -> upcast [||]
