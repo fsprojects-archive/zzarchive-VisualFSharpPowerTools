@@ -81,34 +81,30 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, updateSyntaxConstructClassifiers)
 
-    do doc.TextBuffer.Changed.Add (fun _ -> state.Swap (fun _ -> None) |> ignore)
+    //do doc.TextBuffer.Changed.Add (fun _ -> state.Swap (fun _ -> None) |> ignore)
     
     interface IClassifier with
         // it's called for each visible line of code
         member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) = 
             match state.Value with
             | Some state ->
-                let snapshotLengthChanged = state.SnapshotSpan.Snapshot.LineCount <> snapshotSpan.Snapshot.LineCount
-                let spanStartLine = snapshotSpan.Start.GetContainingLine().LineNumber + 1
+                // we get additional 10 lines above the current snapshot in case the user inserts some line
+                // while we were getting locations from FCS. It's not as reliable though. 
+                let spanStartLine = max 0 (snapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
+                let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
 
                 let spans =
                     state.Spans
                     // locations are sorted, so we can safely filter them efficently
                     |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
-                    |> Seq.choose (fun loc -> maybe {
-                         let! classificationType = getClassficationType loc.Category
-                         let range = 
-                            loc.WordSpan.Line, 
-                            loc.WordSpan.StartCol,
-                            loc.WordSpan.Line,
-                            loc.WordSpan.EndCol
-                         let! span = fromPos state.SnapshotSpan.Snapshot range
-                         let span =
-                            if snapshotLengthChanged 
-                            then span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)
-                            else span
-                         return ClassificationSpan(span, classificationType) })
-                    |> Seq.takeWhile (fun span -> span.Span.End.CompareTo(snapshotSpan.End) <= 0)
+                    |> Seq.choose (fun loc -> 
+                        maybe {
+                            let! clType = getClassficationType loc.Category
+                            let! span = fromPos state.SnapshotSpan.Snapshot (loc.WordSpan.ToRange())
+                            return clType, span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
+                        })
+                    |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
+                    |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))
                     |> Seq.toArray
                 upcast spans
             | None -> upcast [||]

@@ -100,6 +100,7 @@ type WordSpan =
         { Line = r.StartLine
           StartCol = r.StartColumn 
           EndCol = r.EndColumn }
+    member x.ToRange() = x.Line, x.StartCol, x.Line, x.EndCol
 
 type ILexer = 
     abstract GetSymbolAtLocation: line: int -> col: int -> Symbol option
