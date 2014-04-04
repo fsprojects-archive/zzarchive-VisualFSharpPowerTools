@@ -81,8 +81,6 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, updateSyntaxConstructClassifiers)
 
-    //do doc.TextBuffer.Changed.Add (fun _ -> state.Swap (fun _ -> None) |> ignore)
-    
     interface IClassifier with
         // it's called for each visible line of code
         member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) = 
@@ -92,7 +90,6 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 // while we were getting locations from FCS. It's not as reliable though. 
                 let spanStartLine = max 0 (snapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
                 let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
-
                 let spans =
                     state.Spans
                     // locations are sorted, so we can safely filter them efficently

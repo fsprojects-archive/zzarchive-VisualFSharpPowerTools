@@ -15,14 +15,14 @@ open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
-    //Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
-    //Debug.Assert(startLine <> endLine || startColumn < endColumn, 
-    //             sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
+    Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
+    Debug.Assert(startLine <> endLine || startColumn < endColumn, 
+                 sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
 
     try 
         let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
         let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
-        //Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
+        Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
         let length = endPos - startPos
 
         Some (SnapshotSpan(snapshot, startPos, length))
