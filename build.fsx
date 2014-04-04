@@ -59,13 +59,23 @@ let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
 
 // Generate assembly info files with the right version & up-to-date information
 Target "AssemblyInfo" (fun _ ->
-  let fileName = "src/" + project + "/Properties/AssemblyInfo.cs"
-  CreateCSharpAssemblyInfo fileName
-      [ Attribute.Title project
-        Attribute.Product project
+  let shared =
+      [ Attribute.Product project
         Attribute.Description summary
         Attribute.Version release.AssemblyVersion
         Attribute.FileVersion release.AssemblyVersion ] 
+
+  CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
+      (Attribute.Title "FSharpVSPowerTools" :: shared)
+
+  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Core/AssemblyInfo.fs"
+      (Attribute.Title "FSharpVSPowerTools.Core" :: shared)
+
+  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
+      (Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
+
+  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2013/AssemblyInfo.fs"
+      (Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
 )
 
 // --------------------------------------------------------------------------------------
@@ -101,7 +111,7 @@ Target "UnitTests" (fun _ ->
             DisableShadowCopy = true
             TimeOut = TimeSpan.FromMinutes 20.
             Framework = "4.5"
-            Domain = "Multiple"
+            Domain = NUnitDomainModel.MultipleDomainModel
             OutputFile = "TestResults.xml" })
 )
 
@@ -146,7 +156,14 @@ Target "ReleaseDocs" (fun _ ->
     Branches.push tempDocsDir
 )
 
-Target "Release" DoNothing
+Target "Release" (fun _ ->
+    StageAll ""
+    Commit "" (sprintf "Bump version to %s" release.NugetVersion)
+    Branches.push ""
+
+    Branches.tag "" release.NugetVersion
+    Branches.pushTag "" "origin" release.NugetVersion
+)
 
 // --------------------------------------------------------------------------------------
 // Run main targets by default. Invoke 'build <Target>' to override
@@ -157,7 +174,7 @@ Target "All" DoNothing
 
 "Clean"
   ==> "RestorePackages"
-  =?> ("AssemblyInfo", not isLocalBuild)
+  ==> "AssemblyInfo"
   ==> "Build"
   ==> "UnitTests"
   ==> "IntegrationTests"

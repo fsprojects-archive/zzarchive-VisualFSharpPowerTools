@@ -135,3 +135,8 @@ let _ =
     "string"
         .Substring(1)
         .Trim().Remove(1)
+module Module2 =
+    module Module3 =
+        let x = ()
+let _ = System.Linq.Enumerable.Range(0, 1)
+let _ = [1] |> Seq.sort |> Seq.toList |> List.rev
