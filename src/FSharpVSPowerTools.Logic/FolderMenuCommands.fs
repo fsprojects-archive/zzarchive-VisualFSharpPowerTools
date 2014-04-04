@@ -196,39 +196,23 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         | _ -> None
     
     let performMoveToFolderAction (info: ActionInfo) (folder: Folder) = 
-        let project = info.Project?Project
-        
         let destination = 
-            if folder.IsProject then project
+            if folder.IsProject then info.Project.ProjectItems
             else 
                 let item = getFolderItemByName info.Project folder.Name
                 match item with
-                | Some x -> x?Node
+                | Some x -> x.ProjectItems
                 | None -> 
                     ArgumentException(sprintf "folder named %s not found." folder.Name)
                     |> logException
                     |> raise
         
         for item in info.Items do
-            //let oldFilePath = item.Object?Url
-            //let newFilePath = Path.Combine (folder.FullPath, Path.GetFileName oldFilePath)
-            let node = item?Node
-            node?OnItemDeleted ()
-            let parent = node?Parent
-            let prev = node?PreviousSibling
-            if prev <> null then prev?NextSibling <- node?NextSibling
-            if parent?LastChild = node then parent?LastChild <- prev
-            //let win = item.Open Constants.vsViewKindPrimary 
-            //let doc = win.Document
-            //try doc.Save newFilePath |> ignore with _ -> ()
-            //if File.Exists newFilePath
-            //then File.Delete oldFilePath
-            //else failwithf "Cannot save %s." newFilePath
-            destination?AddChild (node)
-        
-        project?SetProjectFileDirty (true)
-        project?ComputeSourcesAndFlags ()
-        ()
+            Debug.Assert(item.FileCount = 1s, "Item should contain only one file.")
+            let filePath = item.FileNames(0s)
+            destination.AddFromFileCopy(filePath) |> ignore
+            item.Delete()
+        info.Project.IsDirty <- true
     
     let askForNewFolderName resources = 
         let model = NewFolderNameDialogModel resources
