@@ -207,12 +207,19 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                     |> logException
                     |> raise
         
-        for item in info.Items do
-            Debug.Assert(item.FileCount = 1s, "Item should contain only one file.")
-            let filePath = item.FileNames(0s)
-            destination.AddFromFileCopy(filePath) |> ignore
-            item.Delete()
-        info.Project.IsDirty <- true
+        let folderExists =
+            if Directory.Exists(folder.FullPath) then true
+            else
+                try Directory.CreateDirectory(folder.FullPath) |> ignore; true with _ -> false
+        if folderExists then
+            for item in info.Items do
+                Debug.Assert(item.FileCount = 1s, "Item should contain only one file.")
+                let filePath = item.FileNames(0s)
+                destination.AddFromFileCopy(filePath) |> ignore
+                item.Delete()
+            info.Project.IsDirty <- true
+        else
+            msgboxErr Resource.validationFolderDoesNotExist
     
     let askForNewFolderName resources = 
         let model = NewFolderNameDialogModel resources
