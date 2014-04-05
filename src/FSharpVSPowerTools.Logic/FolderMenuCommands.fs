@@ -18,9 +18,9 @@ open FSharpVSPowerTools.ProjectSystem
 open Reflection
 
 module PkgCmdConst = 
-    let guidNewFolderCmdSet = new Guid("{e396b698-e00e-444b-9f5f-3dcb1ef74e63}")
+    let guidNewFolderCmdSet = Guid "{9EDC1279-C317-43A6-B554-3A4D7853D55E}"
     let cmdNewFolder = 0x1071
-    let guidMoveCmdSet = new Guid("{e396b698-e00e-444b-9f5f-3dcb1ef74e64}")
+    let guidMoveCmdSet = Guid "{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}"
     let cmdMoveFolderUp = 0x1070
     let cmdMoveFolderDown = 0x1071
     let cmdMoveToFolder = 0x1072
