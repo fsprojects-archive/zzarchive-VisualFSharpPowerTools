@@ -215,16 +215,19 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         let folderExists =
             if Directory.Exists(folder.FullPath) then true
             else
-                try Directory.CreateDirectory(folder.FullPath) |> ignore; true with _ -> false
+                try 
+                    Directory.CreateDirectory(folder.FullPath) |> ignore
+                    true 
+                with _ -> false
         if folderExists then
             for item in info.Items do
-                Debug.Assert(item.FileCount = 1s, "Item should contain only one file.")
+                Debug.Assert(item.FileCount = 1s, "Item should be unique.")
                 let filePath = item.FileNames(0s)
                 destination.AddFromFileCopy(filePath) |> ignore
                 item.Delete()
             info.Project.IsDirty <- true
         else
-            msgboxErr Resource.validationFolderDoesNotExist
+            msgboxErr Resource.validationDestinationFolderDoesNotExist
     
     let askForNewFolderName resources = 
         let model = NewFolderNameDialogModel resources
@@ -240,7 +243,17 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             match info.Items with
             | [ item ] -> item.ProjectItems
             | _ -> info.Project.ProjectItems
-        items.AddFolder name |> ignore
+        let folder = items.AddFolder name
+        Debug.Assert(folder.FileCount = 1s, "Item should be unique.")
+        if Directory.Exists(folder.FileNames(0s)) then
+            msgboxErr Resource.validationFolderAlreadyExistsOnDisk
+        else
+            try
+                Directory.CreateDirectory(folder.FileNames(0s)) |> ignore
+            with _ ->
+                msgboxErr Resource.validationCannotCreateFolder
+                // Can't create folder, remove folder item for consistency
+                folder.Remove()
     
     let executeCommand (action: Action) = 
         let actionInfo = getActionInfo()
