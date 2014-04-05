@@ -5,6 +5,7 @@ open EnvDTE80
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text
 open System
 open System.IO
@@ -17,6 +18,7 @@ open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open Reflection
 
+[<RequireQualifiedAccess>]
 module PkgCmdConst = 
     let guidNewFolderCmdSet = Guid "{9EDC1279-C317-43A6-B554-3A4D7853D55E}"
     let cmdNewFolder = 0x1071
@@ -24,6 +26,9 @@ module PkgCmdConst =
     let cmdMoveFolderUp = 0x1070
     let cmdMoveFolderDown = 0x1071
     let cmdMoveToFolder = 0x1072
+
+    let guidStandardCmdSet = typedefof<VSConstants.VSStd97CmdID>.GUID
+    let cmdStandardNewFolder = uint32 VSConstants.VSStd97CmdID.NewFolder
 
 type VerticalMoveAction = 
     | MoveUp
@@ -301,8 +306,29 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     
     let setupNewFolderCommand = setupCommand PkgCmdConst.guidNewFolderCmdSet
     let setupMoveCommand = setupCommand PkgCmdConst.guidMoveCmdSet
+
     member x.SetupCommands() = 
         setupNewFolderCommand PkgCmdConst.cmdNewFolder Action.New
         setupMoveCommand PkgCmdConst.cmdMoveFolderUp (VerticalMoveAction VerticalMoveAction.MoveUp)
         setupMoveCommand PkgCmdConst.cmdMoveFolderDown (VerticalMoveAction VerticalMoveAction.MoveDown)
         setupMoveCommand PkgCmdConst.cmdMoveToFolder Action.MoveToFolder
+
+    interface IOleCommandTarget with
+        member x.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
+            if pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardNewFolder) then
+                match getActionInfo() with
+                | Some info ->
+                    if isFSharpProject info.Project then
+                        prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
+                        VSConstants.S_OK
+                    else
+                        int Constants.OLECMDERR_E_UNKNOWNGROUP
+                | None ->
+                    int Constants.OLECMDERR_E_UNKNOWNGROUP
+            else
+                int Constants.OLECMDERR_E_UNKNOWNGROUP
+        
+        member x.Exec(_pguidCmdGroup: byref<Guid>, _nCmdID: uint32, _nCmdexecopt: uint32, _pvaIn: IntPtr, _pvaOut: IntPtr): int = 
+            // We should not return OK here because it would short-circuit the command chain
+            int Constants.OLECMDERR_E_UNKNOWNGROUP
