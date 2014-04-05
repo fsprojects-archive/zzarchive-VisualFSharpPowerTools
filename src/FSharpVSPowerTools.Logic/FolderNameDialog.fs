@@ -54,29 +54,3 @@ type NewFolderNameDialogModel(resources :NewFolderNameDialogResources) =
         [<CLIEvent>]
         member x.ErrorsChanged = errorsChanged.Publish
         
-[<RequireQualifiedAccess>]
-module UI =
-    let loadDialog (viewModel: NewFolderNameDialogModel) =
-        let window = NewFolderNameDialog().CreateRoot()
-
-        // Provides access to "code behind" style work
-        let accessor = NewFolderNameDialog.Accessor(window)
-
-        // Use this until we are able to do validation directly
-        accessor.txtName.TextChanged.Add(fun _ ->
-            accessor.btnOk.IsEnabled <- not (viewModel :> INotifyDataErrorInfo).HasErrors
-             )
-        accessor.btnOk.Click.Add(fun _ -> 
-            match viewModel.Result with
-            | Choice1Of2 _ ->
-                window.DialogResult <- Nullable true
-                window.Close()
-            | Choice2Of2 errorMsg ->
-                window.DialogResult <- Nullable false
-                msgboxErr errorMsg)
-        accessor.btnCancel.Click.Add(fun _ -> 
-            window.DialogResult <- Nullable false
-            window.Close())
-        window.DataContext <- viewModel
-        window.Loaded.Add (fun _ -> accessor.txtName.SelectAll())
-        window
