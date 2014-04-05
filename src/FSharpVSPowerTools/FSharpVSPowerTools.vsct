@@ -226,7 +226,7 @@
 
     </GuidSymbol>
 
-    <GuidSymbol name="guidSolutionExplorerCmdSet" value="{e396b698-e00e-444b-9f5f-3dcb1ef74e62}">
+    <GuidSymbol name="guidSolutionExplorerCmdSet" value="{1D4A7B65-A22C-4405-837B-4214C0BED3C5}">
       <IDSymbol name="FSPowerToolsMenuGroup" value="0x1060" />
       <IDSymbol name="FSPowerToolsSubMenuGroup" value="0x1061" />
       <IDSymbol name="FSPowerToolsNewFolderGroup" value="0x1063" />
