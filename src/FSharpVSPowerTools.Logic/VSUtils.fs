@@ -35,8 +35,6 @@ let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColum
 let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
     fromPos snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
 
-let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
-
 let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 let isFSharpProject (project: EnvDTE.Project) = 
     project <> null && project.Kind <> null && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)

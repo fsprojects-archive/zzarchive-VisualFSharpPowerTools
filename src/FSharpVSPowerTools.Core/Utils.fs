@@ -96,6 +96,7 @@ type MaybeBuilder () =
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
+    let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
     let inline debug msg = Printf.kprintf System.Diagnostics.Debug.WriteLine msg
     let inline fail msg = Printf.kprintf System.Diagnostics.Debug.Fail msg
     let maybe = MaybeBuilder()
