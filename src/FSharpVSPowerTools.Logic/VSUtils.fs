@@ -190,7 +190,7 @@ type Project with
     member x.GetReferencedProjects() = 
         (x.Object :?> VSProject).References
         |> Seq.cast<Reference>
-        |> Seq.map (fun r -> r.ContainingProject)
+        |> Seq.choose (fun r -> Option.ofNull r.SourceProject)
         |> Seq.filter isFSharpProject
         |> Seq.toList
 

@@ -49,8 +49,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 | ps -> for p in ps do yield! doProject p
             }
 
-        seq { for refProject in forProject.GetReferencedProjects() do
-                yield! doProject refProject }
+        seq { match forProject.GetReferencedProjects() with
+              | [] -> yield! doProject forProject
+              | refs -> for refProject in refs do yield! doProject refProject }
         |> Seq.distinctBy (fun p -> p.UniqueName) 
         |> Seq.toList
 
