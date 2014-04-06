@@ -125,7 +125,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         | None -> 
                             return ()
                     else
-                        return msgboxErr Resource.renameErrorMessage
+                        return msgboxError Resource.renameErrorMessage
                 | _ ->
                     return ()
             } |> Async.StartImmediate

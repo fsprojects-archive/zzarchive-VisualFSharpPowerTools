@@ -81,10 +81,10 @@ type FormatCommand(getConfig: Func<FormatConfig>) as self =
             true
         with
             | :? Fantomas.FormatConfig.FormatException as ex ->
-                msgboxErr ex.Message
+                msgboxError ex.Message
                 false
             | ex ->
-                msgboxErr (Resource.formattingErrorMessage + ex.Message)
+                msgboxError (Resource.formattingErrorMessage + ex.Message)
                 false
 
     abstract GetFormatted: isSignatureFile: bool * source: string * config: Fantomas.FormatConfig.FormatConfig -> string
