@@ -18,22 +18,18 @@ type DepthRegionTag(info: int * int * int * int) =
     // because we might have range info for indent coloring on a blank line, and there are no chars to tag there, so we put a tag in column 0 and carry all this info as metadata
     member x.Info = info
 
+[<NoComparison>]
+type private DepthTaggerState =
+    { Snapshot: ITextSnapshot
+      Tags: ITagSpan<DepthRegionTag>[]
+      Results: (ITrackingSpan * (int * int * int * int)) list }
+
 type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: VSLanguageService) as self =
     // computed periodically on a background thread
-    let mutable results: _ [] = [||]
-    let resultsLock = obj() // lock for reading/writing "results"
+    let lastResults = Atom []
     // only updated on the UI thread in the GetTags method
-    let mutable prevTags: ITagSpan<DepthRegionTag> [] = null
-    let mutable prevSnapshot = null
-    let mutable prevResults = null
-    // for the event
-    let tagsChangedEvent = new Event<EventHandler<SnapshotSpanEventArgs>, SnapshotSpanEventArgs>()
-    
-    // was once useful for debugging
-    let trace s = 
-        let ticks = System.DateTime.Now.Ticks
-        System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
-        ()
+    let mutable state = None
+    let tagsChanged = Event<_,_>()
     
     let refreshFileImpl() = 
         async { 
@@ -44,29 +40,31 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
                 do! Async.SwitchToThreadPool()
                 let! ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService.Checker)
                 do! Async.SwitchToContext(syncContext)
-                let tempResults = new ResizeArray<_>()
-                for (line, sc, ec, _d) as info in ranges do
-                    try 
-                        //System.Diagnostics.Debug.WriteLine("{0},{1},{2},{3}", line, sc, ec, d)
-                        // -1 because F# reports 1-based line nums, whereas VS wants 0-based
-                        let startLine = snapshot.GetLineFromLineNumber(Math.Min(line - 1, snapshot.LineCount - 1))
-                        let start = startLine.Start.Add(Math.Min(sc, startLine.Length))
-                        let endLine = snapshot.GetLineFromLineNumber(Math.Min(line - 1, snapshot.LineCount - 1))
-                        let end_ = endLine.Start.Add(Math.Min(ec, endLine.Length))
-                        let span = 
-                            snapshot.CreateTrackingSpan
-                                ((new SnapshotSpan(start, end_)).Span, SpanTrackingMode.EdgeExclusive)
-                        tempResults.Add(Tuple.Create(span, info))
-                    with e -> 
-                        System.Diagnostics.Debug.WriteLine(e)
-                        if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
-                lock (resultsLock) (fun () -> 
-                    results <- Array.create tempResults.Count (null, (0, 0, 0, 0))
-                    tempResults.CopyTo(results))
-                trace ("firing tagschanged")
-                tagsChangedEvent.Trigger(self, new SnapshotSpanEventArgs(new SnapshotSpan(snapshot, 0, snapshot.Length)))
+
+                let newResults =
+                    ranges 
+                    |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
+                        try 
+                            // -1 because F# reports 1-based line nums, whereas VS wants 0-based
+                            let startLine = snapshot.GetLineFromLineNumber (min (line - 1) (snapshot.LineCount - 1))
+                            let startPoint = startLine.Start.Add (min startCol startLine.Length)
+                            let endLine = snapshot.GetLineFromLineNumber (min (line - 1) (snapshot.LineCount - 1))
+                            let endPoint = endLine.Start.Add (min endCol endLine.Length)
+                            let trackingSpan = 
+                                snapshot.CreateTrackingSpan
+                                    (SnapshotSpan(startPoint, endPoint).Span, SpanTrackingMode.EdgeExclusive)
+                            (trackingSpan, info) :: res
+                        with e -> 
+                            debug "%O" e
+                            if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
+                            res) []
+                    |> List.rev
+
+                lastResults.Swap (fun _ -> newResults) |> ignore
+                debug "[DepthTagger] Firing tagschanged"
+                tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))
             with e -> 
-                System.Diagnostics.Debug.WriteLine(e)
+                debug "%O" e
                 if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
         }
         |> Async.StartImmediate
@@ -74,19 +72,22 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 500us, refreshFileImpl) 
     
     interface ITagger<DepthRegionTag> with
-        
-        member x.GetTags(spans) = 
-            let ss = spans.[0].Snapshot
-            // note: accessing 'results' on line below outside the lock.  in theory we could have stale result cached and neglect to update,
-            // but in practice this is extremely unlikely to happen, and is easily recoverable (e.g. by the user typing a new char into the buffer).
-            if not (obj.ReferenceEquals(ss, prevSnapshot)) || not (obj.ReferenceEquals(prevResults, results)) then 
-                trace ("computing fresh results")
-                prevSnapshot <- ss
-                lock (resultsLock) (fun () -> prevResults <- results)
-                prevTags <- [| for span, depth in prevResults do
-                                   yield upcast new TagSpan<DepthRegionTag>(span.GetSpan(ss), new DepthRegionTag(depth)) |]
-            else trace ("using cached results")
-            upcast prevTags
+        member x.GetTags spans = 
+            let tags = 
+                match spans |> Seq.toList, state with
+                | [], _ -> [||]
+                | firstSpan :: _, Some state 
+                    when state.Snapshot === firstSpan.Snapshot && state.Results === lastResults.Value ->
+                    debug "[DepthTagger] Using cached results"
+                    state.Tags
+                | firstSpan :: _, _ ->
+                    debug "[DepthTagger] Computing fresh results"
+                    let snapshot = firstSpan.Snapshot
+                    let tags = [| for span, depth in lastResults.Value ->
+                                      TagSpan(span.GetSpan(snapshot), DepthRegionTag(depth)) :> ITagSpan<_> |]
+                    state <- Some { Snapshot = snapshot; Tags = tags; Results = lastResults.Value }
+                    tags
+            upcast tags
         
         [<CLIEvent>]
-        member x.TagsChanged = tagsChangedEvent.Publish
+        member x.TagsChanged = tagsChanged.Publish
