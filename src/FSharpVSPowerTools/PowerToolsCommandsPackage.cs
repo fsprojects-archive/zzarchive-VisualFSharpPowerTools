@@ -41,6 +41,18 @@ namespace FSharpVSPowerTools
 
         private ClassificationColorManager classificationColorManager;
 
+        private void SetupMenu()
+        {
+            OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+            
+            if (mcs != null)
+            {
+                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
+                newFolderMenu.SetupCommands();
+            }
+        }
+
         protected override void Initialize()
         {
             base.Initialize();
@@ -60,16 +72,7 @@ namespace FSharpVSPowerTools
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
 
-            OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
-            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
-            var logger = new Logger(ServiceProvider.GlobalProvider);
-
-            if (mcs != null)
-            {
-                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
-                newFolderMenu.SetupCommands();
-            }
-
+            SetupMenu();
         }
 
         public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)

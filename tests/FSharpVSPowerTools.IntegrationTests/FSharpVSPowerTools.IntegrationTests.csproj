@@ -72,6 +72,7 @@
     <Compile Include="IntegrationTestLibrary\NativeMethods.cs" />
     <Compile Include="IntegrationTestLibrary\Utils.cs" />
     <Compile Include="SignOffTests\CPPProjectTests.cs" />
+    <Compile Include="SignOffTests\FSharpProjectTests.cs" />
     <Compile Include="SignOffTests\CSharpProjectTests.cs" />
     <Compile Include="SignOffTests\SolutionTests.cs" />
     <Compile Include="SignOffTests\VBProjectTests.cs" />
