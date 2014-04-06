@@ -186,6 +186,14 @@ type ProjectItem with
         | Some p -> p
         | None -> raise(new ArgumentException("name"))
 
+type Project with
+    member x.GetReferencedProjects() = 
+        (x.Object :?> VSProject).References
+        |> Seq.cast<Reference>
+        |> Seq.map (fun r -> r.ContainingProject)
+        |> Seq.filter isFSharpProject
+        |> Seq.toList
+
 let inline ensureSucceded hr = 
     ErrorHandler.ThrowOnFailure hr
     |> ignore

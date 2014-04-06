@@ -6,6 +6,7 @@ open System.Diagnostics
 open EnvDTE
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
+open VSLangProj
 
 type IProjectProvider =
     abstract ProjectFileName: string
@@ -59,6 +60,16 @@ module ProjectProvider =
                 | Some getter -> getter
             fun() -> getter underlyingProject
 
+        let references = 
+            (project.Object :?> VSProject).References
+            |> Seq.cast<Reference>
+            // Somethimes references are empty strings
+            |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
+            // Since project references are resolved automatically, we include it here
+            // Path.GetFullPath will escape path strings correctly
+            |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
+            |> Seq.toArray
+
         interface IProjectProvider with
             member x.ProjectFileName = projectFileName
 
@@ -82,8 +93,9 @@ module ProjectProvider =
 
             member x.CompilerOptions = 
                 match getSourcesAndFlags() with
-                | Some(_, flags) -> flags
+                | Some(_, flags) -> flags |> Array.append references
                 | _ -> [||]
+
             member x.SourceFiles = 
                 match getSourcesAndFlags() with
                 | Some(sources, _) -> sources

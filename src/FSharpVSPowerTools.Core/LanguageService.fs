@@ -230,14 +230,14 @@ type LanguageService (dirtyNotify) =
           // We are in a project - construct options using current properties
             //Debug.WriteLine (sprintf "GetProjectCheckerOptions: Creating for project '%s'" projFilename )
 
-            {ProjectFileName = projFilename
-             ProjectFileNames = files
-             ProjectOptions = args
-             IsIncompleteTypeCheckEnvironment = false
-             UseScriptResolutionRules = false   
-             LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
-             UnresolvedReferences = None
-             ReferencedProjects = [||] } 
+            { ProjectFileName = projFilename
+              ProjectFileNames = files
+              ProjectOptions = args
+              IsIncompleteTypeCheckEnvironment = false
+              UseScriptResolutionRules = false
+              LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
+              UnresolvedReferences = None
+              ReferencedProjects = [||] }
 
         // Print contents of check option for debugging purposes
         //Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
