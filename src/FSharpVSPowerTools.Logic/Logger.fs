@@ -4,7 +4,7 @@ open System
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools.ProjectSystem.VSUtils
+open FSharpVSPowerTools.ProjectSystem
 
 type LogType =
     | Information
