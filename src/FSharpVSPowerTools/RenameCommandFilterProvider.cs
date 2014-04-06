@@ -9,8 +9,9 @@ using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.ProjectSystem;
+using FSharpVSPowerTools.Refactoring;
 
-namespace FSharpVSPowerTools.Refactoring
+namespace FSharpVSPowerTools
 {
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
@@ -26,20 +27,13 @@ namespace FSharpVSPowerTools.Refactoring
         [Import(typeof(SVsServiceProvider))]
         private System.IServiceProvider serviceProvider = null;
 
-        [Import(typeof(Logger))]
-        private Logger logger = null;
-
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
             var textView = editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.RenameRefactoringEnabled)
-            {
-                logger.Log(LogType.Information, "Rename Refactoring feature is disabled in General option page.");
-                return;
-            }
+            if (!generalOptions.RenameRefactoringEnabled) return;
 
             AddCommandFilter(textViewAdapter, new RenameCommandFilter(textView, fsharpVsLanguageService, serviceProvider));
         }

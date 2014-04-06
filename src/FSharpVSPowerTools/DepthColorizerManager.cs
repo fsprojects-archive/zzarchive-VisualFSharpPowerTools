@@ -30,19 +30,12 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         private IServiceProvider serviceProvider = null;
 
-        [Import]
-        private Logger logger = null;
-
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             ITextDocument doc;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.DepthColorizerEnabled)
-            {
-                logger.Log(LogType.Information, "Depth Colorizer feature is disabled in General option page.");
-                return null;
-            }
+            if (!generalOptions.DepthColorizerEnabled) return null;
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
@@ -69,19 +62,12 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         private IServiceProvider serviceProvider = null;
 
-        [Import]
-        private Logger logger = null;
-
         public void TextViewCreated(IWpfTextView textView)
         {
             if (textView == null) return;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.DepthColorizerEnabled)
-            {
-                logger.Log(LogType.Information, "[Depth Colorizer] The feature is disabled in General option page.");
-                return;
-            }
+            if (!generalOptions.DepthColorizerEnabled) return;
 
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
             new FullLineAdornmentManager(textView, tagAggregator, serviceProvider);

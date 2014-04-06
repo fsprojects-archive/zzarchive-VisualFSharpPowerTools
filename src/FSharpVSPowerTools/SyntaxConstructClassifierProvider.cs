@@ -199,7 +199,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpReferenceType)]
         [Name(ClassificationTypes.FSharpReferenceType)]
         [UserVisible(true)]
-        sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
+        internal sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpReferenceTypeFormat(ClassificationColorManager colorManager)
@@ -215,7 +215,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpValueType)]
         [Name(ClassificationTypes.FSharpValueType)]
         [UserVisible(true)]
-        sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
+        internal sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpValueTypeFormat(ClassificationColorManager colorManager)
@@ -231,7 +231,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpPatternCase)]
         [Name(ClassificationTypes.FSharpPatternCase)]
         [UserVisible(true)]
-        sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
+        internal sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpPatternCaseFormat(ClassificationColorManager colorManager)
@@ -247,7 +247,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpFunction)]
         [Name(ClassificationTypes.FSharpFunction)]
         [UserVisible(true)]
-        sealed class FSharpFunctionFormat : ClassificationFormatDefinition
+        internal sealed class FSharpFunctionFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpFunctionFormat(ClassificationColorManager colorManager)
@@ -263,7 +263,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpMutableVar)]
         [Name(ClassificationTypes.FSharpMutableVar)]
         [UserVisible(true)]
-        sealed class FSharpMutableVarFormat : ClassificationFormatDefinition
+        internal sealed class FSharpMutableVarFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpMutableVarFormat(ClassificationColorManager colorManager)
@@ -279,7 +279,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpQuotation)]
         [Name(ClassificationTypes.FSharpQuotation)]
         [UserVisible(true)]
-        sealed class FSharpQuotationFormat : ClassificationFormatDefinition
+        internal sealed class FSharpQuotationFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpQuotationFormat(ClassificationColorManager colorManager)
@@ -296,7 +296,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpModule)]
         [Name(ClassificationTypes.FSharpModule)]
         [UserVisible(true)]
-        sealed class FSharpModuleFormat : ClassificationFormatDefinition
+        internal sealed class FSharpModuleFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpModuleFormat(ClassificationColorManager colorManager)
@@ -322,8 +322,6 @@ namespace FSharpVSPowerTools
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
 
-        [Import]
-        private Logger logger = null;
         
         [Import]
         private ITextDocumentFactoryService textDocumentFactoryService = null;
@@ -331,11 +329,7 @@ namespace FSharpVSPowerTools
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.SyntaxColoringEnabled)
-            {
-                logger.Log(LogType.Information, "Syntax Coloring feature is disabled in General option page.");
-                return null;
-            }
+            if (!generalOptions.SyntaxColoringEnabled) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
