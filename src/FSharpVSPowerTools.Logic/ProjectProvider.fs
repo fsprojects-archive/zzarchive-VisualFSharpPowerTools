@@ -18,7 +18,9 @@ type IProjectProvider =
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
-    abstract GetLeafDependentProjects: DependentProjects -> ProjectDescription list
+    abstract GetLeafDependentProjects: DTE -> DependentProjects -> ProjectDescription list
+     
+type UniqueProjectName = string
 
 module ProjectProvider =
     open System.Reflection
@@ -65,6 +67,16 @@ module ProjectProvider =
                 | Some getter -> getter
             fun() -> getter underlyingProject
 
+        let getActiveConfigProperty (tag: string) =
+            let prop = try project.ConfigurationManager.ActiveConfiguration.Properties.[tag] with _ -> null
+            match prop with
+            | null -> null
+            | _ -> try prop.Value.ToString() with _ -> null
+
+        let getOutputFilePath() =
+            let outputPath = getActiveConfigProperty "OutputPath"
+            outputPath
+
 //        let references = 
 //            (project.Object :?> VSProject).References
 //            |> Seq.cast<Reference>
@@ -74,6 +86,28 @@ module ProjectProvider =
 //            // Path.GetFullPath will escape path strings correctly
 //            |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
 //            |> Seq.toArray
+
+        let getLeafProjects (dte: DTE) (topProjects: Project list) : Set<UniqueProjectName> * Project list =
+            let allProjects = 
+                dte.Solution.Projects
+                |> Seq.cast<Project>
+                |> Seq.filter isFSharpProject
+                |> Seq.toList
+
+            let getProjectsReferenceThis (project: Project) =
+                allProjects
+                |> List.filter (fun p -> 
+                    p.UniqueName <> project.UniqueName 
+                    && p.GetReferencedProjects() |> List.exists (fun p -> p.UniqueName = project.UniqueName))
+
+            let rec doProject (seen: Set<string>, leafs: Project list) (project: Project) : Set<UniqueProjectName> * Project list =
+                let seen = seen |> Set.add project.UniqueName
+                match getProjectsReferenceThis project with
+                | [] -> seen, [project]
+                | ps -> ps |> List.fold doProject (seen, leafs)
+
+            let seenProjects, leafProjects = topProjects |> List.fold doProject (Set.empty, [])
+            seenProjects, leafProjects |> Seq.distinctBy (fun p -> p.UniqueName) |> Seq.toList
 
         let compilerOptions() = 
             match getSourcesAndFlags() with
@@ -100,23 +134,38 @@ module ProjectProvider =
                         | _ -> invalidArg "prop" "Unsupported .NET framework version" 
                     with :? ArgumentException -> FSharpTargetFramework.NET_4_5
 
+        member x.GetDescription (referencesToInclude: Set<UniqueProjectName>) =
+            { ProjectFile = projectFileName
+              Files = sourceFiles()
+              OutputFile = getOutputFilePath()
+              CompilerOptions = compilerOptions()
+              Framework = targetFramework()
+              References = 
+                if Set.isEmpty referencesToInclude then []
+                else
+                    project.GetReferencedProjects()
+                    |> List.choose (fun (refp: Project) -> 
+                        if referencesToInclude |> Set.contains refp.UniqueName 
+                        then Some (ProjectProvider(refp).GetDescription referencesToInclude)
+                        else None) }
+
         interface IProjectProvider with
             member x.ProjectFileName = projectFileName
             member x.TargetFramework = targetFramework()
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
 
-            member x.GetLeafDependentProjects dependentProjects =
-                match dependentProjects with
-                | No ->
-                    [ { ProjectFile = projectFileName
-                        Files = sourceFiles()
-                        OutputFile = null
-                        CompilerOptions = compilerOptions()
-                        Framework = targetFramework()
-                        References = [] } ]
-                | Simple | References -> []
+            member x.GetLeafDependentProjects dte dependentProjects =
+                let seenNames, leafProjects =
+                    match dependentProjects with
+                    | No -> Set.empty, [project]
+                    | Simple -> getLeafProjects dte [project]
+                    | References -> getLeafProjects dte (project.GetReferencedProjects())
                     
+                let res = leafProjects |> List.map (fun p -> ProjectProvider(p).GetDescription seenNames)
+                debug "!-!-! GetLeafDependentProjects: SeenProjects: %A, Leafs: %A, Result: %A"
+                      seenNames (leafProjects |> List.map (fun p -> p.UniqueName)) res
+                res
 
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
@@ -129,7 +178,7 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework
             member x.CompilerOptions = compilerOptions
             member x.SourceFiles = files
-            member x.GetLeafDependentProjects _ =
+            member x.GetLeafDependentProjects _ _ =
                 [ { ProjectFile = null
                     Files = files
                     OutputFile = null

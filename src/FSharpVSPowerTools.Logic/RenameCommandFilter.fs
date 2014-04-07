@@ -29,39 +29,13 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 
-    let getLeafProjects (dte: EnvDTE.DTE) (forProject: EnvDTE.Project) =
-        let allProjects = 
-            dte.Solution.Projects
-            |> Seq.cast<EnvDTE.Project>
-            |> Seq.filter isFSharpProject
-            |> Seq.toList
-
-        let getProjectsReferenceThis (project: EnvDTE.Project) =
-            allProjects
-            |> List.filter (fun p -> 
-                p.UniqueName <> project.UniqueName 
-                && p.GetReferencedProjects() |> List.exists (fun p -> p.UniqueName = project.UniqueName))
-
-        let rec doProject (project: EnvDTE.Project) =
-            seq {
-                match getProjectsReferenceThis project with
-                | [] -> yield project
-                | ps -> for p in ps do yield! doProject p
-            }
-
-        seq { match forProject.GetReferencedProjects() with
-              | [] -> yield! doProject forProject
-              | refs -> for refProject in refs do yield! doProject refProject }
-        |> Seq.distinctBy (fun p -> p.UniqueName) 
-        |> Seq.toList
-
     let canRename() = 
         let s =
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let leafProjects = getLeafProjects dte (dte.GetActiveDocument().Value.ProjectItem.ContainingProject)
-                leafProjects |> List.map (fun p -> p.UniqueName) |> debug "Leaf dependent projects: %A"
+                //let leafProjects = getLeafProjects dte (dte.GetActiveDocument().Value.ProjectItem.ContainingProject)
+                //leafProjects |> List.map (fun p -> p.UniqueName) |> debug "Leaf dependent projects: %A"
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
@@ -121,7 +95,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                             filePath = state.File || state.Project.SourceFiles |> Array.exists ((=) filePath)
                         | _ -> false
 
-                    if isSymbolDeclaredInCurrentProject then
+                    if true then //isSymbolDeclaredInCurrentProject then
                         let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
                         let wnd = UI.loadRenameDialog model
                         let hostWnd = Window.GetWindow(view.VisualElement)
