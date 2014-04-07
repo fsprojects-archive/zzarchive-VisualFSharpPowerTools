@@ -7,22 +7,61 @@ open EnvDTE
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
 open VSLangProj
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type DependentProjects =
+[<RequireQualifiedAccess>]
+type ProjectDependencies =
     | No
     | Simple
     | References
 
 type UniqueProjectName = string
+type FilePath = string
+
+type ProjectDescription =
+    { ProjectFile: FilePath
+      Files: FilePath[]
+      OutputFile: FilePath
+      CompilerOptions: string[]
+      Framework: FSharpTargetFramework
+      References: ProjectDescription list }
+    member x.GetProjectCheckerOptions() =
+        { ProjectFileName = x.ProjectFile
+          ProjectFileNames = x.Files
+          ProjectOptions = 
+              x.CompilerOptions 
+              |> Array.append (
+                  x.References 
+                  |> List.map (fun (r: ProjectDescription) -> "-r:" + r.OutputFile) 
+                  |> List.toArray)
+          IsIncompleteTypeCheckEnvironment = false
+          UseScriptResolutionRules = false
+          LoadTime = fakeDateTimeRepresentingTimeLoaded x.ProjectFile
+          UnresolvedReferences = None
+          ReferencedProjects = 
+              x.References 
+              |> List.map (fun r -> r.OutputFile, r.GetProjectCheckerOptions()) |> List.toArray }
+
+[<RequireQualifiedAccess>]
+type SymbolScope = 
+        | File
+        | Project
+        | Solution 
 
 type IProjectProvider =
     abstract ProjectFileName: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
-    abstract GetDescription: referencesToInclude: Set<UniqueProjectName> -> ProjectDescription
-    abstract GetDependentProjects: DTE -> DependentProjects -> ProjectDescription list
-     
+    abstract GetDescription: ?referencesToInclude: Set<UniqueProjectName> -> ProjectDescription
+    abstract GetDependentProjects: DTE -> ProjectDependencies -> ProjectDescription list
+    abstract GetSymbolScope: FSharpSymbol -> DTE -> FilePath -> SymbolScope option
+
+[<AutoOpen>]
+module FSharpSymbolExtensions =
+    type FSharpSymbol with
+        member x.TryGetLocation() = Option.orElse x.ImplementationLocation x.DeclarationLocation
+
 module ProjectProvider =
     open System.Reflection
     
@@ -83,7 +122,7 @@ module ProjectProvider =
                 | outputPath ->
                     Path.Combine (currentDir, outputPath, fileName)
 
-        let getProjectGraph (dte: DTE) (topProjects: Project list) : Project list =
+        let getDependentProjects (dte: DTE) (topProjects: Project list) : Project list =
             let allProjects = 
                 dte.Solution.Projects
                 |> Seq.cast<Project>
@@ -96,18 +135,16 @@ module ProjectProvider =
                     p.UniqueName <> project.UniqueName 
                     && p.GetReferencedProjects() |> List.exists (fun p -> p.UniqueName = project.UniqueName))
 
-            let rec doProject (seen: Map<UniqueProjectName, Project>, leafs: Project list) (project: Project) 
-                    : Map<UniqueProjectName, Project> * Project list =
-                
-                let seen = seen |> Map.add project.UniqueName project
+            let rec getAllProjectsAndLeafs (allProjects, leafs) (project: Project) =
+                let allProjects = allProjects |> Map.add project.UniqueName project
                 match getProjectsReferenceThis project with
-                | [] -> seen, [project]
-                | ps -> ps |> List.fold doProject (seen, leafs)
+                | [] -> allProjects, [project]
+                | projects -> projects |> List.fold getAllProjectsAndLeafs (allProjects, leafs)
 
-            let seenProjects, _leafProjects = topProjects |> List.fold doProject (Map.empty, [])
-            // we don't use leafProject for now as it seems there's a bug in FCS which causes us to 
+            let allDependentProjects, _leafProjects = topProjects |> List.fold getAllProjectsAndLeafs (Map.empty, [])
+            // we don't use leafProject for now as it seems there's a bug in FCS which forces us to 
             // check the entire projects graph instead of the leafs only
-            seenProjects |> Map.toSeq |> Seq.map snd |> Seq.toList
+            allDependentProjects |> Map.toSeq |> Seq.map snd |> Seq.toList
 
         let compilerOptions() = 
             match getSourcesAndFlags() with
@@ -134,7 +171,7 @@ module ProjectProvider =
                         | _ -> invalidArg "prop" "Unsupported .NET framework version" 
                     with :? ArgumentException -> FSharpTargetFramework.NET_4_5
 
-        member x.GetDescription (referencesToInclude: Set<UniqueProjectName>) =
+        let rec getDescription (referencesToInclude: Set<UniqueProjectName>) =
             { ProjectFile = projectFileName
               Files = sourceFiles()
               OutputFile = getOutputFilePath()
@@ -146,7 +183,9 @@ module ProjectProvider =
                     project.GetReferencedProjects()
                     |> List.choose (fun (refp: Project) -> 
                         if referencesToInclude |> Set.contains refp.UniqueName 
-                        then Some (ProjectProvider(refp).GetDescription referencesToInclude)
+                        then
+                            let refProjectProvider = ProjectProvider(refp) :> IProjectProvider
+                            Some (refProjectProvider.GetDescription referencesToInclude)
                         else None) }
 
         interface IProjectProvider with
@@ -154,23 +193,48 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework()
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
-            member x.GetDescription (referencesToInclude: Set<UniqueProjectName>) = x.GetDescription referencesToInclude
+            member x.GetDescription (?referencesToInclude) = getDescription (defaultArg referencesToInclude Set.empty)
 
-            member x.GetDependentProjects dte dependentProjects =
+            member x.GetDependentProjects dte dependencies =
                 let projectGraph =
-                    match dependentProjects with
-                    | DependentProjects.No -> [project]
-                    | DependentProjects.Simple -> getProjectGraph dte [project]
-                    | DependentProjects.References -> 
+                    match dependencies with
+                    | ProjectDependencies.No -> [project]
+                    | ProjectDependencies.Simple -> getDependentProjects dte [project]
+                    | ProjectDependencies.References -> 
                         match project.GetReferencedProjects() with
                         | [] -> [project]
                         | xs -> xs
-                        |> getProjectGraph dte
+                        |> getDependentProjects dte
                     
                 let projectNames = projectGraph |> List.map (fun p -> p.UniqueName) |> Set.ofList
-                let res = projectGraph |> List.map (fun p -> ProjectProvider(p).GetDescription projectNames)
+                let res = projectGraph |> List.map (fun p -> (ProjectProvider(p) :> IProjectProvider).GetDescription projectNames)
                 debug "!-!-! GetLeafDependentProjects: ProjectGraph: %A, Result: %A" projectNames res
                 res
+
+            member x.GetSymbolScope (symbol: FSharpSymbol) (dte: EnvDTE.DTE) (file: string) =
+                let isPrivateToFile = 
+                    match symbol with 
+                    | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || m.Accessibility.IsPrivate
+                    | :? FSharpEntity as m -> m.Accessibility.IsPrivate
+                    | :? FSharpGenericParameter -> true
+                    | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
+                    | :? FSharpField as m -> m.Accessibility.IsPrivate
+                    | _ -> false
+                if isPrivateToFile then Some SymbolScope.File 
+                else 
+                    match symbol.TryGetLocation() with
+                    | Some loc ->
+                        let filePath = Path.GetFullPath loc.FileName
+                        if filePath = file || sourceFiles() |> Array.exists ((=) filePath) then Some SymbolScope.Project
+                        else 
+                            let inSolution = 
+                                (x :> IProjectProvider).GetDependentProjects dte ProjectDependencies.References
+                                |> List.map (fun (p: ProjectDescription) -> p.Files)
+                                |> Seq.concat
+                                |> Seq.exists ((=) filePath)
+                            if inSolution then Some SymbolScope.Solution
+                            else None
+                    | _ -> None
 
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
@@ -192,6 +256,7 @@ module ProjectProvider =
             member x.SourceFiles = files
             member x.GetDescription _ = description
             member x.GetDependentProjects _ _ = [ description ]
+            member x.GetSymbolScope _ _ _ = Some SymbolScope.File
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 

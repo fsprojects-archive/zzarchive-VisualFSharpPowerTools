@@ -88,20 +88,11 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
-                    let isSymbolDeclaredInCurrentSolution =
-                        match vsLanguageService.TryGetLocation fsSymbolUse.Symbol with
-                        | Some loc ->
-                            let filePath = Path.GetFullPath loc.FileName
-                            if filePath = state.File || state.Project.SourceFiles |> Array.exists ((=) filePath) then true
-                            else 
-                                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                                state.Project.GetDependentProjects dte DependentProjects.References
-                                |> List.map (fun (p: ProjectDescription) -> p.Files)
-                                |> Seq.concat
-                                |> Seq.exists ((=) filePath)
-                        | _ -> false
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let symbolScope = state.Project.GetSymbolScope fsSymbolUse.Symbol dte state.File
 
-                    if isSymbolDeclaredInCurrentSolution then
+                    match symbolScope with
+                    | Some scope  ->
                         let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
                         let wnd = UI.loadRenameDialog model
                         let hostWnd = Window.GetWindow(view.VisualElement)
@@ -111,11 +102,12 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         match res with
                         | Some _ -> 
                             let! results =
-                                match fsSymbolUse.Symbol.Scope with
-                                | File -> 
-                                    vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
-                                | Project -> 
-                                    vsLanguageService.FindUsages (cw, state.File, state.Project) 
+                                match scope with
+                                | SymbolScope.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
+                                | SymbolScope.Project -> 
+                                    vsLanguageService.FindUsages (cw, state.File, state.Project, ProjectDependencies.Simple)
+                                | SymbolScope.Solution -> 
+                                    vsLanguageService.FindUsages (cw, state.File, state.Project, ProjectDependencies.References)
                             let usages =
                                 results
                                 |> Option.map (fun (symbol, lastIdent, refs) -> 
@@ -132,8 +124,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                                 return ()
                         | None -> 
                             return ()
-                    else
-                        return messageBoxError Resource.renameErrorMessage
+                    | _ -> return messageBoxError Resource.renameErrorMessage
                 | _ ->
                     return ()
             } |> Async.StartImmediate
