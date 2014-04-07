@@ -8,36 +8,18 @@ using EnvDTE;
 using System.IO;
 using Microsoft.VsSDK.IntegrationTestLibrary;
 
-
 namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
 {
     [TestClass]
     public class SolutionTests
     {
-        #region fields
         private delegate void ThreadInvoker();
-        private TestContext _testContext;
-        #endregion
 
-        #region properties
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get { return _testContext; }
-            set { _testContext = value; }
-        }
-        #endregion
-
-
-        #region ctors
-        public SolutionTests()
-        {
-        }
-
-        #endregion
+        public TestContext TestContext { get; set; }
 
         [TestMethod]
         [HostType("VS IDE")]
@@ -45,11 +27,9 @@ namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
         {
             UIThreadInvoker.Invoke((ThreadInvoker)delegate()
             {
-                TestUtils testUtils = new TestUtils();
-                testUtils.CloseCurrentSolution(__VSSLNSAVEOPTIONS.SLNSAVEOPT_NoSave);
-                testUtils.CreateEmptySolution(TestContext.TestDir, "EmptySolution");
+                TestUtils.CloseCurrentSolution(__VSSLNSAVEOPTIONS.SLNSAVEOPT_NoSave);
+                TestUtils.CreateEmptySolution(TestContext.TestDir, "EmptySolution");
             });
         }
-
     }
 }

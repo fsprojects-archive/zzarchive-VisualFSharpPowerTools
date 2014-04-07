@@ -26,13 +26,13 @@ namespace FSharpVSPowerTools.Tests
         [TestMethod()]
         public void CreateInstance()
         {
-            PowerToolsCommandsPackage package = new PowerToolsCommandsPackage();
+            var package = new PowerToolsCommandsPackage();
         }
 
         [TestMethod()]
         public void IsIVsPackage()
         {
-            PowerToolsCommandsPackage package = new PowerToolsCommandsPackage();
+            var package = new PowerToolsCommandsPackage();
             Assert.IsNotNull(package as IVsPackage, "The object does not implement IVsPackage");
         }
 
@@ -40,13 +40,13 @@ namespace FSharpVSPowerTools.Tests
         public void SetSite()
         {
             // Create the package
-            IVsPackage package = new PowerToolsCommandsPackage() as IVsPackage;
+            var package = new PowerToolsCommandsPackage() as IVsPackage;
             Assert.IsNotNull(package, "The object does not implement IVsPackage");
 
             // Create a basic service provider
-            OleServiceProvider serviceProvider = OleServiceProvider.CreateOleServiceProviderWithBasicServices();
+            var serviceProvider = OleServiceProvider.CreateOleServiceProviderWithBasicServices();
 
-            BaseMock activityLogMock =
+            var activityLogMock =
                 new GenericMockFactory(
                     "MockVsActivityLog",
                     new[] { typeof(Microsoft.VisualStudio.Shell.Interop.IVsActivityLog) }

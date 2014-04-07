@@ -11,28 +11,13 @@ namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
     [TestClass]
     public class FSharpProjectTests
     {
-        #region fields
         private delegate void ThreadInvoker();
-        private TestContext _testContext;
-        #endregion
 
-        #region properties
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get { return _testContext; }
-            set { _testContext = value; }
-        }
-        #endregion
-
-        #region ctors
-        public FSharpProjectTests()
-        {
-        }
-        #endregion
+        public TestContext TestContext {get; set;}
 
         #region Additional test attributes
         //
@@ -63,39 +48,35 @@ namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
             UIThreadInvoker.Invoke((ThreadInvoker)delegate()
             {
                 //Solution and project creation parameters
-                string solutionName = "ConsoleApp";
-                string projectName = "ConsoleApp";
+                const string solutionName = "ConsoleApp";
+                const string projectName = "ConsoleApp";
 
                 //Template parameters
-                string language = "FSharp";
-                string projectTemplateName = "Console Application";
-                string itemTemplateName = "Source File";
-                string newFileName = "Test.fs";
+                const string language = "FSharp";
+                const string projectTemplateName = "Console Application";
+                const string itemTemplateName = "Source File";
+                const string newFileName = "Test.fs";
 
-                DTE dte = (DTE)VsIdeTestHostContext.ServiceProvider.GetService(typeof(DTE));
+                var dte = (DTE)VsIdeTestHostContext.ServiceProvider.GetService(typeof(DTE));
 
-                TestUtils testUtils = new TestUtils();
-
-                testUtils.CreateEmptySolution(TestContext.TestDir, solutionName);
-                Assert.AreEqual<int>(0, testUtils.ProjectCount());
+                TestUtils.CreateEmptySolution(TestContext.TestDir, solutionName);
+                Assert.AreEqual(0, TestUtils.ProjectCount());
 
                 //Add new  console application project to existing solution
-                testUtils.CreateProjectFromTemplate(projectName, projectTemplateName, language, exclusive:false);
+                TestUtils.CreateProjectFromTemplate(projectName, projectTemplateName, language, exclusive: false);
 
                 //Verify that the new project has been added to the solution
-                Assert.AreEqual<int>(1, testUtils.ProjectCount());
+                Assert.AreEqual(1, TestUtils.ProjectCount());
 
                 //Get the project
-                Project project = dte.Solution.Item(1);
+                var project = dte.Solution.Item(1);
                 Assert.IsNotNull(project);
                 Assert.IsTrue(string.Compare(project.Name, projectName, StringComparison.InvariantCultureIgnoreCase) == 0);
 
                 //Verify Adding new code file to project
-                ProjectItem newCodeFileItem = testUtils.AddNewItemFromVsTemplate(project.ProjectItems, itemTemplateName, language, newFileName);
+                var newCodeFileItem = TestUtils.AddNewItemFromVsTemplate(project.ProjectItems, itemTemplateName, language, newFileName);
                 Assert.IsNotNull(newCodeFileItem, "Could not create new project item");
-
             });
         }
-
     }
 }
