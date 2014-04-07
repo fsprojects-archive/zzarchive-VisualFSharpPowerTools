@@ -62,7 +62,6 @@ namespace FSharpVSPowerTools
 
             OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
-            var logger = new Logger(ServiceProvider.GlobalProvider);
 
             if (mcs != null)
             {

@@ -73,7 +73,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
-            debug "[Rename Refactoring] Error %O occurs while renaming symbols." e
+            logException e |> ignore
 
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
@@ -125,7 +125,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         | None -> 
                             return ()
                     else
-                        return msgboxErr Resource.renameErrorMessage
+                        return msgboxError Resource.renameErrorMessage
                 | _ ->
                     return ()
             } |> Async.StartImmediate

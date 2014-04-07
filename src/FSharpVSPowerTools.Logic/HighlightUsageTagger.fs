@@ -80,7 +80,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                             synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                     | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
-                    debug "[Highlight Usage] %O exception occurs while updating." e
+                    logException e |> ignore
                     synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             } |> Async.Start
 

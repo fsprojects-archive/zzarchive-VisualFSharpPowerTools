@@ -127,7 +127,6 @@ type NavigateToItemProviderFactory
                     props.["NavigateToEnabled"].Value :?> bool
                 with _ -> false
             if not navigateToEnabled then
-                debug "[NavigateTo] The feature is disabled in General option page."
                 provider <- null
                 false
             else
