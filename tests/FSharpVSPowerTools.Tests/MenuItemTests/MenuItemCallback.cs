@@ -19,6 +19,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools;
+using System.Reflection;
 
 namespace FSharpVSPowerTools.Tests.MenuItemTests
 {
@@ -33,49 +34,52 @@ namespace FSharpVSPowerTools.Tests.MenuItemTests
         public void InitializeMenuCommand()
         {
             // Create the package
-            IVsPackage package = new PowerToolsCommandsPackage() as IVsPackage;
+            var package = new PowerToolsCommandsPackage() as IVsPackage;
             Assert.IsNotNull(package, "The object does not implement IVsPackage");
 
+            var methodInfo = package.GetType().GetMethod("SetupMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(methodInfo, "Failed to get the protected method SetupMenu through reflection");
+            methodInfo.Invoke(package, null);
+
             // Create a basic service provider
-            OleServiceProvider serviceProvider = OleServiceProvider.CreateOleServiceProviderWithBasicServices();
+            var serviceProvider = OleServiceProvider.CreateOleServiceProviderWithBasicServices();
 
             // Site the package
             // Assert.AreEqual(0, package.SetSite(serviceProvider), "SetSite did not return S_OK");
 
             // Verify that the menu command can be found
-            CommandID menuCommandID = new CommandID(FSharpVSPowerTools.Refactoring.PkgCmdIDList.GuidBuiltinCmdSet,
-                                        (int)FSharpVSPowerTools.Refactoring.PkgCmdIDList.CmdidBuiltinRenameCommand);
-            System.Reflection.MethodInfo info = typeof(Package).GetMethod("GetService", BindingFlags.Instance | BindingFlags.NonPublic);
+            var menuCommandID = new CommandID(FSharpVSPowerTools.Folders.PkgCmdConst.guidNewFolderCmdSet,
+                                              (int)FSharpVSPowerTools.Folders.PkgCmdConst.cmdNewFolder);
+            var info = typeof(Package).GetMethod("GetService", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(info);
-            //OleMenuCommandService mcs = info.Invoke(package, new object[] { (typeof(IMenuCommandService)) }) as OleMenuCommandService;
-            //Assert.IsNotNull(mcs.FindCommand(menuCommandID));
+            var mcs = info.Invoke(package, new object[] { (typeof(IMenuCommandService)) }) as OleMenuCommandService;
+            Assert.IsNotNull(mcs.FindCommand(menuCommandID));
         }
 
         [TestMethod]
         public void MenuItemCallback()
         {
             // Create the package
-            IVsPackage package = new PowerToolsCommandsPackage() as IVsPackage;
+            var package = new PowerToolsCommandsPackage() as IVsPackage;
             Assert.IsNotNull(package, "The object does not implement IVsPackage");
 
             // Create a basic service provider
-            OleServiceProvider serviceProvider = OleServiceProvider.CreateOleServiceProviderWithBasicServices();
+            var serviceProvider = OleServiceProvider.CreateOleServiceProviderWithBasicServices();
 
             // Create a UIShell service mock and proffer the service so that it can called from the MenuItemCallback method
-            BaseMock uishellMock = UIShellServiceMock.GetUiShellInstance();
+            var uishellMock = UIShellServiceMock.GetUiShellInstance();
             serviceProvider.AddService(typeof(SVsUIShell), uishellMock, true);
 
             // Site the package
             // Assert.AreEqual(0, package.SetSite(serviceProvider), "SetSite did not return S_OK");
 
             //Invoke private method on package class and observe that the method does not throw
-            //System.Reflection.MethodInfo info = package.GetType().GetMethod("MenuItemCallback", BindingFlags.Instance | BindingFlags.NonPublic);
-            //Assert.IsNotNull(info, "Failed to get the private method MenuItemCallback through reflection");
-            //info.Invoke(package, new object[] { null, null });
+            var info = package.GetType().GetMethod("SetupMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(info, "Failed to get the protected method SetupMenu through reflection");
+            info.Invoke(package, null);
 
             //Clean up services
             serviceProvider.RemoveService(typeof(SVsUIShell));
-
         }
     }
 }
