@@ -80,7 +80,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                             synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                     | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
-                    logException e |> ignore
+                    logException e
                     synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             } |> Async.Start
 

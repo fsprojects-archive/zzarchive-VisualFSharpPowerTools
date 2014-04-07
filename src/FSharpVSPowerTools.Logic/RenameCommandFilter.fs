@@ -73,7 +73,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
-            logException e |> ignore
+            logException e
 
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
@@ -125,7 +125,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         | None -> 
                             return ()
                     else
-                        return msgboxError Resource.renameErrorMessage
+                        return messageBoxError Resource.renameErrorMessage
                 | _ ->
                     return ()
             } |> Async.StartImmediate
