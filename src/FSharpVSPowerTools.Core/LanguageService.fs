@@ -371,7 +371,7 @@ type LanguageService (dirtyNotify) =
                             let opts = x.GetProjectCheckerOptionsWithRefs p
                             let! projectResults = checker.ParseAndCheckProject opts
                             let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
-                            debug "GetUsesOfSymbol: Project = %s, Opts = %A, results = %A" p.ProjectFile opts refs
+                            debug "--> GetUsesOfSymbol: Project = %s, Opts = %A, Results = %A" p.ProjectFile opts refs
                             return refs })
                     |> Async.Parallel
                  let refs = Array.concat refs

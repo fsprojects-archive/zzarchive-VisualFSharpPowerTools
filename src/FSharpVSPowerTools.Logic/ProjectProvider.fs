@@ -83,7 +83,7 @@ module ProjectProvider =
                 | outputPath ->
                     Path.Combine (currentDir, outputPath, fileName)
 
-        let getLeafProjects (dte: DTE) (topProjects: Project list) : Set<UniqueProjectName> * Project list =
+        let getProjectGraph (dte: DTE) (topProjects: Project list) : Project list =
             let allProjects = 
                 dte.Solution.Projects
                 |> Seq.cast<Project>
@@ -96,14 +96,18 @@ module ProjectProvider =
                     p.UniqueName <> project.UniqueName 
                     && p.GetReferencedProjects() |> List.exists (fun p -> p.UniqueName = project.UniqueName))
 
-            let rec doProject (seen: Set<string>, leafs: Project list) (project: Project) : Set<UniqueProjectName> * Project list =
-                let seen = seen |> Set.add project.UniqueName
+            let rec doProject (seen: Map<UniqueProjectName, Project>, leafs: Project list) (project: Project) 
+                    : Map<UniqueProjectName, Project> * Project list =
+                
+                let seen = seen |> Map.add project.UniqueName project
                 match getProjectsReferenceThis project with
                 | [] -> seen, [project]
                 | ps -> ps |> List.fold doProject (seen, leafs)
 
-            let seenProjects, leafProjects = topProjects |> List.fold doProject (Set.empty, [])
-            seenProjects, leafProjects |> Seq.distinctBy (fun p -> p.UniqueName) |> Seq.toList
+            let seenProjects, leafProjects = topProjects |> List.fold doProject (Map.empty, [])
+            // we don't use leafProject for now as it seems there's a bug in FCS which causes us to 
+            // check the entire projects graph instead of the leafs only
+            seenProjects |> Map.toSeq |> Seq.map snd |> Seq.toList
 
         let compilerOptions() = 
             match getSourcesAndFlags() with
@@ -153,15 +157,19 @@ module ProjectProvider =
             member x.GetDescription (referencesToInclude: Set<UniqueProjectName>) = x.GetDescription referencesToInclude
 
             member x.GetLeafDependentProjects dte dependentProjects =
-                let seenNames, leafProjects =
+                let projectGraph =
                     match dependentProjects with
-                    | No -> Set.empty, [project]
-                    | Simple -> getLeafProjects dte [project]
-                    | References -> getLeafProjects dte (project.GetReferencedProjects())
+                    | DependentProjects.No -> [project]
+                    | DependentProjects.Simple -> getProjectGraph dte [project]
+                    | DependentProjects.References -> 
+                        match project.GetReferencedProjects() with
+                        | [] -> [project]
+                        | xs -> xs
+                        |> getProjectGraph dte
                     
-                let res = leafProjects |> List.map (fun p -> ProjectProvider(p).GetDescription seenNames)
-                debug "!-!-! GetLeafDependentProjects: SeenProjects: %A, Leafs: %A, Result: %A"
-                      seenNames (leafProjects |> List.map (fun p -> p.UniqueName)) res
+                let projectNames = projectGraph |> List.map (fun p -> p.UniqueName) |> Set.ofList
+                let res = projectGraph |> List.map (fun p -> ProjectProvider(p).GetDescription projectNames)
+                debug "!-!-! GetLeafDependentProjects: ProjectGraph: %A, Result: %A" projectNames res
                 res
 
     type private VirtualProjectProvider (filePath: string) = 
