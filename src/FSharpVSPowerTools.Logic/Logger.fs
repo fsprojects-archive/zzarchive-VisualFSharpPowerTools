@@ -36,7 +36,7 @@ type Logger
         getActivityLogService()
         |> Option.iter (fun s -> s.LogEntry(uint32 (getEntryTypeInt logType), Resource.vsPackageTitle, message) |> ignore)
 
-    member x.LogExceptionWithMessage (e: Exception) message =
+    member x.LogExceptionWithMessage(e: Exception, message) =
         let message =
             sprintf "Message: %s\nException Message: %s\nStack Trace: %s" message e.Message e.StackTrace
         x.Log LogType.Error message
@@ -45,7 +45,7 @@ type Logger
         let message = sprintf "Exception Message: %s\nStack Trace: %s" e.Message e.StackTrace
         x.Log LogType.Error message
                 
-    member x.MessageBox logType message =
+    member x.MessageBox(logType, message) =
         let icon = getIcon logType
         let service = getShellService()
         let result = 0
@@ -66,13 +66,10 @@ module Logging =
     let inline logWarning msg = log LogType.Warning msg
     let inline logError msg = log LogType.Error msg
 
-    let inline logException ex =
-        logger.Value.LogException ex
-        ex
+    let inline logException ex = logger.Value.LogException ex
 
-    let inline msgbox logType msg =
-        logger.Value.MessageBox logType msg |> ignore
+    let inline messageBox logType msg = logger.Value.MessageBox(logType, msg) |> ignore
 
-    let inline msgboxInfo msg = msgbox LogType.Information msg
-    let inline msgboxWarning msg = msgbox LogType.Warning msg
-    let inline msgboxError msg = msgbox LogType.Error msg
+    let inline messageBoxInfo msg = messageBox LogType.Information msg
+    let inline messageBoxWarning msg = messageBox LogType.Warning msg
+    let inline messageBoxError msg = messageBox LogType.Error msg

@@ -203,9 +203,9 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 match item with
                 | Some x -> x.ProjectItems
                 | None -> 
-                    ArgumentException(sprintf "folder named %s not found." folder.Name)
-                    |> logException
-                    |> raise
+                    let ex = ArgumentException(sprintf "folder named %s not found." folder.Name)
+                    logException ex
+                    raise ex
         
         let folderExists =
             if Directory.Exists(folder.FullPath) then true
@@ -219,7 +219,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 item.Delete()
             info.Project.IsDirty <- true
         else
-            msgboxError Resource.validationFolderDoesNotExist
+            messageBoxError Resource.validationFolderDoesNotExist
     
     let askForNewFolderName resources = 
         let model = NewFolderNameDialogModel resources
