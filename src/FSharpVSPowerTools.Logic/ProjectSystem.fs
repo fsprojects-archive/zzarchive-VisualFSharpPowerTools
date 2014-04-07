@@ -85,7 +85,9 @@ type FSharpLanguageService [<ImportingConstructor>]
             "FSharp.LanguageService, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
     let asm = lazy try Assembly.Load(assemblyInfo)
                    with _ ->
-                    AssemblyMissingException "FSharp.LanguageService" |> logException |> raise
+                       let ex = AssemblyMissingException "FSharp.LanguageService"
+                       logException ex
+                       raise ex
 
     let vsTextColorStateType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
     let colorStateLookupType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")

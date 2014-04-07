@@ -176,8 +176,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             project?SetProjectFileDirty (true)
             project?ComputeSourcesAndFlags ()
             ()
-        | [] -> logErr "performVerticalMoveAction called with empty info.Items"
-        | _ -> logErr "performVerticalMoveAction called with more than one item in info.Items"
+        | [] -> logError "performVerticalMoveAction called with empty info.Items"
+        | _ -> logError "performVerticalMoveAction called with more than one item in info.Items"
     
     let showDialog (wnd: Window) = 
         try 
@@ -203,9 +203,9 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 match item with
                 | Some x -> x.ProjectItems
                 | None -> 
-                    ArgumentException(sprintf "folder named %s not found." folder.Name)
-                    |> logException
-                    |> raise
+                    let ex = ArgumentException(sprintf "folder named %s not found." folder.Name)
+                    logException ex
+                    raise ex
         
         let folderExists =
             if Directory.Exists(folder.FullPath) then true
@@ -219,7 +219,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 item.Delete()
             info.Project.IsDirty <- true
         else
-            msgboxErr Resource.validationFolderDoesNotExist
+            messageBoxError Resource.validationFolderDoesNotExist
     
     let askForNewFolderName resources = 
         let model = NewFolderNameDialogModel resources
