@@ -8,12 +8,17 @@ open FSharp.CompilerBinding
 open FSharpVSPowerTools
 open VSLangProj
 
+type DependentProjects =
+    | No
+    | Simple
+    | References
+
 type IProjectProvider =
     abstract ProjectFileName: string
-    abstract TargetFSharpCoreVersion: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
+    abstract GetLeafDependentProjects: DependentProjects -> ProjectDescription list
 
 module ProjectProvider =
     open System.Reflection
@@ -60,24 +65,28 @@ module ProjectProvider =
                 | Some getter -> getter
             fun() -> getter underlyingProject
 
-        let references = 
-            (project.Object :?> VSProject).References
-            |> Seq.cast<Reference>
-            // Somethimes references are empty strings
-            |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
-            // Since project references are resolved automatically, we include it here
-            // Path.GetFullPath will escape path strings correctly
-            |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
-            |> Seq.toArray
+//        let references = 
+//            (project.Object :?> VSProject).References
+//            |> Seq.cast<Reference>
+//            // Somethimes references are empty strings
+//            |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
+//            // Since project references are resolved automatically, we include it here
+//            // Path.GetFullPath will escape path strings correctly
+//            |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
+//            |> Seq.toArray
 
-        interface IProjectProvider with
-            member x.ProjectFileName = projectFileName
+        let compilerOptions() = 
+            match getSourcesAndFlags() with
+            | Some(_, flags) -> flags
+            | _ -> [||]
 
-            member x.TargetFSharpCoreVersion = 
-                getProperty "TargetFSharpCoreVersion"
+        let sourceFiles() =
+            match getSourcesAndFlags() with
+            | Some(sources, _) -> sources
+            | _ -> [||]
 
-            member x.TargetFramework = 
-                match getProperty "TargetFrameworkMoniker" with
+        let targetFramework() =
+            match getProperty "TargetFrameworkMoniker" with
                 | null -> FSharpTargetFramework.NET_4_5
                 | x -> 
                     try
@@ -91,33 +100,42 @@ module ProjectProvider =
                         | _ -> invalidArg "prop" "Unsupported .NET framework version" 
                     with :? ArgumentException -> FSharpTargetFramework.NET_4_5
 
-            member x.CompilerOptions = 
-                match getSourcesAndFlags() with
-                | Some(_, flags) -> flags |> Array.append references
-                | _ -> [||]
+        interface IProjectProvider with
+            member x.ProjectFileName = projectFileName
+            member x.TargetFramework = targetFramework()
+            member x.CompilerOptions = compilerOptions()
+            member x.SourceFiles = sourceFiles()
 
-            member x.SourceFiles = 
-                match getSourcesAndFlags() with
-                | Some(sources, _) -> sources
-                | _ -> [||]
+            member x.GetLeafDependentProjects dependentProjects =
+                match dependentProjects with
+                | No ->
+                    [ { ProjectFile = projectFileName
+                        Files = sourceFiles()
+                        OutputFile = null
+                        CompilerOptions = compilerOptions()
+                        Framework = targetFramework()
+                        References = [] } ]
+                | Simple | References -> []
+                    
 
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
-    
+        let targetFramework = FSharpTargetFramework.NET_4_5
+        let compilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
+        let files = [| filePath |]
+
         interface IProjectProvider with
             member x.ProjectFileName = null
-            member x.TargetFSharpCoreVersion = null
-            member x.TargetFramework = FSharpTargetFramework.NET_4_5
-
-            member x.CompilerOptions = 
-                [|  
-                    yield "--noframework"
-                    yield "--debug-"
-                    yield "--optimize-"
-                    yield "--tailcalls-"
-                |]
-
-            member x.SourceFiles = [| filePath |]
+            member x.TargetFramework = targetFramework
+            member x.CompilerOptions = compilerOptions
+            member x.SourceFiles = files
+            member x.GetLeafDependentProjects _ =
+                [ { ProjectFile = null
+                    Files = files
+                    OutputFile = null
+                    CompilerOptions = compilerOptions
+                    Framework = targetFramework
+                    References = [] } ]
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 

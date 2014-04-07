@@ -106,6 +106,16 @@ type ILexer =
     abstract GetSymbolAtLocation: line: int -> col: int -> Symbol option
     abstract TokenizeLine: line: int -> TokenInformation list
   
+type FilePath = string
+
+type ProjectDescription =
+    { ProjectFile: FilePath
+      Files: FilePath[]
+      OutputFile: FilePath
+      CompilerOptions: string[]
+      Framework: FSharpTargetFramework
+      References: ProjectDescription list }
+
 // --------------------------------------------------------------------------------------
 // Language service 
 
@@ -244,8 +254,6 @@ type LanguageService (dirtyNotify) =
         //                     opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
         return opts
     }
-    
-  
 
   member x.ParseFileInProject(projectFilename, fileName:string, src, files, args, targetFramework) = 
     async {
