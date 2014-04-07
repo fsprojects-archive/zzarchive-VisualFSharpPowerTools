@@ -88,14 +88,20 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
-                    let isSymbolDeclaredInCurrentProject =
+                    let isSymbolDeclaredInCurrentSolution =
                         match vsLanguageService.TryGetLocation fsSymbolUse.Symbol with
                         | Some loc ->
                             let filePath = Path.GetFullPath loc.FileName
-                            filePath = state.File || state.Project.SourceFiles |> Array.exists ((=) filePath)
+                            if filePath = state.File || state.Project.SourceFiles |> Array.exists ((=) filePath) then true
+                            else 
+                                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                                state.Project.GetDependentProjects dte DependentProjects.References
+                                |> List.map (fun (p: ProjectDescription) -> p.Files)
+                                |> Seq.concat
+                                |> Seq.exists ((=) filePath)
                         | _ -> false
 
-                    if true then //isSymbolDeclaredInCurrentProject then
+                    if isSymbolDeclaredInCurrentSolution then
                         let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
                         let wnd = UI.loadRenameDialog model
                         let hostWnd = Window.GetWindow(view.VisualElement)

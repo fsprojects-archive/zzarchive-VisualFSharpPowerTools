@@ -21,7 +21,7 @@ type IProjectProvider =
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
     abstract GetDescription: referencesToInclude: Set<UniqueProjectName> -> ProjectDescription
-    abstract GetLeafDependentProjects: DTE -> DependentProjects -> ProjectDescription list
+    abstract GetDependentProjects: DTE -> DependentProjects -> ProjectDescription list
      
 module ProjectProvider =
     open System.Reflection
@@ -104,7 +104,7 @@ module ProjectProvider =
                 | [] -> seen, [project]
                 | ps -> ps |> List.fold doProject (seen, leafs)
 
-            let seenProjects, leafProjects = topProjects |> List.fold doProject (Map.empty, [])
+            let seenProjects, _leafProjects = topProjects |> List.fold doProject (Map.empty, [])
             // we don't use leafProject for now as it seems there's a bug in FCS which causes us to 
             // check the entire projects graph instead of the leafs only
             seenProjects |> Map.toSeq |> Seq.map snd |> Seq.toList
@@ -156,7 +156,7 @@ module ProjectProvider =
             member x.SourceFiles = sourceFiles()
             member x.GetDescription (referencesToInclude: Set<UniqueProjectName>) = x.GetDescription referencesToInclude
 
-            member x.GetLeafDependentProjects dte dependentProjects =
+            member x.GetDependentProjects dte dependentProjects =
                 let projectGraph =
                     match dependentProjects with
                     | DependentProjects.No -> [project]
@@ -191,7 +191,7 @@ module ProjectProvider =
             member x.CompilerOptions = compilerOptions
             member x.SourceFiles = files
             member x.GetDescription _ = description
-            member x.GetLeafDependentProjects _ _ = [ description ]
+            member x.GetDependentProjects _ _ = [ description ]
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 

@@ -99,7 +99,7 @@ type VSLanguageService
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                let leafProjects = project.GetLeafDependentProjects (serviceProvider.GetService<EnvDTE.DTE>()) DependentProjects.References
+                let leafProjects = project.GetDependentProjects (serviceProvider.GetService<EnvDTE.DTE>()) DependentProjects.References
 
                 return! 
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
