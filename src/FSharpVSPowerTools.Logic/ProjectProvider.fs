@@ -123,11 +123,7 @@ module ProjectProvider =
                     Path.Combine (currentDir, outputPath, fileName)
 
         let getDependentProjects (dte: DTE) (topProjects: Project list) : Project list =
-            let allProjects = 
-                dte.Solution.Projects
-                |> Seq.cast<Project>
-                |> Seq.filter isFSharpProject
-                |> Seq.toList
+            let allProjects = dte.ListFSharpProjectsInSolution()
 
             let getProjectsReferenceThis (project: Project) =
                 allProjects
@@ -225,7 +221,9 @@ module ProjectProvider =
                     match symbol.TryGetLocation() with
                     | Some loc ->
                         let filePath = Path.GetFullPath loc.FileName
-                        if filePath = file || sourceFiles() |> Array.exists ((=) filePath) then Some SymbolScope.Project
+                        if filePath = file || sourceFiles() |> Array.exists ((=) filePath) then 
+                            if Path.GetExtension file = ".fsx" then Some SymbolScope.File
+                            else Some SymbolScope.Project
                         else 
                             let inSolution = 
                                 (x :> IProjectProvider).GetDependentProjects dte ProjectDependencies.References
