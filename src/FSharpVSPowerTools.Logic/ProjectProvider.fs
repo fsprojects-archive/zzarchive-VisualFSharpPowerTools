@@ -13,15 +13,16 @@ type DependentProjects =
     | Simple
     | References
 
+type UniqueProjectName = string
+
 type IProjectProvider =
     abstract ProjectFileName: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
+    abstract GetDescription: referencesToInclude: Set<UniqueProjectName> -> ProjectDescription
     abstract GetLeafDependentProjects: DTE -> DependentProjects -> ProjectDescription list
      
-type UniqueProjectName = string
-
 module ProjectProvider =
     open System.Reflection
     
@@ -74,18 +75,13 @@ module ProjectProvider =
             | _ -> try prop.Value.ToString() with _ -> null
 
         let getOutputFilePath() =
-            let outputPath = getActiveConfigProperty "OutputPath"
-            outputPath
-
-//        let references = 
-//            (project.Object :?> VSProject).References
-//            |> Seq.cast<Reference>
-//            // Somethimes references are empty strings
-//            |> Seq.choose (fun r -> if String.IsNullOrWhiteSpace r.Path then None else Some r.Path)
-//            // Since project references are resolved automatically, we include it here
-//            // Path.GetFullPath will escape path strings correctly
-//            |> Seq.map (Path.GetFullPathSafe >> sprintf "-r:%s")
-//            |> Seq.toArray
+            match getProperty "OutputFileName" with
+            | null -> failwithf "Cannot get OutputFileName for project %s" project.FullName
+            | fileName ->
+                match getActiveConfigProperty "OutputPath" with
+                | null -> failwithf "Cannot get OutputPath for project %s" project.FullName
+                | outputPath ->
+                    Path.Combine (currentDir, outputPath, fileName)
 
         let getLeafProjects (dte: DTE) (topProjects: Project list) : Set<UniqueProjectName> * Project list =
             let allProjects = 
@@ -154,6 +150,7 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework()
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
+            member x.GetDescription (referencesToInclude: Set<UniqueProjectName>) = x.GetDescription referencesToInclude
 
             member x.GetLeafDependentProjects dte dependentProjects =
                 let seenNames, leafProjects =
@@ -172,19 +169,21 @@ module ProjectProvider =
         let targetFramework = FSharpTargetFramework.NET_4_5
         let compilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
         let files = [| filePath |]
+        let description = 
+            { ProjectFile = null    
+              Files = files
+              OutputFile = null
+              CompilerOptions = compilerOptions
+              Framework = targetFramework
+              References = [] }
 
         interface IProjectProvider with
             member x.ProjectFileName = null
             member x.TargetFramework = targetFramework
             member x.CompilerOptions = compilerOptions
             member x.SourceFiles = files
-            member x.GetLeafDependentProjects _ _ =
-                [ { ProjectFile = null
-                    Files = files
-                    OutputFile = null
-                    CompilerOptions = compilerOptions
-                    Framework = targetFramework
-                    References = [] } ]
+            member x.GetDescription _ = description
+            member x.GetLeafDependentProjects _ _ = [ description ]
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 

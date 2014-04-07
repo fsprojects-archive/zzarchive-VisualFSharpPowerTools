@@ -91,12 +91,10 @@ type VSLanguageService
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
-                let projectFileName = project.ProjectFileName
                 let source = word.Snapshot.GetText()
                 let currentLine = word.Start.GetContainingLine().GetText()
                 let framework = project.TargetFramework
                 let args = project.CompilerOptions
-                let sourceFiles = project.SourceFiles
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
@@ -105,8 +103,8 @@ type VSLanguageService
 
                 return! 
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
-                        (projectFileName, currentFile, source, sourceFiles, endLine, endCol, currentLine, 
-                        args, framework, buildQueryLexState word.Snapshot.TextBuffer)
+                        (project.GetDescription Set.empty, leafProjects, currentFile, source, endLine, endCol, 
+                         currentLine, args, buildQueryLexState word.Snapshot.TextBuffer)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }

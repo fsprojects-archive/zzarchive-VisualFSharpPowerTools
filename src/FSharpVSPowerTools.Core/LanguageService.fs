@@ -198,7 +198,7 @@ type LanguageService (dirtyNotify) =
       else
         x.GetProjectCheckerOptions(projFilename, files, args)
     opts
-   
+
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
   member x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework) =
       async {
@@ -255,6 +255,22 @@ type LanguageService (dirtyNotify) =
         return opts
     }
 
+  member x.GetProjectCheckerOptionsWithRefs (project: ProjectDescription) =
+      let opts = 
+            { ProjectFileName = project.ProjectFile
+              ProjectFileNames = project.Files
+              ProjectOptions = 
+                project.CompilerOptions 
+                |> Array.append (project.References |> List.map (fun (r: ProjectDescription) -> "-r:" + r.OutputFile) |> List.toArray)
+              IsIncompleteTypeCheckEnvironment = false
+              UseScriptResolutionRules = false
+              LoadTime = fakeDateTimeRepresentingTimeLoaded project.ProjectFile
+              UnresolvedReferences = None
+              ReferencedProjects = 
+                project.References 
+                |> List.map (fun r -> r.OutputFile, x.GetProjectCheckerOptionsWithRefs r) |> List.toArray }
+      opts
+
   member x.ParseFileInProject(projectFilename, fileName:string, src, files, args, targetFramework) = 
     async {
         let! opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
@@ -292,30 +308,40 @@ type LanguageService (dirtyNotify) =
 
   /// Parses and checks the given file in the given project under the given configuration. Asynchronously
   /// returns the results of checking the file.
-  member x.ParseAndCheckFileInProject(projectFilename, fileName:string, src, files, args, targetFramework, stale) = 
-   async {
-    let! opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
-    match x.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
-    | Some results -> return results
-    | None -> 
-        Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
-        let! results = mbox.PostAndAsyncReply(fun r -> fileName, src, opts, r)
-        Debug.WriteLine(sprintf "Worker: Starting background compilations")
-        checker.StartBackgroundCompile(opts)
-        return results
-   }
+  member x.ParseAndCheckFileInProject(projectFilename, fileName: string, src, files, args, targetFramework, stale) = 
+      async { 
+          let! opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
+          match x.TryGetStaleTypedParseResult(fileName, opts, src, stale) with
+          | Some results -> return results
+          | None -> 
+              Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
+              let! results = mbox.PostAndAsyncReply(fun r -> fileName, src, opts, r)
+              Debug.WriteLine(sprintf "Worker: Starting background compilations")
+              checker.StartBackgroundCompile(opts)
+              return results
+      }
+
+  member x.ParseAndCheckFileInProject(opts: ProjectOptions, fileName: string, src, stale) = 
+      async { 
+          match x.TryGetStaleTypedParseResult(fileName, opts, src, stale) with
+          | Some results -> return results
+          | None -> 
+              Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
+              let! results = mbox.PostAndAsyncReply(fun r -> fileName, src, opts, r)
+              Debug.WriteLine(sprintf "Worker: Starting background compilations")
+              checker.StartBackgroundCompile(opts)
+              return results
+      }
 
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, stale, queryLexState) =
-   async { 
-    match Lexer.getSymbol source line col lineStr args queryLexState with
-    | Some sym ->
-        let! checkResults = 
-            x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, stale)
-
-        return! checkResults.GetUsesOfSymbolInFileAtLocation (line, sym.RightColumn, lineStr, sym.Text)
-    | None -> return None 
-   }
+  member x.GetUsesOfSymbolAtLocationInFile(fileName, projectFilename, source, files, line, col, lineStr, args, targetFramework, stale, queryLexState) = 
+      async { 
+          match Lexer.getSymbol source line col lineStr args queryLexState with
+          | Some sym ->
+                let! checkResults = x.ParseAndCheckFileInProject(fileName, projectFilename, source, files, args, targetFramework, stale)
+                return! checkResults.GetUsesOfSymbolInFileAtLocation(line, sym.RightColumn, lineStr, sym.Text)
+          | None -> return None
+      }
 
   member x.GetUsesOfSymbolInProject(projectFilename, file, source, files, args, framework, symbol:FSharpSymbol) =
     async { 
@@ -328,18 +354,27 @@ type LanguageService (dirtyNotify) =
     }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolInProjectAtLocationInFile(projectFilename, fileName, source, files, line:int, col, lineStr, args, targetFramework, queryLexState) =
+  member x.GetUsesOfSymbolInProjectAtLocationInFile(project: ProjectDescription, leafProjects: ProjectDescription list, 
+                                                    fileName, source, line:int, col, lineStr, args, queryLexState) =
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
          | Some symbol ->
-             let! checkResults = x.ParseAndCheckFileInProject(projectFilename, fileName, source, files, args, targetFramework, AllowStaleResults.MatchingSource)
-         
-             let! result = checkResults.GetSymbolUseAtLocation(line+1, symbol.RightColumn, lineStr, [symbol.Text])
+             let opts = x.GetProjectCheckerOptionsWithRefs project
+             let! projectCheckResults = x.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.MatchingSource)
+             let! result = projectCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
              match result with
              | Some fsSymbolUse ->
-                 let! projectOptions = x.GetCheckerOptions(fileName, projectFilename, source, files, args, targetFramework)
-                 let! projectResults = checker.ParseAndCheckProject(projectOptions) 
-                 let! refs = projectResults.GetUsesOfSymbol(fsSymbolUse.Symbol)
+                 let! refs =
+                    leafProjects
+                    |> List.map (fun p ->
+                          async {
+                            let opts = x.GetProjectCheckerOptionsWithRefs p
+                            let! projectResults = checker.ParseAndCheckProject opts
+                            let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
+                            debug "GetUsesOfSymbol: Project = %s, Opts = %A, results = %A" p.ProjectFile opts refs
+                            return refs })
+                    |> Async.Parallel
+                 let refs = Array.concat refs
                  return Some(fsSymbolUse.Symbol, symbol.Text, refs)
              | None -> return None
          | None -> return None 
