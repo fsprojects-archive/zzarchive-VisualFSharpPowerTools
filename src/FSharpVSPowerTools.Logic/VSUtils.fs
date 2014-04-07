@@ -167,6 +167,20 @@ type DTE with
         | None -> debug "Should be able to find active document and active project."
         | _ -> ()
         doc
+
+    member x.ListFSharpProjectsInSolution() = 
+        let rec handleProject (p: Project) = 
+            if p === null then []
+            elif isFSharpProject p then [ p ]
+            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
+            else []
+        
+        and handleProjectItems (items: ProjectItems) = 
+            [ for pi in items do
+                  yield! handleProject pi.SubProject ]
+        
+        [ for p in x.Solution.Projects do
+              yield! handleProject p ]
     
 type ProjectItem with
     member x.VSProject =
@@ -185,6 +199,14 @@ type ProjectItem with
         match property with
         | Some p -> p
         | None -> raise(new ArgumentException("name"))
+
+type Project with
+    member x.GetReferencedProjects() = 
+        (x.Object :?> VSProject).References
+        |> Seq.cast<Reference>
+        |> Seq.choose (fun r -> Option.ofNull r.SourceProject)
+        |> Seq.filter isFSharpProject
+        |> Seq.toList
 
 let inline ensureSucceded hr = 
     ErrorHandler.ThrowOnFailure hr
