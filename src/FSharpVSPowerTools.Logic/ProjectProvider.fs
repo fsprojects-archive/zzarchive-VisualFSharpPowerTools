@@ -42,6 +42,36 @@ type ProjectDescription =
               x.References 
               |> List.map (fun r -> r.OutputFile, r.GetProjectCheckerOptions()) |> List.toArray }
 
+module ProjectGraphFormatter =
+    let toGraphViz (descs: ProjectDescription list) =
+        let nodeName =
+            let n = ref 0
+            let nodes = System.Collections.Generic.Dictionary()
+            fun (d: ProjectDescription) ->
+                let projectFileName = Path.GetFileNameWithoutExtension d.ProjectFile
+                match nodes.TryGetValue projectFileName with
+                | true, node -> node
+                | _ ->
+                    incr n
+                    let linesCount = 
+                        d.Files 
+                        |> Array.filter (fun f -> Path.GetExtension(f) = ".fs")
+                        |> Array.sumBy (fun f -> 
+                            IO.File.ReadAllLines(f) 
+                            |> Array.filter (not << String.IsNullOrWhiteSpace) 
+                            |> Array.length)
+                    let node = sprintf "%d (fc=%d, loc=%d)" !n d.Files.Length linesCount
+                    nodes.Add(projectFileName, node)
+                    node
+        
+        let nodes = 
+            descs
+            |> List.fold (fun acc desc ->
+                 desc.References 
+                |> List.fold (fun res refp -> 
+                    res + sprintf "\"%s\" -> \"%s\"\n" (nodeName desc) (nodeName refp)) acc) ""
+        sprintf "digraph project_graph {\n%s}" nodes
+
 [<RequireQualifiedAccess>]
 type SymbolScope = 
         | File

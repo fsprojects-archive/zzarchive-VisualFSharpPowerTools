@@ -97,8 +97,9 @@ type VSLanguageService
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 let dependentProjectsOptions = 
-                    project.GetDependentProjects (serviceProvider.GetService<EnvDTE.DTE>()) dependencies
-                    |> List.map (fun p -> p.GetProjectCheckerOptions())
+                    let descriptions = project.GetDependentProjects (serviceProvider.GetService<EnvDTE.DTE>()) dependencies
+                    debug "Dependent projects for %s: %s" project.ProjectFileName (ProjectGraphFormatter.toGraphViz descriptions)
+                    descriptions |> List.map (fun p -> p.GetProjectCheckerOptions())
 
                 let projectOptions = project.GetDescription().GetProjectCheckerOptions()
 
