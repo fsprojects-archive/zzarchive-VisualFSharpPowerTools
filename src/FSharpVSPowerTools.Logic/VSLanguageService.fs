@@ -84,24 +84,19 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member x.FindUsages (word: SnapshotSpan, currentFile: string, project: IProjectProvider, dependencies) =
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: ProjectDescription, declarationProject: ProjectDescription) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
                 let source = word.Snapshot.GetText()
                 let currentLine = word.Start.GetContainingLine().GetText()
-                let framework = project.TargetFramework
-                let args = project.CompilerOptions
+                let framework = currentProject.TargetFramework
+                let args = currentProject.CompilerOptions
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                let dependentProjectsOptions = 
-                    let descriptions = project.GetDependentProjects (serviceProvider.GetService<EnvDTE.DTE>()) dependencies
-                    debug "Dependent projects for %s: %s" project.ProjectFileName (ProjectGraphFormatter.toGraphViz descriptions)
-                    descriptions |> List.map (fun p -> p.GetProjectCheckerOptions())
-
-                let projectOptions = project.GetDescription().GetProjectCheckerOptions()
+                let projectOptions = currentProject.GetProjectCheckerOptions()
 
                 return! 
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
