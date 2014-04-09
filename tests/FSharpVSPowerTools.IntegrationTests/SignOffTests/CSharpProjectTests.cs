@@ -10,28 +10,13 @@ namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
     [TestClass]
     public class CSharpProjectTests
     {
-        #region fields
         private delegate void ThreadInvoker();
-        private TestContext _testContext;
-        #endregion
 
-        #region properties
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get { return _testContext; }
-            set { _testContext = value; }
-        }
-        #endregion
-
-        #region ctors
-        public CSharpProjectTests()
-        {
-        }
-        #endregion
+        public TestContext TestContext { get; set; }
 
         #region Additional test attributes
         //
@@ -61,23 +46,16 @@ namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
         {
             UIThreadInvoker.Invoke((ThreadInvoker)delegate()
             {
-                TestUtils testUtils = new TestUtils();
-
-                testUtils.CreateEmptySolution(TestContext.TestDir, "CSWinApp");
-                Assert.AreEqual<int>(0, testUtils.ProjectCount());
+                TestUtils.CreateEmptySolution(TestContext.TestDir, "CSWinApp");
+                Assert.AreEqual<int>(0, TestUtils.ProjectCount());
 
                 //Create Winforms application project
                 //TestUtils.CreateProjectFromTemplate("MyWindowsApp", "Windows Application", "CSharp", false);
                 //Assert.AreEqual<int>(1, TestUtils.ProjectCount());
-
                 //TODO Verify that we can debug launch the application
-
                 //TODO Set Break point and verify that will hit
-
                 //TODO Verify Adding new project item to project
-
             });
         }
-
     }
 }

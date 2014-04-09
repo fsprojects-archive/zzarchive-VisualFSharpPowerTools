@@ -6,7 +6,7 @@ module Resource =
     
     let [<Literal>] formattingErrorMessage = "Unable to format. "
 
-    let [<Literal>] renameErrorMessage = "Unable to rename. The symbol hasn't been declared in current project."
+    let [<Literal>] renameErrorMessage = "Unable to rename. The symbol hasn't been declared in current solution."
     let [<Literal>] validatingEmptyName = "Empty names are not allowed."
     let [<Literal>] validatingOriginalName = "New name should not be the same as the original one."
     let [<Literal>] validatingUnionCase = "Invalid name for union cases."

@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
 using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace FSharpVSPowerTools
 {
@@ -17,8 +18,22 @@ namespace FSharpVSPowerTools
         private const string navBarConfig = "fsharp-navigationbar-enabled";
         private bool _navBarEnabledInAppConfig;
 
-        // I've tried using [Logger] here, but doesn't work. Anyone knows why? Feel free to fix!
         private Logger logger = new Logger(ServiceProvider.GlobalProvider);
+
+        public GeneralOptionsPage()
+        {
+            var componentModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
+            logger = componentModel.DefaultExportProvider.GetExportedValue<Logger>();
+
+            XmlDocEnabled = true;
+            FormattingEnabled = true;
+            _navBarEnabledInAppConfig = GetNavigationBarConfig();
+            HighlightUsageEnabled = true;
+            RenameRefactoringEnabled = true;
+            DepthColorizerEnabled = false;
+            NavigateToEnabled = true;
+            SyntaxColoringEnabled = true;
+        }
 
         private bool GetNavigationBarConfig()
         {
@@ -65,6 +80,7 @@ namespace FSharpVSPowerTools
                     config.AppSettings.Settings.Remove(navBarConfig);
                     config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
                     config.Save(ConfigurationSaveMode.Minimal);
+                    
                     return true;
                 }
                 else
@@ -126,17 +142,6 @@ namespace FSharpVSPowerTools
 
                 return _optionsControl;
             }
-        }
-        public GeneralOptionsPage()
-        {
-            XmlDocEnabled = true;
-            FormattingEnabled = true;
-            _navBarEnabledInAppConfig = GetNavigationBarConfig();
-            HighlightUsageEnabled = true;
-            RenameRefactoringEnabled = true;
-            DepthColorizerEnabled = false;
-            NavigateToEnabled = true;
-            SyntaxColoringEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         

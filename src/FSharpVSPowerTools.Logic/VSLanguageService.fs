@@ -49,9 +49,6 @@ type VSLanguageService
             debug "[Language Service] %O exception occurs while querying lexing states." e
             Lexer.queryLexState source defines line
     
-    member x.TryGetLocation (symbol: FSharpSymbol) =
-        Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
-
     member x.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
@@ -87,24 +84,28 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member x.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, project: IProjectProvider, dependencies) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
-                let projectFileName = projectProvider.ProjectFileName
                 let source = word.Snapshot.GetText()
                 let currentLine = word.Start.GetContainingLine().GetText()
-                let framework = projectProvider.TargetFramework
-                let args = projectProvider.CompilerOptions
-                let sourceFiles = projectProvider.SourceFiles
+                let framework = project.TargetFramework
+                let args = project.CompilerOptions
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
+                let dependentProjectsOptions = 
+                    project.GetDependentProjects (serviceProvider.GetService<EnvDTE.DTE>()) dependencies
+                    |> List.map (fun p -> p.GetProjectCheckerOptions())
+
+                let projectOptions = project.GetDescription().GetProjectCheckerOptions()
+
                 return! 
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
-                        (projectFileName, currentFile, source, sourceFiles, endLine, endCol, currentLine, 
-                        args, framework, buildQueryLexState word.Snapshot.TextBuffer)
+                        (projectOptions, dependentProjectsOptions, currentFile, source, endLine, endCol, 
+                         currentLine, args, buildQueryLexState word.Snapshot.TextBuffer)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }

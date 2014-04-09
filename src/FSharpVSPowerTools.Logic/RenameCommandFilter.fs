@@ -34,6 +34,8 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                //let leafProjects = getLeafProjects dte (dte.GetActiveDocument().Value.ProjectItem.ContainingProject)
+                //leafProjects |> List.map (fun p -> p.UniqueName) |> debug "Leaf dependent projects: %A"
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
@@ -73,7 +75,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
-            debug "[Rename Refactoring] Error %O occurs while renaming symbols." e
+            logException e
 
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
@@ -86,14 +88,11 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
-                    let isSymbolDeclaredInCurrentProject =
-                        match vsLanguageService.TryGetLocation fsSymbolUse.Symbol with
-                        | Some loc ->
-                            let filePath = Path.GetFullPath loc.FileName
-                            filePath = state.File || state.Project.SourceFiles |> Array.exists ((=) filePath)
-                        | _ -> false
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let symbolScope = state.Project.GetSymbolScope fsSymbolUse.Symbol dte state.File
 
-                    if isSymbolDeclaredInCurrentProject then
+                    match symbolScope with
+                    | Some scope  ->
                         let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
                         let wnd = UI.loadRenameDialog model
                         let hostWnd = Window.GetWindow(view.VisualElement)
@@ -103,11 +102,12 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         match res with
                         | Some _ -> 
                             let! results =
-                                match fsSymbolUse.Symbol.Scope with
-                                | File -> 
-                                    vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
-                                | Project -> 
-                                    vsLanguageService.FindUsages (cw, state.File, state.Project) 
+                                match scope with
+                                | SymbolScope.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
+                                | SymbolScope.Project -> 
+                                    vsLanguageService.FindUsages (cw, state.File, state.Project, ProjectDependencies.Simple)
+                                | SymbolScope.Solution -> 
+                                    vsLanguageService.FindUsages (cw, state.File, state.Project, ProjectDependencies.References)
                             let usages =
                                 results
                                 |> Option.map (fun (symbol, lastIdent, refs) -> 
@@ -124,8 +124,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                                 return ()
                         | None -> 
                             return ()
-                    else
-                        return msgboxErr Resource.renameErrorMessage
+                    | _ -> return messageBoxError Resource.renameErrorMessage
                 | _ ->
                     return ()
             } |> Async.StartImmediate

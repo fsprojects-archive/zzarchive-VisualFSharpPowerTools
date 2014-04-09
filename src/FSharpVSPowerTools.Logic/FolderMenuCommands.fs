@@ -22,6 +22,7 @@ open Reflection
 module PkgCmdConst = 
     let guidNewFolderCmdSet = Guid "{9EDC1279-C317-43A6-B554-3A4D7853D55E}"
     let cmdNewFolder = 0x1071
+    let cmdRenameFolder = 0x1072
     let guidMoveCmdSet = Guid "{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}"
     let cmdMoveFolderUp = 0x1070
     let cmdMoveFolderDown = 0x1071
@@ -34,8 +35,12 @@ type VerticalMoveAction =
     | MoveUp
     | MoveDown
 
-type Action = 
+type NameAction = 
     | New
+    | Rename
+
+type Action = 
+    | NameAction of NameAction
     | VerticalMoveAction of VerticalMoveAction
     | MoveToFolder
 
@@ -181,8 +186,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             project?SetProjectFileDirty (true)
             project?ComputeSourcesAndFlags ()
             ()
-        | [] -> logErr "performVerticalMoveAction called with empty info.Items"
-        | _ -> logErr "performVerticalMoveAction called with more than one item in info.Items"
+        | [] -> logError "performVerticalMoveAction called with empty info.Items"
+        | _ -> logError "performVerticalMoveAction called with more than one item in info.Items"
     
     let showDialog (wnd: Window) = 
         try 
@@ -208,9 +213,9 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 match item with
                 | Some x -> x.ProjectItems
                 | None -> 
-                    ArgumentException(sprintf "folder named %s not found." folder.Name)
-                    |> logException
-                    |> raise
+                    let ex = ArgumentException(sprintf "folder named %s not found." folder.Name)
+                    logException ex
+                    raise ex
         
         let folderExists =
             if Directory.Exists(folder.FullPath) then true
@@ -227,9 +232,9 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 item.Delete()
             info.Project.IsDirty <- true
         else
-            msgboxErr Resource.validationDestinationFolderDoesNotExist
+            messageBoxError Resource.validationDestinationFolderDoesNotExist
     
-    let askForNewFolderName resources = 
+    let askForFolderName resources = 
         let model = NewFolderNameDialogModel resources
         let wnd = FolderMenuUI.loadNewFolderDialog model
         wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
@@ -246,25 +251,38 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         let folder = items.AddFolder name
         Debug.Assert(folder.FileCount = 1s, "Item should be unique.")
         if Directory.Exists(folder.FileNames(0s)) then
-            msgboxErr Resource.validationFolderAlreadyExistsOnDisk
+            messageBoxError Resource.validationFolderAlreadyExistsOnDisk
         else
             try
                 Directory.CreateDirectory(folder.FileNames(0s)) |> ignore
             with _ ->
-                msgboxErr Resource.validationCannotCreateFolder
+                messageBoxError Resource.validationCannotCreateFolder
                 // Can't create folder, remove folder item for consistency
                 folder.Remove()
     
+    let performNameAction (info: ActionInfo) action name =
+        match action with
+        | NameAction.New -> performNewFolderAction info name
+        | NameAction.Rename -> messageBoxInfo name
+
     let executeCommand (action: Action) = 
         let actionInfo = getActionInfo()
         match actionInfo with
         | Some info -> 
             match action with
-            | Action.New -> 
+            | Action.NameAction a -> 
+                let folderNames = getfolderNamesFromProject info.Project
                 let resources = 
-                    { WindowTitle = Resource.newFolderDialogTitle
-                      FolderNames = getfolderNamesFromProject info.Project }
-                askForNewFolderName resources |> Option.iter (performNewFolderAction info)
+                    match a with
+                    | NameAction.New ->
+                        { WindowTitle = Resource.newFolderDialogTitle
+                          OriginalName = ""
+                          FolderNames = folderNames }
+                    | NameAction.Rename -> 
+                        { WindowTitle = Resource.renameFolderDialogTitle
+                          OriginalName = info.Items.Head.Name
+                          FolderNames = folderNames }
+                askForFolderName resources |> Option.iter (performNameAction info a)
             | Action.VerticalMoveAction a -> performVerticalMoveAction info a
             | Action.MoveToFolder -> 
                 let resources = 
@@ -285,10 +303,10 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 | VerticalMoveAction.MoveDown -> checkItem item?Node?NextSibling
         | _ -> false
     
-    let isNewFolderCommandEnabled info = 
+    let isNameCommandEnabled info action = 
         match info.Items with
         | [ item ] -> VSUtils.isPhysicalFolder item
-        | [] -> true
+        | [] -> action = NameAction.New
         | _ -> false
     
     let isMoveToFolderCommandEnabled info = 
@@ -304,7 +322,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         | Some info -> 
             if VSUtils.isFSharpProject info.Project then 
                 match action with
-                | Action.New -> isNewFolderCommandEnabled info
+                | Action.NameAction a -> isNameCommandEnabled info a
                 | Action.VerticalMoveAction a -> isVerticalMoveCommandEnabled info a
                 | Action.MoveToFolder -> isMoveToFolderCommandEnabled info
             else false
@@ -321,7 +339,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let setupMoveCommand = setupCommand PkgCmdConst.guidMoveCmdSet
 
     member x.SetupCommands() = 
-        setupNewFolderCommand PkgCmdConst.cmdNewFolder Action.New
+        setupNewFolderCommand PkgCmdConst.cmdNewFolder (NameAction NameAction.New)
+        setupNewFolderCommand PkgCmdConst.cmdRenameFolder (NameAction NameAction.Rename)
         setupMoveCommand PkgCmdConst.cmdMoveFolderUp (VerticalMoveAction VerticalMoveAction.MoveUp)
         setupMoveCommand PkgCmdConst.cmdMoveFolderDown (VerticalMoveAction VerticalMoveAction.MoveDown)
         setupMoveCommand PkgCmdConst.cmdMoveToFolder Action.MoveToFolder

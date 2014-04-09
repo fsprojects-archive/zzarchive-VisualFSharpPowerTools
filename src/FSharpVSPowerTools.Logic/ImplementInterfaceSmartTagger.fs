@@ -191,8 +191,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                 if shouldImplementInterface data entity then
                     handleImplementInterface span data displayContext entity
                 else
-                    MessageBox.Show(Resource.implementInterfaceErrorMessage, Resource.vsPackageTitle, 
-                        MessageBoxButton.OK, MessageBoxImage.Error) |> ignore }
+                    messageBoxError Resource.implementInterfaceErrorMessage }
 
     member x.GetSmartTagActions(span: SnapshotSpan, data, displayContext, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()

@@ -127,7 +127,6 @@ type NavigateToItemProviderFactory
                     props.["NavigateToEnabled"].Value :?> bool
                 with _ -> false
             if not navigateToEnabled then
-                debug "[NavigateTo] The feature is disabled in General option page."
                 provider <- null
                 false
             else
@@ -146,21 +145,10 @@ and
     
     let projectIndexes = 
         lazy
-            let dte = serviceProvider.GetService<DTE, SDTE>()
             let listFSharpProjectsInSolution() = 
-                let rec handleProject (p: Project) =
-                    if p === null then []
-                    elif isFSharpProject p then [ProjectProvider.createForProject p]
-                    elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-                    else []
-                and handleProjectItems(items: ProjectItems) = 
-                    [
-                        for pi in items do
-                            yield! handleProject pi.SubProject
-                    ]
-                [
-                    for p in dte.Solution.Projects do yield! handleProject p
-                ]
+                serviceProvider.GetService<DTE, SDTE>().ListFSharpProjectsInSolution() 
+                |> List.map ProjectProvider.createForProject
+
             let openedDocuments = 
                 openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path,snapshot)) -> path, snapshot.GetText())
                 |> Map.ofSeq

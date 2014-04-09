@@ -420,19 +420,19 @@ type DepthParser private () =
                     if sc = m then // && ec = len el then // would fail on comments, trailing whitespace, etc
                         q.Add(Start r) |> ignore
             let curLine, curCol, curDepth = ref 1, ref 0, ref 0  // lines are 1-based
-            let mindentStack = ResizeArray<(int*int)>() // numCharsIndent, semanticDepth
+            let mindentStack = ResizeArray<int * int>() // numCharsIndent, semanticDepth
             mindentStack.Add(0,0)
-            let results = ResizeArray<_>()
-            let add((line,sc,ec,d) as info) =
-                assert(sc <= ec)
-                let l = len line
-                if l > 0 && sc >= l then
+            let results = ResizeArray()
+            let add((line, startCol, endCol, d) as info) =
+                assert(startCol <= endCol)
+                let lineLength = len line
+                if lineLength > 0 && startCol >= lineLength then
                     () // don't report spans past end of line (don't close color scopes in whitespace after end of line), (empty lines are exempt, we need to report something)
                 else
-                    if l < ec then
-                        results.Add((line,sc,ec,-d))  // negative depth means this is on a whitespace-only line that is not long enough to hang a tag on
+                    if lineLength < endCol then
+                        results.Add (line, startCol, endCol, -d)  // negative depth means this is on a whitespace-only line that is not long enough to hang a tag on
                     else
-                        results.Add(info)
+                        results.Add info
             while q.Count <> 0 do
                 // dequeue
                 let min = q.Min 

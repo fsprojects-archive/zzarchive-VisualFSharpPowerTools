@@ -11,28 +11,13 @@ namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
     [TestClass]
     public class VisualBasicProjectTests
     {
-        #region fields
         private delegate void ThreadInvoker();
-        private TestContext _testContext;
-        #endregion
 
-        #region properties
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get { return _testContext; }
-            set { _testContext = value; }
-        }
-        #endregion
-
-        #region ctors
-        public VisualBasicProjectTests()
-        {
-        }
-        #endregion
+        public TestContext TestContext { get; set; }
 
         #region Additional test attributes
         //
@@ -63,39 +48,35 @@ namespace FSharpVSPowerTools.IntegrationTests.IntegrationTests
             UIThreadInvoker.Invoke((ThreadInvoker)delegate()
             {
                 //Solution and project creation parameters
-                string solutionName = "VBWinApp";
-                string projectName = "VBWinApp";
+                const string solutionName = "VBWinApp";
+                const string projectName = "VBWinApp";
 
                 //Template parameters
-                string language = "VisualBasic";
-                string projectTemplateName = "WindowsApplication.Zip";
-                string itemTemplateName = "CodeFile.zip";
-                string newFileName = "Test.vb";
+                const string language = "VisualBasic";
+                const string projectTemplateName = "WindowsApplication.Zip";
+                const string itemTemplateName = "CodeFile.zip";
+                const string newFileName = "Test.vb";
 
-                DTE dte = (DTE)VsIdeTestHostContext.ServiceProvider.GetService(typeof(DTE));
+                var dte = (DTE)VsIdeTestHostContext.ServiceProvider.GetService(typeof(DTE));
 
-                TestUtils testUtils = new TestUtils();
-
-                testUtils.CreateEmptySolution(TestContext.TestDir, solutionName);
-                Assert.AreEqual<int>(0, testUtils.ProjectCount());
+                TestUtils.CreateEmptySolution(TestContext.TestDir, solutionName);
+                Assert.AreEqual<int>(0, TestUtils.ProjectCount());
 
                 //Add new  Windows application project to existing solution
-                testUtils.CreateProjectFromTemplate(projectName, projectTemplateName, language, false);
+                TestUtils.CreateProjectFromTemplate(projectName, projectTemplateName, language, false);
 
                 //Verify that the new project has been added to the solution
-                Assert.AreEqual<int>(1, testUtils.ProjectCount());
+                Assert.AreEqual<int>(1, TestUtils.ProjectCount());
 
                 //Get the project
-                Project project = dte.Solution.Item(1);
+                var project = dte.Solution.Item(1);
                 Assert.IsNotNull(project);
                 Assert.IsTrue(string.Compare(project.Name, projectName, StringComparison.InvariantCultureIgnoreCase) == 0);
 
                 //Verify Adding new code file to project
-                ProjectItem newCodeFileItem = testUtils.AddNewItemFromVsTemplate(project.ProjectItems, itemTemplateName, language, newFileName);
+                var newCodeFileItem = TestUtils.AddNewItemFromVsTemplate(project.ProjectItems, itemTemplateName, language, newFileName);
                 Assert.IsNotNull(newCodeFileItem, "Could not create new project item");
-
             });
         }
-
     }
 }

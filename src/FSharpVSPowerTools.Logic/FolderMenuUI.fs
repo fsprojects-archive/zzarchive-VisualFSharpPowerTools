@@ -24,7 +24,7 @@ module FolderMenuUI =
                 window.Close()
             | Choice2Of2 errorMsg ->
                 window.DialogResult <- Nullable false
-                msgboxErr errorMsg)
+                messageBoxError errorMsg)
         accessor.btnCancel.Click.Add(fun _ -> 
             window.DialogResult <- Nullable false
             window.Close())
@@ -50,7 +50,7 @@ module FolderMenuUI =
                 window.Close()
             | Choice2Of2 errorMsg ->
                 window.DialogResult <- Nullable false
-                msgboxErr errorMsg)
+                messageBoxError errorMsg)
         accessor.btnCancel.Click.Add(fun _ -> 
             window.DialogResult <- Nullable false
             window.Close())
