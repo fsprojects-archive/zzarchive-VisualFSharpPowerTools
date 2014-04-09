@@ -89,9 +89,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let symbolScope = state.Project.GetSymbolScope fsSymbolUse.Symbol dte state.File
+                    let symbolDeclarationLocation = ProjectProvider.getSymbolUsageScope fsSymbolUse.Symbol dte state.File
 
-                    match symbolScope with
+                    match symbolDeclarationLocation with
                     | Some scope  ->
                         let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
                         let wnd = UI.loadRenameDialog model
@@ -103,11 +103,10 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         | Some _ -> 
                             let! results =
                                 match scope with
-                                | SymbolScope.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
-                                | SymbolScope.Project -> 
-                                    vsLanguageService.FindUsages (cw, state.File, state.Project, ProjectDependencies.Simple)
-                                | SymbolScope.Solution -> 
-                                    vsLanguageService.FindUsages (cw, state.File, state.Project, ProjectDependencies.References)
+                                | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
+                                | SymbolDeclarationLocation.Project declarationProject -> 
+                                    let dependentProjects = ProjectProvider.getDependentProjects dte declarationProject
+                                    vsLanguageService.FindUsages (cw, state.File, state.Project, declarationProject :: dependentProjects)
                             let usages =
                                 results
                                 |> Option.map (fun (symbol, lastIdent, refs) -> 

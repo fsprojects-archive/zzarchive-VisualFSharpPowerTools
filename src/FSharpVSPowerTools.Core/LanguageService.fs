@@ -323,12 +323,12 @@ type LanguageService (dirtyNotify) =
     }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolInProjectAtLocationInFile(projectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions list, 
+  member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions list, 
                                                     fileName, source, line:int, col, lineStr, args, queryLexState) =
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
          | Some symbol ->
-             let! projectCheckResults = x.ParseAndCheckFileInProject(projectOptions, fileName, source, AllowStaleResults.MatchingSource)
+             let! projectCheckResults = x.ParseAndCheckFileInProject(currentProjectOptions, fileName, source, AllowStaleResults.MatchingSource)
              let! result = projectCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
              match result with
              | Some fsSymbolUse ->
