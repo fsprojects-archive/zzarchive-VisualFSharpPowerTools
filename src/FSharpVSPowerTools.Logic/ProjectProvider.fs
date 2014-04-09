@@ -9,73 +9,19 @@ open FSharpVSPowerTools
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-[<RequireQualifiedAccess>]
-type ProjectDependencies =
-    | No
-    | Simple
-    | References
-
-type UniqueProjectName = string
 type FilePath = string
 
-type ProjectDescription =
-    { ProjectFile: FilePath
-      Files: FilePath[]
-      CompilerOptions: string[]
-      Framework: FSharpTargetFramework
-      DependentProjects: ProjectDescription list }
-    member x.GetProjectCheckerOptions() =
-        { ProjectFileName = x.ProjectFile
-          ProjectFileNames = x.Files
-          ProjectOptions = x.CompilerOptions 
-          IsIncompleteTypeCheckEnvironment = false
-          UseScriptResolutionRules = false
-          LoadTime = fakeDateTimeRepresentingTimeLoaded x.ProjectFile
-          UnresolvedReferences = None
-          ReferencedProjects = [||] }
-
-module ProjectGraphFormatter =
-    let toGraphViz (descs: ProjectDescription list) =
-        let nodeName =
-            let n = ref 0
-            let nodes = System.Collections.Generic.Dictionary()
-            fun (d: ProjectDescription) ->
-                let projectFileName = Path.GetFileNameWithoutExtension d.ProjectFile
-                match nodes.TryGetValue projectFileName with
-                | true, node -> node
-                | _ ->
-                    incr n
-                    let linesCount = 
-                        d.Files 
-                        |> Array.filter (fun f -> Path.GetExtension(f) = ".fs")
-                        |> Array.sumBy (fun f -> 
-                            IO.File.ReadAllLines(f) 
-                            |> Array.filter (not << String.IsNullOrWhiteSpace) 
-                            |> Array.length)
-                    let node = sprintf "%d (fc=%d, loc=%d)" !n d.Files.Length linesCount
-                    nodes.Add(projectFileName, node)
-                    node
-        
-        let nodes = 
-            descs
-            |> List.fold (fun acc desc ->
-                 desc.DependentProjects 
-                |> List.fold (fun res refp -> 
-                    res + sprintf "\"%s\" -> \"%s\"\n" (nodeName desc) (nodeName refp)) acc) ""
-        sprintf "digraph project_graph {\n%s}" nodes
-
 [<RequireQualifiedAccess; NoComparison>]
-type DeclarationLocation = 
+type SymbolDeclarationLocation = 
     | File
-    | Project of ProjectDescription
+    | Project of IProjectProvider
 
 and IProjectProvider =
     abstract ProjectFileName: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
-    abstract GetDescription: EnvDTE.DTE -> includeRefs: bool -> ProjectDescription
-    abstract GetDeclarationLocation: FSharpSymbol -> DTE -> FilePath -> DeclarationLocation option
+    abstract GetReferencedProjects: unit -> IProjectProvider list
 
 [<AutoOpen>]
 module FSharpSymbolExtensions =
@@ -94,7 +40,7 @@ module ProjectProvider =
         let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
         lambda.Compile().Invoke
 
-    type private ProjectProvider(project: Project) as self =
+    type private ProjectProvider(project: Project) =
         static let mutable getField = None
         do Debug.Assert(project <> null, "Input project should be well-formed.")
     
@@ -147,85 +93,30 @@ module ProjectProvider =
                         | _ -> invalidArg "prop" "Unsupported .NET framework version" 
                     with :? ArgumentException -> FSharpTargetFramework.NET_4_5
 
-        member x.GetDependentProjects (dte: DTE) =
-            dte.ListFSharpProjectsInSolution()
-            |> List.filter (fun p -> 
-                p.UniqueName <> project.UniqueName 
-                && p.GetReferencedProjects() |> List.exists (fun p -> p.UniqueName = project.UniqueName))
-
-        member x.SourceFiles() =
+        let sourceFiles() =
             match getSourcesAndFlags() with
             | Some(sources, _) -> sources
             | _ -> [||]
-
-        member x.GetDescription (dte: EnvDTE.DTE) (includeRefs: bool) =
-            { ProjectFile = projectFileName
-              Files = x.SourceFiles()
-              CompilerOptions = compilerOptions()
-              Framework = targetFramework()
-              DependentProjects = 
-                if includeRefs then 
-                    x.GetDependentProjects dte
-                    |> List.map (fun p -> ProjectProvider(p).GetDescription dte false) 
-                else [] }
-            
-        member x.GetDeclarationLocation (symbol: FSharpSymbol) (dte: EnvDTE.DTE) (currentFile: string) =
-            let isPrivateToFile = 
-                match symbol with 
-                | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || m.Accessibility.IsPrivate
-                | :? FSharpEntity as m -> m.Accessibility.IsPrivate
-                | :? FSharpGenericParameter -> true
-                | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
-                | :? FSharpField as m -> m.Accessibility.IsPrivate
-                | _ -> false
-            if isPrivateToFile then Some DeclarationLocation.File 
-            else 
-                match symbol.TryGetLocation() with
-                | Some loc ->
-                    let filePath = Path.GetFullPath loc.FileName
-                    if filePath = currentFile || x.SourceFiles() |> Array.exists ((=) filePath) then 
-                        if Path.GetExtension currentFile = ".fsx" then Some DeclarationLocation.File
-                        else Some (DeclarationLocation.Project (self.GetDescription dte true))
-                    else
-                        let projects = 
-                            project.GetReferencedProjects()
-                            |> Seq.map (fun p -> ProjectProvider(p))
-                            |> Seq.filter (fun p -> p.SourceFiles() |> Array.exists ((=) filePath))
-                            |> Seq.truncate 1
-                            |> Seq.toList
-
-                        match projects with
-                        | [] -> None
-                        | refProject :: _ -> Some (DeclarationLocation.Project (refProject.GetDescription dte true))
-                | _ -> None
 
         interface IProjectProvider with
             member x.ProjectFileName = projectFileName
             member x.TargetFramework = targetFramework()
             member x.CompilerOptions = compilerOptions()
-            member x.SourceFiles = x.SourceFiles()
-            member x.GetDescription dte includeRefs = x.GetDescription dte includeRefs
-            member x.GetDeclarationLocation symbol dte currentFile = x.GetDeclarationLocation symbol dte currentFile
-
+            member x.SourceFiles = sourceFiles()
+            
+            member x.GetReferencedProjects() = 
+                project.GetReferencedProjects() 
+                |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
+            
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
-        let targetFramework = FSharpTargetFramework.NET_4_5
-        let compilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
-        let files = [| filePath |]
-        let description = 
-            { ProjectFile = null    
-              Files = files
-              CompilerOptions = compilerOptions
-              Framework = targetFramework
-              DependentProjects = [] }
 
         interface IProjectProvider with
             member x.ProjectFileName = null
-            member x.TargetFramework = targetFramework
-            member x.CompilerOptions = compilerOptions
-            member x.SourceFiles = files
-            member x.GetDescription _ _ = description
-            member x.GetDeclarationLocation _ _ _ = Some DeclarationLocation.File
+            member x.TargetFramework = FSharpTargetFramework.NET_4_5
+            member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
+            member x.SourceFiles = [| filePath |]
+            member x.GetReferencedProjects() = []
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 
@@ -246,4 +137,45 @@ module ProjectProvider =
     let createForDocument (doc: Document) =
         createForFileInProject doc.FullName doc.ProjectItem.ContainingProject
 
-    
+    let getSymbolUsageScope (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
+        let isPrivateToFile = 
+            match symbol with 
+            | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || m.Accessibility.IsPrivate
+            | :? FSharpEntity as m -> m.Accessibility.IsPrivate
+            | :? FSharpGenericParameter -> true
+            | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
+            | :? FSharpField as m -> m.Accessibility.IsPrivate
+            | _ -> false
+        if isPrivateToFile then Some SymbolDeclarationLocation.File 
+        else 
+            match symbol.TryGetLocation() with
+            | Some loc ->
+                let filePath = Path.GetFullPath loc.FileName
+                if filePath = currentFile && Path.GetExtension currentFile = ".fsx" then 
+                    Some SymbolDeclarationLocation.File
+                else
+                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
+                    match allProjects |> List.tryFind (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
+                    | Some declarationProject -> Some (SymbolDeclarationLocation.Project declarationProject)
+                    | _ -> None
+            | _ -> None
+
+    let getDependentProjects (dte: DTE) (project: IProjectProvider) =
+        dte.ListFSharpProjectsInSolution()
+        |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
+        |> List.filter (fun p -> 
+            p.GetReferencedProjects() 
+            |> List.exists (fun p -> String.Compare(p.ProjectFileName, project.ProjectFileName, true) = 0))
+
+[<AutoOpen>]
+module ProjectProviderExtensions =
+    type IProjectProvider with
+        member x.GetProjectCheckerOptions() =
+            { ProjectFileName = x.ProjectFileName
+              ProjectFileNames = x.SourceFiles
+              ProjectOptions = x.CompilerOptions
+              IsIncompleteTypeCheckEnvironment = false
+              UseScriptResolutionRules = false
+              LoadTime = fakeDateTimeRepresentingTimeLoaded x.ProjectFileName
+              UnresolvedReferences = None
+              ReferencedProjects = [||] }

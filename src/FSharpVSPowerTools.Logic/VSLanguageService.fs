@@ -84,7 +84,7 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member x.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: ProjectDescription, declarationProject: ProjectDescription) =
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list) =
         async {
             try 
                 let (_, _, endLine, endCol) = word.ToRange()
@@ -96,11 +96,12 @@ type VSLanguageService
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                let projectOptions = currentProject.GetProjectCheckerOptions()
+                let currentProjectOptions = currentProject.GetProjectCheckerOptions()
+                let projectsToCheckOptions = projectsToCheck |> List.map (fun p -> p.GetProjectCheckerOptions())
 
                 return! 
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
-                        (projectOptions, dependentProjectsOptions, currentFile, source, endLine, endCol, 
+                        (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 
                          currentLine, args, buildQueryLexState word.Snapshot.TextBuffer)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
