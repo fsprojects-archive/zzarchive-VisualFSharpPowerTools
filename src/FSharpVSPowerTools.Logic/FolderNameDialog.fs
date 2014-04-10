@@ -15,11 +15,12 @@ type NewFolderNameDialog = FsXaml.XAML<"FolderNameDialog.xaml">
 [<NoEquality; NoComparison>]
 type NewFolderNameDialogResources =
     { WindowTitle : string
-      FolderNames : Set<string> }
+      FolderNames : Set<string>
+      OriginalName : string }
 
 type NewFolderNameDialogModel(resources :NewFolderNameDialogResources) =
 
-    let mutable name = ""
+    let mutable name = resources.OriginalName
 
     let validate (name :string) =
         let name = name.Trim()
