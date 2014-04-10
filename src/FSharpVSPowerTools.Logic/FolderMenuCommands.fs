@@ -30,6 +30,7 @@ module PkgCmdConst =
 
     let guidStandardCmdSet = typedefof<VSConstants.VSStd97CmdID>.GUID
     let cmdStandardNewFolder = uint32 VSConstants.VSStd97CmdID.NewFolder
+    let cmdStandardRenameFolder = uint32 VSConstants.VSStd97CmdID.Rename
 
 type VerticalMoveAction = 
     | MoveUp
@@ -285,7 +286,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             if isPhysicalFolder item then
                 let subItems = 
                     seq {
-                        for subItem in item.ProjectItems -> createRenameItem (path + item.Name) subItem 
+                        for subItem in item.ProjectItems -> 
+                            createRenameItem (Path.Combine(path, item.Name)) subItem 
                     }
                     |> Seq.toList
                 RenameItem.Folder(item.Name, subItems)                
@@ -421,6 +423,17 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 match getActionInfo() with
                 | Some info ->
                     if isFSharpProject info.Project then
+                        prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
+                        VSConstants.S_OK
+                    else
+                        int Constants.OLECMDERR_E_UNKNOWNGROUP
+                | None ->
+                    int Constants.OLECMDERR_E_UNKNOWNGROUP
+            elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardRenameFolder) then
+                match getActionInfo() with
+                | Some info ->
+                    if isFSharpProject info.Project && List.exists isPhysicalFolder info.Items then
                         prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
                         VSConstants.S_OK
                     else

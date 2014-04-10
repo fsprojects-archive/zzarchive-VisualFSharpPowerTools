@@ -47,12 +47,12 @@ namespace FSharpVSPowerTools
 
         private void SetupMenu()
         {
-            OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
             
             if (mcs != null)
             {
-                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
+                newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
                 newFolderMenu.SetupCommands();
 
                 var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
