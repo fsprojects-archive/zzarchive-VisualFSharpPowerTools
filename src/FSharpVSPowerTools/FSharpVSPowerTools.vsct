@@ -116,6 +116,13 @@
         </Strings>
       </Button>
 
+      <Button guid="guidNewFolderCmdSet" id="cmdRenameFolder" priority="0x0102" type="Button">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
+        <Strings>
+          <ButtonText>Rename Folder</ButtonText>
+        </Strings>
+      </Button>
+
       <Button guid="guidMoveCmdSet" id="cmdMoveFolderUp" priority="0x0110" type="Button">
         <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMoveGroup"/>
         <Strings>
@@ -236,6 +243,7 @@
     <GuidSymbol name="guidNewFolderCmdSet" value="{9EDC1279-C317-43A6-B554-3A4D7853D55E}">
       <IDSymbol name="FSPowerToolsMenuGroup" value="0x1070" />
       <IDSymbol name="cmdNewFolder" value="0x1071" />
+      <IDSymbol name="cmdRenameFolder" value="0x1072"/>
     </GuidSymbol>
 
     <GuidSymbol name="guidMoveCmdSet" value="{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}">

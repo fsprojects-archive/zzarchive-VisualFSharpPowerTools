@@ -5,6 +5,7 @@ open EnvDTE80
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text
 open System
 open System.IO
@@ -17,28 +18,47 @@ open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open Reflection
 
+[<RequireQualifiedAccess>]
 module PkgCmdConst = 
     let guidNewFolderCmdSet = Guid "{9EDC1279-C317-43A6-B554-3A4D7853D55E}"
     let cmdNewFolder = 0x1071
+    let cmdRenameFolder = 0x1072
     let guidMoveCmdSet = Guid "{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}"
     let cmdMoveFolderUp = 0x1070
     let cmdMoveFolderDown = 0x1071
     let cmdMoveToFolder = 0x1072
 
+    let guidStandardCmdSet = typedefof<VSConstants.VSStd97CmdID>.GUID
+    let cmdStandardNewFolder = uint32 VSConstants.VSStd97CmdID.NewFolder
+    let cmdStandardRenameFolder = uint32 VSConstants.VSStd97CmdID.Rename
+
 type VerticalMoveAction = 
     | MoveUp
     | MoveDown
 
-type Action = 
+[<RequireQualifiedAccess>]
+type NameAction = 
     | New
+    | Rename
+
+type Action = 
+    | NameAction of NameAction
     | VerticalMoveAction of VerticalMoveAction
     | MoveToFolder
 
-[<NoEquality>]
-[<NoComparison>]
+[<NoComparison; NoEquality>]
 type ActionInfo = 
     { Items: ProjectItem list
       Project: Project }
+
+type Name = string
+type Path = string
+
+[<RequireQualifiedAccess>]
+type RenameItem =
+    | Folder of Name * RenameItem list
+    | File of Path
+    | Unsupported
 
 [<Export>]
 type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) = 
@@ -70,7 +90,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                     yield! getFolderNamesFromItems item.ProjectItems
         }
     
-    let getfolderNamesFromProject (project: Project) = Set(getFolderNamesFromItems project.ProjectItems)
+    let getFolderNamesFromProject (project: Project) = Set(getFolderNamesFromItems project.ProjectItems)
     
     let rec getFoldersFromItems (items: ProjectItems) = 
         [ for item in items do
@@ -164,7 +184,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let getPreviousItem = getItem getPreviousItemImpl
     let getNextItem = getItem getNextItemImpl
     
-    let performVerticalMoveAction (info: ActionInfo) action = 
+    let performVerticalMove (info: ActionInfo) action = 
         match info.Items with
         | [ item ] -> 
             let service = new FSharpProjectSystemService(dte :?> DTE)
@@ -173,8 +193,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             match action with
             | VerticalMoveAction.MoveUp -> service.MoveFolderUp node (getPreviousItem node) project
             | VerticalMoveAction.MoveDown -> service.MoveFolderDown node (getNextItem node) project
-            project?SetProjectFileDirty (true)
-            project?ComputeSourcesAndFlags ()
+            project?SetProjectFileDirty true
+            project?ComputeSourcesAndFlags()
             ()
         | [] -> logError "performVerticalMoveAction called with empty info.Items"
         | _ -> logError "performVerticalMoveAction called with more than one item in info.Items"
@@ -195,7 +215,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         | Some true -> model.SelectedFolder
         | _ -> None
     
-    let performMoveToFolderAction (info: ActionInfo) (folder: Folder) = 
+    let performMoveToFolder (info: ActionInfo) (folder: Folder) = 
         let destination = 
             if folder.IsProject then info.Project.ProjectItems
             else 
@@ -210,18 +230,21 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         let folderExists =
             if Directory.Exists(folder.FullPath) then true
             else
-                try Directory.CreateDirectory(folder.FullPath) |> ignore; true with _ -> false
+                try 
+                    Directory.CreateDirectory(folder.FullPath) |> ignore
+                    true 
+                with _ -> false
         if folderExists then
             for item in info.Items do
-                Debug.Assert(item.FileCount = 1s, "Item should contain only one file.")
+                Debug.Assert(item.FileCount = 1s, "Item should be unique.")
                 let filePath = item.FileNames(0s)
                 destination.AddFromFileCopy(filePath) |> ignore
                 item.Delete()
             info.Project.IsDirty <- true
         else
-            messageBoxError Resource.validationFolderDoesNotExist
+            messageBoxError Resource.validationDestinationFolderDoesNotExist
     
-    let askForNewFolderName resources = 
+    let askForFolderName resources = 
         let model = NewFolderNameDialogModel resources
         let wnd = FolderMenuUI.loadNewFolderDialog model
         wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
@@ -230,29 +253,113 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         | Some true -> Some model.Name
         | _ -> None
     
-    let performNewFolderAction (info: ActionInfo) name = 
+    let performNewFolder (info: ActionInfo) name = 
         let items = 
             match info.Items with
             | [ item ] -> item.ProjectItems
             | _ -> info.Project.ProjectItems
-        items.AddFolder name |> ignore
-    
+        let folder = items.AddFolder name
+        Debug.Assert(folder.FileCount = 1s, "Item should be unique.")
+        if Directory.Exists(folder.FileNames(0s)) then
+            // We tolerate that folder might already exist
+            messageBoxInfo Resource.validationExistingFolderOnDisk
+        else
+            try
+                Directory.CreateDirectory(folder.FileNames(0s)) |> ignore
+            with _ ->
+                messageBoxError Resource.validationCannotCreateFolder
+                // Can't create folder, remove folder item for consistency
+                folder.Remove()        
+
+    let performRenameFolder (info: ActionInfo) name = 
+        let project = info.Project?Project
+        // Try to sync with internal project system        
+        project?ComputeSourcesAndFlags()
+
+        let folder = 
+            match info.Items with
+            | [ item ] -> item
+            | _ -> info.Project.ProjectItems.[0]
+        /// ProjectItem will be disposed once we remove them from the parent node
+        /// We capture required information for renaming i.e. replacing paths by those in new folder names
+        let rec createRenameItem path (item: ProjectItem) =
+            if isPhysicalFolder item then
+                let subItems = 
+                    seq {
+                        for subItem in item.ProjectItems -> 
+                            createRenameItem (Path.Combine(path, item.Name)) subItem 
+                    }
+                    |> Seq.toList
+                RenameItem.Folder(item.Name, subItems)                
+            elif isPhysicalFile item then
+                RenameItem.File(Path.Combine(path, item.Name))
+            else
+                RenameItem.Unsupported
+
+        let path: string = folder.Object?Url
+        let parentPath = Directory.GetParent(path.TrimEnd('\\')).FullName
+        let newPath = Path.Combine(parentPath, name)
+
+        if Directory.Exists(newPath) then
+            messageBoxError Resource.validationRenameFolderAlreadyExistsOnDisk
+        else
+            // F# project system can't rename folders with any item in it.
+            // We remove all items in the folder and add it back later       
+            let items = ResizeArray()        
+            for it in folder.ProjectItems do
+                items.Add(createRenameItem newPath it)            
+                it.Remove()
+
+            // Rename the empty folder (on Solution Explorer and on disk)
+            folder.Name <- name
+
+            let rec addToFolder (folder: ProjectItem) (item: RenameItem) =
+                match item with
+                | RenameItem.Folder(name, subItems) ->
+                    let subFolder = folder.ProjectItems.AddFolder(name)
+                    for subItem in subItems do
+                        addToFolder subFolder subItem
+                | RenameItem.File path ->
+                    folder.ProjectItems.AddFromFile(path) |> ignore
+                | RenameItem.Unsupported -> ()
+
+            // Add back all children recursively
+            for item in items do
+                addToFolder folder item
+
+            // Synchronize between external changes and internal representation of F# project system        
+            project?SetProjectFileDirty true
+            project?ComputeSourcesAndFlags()
+
+    let performNameAction (info: ActionInfo) action name =
+        match action with
+        | NameAction.New -> performNewFolder info name
+        | NameAction.Rename -> performRenameFolder info name
+
     let executeCommand (action: Action) = 
         let actionInfo = getActionInfo()
         match actionInfo with
         | Some info -> 
             match action with
-            | Action.New -> 
+            | Action.NameAction a -> 
+                let folderNames = getFolderNamesFromProject info.Project
                 let resources = 
-                    { WindowTitle = Resource.newFolderDialogTitle
-                      FolderNames = getfolderNamesFromProject info.Project }
-                askForNewFolderName resources |> Option.iter (performNewFolderAction info)
-            | Action.VerticalMoveAction a -> performVerticalMoveAction info a
+                    match a with
+                    | NameAction.New ->
+                        { WindowTitle = Resource.newFolderDialogTitle
+                          OriginalName = ""
+                          FolderNames = folderNames }
+                    | NameAction.Rename -> 
+                        { WindowTitle = Resource.renameFolderDialogTitle
+                          OriginalName = info.Items.Head.Name
+                          FolderNames = folderNames }
+                askForFolderName resources |> Option.iter (performNameAction info a)
+            | Action.VerticalMoveAction a -> performVerticalMove info a
             | Action.MoveToFolder -> 
                 let resources = 
                     { FileNames = info.Items |> List.map (fun item -> Path.GetFileName item.Object?Url)
                       Root = getFoldersFromProject info.Project }
-                askForDestinationFolder resources |> Option.iter (performMoveToFolderAction info)
+                askForDestinationFolder resources |> Option.iter (performMoveToFolder info)
         | None -> fail "actionInfo is None"
     
     let isVerticalMoveCommandEnabled info action = 
@@ -267,10 +374,10 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 | VerticalMoveAction.MoveDown -> checkItem item?Node?NextSibling
         | _ -> false
     
-    let isNewFolderCommandEnabled info = 
+    let isNameCommandEnabled info action = 
         match info.Items with
         | [ item ] -> VSUtils.isPhysicalFolder item
-        | [] -> true
+        | [] -> action = NameAction.New
         | _ -> false
     
     let isMoveToFolderCommandEnabled info = 
@@ -286,7 +393,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         | Some info -> 
             if VSUtils.isFSharpProject info.Project then 
                 match action with
-                | Action.New -> isNewFolderCommandEnabled info
+                | Action.NameAction a -> isNameCommandEnabled info a
                 | Action.VerticalMoveAction a -> isVerticalMoveCommandEnabled info a
                 | Action.MoveToFolder -> isMoveToFolderCommandEnabled info
             else false
@@ -301,8 +408,41 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     
     let setupNewFolderCommand = setupCommand PkgCmdConst.guidNewFolderCmdSet
     let setupMoveCommand = setupCommand PkgCmdConst.guidMoveCmdSet
+
     member x.SetupCommands() = 
-        setupNewFolderCommand PkgCmdConst.cmdNewFolder Action.New
+        setupNewFolderCommand PkgCmdConst.cmdNewFolder (NameAction NameAction.New)
+        setupNewFolderCommand PkgCmdConst.cmdRenameFolder (NameAction NameAction.Rename)
         setupMoveCommand PkgCmdConst.cmdMoveFolderUp (VerticalMoveAction VerticalMoveAction.MoveUp)
         setupMoveCommand PkgCmdConst.cmdMoveFolderDown (VerticalMoveAction VerticalMoveAction.MoveDown)
         setupMoveCommand PkgCmdConst.cmdMoveToFolder Action.MoveToFolder
+
+    interface IOleCommandTarget with
+        member x.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
+            if pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardNewFolder) then
+                match getActionInfo() with
+                | Some info ->
+                    if isFSharpProject info.Project then
+                        prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
+                        VSConstants.S_OK
+                    else
+                        int Constants.OLECMDERR_E_UNKNOWNGROUP
+                | None ->
+                    int Constants.OLECMDERR_E_UNKNOWNGROUP
+            elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardRenameFolder) then
+                match getActionInfo() with
+                | Some info ->
+                    if isFSharpProject info.Project && List.exists isPhysicalFolder info.Items then
+                        prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
+                        VSConstants.S_OK
+                    else
+                        int Constants.OLECMDERR_E_UNKNOWNGROUP
+                | None ->
+                    int Constants.OLECMDERR_E_UNKNOWNGROUP
+            else
+                int Constants.OLECMDERR_E_UNKNOWNGROUP
+        
+        member x.Exec(_pguidCmdGroup: byref<Guid>, _nCmdID: uint32, _nCmdexecopt: uint32, _pvaIn: IntPtr, _pvaOut: IntPtr): int = 
+            // We should not return OK here because it would short-circuit the command chain
+            int Constants.OLECMDERR_E_UNKNOWNGROUP

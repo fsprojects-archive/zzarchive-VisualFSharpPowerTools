@@ -33,9 +33,13 @@ namespace FSharpVSPowerTools
     public class PowerToolsCommandsPackage : Package, IVsBroadcastMessageEvents, IDisposable
     {
         private const uint WM_SYSCOLORCHANGE = 0x0015;
+
         private IVsShell shellService;
+        private FolderMenuCommands newFolderMenu;
+
         private uint broadcastEventCookie;
-        
+        private uint pctCookie;
+
         internal static Lazy<DTE2> DTE
             = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
 
@@ -43,13 +47,16 @@ namespace FSharpVSPowerTools
 
         private void SetupMenu()
         {
-            OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
             
             if (mcs != null)
             {
-                var newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
+                newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
                 newFolderMenu.SetupCommands();
+
+                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+                rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
             }
         }
 
@@ -90,6 +97,16 @@ namespace FSharpVSPowerTools
             {
                 shellService.UnadviseBroadcastMessages(broadcastEventCookie);
                 broadcastEventCookie = 0;
+            }
+
+            if (pctCookie != 0)
+            {
+                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+                if (rpct != null)
+                {
+                    rpct.UnregisterPriorityCommandTarget(pctCookie);
+                    pctCookie = 0;
+                }
             }
         }
     }
