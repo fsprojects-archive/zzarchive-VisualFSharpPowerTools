@@ -33,6 +33,7 @@ namespace FSharpVSPowerTools
             DepthColorizerEnabled = false;
             NavigateToEnabled = true;
             SyntaxColoringEnabled = true;
+            FolderOrganizationEnabled = false;
         }
 
         private bool GetNavigationBarConfig()
@@ -123,6 +124,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool SyntaxColoringEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool FolderOrganizationEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -139,6 +143,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
                 _optionsControl.NavigateToEnabled = NavigateToEnabled;
                 _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
+                _optionsControl.FolderOrganizationEnabled = FolderOrganizationEnabled;
 
                 return _optionsControl;
             }
@@ -164,6 +169,7 @@ namespace FSharpVSPowerTools
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
                 SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
+                FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
             }
 
             base.OnApply(e);
