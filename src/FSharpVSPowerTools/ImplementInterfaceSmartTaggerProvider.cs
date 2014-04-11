@@ -33,8 +33,11 @@ namespace FSharpVSPowerTools
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
-            // Only provide highlighting on the top-level buffer
+            // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
+
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (!generalOptions.ImplementInterfaceEnabled) return null;
 
             return new ImplementInterfaceSmartTagger(textView, buffer, editorOptionsFactory,
                         undoHistoryRegistry.RegisterHistory(buffer), 

@@ -18,7 +18,7 @@ namespace FSharpVSPowerTools
         private const string navBarConfig = "fsharp-navigationbar-enabled";
         private bool _navBarEnabledInAppConfig;
 
-        private Logger logger = new Logger(ServiceProvider.GlobalProvider);
+        private Logger logger;
 
         public GeneralOptionsPage()
         {
@@ -33,6 +33,7 @@ namespace FSharpVSPowerTools
             DepthColorizerEnabled = false;
             NavigateToEnabled = true;
             SyntaxColoringEnabled = true;
+            ImplementInterfaceEnabled = false;
         }
 
         private bool GetNavigationBarConfig()
@@ -123,6 +124,8 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool SyntaxColoringEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool ImplementInterfaceEnabled { get; set; }
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -139,6 +142,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
                 _optionsControl.NavigateToEnabled = NavigateToEnabled;
                 _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
+                _optionsControl.ImplementInterfaceEnabled = ImplementInterfaceEnabled;
 
                 return _optionsControl;
             }
@@ -164,6 +168,7 @@ namespace FSharpVSPowerTools
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
                 SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
+                ImplementInterfaceEnabled = _optionsControl.ImplementInterfaceEnabled;
             }
 
             base.OnApply(e);
