@@ -19,7 +19,6 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools;
-using System.Reflection;
 
 namespace FSharpVSPowerTools.Tests.MenuItemTests
 {
