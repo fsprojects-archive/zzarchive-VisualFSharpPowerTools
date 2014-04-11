@@ -18,10 +18,10 @@ namespace FSharpVSPowerTools
         }
         public GeneralOptionsPage OptionsPage { get; set; }
 
-        public bool XmlDocEnabled 
+        public bool XmlDocEnabled
         {
             get { return chbXmlDoc.Checked; }
-            set { chbXmlDoc.Checked = value;  }
+            set { chbXmlDoc.Checked = value; }
         }
 
         public bool FormattingEnabled
@@ -71,6 +71,12 @@ namespace FSharpVSPowerTools
             set { chbImplementInterface.Checked = value; }
         }
 
+        public bool FolderOrganizationEnabled
+        {
+            get { return chbFolderOrganization.Checked; }
+            set { chbFolderOrganization.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
@@ -85,6 +91,7 @@ namespace FSharpVSPowerTools
 
             // Temporarily hide the option
             chbImplementInterface.Visible = false;
+            chbFolderOrganization.Checked = OptionsPage.FolderOrganizationEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
