@@ -54,9 +54,6 @@ namespace FSharpVSPowerTools
             {
                 newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
                 newFolderMenu.SetupCommands();
-
-                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
-                rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
             }
         }
 
@@ -80,6 +77,9 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
 
             SetupMenu();
+
+            var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+            rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
         }
 
         public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)
