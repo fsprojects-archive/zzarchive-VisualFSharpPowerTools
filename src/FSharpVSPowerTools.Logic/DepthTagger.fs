@@ -63,31 +63,32 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
                 lastResults.Swap (fun _ -> newResults) |> ignore
                 debug "[DepthTagger] Firing tagschanged"
                 tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))
-            with e -> 
-                debug "%O" e
-                if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
-        }
-        |> Async.StartImmediate
+            with e -> Logging.logException e
+        } |> Async.StartImmediate
     
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 500us, refreshFileImpl) 
     
+    let getTags (spans: NormalizedSnapshotSpanCollection) = 
+        match spans |> Seq.toList, state with
+        | [], _ -> [||]
+        | firstSpan :: _, Some state 
+            when state.Snapshot === firstSpan.Snapshot && state.Results === lastResults.Value ->
+            debug "[DepthTagger] Using cached results"
+            state.Tags
+        | firstSpan :: _, _ ->
+            debug "[DepthTagger] Computing fresh results"
+            let snapshot = firstSpan.Snapshot
+            let tags = [| for span, depth in lastResults.Value ->
+                            TagSpan(span.GetSpan(snapshot), DepthRegionTag(depth)) :> ITagSpan<_> |]
+            state <- Some { Snapshot = snapshot; Tags = tags; Results = lastResults.Value }
+            tags
+
     interface ITagger<DepthRegionTag> with
         member x.GetTags spans = 
-            let tags = 
-                match spans |> Seq.toList, state with
-                | [], _ -> [||]
-                | firstSpan :: _, Some state 
-                    when state.Snapshot === firstSpan.Snapshot && state.Results === lastResults.Value ->
-                    debug "[DepthTagger] Using cached results"
-                    state.Tags
-                | firstSpan :: _, _ ->
-                    debug "[DepthTagger] Computing fresh results"
-                    let snapshot = firstSpan.Snapshot
-                    let tags = [| for span, depth in lastResults.Value ->
-                                      TagSpan(span.GetSpan(snapshot), DepthRegionTag(depth)) :> ITagSpan<_> |]
-                    state <- Some { Snapshot = snapshot; Tags = tags; Results = lastResults.Value }
-                    tags
-            upcast tags
+            try getTags spans :> _
+            with e -> 
+                Logging.logException e
+                Seq.empty
         
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
