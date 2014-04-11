@@ -47,7 +47,7 @@
 
 #### 0.6.0 - Unreleased
 * Add folder organization support
-* Add "Implement Interface" feature
 * Enhance syntax coloring (now with coloring modules and quotations)
+* Implement solution-wide rename refactoring
 
 
