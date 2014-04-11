@@ -10,8 +10,10 @@ Syntax coloring
 We currently support coloring:
 
 - types
-- functions / methods
 - value types
+- modules
+- functions / methods
+- quotations
 - patterns (off by default)
 - mutable variables / reference cells (off by default)
 
@@ -27,11 +29,13 @@ How to customize colors
 
 Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:
 
-- F# Types
 - F# Functions / Methods
-- F# Value Types
-- F# Patterns
+- F# Modules
 - F# Mutable Variables / Reference Cells
+- F# Patterns
+- F# Quotations
+- F# Types
+- F# Value Types
 
 You can press Ctrl + F in 'Display items' to quickly navigate to these colors.
 
