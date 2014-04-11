@@ -25,6 +25,7 @@ Here are currently supported features:
  * [Depth colorizer](depthcolorizer.html)
  * [NavigateTo](navigateto.html)
  * [Syntax coloring](syntaxcoloring.html)
+ * [Folder organization](folderorganization.html)
   
 Contributing and copyright
 --------------------------
