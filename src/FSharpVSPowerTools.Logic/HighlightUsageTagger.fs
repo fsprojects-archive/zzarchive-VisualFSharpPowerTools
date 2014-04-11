@@ -119,11 +119,12 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                 updateWordAdornments()
         | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, updateAtCaretPosition)
+    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
+                                    fun() -> try updateAtCaretPosition()
+                                             with e -> Logging.logException e)
 
-    interface ITagger<HighlightUsageTag> with
-        member x.GetTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq =
-            seq {
+    let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq = 
+        seq {
                 match currentWord with
                 | Some word when spans.Count <> 0 && wordSpans.Count <> 0 ->
                     let wordSpans, word =
@@ -147,5 +148,13 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                         TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
                 | _ -> ()
             }
+
+    interface ITagger<HighlightUsageTag> with
+        member x.GetTags spans =
+            try getTags spans
+            with e -> 
+                Logging.logException e
+                upcast []
+        
         member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
         member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
