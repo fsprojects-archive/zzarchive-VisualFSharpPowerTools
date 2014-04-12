@@ -5,7 +5,10 @@
 
 (**
 Folder Organization
------------------------
+===================
+
+> **NOTE:** Folder organization feature doesn't change the order of source files in your projects. You still have to follow the linear order of F# source files as shown in Solution Explorer.
+
 
 We currently support:
 
@@ -26,12 +29,23 @@ When you add new folder or rename existing one folder name must be provided into
 ![New Folder Dialog](img/FolderOrganization_NewFolderDialog.png)
 
 
-**This feature is disabled by default**
+**This feature is disabled by default**. 
+Because there are known issues with F# Project System in Visual F# Tools, folder organization may not work 100% correctly in all cases.
 
-Because there are known issues with F# Project System in Visual F# Tools, Folder Organization may not work 100% correctly in all cases.
+ - **We do not advice you to introduce complicated folder structure within F# projects.
+ - ** You should keep number of folders within your project as low as possible.
 
-**We do not advice you to introduce complicated folder structure within F# projects.** You should keep number of folders within your project as low as possible.
+Limitations
+-----------
 
-One of known issues causes problems when project contains two folders with the same name. Our *New Folder* and *Rename Folder* dialogs validates folders names across entire project to prevent that problem from occuring.
+One of known issues causes problems when project contains two folders with the same name. 
+Our *New Folder* and *Rename Folder* dialogs validates folders names across entire project to prevent that problem from occuring.
 
+Other issues:
+
+ - An empty folder will disappear after saving if you don't add any file to it.
+ - Renaming a file could make it jump out of the current folder. 
+It's a UI bug, if you close the project and reopen it, Solution Explorer shows correct folder structure again. 
+Alternatively you can move files out of the folder and move them into the folder again using menus.
+ - Renaming a folder using standard F2 shortcut (inplace editing) is buggy due to issues inside F# project system. We advise you to use 'F# Power Tools --> Rename Folder' instead.
 *)
