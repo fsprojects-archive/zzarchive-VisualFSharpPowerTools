@@ -80,7 +80,7 @@ type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) =
     member x.MoveFolderDown item next project: unit = MSBuildUtilitiesType.Value?MoveFolderDown (item, next, project)
     member x.MoveFolderUp item next project: unit = MSBuildUtilitiesType.Value?MoveFolderUp (item, next, project)
 
-type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell, featureEnabled: bool) = 
+type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell) = 
     let getSelectedItems() = VSUtils.getSelectedItemsFromSolutionExplorer dte |> Seq.toList
     let getSelectedProjects() = VSUtils.getSelectedProjectsFromSolutionExplorer dte |> Seq.toList
     
@@ -420,39 +420,34 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
 
     interface IOleCommandTarget with
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
-            match featureEnabled with
-            | true ->
-                if pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
-                    prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardNewFolder) then
-                    match getActionInfo() with
-                    | Some info ->
-                        if isFSharpProject info.Project then
-                            prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
-                            VSConstants.S_OK
-                        else
-                            int Constants.OLECMDERR_E_UNKNOWNGROUP
-                    | None ->
+            if pguidCmdGroup = PkgCmdConst.guidSolutionExplorerCmdSet &&
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.fsPowerToolsSubMenuGroup) then
+                prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
+                VSConstants.S_OK
+            elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardNewFolder) then
+                match getActionInfo() with
+                | Some info ->
+                    if isFSharpProject info.Project then
+                        prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
+                        VSConstants.S_OK
+                    else
                         int Constants.OLECMDERR_E_UNKNOWNGROUP
-                elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
-                    prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardRenameFolder) then
-                    match getActionInfo() with
-                    | Some info ->
-                        if isFSharpProject info.Project && List.exists isPhysicalFolder info.Items then
-                            prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
-                            VSConstants.S_OK
-                        else
-                            int Constants.OLECMDERR_E_UNKNOWNGROUP
-                    | None ->
+                | None ->
+                    int Constants.OLECMDERR_E_UNKNOWNGROUP
+            elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardRenameFolder) then
+                match getActionInfo() with
+                | Some info ->
+                    if isFSharpProject info.Project && List.exists isPhysicalFolder info.Items then
+                        prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
+                        VSConstants.S_OK
+                    else
                         int Constants.OLECMDERR_E_UNKNOWNGROUP
-                else
+                | None ->
                     int Constants.OLECMDERR_E_UNKNOWNGROUP
-            | false ->
-                if pguidCmdGroup = PkgCmdConst.guidSolutionExplorerCmdSet &&
-                    prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.fsPowerToolsSubMenuGroup) then
-                    prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
-                    VSConstants.S_OK
-                else
-                    int Constants.OLECMDERR_E_UNKNOWNGROUP
+            else
+                int Constants.OLECMDERR_E_UNKNOWNGROUP
         
         member x.Exec(_pguidCmdGroup: byref<Guid>, _nCmdID: uint32, _nCmdexecopt: uint32, _pvaIn: IntPtr, _pvaOut: IntPtr): int = 
             // We should not return OK here because it would short-circuit the command chain

@@ -52,9 +52,7 @@ namespace FSharpVSPowerTools
 
             if (mcs != null)
             {
-                var generalOptions = GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-
-                newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell, generalOptions.FolderOrganizationEnabled);
+                newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
                 newFolderMenu.SetupCommands();
             }
         }
@@ -78,10 +76,14 @@ namespace FSharpVSPowerTools
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote: true);
 
-            SetupMenu();
+            var generalOptions = GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (generalOptions.FolderOrganizationEnabled)
+            {
+                SetupMenu();
 
-            var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
-            rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
+                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+                rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
+            }
         }
 
         public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)
