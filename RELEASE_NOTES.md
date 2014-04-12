@@ -49,5 +49,6 @@
 * Add folder organization support
 * Enhance syntax coloring (now with coloring modules and quotations)
 * Implement solution-wide rename refactoring
+* Add logging facilities
 
 
