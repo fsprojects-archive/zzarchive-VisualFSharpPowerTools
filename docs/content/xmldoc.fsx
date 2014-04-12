@@ -43,3 +43,7 @@ Just type `///<` (the slashes and `<` simbol may be delemited by any number of w
 type, or module-scoped let (before any attributes, if there are any), 
 and you get a blank XMLDoc template (if there wasn't already a non-empty XMLDoc there).
 *)
+
+(** This is how it looks like in action
+![Auto generate XML doc](img/auto_generate_xml_doc.gif)
+*)

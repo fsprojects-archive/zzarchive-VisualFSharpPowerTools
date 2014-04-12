@@ -9,15 +9,16 @@ Depth colorizer
 
 This feature, originally written by Brian McNamara, highlights the indentation in code using color.
 
-For instance this code with the colorizer turned on
+It looks like this in the light Visual Studio theme
 
-![Not colorized](img/notcolorized.png)
+![Depth Colorizer in the Light theme](img/depth_colorizer_light_theme.png)
 
-would look like this
+And in the dark theme
 
-![Colorized](img/colorized.png)
+![Depth Colorizer in the Dark theme](img/depth_colorizer_dark_theme.png)
 
-The default scheme used in Visual F# Power Tools only uses a grey border to indicate indentation in F# source code.
+The default scheme used in Visual F# Power Tools only uses a grey border to indicate indentation in F# source code (as on the 
+examples above).
 If you prefer original colorful themes, custom colors can be added to the registry as documented [here](http://lorgonblog.wordpress.com/2010/11/18/f-source-code-structural-colorizer-available/).
 
 Here are two popular schemes for light theme: [Grey Scale](img/FSDCLightGrey.reg) and [Red Blue](img/FSDCLightRedBlue.reg) 
