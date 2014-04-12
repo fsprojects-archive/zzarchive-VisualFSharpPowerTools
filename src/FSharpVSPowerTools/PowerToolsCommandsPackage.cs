@@ -49,7 +49,7 @@ namespace FSharpVSPowerTools
         {
             var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
-            
+
             if (mcs != null)
             {
                 newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
@@ -64,7 +64,7 @@ namespace FSharpVSPowerTools
 
             var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
             classificationColorManager = componentModel.DefaultExportProvider.GetExportedValue<ClassificationColorManager>();
-            
+
             shellService = GetService(typeof(SVsShell)) as IVsShell;
 
             if (shellService != null)
@@ -72,14 +72,18 @@ namespace FSharpVSPowerTools
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(GeneralOptionsPage),
-                delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
+                delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote: true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
-                delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
+                delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote: true);
 
-            SetupMenu();
+            var generalOptions = GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (generalOptions.FolderOrganizationEnabled)
+            {
+                SetupMenu();
 
-            var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
-            rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
+                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+                rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
+            }
         }
 
         public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)

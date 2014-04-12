@@ -61,6 +61,8 @@
 
       <Menu guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup" priority="0x202" type="Menu">
         <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" />
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
           <ButtonText>F# Power Tools</ButtonText>
           <CommandName>F# Power Tools</CommandName>

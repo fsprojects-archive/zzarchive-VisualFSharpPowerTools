@@ -31,6 +31,8 @@ module PkgCmdConst =
     let guidStandardCmdSet = typedefof<VSConstants.VSStd97CmdID>.GUID
     let cmdStandardNewFolder = uint32 VSConstants.VSStd97CmdID.NewFolder
     let cmdStandardRenameFolder = uint32 VSConstants.VSStd97CmdID.Rename
+    let guidSolutionExplorerCmdSet = new Guid("{1D4A7B65-A22C-4405-837B-4214C0BED3C5}")
+    let fsPowerToolsSubMenuGroup = uint32 0x1061
 
 type VerticalMoveAction = 
     | MoveUp
@@ -418,7 +420,11 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
 
     interface IOleCommandTarget with
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
-            if pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+            if pguidCmdGroup = PkgCmdConst.guidSolutionExplorerCmdSet &&
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.fsPowerToolsSubMenuGroup) then
+                prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
+                VSConstants.S_OK
+            elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
                 prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardNewFolder) then
                 match getActionInfo() with
                 | Some info ->

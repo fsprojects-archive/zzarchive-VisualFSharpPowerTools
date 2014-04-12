@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
-            this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
             this.chbNavigateTo = new System.Windows.Forms.CheckBox();
             this.chbDepthColorizer = new System.Windows.Forms.CheckBox();
             this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
@@ -41,12 +40,15 @@
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
             this.chbImplementInterface = new System.Windows.Forms.CheckBox();
+            this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
+            this.chbFolderOrganization = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
             this.grbOptions.Controls.Add(this.chbImplementInterface);
+            this.grbOptions.Controls.Add(this.chbFolderOrganization);
             this.grbOptions.Controls.Add(this.chbSyntaxColoring);
             this.grbOptions.Controls.Add(this.chbNavigateTo);
             this.grbOptions.Controls.Add(this.chbDepthColorizer);
@@ -60,22 +62,10 @@
             this.grbOptions.Controls.Add(this.chbXmlDoc);
             this.grbOptions.Location = new System.Drawing.Point(3, 3);
             this.grbOptions.Name = "grbOptions";
-            this.grbOptions.Size = new System.Drawing.Size(424, 272);
+            this.grbOptions.Size = new System.Drawing.Size(424, 293);
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
-            // 
-            // chbSyntaxColoring
-            // 
-            this.chbSyntaxColoring.AutoSize = true;
-            this.chbSyntaxColoring.Checked = true;
-            this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 191);
-            this.chbSyntaxColoring.Name = "chbSyntaxColoring";
-            this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
-            this.chbSyntaxColoring.TabIndex = 11;
-            this.chbSyntaxColoring.Text = "Syntax coloring";
-            this.chbSyntaxColoring.UseVisualStyleBackColor = true;
             // 
             // chbNavigateTo
             // 
@@ -137,7 +127,7 @@
             // 
             this.lblInfo.AutoSize = true;
             this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.lblInfo.Location = new System.Drawing.Point(13, 228);
+            this.lblInfo.Location = new System.Drawing.Point(13, 255);
             this.lblInfo.Name = "lblInfo";
             this.lblInfo.Size = new System.Drawing.Size(331, 13);
             this.lblInfo.TabIndex = 5;
@@ -146,7 +136,7 @@
             // lblTitle
             // 
             this.lblTitle.AutoSize = true;
-            this.lblTitle.Location = new System.Drawing.Point(13, 244);
+            this.lblTitle.Location = new System.Drawing.Point(13, 271);
             this.lblTitle.Name = "lblTitle";
             this.lblTitle.Size = new System.Drawing.Size(95, 13);
             this.lblTitle.TabIndex = 4;
@@ -155,7 +145,7 @@
             // lblHome
             // 
             this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(101, 244);
+            this.lblHome.Location = new System.Drawing.Point(101, 271);
             this.lblHome.Name = "lblHome";
             this.lblHome.Size = new System.Drawing.Size(254, 13);
             this.lblHome.TabIndex = 3;
@@ -197,6 +187,27 @@
             this.chbImplementInterface.TabIndex = 12;
             this.chbImplementInterface.Text = "Implement interface";
             this.chbImplementInterface.UseVisualStyleBackColor = true;
+            // chbSyntaxColoring
+            // 
+            this.chbSyntaxColoring.AutoSize = true;
+            this.chbSyntaxColoring.Checked = true;
+            this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 191);
+            this.chbSyntaxColoring.Name = "chbSyntaxColoring";
+            this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
+            this.chbSyntaxColoring.TabIndex = 11;
+            this.chbSyntaxColoring.Text = "Syntax coloring";
+            this.chbSyntaxColoring.UseVisualStyleBackColor = true;
+            // 
+            // chbFolderOrganization
+            // 
+            this.chbFolderOrganization.AutoSize = true;
+            this.chbFolderOrganization.Location = new System.Drawing.Point(16, 214);
+            this.chbFolderOrganization.Name = "chbFolderOrganization";
+            this.chbFolderOrganization.Size = new System.Drawing.Size(115, 17);
+            this.chbFolderOrganization.TabIndex = 12;
+            this.chbFolderOrganization.Text = "Folder organization";
+            this.chbFolderOrganization.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -204,7 +215,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.grbOptions);
             this.Name = "GeneralOptionsControl";
-            this.Size = new System.Drawing.Size(461, 294);
+            this.Size = new System.Drawing.Size(461, 310);
             this.Load += new System.EventHandler(this.GeneralOptionsControl_Load);
             this.grbOptions.ResumeLayout(false);
             this.grbOptions.PerformLayout();
@@ -225,6 +236,7 @@
         private System.Windows.Forms.CheckBox chbRenameRefactoring;
         private System.Windows.Forms.CheckBox chbDepthColorizer;
         private System.Windows.Forms.CheckBox chbNavigateTo;
+        private System.Windows.Forms.CheckBox chbFolderOrganization;
         private System.Windows.Forms.CheckBox chbSyntaxColoring;
         private System.Windows.Forms.CheckBox chbImplementInterface;
     }
