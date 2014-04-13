@@ -62,6 +62,9 @@
 type, or module-scoped let (before any attributes, if there are any), 
 and you get a blank XMLDoc template (if there wasn't already a non-empty XMLDoc there).</p>
 
+<p>This is how it looks like in action
+<img src="img/auto_generate_xml_doc.gif" alt="Auto generate XML doc" /></p>
+
 <div class="tip" id="fs1">Multiple items<br />type SomeType =<br />&#160;&#160;new : unit -&gt; SomeType<br />&#160;&#160;member Foo : x:int * s:string -&gt; unit<br /><br />Full name: Xmldoc.Version1.SomeType<br /><br />--------------------<br />new : unit -&gt; SomeType</div>
 <div class="tip" id="fs2">val this : SomeType</div>
 <div class="tip" id="fs3">member SomeType.Foo : x:int * s:string -&gt; unit<br /><br />Full name: Xmldoc.Version1.SomeType.Foo</div>
@@ -96,6 +99,7 @@ and you get a blank XMLDoc template (if there wasn't already a non-empty XMLDoc 
             <li><a href="./depthcolorizer.html">Depth colorizer</a></li>
             <li><a href="./navigateto.html">NavigateTo</a></li>
             <li><a href="./syntaxcoloring.html">Syntax coloring</a></li>
+            <li><a href="./folderorganization.html">Folder organization</a></li>
             <!--
             <li class="nav-header">Documentation</li>
             <li><a href="./reference/index.html">API Reference</a></li>

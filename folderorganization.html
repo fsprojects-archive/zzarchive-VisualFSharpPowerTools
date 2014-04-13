@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>index</title>
+    <title>Folder Organization
+</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Visual F# Power Tools (by F# Community) ">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko">
@@ -32,39 +33,54 @@
       <div class="row">
         <div class="span9" id="main">
           
-<p>You can install this extension in Visual Studio 2012 and Visual Studio 2013 by searching for "FSharp Power Tools" in "Tools --> Extensions and Updates --> Online".
-The extension is also available in the <a href="http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff">Visual Studio Gallery</a>.</p>
+<h1>Folder Organization</h1>
 
-<h2>User guides</h2>
+<blockquote>
+  <p><strong>NOTE:</strong> Folder organization feature doesn't change the order of source files in your projects. You still have to follow the linear order of F# source files as shown in Solution Explorer.</p>
+</blockquote>
 
-<p>The extension comes with independent commands which can be toggled on/off in "Tools --> Options --> F# Power Tools --> General" dialog:</p>
-
-<p><img src="img/general_options.png" alt="General options" /></p>
-
-<p>Here are currently supported features:</p>
+<p>We currently support:</p>
 
 <ul>
-<li><a href="xmldoc.html">Auto-generating XMLDoc</a></li>
-<li><a href="codeformatting.html">Source code formatting</a></li>
-<li><a href="navbar.html">Navigation bar</a></li>
-<li><a href="highlightusage.html">Highlight references</a></li>
-<li><a href="rename.html">Rename refactoring</a></li>
-<li><a href="depthcolorizer.html">Depth colorizer</a></li>
-<li><a href="navigateto.html">NavigateTo</a></li>
-<li><a href="syntaxcoloring.html">Syntax coloring</a></li>
-<li><a href="folderorganization.html">Folder organization</a></li>
+<li>adding folders to projects</li>
+<li>adding subfolders to existing folders</li>
+<li>renaming folders</li>
+<li>moving files to folders</li>
+<li>moving folders up/down</li>
 </ul>
 
-<h2>Contributing and copyright</h2>
+<p>Here is how Solution Explorer context menu commands looks like for Folder Organization:</p>
 
-<p>The project is hosted on <a href="https://github.com/fsprojects/VisualFSharpPowerTools">GitHub</a> where you can <a href="https://github.com/fsprojects/VisualFSharpPowerTools/issues">report issues</a>, fork 
-the project and submit pull requests. You can suggest new features at our <a href="http://vfpt.uservoice.com/">user voice system</a>. 
-Please vote for your favourite features so that they have higher chances to be implemented. 
-If you're adding new features, please also consider adding <a href="https://github.com/fsprojects/VisualFSharpPowerTools/tree/master/docs/content">user guides</a> that can be turned into documentation.</p>
+<p><img src="img/FolderOrganization_ContextMenu.png" alt="Folder Organization Commands" /></p>
 
-<p>The extension is available under Apache 2.0 license, which allows modification and 
-redistribution for both commercial and non-commercial purposes. For more information see the 
-<a href="https://github.com/fsprojects/VisualFSharpPowerTools/tree/master/LICENSE.txt">License file</a> in the GitHub repository.</p>
+<p>Particular commands are enabled/disabled according to item you invoke the context menu on.</p>
+
+<p>When you add new folder or rename existing one folder name must be provided into a dialog:</p>
+
+<p><img src="img/FolderOrganization_NewFolderDialog.png" alt="New Folder Dialog" /></p>
+
+<p><strong>This feature is disabled by default</strong>. 
+Because there are known issues with F# Project System in Visual F# Tools, folder organization may not work 100% correctly in all cases.</p>
+
+<ul>
+<li><em></em>We do not advice you to introduce complicated folder structure within F# projects.</li>
+<li><em></em> You should keep number of folders within your project as low as possible.</li>
+</ul>
+
+<h2>Limitations</h2>
+
+<p>One of known issues causes problems when project contains two folders with the same name. 
+Our <em>New Folder</em> and <em>Rename Folder</em> dialogs validates folders names across entire project to prevent that problem from occuring.</p>
+
+<p>Other issues:</p>
+
+<ul>
+<li>An empty folder will disappear after saving if you don't add any file to it.</li>
+<li>Renaming a file could make it jump out of the current folder. 
+It's a UI bug, if you close the project and reopen it, Solution Explorer shows correct folder structure again.
+Alternatively you can move files out of the folder and move them into the folder again using menus.</li>
+<li>Renaming a folder using standard F2 shortcut (inplace editing) is buggy due to issues inside F# project system. We advise you to use 'F# Power Tools --> Rename Folder' instead.</li>
+</ul>
 
 
         </div>
