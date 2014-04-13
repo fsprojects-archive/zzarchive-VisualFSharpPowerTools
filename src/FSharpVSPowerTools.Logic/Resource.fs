@@ -7,6 +7,7 @@ module Resource =
     let [<Literal>] formattingErrorMessage = "Unable to format. "
 
     let [<Literal>] renameErrorMessage = "Unable to rename. The symbol hasn't been declared in current solution."
+    
     let [<Literal>] validatingEmptyName = "Empty names are not allowed."
     let [<Literal>] validatingOriginalName = "New name should not be the same as the original one."
     let [<Literal>] validatingUnionCase = "Invalid name for union cases."
@@ -24,7 +25,7 @@ module Resource =
     let [<Literal>] navBarUnauthorizedMessage = "Unauthorized access to navigation bar configuration. Please try again after restarting Visual Studio from Administrator."
     let [<Literal>] navBarErrorMessage = "Error occurs while saving navigation bar configuration."
 
-    let [<Literal>] newFolderDialogTitle = vsPackageTitle + " - New Folder"
-    let [<Literal>] renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
+    let newFolderDialogTitle = vsPackageTitle + " - New Folder"
+    let renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
 
     let [<Literal>] implementInterfaceErrorMessage = "All members of this interface have been implemented."
