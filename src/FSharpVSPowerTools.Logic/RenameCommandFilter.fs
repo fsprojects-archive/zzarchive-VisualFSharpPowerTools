@@ -100,7 +100,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         wnd.Owner <- hostWnd
                         let res = x.ShowDialog wnd
                         match res with
-                        | Some _ -> 
+                        | Some true -> 
                             let! results =
                                 match scope with
                                 | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
@@ -121,8 +121,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                                 return rename currentName model.Name references
                             | None -> 
                                 return ()
-                        | None -> 
-                            return ()
+                        | _ -> return ()
                     | _ -> return messageBoxError Resource.renameErrorMessage
                 | _ ->
                     return ()

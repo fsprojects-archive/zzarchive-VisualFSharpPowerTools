@@ -45,7 +45,7 @@
 * Fix intermittent navigation bar configuration 
 * Setup integration tests
 
-#### 0.6.0 - Unreleased
+#### 0.6.0 - April 14 2014
 * Add folder organization support
 * Enhance syntax coloring (now with coloring modules and quotations)
 * Implement solution-wide rename refactoring
