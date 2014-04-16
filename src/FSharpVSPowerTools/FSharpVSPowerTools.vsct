@@ -249,9 +249,9 @@
     </GuidSymbol>
 
     <GuidSymbol name="guidMoveCmdSet" value="{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}">
-      <IDSymbol name="cmdMoveFolderUp" value="0x1070"/>
-      <IDSymbol name="cmdMoveFolderDown" value="0x1071"/>
-      <IDSymbol name="cmdMoveToFolder" value="0x1072"/>
+      <IDSymbol name="cmdMoveFolderUp" value="0x1073"/>
+      <IDSymbol name="cmdMoveFolderDown" value="0x1074"/>
+      <IDSymbol name="cmdMoveToFolder" value="0x1075"/>
     </GuidSymbol>
 
   </Symbols>

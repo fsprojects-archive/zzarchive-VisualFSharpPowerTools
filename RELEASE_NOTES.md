@@ -51,4 +51,7 @@
 * Implement solution-wide rename refactoring
 * Add logging facilities
 
+#### 0.6.1 - April 14 2014
+* Fix the issue where rename refactoring is applied after cancelled by 'Esc'
+
 
