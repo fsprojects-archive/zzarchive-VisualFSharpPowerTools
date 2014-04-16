@@ -168,5 +168,9 @@ module Pervasive =
             try Path.GetFullPath path
             with _ -> path
 
+        static member GetFileNameSafe path =
+            try Path.GetFileName path
+            with _ -> path
+
     open Microsoft.FSharp.Compiler.SourceCodeServices
 

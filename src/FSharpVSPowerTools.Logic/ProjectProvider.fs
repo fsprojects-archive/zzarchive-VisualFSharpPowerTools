@@ -109,8 +109,12 @@ module ProjectProvider =
                 project.GetReferencedFSharpProjects()
                 |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
 
-            member x.GetAllReferencedProjectFileNames() =
-                project.GetReferencedProjects() |> List.map (fun p -> Path.GetFileName p.FileName)
+            member x.GetAllReferencedProjectFileNames() = 
+                project.GetReferencedProjects()
+                |> List.map (fun p -> p.FileName)
+                |> List.choose (fun file -> 
+                       if String.IsNullOrWhiteSpace file then None
+                       else Some(Path.GetFileNameSafe file))
             
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
