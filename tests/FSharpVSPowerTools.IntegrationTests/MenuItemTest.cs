@@ -30,8 +30,8 @@ namespace FSharpVSPowerTools.IntegrationTests
         {
             UIThreadInvoker.Invoke((ThreadInvoker)delegate()
             {
-                var menuItemCmd = new CommandID(FSharpVSPowerTools.Refactoring.PkgCmdIDList.GuidBuiltinCmdSet,
-                                                (int) FSharpVSPowerTools.Refactoring.PkgCmdIDList.CmdidBuiltinRenameCommand);
+                var menuItemCmd = new CommandID(FSharpVSPowerTools.Refactoring.PkgCmdConst.guidStandardCmdSet,
+                                                (int)FSharpVSPowerTools.Refactoring.PkgCmdConst.cmdidStandardRenameCommand);
                 // Create the DialogBoxListener Thread.
                 var expectedDialogBoxText = string.Format(CultureInfo.CurrentCulture, "{0}\n\nInside {1}.MenuItemCallback()", "PowerToolsCommandsPackage", "FSharpVSPowerTools.PowerToolsCommandsPackage");
                 var purger = new DialogBoxPurger(NativeMethods.IDOK, expectedDialogBoxText);

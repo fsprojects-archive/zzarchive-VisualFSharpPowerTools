@@ -15,9 +15,9 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 
-module PkgCmdIDList =
-    let CmdidBuiltinRenameCommand = 1550u // ECMD_RENAME
-    let GuidBuiltinCmdSet = typedefof<VSConstants.VSStd2KCmdID>.GUID
+module PkgCmdConst =
+    let cmdidStandardRenameCommand = uint32 VSConstants.VSStd2KCmdID.RENAME // ECMD_RENAME
+    let guidStandardCmdSet = typedefof<VSConstants.VSStd2KCmdID>.GUID
 
 [<NoEquality; NoComparison>]
 type DocumentState =
@@ -143,13 +143,13 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
-            if (pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && nCmdId = PkgCmdIDList.CmdidBuiltinRenameCommand) && canRename() then
+            if (pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && nCmdId = PkgCmdConst.cmdidStandardRenameCommand) && canRename() then
                 x.HandleRename()
             x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
-            if pguidCmdGroup = PkgCmdIDList.GuidBuiltinCmdSet && 
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdIDList.CmdidBuiltinRenameCommand) then
+            if pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdidStandardRenameCommand) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else

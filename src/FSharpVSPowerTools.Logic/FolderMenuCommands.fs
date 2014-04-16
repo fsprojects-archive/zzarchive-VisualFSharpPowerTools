@@ -23,16 +23,18 @@ module PkgCmdConst =
     let guidNewFolderCmdSet = Guid "{9EDC1279-C317-43A6-B554-3A4D7853D55E}"
     let cmdNewFolder = 0x1071
     let cmdRenameFolder = 0x1072
-    let guidMoveCmdSet = Guid "{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}"
-    let cmdMoveFolderUp = 0x1070
-    let cmdMoveFolderDown = 0x1071
-    let cmdMoveToFolder = 0x1072
 
-    let guidStandardCmdSet = typedefof<VSConstants.VSStd97CmdID>.GUID
+    let guidMoveCmdSet = Guid "{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}"
+    let cmdMoveFolderUp = 0x1073
+    let cmdMoveFolderDown = 0x1074
+    let cmdMoveToFolder = 0x1075
+
+    let guidSolutionExplorerCmdSet = Guid("{1D4A7B65-A22C-4405-837B-4214C0BED3C5}")
+    let fsPowerToolsSubMenuGroup = 0x1061u
+
+    let guidStandardCmdSet = VSConstants.GUID_VSStandardCommandSet97
     let cmdStandardNewFolder = uint32 VSConstants.VSStd97CmdID.NewFolder
     let cmdStandardRenameFolder = uint32 VSConstants.VSStd97CmdID.Rename
-    let guidSolutionExplorerCmdSet = new Guid("{1D4A7B65-A22C-4405-837B-4214C0BED3C5}")
-    let fsPowerToolsSubMenuGroup = uint32 0x1061
 
 type VerticalMoveAction = 
     | MoveUp
