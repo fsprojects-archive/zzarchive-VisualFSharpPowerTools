@@ -78,6 +78,9 @@
     <Resource Include="RenameDialog.xaml" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
+    <Compile Include="LibraryNode.fs" />
+    <Compile Include="Library.fs" />
+    <Compile Include="FindReferencesFilter.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

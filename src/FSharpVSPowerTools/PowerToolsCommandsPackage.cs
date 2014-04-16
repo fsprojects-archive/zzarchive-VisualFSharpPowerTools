@@ -9,6 +9,7 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using FSharpVSPowerTools.ProjectSystem;
+using FSharpVSPowerTools.Navigation;
 
 namespace FSharpVSPowerTools
 {
@@ -24,6 +25,9 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package
     {
+        private uint objectManagerCookie;
+        private FSharpLibrary library;
+
         protected override void Initialize()
         {
             base.Initialize();
@@ -34,6 +38,24 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
+
+            library = new FSharpLibrary(PkgCmdConst.guidSymbolLibrary);
+            library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
+
+            RegisterLibrary();
+        }
+
+        private void RegisterLibrary()
+        {
+            if (0 == objectManagerCookie)
+            {
+                IVsObjectManager2 objManager = GetService(typeof(SVsObjectManager)) as IVsObjectManager2;
+                if (null == objManager)
+                {
+                    return;
+                }
+                ErrorHandler.ThrowOnFailure(objManager.RegisterSimpleLibrary(library, out objectManagerCookie));
+            }
         }
     }
 }

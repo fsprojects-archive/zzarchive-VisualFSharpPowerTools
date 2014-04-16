@@ -1,0 +1,183 @@
+﻿namespace FSharpVSPowerTools.Navigation
+
+open System
+open System.IO
+open System.Collections.Generic
+open System.ComponentModel.Design
+open System.Runtime.InteropServices
+open Microsoft.VisualStudio.OLE.Interop
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.TextManager.Interop
+open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler.Range
+open FSharpVSPowerTools.ProjectSystem
+
+[<RequireQualifiedAccess>]
+module Constants =
+    let [<Literal>] FindReferencesResults = 0x11223344u
+
+type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUse: FSharpSymbolUse) =
+    inherit LibraryNode(name)
+    do
+        base.CanGoToSource <- true
+
+    let navigationData =
+        match symbolUse with
+        | Some symbolUse ->
+            let mutable hierarchy = Unchecked.defaultof<_>
+            let mutable itemId = Unchecked.defaultof<_>
+            let mutable windowFrame = Unchecked.defaultof<_>
+            let isOpened = 
+                VsShellUtilities.IsDocumentOpen(
+                    serviceProvider, 
+                    symbolUse.FileName, 
+                    Constants.LogicalViewTextGuid,
+                    &hierarchy,
+                    &itemId,
+                    &windowFrame)
+            let canShow = 
+                if isOpened then true
+                else
+                    // TODO: track the project that contains document and open document in project context
+                    try
+                        VsShellUtilities.OpenDocument(
+                            serviceProvider, 
+                            symbolUse.FileName, 
+                            Constants.LogicalViewTextGuid, 
+                            &hierarchy,
+                            &itemId,
+                            &windowFrame)
+                        true
+                    with _ -> false
+            if canShow then
+                windowFrame.Show()
+                |> ensureSucceded
+
+                let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+                let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+                let mutable vsTextBuffer = Unchecked.defaultof<_>
+                vsTextView.GetBuffer(&vsTextBuffer)
+                |> ensureSucceded
+                Some (vsTextManager, vsTextBuffer)
+            else None
+        | _ -> None
+
+    let getCurrentLine (range: range) =
+        match navigationData with
+        | Some(_, vsTextBuffer) ->
+            let line = range.StartLine-1
+            let (_, lineLength) = vsTextBuffer.GetLengthOfLine(line)
+            let (_, lineStr) = vsTextBuffer.GetLineText(line, 0, line, lineLength)
+            // Trimming for display purpose
+            lineStr.Trim()
+        | None -> ""
+
+    override x.CategoryField(_category: LIB_CATEGORY) =
+        uint32 LibraryNodeType.None
+
+    override x.GetTextWithOwnership(tto: VSTREETEXTOPTIONS) = 
+        match tto, symbolUse with
+        | VSTREETEXTOPTIONS.TTO_DEFAULT, Some symbolUse ->
+            let range = symbolUse.RangeAlternate
+            sprintf "%s %s - (%i, %i) : %s" x.Name (Path.GetFullPath(symbolUse.FileName)) 
+                range.StartLine range.StartColumn (getCurrentLine range)
+        | _ -> null
+
+    override x.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = 
+        match navigationData, symbolUse with
+        | Some(vsTextManager, vsTextBuffer), Some symbolUse ->
+            let range = symbolUse.RangeAlternate
+            let (startRow, startCol, endRow, endCol) = (range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
+            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, 
+                startRow, startCol, endRow, endCol)
+            |> ensureSucceded
+        | _ -> ()
+
+    interface IVsNavInfo with
+        member x.GetLibGuid(_pGuid: byref<Guid>): int = 
+            raise (System.NotImplementedException())
+              
+        member x.GetSymbolType(_pdwType: byref<uint32>): int = 
+            raise (System.NotImplementedException())
+              
+        member x.EnumPresentationNodes(_dwFlags: uint32, _ppEnum: byref<IVsEnumNavInfoNodes>): int = 
+            raise (System.NotImplementedException())
+              
+        member x.EnumCanonicalNodes(ppEnum: byref<IVsEnumNavInfoNodes>): int = 
+            raise (System.NotImplementedException())
+
+type FSharpLibrary(guid: Guid) =
+    let mutable capabilities: _LIB_FLAGS2 = Unchecked.defaultof<_>
+    let mutable root = LibraryNode("", LibraryNodeType.Package)
+
+    member x.LibraryCapabilities
+        with get () = capabilities
+        and set v = capabilities <- v
+    
+    member internal x.AddNode(node: LibraryNode) =
+        lock x (fun () ->
+            root <- root.Clone()
+            root.AddNode(node))
+
+    member internal x.RemoveNode(node: LibraryNode) =
+        lock x (fun () ->
+            root <- root.Clone()
+            root.RemoveNode(node))
+
+    interface IVsSimpleLibrary2 with
+        member x.GetSupportedCategoryFields2(_category: int, pgrfCatField: byref<uint32>): int = 
+            pgrfCatField <- uint32 _LIB_CATEGORY2.LC_HIERARCHYTYPE ||| uint32 _LIB_CATEGORY2.LC_PHYSICALCONTAINERTYPE
+            VSConstants.S_OK
+              
+        member x.GetList2(listType: uint32, _flags: uint32, pobSrch: VSOBSEARCHCRITERIA2 [], ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
+            if pobSrch <> null && not (Array.isEmpty pobSrch) && pobSrch.[0].dwCustom = Constants.FindReferencesResults then
+                // Filter duplicated results
+                // Reference at http://social.msdn.microsoft.com/Forums/en-US/267c38d3-1732-465c-82cd-c36fceb486be/find-symbol-result-window-got-double-results-when-i-search-object-use-ivssimplelibrary2?forum=vsx
+                match enum<_>(int listType) with
+                |  _LIB_LISTTYPE.LLT_NAMESPACES ->
+                    ppIVsSimpleObjectList2 <- pobSrch.[0].pIVsNavInfo :?> FSharpLibraryNode
+                    VSConstants.S_OK
+                | _ ->
+                    ppIVsSimpleObjectList2 <- null
+                    VSConstants.E_FAIL
+            else
+                // We don't support call hierarchy, object browser and the like
+                ppIVsSimpleObjectList2 <- null
+                VSConstants.E_NOTIMPL
+              
+        member x.GetLibFlags2(pgrfFlags: byref<uint32>): int = 
+            pgrfFlags <- uint32 x.LibraryCapabilities
+            VSConstants.S_OK
+              
+        member x.UpdateCounter(pCurUpdate: byref<uint32>): int = 
+            (root :> IVsSimpleObjectList2).UpdateCounter(&pCurUpdate)
+              
+        member x.GetGuid(pguidLib: byref<Guid>): int = 
+            pguidLib <- guid
+            VSConstants.S_OK
+              
+        member x.GetSeparatorStringWithOwnership(pbstrSeparator: byref<string>): int = 
+            pbstrSeparator <- "."
+            VSConstants.S_OK
+              
+        member x.LoadState(_pIStream: IStream, _lptType: LIB_PERSISTTYPE): int = 
+            VSConstants.S_OK
+              
+        member x.SaveState(_pIStream: IStream, _lptType: LIB_PERSISTTYPE): int = 
+            VSConstants.S_OK
+              
+        member x.GetBrowseContainersForHierarchy(_pHierarchy: IVsHierarchy, _celt: uint32, _rgBrowseContainers: VSBROWSECONTAINER [], pcActual: uint32 []): int = 
+            VSConstants.E_NOTIMPL
+              
+        member x.AddBrowseContainer(_pcdComponent: VSCOMPONENTSELECTORDATA [], _pgrfOptions: byref<uint32>, pbstrComponentAdded: byref<string>): int = 
+            pbstrComponentAdded <- null
+            VSConstants.E_NOTIMPL
+              
+        member x.RemoveBrowseContainer(_dwReserved: uint32, _pszLibName: string): int = 
+            VSConstants.E_NOTIMPL
+              
+        member x.CreateNavInfo(_rgSymbolNodes: SYMBOL_DESCRIPTION_NODE [], _ulcNodes: uint32, ppNavInfo: byref<IVsNavInfo>): int = 
+            ppNavInfo <- null
+            VSConstants.E_NOTIMPL
+
