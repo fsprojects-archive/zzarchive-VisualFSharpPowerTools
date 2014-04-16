@@ -22,6 +22,7 @@ and IProjectProvider =
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
     abstract GetReferencedProjects: unit -> IProjectProvider list
+    abstract GetAllReferencedProjectFileNames: unit -> string list
 
 [<AutoOpen>]
 module FSharpSymbolExtensions =
@@ -104,9 +105,12 @@ module ProjectProvider =
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
             
-            member x.GetReferencedProjects() = 
-                project.GetReferencedProjects() 
+            member x.GetReferencedProjects() =
+                project.GetReferencedFSharpProjects()
                 |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
+
+            member x.GetAllReferencedProjectFileNames() =
+                project.GetReferencedProjects() |> List.map (fun p -> Path.GetFileName p.FileName)
             
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
@@ -117,6 +121,7 @@ module ProjectProvider =
             member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
             member x.SourceFiles = [| filePath |]
             member x.GetReferencedProjects() = []
+            member x.GetAllReferencedProjectFileNames() = []
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 

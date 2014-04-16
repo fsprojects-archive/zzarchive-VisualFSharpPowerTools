@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.SyntaxColoring
 
 open System
+open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
@@ -35,54 +36,68 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     let state = Atom None
     let mutable isWorking = false
 
-    let getProject() = 
+    let getProject() =
         maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath)
             return! ProjectProvider.createForFileInProject doc.FilePath projectItem.ContainingProject }
-    
-    let updateSyntaxConstructClassifiers() =
-        let snapshot = doc.TextBuffer.CurrentSnapshot
-        let currentState = state.Value
-        if not isWorking then
-            let needUpdate =
-                match currentState with
-                | None -> true
-                | Some state -> state.SnapshotSpan.Snapshot <> snapshot
 
-            if needUpdate then
-                isWorking <- true
-                match getProject() with
-                | Some project ->
-                    debug "[SyntaxConstructClassifier] - Effective update"
-                    async {
-                        try
+    let updateSyntaxConstructClassifiers force =
+        try
+            let snapshot = doc.TextBuffer.CurrentSnapshot
+            let currentState = state.Value
+            if not isWorking then
+                let needUpdate =
+                    match force, currentState with
+                    | true, _ -> true
+                    | _, None -> true
+                    | _, Some state -> state.SnapshotSpan.Snapshot <> snapshot
+
+                if needUpdate then
+                    isWorking <- true
+                    match getProject() with
+                    | Some project ->
+                        debug "[SyntaxConstructClassifier] - Effective update"
+                        async {
                             try
-                                let! allSymbolsUses, lexer =
-                                    vsLanguageService.GetAllUsesOfAllSymbolsInFile (
-                                        snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
-                                let! parseResults = vsLanguageService.ParseFileInProject(snapshot, doc.FilePath, project)
+                                try
+                                    let! allSymbolsUses, lexer =
+                                        vsLanguageService.GetAllUsesOfAllSymbolsInFile (
+                                            snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
+                                    let! parseResults = vsLanguageService.ParseFileInProject(snapshot, doc.FilePath, project)
 
-                                let spans = 
-                                    getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
-                                    |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                                    let spans = 
+                                        getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
+                                        |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
-                                state.Swap (fun _ -> 
-                                    Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
-                                           Spans = spans }) |> ignore
-                                // TextBuffer is null if a solution is closed at this moment
-                                if doc.TextBuffer <> null then
-                                    let currentSnapshot = doc.TextBuffer.CurrentSnapshot
-                                    let snapshot = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-                                    classificationChanged.Trigger(self, ClassificationChangedEventArgs(snapshot))
-                            with e -> Logging.logException e
-                        finally isWorking <- false
-                    } |> Async.Start
-                | None -> ()
+                                    state.Swap (fun _ -> 
+                                        Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
+                                               Spans = spans }) |> ignore
+                                    // TextBuffer is null if a solution is closed at this moment
+                                    if doc.TextBuffer <> null then
+                                        let currentSnapshot = doc.TextBuffer.CurrentSnapshot
+                                        let snapshot = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+                                        classificationChanged.Trigger(self, ClassificationChangedEventArgs(snapshot))
+                                with e -> Logging.logException e
+                            finally isWorking <- false
+                        } |> Async.Start
+                    | None -> ()
+        with e -> Logging.logException e
+
+    let events = serviceProvider.GetService<EnvDTE.DTE, SDTE>().Events :?> EnvDTE80.Events2 
+    do events.BuildEvents.add_OnBuildProjConfigDone (fun project _ _ _ _ ->
+        maybe {
+            let! selfProject = getProject()
+            let builtProjectFileName = Path.GetFileName project
+            let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
+            debug "[SyntaxConstructClassifier] Project %s has been built. Referenced projects: %A" 
+                  builtProjectFileName referencedProjectFileNames 
+            if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
+                updateSyntaxConstructClassifiers true
+        } |> ignore)
     
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
-                                    fun() -> try updateSyntaxConstructClassifiers() 
-                                             with e -> Logging.logException e)
+                                    fun() -> updateSyntaxConstructClassifiers false)
 
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
         match state.Value with
