@@ -61,9 +61,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                         async {
                             try
                                 try
+                                    let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
                                     let! allSymbolsUses, lexer =
-                                        vsLanguageService.GetAllUsesOfAllSymbolsInFile (
-                                            snapshot, doc.FilePath, project, AllowStaleResults.MatchingSource)
+                                        vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
                                     let! parseResults = vsLanguageService.ParseFileInProject(snapshot, doc.FilePath, project)
 
                                     let spans = 
@@ -90,9 +90,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let! selfProject = getProject()
             let builtProjectFileName = Path.GetFileName project
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
-            debug "[SyntaxConstructClassifier] Project %s has been built. Referenced projects: %A" 
-                  builtProjectFileName referencedProjectFileNames 
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
+                debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers." 
+                      builtProjectFileName
                 updateSyntaxConstructClassifiers true
         } |> ignore)
     
