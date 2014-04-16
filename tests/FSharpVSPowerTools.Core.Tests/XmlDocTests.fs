@@ -1,6 +1,6 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../bin/FSharpXmlDoc.dll"
+#r "../../bin/FSharpVSPowerTools.Core.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
@@ -14,7 +14,7 @@ open NUnit.Framework
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
 let input = File.ReadAllText(fileName)
 
-let output = XmlDocParser.GetXmlDocables(input, fileName) |> Set.ofList
+let output = XmlDocParser.GetXmlDocables(input, fileName) |> Async.RunSynchronously |> Set.ofList
 
 [<Test>]
 let ``should create XML Doc for module-level let bounds``() =

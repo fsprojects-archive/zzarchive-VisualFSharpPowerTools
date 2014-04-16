@@ -1,15 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Design;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using FSharpVSPowerTools.ProjectSystem;
+using Microsoft.VisualStudio.ComponentModelHost;
+using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Formatting;
+using EnvDTE;
+using EnvDTE80;
+using FSharpVSPowerTools;
 using FSharpVSPowerTools.Navigation;
+using FSharpVSPowerTools.Folders;
+using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
@@ -23,23 +32,64 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
-    public class PowerToolsCommandsPackage : Package
+    public class PowerToolsCommandsPackage : Package, IVsBroadcastMessageEvents, IDisposable
     {
-        private uint objectManagerCookie;
+        private const uint WM_SYSCOLORCHANGE = 0x0015;
+
+        private IVsShell shellService;
+        private FolderMenuCommands newFolderMenu;
         private FSharpLibrary library;
+
+        private uint broadcastEventCookie;
+        private uint pctCookie;
+        private uint objectManagerCookie;
+        
+        internal static Lazy<DTE2> DTE
+            = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
+
+        private ClassificationColorManager classificationColorManager;
+
+        private void SetupMenu()
+        {
+            var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+
+            if (mcs != null)
+            {
+                newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
+                newFolderMenu.SetupCommands();
+            }
+        }
 
         protected override void Initialize()
         {
             base.Initialize();
             VSUtils.ForegroundThreadGuard.BindThread();
 
+            var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
+            classificationColorManager = componentModel.DefaultExportProvider.GetExportedValue<ClassificationColorManager>();
+
+            shellService = GetService(typeof(SVsShell)) as IVsShell;
+
+            if (shellService != null)
+                ErrorHandler.ThrowOnFailure(shellService.AdviseBroadcastMessages(this, out broadcastEventCookie));
+
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(GeneralOptionsPage),
-                delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote:true);
+                delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote: true);
             serviceContainer.AddService(typeof(FantomasOptionsPage),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote:true);
 
-            library = new FSharpLibrary(PkgCmdConst.guidSymbolLibrary);
+            var generalOptions = GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (generalOptions.FolderOrganizationEnabled)
+            {
+                SetupMenu();
+
+                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+                rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
+            }
+
+            library = new FSharpLibrary(Navigation.PkgCmdConst.guidSymbolLibrary);
             library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
 
             RegisterLibrary();
@@ -47,14 +97,46 @@ namespace FSharpVSPowerTools
 
         private void RegisterLibrary()
         {
-            if (0 == objectManagerCookie)
+            if (objectManagerCookie == 0)
             {
                 IVsObjectManager2 objManager = GetService(typeof(SVsObjectManager)) as IVsObjectManager2;
-                if (null == objManager)
-                {
-                    return;
-                }
+                if (objManager == null) return;
                 ErrorHandler.ThrowOnFailure(objManager.RegisterSimpleLibrary(library, out objectManagerCookie));
+            }
+        }
+
+        public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            if (msg == WM_SYSCOLORCHANGE)
+            {
+                classificationColorManager.UpdateColors();
+            }
+            return VSConstants.S_OK;
+        }
+
+        public void Dispose()
+        {
+            if (shellService != null && broadcastEventCookie != 0)
+            {
+                shellService.UnadviseBroadcastMessages(broadcastEventCookie);
+                broadcastEventCookie = 0;
+            }
+
+            if (pctCookie != 0)
+            {
+                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+                if (rpct != null)
+                {
+                    rpct.UnregisterPriorityCommandTarget(pctCookie);
+                    pctCookie = 0;
+                }
+            }
+
+            if (objectManagerCookie != 0)
+            {
+                IVsObjectManager2 objManager = GetService(typeof(SVsObjectManager)) as IVsObjectManager2;
+                if (objManager != null) 
+                    objManager.UnregisterLibrary(objectManagerCookie);
             }
         }
     }

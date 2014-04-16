@@ -6,7 +6,8 @@ module Resource =
     
     let [<Literal>] formattingErrorMessage = "Unable to format. "
 
-    let [<Literal>] renameErrorMessage = "Unable to rename. The symbol hasn't been declared in current project."
+    let [<Literal>] renameErrorMessage = "Unable to rename. The symbol hasn't been declared in current solution."
+    
     let [<Literal>] validatingEmptyName = "Empty names are not allowed."
     let [<Literal>] validatingOriginalName = "New name should not be the same as the original one."
     let [<Literal>] validatingUnionCase = "Invalid name for union cases."
@@ -15,7 +16,16 @@ module Resource =
     let [<Literal>] validatingGenericTypeParameter = "Invalid name for generic type parameters."
     let [<Literal>] validatingStaticallyResolvedTypeParameter = "Invalid name for statically resolved type parameters."
     let [<Literal>] validatingOperator ="Invalid name for operators."
+    let [<Literal>] validationFolderWithGivenNameAlreadyExists = "Folder with given name already exists in the project."
+    let [<Literal>] validationDestinationFolderDoesNotExist = "Destination folder doesn't exist. Please try to create destination folder before moving files."
+    let [<Literal>] validationCannotCreateFolder = "Unable to create folder. Please make sure you have enough privileges."
+    let [<Literal>] validationExistingFolderOnDisk = "An existing folder has been added."
+    let [<Literal>] validationRenameFolderAlreadyExistsOnDisk = "Unable to rename folder. Folder with given name already exists on disk."
 
     let [<Literal>] navBarUnauthorizedMessage = "Unauthorized access to navigation bar configuration. Please try again after restarting Visual Studio from Administrator."
     let [<Literal>] navBarErrorMessage = "Error occurs while saving navigation bar configuration."
 
+    let newFolderDialogTitle = vsPackageTitle + " - New Folder"
+    let renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
+
+    let [<Literal>] implementInterfaceErrorMessage = "All members of this interface have been implemented."

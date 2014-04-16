@@ -59,13 +59,23 @@ let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
 
 // Generate assembly info files with the right version & up-to-date information
 Target "AssemblyInfo" (fun _ ->
-  let fileName = "src/" + project + "/Properties/AssemblyInfo.cs"
-  CreateCSharpAssemblyInfo fileName
-      [ Attribute.Title project
-        Attribute.Product project
+  let shared =
+      [ Attribute.Product project
         Attribute.Description summary
         Attribute.Version release.AssemblyVersion
         Attribute.FileVersion release.AssemblyVersion ] 
+
+  CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
+      (Attribute.Title "FSharpVSPowerTools" :: shared)
+
+  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Core/AssemblyInfo.fs"
+      (Attribute.Title "FSharpVSPowerTools.Core" :: shared)
+
+  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
+      (Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
+
+  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2013/AssemblyInfo.fs"
+      (Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
 )
 
 // --------------------------------------------------------------------------------------
@@ -94,15 +104,34 @@ Target "Build" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
 
-Target "RunTests" (fun _ ->
+Target "UnitTests" (fun _ ->
     !! testAssemblies 
     |> NUnit (fun p ->
         { p with
             DisableShadowCopy = true
             TimeOut = TimeSpan.FromMinutes 20.
             Framework = "4.5"
-            Domain = "Multiple"
+            Domain = NUnitDomainModel.MultipleDomainModel
             OutputFile = "TestResults.xml" })
+)
+
+// --------------------------------------------------------------------------------------
+// Run the integration tests using test runner
+
+Target "IntegrationTests" (fun _ ->
+    !! "tests/**/bin/Release/FSharpVSPowerTools.Tests.dll"
+    |> MSTest.MSTest (fun p ->
+        { p with
+            TimeOut = TimeSpan.FromMinutes 20.
+        })
+)
+
+Target "ExtraIntegrationTests" (fun _ ->
+    !! "tests/**/bin/Release/FSharpVSPowerTools.IntegrationTests.dll" 
+    |> MSTest.MSTest (fun p ->
+        { p with
+            TimeOut = TimeSpan.FromMinutes 20.
+        })
 )
 
 // --------------------------------------------------------------------------------------
@@ -127,24 +156,38 @@ Target "ReleaseDocs" (fun _ ->
     Branches.push tempDocsDir
 )
 
-Target "Release" DoNothing
+Target "Release" (fun _ ->
+    StageAll ""
+    Commit "" (sprintf "Bump version to %s" release.NugetVersion)
+    Branches.push ""
+
+    Branches.tag "" release.NugetVersion
+    Branches.pushTag "" "origin" release.NugetVersion
+)
 
 // --------------------------------------------------------------------------------------
-// Run all targets by default. Invoke 'build <Target>' to override
+// Run main targets by default. Invoke 'build <Target>' to override
+
+Target "Main" DoNothing
 
 Target "All" DoNothing
 
 "Clean"
   ==> "RestorePackages"
-  =?> ("AssemblyInfo", not isLocalBuild)
+  ==> "AssemblyInfo"
   ==> "Build"
-  ==> "RunTests"
+  ==> "UnitTests"
+  ==> "IntegrationTests"
+  ==> "Main"
+
+"Main"
+  =?> ("ExtraIntegrationTests", isLocalBuild)
   ==> "All"
 
-"All" 
+"Main" 
   ==> "CleanDocs"
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
   ==> "Release"
 
-RunTargetOrDefault "All"
+RunTargetOrDefault "Main"

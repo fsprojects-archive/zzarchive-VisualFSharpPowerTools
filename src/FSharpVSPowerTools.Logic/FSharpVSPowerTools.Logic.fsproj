@@ -57,12 +57,15 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
     <None Include="packages.config" />
+    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Resource.fs" />
     <Compile Include="VSUtils.fs" />
+    <Compile Include="Logger.fs" />
     <Compile Include="VisualStudioVersion.fs" />
+    <Compile Include="ThemeManager.fs" />
     <Compile Include="ProjectSystem.fs" />
     <Compile Include="ProjectProvider.fs" />
-    <Compile Include="LanguageService.fs" />
+    <Compile Include="VSLanguageService.fs" />
     <Compile Include="OpenDocumentsTracker.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="NavigateToItem.fs" />
@@ -78,6 +81,13 @@
     <Resource Include="RenameDialog.xaml" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
+    <Resource Include="FolderNameDialog.xaml" />
+    <Compile Include="FolderNameDialog.fs" />
+    <Resource Include="MoveToFolderDialog.xaml" />
+    <Compile Include="MoveToFolderDialog.fs" />
+    <Compile Include="FolderMenuUI.fs" />
+    <Compile Include="FolderMenuCommands.fs" />
+    <Compile Include="ImplementInterfaceSmartTagger.fs" />
     <Compile Include="LibraryNode.fs" />
     <Compile Include="Library.fs" />
     <Compile Include="FindReferencesFilter.fs" />
@@ -87,11 +97,11 @@
     </Reference>
     <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="FantomasLib">
-      <HintPath>..\..\packages\Fantomas.1.0.7\lib\FantomasLib.dll</HintPath>
+      <HintPath>..\..\packages\Fantomas.1.1.0\lib\FantomasLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.36\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.44\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -157,6 +167,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Interactivity">

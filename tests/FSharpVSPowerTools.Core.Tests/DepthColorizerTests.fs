@@ -1,6 +1,6 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../bin/FSharpDepthColorizer.dll"
+#r "../../bin/FSharpVSPowerTools.Core.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
@@ -14,7 +14,7 @@ open NUnit.Framework
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "DepthColorizerSampleFile.fs")
 let input = File.ReadAllText(fileName)
 
-let output = DepthParser.GetNonoverlappingDepthRanges(input, fileName)
+let output = DepthParser.GetNonoverlappingDepthRanges(input, fileName) |> Async.RunSynchronously
 
 [<Test>]
 let ``should create single level at depth 0 for module definition``() =

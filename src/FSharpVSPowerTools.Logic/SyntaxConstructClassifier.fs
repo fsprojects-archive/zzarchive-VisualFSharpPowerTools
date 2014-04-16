@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.SyntaxColoring
 
 open System
+open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
@@ -11,80 +12,122 @@ open FSharpVSPowerTools.Core.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 
-type SyntaxConstructClassifier (buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
-                                vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self = 
-    let classificationChanged = Event<_,_>()
-    let lastSnapshot = Atom null
-    let locations = Atom [||]
-    let mutable isWorking = false 
-    
-    let referenceType = classificationRegistry.GetClassificationType "FSharp.ReferenceType"
-    let valueType = classificationRegistry.GetClassificationType "FSharp.ValueType"
-    let patternType = classificationRegistry.GetClassificationType "FSharp.PatternCase"
-    let functionType = classificationRegistry.GetClassificationType "FSharp.Function"
+[<NoComparison>]
+type private ClassifierState =
+    { SnapshotSpan: SnapshotSpan
+      Spans: CategorizedColumnSpan[] }
 
+type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
+                                vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self = 
+    
     let getClassficationType cat =
         match cat with
-        | ReferenceType -> Some referenceType
-        | ValueType -> Some valueType
-        | PatternCase -> Some patternType
-        | TypeParameter -> None
-        | Function -> Some functionType
-        | PublicField | Other -> None
-    
-    let synchronousUpdate (newLocations: CategorizedColumnSpan[]) = 
-        locations.Swap(fun _ -> newLocations) |> ignore
-        let snapshot = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-        classificationChanged.Trigger (self, ClassificationChangedEventArgs(snapshot))
-    
-    let updateSyntaxConstructClassifiers() =
-        let snapshot = buffer.CurrentSnapshot
-        if not isWorking && snapshot <> lastSnapshot.Value then 
-            isWorking <- true
-            maybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument()
-                let! project = ProjectProvider.createForDocument doc
+        | ReferenceType -> Some "FSharp.ReferenceType"
+        | ValueType -> Some "FSharp.ValueType"
+        | PatternCase -> Some "FSharp.PatternCase"
+        | Function -> Some "FSharp.Function"
+        | MutableVar -> Some "FSharp.MutableVar"
+        | Quotation -> Some "FSharp.Quotation"
+        | Module -> Some "FSharp.Module"
+        | _ -> None
+        |> Option.map classificationRegistry.GetClassificationType
 
-                debug "[SyntaxConstructClassifier] - Effective update"
-                lastSnapshot.Swap (fun _ -> snapshot) |> ignore
-                async {
-                    try
-                        let! allSymbolsUses =
-                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FullName, project, AllowStaleResults.MatchingSource)
-                
-                        getCategoriesAndLocations allSymbolsUses
-                        |> Array.sortBy (fun { Line = line } -> line)
-                        |> synchronousUpdate
-                    finally
-                        isWorking <- false
-                } |> Async.Start
-            } |> ignore
-    
-    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 
-                                    TimeSpan.FromMilliseconds 200.,
-                                    fun _ -> updateSyntaxConstructClassifiers())
+    let classificationChanged = Event<_,_>()
+    let state = Atom None
+    let mutable isWorking = false
 
-    do buffer.Changed.Add (fun _ -> locations.Swap (fun _ -> [||]) |> ignore)
+    let getProject() =
+        maybe {
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath)
+            return! ProjectProvider.createForFileInProject doc.FilePath projectItem.ContainingProject }
+
+    let updateSyntaxConstructClassifiers force =
+        try
+            let snapshot = doc.TextBuffer.CurrentSnapshot
+            let currentState = state.Value
+            if not isWorking then
+                let needUpdate =
+                    match force, currentState with
+                    | true, _ -> true
+                    | _, None -> true
+                    | _, Some state -> state.SnapshotSpan.Snapshot <> snapshot
+
+                if needUpdate then
+                    isWorking <- true
+                    match getProject() with
+                    | Some project ->
+                        debug "[SyntaxConstructClassifier] - Effective update"
+                        async {
+                            try
+                                try
+                                    let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
+                                    let! allSymbolsUses, lexer =
+                                        vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
+                                    let! parseResults = vsLanguageService.ParseFileInProject(snapshot, doc.FilePath, project)
+
+                                    let spans = 
+                                        getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
+                                        |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                        
+                                    state.Swap (fun _ -> 
+                                        Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
+                                               Spans = spans }) |> ignore
+                                    // TextBuffer is null if a solution is closed at this moment
+                                    if doc.TextBuffer <> null then
+                                        let currentSnapshot = doc.TextBuffer.CurrentSnapshot
+                                        let snapshot = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+                                        classificationChanged.Trigger(self, ClassificationChangedEventArgs(snapshot))
+                                with e -> Logging.logException e
+                            finally isWorking <- false
+                        } |> Async.Start
+                    | None -> ()
+        with e -> Logging.logException e
+
+    let events = serviceProvider.GetService<EnvDTE.DTE, SDTE>().Events :?> EnvDTE80.Events2 
+    do events.BuildEvents.add_OnBuildProjConfigDone (fun project _ _ _ _ ->
+        maybe {
+            let! selfProject = getProject()
+            let builtProjectFileName = Path.GetFileName project
+            let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
+            if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
+                debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers." 
+                      builtProjectFileName
+                updateSyntaxConstructClassifiers true
+        } |> ignore)
     
+    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
+                                    fun() -> updateSyntaxConstructClassifiers false)
+
+    let getClassificationSpans (snapshotSpan: SnapshotSpan) =
+        match state.Value with
+        | Some state ->
+            // we get additional 10 lines above the current snapshot in case the user inserts some line
+            // while we were getting locations from FCS. It's not as reliable though. 
+            let spanStartLine = max 0 (snapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
+            let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
+            let spans =
+                state.Spans
+                // locations are sorted, so we can safely filter them efficently
+                |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
+                |> Seq.choose (fun loc -> 
+                    maybe {
+                        let! clType = getClassficationType loc.Category
+                        let! span = fromPos state.SnapshotSpan.Snapshot (loc.WordSpan.ToRange())
+                        return clType, span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
+                    })
+                |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
+                |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))
+                |> Seq.toArray
+            spans
+        | None -> [||]
+
+
     interface IClassifier with
         // it's called for each visible line of code
         member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) = 
-            let spanStartLine = snapshotSpan.Start.GetContainingLine().LineNumber + 1
-            let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
-
-            let spans = 
-                locations.Value
-                // locations are sorted, so we can safely filter them efficently
-                |> Seq.skipWhile (fun { Line = line } -> line < spanStartLine)
-                |> Seq.takeWhile (fun { Line = line } -> line <= spanEndLine)
-                |> Seq.choose (fun loc -> 
-                    getClassficationType loc.Category
-                    |> Option.map (fun classificationType -> 
-                        let range = loc.Line, loc.ColumnSpan.Start, loc.Line, loc.ColumnSpan.End
-                        ClassificationSpan(fromPos snapshotSpan.Snapshot range, classificationType)))
-                |> Seq.toArray
-            upcast spans
+            try getClassificationSpans snapshotSpan :> _
+            with e -> Logging.logException e; upcast [||]
         
         [<CLIEvent>]
         member x.ClassificationChanged = classificationChanged.Publish

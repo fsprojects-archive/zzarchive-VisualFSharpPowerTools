@@ -7,7 +7,7 @@
 Rename refactoring
 -----------------------
 
-We currently support rename identifiers and operators which are defined in current project.
+We currently support rename identifiers and operators which are defined in any F# project in the current solution.
 Rename dialog can be activated via Edit --> Refactor --> Rename menu, context menu or Ctrl + R, Ctrl + R key binding.
 
 Here is a demo screencast.

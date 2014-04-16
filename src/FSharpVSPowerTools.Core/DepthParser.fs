@@ -358,26 +358,29 @@ type DepthParser private () =
     // TODO, consider perf, way just to consider viewport and do as little work as necessary?
 
     member internal x.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker: InteractiveChecker option) =
-        let mindents = computeMinIndentArray sourceCodeLinesOfTheFile
-        let indent startLine endLine =
-            let mutable i, n = mindents.[startLine-1], startLine+1
-            while n <= endLine do
-                i <- min i mindents.[n-1] // line nums are 1-based
-                n <- n + 1
-            i
+        async {
+            let mindents = computeMinIndentArray sourceCodeLinesOfTheFile
+            let indent startLine endLine =
+                let mutable i, n = mindents.[startLine-1], startLine+1
+                while n <= endLine do
+                    i <- min i mindents.[n-1] // line nums are 1-based
+                    n <- n + 1
+                i
         
-        let checker = defaultArg checker x.Checker
-        // Get compiler options for the 'project' implied by a single script file
-        let projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
-        let input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions) |> Async.RunSynchronously
+            let checker = defaultArg checker x.Checker
+            // Get compiler options for the 'project' implied by a single script file
+            let! projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
+            let! input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
     
-        match input.ParseTree with
-        | Some tree -> 
-            tree
-            |> getRangesInput 
-            |> List.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn, indent r.StartLine r.EndLine)
-            |> List.toArray 
-        | None -> failwith "Failed to parse"
+            match input.ParseTree with
+            | Some tree -> 
+                return tree
+                       |> getRangesInput 
+                       |> List.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn, indent r.StartLine r.EndLine)
+                       |> List.toArray 
+            | None -> 
+                return [||]
+        }
 
     // One of the two main APIs.  This reports all the nested ranges in a file, along with the 'indent' of that range.
     // This is not used by the colorizer, but may be useful to other "scope tools", and it used as an implementation detail
@@ -400,70 +403,72 @@ type DepthParser private () =
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
     static member GetNonoverlappingDepthRanges(sourceCodeOfTheFile: string, filename, ?checker: InteractiveChecker) =
-        let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split([|"\r\n";"\n"|], StringSplitOptions.None)
-        let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
-        let len line = lineLens.[line-1]  // line #s are 1-based
-        let nestedRanges = DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
-        let q = System.Collections.Generic.SortedSet<_>(qevComp)  // priority queue
-        for r in nestedRanges do
-            System.Diagnostics.Debug.WriteLine(sprintf "%A" r)
-            let sl,sc,el,_ec,m = r
-            if sl <> el then
-                q.Add(Start r) |> ignore
-            else
-                // filter out ranges that start and end on same line, unless there are no other tokens on the line
-                // approximate the 'no other tokens on line' info thusly (only check that expr is first thing on this line):
-                if sc = m then // && ec = len el then // would fail on comments, trailing whitespace, etc
+        async {
+            let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split([|"\r\n";"\n"|], StringSplitOptions.None)
+            let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
+            let len line = lineLens.[line-1]  // line #s are 1-based
+            let! nestedRanges = DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
+            let q = System.Collections.Generic.SortedSet<_>(qevComp)  // priority queue
+            for r in nestedRanges do
+                System.Diagnostics.Debug.WriteLine(sprintf "%A" r)
+                let sl,sc,el,_ec,m = r
+                if sl <> el then
                     q.Add(Start r) |> ignore
-        let mutable curLine, curCol, curDepth = 1, 0, 0  // lines are 1-based
-        let mindentStack = ResizeArray<(int*int)>() // numCharsIndent, semanticDepth
-        mindentStack.Add(0,0)
-        let results = ResizeArray<_>()
-        let add((line,sc,ec,d) as info) =
-            assert(sc <= ec)
-            let l = len line
-            if l > 0 && sc >= l then
-                () // don't report spans past end of line (don't close color scopes in whitespace after end of line), (empty lines are exempt, we need to report something)
-            else
-                if l < ec then
-                    results.Add((line,sc,ec,-d))  // negative depth means this is on a whitespace-only line that is not long enough to hang a tag on
                 else
-                    results.Add(info)
-        while q.Count <> 0 do
-            // dequeue
-            let min = q.Min 
-            q.Remove(min) |> ignore
-            // yield spans
-            let line, col = min.Info
-            if line = curLine then
-                // ... only line
-                add(curLine, curCol, col, curDepth)
-            else
-                // ...first line
-                add(curLine, curCol, (max curCol (len curLine)), curDepth)
-                // ...rest of lines
-                let curDent = fst mindentStack.[mindentStack.Count-1]
-                let mutable n = curLine+1
-                while n <= line do
-                    // indents
-                    for (a,d),(b,_) in Seq.pairwise mindentStack do
-                        if a<>b then
-                            add(n, a, b, d)
-                    // tokens from this line
-                    if n < line then
-                        add(n, curDent, (max curDent (len n)), curDepth)
+                    // filter out ranges that start and end on same line, unless there are no other tokens on the line
+                    // approximate the 'no other tokens on line' info thusly (only check that expr is first thing on this line):
+                    if sc = m then // && ec = len el then // would fail on comments, trailing whitespace, etc
+                        q.Add(Start r) |> ignore
+            let curLine, curCol, curDepth = ref 1, ref 0, ref 0  // lines are 1-based
+            let mindentStack = ResizeArray<int * int>() // numCharsIndent, semanticDepth
+            mindentStack.Add(0,0)
+            let results = ResizeArray()
+            let add((line, startCol, endCol, d) as info) =
+                assert(startCol <= endCol)
+                let lineLength = len line
+                if lineLength > 0 && startCol >= lineLength then
+                    () // don't report spans past end of line (don't close color scopes in whitespace after end of line), (empty lines are exempt, we need to report something)
+                else
+                    if lineLength < endCol then
+                        results.Add (line, startCol, endCol, -d)  // negative depth means this is on a whitespace-only line that is not long enough to hang a tag on
                     else
-                        add(n, curDent, col, curDepth)  // TODO any chance col > len line?
-                    n <- n + 1
-            // update
-            curLine <- line
-            curCol <- col
-            match min with
-            | Start((_,_,_,_,m) as r) -> 
-                q.Add(End r) |> ignore
-                curDepth <- curDepth + 1
-                mindentStack.Add(m, curDepth)
-            | End _ ->
-                curDepth <- curDepth - 1
-                mindentStack.RemoveAt(mindentStack.Count-1)
-        results |> Seq.toArray
+                        results.Add info
+            while q.Count <> 0 do
+                // dequeue
+                let min = q.Min 
+                q.Remove(min) |> ignore
+                // yield spans
+                let line, col = min.Info
+                if line = !curLine then
+                    // ... only line
+                    add(!curLine, !curCol, col, !curDepth)
+                else
+                    // ...first line
+                    add(!curLine, !curCol, (max !curCol (len !curLine)), !curDepth)
+                    // ...rest of lines
+                    let curDent = fst mindentStack.[mindentStack.Count-1]
+                    let n = ref (!curLine + 1)
+                    while !n <= line do
+                        // indents
+                        for (a,d),(b,_) in Seq.pairwise mindentStack do
+                            if a<>b then
+                                add(!n, a, b, d)
+                        // tokens from this line
+                        if !n < line then
+                            add(!n, curDent, (max curDent (len !n)), !curDepth)
+                        else
+                            add(!n, curDent, col, !curDepth)  // TODO any chance col > len line?
+                        incr n
+                // update
+                curLine := line
+                curCol := col
+                match min with
+                | Start((_,_,_,_,m) as r) -> 
+                    q.Add(End r) |> ignore
+                    incr curDepth
+                    mindentStack.Add(m, !curDepth)
+                | End _ ->
+                    decr curDepth
+                    mindentStack.RemoveAt(mindentStack.Count-1)
+            return Seq.toArray results
+        }

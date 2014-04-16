@@ -45,9 +45,11 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                         match XmlDocComment.isBlank (curLine + (string lastChar)) with
                         | Some i when i = indexOfCaret ->
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 // XmlDocable line #1 are 1-based, editor is 0-based
-                            let xmldocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, fsharpLanguageService.Checker)
+                            let xmlDocables = 
+                                XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, fsharpLanguageService.Checker)
+                                |> Async.RunSynchronously
                             let xmlDocablesBelowThisLine = 
-                                xmldocables 
+                                xmlDocables 
                                 |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'
                             let hr = passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) // parse it before we pass thru to editor, as we want to notice if no XmlDoc yet
                             match xmlDocablesBelowThisLine with

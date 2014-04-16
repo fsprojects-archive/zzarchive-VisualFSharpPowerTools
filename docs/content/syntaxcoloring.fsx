@@ -7,12 +7,17 @@
 Syntax coloring
 -----------------------
 
-We currently support:
+We currently support coloring:
 
-- type coloring
-- function coloring
+- types
+- value types
+- modules
+- functions / methods
+- quotations
+- patterns (off by default)
+- mutable variables / reference cells (off by default)
 
-Here is how colors can be customized (in blue & dark theme):
+Here is how the editor looks like in blue & dark theme:
 
 ![Syntax coloring](img/syntax_coloring_demo_blue.png)
 
@@ -24,8 +29,15 @@ How to customize colors
 
 Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:
 
-- F# User Types
-- F# Functions
+- F# Functions / Methods
+- F# Modules
+- F# Mutable Variables / Reference Cells
+- F# Patterns
+- F# Quotations
+- F# Types
+- F# Value Types
+
+You can press Ctrl + F in 'Display items' to quickly navigate to these colors.
 
 ![Syntax coloring](img/syntax_coloring_options.png)
 

@@ -39,9 +39,8 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             }
         match state with
         | Some { Word = Some (cw, sym); File = file; Project = project } ->
-            let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
             let references =
-                vsLanguageService.FindUsages (cw, file, project) 
+                vsLanguageService.FindUsages (cw, file, project, [project]) 
                 |> Async.RunSynchronously   
                 |> Option.map (fun (_, _, refs) -> 
                     refs 
@@ -60,6 +59,8 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             let findResults = FSharpLibraryNode("Find results", serviceProvider)
             for r in references do
                 findResults.AddNode(FSharpLibraryNode(r.Symbol.DisplayName, serviceProvider, r))
+
+            let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
             let searchCriteria = 
                 VSOBSEARCHCRITERIA2(
                     dwCustom = Constants.FindReferencesResults,

@@ -8,9 +8,11 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
+open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 
@@ -21,7 +23,7 @@ type HighlightUsageTag() =
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
-type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearchService: ITextSearchService, 
+type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchService: ITextSearchService, 
                           vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
@@ -35,36 +37,38 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
                 currentWord <- newWord
-                let span = SnapshotSpan(sourceBuffer.CurrentSnapshot, 0, sourceBuffer.CurrentSnapshot.Length)
+                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+
+    let symbolUsesToSpans fileName (lastIdent: string) (symbolUses: FSharpSymbolUse[]) =
+        let filePath = Path.GetFullPathSafe(fileName)
+        symbolUses
+        |> Seq.choose (fun symbolUse -> 
+            // We have to filter by full paths otherwise the range is invalid wrt current snapshot
+            if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
+                fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate
+            else None)
+        |> Seq.map (fun span -> 
+            // Sometimes F.C.S returns a composite identifier which should be truncated
+            let index = span.GetText().LastIndexOf (lastIdent)
+            if index > 0 then 
+                SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
+            else span)
+        |> Seq.toList
 
     let doUpdate (currentRequest: SnapshotPoint, sym, newWord: SnapshotSpan, newWordSpans: seq<SnapshotSpan>, 
                   fileName: string, projectProvider: IProjectProvider) =
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.GetFSharpSymbol (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
-                    let results =
-                        res
-                        |> Option.bind (fun (_, checkResults) -> 
-                            vsLanguageService.FindUsagesInFile (newWord, sym, checkResults))
-                        |> Option.map (fun (_, lastIdent, refs) -> 
-                            let filePath = Path.GetFullPathSafe(fileName)
-                            refs 
-                            |> Seq.choose (fun symbolUse -> 
-                                // We have to filter by full paths otherwise the range is invalid wrt current snapshot
-                                if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
-                                    Some (fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate)
-                                else None)
-                            |> Seq.map (fun span -> 
-                                // Sometimes F.C.S returns a composite identifier which should be truncated
-                                let index = span.GetText().LastIndexOf (lastIdent)
-                                if index > 0 then 
-                                    SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
-                                else span)
-                            |> Seq.toList)
-                    return 
-                        match results with
+                    let! res = vsLanguageService.GetFSharpSymbolUse (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
+                    match res with
+                    | Some (_, checkResults) ->
+                        let! results = vsLanguageService.FindUsagesInFile (newWord, sym, checkResults)
+                        let refSpans =
+                            results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans fileName lastIdent refs)
+
+                        match refSpans with
                         | Some references -> 
                             let possibleSpans = HashSet(newWordSpans)
                             let references = references |> List.filter possibleSpans.Contains
@@ -74,9 +78,10 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                         | None ->
                             // Return empty values in order to clear up markers
                             synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
-                debug "[Highlight Usage] %O exception occurs while updating." e
-                return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    logException e
+                    synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             } |> Async.Start
 
     let updateWordAdornments() =
@@ -84,10 +89,10 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
         // Find all words in the buffer like the one the caret is on
 
         maybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetActiveDocument()
             let! project = ProjectProvider.createForDocument doc
-            let! newWord, sym = vsLanguageService.GetSymbol(currentRequest, project)
+            let! newWord, symbol = vsLanguageService.GetSymbol(currentRequest, project)
             // If this is the same word we currently have, we're done (e.g. caret moved within a word).
             match currentWord with
             | Some cw when cw = newWord -> ()
@@ -97,13 +102,13 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                     FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
                     |> textSearchService.FindAll
                 // If we are still up-to-date (another change hasn't happened yet), do a real update
-                doUpdate (currentRequest, sym, newWord, newSpans, doc.FullName, project) }
+                doUpdate (currentRequest, symbol, newWord, newSpans, doc.FullName, project) }
         |> function
            | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
            | _ -> ()
 
     let updateAtCaretPosition () =
-        match sourceBuffer.GetSnapshotPoint view.Caret.Position with
+        match buffer.GetSnapshotPoint view.Caret.Position with
         | Some point ->
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
@@ -114,13 +119,12 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                 updateWordAdornments()
         | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    TimeSpan.FromMilliseconds 200.,
-                                    fun _ -> updateAtCaretPosition())
+    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
+                                    fun() -> try updateAtCaretPosition()
+                                             with e -> Logging.logException e)
 
-    interface ITagger<HighlightUsageTag> with
-        member x.GetTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq =
-            seq {
+    let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq = 
+        seq {
                 match currentWord with
                 | Some word when spans.Count <> 0 && wordSpans.Count <> 0 ->
                     let wordSpans, word =
@@ -144,5 +148,13 @@ type HighlightUsageTagger(view: ITextView, sourceBuffer: ITextBuffer, textSearch
                         TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
                 | _ -> ()
             }
+
+    interface ITagger<HighlightUsageTag> with
+        member x.GetTags spans =
+            try getTags spans
+            with e -> 
+                Logging.logException e
+                upcast []
+        
         member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
         member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)

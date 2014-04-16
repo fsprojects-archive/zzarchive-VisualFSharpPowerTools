@@ -96,6 +96,7 @@ type MaybeBuilder () =
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
+    let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
     let inline debug msg = Printf.kprintf System.Diagnostics.Debug.WriteLine msg
     let inline fail msg = Printf.kprintf System.Diagnostics.Debug.Fail msg
     let maybe = MaybeBuilder()
@@ -105,6 +106,10 @@ module Pervasive =
         | null -> None
         | :? 'a as a -> Some a
         | _ -> fail "Cannot cast %O to %O" (o.GetType()) typeof<'a>.Name; None
+
+    /// Load times used to reset type checking properly on script/project load/unload. It just has to be unique for each project load/reload.
+    /// Not yet sure if this works for scripts.
+    let fakeDateTimeRepresentingTimeLoaded proj = DateTime(abs (int64 (match proj with null -> 0 | _ -> proj.GetHashCode())) % 103231L)
 
     open System.Threading
     
@@ -163,21 +168,9 @@ module Pervasive =
             try Path.GetFullPath path
             with _ -> path
 
+        static member GetFileNameSafe path =
+            try Path.GetFileName path
+            with _ -> path
+
     open Microsoft.FSharp.Compiler.SourceCodeServices
-
-    type SymbolScope = 
-        | File
-        | Project
-
-    type FSharpSymbol with
-        member x.Scope =
-            let isPrivateToFile = 
-                match x with 
-                | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || m.Accessibility.IsPrivate
-                | :? FSharpEntity as m -> m.Accessibility.IsPrivate
-                | :? FSharpGenericParameter -> true
-                | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
-                | :? FSharpField as m -> m.Accessibility.IsPrivate
-                | _ -> false
-            if isPrivateToFile then SymbolScope.File else SymbolScope.Project
 

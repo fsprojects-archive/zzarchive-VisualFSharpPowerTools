@@ -2,6 +2,7 @@
 module FSharpVSPowerTools.ProjectSystem.VSUtils
 
 open System
+open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -14,19 +15,47 @@ open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
-    let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
-    let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
-    SnapshotSpan(snapshot, startPos, endPos - startPos)
+    Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
+    Debug.Assert(startLine <> endLine || startColumn < endColumn, 
+                 sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
 
+    try 
+        let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
+        let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
+        Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
+        let length = endPos - startPos
+
+        Some (SnapshotSpan(snapshot, startPos, length))
+    with e ->
+        fail "Attempt to create a SnapshotSpan with wrong arguments (StartLine = %d, StartColumn = %d, EndLine = %d, EndColumn = %d)"
+             startLine startColumn endLine endColumn
+        None
+    
 /// Retrieve snapshot from VS zero-based positions
 let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
     fromPos snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
 
-let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
-
 let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 let isFSharpProject (project: EnvDTE.Project) = 
     project <> null && project.Kind <> null && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
+
+let isPhysicalFolderKind (kind: string) =
+    kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFolder, StringComparison.OrdinalIgnoreCase)
+
+let isPhysicalFileKind (kind: string) =
+    kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFile, StringComparison.OrdinalIgnoreCase)
+
+let isPhysicalFileOrFolderKind kind =
+    kind <> null && (isPhysicalFolderKind kind) || (isPhysicalFileKind kind)
+
+let isPhysicalFolder (item: EnvDTE.ProjectItem) =
+    item <> null && item.Kind <> null && (isPhysicalFolderKind item.Kind)
+
+let isPhysicalFile (item: EnvDTE.ProjectItem) =
+    item <> null && item.Kind <> null && (isPhysicalFileKind item.Kind)
+
+let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
+    item <> null && isPhysicalFileOrFolderKind item.Kind
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
@@ -130,7 +159,7 @@ type DTE with
     member x.GetActiveDocument() =
         let doc =
             maybe {
-                let! doc = Option.ofNull x.ActiveDocument
+                let! doc = Option.ofNull x.ActiveDocument 
                 let! item = Option.ofNull doc.ProjectItem 
                 let! _ = Option.ofNull item.ContainingProject 
                 return doc }
@@ -138,6 +167,20 @@ type DTE with
         | None -> debug "Should be able to find active document and active project."
         | _ -> ()
         doc
+
+    member x.ListFSharpProjectsInSolution() = 
+        let rec handleProject (p: Project) = 
+            if p === null then []
+            elif isFSharpProject p then [ p ]
+            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
+            else []
+        
+        and handleProjectItems (items: ProjectItems) = 
+            [ for pi in items do
+                  yield! handleProject pi.SubProject ]
+        
+        [ for p in x.Solution.Projects do
+              yield! handleProject p ]
     
 type ProjectItem with
     member x.VSProject =
@@ -145,9 +188,44 @@ type ProjectItem with
         |> Option.bind (fun item ->
             try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
 
+    member x.TryGetProperty name = 
+        let property = x.Properties |> Seq.cast<Property> |> Seq.tryFind (fun p -> p.Name = name)
+        match property with
+        | Some p -> Some (p.Value :?> string)
+        | None -> None
+
+    member x.GetProperty name = 
+        let property = x.TryGetProperty name
+        match property with
+        | Some p -> p
+        | None -> raise(new ArgumentException("name"))
+
+type Project with
+    member x.GetReferencedProjects() = 
+        (x.Object :?> VSProject).References
+        |> Seq.cast<Reference>
+        |> Seq.choose (fun r -> Option.ofNull r.SourceProject)
+        |> Seq.toList
+
+    member x.GetReferencedFSharpProjects() = x.GetReferencedProjects() |> List.filter isFSharpProject
+
 let inline ensureSucceded hr = 
     ErrorHandler.ThrowOnFailure hr
     |> ignore
+
+let private getSelectedFromSolutionExplorer<'T> (dte:EnvDTE80.DTE2) =
+    let items = dte.ToolWindows.SolutionExplorer.SelectedItems :?> UIHierarchyItem[]
+    items
+    |> Seq.choose (fun x -> 
+            match x.Object with
+            | :? 'T as p -> Some p
+            | _ -> None)
+
+let getSelectedItemsFromSolutionExplorer dte =
+    getSelectedFromSolutionExplorer<ProjectItem> dte
+
+let getSelectedProjectsFromSolutionExplorer dte =
+    getSelectedFromSolutionExplorer<Project> dte
 
 open System.ComponentModel.Composition
 
@@ -158,7 +236,7 @@ type ForegroundThreadGuard private() =
     static let mutable threadId = UnassignedThreadId
     static member BindThread() =
         if threadId <> UnassignedThreadId then 
-            fail "Thread is already set"
+            () // fail "Thread is already set"
         threadId <- System.Threading.Thread.CurrentThread.ManagedThreadId
     static member CheckThread() =
         if threadId = UnassignedThreadId then 
@@ -174,13 +252,14 @@ module ViewChange =
     let caretEvent (view: ITextView) = view.Caret.PositionChanged |> Event.map (fun _ -> ())
     let bufferChangedEvent (buffer: ITextBuffer) = buffer.Changed |> Event.map (fun _ -> ())
 
-type DocumentEventsListener (events: IEvent<unit> list, delay: TimeSpan, update: bool -> unit) =
+type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
     // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
     let events = events |> List.reduce Event.merge 
 
     let startNewTimer() = 
-        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = delay)
+        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, 
+                                        Interval = TimeSpan.FromMilliseconds (float delayMillis))
         timer.Start()
         timer
         
@@ -198,7 +277,7 @@ type DocumentEventsListener (events: IEvent<unit> list, delay: TimeSpan, update:
         while true do
             do! Async.AwaitEvent events
             do! awaitPauseAfterChange (startNewTimer())
-            update false }
+            update() }
        |> Async.StartImmediate
        // go ahead and synchronously get the first bit of info for the original rendering
-       update true
+       update()

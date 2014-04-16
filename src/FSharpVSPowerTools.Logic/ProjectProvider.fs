@@ -6,13 +6,28 @@ open System.Diagnostics
 open EnvDTE
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
+open VSLangProj
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type IProjectProvider =
+type FilePath = string
+
+[<RequireQualifiedAccess; NoComparison>]
+type SymbolDeclarationLocation = 
+    | File
+    | Project of IProjectProvider
+
+and IProjectProvider =
     abstract ProjectFileName: string
-    abstract TargetFSharpCoreVersion: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
+    abstract GetReferencedProjects: unit -> IProjectProvider list
+    abstract GetAllReferencedProjectFileNames: unit -> string list
+
+[<AutoOpen>]
+module FSharpSymbolExtensions =
+    type FSharpSymbol with
+        member x.TryGetLocation() = Option.orElse x.ImplementationLocation x.DeclarationLocation
 
 module ProjectProvider =
     open System.Reflection
@@ -34,7 +49,7 @@ module ProjectProvider =
             let prop = try project.Properties.[tag] with _ -> null
             match prop with
             | null -> null
-            | _ -> prop.Value.ToString()
+            | _ -> try prop.Value.ToString() with _ -> null
 
         let currentDir = getProperty "FullPath"
     
@@ -59,61 +74,117 @@ module ProjectProvider =
                 | Some getter -> getter
             fun() -> getter underlyingProject
 
+        let compilerOptions() = 
+            match getSourcesAndFlags() with
+            | Some(_, flags) -> flags
+            | _ -> [||]
+
+        let targetFramework() =
+            match getProperty "TargetFrameworkMoniker" with
+                | null -> FSharpTargetFramework.NET_4_5
+                | x -> 
+                    try
+                        let frameworkName = new Runtime.Versioning.FrameworkName(x)
+                        match frameworkName.Version.Major, frameworkName.Version.Minor with
+                        | 4, 5 -> FSharpTargetFramework.NET_4_5
+                        | 4, 0 -> FSharpTargetFramework.NET_4_0
+                        | 3, 5 -> FSharpTargetFramework.NET_3_5
+                        | 3, 0 -> FSharpTargetFramework.NET_3_0
+                        | 2, 0 -> FSharpTargetFramework.NET_2_0
+                        | _ -> invalidArg "prop" "Unsupported .NET framework version" 
+                    with :? ArgumentException -> FSharpTargetFramework.NET_4_5
+
+        let sourceFiles() =
+            match getSourcesAndFlags() with
+            | Some(sources, _) -> sources
+            | _ -> [||]
+
         interface IProjectProvider with
             member x.ProjectFileName = projectFileName
+            member x.TargetFramework = targetFramework()
+            member x.CompilerOptions = compilerOptions()
+            member x.SourceFiles = sourceFiles()
+            
+            member x.GetReferencedProjects() =
+                project.GetReferencedFSharpProjects()
+                |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
 
-            member x.TargetFSharpCoreVersion = 
-                getProperty "TargetFSharpCoreVersion"
+            member x.GetAllReferencedProjectFileNames() = 
+                project.GetReferencedProjects()
+                |> List.map (fun p -> p.FileName)
+                |> List.choose (fun file -> 
+                       if String.IsNullOrWhiteSpace file then None
+                       else Some(Path.GetFileNameSafe file))
+            
+    type private VirtualProjectProvider (filePath: string) = 
+        do Debug.Assert (filePath <> null, "FilePath should not be null.")
 
-            member x.TargetFramework = 
-                match getProperty "TargetFrameworkVersion" with
-                | null | "v4.5" | "v4.5.1" -> FSharpTargetFramework.NET_4_5
-                | "v4.0" -> FSharpTargetFramework.NET_4_0
-                | "v3.5" -> FSharpTargetFramework.NET_3_5
-                | "v3.0" -> FSharpTargetFramework.NET_3_5
-                | "v2.0" -> FSharpTargetFramework.NET_2_0
-                | _ -> invalidArg "prop" "Unsupported .NET framework version"
-
-            member x.CompilerOptions = 
-                match getSourcesAndFlags() with
-                | Some(_, flags) -> flags
-                | _ -> [||]
-            member x.SourceFiles = 
-                match getSourcesAndFlags() with
-                | Some(sources, _) -> sources
-                | _ -> [||]
-
-    type private VirtualProjectProvider (doc: Document) = 
-        do Debug.Assert (doc <> null, "Input document should not be null.")
-    
         interface IProjectProvider with
             member x.ProjectFileName = null
-            member x.TargetFSharpCoreVersion = null
             member x.TargetFramework = FSharpTargetFramework.NET_4_5
-
-            member x.CompilerOptions = 
-                [|  
-                    yield "--noframework"
-                    yield "--debug-"
-                    yield "--optimize-"
-                    yield "--tailcalls-"
-                |]
-
-            member x.SourceFiles = [|doc.FullName|]
+            member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
+            member x.SourceFiles = [| filePath |]
+            member x.GetReferencedProjects() = []
+            member x.GetAllReferencedProjectFileNames() = []
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 
-    let createForDocument (doc: Document): IProjectProvider option =
-        let project = doc.ProjectItem.ContainingProject
+    let createForFileInProject (filePath: string) project: IProjectProvider option =
         if not (project === null) && isFSharpProject project then
             Some (ProjectProvider(project) :> _)
-        elif not (doc.FullName === null) then
-            let ext = Path.GetExtension doc.FullName
+        elif not (filePath === null) then
+            let ext = Path.GetExtension filePath
             if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
                String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
                String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
-                Some (VirtualProjectProvider(doc) :> _)
+                Some (VirtualProjectProvider(filePath) :> _)
             else 
                 None
         else 
             None
+
+    let createForDocument (doc: Document) =
+        createForFileInProject doc.FullName doc.ProjectItem.ContainingProject
+
+    let getSymbolUsageScope (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
+        let isPrivateToFile = 
+            match symbol with 
+            | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || m.Accessibility.IsPrivate
+            | :? FSharpEntity as m -> m.Accessibility.IsPrivate
+            | :? FSharpGenericParameter -> true
+            | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
+            | :? FSharpField as m -> m.Accessibility.IsPrivate
+            | _ -> false
+        if isPrivateToFile then Some SymbolDeclarationLocation.File 
+        else 
+            match symbol.TryGetLocation() with
+            | Some loc ->
+                let filePath = Path.GetFullPath loc.FileName
+                if filePath = currentFile && Path.GetExtension currentFile = ".fsx" then 
+                    Some SymbolDeclarationLocation.File
+                else
+                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
+                    match allProjects |> List.tryFind (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
+                    | Some declarationProject -> Some (SymbolDeclarationLocation.Project declarationProject)
+                    | _ -> None
+            | _ -> None
+
+    let getDependentProjects (dte: DTE) (project: IProjectProvider) =
+        dte.ListFSharpProjectsInSolution()
+        |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
+        |> List.filter (fun p -> 
+            p.GetReferencedProjects() 
+            |> List.exists (fun p -> String.Compare(p.ProjectFileName, project.ProjectFileName, true) = 0))
+
+[<AutoOpen>]
+module ProjectProviderExtensions =
+    type IProjectProvider with
+        member x.GetProjectCheckerOptions() =
+            { ProjectFileName = x.ProjectFileName
+              ProjectFileNames = x.SourceFiles
+              ProjectOptions = x.CompilerOptions
+              IsIncompleteTypeCheckEnvironment = false
+              UseScriptResolutionRules = false
+              LoadTime = fakeDateTimeRepresentingTimeLoaded x.ProjectFileName
+              UnresolvedReferences = None
+              ReferencedProjects = [||] }

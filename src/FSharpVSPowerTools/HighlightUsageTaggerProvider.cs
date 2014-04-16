@@ -33,11 +33,7 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.HighlightUsageEnabled)
-            {
-                Debug.WriteLine("[Highlight Usage] The feature is disabled in General option page.");
-                return null;
-            }
+            if (!generalOptions.HighlightUsageEnabled) return null;
 
             return new HighlightUsageTagger(textView, buffer, textSearchService, fsharpVsLanguageService, serviceProvider) as ITagger<T>;
         }

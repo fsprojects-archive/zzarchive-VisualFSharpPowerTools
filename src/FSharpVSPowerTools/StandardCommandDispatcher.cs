@@ -20,11 +20,7 @@ namespace FSharpVSPowerTools
         public static void Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
             GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
-            if (!generalOptions.FormattingEnabled)
-            {
-                Debug.WriteLine("[Formatting] The feature is disabled in General option page.");
-                return;
-            }
+            if (!generalOptions.FormattingEnabled) return;
 
             var dispatcher = new StandardCommandDispatcher();
             dispatcher._textView = textView;

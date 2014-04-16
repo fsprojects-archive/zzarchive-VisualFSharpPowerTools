@@ -20,18 +20,20 @@ Here are currently supported features:
  * [Auto-generating XMLDoc](xmldoc.html)
  * [Source code formatting](codeformatting.html)
  * [Navigation bar](navbar.html)
- * [Syntax coloring](syntaxcoloring.html)
  * [Highlight references](highlightusage.html)
  * [Rename refactoring](rename.html)
  * [Depth colorizer](depthcolorizer.html)
  * [NavigateTo](navigateto.html)
- 
+ * [Syntax coloring](syntaxcoloring.html)
+ * [Folder organization](folderorganization.html)
+  
 Contributing and copyright
 --------------------------
 
 The project is hosted on [GitHub][gh] where you can [report issues][issues], fork 
-the project and submit pull requests. If you're adding new features, please also 
-consider adding [user guides][content] that can be turned into documentation.
+the project and submit pull requests. You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
+Please vote for your favourite features so that they have higher chances to be implemented. 
+If you're adding new features, please also consider adding [user guides][content] that can be turned into documentation.
 
 The extension is available under Apache 2.0 license, which allows modification and 
 redistribution for both commercial and non-commercial purposes. For more information see the 

@@ -56,15 +56,16 @@
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
-    <Compile Include="SymbolParserTests.fs" />
+    <Compile Include="LexerTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
     <Compile Include="XmlDocTests.fs" />
     <Compile Include="SourceCodeClassifierTests.fs" />
+    <Compile Include="InterfaceStubGeneratorTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.36\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.44\lib\net40\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />

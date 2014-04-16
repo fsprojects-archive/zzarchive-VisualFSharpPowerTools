@@ -3,11 +3,11 @@ using System.Reflection;
 
 [assembly: AssemblyTitleAttribute("FSharpVSPowerTools")]
 [assembly: AssemblyProductAttribute("FSharpVSPowerTools")]
-[assembly: AssemblyDescriptionAttribute("F# Community Power Tools (for Visual Studio)")]
-[assembly: AssemblyVersionAttribute("0.3.0")]
-[assembly: AssemblyFileVersionAttribute("0.3.0")]
+[assembly: AssemblyDescriptionAttribute("Visual F# Power Tools (by F# Community)")]
+[assembly: AssemblyVersionAttribute("0.6.1")]
+[assembly: AssemblyFileVersionAttribute("0.6.1")]
 namespace System {
     internal static class AssemblyVersionInformation {
-        internal const string Version = "0.3.0";
+        internal const string Version = "0.6.1";
     }
 }

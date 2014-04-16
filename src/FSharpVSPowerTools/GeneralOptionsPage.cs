@@ -5,6 +5,8 @@ using System.Configuration;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
+using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace FSharpVSPowerTools
 {
@@ -14,19 +16,39 @@ namespace FSharpVSPowerTools
     {   
         private GeneralOptionsControl _optionsControl;
         private const string navBarConfig = "fsharp-navigationbar-enabled";
-        
+        private bool _navBarEnabledInAppConfig;
+
+        private Logger logger;
+
+        public GeneralOptionsPage()
+        {
+            var componentModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
+            logger = componentModel.DefaultExportProvider.GetExportedValue<Logger>();
+
+            XmlDocEnabled = true;
+            FormattingEnabled = true;
+            _navBarEnabledInAppConfig = GetNavigationBarConfig();
+            HighlightUsageEnabled = true;
+            RenameRefactoringEnabled = true;
+            DepthColorizerEnabled = false;
+            NavigateToEnabled = true;
+            SyntaxColoringEnabled = true;
+            ImplementInterfaceEnabled = false;
+            FolderOrganizationEnabled = false;
+        }
+
         private bool GetNavigationBarConfig()
         {
             try
             {
                 var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
-                var b = config.AppSettings.Settings[navBarConfig].Value;
+                var configValue = config.AppSettings.Settings[navBarConfig];
                 bool result;
-                if (b != null && bool.TryParse(b, out result)) return result;
-                return false;
+                return configValue != null && bool.TryParse(configValue.Value, out result) ? result : false;
             }
-            catch (Exception)
+            catch(Exception ex)
             {
+                logger.LogException(ex);
                 return false;
             }
         }
@@ -60,17 +82,19 @@ namespace FSharpVSPowerTools
                     config.AppSettings.Settings.Remove(navBarConfig);
                     config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
                     config.Save(ConfigurationSaveMode.Minimal);
+                    
                     return true;
                 }
                 else
                 {
-                    MessageBox.Show(Resource.navBarUnauthorizedMessage, Resource.vsPackageTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    logger.MessageBox(LogType.Error, Resource.navBarUnauthorizedMessage);
                     return false;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show(Resource.navBarErrorMessage, Resource.vsPackageTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                logger.MessageBox(LogType.Error, Resource.navBarErrorMessage);
+                logger.LogException(ex);
                 return false;
             }
         }
@@ -101,6 +125,12 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool SyntaxColoringEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool ImplementInterfaceEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool FolderOrganizationEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -111,26 +141,17 @@ namespace FSharpVSPowerTools
                 _optionsControl.OptionsPage = this;
                 _optionsControl.XmlDocEnabled = XmlDocEnabled;
                 _optionsControl.FormattingEnabled = FormattingEnabled;
-                _optionsControl.NavBarEnabled = NavBarEnabled;
+                _optionsControl.NavBarEnabled = NavBarEnabled && _navBarEnabledInAppConfig;
                 _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
                 _optionsControl.RenameRefactoringEnabled = RenameRefactoringEnabled;
                 _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
                 _optionsControl.NavigateToEnabled = NavigateToEnabled;
                 _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
+                _optionsControl.ImplementInterfaceEnabled = ImplementInterfaceEnabled;
+                _optionsControl.FolderOrganizationEnabled = FolderOrganizationEnabled;
 
                 return _optionsControl;
             }
-        }
-        public GeneralOptionsPage()
-        {
-            XmlDocEnabled = true;
-            FormattingEnabled = true;
-            NavBarEnabled = GetNavigationBarConfig();
-            HighlightUsageEnabled = true;
-            RenameRefactoringEnabled = true;
-            DepthColorizerEnabled = false;
-            NavigateToEnabled = true;
-            SyntaxColoringEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
@@ -145,6 +166,7 @@ namespace FSharpVSPowerTools
                 if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
                 {
                     NavBarEnabled = _optionsControl.NavBarEnabled;
+                    _navBarEnabledInAppConfig = _optionsControl.NavBarEnabled;
                 }
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
@@ -152,6 +174,8 @@ namespace FSharpVSPowerTools
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
                 SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
+                ImplementInterfaceEnabled = _optionsControl.ImplementInterfaceEnabled;
+                FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
             }
 
             base.OnApply(e);
