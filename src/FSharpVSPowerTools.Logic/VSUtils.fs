@@ -205,8 +205,9 @@ type Project with
         (x.Object :?> VSProject).References
         |> Seq.cast<Reference>
         |> Seq.choose (fun r -> Option.ofNull r.SourceProject)
-        |> Seq.filter isFSharpProject
         |> Seq.toList
+
+    member x.GetReferencedFSharpProjects() = x.GetReferencedProjects() |> List.filter isFSharpProject
 
 let inline ensureSucceded hr = 
     ErrorHandler.ThrowOnFailure hr
