@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Navigation
 
 open System
+open System.Threading
 open System.IO
 open System.Windows
 open Microsoft.VisualStudio.Text
@@ -26,74 +27,93 @@ type DocumentState =
     { Word: SnapshotSpan * Symbol
       File: string
       Project: IProjectProvider
-      SymbolDeclLocation: SymbolDeclarationLocation }
+      TargetProjects: IProjectProvider list }
 
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider) =
-    let findReferences() =
-        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-
-        let state =
-            maybe {
+    let getState() =
+        async {
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let projectItems = maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
-                let! word, sym = vsLanguageService.GetSymbol(caretPos, project)
-                let! symbolUse, _ = 
-                    vsLanguageService.GetFSharpSymbolUse(word, sym, doc.FullName, project, AllowStaleResults.No)
-                    |> Async.RunSynchronously
-                let! symbolDeclarationLocation = ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte doc.FullName
-                return { Word = word, sym; File = doc.FullName; Project = project
-                         SymbolDeclLocation = symbolDeclarationLocation }
-            }
+                let! span, sym = vsLanguageService.GetSymbol(caretPos, project)
+                return doc.FullName, project, span, sym }
 
-        match state with
-        | Some { Word = cw, sym; File = file; Project = project; SymbolDeclLocation = symbolDeclLocation } ->
-            let dependentProjects = 
-                let declarationProject = 
-                    match symbolDeclLocation with
-                    | SymbolDeclarationLocation.File -> project
-                    | SymbolDeclarationLocation.Project p -> p
+            match projectItems with
+            | Some (file, project, span, sym) ->
+                let syncContext = SynchronizationContext.Current
+                do! Async.SwitchToThreadPool()
+                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, sym, file, project, AllowStaleResults.No)
+                do! Async.SwitchToContext syncContext
+                match symbolUse with
+                | Some (symbolUse, _) ->
+                    match ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte file with
+                    | Some symbolDeclLocation ->
+                        let dependentProjects =
+                            let declProject = 
+                                match symbolDeclLocation with
+                                | SymbolDeclarationLocation.File -> project
+                                | SymbolDeclarationLocation.Project p -> p
 
-                let dependentProjects = ProjectProvider.getDependentProjects dte declarationProject
-                if dependentProjects |> List.exists (fun x -> x.ProjectFileName = declarationProject.ProjectFileName)
-                then dependentProjects
-                else declarationProject :: dependentProjects
+                            let dependentProjects = ProjectProvider.getDependentProjects dte declProject
+                            if dependentProjects |> List.exists (fun x -> x.ProjectFileName = declProject.ProjectFileName)
+                            then dependentProjects
+                            else declProject :: dependentProjects
 
-            let references =
-                vsLanguageService.FindUsages (cw, file, project, dependentProjects) 
-                |> Async.RunSynchronously
-                |> Option.map (fun (_, _, refs) -> 
-                    refs 
-                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
-                    |> Seq.groupBy (fst >> Path.GetFullPath)
-                    |> Seq.map (fun (_, symbolUses) -> 
-                        // Sort symbols by positions
-                        symbolUses 
-                        |> Seq.map snd 
-                        |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn) 
+                        return Some { Word = span, sym
+                                      File = file
+                                      Project = project
+                                      TargetProjects = dependentProjects }
+                    | _ -> return None
+                | _ -> return None
+            | _ -> return None
+        }
+
+    let findReferences() = 
+        async {
+            let! state = getState()
+            match state with
+            | Some { Word = cw, sym; File = file; Project = project; TargetProjects = targetProjects } ->
+                let syncContext = SynchronizationContext.Current
+                do! Async.SwitchToThreadPool()
+                let! references = vsLanguageService.FindUsages (cw, file, project, targetProjects) 
+                do! Async.SwitchToContext syncContext
+                let references = 
+                    references
+                    |> Option.map (fun (_, _, refs) -> 
+                        refs 
+                        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
+                        |> Seq.groupBy (fst >> Path.GetFullPath)
+                        |> Seq.map (fun (_, symbolUses) -> 
+                            // Sort symbols by positions
+                            symbolUses 
+                            |> Seq.map snd 
+                            |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn) 
+                            |> Seq.toList)
+                        |> Seq.concat
                         |> Seq.toList)
-                    |> Seq.concat
-                    |> Seq.toList)
-                |> fun opt -> defaultArg opt []
+                    |> fun opt -> defaultArg opt []
             
-            let findResults = FSharpLibraryNode("Find results", serviceProvider)
-            for r in references do
-                findResults.AddNode(FSharpLibraryNode(r.Symbol.DisplayName, serviceProvider, r))
+                let findResults = FSharpLibraryNode("Find results", serviceProvider)
+                for r in references do
+                    findResults.AddNode(FSharpLibraryNode(r.Symbol.DisplayName, serviceProvider, r))
 
-            let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
-            let searchCriteria = 
-                VSOBSEARCHCRITERIA2(
-                    dwCustom = Constants.FindReferencesResults,
-                    eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD,
-                    pIVsNavInfo = (findResults :> IVsNavInfo),
-                    grfOptions = uint32 _VSOBSEARCHOPTIONS2.VSOBSO_LISTREFERENCES,
-                    szName = sym.Text)
+                let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
+                let searchCriteria = 
+                    VSOBSEARCHCRITERIA2(
+                        dwCustom = Constants.FindReferencesResults,
+                        eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD,
+                        pIVsNavInfo = (findResults :> IVsNavInfo),
+                        grfOptions = uint32 _VSOBSEARCHOPTIONS2.VSOBSO_LISTREFERENCES,
+                        szName = sym.Text)
 
-            let guid = ref PkgCmdConst.guidSymbolLibrary
-            ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
-        | _ -> 
-            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-            statusBar.SetText("The caret must be on valid expression to find all references.") |> ignore
+                let guid = ref PkgCmdConst.guidSymbolLibrary
+                ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
+            | _ -> 
+                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                statusBar.SetText("The caret must be on valid expression to find all references.") |> ignore 
+        } |> Async.StartImmediate
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
