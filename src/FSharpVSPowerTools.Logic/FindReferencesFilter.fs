@@ -23,25 +23,45 @@ module PkgCmdConst =
 
 [<NoEquality; NoComparison>]
 type DocumentState =
-    { Word: (SnapshotSpan * Symbol) option
+    { Word: SnapshotSpan * Symbol
       File: string
-      Project: IProjectProvider }
+      Project: IProjectProvider
+      SymbolDeclLocation: SymbolDeclarationLocation }
 
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider) =
     let findReferences() =
+        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
         let state =
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
-                return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
+                let! word, sym = vsLanguageService.GetSymbol(caretPos, project)
+                let! symbolUse, _ = 
+                    vsLanguageService.GetFSharpSymbolUse(word, sym, doc.FullName, project, AllowStaleResults.No)
+                    |> Async.RunSynchronously
+                let! symbolDeclarationLocation = ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte doc.FullName
+                return { Word = word, sym; File = doc.FullName; Project = project
+                         SymbolDeclLocation = symbolDeclarationLocation }
             }
+
         match state with
-        | Some { Word = Some (cw, sym); File = file; Project = project } ->
+        | Some { Word = cw, sym; File = file; Project = project; SymbolDeclLocation = symbolDeclLocation } ->
+            let dependentProjects = 
+                let declarationProject = 
+                    match symbolDeclLocation with
+                    | SymbolDeclarationLocation.File -> project
+                    | SymbolDeclarationLocation.Project p -> p
+
+                let dependentProjects = ProjectProvider.getDependentProjects dte declarationProject
+                if dependentProjects |> List.exists (fun x -> x.ProjectFileName = declarationProject.ProjectFileName)
+                then dependentProjects
+                else declarationProject :: dependentProjects
+
             let references =
-                vsLanguageService.FindUsages (cw, file, project, [project]) 
-                |> Async.RunSynchronously   
+                vsLanguageService.FindUsages (cw, file, project, dependentProjects) 
+                |> Async.RunSynchronously
                 |> Option.map (fun (_, _, refs) -> 
                     refs 
                     |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
