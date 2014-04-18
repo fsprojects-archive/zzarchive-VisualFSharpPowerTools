@@ -170,12 +170,12 @@ namespace FSharpVSPowerTools
 
                         var foregroundBrush = 
                             color.Foreground == null 
-                                ? oldProp.ForegroundBrush 
+                                ? null
                                 : new SolidColorBrush(color.Foreground.Value);
 
                         var backgroundBrush = 
                             color.Background == null 
-                                ? oldProp.BackgroundBrush 
+                                ? null
                                 : new SolidColorBrush(color.Background.Value);
 
                         var newProp = TextFormattingRunProperties.CreateTextFormattingRunProperties(
