@@ -175,7 +175,7 @@ module XmlDocComment =
     // if it's a blank XML comment with trailing "<", returns Some (index of the "<"), otherwise returns None
     let isBlank (s: string) =
         let parser = ws >=> str "///" >=> ws >=> str "<" >=> eol
-        let res = parser (s, 0) |> Option.map snd |> Option.map (fun x -> x - 1)
+        let res = parser (s.TrimEnd(), 0) |> Option.map snd |> Option.map (fun x -> x - 1)
         res
 
 open Microsoft.FSharp.Compiler.SourceCodeServices

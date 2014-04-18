@@ -39,10 +39,14 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                 if pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
                     match getTypedChar pvaIn with
                     | ('/' | '<') as lastChar ->
-                        let curLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().GetText()
+                        
                         let indexOfCaret = wpfTextView.Caret.Position.BufferPosition.Position 
                                            - wpfTextView.Caret.Position.BufferPosition.GetContainingLine().Start.Position 
-                        match XmlDocComment.isBlank (curLine + (string lastChar)) with
+                        
+                        let curLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().GetText()
+                        let lineWithLastCharInserted = curLine.Substring(0, indexOfCaret) + (string lastChar) + curLine.Substring(indexOfCaret)
+
+                        match XmlDocComment.isBlank lineWithLastCharInserted with
                         | Some i when i = indexOfCaret ->
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 // XmlDocable line #1 are 1-based, editor is 0-based
                             let xmlDocables = 
