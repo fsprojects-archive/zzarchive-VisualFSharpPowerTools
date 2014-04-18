@@ -70,30 +70,30 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
     let updateCount = ref 0
     let mutable filteredView = Dictionary<LibraryNodeType, LibraryNode>()
 
-    let setCapabilityFlag(flag: LibraryNodeCapabilities, value: bool) =
+    let setCapabilityFlag(flag: LibraryNodeCapabilities, value) =
         if value then 
             capabilities <- capabilities ||| flag
         else
             capabilities <- capabilities &&& ~~~flag
 
     member internal x.ContextMenuID
-        with get() = contextMenuID
+        with get () = contextMenuID
         and set value = contextMenuID <- value
   
     member internal x.Children
-        with get() = children
+        with get () = children
         and set value = children <- value
 
     member internal x.ClipboardFormats
-        with get() = clipboardFormats
+        with get () = clipboardFormats
         and set value = clipboardFormats <- value
 
     member internal x.UpdateCount 
-        with get() = !updateCount
+        with get () = !updateCount
         and set value = updateCount := value
 
     member internal x.FilteredView 
-        with get() = filteredView
+        with get () = filteredView
         and set value = filteredView <- value
 
     member x.AddNode(node: LibraryNode) =
@@ -152,7 +152,8 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
     /// <param name="itemId">The item id of the item.</param>
     /// <param name="itemsCount">Number of items.</param>
     abstract SourceItems: byref<IVsHierarchy> * byref<uint32> * byref<uint32> -> unit
-    default x.SourceItems([<Out>] hierarchy: byref<IVsHierarchy>, [<Out>] itemId: byref<uint32>, [<Out>] itemsCount: byref<uint32>) =
+    default x.SourceItems([<Out>] hierarchy: byref<IVsHierarchy>, [<Out>] itemId: byref<uint32>, 
+                          [<Out>] itemsCount: byref<uint32>) =
         hierarchy <- null
         itemId <- 0u
         itemsCount <- 0u
@@ -185,19 +186,19 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
         description.AddDescriptionText3(name, VSOBDESCRIPTIONSECTION.OBDS_NAME, null) |> ignore
 
     member x.FilterView(filterType: LibraryNodeType) =
-        let mutable filtered = Unchecked.defaultof<LibraryNode>
-//        if (filteredView.TryGetValue(filterType, &filtered)) then
-//            filtered
-//        else
-//            filtered// <- new LibraryNode()
-
-        for i in 0..filtered.Children.Count do
-            if filtered.Children.[i].NodeType &&& filterType = enum<_> 0 then
-                filtered.Children.RemoveAt(i)
-            // else i <- i + 1
-
-        filteredView.Add(filterType, filtered)
-        filtered
+        match filteredView.TryGetValue(filterType) with
+        | true, filtered ->
+            filtered
+        | _ -> 
+            let filtered = x.Clone()
+            let rec loop i =
+                if i = filtered.Children.Count then ()
+                elif (filtered.Children.[i].NodeType &&& filterType) = enum<_> 0 then
+                    filtered.Children.RemoveAt(i)
+                else loop (i + 1)
+            loop 0
+            filteredView.Add(filterType, filtered)
+            filtered
 
     abstract BrowseObject: obj
     default x.BrowseObject = null
@@ -258,7 +259,6 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                 if index = NullIndex then x
                 elif index < uint32 children.Count then children.[int index]
                 else raise (ArgumentOutOfRangeException("index"))
-
             pfCatField <- node.CategoryField(enum<LIB_CATEGORY>(category))
             VSConstants.S_OK
         
@@ -267,7 +267,6 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                 raise (ArgumentOutOfRangeException("index"))
             else
                 ppdispBrowseObj <- children.[int index].BrowseObject
-
                 if ppdispBrowseObj = null then
                     VSConstants.E_NOTIMPL
                 else
@@ -287,7 +286,8 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                 pfOK <- if children.[int index].CanGoToSource then 1 else 0
                 VSConstants.S_OK
         
-        member x.GetContextMenu(index: uint32, pclsidActive: byref<Guid>, pnMenuId: byref<int>, ppCmdTrgtActive: byref<IOleCommandTarget>): int = 
+        member x.GetContextMenu(index: uint32, pclsidActive: byref<Guid>, pnMenuId: byref<int>, 
+                                ppCmdTrgtActive: byref<IOleCommandTarget>): int = 
             if index >= uint32 children.Count then
                 raise (ArgumentOutOfRangeException("index"))
             else
@@ -300,7 +300,12 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                 else
                     pclsidActive <- commandId.Guid
                     pnMenuId <- commandId.ID
-                    //ppCmdTrgtActive <- children.[int index] :?> IOleCommandTarget
+                    // TODO: not sure why this doesn't work
+                    let child = children.[int index] :> obj
+                    ppCmdTrgtActive <-
+                        match child with
+                        | :? IOleCommandTarget -> child :?> IOleCommandTarget
+                        | _ -> null
                     VSConstants.S_OK
 
         member x.DoDragDrop(index: uint32, pDataObject: IDataObject, grfKeyState: uint32, pdwEffect: byref<uint32>): int = 
@@ -360,7 +365,8 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
         member x.GetClipboardFormat(_index: uint32, _grfFlags: uint32, _pFormatetc: FORMATETC [], _pMedium: STGMEDIUM []): int = 
             VSConstants.E_NOTIMPL
         
-        member x.GetExtendedClipboardVariant(_index: uint32, _grfFlags: uint32, _pcfFormat: VSOBJCLIPFORMAT [], pvarFormat: byref<obj>): int = 
+        member x.GetExtendedClipboardVariant(_index: uint32, _grfFlags: uint32, _pcfFormat: VSOBJCLIPFORMAT [], 
+                                             pvarFormat: byref<obj>): int = 
             pvarFormat <- null
             VSConstants.E_NOTIMPL
         
@@ -370,7 +376,8 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             pfExpandable <- 0
             VSConstants.E_NOTIMPL
         
-        member x.GetList2(index: uint32, listType: uint32, _flags: uint32, _pobSrch: VSOBSEARCHCRITERIA2 [], ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
+        member x.GetList2(index: uint32, listType: uint32, _flags: uint32, _pobSrch: VSOBSEARCHCRITERIA2 [], 
+                          ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
             // TODO: Use the flags and list type to actually filter the result.
             if index >= uint32 children.Count then
                 raise (ArgumentOutOfRangeException("index"))
@@ -396,7 +403,8 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             pvar <- null
             VSConstants.E_NOTIMPL
 
-        member x.GetSourceContextWithOwnership(index: uint32, [<Out>] pbstrFilename: byref<string>, [<Out>] pulLineNum: byref<uint32>) =
+        member x.GetSourceContextWithOwnership(index: uint32, [<Out>] pbstrFilename: byref<string>, 
+                                               [<Out>] pulLineNum: byref<uint32>) =
             if index >= uint32 children.Count then
                 raise (ArgumentOutOfRangeException("index"))
             else

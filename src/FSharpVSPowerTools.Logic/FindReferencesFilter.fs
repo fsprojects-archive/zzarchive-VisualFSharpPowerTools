@@ -30,7 +30,7 @@ type DocumentState =
       TargetProjects: IProjectProvider list }
 
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider) =
-    let getState() =
+    let getDocumentState() =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItems = maybe {
@@ -42,10 +42,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
             match projectItems with
             | Some (file, project, span, sym) ->
-                let syncContext = SynchronizationContext.Current
-                do! Async.SwitchToThreadPool()
                 let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, sym, file, project, AllowStaleResults.No)
-                do! Async.SwitchToContext syncContext
                 match symbolUse with
                 | Some (symbolUse, _) ->
                     match ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte file with
@@ -72,13 +69,10 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
     let findReferences() = 
         async {
-            let! state = getState()
+            let! state = getDocumentState()
             match state with
             | Some { Word = cw, sym; File = file; Project = project; TargetProjects = targetProjects } ->
-                let syncContext = SynchronizationContext.Current
-                do! Async.SwitchToThreadPool()
                 let! references = vsLanguageService.FindUsages (cw, file, project, targetProjects) 
-                do! Async.SwitchToContext syncContext
                 let references = 
                     references
                     |> Option.map (fun (_, _, refs) -> 
@@ -89,13 +83,11 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                             // Sort symbols by positions
                             symbolUses 
                             |> Seq.map snd 
-                            |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn) 
-                            |> Seq.toList)
-                        |> Seq.concat
-                        |> Seq.toList)
-                    |> fun opt -> defaultArg opt []
+                            |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
+                        |> Seq.concat)
+                    |> fun opt -> defaultArg opt Seq.empty
             
-                let findResults = FSharpLibraryNode("Find results", serviceProvider)
+                let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
                 for r in references do
                     findResults.AddNode(FSharpLibraryNode(r.Symbol.DisplayName, serviceProvider, r))
 
@@ -112,7 +104,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
             | _ -> 
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                statusBar.SetText("The caret must be on valid expression to find all references.") |> ignore 
+                statusBar.SetText(Resource.findAllReferenceStatusMessage) |> ignore 
         } |> Async.StartImmediate
 
     member val IsAdded = false with get, set

@@ -74,9 +74,11 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
             let (_, lineStr) = vsTextBuffer.GetLineText(line, 0, line, lineLength)
             // Trimming for display purpose
             let content = lineStr.Trim()
+            // We use name since ranges might not be correct on fully qualified symbols
+            let name = base.Name
             // Get the index of symbol in the trimmed text
-            let highlightStart = prefix.Length + range.StartColumn - lineStr.IndexOf(content)
-            let highlightLength = symbolUse.Symbol.DisplayName.Length
+            let highlightStart = prefix.Length + lineStr.IndexOf(name) - lineStr.IndexOf(content)
+            let highlightLength = name.Length
             let text = prefix + content
             Some (highlightStart, highlightLength, text)
         | _ -> None
