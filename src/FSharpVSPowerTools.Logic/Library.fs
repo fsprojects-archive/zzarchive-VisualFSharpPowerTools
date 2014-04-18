@@ -11,7 +11,6 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools.ProjectSystem
 
 [<RequireQualifiedAccess>]
@@ -74,10 +73,12 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
             let (_, lineStr) = vsTextBuffer.GetLineText(line, 0, line, lineLength)
             // Trimming for display purpose
             let content = lineStr.Trim()
+            let numOfWhitespaces = lineStr.Length - content.Length
+            let (_, rangeText) = vsTextBuffer.GetLineText(range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
             // We use name since ranges might not be correct on fully qualified symbols
-            let name = base.Name
+            let offset = max 0 (rangeText.Length - name.Length)
             // Get the index of symbol in the trimmed text
-            let highlightStart = prefix.Length + lineStr.IndexOf(name) - lineStr.IndexOf(content)
+            let highlightStart = prefix.Length + range.StartColumn + offset - numOfWhitespaces
             let highlightLength = name.Length
             let text = prefix + content
             Some (highlightStart, highlightLength, text)
@@ -122,7 +123,10 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
         match navigationData, symbolUse with
         | Some(vsTextManager, vsTextBuffer), Some symbolUse ->
             let range = symbolUse.RangeAlternate
-            let (startRow, startCol, endRow, endCol) = (range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
+            let (_, rangeText) = vsTextBuffer.GetLineText(range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
+            // FCS may return ranges for fully-qualified symbols
+            let offset = max 0 (rangeText.Length - name.Length)
+            let (startRow, startCol, endRow, endCol) = (range.StartLine-1, range.StartColumn + offset, range.EndLine-1, range.EndColumn)
             vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, 
                 startRow, startCol, endRow, endCol)
             |> ensureSucceded

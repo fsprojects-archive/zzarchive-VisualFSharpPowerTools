@@ -4,10 +4,10 @@ open System
 open System.Collections.Generic
 open System.ComponentModel.Design
 open System.Runtime.InteropServices
-
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
+open FSharpVSPowerTools
 
 type ErrorHandler = Microsoft.VisualStudio.ErrorHandler
 type VSConstants = Microsoft.VisualStudio.VSConstants
@@ -234,6 +234,12 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
         node.UpdateCount <- x.UpdateCount
         node
 
+    member internal x.CheckIndexOutOfRange(index) =
+        if index >= uint32 children.Count then
+           let ex = ArgumentOutOfRangeException("index")
+           Logging.logException ex
+           raise ex
+
     interface IVsSimpleObjectList2 with
         member x.GetFlags(pFlags: byref<uint32>): int = 
             pFlags <- uint32 x.Flags
@@ -248,119 +254,96 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             VSConstants.S_OK
         
         member x.GetDisplayData(index: uint32, pData: VSTREEDISPLAYDATA []): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                pData.[0] <- children.[int index].DisplayData
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            pData.[0] <- children.[int index].DisplayData
+            VSConstants.S_OK
         
         member x.GetCategoryField2(index: uint32, category: int, pfCatField: byref<uint32>): int = 
+            let check() = x.CheckIndexOutOfRange(index)
             let node =
                 if index = NullIndex then x
-                elif index < uint32 children.Count then children.[int index]
-                else raise (ArgumentOutOfRangeException("index"))
+                else 
+                    check()
+                    children.[int index]
             pfCatField <- node.CategoryField(enum<LIB_CATEGORY>(category))
             VSConstants.S_OK
         
         member x.GetBrowseObject(index: uint32, ppdispBrowseObj: byref<obj>): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
+            x.CheckIndexOutOfRange(index)
+            ppdispBrowseObj <- children.[int index].BrowseObject
+            if ppdispBrowseObj = null then
+                VSConstants.E_NOTIMPL
             else
-                ppdispBrowseObj <- children.[int index].BrowseObject
-                if ppdispBrowseObj = null then
-                    VSConstants.E_NOTIMPL
-                else
-                    VSConstants.S_OK
+                VSConstants.S_OK
         
         member x.CountSourceItems(index: uint32, ppHier: byref<IVsHierarchy>, pItemid: byref<uint32>, pcItems: byref<uint32>): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                children.[int index].SourceItems(&ppHier, &pItemid, &pcItems)
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            children.[int index].SourceItems(&ppHier, &pItemid, &pcItems)
+            VSConstants.S_OK
         
         member x.CanGoToSource(index: uint32, _srcType: VSOBJGOTOSRCTYPE, pfOK: byref<int>): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                pfOK <- if children.[int index].CanGoToSource then 1 else 0
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            pfOK <- if children.[int index].CanGoToSource then 1 else 0
+            VSConstants.S_OK
         
         member x.GetContextMenu(index: uint32, pclsidActive: byref<Guid>, pnMenuId: byref<int>, 
                                 ppCmdTrgtActive: byref<IOleCommandTarget>): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
+            x.CheckIndexOutOfRange(index)
+            let commandId = children.[int index].ContextMenuID
+            if commandId = null then
+                pclsidActive <- Guid.Empty
+                pnMenuId <- 0
+                ppCmdTrgtActive <- null
+                VSConstants.E_NOTIMPL
             else
-                let commandId = children.[int index].ContextMenuID
-                if commandId = null then
-                    pclsidActive <- Guid.Empty;
-                    pnMenuId <- 0
-                    ppCmdTrgtActive <- null
-                    VSConstants.E_NOTIMPL
-                else
-                    pclsidActive <- commandId.Guid
-                    pnMenuId <- commandId.ID
-                    // TODO: not sure why this doesn't work
-                    let child = children.[int index] :> obj
-                    ppCmdTrgtActive <-
-                        match child with
-                        | :? IOleCommandTarget -> child :?> IOleCommandTarget
-                        | _ -> null
-                    VSConstants.S_OK
+                pclsidActive <- commandId.Guid
+                pnMenuId <- commandId.ID
+                let child = children.[int index] :> obj
+                ppCmdTrgtActive <-
+                    match child with
+                    | :? IOleCommandTarget -> child :?> IOleCommandTarget
+                    | _ -> null
+                VSConstants.S_OK
 
         member x.DoDragDrop(index: uint32, pDataObject: IDataObject, grfKeyState: uint32, pdwEffect: byref<uint32>): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                let dataObject = OleDataObject(pDataObject)
-                children.[int index].DoDragDrop(dataObject, grfKeyState, pdwEffect)
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            let dataObject = OleDataObject(pDataObject)
+            children.[int index].DoDragDrop(dataObject, grfKeyState, pdwEffect)
+            VSConstants.S_OK
         
         member x.CanRename(index: uint32, _pszNewName: string, pfOK: byref<int>): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                pfOK <- if children.[int index].CanRename then 1 else 0
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            pfOK <- if children.[int index].CanRename then 1 else 0
+            VSConstants.S_OK
         
         member x.DoRename(index: uint32, pszNewName: string, grfFlags: uint32): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                children.[int index].Rename(pszNewName, grfFlags)
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            children.[int index].Rename(pszNewName, grfFlags)
+            VSConstants.S_OK
         
         member x.CanDelete(index: uint32, pfOK: byref<int>): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                pfOK <- if children.[int index].CanDelete then 1 else 0
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            pfOK <- if children.[int index].CanDelete then 1 else 0
+            VSConstants.S_OK
         
         member x.DoDelete(index: uint32, _grfFlags: uint32): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                children.[int index].Delete()
-                children.RemoveAt(int index)
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            children.[int index].Delete()
+            children.RemoveAt(int index)
+            VSConstants.S_OK
         
         member x.FillDescription2(index: uint32, grfOptions: uint32, pobDesc: IVsObjectBrowserDescription3): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                children.[int index].FillDescription(enum<_VSOBJDESCOPTIONS>(int grfOptions), pobDesc) |> ignore
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            children.[int index].FillDescription(enum<_VSOBJDESCOPTIONS>(int grfOptions), pobDesc) |> ignore
+            VSConstants.S_OK
                       
         member x.EnumClipboardFormats(index: uint32, grfFlags: uint32, _celt: uint32, rgcfFormats: VSOBJCLIPFORMAT [], pcActual: uint32 []): int = 
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                let copied = children.[int index].EnumClipboardFormats(enum<_VSOBJCFFLAGS>(int grfFlags), rgcfFormats)
+            x.CheckIndexOutOfRange(index)
+            let copied = children.[int index].EnumClipboardFormats(enum<_VSOBJCFFLAGS>(int grfFlags), rgcfFormats)
 
-                if (pcActual <> null && pcActual.Length > 0) then
-                    pcActual.[0] <- copied
-                VSConstants.S_OK
+            if (pcActual <> null && pcActual.Length > 0) then
+                pcActual.[0] <- copied
+            VSConstants.S_OK
         
         member x.GetClipboardFormat(_index: uint32, _grfFlags: uint32, _pFormatetc: FORMATETC [], _pMedium: STGMEDIUM []): int = 
             VSConstants.E_NOTIMPL
@@ -379,11 +362,9 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
         member x.GetList2(index: uint32, listType: uint32, _flags: uint32, _pobSrch: VSOBSEARCHCRITERIA2 [], 
                           ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
             // TODO: Use the flags and list type to actually filter the result.
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                ppIVsSimpleObjectList2 <- children.[int index].FilterView(enum<LibraryNodeType> (int listType))
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            ppIVsSimpleObjectList2 <- children.[int index].FilterView(enum<LibraryNodeType> (int listType))
+            VSConstants.S_OK
  
         member x.GetMultipleSourceItems(_index: uint32, _grfGSI: uint32, _cItems: uint32, _rgItemSel: VSITEMSELECTION []) =
             VSConstants.E_NOTIMPL
@@ -393,11 +374,9 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             VSConstants.E_NOTIMPL
 
         member x.GetNavInfoNode(index: uint32, [<Out>] ppNavInfoNode: byref<IVsNavInfoNode>) =
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                ppNavInfoNode <- children.[int index] :> IVsNavInfoNode
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            ppNavInfoNode <- children.[int index] :> IVsNavInfoNode
+            VSConstants.S_OK
 
         member x.GetProperty(_index: uint32, _propid: int, [<Out>] pvar) =
             pvar <- null
@@ -405,40 +384,32 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
 
         member x.GetSourceContextWithOwnership(index: uint32, [<Out>] pbstrFilename: byref<string>, 
                                                [<Out>] pulLineNum: byref<uint32>) =
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                children.[int index].GetSourceContextWithOwnership(&pbstrFilename, &pulLineNum)
-                match pbstrFilename with
-                | null -> VSConstants.E_NOTIMPL
-                | _ -> VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            children.[int index].GetSourceContextWithOwnership(&pbstrFilename, &pulLineNum)
+            match pbstrFilename with
+            | null -> VSConstants.E_NOTIMPL
+            | _ -> VSConstants.S_OK
 
         member x.GetTextWithOwnership(index: uint32, tto: VSTREETEXTOPTIONS, [<Out>] pbstrText: byref<string>) =
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                pbstrText <- children.[int index].GetTextWithOwnership(tto)
-                match pbstrText with
-                | null -> VSConstants.E_NOTIMPL
-                | _ -> VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            pbstrText <- children.[int index].GetTextWithOwnership(tto)
+            match pbstrText with
+            | null -> VSConstants.E_NOTIMPL
+            | _ -> VSConstants.S_OK
 
         member x.GetTipTextWithOwnership(index: uint32, _eTipType: VSTREETOOLTIPTYPE, [<Out>] pbstrText: byref<string>) =
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                pbstrText <- children.[int index].TooltipText
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            pbstrText <- children.[int index].TooltipText
+            VSConstants.S_OK
 
         member x.GetUserContext(_index: uint32, [<Out>] ppunkUserCtx) =
             ppunkUserCtx <- null
             VSConstants.E_NOTIMPL
 
         member x.GoToSource(index: uint32, srcType: VSOBJGOTOSRCTYPE) =
-            if index >= uint32 children.Count then
-                raise (ArgumentOutOfRangeException("index"))
-            else
-                children.[int index].GotoSource(srcType)
-                VSConstants.S_OK
+            x.CheckIndexOutOfRange(index)
+            children.[int index].GotoSource(srcType)
+            VSConstants.S_OK
 
         member x.LocateNavInfoNode(pNavInfoNode: IVsNavInfoNode, [<Out>] pulIndex: byref<uint32>) =
             match pNavInfoNode with
@@ -446,10 +417,8 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                 raise (ArgumentNullException("pNavInfoNode"))
             | _ ->
                 pulIndex <- NullIndex
-
                 let nodeName = ref null
                 ErrorHandler.ThrowOnFailure(pNavInfoNode.get_Name(nodeName)) |> ignore
-
                 let rec loop i =
                     if i = children.Count then
                         VSConstants.S_FALSE

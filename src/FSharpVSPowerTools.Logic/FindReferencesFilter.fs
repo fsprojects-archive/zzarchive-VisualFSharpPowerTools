@@ -11,7 +11,7 @@ open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.FSharp.Compiler.Range
+open Microsoft.FSharp.Compiler
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
@@ -90,8 +90,8 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     |> fun opt -> defaultArg opt Seq.empty
             
                 let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
-                for r in references do
-                    findResults.AddNode(FSharpLibraryNode(r.Symbol.DisplayName, serviceProvider, r))
+                for reference in references do
+                    findResults.AddNode(FSharpLibraryNode(sym.Text, serviceProvider, reference))
 
                 let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
                 let searchCriteria = 
