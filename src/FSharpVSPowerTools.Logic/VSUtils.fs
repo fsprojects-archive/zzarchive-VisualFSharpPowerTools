@@ -209,7 +209,7 @@ type Project with
 
     member x.GetReferencedFSharpProjects() = x.GetReferencedProjects() |> List.filter isFSharpProject
 
-let inline ensureSucceded hr = 
+let inline ensureSucceeded hr = 
     ErrorHandler.ThrowOnFailure hr
     |> ignore
 

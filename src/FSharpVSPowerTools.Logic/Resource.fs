@@ -29,3 +29,5 @@ module Resource =
     let renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
 
     let [<Literal>] implementInterfaceErrorMessage = "All members of this interface have been implemented."
+
+    let [<Literal>] findAllReferenceStatusMessage = "The caret must be on a valid expression to find all references."

@@ -141,6 +141,7 @@
     <Compile Include="ImplementInterfaceSmartTaggerProvider.cs" />
     <Compile Include="HighlightUsageTaggerProvider.cs" />
     <Compile Include="PowerToolsCommandsPackage.cs" />
+    <Compile Include="FindReferencesFilterProvider.cs" />
     <Compile Include="RenameCommandFilterProvider.cs" />
     <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

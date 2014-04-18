@@ -335,15 +335,15 @@ and
                         with _ -> false
                 if canShow then
                     windowFrame.Show()
-                    |> ensureSucceded
+                    |> ensureSucceeded
 
                     let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                     let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
                     let mutable vsTextBuffer = Unchecked.defaultof<_>
                     vsTextView.GetBuffer(&vsTextBuffer)
-                    |> ensureSucceded
+                    |> ensureSucceeded
 
                     let (startRow, startCol), (endRow, endCol) = extraData.Span
                     vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
-                    |> ensureSucceded
+                    |> ensureSucceeded
 
