@@ -45,9 +45,9 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, sym, file, project, AllowStaleResults.No)
                 match symbolUse with
                 | Some (symbolUse, _) ->
-                    match ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte file with
-                    | Some symbolDeclLocation ->
-                        let dependentProjects =
+                    let targetProjects =
+                        match ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte file with
+                        | Some symbolDeclLocation ->
                             let declProject = 
                                 match symbolDeclLocation with
                                 | SymbolDeclarationLocation.File -> project
@@ -57,12 +57,14 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                             if dependentProjects |> List.exists (fun x -> x.ProjectFileName = declProject.ProjectFileName)
                             then dependentProjects
                             else declProject :: dependentProjects
-
-                        return Some { Word = span, sym
-                                      File = file
-                                      Project = project
-                                      TargetProjects = dependentProjects }
-                    | _ -> return None
+                        // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
+                        // In order to find all its usages we have to check all F# projects.
+                        | None -> dte.ListFSharpProjectsInSolution() |> List.map ProjectProvider.createForProject
+    
+                    return Some { Word = span, sym
+                                  File = file
+                                  Project = project
+                                  TargetProjects = targetProjects }
                 | _ -> return None
             | _ -> return None
         }
