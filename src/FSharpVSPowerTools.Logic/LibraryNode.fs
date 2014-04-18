@@ -88,10 +88,6 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
         with get() = clipboardFormats
         and set value = clipboardFormats <- value
 
-    member internal x.DisplayData 
-        with get() = displayData
-        and set value = displayData <- value
-
     member internal x.UpdateCount 
         with get() = !updateCount
         and set value = updateCount := value
@@ -142,6 +138,9 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
     member x.NodeType
         with get () = nodeType
         and set value = nodeType <- value
+
+    abstract DisplayData: VSTREEDISPLAYDATA
+    default x.DisplayData = displayData
 
     abstract UniqueName: string
     default x.UniqueName = x.Name
