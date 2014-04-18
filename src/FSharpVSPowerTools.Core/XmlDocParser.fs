@@ -86,10 +86,10 @@ module internal XmlDocParsing =
             | SynModuleDecl.HashDirective(_parsedHashDirective, _range) -> []
             | SynModuleDecl.NamespaceFragment(synModuleOrNamespace) -> getXmlDocablesSynModuleOrNamespace synModuleOrNamespace
 
-        and getXmlDocablesSynModuleOrNamespace (SynModuleOrNamespace(_longIdent, _isModule, synModuleDecls, _preXmlDoc, _synAttributes, _synAccessOpt, _range)) =
+        and getXmlDocablesSynModuleOrNamespace (SynModuleOrNamespace(_, _, synModuleDecls, _, _, _, _)) =
             (synModuleDecls |> List.collect getXmlDocablesSynModuleDecl)
 
-        and getXmlDocablesSynTypeDefn (SynTypeDefn.TypeDefn(ComponentInfo(synAttributes, _synTyparDeclList, _synTypeConstraintList, _longIdent, preXmlDoc, _bool, _synAccessOpt, compRange), synTypeDefnRepr, synMemberDefns, tRange)) =
+        and getXmlDocablesSynTypeDefn (SynTypeDefn.TypeDefn(ComponentInfo(synAttributes, _, _, _, preXmlDoc, _, _, compRange), synTypeDefnRepr, synMemberDefns, tRange)) =
             let stuff = 
                 match synTypeDefnRepr with
                 | ObjectModel(_synTypeDefnKind, synMemberDefns, _oRange) -> (synMemberDefns |> List.collect getXmlDocablesSynMemberDefn)
@@ -106,7 +106,7 @@ module internal XmlDocParsing =
         and getXmlDocablesSynMemberDefn m =
             match m with
             | SynMemberDefn.Open(_longIdent, _range) -> []
-            | SynMemberDefn.Member(SynBinding.Binding(_synAccessOption, _synBindingKind, _, _, synAttributes, preXmlDoc, _synValData, synPat, _synBindingReturnInfoOption, _synExpr, _range, _sequencePointInfoForBinding), memRange) -> 
+            | SynMemberDefn.Member(SynBinding.Binding(_, _, _, _, synAttributes, preXmlDoc, _, synPat, _, _, _, _), memRange) -> 
                 if isEmptyXmlDoc preXmlDoc then
                     let fullRange = synAttributes |> List.fold (fun r a -> unionRanges r a.Range) memRange
                     let line = fullRange.StartLine 
@@ -117,7 +117,7 @@ module internal XmlDocParsing =
             | SynMemberDefn.ImplicitCtor(_synAccessOption, _synAttributes, _synSimplePatList, _identOption, _range) -> []
             | SynMemberDefn.ImplicitInherit(_synType, _synExpr, _identOption, _range) -> []
             | SynMemberDefn.LetBindings(_synBindingList, _, _, _range) -> []
-            | SynMemberDefn.AbstractSlot(ValSpfn(synAttributes, _ident, _synValTyparDecls, _synType, SynValInfo(args, _ret), _, _, preXmlDoc, _synAccessOpt, _synExprOpt, _range), _memberFlags, range) -> 
+            | SynMemberDefn.AbstractSlot(ValSpfn(synAttributes, _, _, _, SynValInfo(args, _ret), _, _, preXmlDoc, _, _, _), _, range) -> 
                 if isEmptyXmlDoc preXmlDoc then
                     let fullRange = synAttributes |> List.fold (fun r a -> unionRanges r a.Range) range
                     let line = fullRange.StartLine 
@@ -131,8 +131,12 @@ module internal XmlDocParsing =
                 | Some(x) -> x |> List.collect getXmlDocablesSynMemberDefn
             | SynMemberDefn.Inherit(_synType, _identOption, _range) -> []
             | SynMemberDefn.ValField(_synField, _range) -> []
-            | SynMemberDefn.NestedType(synTypeDefn, _synAccessOption, _range) -> getXmlDocablesSynTypeDefn synTypeDefn
-            | _ -> failwith "error"
+            | SynMemberDefn.NestedType(synTypeDefn, _, _range) -> getXmlDocablesSynTypeDefn synTypeDefn
+            | SynMemberDefn.AutoProperty(synAttributes,_,_,_,_,_,_,_,_,_, range) -> 
+                let fullRange = synAttributes |> List.fold (fun r a -> unionRanges r a.Range) range
+                let line = fullRange.StartLine 
+                let indent = indentOf line
+                [XmlDocable(line, indent, [])]
 
         and getXmlDocablesInput input =
             match input with
