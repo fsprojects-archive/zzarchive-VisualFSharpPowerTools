@@ -47,24 +47,22 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
                             &hierarchy,
                             &itemId,
                             &windowFrame)
+                        // Hide it until actually navigating to the window
+                        windowFrame.Hide() |> ensureSucceeded
                         true
                     with _ -> false
             if canShow then
-                windowFrame.Show()
-                |> ensureSucceded
-
                 let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                 let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
                 let mutable vsTextBuffer = Unchecked.defaultof<_>
-                vsTextView.GetBuffer(&vsTextBuffer)
-                |> ensureSucceded
-                Some (vsTextManager, vsTextBuffer)
+                vsTextView.GetBuffer(&vsTextBuffer) |> ensureSucceeded
+                Some (windowFrame, vsTextManager, vsTextBuffer)
             else None
         | _ -> None
     
     let textData =
         match navigationData, symbolUse with
-        | Some(_, vsTextBuffer), Some symbolUse ->
+        | Some(_, _, vsTextBuffer), Some symbolUse ->
             let range = symbolUse.RangeAlternate
             let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPath(symbolUse.FileName)) 
                             range.StartLine range.StartColumn
@@ -121,7 +119,9 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
 
     override x.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = 
         match navigationData, symbolUse with
-        | Some(vsTextManager, vsTextBuffer), Some symbolUse ->
+        | Some(windowFrame, vsTextManager, vsTextBuffer), Some symbolUse ->
+            // Only show windows when going to source
+            windowFrame.Show() |> ensureSucceeded
             let range = symbolUse.RangeAlternate
             let (_, rangeText) = vsTextBuffer.GetLineText(range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
             // FCS may return ranges for fully-qualified symbols
@@ -129,7 +129,7 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
             let (startRow, startCol, endRow, endCol) = (range.StartLine-1, range.StartColumn + offset, range.EndLine-1, range.EndColumn)
             vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, 
                 startRow, startCol, endRow, endCol)
-            |> ensureSucceded
+            |> ensureSucceeded
         | _ -> ()
 
     // This class implement 'IVSNavInfo' in order to be attached in search criteria

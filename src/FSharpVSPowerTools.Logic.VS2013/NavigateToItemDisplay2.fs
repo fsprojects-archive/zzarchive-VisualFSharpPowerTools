@@ -78,17 +78,17 @@ and
                     ErrorHandler.Succeeded(opened)
             if canShow then
                 windowFrame.Show()
-                |> ensureSucceded
+                |> ensureSucceeded
 
                 let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                 let vsTextManager = x.serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
                 let mutable vsTextBuffer = Unchecked.defaultof<_>
                 vsTextView.GetBuffer(&vsTextBuffer)
-                |> ensureSucceded
+                |> ensureSucceeded
 
                 let (startRow, startCol), (endRow, endCol) = position.Span
                 vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
-                |> ensureSucceded
+                |> ensureSucceeded
         member internal x.GetProvisionalViewingStatus(position: NavigateToItemExtraData) =
             int (VsShellUtilities.GetProvisionalViewingStatus(position.FileName))
         member internal x.PreviewItem(position: NavigateToItemExtraData) =
