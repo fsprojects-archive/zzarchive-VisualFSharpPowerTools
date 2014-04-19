@@ -111,13 +111,12 @@ type ILexer =
 
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService (dirtyNotify) =
-  do Environment.SetEnvironmentVariable ("mFSharp_BuildCacheSize", "200")
   // Create an instance of interactive checker. The callback is called by the F# compiler service
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
   let checker = 
-    let checker = InteractiveChecker.Create()
+    let checker = InteractiveChecker.Create(200)
     checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
