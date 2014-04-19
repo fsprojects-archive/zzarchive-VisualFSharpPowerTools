@@ -85,6 +85,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                             // Sort symbols by positions
                             symbolUses 
                             |> Seq.map snd 
+                            |> Seq.distinctBy (fun s -> s.RangeAlternate)
                             |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
                         |> Seq.concat)
                     |> fun opt -> defaultArg opt Seq.empty

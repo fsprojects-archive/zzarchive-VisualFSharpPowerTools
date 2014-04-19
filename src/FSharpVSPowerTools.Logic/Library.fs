@@ -12,12 +12,13 @@ open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
+open FSharpVSPowerTools
 
 [<RequireQualifiedAccess>]
 module Constants =
     let [<Literal>] FindReferencesResults = 0x11223344u
 
-type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUse: FSharpSymbolUse) =
+type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?symbolUse: FSharpSymbolUse) =
     inherit LibraryNode(name)
     do
         base.CanGoToSource <- true
@@ -69,8 +70,8 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
             let line = range.StartLine-1
             let (_, lineLength) = vsTextBuffer.GetLengthOfLine(line)
             let (_, lineStr) = vsTextBuffer.GetLineText(line, 0, line, lineLength)
-            // Trimming for display purpose
-            let content = lineStr.Trim()
+            // Trimming for display purpose, but we should not touch the trailing spaces.
+            let content = lineStr.TrimStart()
             let numOfWhitespaces = lineStr.Length - content.Length
             let (_, rangeText) = vsTextBuffer.GetLineText(range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
             // We use name since ranges might not be correct on fully qualified symbols
@@ -78,7 +79,7 @@ type FSharpLibraryNode(name, serviceProvider: System.IServiceProvider, ?symbolUs
             // Get the index of symbol in the trimmed text
             let highlightStart = prefix.Length + range.StartColumn + offset - numOfWhitespaces
             let highlightLength = name.Length
-            let text = prefix + content
+            let text = prefix + content.Trim()
             Some (highlightStart, highlightLength, text)
         | _ -> None
 
