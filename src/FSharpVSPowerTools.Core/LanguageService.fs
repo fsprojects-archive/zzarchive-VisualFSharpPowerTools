@@ -116,7 +116,7 @@ type LanguageService (dirtyNotify) =
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
   let checker = 
-    let checker = InteractiveChecker.Create()
+    let checker = InteractiveChecker.Create(200)
     checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
