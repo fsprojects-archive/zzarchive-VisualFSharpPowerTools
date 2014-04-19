@@ -54,4 +54,9 @@
 #### 0.6.1 - April 14 2014
 * Fix the issue where rename refactoring is applied after cancelled by 'Esc'
 
+#### 1.0.0 - Unreleased
+* Implement Find all references
+* Improve robustness of XmlDoc generation
+* Improve performance on large solutions
+
 
