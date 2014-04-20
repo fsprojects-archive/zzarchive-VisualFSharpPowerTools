@@ -17,7 +17,7 @@ let debug x =
 let mutable debugObject: obj = null
 
 [<NoEquality; NoComparison>]
-type RecordBindingData =
+type RecordBinding =
     | RecordBinding of SynType * (RecordFieldName * SynExpr option * BlockSeparator option) list
 
 // TODO: copy-pasted from InterfaceStubGeneration
@@ -29,8 +29,11 @@ let private (|IndexerArg|) = function
 let private (|IndexerArgList|) xs =
     List.collect (|IndexerArg|) xs
 
+// TODO: copy-pasted from InterfaceStubGeneration
 let private inRange range pos = 
     AstTraversal.rangeContainsPosLeftEdgeInclusive range pos
+
+let countRecordFields (e: FSharpEntity) = e.FSharpFields.Count
 
 let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 

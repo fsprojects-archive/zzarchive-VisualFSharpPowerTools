@@ -19,13 +19,13 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     static member Empty = ParseAndCheckResults(None)
 
-    member x.GetSymbolUseAtLocation(line, col, lineStr, identIsland) =
+    member x.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
         async {
             match infoOpt with 
             | None -> 
                 return None
             | Some (checkResults, _parseResults) -> 
-                return! checkResults.GetSymbolUseAtLocation(line, col, lineStr, identIsland)
+                return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
         }
 
     member x.GetUsesOfSymbolInFile(symbol) =

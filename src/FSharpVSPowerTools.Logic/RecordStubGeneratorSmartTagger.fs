@@ -14,6 +14,8 @@ open Microsoft.VisualStudio.Shell.Interop
 open System
 open System.IO
 open FSharpVSPowerTools.Core
+open FSharpVSPowerTools.Core.CodeGeneration
+open FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharp.CompilerBinding
@@ -21,6 +23,7 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
+// TODO: edit all comments containing 'implement'
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
@@ -32,9 +35,14 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable interfaceDefinition = None
+    let mutable recordDefinition = None
 
-    let collectInterfaceData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
+    let [<Literal>] CommandName = "Generate record stub"
+
+    // Try to:
+    // - Identify record expression binding
+    // - Try to identify the '{' in 'let x: MyRecord = { }'
+    let collectRecordBindingData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
         async {
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
             let column = point.Position - point.GetContainingLine().Start.Position
@@ -43,19 +51,19 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let pos = Pos.fromZ line column
             let data =
                 ast.ParseTree
-                |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)
-                |> Option.map (fun iface -> 
+                |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
+                |> Option.map (fun recordBinding -> 
                     let lineStr = point.GetContainingLine().GetText()
                     let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
-                    let endPosOfWith =
+                    // TODO: we want to go after the '{' that' is right after the caret position
+                    let endPosOfLBrace =
                         tokens |> List.tryPick (fun (t: TokenInformation) ->
-                                    if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column then
-                                        let text = lineStr.[t.LeftColumn..t.RightColumn]
-                                        match text with
-                                        | "with" -> Some (Pos.fromZ line (t.RightColumn + 1))
-                                        | _ -> None
+                                    if t.CharClass = TokenCharKind.Delimiter &&
+                                       t.LeftColumn >= column &&
+                                       t.TokenName = "LBRACE" then
+                                        Some (Pos.fromZ line (t.RightColumn + 1))
                                     else None)
-                    iface, endPosOfWith)
+                    recordBinding, endPosOfLBrace)
             return data
         }
 
@@ -74,9 +82,9 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                     async {
                         match symbol.Kind with
                         | SymbolKind.Ident ->
-                            let! interfaceData = collectInterfaceData point doc project
-                            match interfaceData with
-                            | Some interfaceData ->
+                            let! recordBindingData' = collectRecordBindingData point doc project
+                            match recordBindingData' with
+                            | Some recordBindingData ->
                                 let! results = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, 
                                                     AllowStaleResults.MatchingSource)
                                 // Recheck cursor position to ensure it's still in new word
@@ -84,113 +92,105 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                 | Some (fsSymbolUse, _), Some point when (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord ->
                                     let entity = fsSymbolUse.Symbol :?> FSharpEntity
                                     // The entity might correspond to another symbol 
-                                    if entity.IsInterface && entity.DisplayName = symbol.Text then
-                                        interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
+                                    if entity.IsFSharpRecord && entity.DisplayName = symbol.Text then
+                                        recordDefinition <- Some (recordBindingData, fsSymbolUse.DisplayContext, entity)
                                         currentWord <- Some newWord
                                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                                         return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
                                     else
-                                        return interfaceDefinition <- None
+                                        return recordDefinition <- None
                                 | _ ->
-                                    return interfaceDefinition <- None
+                                    return recordDefinition <- None
                             | None ->
-                                return interfaceDefinition <- None 
+                                return recordDefinition <- None 
                         | _ ->
-                            return interfaceDefinition <- None 
+                            return recordDefinition <- None 
 
                     } |> Async.StartImmediate
                 | None ->
-                    interfaceDefinition <- None 
+                    recordDefinition <- None 
         | None -> ()
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
     let getRange = function
-        | InterfaceData.Interface(typ, _) -> 
-            typ.Range
-        | InterfaceData.ObjExpr(typ, _) -> 
-            typ.Range
+        RecordBinding(typ, _) -> typ.Range
 
     let inferStartColumn = function
-        | InterfaceData.Interface(_, Some (m :: _)) ->
-            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(m.Range.StartLine-1)
+        | RecordBinding(_typ, ((field, _, _) :: _)) ->
+            let longIdent, _ = field
+            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(longIdent.Range.StartLine - 1)
             let str = line.GetText()
             str.Length - str.TrimStart(' ').Length
-        | InterfaceData.ObjExpr(_, b :: _) -> 
-            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(b.RangeOfBindingSansRhs.StartLine-1)
-            let str = line.GetText()
-            str.Length - str.TrimStart(' ').Length
-        | iface ->
-            // There is no implemented member, we indent the content at the start column of the interface
-            (getRange iface).StartColumn
+        | recordBinding ->
+            // TODO: this logic may not be adapted to a record
+            // There is no assied record field, we indent the content at the start column of the definition
+            (getRange recordBinding).StartColumn
 
-    let countMembers = function
-        | InterfaceData.Interface(_, None) -> 
-            0
-        | InterfaceData.Interface(_, Some members) -> 
-            List.length members
-        | InterfaceData.ObjExpr(_, bindings) ->
-            List.length bindings
+    let countFields = function
+        RecordBinding(_, fields) -> List.length fields
 
-    let getTypeParameters = function
-        | InterfaceData.Interface(typ, _)
-        | InterfaceData.ObjExpr(typ, _) ->
-            match typ with
-            | SynType.App(_, _, ts, _, _, _, _)
-            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
-                let (|TypeIdent|_|) = function
-                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
-                        match req with
-                        | NoStaticReq -> 
-                            Some ("'" + s.idText)
-                        | HeadTypeStaticReq -> 
-                            Some ("^" + s.idText)
-                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
-                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
-                    | _ -> 
-                        None
-                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
-            | _ ->
-                [||]
+//    let getTypeParameters = function
+//        | InterfaceData.Interface(typ, _)
+//        | InterfaceData.ObjExpr(typ, _) ->
+//            match typ with
+//            | SynType.App(_, _, ts, _, _, _, _)
+//            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
+//                let (|TypeIdent|_|) = function
+//                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
+//                        match req with
+//                        | NoStaticReq -> 
+//                            Some ("'" + s.idText)
+//                        | HeadTypeStaticReq -> 
+//                            Some ("^" + s.idText)
+//                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
+//                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
+//                    | _ -> 
+//                        None
+//                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
+//            | _ ->
+//                [||]
 
-    // Check whether the interface has been fully implemented
-    let shouldImplementInterface (interfaceData, _) (entity: FSharpEntity) =
+    // Check whether the record has been fully implemented
+    let shouldGenerateRecordStub (recordBindingData, _) (entity: FSharpEntity) =
         // TODO: counting members is not enough.
         // We should match member signatures, 
         // it will be tricky in case of specialized interface implementation
-        let count = InterfaceStubGenerator.countInterfaceMembers entity
-        count > 0 && count > countMembers interfaceData
+        let count = RecordStubGenerator.countRecordFields entity
+        count > 0 && count > countFields recordBindingData
 
-    let handleImplementInterface (span: SnapshotSpan) (interfaceData, posOpt: pos option) displayContext entity = 
-        let startColumn = inferStartColumn interfaceData
+    let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, posOpt: pos option) displayContext entity = 
+        let startColumn = inferStartColumn recordBindingData
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let typeParams = getTypeParameters interfaceData
-        let stub = InterfaceStubGenerator.formatInterface 
-                        startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" displayContext entity
+//        let typeParams = getTypeParameters recordBindingData
 
-        use transaction = textUndoHistory.CreateTransaction("Implement Interface Explicitly")
-        match posOpt with
-        | Some pos -> 
-            let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
-            buffer.Insert(current, stub) |> ignore
-        | None ->
-            let range = getRange interfaceData
-            let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
-            buffer.Insert(current, " with") |> ignore
-            buffer.Insert(current + 5, stub) |> ignore
+        // TODO: implement format record
+//        let stub = InterfaceStubGenerator.formatInterface 
+//                        startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" displayContext entity
+//
+        use transaction = textUndoHistory.CreateTransaction(CommandName)
+//        match posOpt with
+//        | Some pos -> 
+//            let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
+//            buffer.Insert(current, stub) |> ignore
+//        | None ->
+//            let range = getRange interfaceData
+//            let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
+//            buffer.Insert(current, " with") |> ignore
+//            buffer.Insert(current + 5, stub) |> ignore
         transaction.Complete()
 
-    let implementInterface span data displayContext entity =
+    let generateRecordStub span data displayContext entity =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = "Generate record fields stubs"
+            member x.DisplayText = CommandName
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = 
-                if shouldImplementInterface data entity then
-                    handleImplementInterface span data displayContext entity
+                if shouldGenerateRecordStub data entity then
+                    handleGenerateRecordStub span data displayContext entity
                 else
                     messageBoxError Resource.implementInterfaceErrorMessage }
 
@@ -201,7 +201,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         let trackingSpan = span.Snapshot.CreateTrackingSpan(span.Span, SpanTrackingMode.EdgeInclusive)
         let _snapshot = trackingSpan.TextBuffer.CurrentSnapshot
 
-        actionList.Add(implementInterface span data displayContext entity)
+        actionList.Add(generateRecordStub span data displayContext entity)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -209,7 +209,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     interface ITagger<RecordStubGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             seq {
-                match currentWord, interfaceDefinition with
+                match currentWord, recordDefinition with
                 | Some word, Some (data, displayContext, entity) ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<RecordStubGeneratorSmartTag>(span, 
