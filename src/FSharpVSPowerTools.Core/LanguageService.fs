@@ -75,7 +75,7 @@ type AllowStaleResults =
     /// (such as a saved change in an earlier file in the compilation order, or a saved change in a project or DLL this project depends on).
     ///
     /// This gives good, fast, accurate results for repeated requests to the same file text. Semantic responsiveness will be degraded
-    /// during eiting of the file.
+    /// during edition of the file.
     | MatchingSource
     /// Don't allow stale results. This waits for all background changes relevant to the file to propagate, and forces a recheck of the file text
     /// regardless of whether if has been recently checked or not.
