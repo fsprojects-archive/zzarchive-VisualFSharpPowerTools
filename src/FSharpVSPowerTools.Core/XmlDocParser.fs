@@ -1,7 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Core
 
 type XmlDocable =
-    | XmlDocable of line: int * indent: int * paramNames: string list
+    | XmlDocable of int * int * string list
 
 module internal XmlDocParsing =
     open Microsoft.FSharp.Compiler.Range
@@ -34,8 +34,8 @@ module internal XmlDocParsing =
         | SynPat.InstanceMember _
         | SynPat.FromParseError _ -> []
 
-    let getXmlDocablesImpl(sourceCodeLinesOfTheFile: string[], sourceCodeOfTheFile, filename, checker: InteractiveChecker) =
-        let indentOf (lineNum:int) =
+    let getXmlDocablesImpl(sourceCodeLinesOfTheFile: string [], sourceCodeOfTheFile, filename, checker: InteractiveChecker) =
+        let indentOf (lineNum: int) =
             let mutable i = 0
             let line = sourceCodeLinesOfTheFile.[lineNum-1] // -1 because lineNum reported by xmldocs are 1-based, but array is 0-based
             while i < line.Length && line.Chars(i) = ' ' do
