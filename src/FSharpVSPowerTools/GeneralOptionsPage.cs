@@ -35,6 +35,7 @@ namespace FSharpVSPowerTools
             SyntaxColoringEnabled = true;
             ImplementInterfaceEnabled = false;
             FolderOrganizationEnabled = false;
+            FindAllReferencesEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -131,6 +132,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FolderOrganizationEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool FindAllReferencesEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -149,6 +153,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
                 _optionsControl.ImplementInterfaceEnabled = ImplementInterfaceEnabled;
                 _optionsControl.FolderOrganizationEnabled = FolderOrganizationEnabled;
+                _optionsControl.FindAllReferencesEnabled = FindAllReferencesEnabled;
 
                 return _optionsControl;
             }
@@ -176,6 +181,7 @@ namespace FSharpVSPowerTools
                 SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
                 ImplementInterfaceEnabled = _optionsControl.ImplementInterfaceEnabled;
                 FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
+                FindAllReferencesEnabled = _optionsControl.FindAllReferencesEnabled;
             }
 
             base.OnApply(e);

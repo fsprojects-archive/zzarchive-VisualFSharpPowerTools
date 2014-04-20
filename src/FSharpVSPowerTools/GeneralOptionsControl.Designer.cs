@@ -29,6 +29,9 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbImplementInterface = new System.Windows.Forms.CheckBox();
+            this.chbFolderOrganization = new System.Windows.Forms.CheckBox();
+            this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
             this.chbNavigateTo = new System.Windows.Forms.CheckBox();
             this.chbDepthColorizer = new System.Windows.Forms.CheckBox();
             this.chbRenameRefactoring = new System.Windows.Forms.CheckBox();
@@ -39,14 +42,15 @@
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbImplementInterface = new System.Windows.Forms.CheckBox();
-            this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
-            this.chbFolderOrganization = new System.Windows.Forms.CheckBox();
+            this.lblInformation = new System.Windows.Forms.Label();
+            this.chbFindAllReferences = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbFindAllReferences);
+            this.grbOptions.Controls.Add(this.lblInformation);
             this.grbOptions.Controls.Add(this.chbImplementInterface);
             this.grbOptions.Controls.Add(this.chbFolderOrganization);
             this.grbOptions.Controls.Add(this.chbSyntaxColoring);
@@ -66,6 +70,38 @@
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbImplementInterface
+            // 
+            this.chbImplementInterface.AutoSize = true;
+            this.chbImplementInterface.Location = new System.Drawing.Point(212, 76);
+            this.chbImplementInterface.Name = "chbImplementInterface";
+            this.chbImplementInterface.Size = new System.Drawing.Size(118, 17);
+            this.chbImplementInterface.TabIndex = 12;
+            this.chbImplementInterface.Text = "Implement interface";
+            this.chbImplementInterface.UseVisualStyleBackColor = true;
+            // 
+            // chbFolderOrganization
+            // 
+            this.chbFolderOrganization.AutoSize = true;
+            this.chbFolderOrganization.Location = new System.Drawing.Point(212, 30);
+            this.chbFolderOrganization.Name = "chbFolderOrganization";
+            this.chbFolderOrganization.Size = new System.Drawing.Size(115, 17);
+            this.chbFolderOrganization.TabIndex = 12;
+            this.chbFolderOrganization.Text = "Folder organization";
+            this.chbFolderOrganization.UseVisualStyleBackColor = true;
+            // 
+            // chbSyntaxColoring
+            // 
+            this.chbSyntaxColoring.AutoSize = true;
+            this.chbSyntaxColoring.Checked = true;
+            this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 191);
+            this.chbSyntaxColoring.Name = "chbSyntaxColoring";
+            this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
+            this.chbSyntaxColoring.TabIndex = 11;
+            this.chbSyntaxColoring.Text = "Syntax coloring";
+            this.chbSyntaxColoring.UseVisualStyleBackColor = true;
             // 
             // chbNavigateTo
             // 
@@ -118,9 +154,9 @@
             this.chbNavBar.AutoSize = true;
             this.chbNavBar.Location = new System.Drawing.Point(16, 76);
             this.chbNavBar.Name = "chbNavBar";
-            this.chbNavBar.Size = new System.Drawing.Size(221, 17);
+            this.chbNavBar.Size = new System.Drawing.Size(110, 17);
             this.chbNavBar.TabIndex = 6;
-            this.chbNavBar.Text = "Navigation bar (Admin privileges required)";
+            this.chbNavBar.Text = "Navigation bar ***";
             this.chbNavBar.UseVisualStyleBackColor = true;
             // 
             // lblInfo
@@ -173,41 +209,31 @@
             this.chbXmlDoc.Location = new System.Drawing.Point(16, 30);
             this.chbXmlDoc.Name = "chbXmlDoc";
             this.chbXmlDoc.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.chbXmlDoc.Size = new System.Drawing.Size(146, 17);
+            this.chbXmlDoc.Size = new System.Drawing.Size(141, 17);
             this.chbXmlDoc.TabIndex = 1;
-            this.chbXmlDoc.Text = "Auto-generating XMLDoc";
+            this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
-            // chbImplementInterface
+            // lblInformation
             // 
-            this.chbImplementInterface.AutoSize = true;
-            this.chbImplementInterface.Location = new System.Drawing.Point(243, 53);
-            this.chbImplementInterface.Name = "chbImplementInterface";
-            this.chbImplementInterface.Size = new System.Drawing.Size(118, 17);
-            this.chbImplementInterface.TabIndex = 12;
-            this.chbImplementInterface.Text = "Implement interface";
-            this.chbImplementInterface.UseVisualStyleBackColor = true;
-            // chbSyntaxColoring
+            this.lblInformation.AutoSize = true;
+            this.lblInformation.Location = new System.Drawing.Point(13, 232);
+            this.lblInformation.Name = "lblInformation";
+            this.lblInformation.Size = new System.Drawing.Size(139, 13);
+            this.lblInformation.TabIndex = 13;
+            this.lblInformation.Text = "*** Admin privileges required";
             // 
-            this.chbSyntaxColoring.AutoSize = true;
-            this.chbSyntaxColoring.Checked = true;
-            this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 191);
-            this.chbSyntaxColoring.Name = "chbSyntaxColoring";
-            this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
-            this.chbSyntaxColoring.TabIndex = 11;
-            this.chbSyntaxColoring.Text = "Syntax coloring";
-            this.chbSyntaxColoring.UseVisualStyleBackColor = true;
+            // chbFindAllReferences
             // 
-            // chbFolderOrganization
-            // 
-            this.chbFolderOrganization.AutoSize = true;
-            this.chbFolderOrganization.Location = new System.Drawing.Point(16, 214);
-            this.chbFolderOrganization.Name = "chbFolderOrganization";
-            this.chbFolderOrganization.Size = new System.Drawing.Size(115, 17);
-            this.chbFolderOrganization.TabIndex = 12;
-            this.chbFolderOrganization.Text = "Folder organization";
-            this.chbFolderOrganization.UseVisualStyleBackColor = true;
+            this.chbFindAllReferences.AutoSize = true;
+            this.chbFindAllReferences.Checked = true;
+            this.chbFindAllReferences.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbFindAllReferences.Location = new System.Drawing.Point(212, 53);
+            this.chbFindAllReferences.Name = "chbFindAllReferences";
+            this.chbFindAllReferences.Size = new System.Drawing.Size(112, 17);
+            this.chbFindAllReferences.TabIndex = 14;
+            this.chbFindAllReferences.Text = "Find all references";
+            this.chbFindAllReferences.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -239,5 +265,7 @@
         private System.Windows.Forms.CheckBox chbFolderOrganization;
         private System.Windows.Forms.CheckBox chbSyntaxColoring;
         private System.Windows.Forms.CheckBox chbImplementInterface;
+        private System.Windows.Forms.Label lblInformation;
+        private System.Windows.Forms.CheckBox chbFindAllReferences;
     }
 }

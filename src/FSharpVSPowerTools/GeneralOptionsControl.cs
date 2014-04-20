@@ -77,6 +77,12 @@ namespace FSharpVSPowerTools
             set { chbFolderOrganization.Checked = value; }
         }
 
+        public bool FindAllReferencesEnabled
+        {
+            get { return chbFindAllReferences.Checked; }
+            set { chbFindAllReferences.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
@@ -88,10 +94,8 @@ namespace FSharpVSPowerTools
             chbNavigateTo.Checked = OptionsPage.NavigateToEnabled;
             chbSyntaxColoring.Checked = OptionsPage.SyntaxColoringEnabled;
             chbImplementInterface.Checked = OptionsPage.ImplementInterfaceEnabled;
-
-            // Temporarily hide the option
-            chbImplementInterface.Visible = false;
             chbFolderOrganization.Checked = OptionsPage.FolderOrganizationEnabled;
+            chbFindAllReferences.Checked = OptionsPage.FindAllReferencesEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
