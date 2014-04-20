@@ -304,3 +304,9 @@ let ``F# external modules``() =
             Module, 41, 45; Function, 46, 49  
         ]
 
+[<Test>]
+let ``byref argument``() = 
+    checkCategories 143 
+        [ Function, 4, 27
+          // ReferenceType 32, 37 - bug in FCS 0.0.45
+          ValueType, 38, 41 ]
