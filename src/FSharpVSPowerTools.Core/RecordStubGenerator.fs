@@ -10,6 +10,12 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
+// TODO remove all debugs
+let debug x =
+    Printf.ksprintf (printfn "[RecordStubGenerator] %s") x
+
+let mutable debugObject: obj = null
+
 [<NoEquality; NoComparison>]
 type RecordBindingData =
     | RecordBinding of SynType * (RecordFieldName * SynExpr option * BlockSeparator option) list
@@ -102,14 +108,29 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynMemberDefn.ImplicitCtor _ -> 
                 None
 
-    and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
+    and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
+        debug "Walk Binding"
         if not <| inRange binding.RangeOfBindingAndRhs pos then
+            debug "Not in range"
             None
         else
+            debug "In range (%A)" binding.RangeOfBindingAndRhs
+            debug "BindingReturnInfo: %A" retTy
+            debug "Expr: %A" expr
+            debugObject <- binding
             match retTy with
             | Some(SynBindingReturnInfo(ty, _range, _attributes)) ->
                 match expr with
-                | SynExpr.Record(_inheritOpt, _copyOpt, fields, range) ->
+                // TODO: situation 1: buggy parse tree when a type annotation is given before the '='
+                // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
+                | SynExpr.Typed(SynExpr.Record(_inheritOpt, _copyOpt, fields, _range),
+                                _,
+                                __range) ->
+                    // TODO: we'll possibly have to look further down the tree
+                    Some(RecordBinding(ty, fields))
+
+                // let x = { f1 = e1; f2 = e2; ... }
+                | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
                     // TODO: we'll possibly have to look further down the tree
                     Some(RecordBinding(ty, fields))
                 | _ -> walkExpr expr
