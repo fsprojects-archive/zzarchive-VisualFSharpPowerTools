@@ -22,13 +22,6 @@ module PkgCmdConst =
     let guidBuiltinCmdSet = VSConstants.GUID_VSStandardCommandSet97
     let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
 
-[<NoEquality; NoComparison>]
-type DocumentState =
-    { Word: SnapshotSpan * Symbol
-      File: string
-      Project: IProjectProvider
-      TargetProjects: IProjectProvider list }
-
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider) =
     let getDocumentState() =
         async {
