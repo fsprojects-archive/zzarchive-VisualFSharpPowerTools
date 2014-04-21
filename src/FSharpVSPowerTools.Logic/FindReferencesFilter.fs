@@ -52,7 +52,11 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                                     else declProject :: dependentProjects
                                 // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
                                 // In order to find all its usages we have to check all F# projects.
-                                | _ -> dte.ListFSharpProjectsInSolution() |> List.map ProjectProvider.createForProject
+                                | _ -> 
+                                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map ProjectProvider.createForProject
+                                    if allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName) 
+                                    then allProjects 
+                                    else project :: allProjects
     
                             vsLanguageService.FindUsages (span, file, project, projectsToCheck) 
                     return res |> Option.map (fun (_, _, refs) -> refs, sym)
