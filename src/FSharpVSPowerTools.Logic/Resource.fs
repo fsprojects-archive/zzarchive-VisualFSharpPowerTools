@@ -5,6 +5,7 @@ module Resource =
     let [<Literal>] vsPackageTitle = "F# Power Tools"
     
     let [<Literal>] formattingErrorMessage = "Unable to format. "
+    let [<Literal>] formattingValidationMessage = "Validation after formatting failed. The original content is preserved."
 
     let [<Literal>] renameErrorMessage = "Unable to rename. The symbol hasn't been declared in current solution."
     

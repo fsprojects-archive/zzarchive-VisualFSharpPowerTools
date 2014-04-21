@@ -39,7 +39,7 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
             | _ -> currentSnapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
         let maxLine = currentSnapshot.LineCount
 
-        let setNewCaretPosition() =
+        fun () ->
             let newCurrentSnapshot = x.TextView.TextBuffer.CurrentSnapshot
             let newMaxLine = newCurrentSnapshot.LineCount
 
@@ -54,5 +54,3 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
             // Assume that the document scales in a linear way
             let newScrollBarPos = int (float scrollBarPos * (float newMaxLine) / (float maxLine))
             x.TextView.ViewScroller.ScrollViewportVerticallyByLines(ScrollDirection.Down, newScrollBarPos)
-
-        setNewCaretPosition

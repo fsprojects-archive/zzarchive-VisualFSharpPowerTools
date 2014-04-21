@@ -7,7 +7,9 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
+open Microsoft.VisualStudio.Shell.Interop
 open Fantomas.FormatConfig
+open Fantomas.CodeFormatter
 open FSharpVSPowerTools
 
 [<AbstractClass>]
@@ -68,26 +70,30 @@ type FormatCommand(getConfig: Func<FormatConfig>) as self =
         let isSignatureFile = x.IsSignatureFile(buffer)
 
         let config = getConfig()
+        let statusBar = Package.GetGlobalService(typedefof<SVsStatusbar>) :?> IVsStatusbar
 
         try
             let formatted = x.GetFormatted(isSignatureFile, source, config)
+            if isValidFSharpCode isSignatureFile formatted then
+                use edit = buffer.CreateEdit()
+                let setCaretPosition = x.GetNewCaretPositionSetter()
 
-            use edit = buffer.CreateEdit()
-            let setCaretPosition = x.GetNewCaretPositionSetter()
-
-            edit.Replace(0, text.Length, formatted) |> ignore
-            edit.Apply() |> ignore
-            setCaretPosition()
-            true
+                edit.Replace(0, text.Length, formatted) |> ignore
+                edit.Apply() |> ignore
+                setCaretPosition()
+                true
+            else
+                statusBar.SetText(Resource.formattingValidationMessage) |> ignore 
+                false
         with
-            | :? Fantomas.FormatConfig.FormatException as ex ->
-                messageBoxError ex.Message
+            | :? FormatException as ex ->
+                statusBar.SetText(ex.Message) |> ignore 
                 false
             | ex ->
-                messageBoxError (Resource.formattingErrorMessage + ex.Message)
+                statusBar.SetText(Resource.formattingErrorMessage + ex.Message) |> ignore
                 false
 
-    abstract GetFormatted: isSignatureFile: bool * source: string * config: Fantomas.FormatConfig.FormatConfig -> string
+    abstract GetFormatted: isSignatureFile: bool * source: string * config: FormatConfig -> string
     abstract GetNewCaretPositionSetter: unit -> (unit -> unit)
 
     member x.IsSignatureFile(buffer: ITextBuffer) =
