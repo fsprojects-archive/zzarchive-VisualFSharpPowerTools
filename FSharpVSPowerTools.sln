@@ -64,7 +64,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test sample
 	ProjectSection(SolutionItems) = preProject
 		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
 		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
-		tests\FSharpVSPowerTools.Core.Tests\RecordSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\RecordSampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
 	EndProjectSection
 EndProject

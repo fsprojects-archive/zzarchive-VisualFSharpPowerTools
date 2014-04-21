@@ -34,12 +34,6 @@ let args =
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
-[<Measure>] type Line0
-[<Measure>] type Line1
-
-let inline toLine0 (line1: int<Line1>): int<Line0> =
-    LanguagePrimitives.Int32WithMeasure(int line1 - 1)
-
 // [x] Get the syntax construct that you're interested in
 // [x] Get the position P where to insert the generated code
 // [x] Get the symbol S on which the caret is

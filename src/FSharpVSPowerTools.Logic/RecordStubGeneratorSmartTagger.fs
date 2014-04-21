@@ -171,7 +171,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                 if shouldGenerateRecordStub data entity then
                     handleGenerateRecordStub span data displayContext entity
                 else
-                    messageBoxError Resource.implementInterfaceErrorMessage }
+                    // TODO: this should not display a msg box, too annoying
+                    messageBoxError Resource.generateRecordStubsErrorMessage }
 
     member x.GetSmartTagActions(span: SnapshotSpan, data, displayContext, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
