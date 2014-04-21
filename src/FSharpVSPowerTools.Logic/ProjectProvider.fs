@@ -23,6 +23,7 @@ and IProjectProvider =
     abstract SourceFiles: string []
     abstract GetReferencedProjects: unit -> IProjectProvider list
     abstract GetAllReferencedProjectFileNames: unit -> string list
+    abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
 
 [<AutoOpen>]
 module FSharpSymbolExtensions =
@@ -115,17 +116,25 @@ module ProjectProvider =
                 |> List.choose (fun file -> 
                        if String.IsNullOrWhiteSpace file then None
                        else Some(Path.GetFileNameSafe file))
+
+            member x.GetProjectCheckerOptions languageService =
+                let x = x :> IProjectProvider
+                languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
             
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
+        let source = File.ReadAllText filePath
+        let targetFramework = FSharpTargetFramework.NET_4_5
 
         interface IProjectProvider with
             member x.ProjectFileName = null
-            member x.TargetFramework = FSharpTargetFramework.NET_4_5
+            member x.TargetFramework = targetFramework
             member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
             member x.SourceFiles = [| filePath |]
             member x.GetReferencedProjects() = []
             member x.GetAllReferencedProjectFileNames() = []
+            member x.GetProjectCheckerOptions languageService =
+                languageService.GetScriptCheckerOptions (filePath, null, source, targetFramework)
     
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 
@@ -176,15 +185,3 @@ module ProjectProvider =
             p.GetReferencedProjects() 
             |> List.exists (fun p -> String.Compare(p.ProjectFileName, project.ProjectFileName, true) = 0))
 
-[<AutoOpen>]
-module ProjectProviderExtensions =
-    type IProjectProvider with
-        member x.GetProjectCheckerOptions() =
-            { ProjectFileName = x.ProjectFileName
-              ProjectFileNames = x.SourceFiles
-              ProjectOptions = x.CompilerOptions
-              IsIncompleteTypeCheckEnvironment = false
-              UseScriptResolutionRules = false
-              LoadTime = fakeDateTimeRepresentingTimeLoaded x.ProjectFileName
-              UnresolvedReferences = None
-              ReferencedProjects = [||] }
