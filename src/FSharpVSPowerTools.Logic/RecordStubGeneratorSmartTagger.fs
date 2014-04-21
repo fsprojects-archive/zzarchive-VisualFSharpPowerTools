@@ -1,8 +1,9 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
 
+open System
+open System.Collections.Generic
 open System.Windows
 open System.Windows.Threading
-open System.Collections.Generic
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -12,12 +13,11 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
-open System.IO
+open FSharpVSPowerTools
 open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.Core.CodeGeneration
 open FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
 open FSharp.CompilerBinding
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
@@ -41,7 +41,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     // Try to:
     // - Identify record expression binding
-    // - Try to identify the '{' in 'let x: MyRecord = { }'
+    // - Identify the '{' in 'let x: MyRecord = { }'
     let collectRecordBindingData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
         async {
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
@@ -53,9 +53,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                 ast.ParseTree
                 |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
                 |> Option.map (fun recordBinding -> 
-                    let lineStr = point.GetContainingLine().GetText()
                     let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
-                    // TODO: we want to go after the '{' that' is right after the caret position
+                    // We want to go after the '{' that' is right after the caret position
                     let endPosOfLBrace =
                         tokens |> List.tryPick (fun (t: TokenInformation) ->
                                     if t.CharClass = TokenCharKind.Delimiter &&
@@ -96,6 +95,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                         recordDefinition <- Some (recordBindingData, fsSymbolUse.DisplayContext, entity)
                                         currentWord <- Some newWord
                                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+
+                                        // TODO: we shouldn't trigger it if all fields are already generated
                                         return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
                                     else
                                         return recordDefinition <- None
@@ -114,67 +115,45 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
-    let getRange = function
-        RecordBinding(typ, _) -> typ.Range
-
-    let inferStartColumn = function
-        | RecordBinding(_typ, ((field, _, _) :: _)) ->
-            let longIdent, _ = field
-            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(longIdent.Range.StartLine - 1)
-            let str = line.GetText()
-            str.Length - str.TrimStart(' ').Length
-        | recordBinding ->
-            // TODO: this logic may not be adapted to a record
-            // There is no assied record field, we indent the content at the start column of the definition
-            (getRange recordBinding).StartColumn
+//    let getRecordExprRange = function
+//        RecordBinding(_typ, expr, _) -> expr.Range
+//
+//    let inferStartColumn = function
+//        | RecordBinding(_typ, _expr, ((field, _, _) :: _)) ->
+//            let longIdent, _ = field
+//            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(longIdent.Range.StartLine - 1)
+//            let str = line.GetText()
+//            str.Length - str.TrimStart(' ').Length
+//        | recordBinding ->
+//            // TODO: this logic may not be adapted to a record
+//            // There is no assied record field, we indent the content at the start column of the definition
+//            (getRecordExprRange recordBinding).StartColumn
 
     let countFields = function
-        RecordBinding(_, fields) -> List.length fields
-
-//    let getTypeParameters = function
-//        | InterfaceData.Interface(typ, _)
-//        | InterfaceData.ObjExpr(typ, _) ->
-//            match typ with
-//            | SynType.App(_, _, ts, _, _, _, _)
-//            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
-//                let (|TypeIdent|_|) = function
-//                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
-//                        match req with
-//                        | NoStaticReq -> 
-//                            Some ("'" + s.idText)
-//                        | HeadTypeStaticReq -> 
-//                            Some ("^" + s.idText)
-//                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
-//                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
-//                    | _ -> 
-//                        None
-//                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
-//            | _ ->
-//                [||]
+        RecordBinding(_, _, fields) -> List.length fields
 
     // Check whether the record has been fully implemented
     let shouldGenerateRecordStub (recordBindingData, _) (entity: FSharpEntity) =
-        // TODO: counting members is not enough.
-        // We should match member signatures, 
-        // it will be tricky in case of specialized interface implementation
-        let count = RecordStubGenerator.countRecordFields entity
+        let count = entity.FSharpFields.Count
         count > 0 && count > countFields recordBindingData
 
-    let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, posOpt: pos option) displayContext entity = 
-        let startColumn = inferStartColumn recordBindingData
+    let handleGenerateRecordStub (span: SnapshotSpan) (_, posOpt: pos option) displayContext entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-//        let typeParams = getTypeParameters recordBindingData
 
-        // TODO: implement format record
-//        let stub = InterfaceStubGenerator.formatInterface 
-//                        startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" displayContext entity
-//
         use transaction = textUndoHistory.CreateTransaction(CommandName)
-//        match posOpt with
-//        | Some pos -> 
-//            let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
-//            buffer.Insert(current, stub) |> ignore
+        match posOpt with
+        | Some pos ->
+            let stub = RecordStubGenerator.formatRecord
+                           pos.Column
+                           indentSize
+                           "failwith \"Uninitialized field\""
+                           displayContext
+                           entity
+            let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
+            buffer.Insert(current, stub) |> ignore
+        | None -> ()
+            // TODO: handle this case
 //        | None ->
 //            let range = getRange interfaceData
 //            let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn

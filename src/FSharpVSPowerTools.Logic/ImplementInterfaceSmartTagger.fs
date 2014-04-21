@@ -12,7 +12,6 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
-open System.IO
 open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools

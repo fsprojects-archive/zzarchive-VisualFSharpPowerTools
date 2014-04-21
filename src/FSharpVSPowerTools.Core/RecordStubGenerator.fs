@@ -6,19 +6,38 @@ open System.Diagnostics
 open System.Collections.Generic
 open System.CodeDom.Compiler
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Core
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // TODO remove all debugs
+#if INTERACTIVE
 let debug x =
     Printf.ksprintf (printfn "[RecordStubGenerator] %s") x
 
 let mutable debugObject: obj = null
+#endif
+
+let inline setDebugObject (o: 'a) =
+    #if INTERACTIVE
+    debugObject <- o
+    #endif
+    ()
 
 [<NoEquality; NoComparison>]
 type RecordBinding =
-    | RecordBinding of SynType * (RecordFieldName * SynExpr option * BlockSeparator option) list
+    | RecordBinding of SynType * SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
+
+[<NoComparison>]
+type private Context = {
+    Writer: InterfaceStubGenerator.ColumnIndentedTextWriter
+    /// Indentation inside method bodies
+    IndentValue: int
+    /// A single-line skeleton for each field
+    FieldDefaultValue: string
+    DisplayContext: FSharpDisplayContext
+}
 
 // TODO: copy-pasted from InterfaceStubGeneration
 let private (|IndexerArg|) = function
@@ -33,7 +52,35 @@ let private (|IndexerArgList|) xs =
 let private inRange range pos = 
     AstTraversal.rangeContainsPosLeftEdgeInclusive range pos
 
-let countRecordFields (e: FSharpEntity) = e.FSharpFields.Count
+let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
+    let writer = ctxt.Writer
+
+    if not isFirstField then
+        writer.WriteLine("")
+    
+    writer.Write(" {0} = {1}", field.Name, ctxt.FieldDefaultValue)
+
+let formatRecord startColumn indentValue (fieldDefaultValue: string)
+                 (displayContext: FSharpDisplayContext) (entity: FSharpEntity) =
+    assert entity.IsFSharpRecord
+
+    use writer = new InterfaceStubGenerator.ColumnIndentedTextWriter()
+    let ctxt: Context =
+        { Writer = writer
+          IndentValue = indentValue
+          FieldDefaultValue = fieldDefaultValue
+          DisplayContext = displayContext }
+
+    writer.Indent startColumn
+    match List.ofSeq entity.FSharpFields with
+    | [] -> ()
+    | firstField :: otherFields ->
+        formatField ctxt true firstField
+        otherFields
+        |> List.iter (formatField ctxt false)
+
+    writer.Dump()
+
 
 let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
@@ -120,9 +167,11 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             debug "In range (%A)" binding.RangeOfBindingAndRhs
             debug "BindingReturnInfo: %A" retTy
             debug "Expr: %A" expr
-            debugObject <- binding
+            setDebugObject binding
             match retTy with
             | Some(SynBindingReturnInfo(ty, _range, _attributes)) ->
+                debug "ReturnTypeInfo: %A" ty
+
                 match expr with
                 // TODO: situation 1: buggy parse tree when a type annotation is given before the '='
                 // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
@@ -130,12 +179,12 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                                 _,
                                 __range) ->
                     // TODO: we'll possibly have to look further down the tree
-                    Some(RecordBinding(ty, fields))
+                    Some(RecordBinding(ty, expr, fields))
 
                 // let x = { f1 = e1; f2 = e2; ... }
                 | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
                     // TODO: we'll possibly have to look further down the tree
-                    Some(RecordBinding(ty, fields))
+                    Some(RecordBinding(ty, expr, fields))
                 | _ -> walkExpr expr
             | None -> walkExpr expr
 
