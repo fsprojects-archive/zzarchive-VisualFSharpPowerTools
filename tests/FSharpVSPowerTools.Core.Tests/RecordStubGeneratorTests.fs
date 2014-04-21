@@ -1,27 +1,26 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../bin/FSharpVSPowerTools.Core.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
-//#load "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
+#load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
 #load "TestHelpers.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.RecordStubGeneratorTests
 #endif
 
 open NUnit.Framework
+open System
 open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.CompilerBinding
-open FSharpVSPowerTools.Core
-open FSharpVSPowerTools.ProjectSystem
+open FSharpVSPowerTools
 
-let fileName = Path.Combine(__SOURCE_DIRECTORY__, "RecordSampleFile.fs")
-let source = File.ReadAllText(fileName)
-let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
-
-let sourceFiles = [| fileName |]
 let args = 
   [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
@@ -33,74 +32,225 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+
+[<Measure>] type Line0
+[<Measure>] type Line1
+
+let inline toLine0 (line1: int<Line1>): int<Line0> =
+    LanguagePrimitives.Int32WithMeasure(int line1 - 1)
+
+// [x] Get the syntax construct that you're interested in
+// [x] Get the position P where to insert the generated code
+// [x] Get the symbol S on which the caret is
+// [x] Get symbol S use to get its type metadata (fields, in particular)
+// [x] Generate code at position P
+// [ ] Handle case when some fields are already written
+// [ ] Handle case when all fields are written
+
 #if INTERACTIVE
-let checker = InteractiveChecker.Create()
-
-let projectOptions = 
-    checker.GetProjectOptionsFromCommandLineArgs
-       (projectFileName,
-        [| 
-            yield! args
-            yield fileName
-        |])
-
-let rec allSymbolsInEntities compGen (entities: IList<FSharpEntity>) = 
-    [ for e in entities do 
-          yield (e :> FSharpSymbol) 
-          for x in e.MembersFunctionsAndValues do
-             if compGen || not x.IsCompilerGenerated then 
-               yield (x :> FSharpSymbol)
-          for x in e.UnionCases do
-             yield (x :> FSharpSymbol)
-          for x in e.FSharpFields do
-             if compGen || not x.IsCompilerGenerated then 
-                 yield (x :> FSharpSymbol)
-          yield! allSymbolsInEntities compGen e.NestedEntities ]
-
-let wholeProjectResults = checker.ParseAndCheckProject(projectOptions) |> Async.RunSynchronously
-printfn "There are %i error(s)." wholeProjectResults.Errors.Length
-Array.iter (printfn "Errors:\n %A") wholeProjectResults.Errors;;
-let allSymbols = allSymbolsInEntities true wholeProjectResults.AssemblySignature.Entities;;
-let allUsesOfAllSymbols = 
-    [ for s in allSymbols do 
-            let loc = s.DeclarationLocation |> Option.map (fun r -> Range.Range.toZ r)
-            yield s.ToString(), loc, wholeProjectResults.GetUsesOfSymbol(s) ]
-allUsesOfAllSymbols |> List.iter (printfn "%A")
+#load "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
 #endif
 
-let tryFindRecord line col lineStr idents =
-    let results = 
-        vsLanguageService.ParseAndCheckFileInProject(projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource)
+open FSharpVSPowerTools.Core
+open FSharpVSPowerTools.Core.CodeGeneration
+open Microsoft.FSharp.Compiler.Ast
+
+let srcToLineMap (src: string) =
+    src.Split('\n')
+    |> Array.mapi (fun i line -> i, line)
+    |> Map.ofArray
+
+let splitLines (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
+
+let getSymbolAtPoint (src: string) (pos: pos) =
+    let lines = srcToLineMap src
+    let lineIdx0 = pos.Line - 1 
+    let line = lines.[lineIdx0]
+    Lexer.getSymbol src lineIdx0 pos.Column line args Lexer.queryLexState
+
+let getSymbolUseAtPoint (src: string) (pos: pos) =
+    let fileName = @"C:\file.fs"
+    let projFileName = @"C:\Project.fsproj"
+    let files = [| fileName |]
+    let lines = srcToLineMap src
+    let lineIdx0 = pos.Line - 1
+    let line = lines.[lineIdx0]
+
+    match getSymbolAtPoint src pos with
+    | Some symbol ->
+        let parseAndCheckResults =
+            languageService.ParseAndCheckFileInProject(
+                projFileName, fileName, src, files, args, framework, AllowStaleResults.MatchingSource)
+            |> Async.RunSynchronously
+
+        // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
+        // and not <pos.Column>, otherwise GetSymbolUseAtLocation won't find it
+        parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
         |> Async.RunSynchronously
-
-    let symbolUse = results.GetSymbolUseAtLocation(line, col, lineStr, idents)
-                    |> Async.RunSynchronously
-
-    match symbolUse with
-    | Some s when (s.Symbol :? FSharpEntity) ->
-        let e = s.Symbol :?> FSharpEntity
-        if e.IsFSharpRecord then
-            e.FSharpFields
-            |> Seq.map (fun f -> f.Name)
-            |> Seq.reduce (fun a b -> a + " " + b)
-            |> Some
-        else 
-            None
+        |> Option.map (fun s -> s, parseAndCheckResults)
     | _ -> None
 
-[<Test>]
-let ``should generate stubs for single-field record type``() =
-    tryFindRecord 12 7 "let x: Record =" ["Record"]
-    |> assertEqual (Some "Field")
+let tryFindRecordBindingExpTree (src: string) pos =
+    let fileName = @"C:\file.fs"
+    let projFileName = @"C:\Project.fsproj"
+    let files = [| fileName |]
+
+    let parseResults =
+        languageService.ParseFileInProject(projFileName, fileName, src, files, args, framework)
+        |> Async.RunSynchronously
+
+    parseResults.ParseTree
+    |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
+
+let tokenizeLine (src: string) (lineIdx1: int) =
+    let lines =
+        src.Split('\n')
+        |> Array.mapi (fun i line -> i, line)
+        |> Map.ofArray
+
+    let lineIdx0 = lineIdx1 - 1 
+    let line = lines.[lineIdx0]
+    Lexer.tokenizeLine src args (lineIdx0) line Lexer.queryLexState
+
+//type VirtualTextEditor(src: string) =
+//    let splitLines (s: string) =
+//        s.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
+//
+//    let mutable lines = new ResizeArray<_>(splitLines src)
+//        
+//    member this.Line i = lines.[i]
+////    member this.InsertAt(lineIdx, col, str) =
+////        let line = lines.[lineIdx]
+////        assert (col >= 0 && col <= line.Length)
+////        let before, after = line.Substring(0, col), line.Substring(col)
+////        let lines = splitLines str
+////        match lines with
+////        | [||] -> ()
+////        | [|s0|] -> lines.[lineIdx] <- before + s0
+////                    lines.Insert(lineIdx + 1, after)
+////        | [|s0; s1|] -> lines.[lineIdx] <- before + s0
+////                        lines.Insert(lineIdx + 1, after)
+////        | _ -> ()
+//
+//    member this.GetText() =
+//        lines
+//        |> Seq.fold (fun state line -> state + Environment.NewLine + line) ""
+
+
+let getRecordBindingData (src: string) pos =
+    let recordBindingExpTree = tryFindRecordBindingExpTree src pos
+    let tokens = tokenizeLine src pos.Line
+    let column = pos.Column
+    let line0 = pos.Line - 1
+    let endPosOfLBrace =
+        tokens |> List.tryPick (fun (t: TokenInformation) ->
+                    if t.CharClass = TokenCharKind.Delimiter &&
+                       t.LeftColumn >= column &&
+                       t.TokenName = "LBRACE" then
+                        Some (Pos.fromZ line0 (t.RightColumn + 1))
+                    else None)
+
+    match recordBindingExpTree with
+    | Some tree -> Some (tree, endPosOfLBrace)
+    | None -> None
+
+let getRecordDefinitionFromPoint (src: string) (pos: pos) =
+    maybe {
+        let! recordBindingData, endPosOfLBrace' = getRecordBindingData src pos
+        let! endPosOfLBrace = endPosOfLBrace'
+        let! symbolUse, _ = getSymbolUseAtPoint src pos
+
+        if symbolUse.Symbol :? FSharpEntity then
+            let entity = symbolUse.Symbol :?> FSharpEntity
+            if entity.IsFSharpRecord then
+                return! Some (recordBindingData, symbolUse.DisplayContext, entity, endPosOfLBrace)
+            else
+                return! None
+        else
+            return! None
+    }
+
+let insertStubFromPos caretPos src =
+    let recordDefnFromPt = getRecordDefinitionFromPoint src caretPos
+    match recordDefnFromPt with
+    | None -> src
+    | Some(_, context, entity, insertLocation) ->
+        let column = insertLocation.Column
+        let fieldValue = "failwith \"\""
+        let stub = RecordStubGenerator.formatRecord column 4 fieldValue context entity
+        let srcLines = splitLines src
+        let line0 = caretPos.Line - 1
+        let curLine = srcLines.[line0]
+        let before, after = curLine.Substring(0, column), curLine.Substring(column)
+
+        srcLines.[line0] <- before + stub + after
+
+        if srcLines.Length = 0 then
+            "" 
+        else
+            srcLines
+            |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
+
+let assertSrcAreEqual expectedSrc actualSrc =
+    assertEqual (splitLines expectedSrc) (splitLines actualSrc)
 
 [<Test>]
-let ``should generate stubs for multiple-field record type``() =
-    tryFindRecord 13 7 "let y: Record2 =" ["Record2"]
-    |> assertEqual (Some "Field1 Field2")
+let ``basic single-field record stub generation`` () =
+    """
+type MyRecord = { Field1: int }
+let x: MyRecord = { }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = { Field1: int }
+let x: MyRecord = { Field1 = failwith "" }"""
 
+[<Test>]
+let ``basic multiple-field record stub generation`` () =
+    """
+type MyRecord = {Field1: int; Field2: float; Field3: float}
+let x: MyRecord = { }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: float; Field3: float}
+let x: MyRecord = { Field1 = failwith ""
+                    Field2 = failwith ""
+                    Field3 = failwith "" }"""
+
+[<Test>]
+let ``single-field record stub generation in the middle of the file`` () =
+    """
+module A
+type MyRecord = { Field1: int }
+let x: MyRecord = { }
+do ()"""
+    |> insertStubFromPos (Pos.fromZ 3 7)
+    |> assertSrcAreEqual """
+module A
+type MyRecord = { Field1: int }
+let x: MyRecord = { Field1 = failwith "" }
+do ()"""
+
+[<Test>]
+let ``multiple-field record stub generation in the middle of the file`` () =
+    """
+module A
+type MyRecord = { Field1: int; Field2: float }
+let x: MyRecord = { }
+let y = 3
+do ()"""
+    |> insertStubFromPos (Pos.fromZ 3 7)
+    |> assertSrcAreEqual """
+module A
+type MyRecord = { Field1: int; Field2: float }
+let x: MyRecord = { Field1 = failwith ""
+                    Field2 = failwith "" }
+let y = 3
+do ()"""
 
 #if INTERACTIVE
-``should generate stubs for single-field record type``()
-``should generate stubs for multiple-field record type``()
+``basic single-field record stub generation`` ()
+``basic multiple-field record stub generation`` ()
+``single-field record stub generation in the middle of the file`` ()
+``multiple-field record stub generation in the middle of the file`` ()
 #endif
