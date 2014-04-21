@@ -155,7 +155,7 @@ let getRecordBindingData (src: string) pos =
     | Some tree -> Some (tree, endPosOfLBrace)
     | None -> None
 
-let getRecordDefinitionFromPoint (src: string) (pos: pos) =
+let getRecordDefinitionFromPoint (pos: pos) (src: string) =
     maybe {
         let! recordBindingData, endPosOfLBrace' = getRecordBindingData src pos
         let! endPosOfLBrace = endPosOfLBrace'
@@ -172,7 +172,7 @@ let getRecordDefinitionFromPoint (src: string) (pos: pos) =
     }
 
 let insertStubFromPos caretPos src =
-    let recordDefnFromPt = getRecordDefinitionFromPoint src caretPos
+    let recordDefnFromPt = getRecordDefinitionFromPoint caretPos src
     match recordDefnFromPt with
     | None -> src
     | Some(_, context, entity, insertLocation) ->
@@ -247,6 +247,19 @@ let x: MyRecord = { Field1 = failwith ""
                     Field2 = failwith "" }
 let y = 3
 do ()"""
+
+[<Test; Ignore "Activate when tokenizer is more elaborate">]
+let ``basic single-field stub generation when left brace is on next line`` () =
+    """
+type MyRecord = { Field1: int }
+let x: MyRecord =
+    { }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = { Field1: int }
+let x: MyRecord =
+    { Field1 = failwith "" }"""
+
 
 #if INTERACTIVE
 ``basic single-field record stub generation`` ()
