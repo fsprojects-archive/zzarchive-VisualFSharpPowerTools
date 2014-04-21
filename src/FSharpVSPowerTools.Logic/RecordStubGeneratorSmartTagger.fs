@@ -37,7 +37,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
 
-    let [<Literal>] CommandName = "Generate record stub"
+    let [<Literal>] CommandName = "Generate record stubs"
 
     // Try to:
     // - Identify record expression binding

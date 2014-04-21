@@ -17,13 +17,11 @@ let debug x =
     Printf.ksprintf (printfn "[RecordStubGenerator] %s") x
 
 let mutable debugObject: obj = null
+let inline setDebugObject (o: 'a) = debugObject <- o
+#else
+let inline setDebugObject (_: 'a) = ()
 #endif
 
-let inline setDebugObject (o: 'a) =
-    #if INTERACTIVE
-    debugObject <- o
-    #endif
-    ()
 
 [<NoEquality; NoComparison>]
 type RecordBinding =
@@ -31,7 +29,7 @@ type RecordBinding =
 
 [<NoComparison>]
 type private Context = {
-    Writer: InterfaceStubGenerator.ColumnIndentedTextWriter
+    Writer: ColumnIndentedTextWriter
     /// Indentation inside method bodies
     IndentValue: int
     /// A single-line skeleton for each field
@@ -64,7 +62,7 @@ let formatRecord startColumn indentValue (fieldDefaultValue: string)
                  (displayContext: FSharpDisplayContext) (entity: FSharpEntity) =
     assert entity.IsFSharpRecord
 
-    use writer = new InterfaceStubGenerator.ColumnIndentedTextWriter()
+    use writer = new ColumnIndentedTextWriter()
     let ctxt: Context =
         { Writer = writer
           IndentValue = indentValue
@@ -142,7 +140,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 None
             | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, expr, _r1, _r2) ->
                 walkExpr expr
-            | SynMemberDefn.Interface(interfaceType, members, _range) ->
+            | SynMemberDefn.Interface(_, members, _range) ->
                 Option.bind (List.tryPick walkSynMemberDefn) members
             | SynMemberDefn.Member(binding, _range) ->
                 walkBinding binding
@@ -158,7 +156,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynMemberDefn.ImplicitCtor _ -> 
                 None
 
-    and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
+    and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
         debug "Walk Binding"
         if not <| inRange binding.RangeOfBindingAndRhs pos then
             debug "Not in range"
@@ -214,7 +212,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.ArrayOrList(_, synExprList, _range) ->
                 List.tryPick walkExpr synExprList
 
-            | SynExpr.Record(_inheritOpt, _copyOpt, fields, range) ->
+            | SynExpr.Record(_inheritOpt, _copyOpt, _fields, _range) ->
                 // TODO: look in all expressions
                 None
 

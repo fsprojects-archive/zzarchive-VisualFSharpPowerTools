@@ -65,6 +65,7 @@
     <Compile Include="DepthParser.fs" />
     <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="SourceCodeClassifier.fs" />
+    <Compile Include="ColumnIndentedTextWriter.fs" />
     <Compile Include="InterfaceStubGenerator.fs" />
     <Compile Include="RecordStubGenerator.fs" />
     <None Include="packages.config" />
