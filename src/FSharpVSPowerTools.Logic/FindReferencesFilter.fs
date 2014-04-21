@@ -22,13 +22,6 @@ module PkgCmdConst =
     let guidBuiltinCmdSet = VSConstants.GUID_VSStandardCommandSet97
     let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
 
-[<NoEquality; NoComparison>]
-type DocumentState =
-    { Word: SnapshotSpan * Symbol
-      File: string
-      Project: IProjectProvider
-      TargetProjects: IProjectProvider list }
-
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider) =
     let getDocumentState() =
         async {
@@ -44,51 +37,49 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             | Some (file, project, span, sym) ->
                 let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, sym, file, project, AllowStaleResults.No)
                 match symbolUse with
-                | Some (symbolUse, _) ->
-                    let targetProjects =
+                | Some (symbolUse, fileScopedCheckResults) ->
+                    let! res = 
                         match ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte file with
-                        | Some symbolDeclLocation ->
-                            let declProject = 
-                                match symbolDeclLocation with
-                                | SymbolDeclarationLocation.File -> project
-                                | SymbolDeclarationLocation.Project p -> p
-
-                            let dependentProjects = ProjectProvider.getDependentProjects dte declProject
-                            if dependentProjects |> List.exists (fun x -> x.ProjectFileName = declProject.ProjectFileName)
-                            then dependentProjects
-                            else declProject :: dependentProjects
-                        // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
-                        // In order to find all its usages we have to check all F# projects.
-                        | None -> dte.ListFSharpProjectsInSolution() |> List.map ProjectProvider.createForProject
+                        | Some SymbolDeclarationLocation.File ->
+                            vsLanguageService.FindUsagesInFile (span, sym, fileScopedCheckResults)
+                        | loc ->
+                            let projectsToCheck =
+                                match loc with
+                                | Some (SymbolDeclarationLocation.Project declProject) ->
+                                    let dependentProjects = ProjectProvider.getDependentProjects dte declProject
+                                    if dependentProjects |> List.exists (fun x -> x.ProjectFileName = declProject.ProjectFileName)
+                                    then dependentProjects
+                                    else declProject :: dependentProjects
+                                // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
+                                // In order to find all its usages we have to check all F# projects.
+                                | _ -> 
+                                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map ProjectProvider.createForProject
+                                    if allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName) 
+                                    then allProjects 
+                                    else project :: allProjects
     
-                    return Some { Word = span, sym
-                                  File = file
-                                  Project = project
-                                  TargetProjects = targetProjects }
+                            vsLanguageService.FindUsages (span, file, project, projectsToCheck) 
+                    return res |> Option.map (fun (_, _, refs) -> refs, sym)
                 | _ -> return None
             | _ -> return None
         }
 
     let findReferences() = 
         async {
-            let! state = getDocumentState()
-            match state with
-            | Some { Word = cw, sym; File = file; Project = project; TargetProjects = targetProjects } ->
-                let! references = vsLanguageService.FindUsages (cw, file, project, targetProjects) 
+            let! references = getDocumentState()
+            match references with
+            | Some (references, sym) ->
                 let references = 
                     references
-                    |> Option.map (fun (_, _, refs) -> 
-                        refs 
-                        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
-                        |> Seq.groupBy (fst >> Path.GetFullPath)
-                        |> Seq.map (fun (_, symbolUses) -> 
-                            // Sort symbols by positions
-                            symbolUses 
-                            |> Seq.map snd 
-                            |> Seq.distinctBy (fun s -> s.RangeAlternate)
-                            |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
-                        |> Seq.concat)
-                    |> fun opt -> defaultArg opt Seq.empty
+                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
+                    |> Seq.groupBy (fst >> Path.GetFullPath)
+                    |> Seq.map (fun (_, symbolUses) -> 
+                        // Sort symbols by positions
+                        symbolUses 
+                        |> Seq.map snd 
+                        |> Seq.distinctBy (fun s -> s.RangeAlternate)
+                        |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
+                    |> Seq.concat
             
                 let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
                 for reference in references do

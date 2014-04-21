@@ -323,7 +323,7 @@ type LanguageService (dirtyNotify) =
     }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions list, 
+  member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions seq, 
                                                     fileName, source, line:int, col, lineStr, args, queryLexState) =
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
@@ -334,7 +334,7 @@ type LanguageService (dirtyNotify) =
              | Some fsSymbolUse ->
                  let! refs =
                     dependentProjectsOptions
-                    |> List.map (fun opts ->
+                    |> Seq.map (fun opts ->
                           async {
                             let! projectResults = checker.ParseAndCheckProject opts
                             let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol

@@ -140,3 +140,4 @@ module Module2 =
         let x = ()
 let _ = System.Linq.Enumerable.Range(0, 1)
 let _ = [1] |> Seq.sort |> Seq.toList |> List.rev
+let ``func with byref arg`` (p: byref<int>) = ()
