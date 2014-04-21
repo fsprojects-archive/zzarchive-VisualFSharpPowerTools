@@ -51,9 +51,9 @@
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="envdte80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="FantomasLib, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="FantomasLib, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Fantomas.1.1.0\lib\FantomasLib.dll</HintPath>
+      <HintPath>..\..\packages\Fantomas.1.2.0\lib\FantomasLib.dll</HintPath>
     </Reference>
     <Reference Include="FSharp.Compiler.Service, Version=0.0.45.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
