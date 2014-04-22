@@ -59,7 +59,8 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     writer.Write(" {0} = {1}", field.Name, ctxt.FieldDefaultValue)
 
 let formatRecord startColumn indentValue (fieldDefaultValue: string)
-                 (displayContext: FSharpDisplayContext) (entity: FSharpEntity) =
+                 (displayContext: FSharpDisplayContext) (entity: FSharpEntity)
+                 (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
 
     use writer = new ColumnIndentedTextWriter()
@@ -69,13 +70,31 @@ let formatRecord startColumn indentValue (fieldDefaultValue: string)
           FieldDefaultValue = fieldDefaultValue
           DisplayContext = displayContext }
 
+    let fieldsWritten =
+        fieldsWritten
+        |> List.collect (function
+            ((fieldName, _), _, _) ->
+                if fieldName.Lid.Length > 0 then
+                    [(fieldName.Lid.Item (fieldName.Lid.Length - 1)).idText]
+                else [])
+        |> Set.ofList
+
+    let fieldsToWrite =
+        entity.FSharpFields
+        |> Seq.filter (fun field -> not <| fieldsWritten.Contains field.Name)
+
     writer.Indent startColumn
-    match List.ofSeq entity.FSharpFields with
+    match List.ofSeq fieldsToWrite with
     | [] -> ()
     | firstField :: otherFields ->
         formatField ctxt true firstField
         otherFields
         |> List.iter (formatField ctxt false)
+
+    // special case when fields are already written
+    if not fieldsWritten.IsEmpty && fieldsWritten.Count < entity.FSharpFields.Count then
+        writer.WriteLine("")
+        writer.Write("")
 
     writer.Dump()
 

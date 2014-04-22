@@ -143,9 +143,10 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         let count = entity.FSharpFields.Count
         count > 0 && count > countFields recordBindingData
 
-    let handleGenerateRecordStub (span: SnapshotSpan) (_, posOpt: pos option) displayContext entity = 
+    let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, posOpt: pos option) displayContext entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
+        let (RecordBinding(_, _, fieldsWritten)) = recordBindingData
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
         match posOpt with
@@ -156,6 +157,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                            "failwith \"Uninitialized field\""
                            displayContext
                            entity
+                           fieldsWritten
             let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
             buffer.Insert(current, stub) |> ignore
         | None -> ()

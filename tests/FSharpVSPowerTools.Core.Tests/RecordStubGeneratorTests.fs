@@ -40,8 +40,8 @@ let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 // [x] Get the symbol S on which the caret is
 // [x] Get symbol S use to get its type metadata (fields, in particular)
 // [x] Generate code at position P
-// [ ] Handle case when some fields are already written
-// [ ] Handle case when all fields are written
+// [x] Handle case when some fields are already written
+// [x] Handle case when all fields are written
 
 #if INTERACTIVE
 #load "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
@@ -178,10 +178,10 @@ let insertStubFromPos caretPos src =
     let recordDefnFromPt = getRecordDefinitionFromPoint caretPos src
     match recordDefnFromPt with
     | None -> src
-    | Some(_, context, entity, insertPos) ->
+    | Some(RecordBinding(_, _, fieldsWritten), context, entity, insertPos) ->
         let insertColumn = insertPos.Column
         let fieldValue = "failwith \"\""
-        let stub = RecordStubGenerator.formatRecord insertColumn 4 fieldValue context entity
+        let stub = RecordStubGenerator.formatRecord insertColumn 4 fieldValue context entity fieldsWritten
         let srcLines = splitLines src
         let insertLine0 = insertPos.Line - 1
         let curLine = srcLines.[insertLine0]
@@ -280,6 +280,28 @@ let x: MyRecord =
     { Field1 = failwith ""
       Field2 = failwith "" }"""
 
+[<Test>]
+let ``multiple-field stub generation when some fields are already written`` () =
+    """
+type MyRecord = {Field1: int; Field2: float; Field3: float}
+let x: MyRecord = { Field1 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: float; Field3: float}
+let x: MyRecord = { Field2 = failwith ""
+                    Field3 = failwith ""
+                    Field1 = 0 }"""
+
+[<Test>]
+let ``multiple-field stub generation when all fields are already written`` () =
+    """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
+
 
 #if INTERACTIVE
 ``single-field record stub generation`` ()
@@ -288,4 +310,6 @@ let x: MyRecord =
 ``multiple-field record stub generation in the middle of the file`` ()
 ``single-field stub generation when left brace is on next line`` ()
 ``multiple-field stub generation when left brace is on next line`` ()
+``multiple-field stub generation when some fields are already written``()
+``multiple-field stub generation when all fields are already written`` ()
 #endif
