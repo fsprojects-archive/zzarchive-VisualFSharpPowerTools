@@ -45,24 +45,30 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let collectRecordBindingData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
         async {
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
-            let column = point.Position - point.GetContainingLine().Start.Position
+            let caretColumn = point.Position - point.GetContainingLine().Start.Position
             let source = point.Snapshot.GetText()
             let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
-            let pos = Pos.fromZ line column
+            let pos = Pos.fromZ line caretColumn
             let data =
                 ast.ParseTree
                 |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
-                |> Option.map (fun recordBinding -> 
-                    let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
-                    // We want to go after the '{' that' is right after the caret position
-                    let endPosOfLBrace =
-                        tokens |> List.tryPick (fun (t: TokenInformation) ->
-                                    if t.CharClass = TokenCharKind.Delimiter &&
-                                       t.LeftColumn >= column &&
-                                       t.TokenName = "LBRACE" then
-                                        Some (Pos.fromZ line (t.RightColumn + 1))
-                                    else None)
-                    recordBinding, endPosOfLBrace)
+                |> Option.map (function
+                    (RecordBinding(_, expr, _) as recordBinding) -> 
+                        let exprStartLine1 = expr.Range.StartLine
+                        let exprStartLine0 = exprStartLine1 - 1
+
+                        // Tokenize line where the record expression starts
+                        let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, exprStartLine0) 
+
+                        // We want to go after the '{' that' is right after the caret position
+                        let endPosOfLBrace =
+                            tokens |> List.tryPick (fun (t: TokenInformation) ->
+                                        if t.CharClass = TokenCharKind.Delimiter &&
+                                           (pos.Line <> exprStartLine1 || t.LeftColumn >= caretColumn) &&
+                                           t.TokenName = "LBRACE" then
+                                            Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
+                                        else None)
+                        recordBinding, endPosOfLBrace)
             return data
         }
 

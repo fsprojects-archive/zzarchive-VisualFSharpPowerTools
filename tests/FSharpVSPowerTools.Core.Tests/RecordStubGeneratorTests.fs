@@ -5,6 +5,7 @@
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/ColumnIndentedTextWriter.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
 #load "TestHelpers.fs"
 #else
@@ -48,6 +49,7 @@ let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 
 open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.Core.CodeGeneration
+open FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
 open Microsoft.FSharp.Compiler.Ast
 
 let srcToLineMap (src: string) =
@@ -63,7 +65,7 @@ let getSymbolAtPoint (src: string) (pos: pos) =
     let line = lines.[lineIdx0]
     Lexer.getSymbol src lineIdx0 pos.Column line args Lexer.queryLexState
 
-let getSymbolUseAtPoint (src: string) (pos: pos) =
+let getSymbolUseAtPoint (pos: pos) (src: string) =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
@@ -85,7 +87,7 @@ let getSymbolUseAtPoint (src: string) (pos: pos) =
         |> Option.map (fun s -> s, parseAndCheckResults)
     | _ -> None
 
-let tryFindRecordBindingExpTree (src: string) pos =
+let tryFindRecordBindingExpTree (pos: pos) (src: string) =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
@@ -132,28 +134,35 @@ let tokenizeLine (src: string) (lineIdx1: int) =
 //        |> Seq.fold (fun state line -> state + Environment.NewLine + line) ""
 
 
-let getRecordBindingData (src: string) pos =
-    let recordBindingExpTree = tryFindRecordBindingExpTree src pos
-    let tokens = tokenizeLine src pos.Line
-    let column = pos.Column
-    let line0 = pos.Line - 1
-    let endPosOfLBrace =
-        tokens |> List.tryPick (fun (t: TokenInformation) ->
-                    if t.CharClass = TokenCharKind.Delimiter &&
-                       t.LeftColumn >= column &&
-                       t.TokenName = "LBRACE" then
-                        Some (Pos.fromZ line0 (t.RightColumn + 1))
-                    else None)
+let getRecordBindingData (pos: pos) (src: string) =
+    maybe {
+        let! recordBindingExpTree = tryFindRecordBindingExpTree pos src
+        let (RecordBinding(_, expr, _)) = recordBindingExpTree
 
-    match recordBindingExpTree with
-    | Some tree -> Some (tree, endPosOfLBrace)
-    | None -> None
+        // Tokenize line where the record expression starts
+        let exprStartLine1 = expr.Range.StartLine
+        let tokens = tokenizeLine src exprStartLine1
+        let caretColumn = pos.Column
+        let exprStartLine0 = exprStartLine1 - 1
+
+        let endPosOfLBrace =
+            tokens |> List.tryPick (fun (t: TokenInformation) ->
+                        if t.CharClass = TokenCharKind.Delimiter &&
+                           // t.LeftColumn >= column: only if the expression is on the
+                           // same line as the caret position
+                           (pos.Line <> exprStartLine1 || t.LeftColumn >= caretColumn) &&
+                           t.TokenName = "LBRACE" then
+                            Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
+                        else None)
+
+        return recordBindingExpTree, endPosOfLBrace
+    }
 
 let getRecordDefinitionFromPoint (pos: pos) (src: string) =
     maybe {
-        let! recordBindingData, endPosOfLBrace' = getRecordBindingData src pos
+        let! recordBindingData, endPosOfLBrace' = getRecordBindingData pos src
         let! endPosOfLBrace = endPosOfLBrace'
-        let! symbolUse, _ = getSymbolUseAtPoint src pos
+        let! symbolUse, _ = getSymbolUseAtPoint pos src
 
         if symbolUse.Symbol :? FSharpEntity then
             let entity = symbolUse.Symbol :?> FSharpEntity
@@ -169,16 +178,16 @@ let insertStubFromPos caretPos src =
     let recordDefnFromPt = getRecordDefinitionFromPoint caretPos src
     match recordDefnFromPt with
     | None -> src
-    | Some(_, context, entity, insertLocation) ->
-        let column = insertLocation.Column
+    | Some(_, context, entity, insertPos) ->
+        let insertColumn = insertPos.Column
         let fieldValue = "failwith \"\""
-        let stub = RecordStubGenerator.formatRecord column 4 fieldValue context entity
+        let stub = RecordStubGenerator.formatRecord insertColumn 4 fieldValue context entity
         let srcLines = splitLines src
-        let line0 = caretPos.Line - 1
-        let curLine = srcLines.[line0]
-        let before, after = curLine.Substring(0, column), curLine.Substring(column)
+        let insertLine0 = insertPos.Line - 1
+        let curLine = srcLines.[insertLine0]
+        let before, after = curLine.Substring(0, insertColumn), curLine.Substring(insertColumn)
 
-        srcLines.[line0] <- before + stub + after
+        srcLines.[insertLine0] <- before + stub + after
 
         if srcLines.Length = 0 then
             "" 
@@ -190,7 +199,7 @@ let assertSrcAreEqual expectedSrc actualSrc =
     assertEqual (splitLines expectedSrc) (splitLines actualSrc)
 
 [<Test>]
-let ``basic single-field record stub generation`` () =
+let ``single-field record stub generation`` () =
     """
 type MyRecord = { Field1: int }
 let x: MyRecord = { }"""
@@ -200,7 +209,7 @@ type MyRecord = { Field1: int }
 let x: MyRecord = { Field1 = failwith "" }"""
 
 [<Test>]
-let ``basic multiple-field record stub generation`` () =
+let ``multiple-field record stub generation`` () =
     """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
 let x: MyRecord = { }"""
@@ -242,22 +251,41 @@ let x: MyRecord = { Field1 = failwith ""
 let y = 3
 do ()"""
 
-[<Test; Ignore "Activate when tokenizer is more elaborate">]
-let ``basic single-field stub generation when left brace is on next line`` () =
+[<Test>]
+let ``single-field stub generation when left brace is on next line`` () =
     """
 type MyRecord = { Field1: int }
 let x: MyRecord =
+
     { }"""
     |> insertStubFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """
 type MyRecord = { Field1: int }
 let x: MyRecord =
+
     { Field1 = failwith "" }"""
+
+[<Test>]
+let ``multiple-field stub generation when left brace is on next line`` () =
+    """
+type MyRecord = { Field1: int; Field2: char }
+let x: MyRecord =
+
+    { }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = { Field1: int; Field2: char }
+let x: MyRecord =
+
+    { Field1 = failwith ""
+      Field2 = failwith "" }"""
 
 
 #if INTERACTIVE
-``basic single-field record stub generation`` ()
-``basic multiple-field record stub generation`` ()
+``single-field record stub generation`` ()
+``multiple-field record stub generation`` ()
 ``single-field record stub generation in the middle of the file`` ()
 ``multiple-field record stub generation in the middle of the file`` ()
+``single-field stub generation when left brace is on next line`` ()
+``multiple-field stub generation when left brace is on next line`` ()
 #endif
