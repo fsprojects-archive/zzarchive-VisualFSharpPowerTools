@@ -58,5 +58,6 @@
 * Implement Find all references
 * Improve robustness of XmlDoc generation
 * Improve performance on large solutions
+* Add validation after reformatting
 
 
