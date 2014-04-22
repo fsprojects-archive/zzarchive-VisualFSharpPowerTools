@@ -52,8 +52,11 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let data =
                 ast.ParseTree
                 |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
-                |> Option.map (function
-                    (RecordBinding(_, expr, _) as recordBinding) -> 
+                |> Option.map (fun recordBinding ->
+                        let expr, lBraceLeftColumnCondition =
+                            match recordBinding with
+                            | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
+                            | QualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
                         let exprStartLine1 = expr.Range.StartLine
                         let exprStartLine0 = exprStartLine1 - 1
 
@@ -64,7 +67,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                         let endPosOfLBrace =
                             tokens |> List.tryPick (fun (t: TokenInformation) ->
                                         if t.CharClass = TokenCharKind.Delimiter &&
-                                           (pos.Line <> exprStartLine1 || t.LeftColumn >= caretColumn) &&
+                                           (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
                                            t.TokenName = "LBRACE" then
                                             Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
                                         else None)
@@ -136,7 +139,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 //            (getRecordExprRange recordBinding).StartColumn
 
     let countFields = function
-        RecordBinding(_, _, fields) -> List.length fields
+        | TypedRecordBinding(_, _, fields)
+        | QualifiedFieldRecordBinding(_, fields) -> List.length fields
 
     // Check whether the record has been fully implemented
     let shouldGenerateRecordStub (recordBindingData, _) (entity: FSharpEntity) =
@@ -146,7 +150,10 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, posOpt: pos option) displayContext entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let (RecordBinding(_, _, fieldsWritten)) = recordBindingData
+        let fieldsWritten =
+            match recordBindingData with
+            | TypedRecordBinding(_, _, fieldsWritten)
+            | QualifiedFieldRecordBinding(_, fieldsWritten) -> fieldsWritten
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
         match posOpt with

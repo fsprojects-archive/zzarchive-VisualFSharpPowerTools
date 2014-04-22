@@ -25,7 +25,8 @@ let inline setDebugObject (_: 'a) = ()
 
 [<NoEquality; NoComparison>]
 type RecordBinding =
-    | RecordBinding of SynType * SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
+    | TypedRecordBinding of SynType * SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
+    | QualifiedFieldRecordBinding of SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
 
 [<NoComparison>]
 type private Context = {
@@ -196,14 +197,18 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                                 _,
                                 __range) ->
                     // TODO: we'll possibly have to look further down the tree
-                    Some(RecordBinding(ty, expr, fields))
-
+                    Some(TypedRecordBinding(ty, expr, fields))
+                | _ -> walkExpr expr
+            | None ->
+                match expr with
                 // let x = { f1 = e1; f2 = e2; ... }
                 | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
-                    // TODO: we'll possibly have to look further down the tree
-                    Some(RecordBinding(ty, expr, fields))
+                    match fields with
+                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
+                        // TODO: we'll possibly have to look further down the tree
+                        Some(QualifiedFieldRecordBinding(expr, fields))
+                    | _ -> None
                 | _ -> walkExpr expr
-            | None -> walkExpr expr
 
     and walkExpr expr =
         if not <| inRange expr.Range pos then 

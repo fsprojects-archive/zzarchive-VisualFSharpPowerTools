@@ -42,6 +42,8 @@ let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 // [x] Generate code at position P
 // [x] Handle case when some fields are already written
 // [x] Handle case when all fields are written
+// [x] Handle pattern: let x = { MyRecord1.Field1 = 0 }
+// [ ] Handle pattern: let x = { Field1 = 0 }
 
 #if INTERACTIVE
 #load "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
@@ -52,15 +54,10 @@ open FSharpVSPowerTools.Core.CodeGeneration
 open FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
 open Microsoft.FSharp.Compiler.Ast
 
-let srcToLineMap (src: string) =
-    src.Split('\n')
-    |> Array.mapi (fun i line -> i, line)
-    |> Map.ofArray
+let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
 
-let splitLines (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
-
-let getSymbolAtPoint (src: string) (pos: pos) =
-    let lines = srcToLineMap src
+let getSymbolAtPoint (pos: pos) (src: string) =
+    let lines = srcToLineArray src
     let lineIdx0 = pos.Line - 1 
     let line = lines.[lineIdx0]
     Lexer.getSymbol src lineIdx0 pos.Column line args Lexer.queryLexState
@@ -69,11 +66,11 @@ let getSymbolUseAtPoint (pos: pos) (src: string) =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
-    let lines = srcToLineMap src
+    let lines = srcToLineArray src
     let lineIdx0 = pos.Line - 1
     let line = lines.[lineIdx0]
 
-    match getSymbolAtPoint src pos with
+    match getSymbolAtPoint pos src with
     | Some symbol ->
         let parseAndCheckResults =
             languageService.ParseAndCheckFileInProject(
@@ -137,12 +134,15 @@ let tokenizeLine (src: string) (lineIdx1: int) =
 let getRecordBindingData (pos: pos) (src: string) =
     maybe {
         let! recordBindingExpTree = tryFindRecordBindingExpTree pos src
-        let (RecordBinding(_, expr, _)) = recordBindingExpTree
+        let caretColumn = pos.Column
+        let expr, lBraceLeftColumnCondition =
+            match recordBindingExpTree with
+            | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
+            | QualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
 
         // Tokenize line where the record expression starts
         let exprStartLine1 = expr.Range.StartLine
         let tokens = tokenizeLine src exprStartLine1
-        let caretColumn = pos.Column
         let exprStartLine0 = exprStartLine1 - 1
 
         let endPosOfLBrace =
@@ -150,7 +150,7 @@ let getRecordBindingData (pos: pos) (src: string) =
                         if t.CharClass = TokenCharKind.Delimiter &&
                            // t.LeftColumn >= column: only if the expression is on the
                            // same line as the caret position
-                           (pos.Line <> exprStartLine1 || t.LeftColumn >= caretColumn) &&
+                           (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
                            t.TokenName = "LBRACE" then
                             Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
                         else None)
@@ -178,11 +178,12 @@ let insertStubFromPos caretPos src =
     let recordDefnFromPt = getRecordDefinitionFromPoint caretPos src
     match recordDefnFromPt with
     | None -> src
-    | Some(RecordBinding(_, _, fieldsWritten), context, entity, insertPos) ->
+    | Some(TypedRecordBinding(_, _, fieldsWritten), context, entity, insertPos)
+    | Some(QualifiedFieldRecordBinding(_, fieldsWritten), context, entity, insertPos) ->
         let insertColumn = insertPos.Column
         let fieldValue = "failwith \"\""
         let stub = RecordStubGenerator.formatRecord insertColumn 4 fieldValue context entity fieldsWritten
-        let srcLines = splitLines src
+        let srcLines = srcToLineArray src
         let insertLine0 = insertPos.Line - 1
         let curLine = srcLines.[insertLine0]
         let before, after = curLine.Substring(0, insertColumn), curLine.Substring(insertColumn)
@@ -196,7 +197,8 @@ let insertStubFromPos caretPos src =
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
 let assertSrcAreEqual expectedSrc actualSrc =
-    assertEqual (splitLines expectedSrc) (splitLines actualSrc)
+    assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
+
 
 [<Test>]
 let ``single-field record stub generation`` () =
@@ -281,7 +283,7 @@ let x: MyRecord =
       Field2 = failwith "" }"""
 
 [<Test>]
-let ``multiple-field stub generation when some fields are already written`` () =
+let ``multiple-field stub generation when some fields are already written (1)`` () =
     """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
 let x: MyRecord = { Field1 = 0 }"""
@@ -293,7 +295,18 @@ let x: MyRecord = { Field2 = failwith ""
                     Field1 = 0 }"""
 
 [<Test>]
-let ``multiple-field stub generation when all fields are already written`` () =
+let ``multiple-field stub generation when some fields are already written (2)`` () =
+    """
+type MyRecord = {Field1: int; Field2: int}
+let x = { MyRecord.Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 11)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: int}
+let x = { Field1 = failwith ""
+          MyRecord.Field2 = 0 }"""
+
+[<Test>]
+let ``multiple-field stub generation when all fields are already written (1)`` () =
     """
 type MyRecord = {Field1: int; Field2: float}
 let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
@@ -301,6 +314,39 @@ let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: float}
 let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
+
+[<Test>]
+let ``multiple-field stub generation when all fields are already written (2)`` () =
+    """
+type MyRecord = {Field1: int; Field2: int}
+let x = { MyRecord.Field1 = 0; MyRecord.Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 11)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: int}
+let x = { MyRecord.Field1 = 0; MyRecord.Field2 = 0 }"""
+
+[<Test>]
+let ``multiple-field stub generation with some fully-qualified fields already written`` () =
+    """
+type MyRecord = {Field1: int; Field2: int}
+let x: MyRecord = { MyRecord.Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: int}
+let x: MyRecord = { Field1 = failwith ""
+                    MyRecord.Field2 = 0 }"""
+
+[<Test>]
+let ``multiple-field stub generation with all fully-qualified fields already written`` () =
+    """
+type MyRecord = {Field1: int; Field2: int}
+let x: MyRecord = { MyRecord.Field1 = 0;
+                    MyRecord.Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: int}
+let x: MyRecord = { MyRecord.Field1 = 0;
+                    MyRecord.Field2 = 0 }"""
 
 
 #if INTERACTIVE
@@ -310,6 +356,10 @@ let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
 ``multiple-field record stub generation in the middle of the file`` ()
 ``single-field stub generation when left brace is on next line`` ()
 ``multiple-field stub generation when left brace is on next line`` ()
-``multiple-field stub generation when some fields are already written``()
-``multiple-field stub generation when all fields are already written`` ()
+``multiple-field stub generation when some fields are already written (1)`` ()
+``multiple-field stub generation when some fields are already written (2)`` ()
+``multiple-field stub generation when all fields are already written (1)`` ()
+``multiple-field stub generation when all fields are already written (2)`` ()
+``multiple-field stub generation with some fully-qualified fields already written`` ()
+``multiple-field stub generation with all fully-qualified fields already written`` ()
 #endif
