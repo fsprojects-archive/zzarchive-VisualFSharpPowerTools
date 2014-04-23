@@ -44,6 +44,7 @@ let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 // [x] Handle case when all fields are written
 // [x] Handle pattern: let x = { MyRecord1.Field1 = 0 }
 // [ ] Handle pattern: let x = { Field1 = 0 }
+// [ ] Add tests for SmartTag generation?
 
 #if INTERACTIVE
 #load "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"

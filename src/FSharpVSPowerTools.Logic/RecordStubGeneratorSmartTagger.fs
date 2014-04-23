@@ -23,7 +23,6 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-// TODO: edit all comments containing 'implement'
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
@@ -49,30 +48,32 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let source = point.Snapshot.GetText()
             let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
             let pos = Pos.fromZ line caretColumn
-            let data =
-                ast.ParseTree
-                |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
-                |> Option.map (fun recordBinding ->
-                        let expr, lBraceLeftColumnCondition =
-                            match recordBinding with
-                            | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
-                            | QualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
-                        let exprStartLine1 = expr.Range.StartLine
-                        let exprStartLine0 = exprStartLine1 - 1
 
-                        // Tokenize line where the record expression starts
-                        let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, exprStartLine0) 
+            return maybe {
+                let! parsedInput = ast.ParseTree
+                let! recordBinding = RecordStubGenerator.tryFindRecordBinding pos parsedInput
+                let expr, lBraceLeftColumnCondition =
+                    match recordBinding with
+                    | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
+                    | QualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
+                let exprStartLine1 = expr.Range.StartLine
+                let exprStartLine0 = exprStartLine1 - 1
 
-                        // We want to go after the '{' that' is right after the caret position
-                        let endPosOfLBrace =
-                            tokens |> List.tryPick (fun (t: TokenInformation) ->
-                                        if t.CharClass = TokenCharKind.Delimiter &&
-                                           (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
-                                           t.TokenName = "LBRACE" then
-                                            Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
-                                        else None)
-                        recordBinding, endPosOfLBrace)
-            return data
+                // Tokenize line where the record expression starts
+                let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, exprStartLine0) 
+
+                // We want to go after the '{' that' is right after the caret position
+                let! endPosOfLBrace =
+                    tokens
+                    |> List.tryPick (fun (t: TokenInformation) ->
+                                if t.CharClass = TokenCharKind.Delimiter &&
+                                   (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
+                                   t.TokenName = "LBRACE" then
+                                    Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
+                                else None)
+
+                return recordBinding, endPosOfLBrace
+            }
         }
 
     let updateAtCaretPosition() =
@@ -105,7 +106,6 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                         currentWord <- Some newWord
                                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
 
-                                        // TODO: we shouldn't trigger it if all fields are already generated
                                         return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
                                     else
                                         return recordDefinition <- None
@@ -124,30 +124,16 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
-//    let getRecordExprRange = function
-//        RecordBinding(_typ, expr, _) -> expr.Range
-//
-//    let inferStartColumn = function
-//        | RecordBinding(_typ, _expr, ((field, _, _) :: _)) ->
-//            let longIdent, _ = field
-//            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(longIdent.Range.StartLine - 1)
-//            let str = line.GetText()
-//            str.Length - str.TrimStart(' ').Length
-//        | recordBinding ->
-//            // TODO: this logic may not be adapted to a record
-//            // There is no assied record field, we indent the content at the start column of the definition
-//            (getRecordExprRange recordBinding).StartColumn
-
-    let countFields = function
-        | TypedRecordBinding(_, _, fields)
-        | QualifiedFieldRecordBinding(_, fields) -> List.length fields
-
-    // Check whether the record has been fully implemented
+    // Check whether the record has been fully defined
     let shouldGenerateRecordStub (recordBindingData, _) (entity: FSharpEntity) =
-        let count = entity.FSharpFields.Count
-        count > 0 && count > countFields recordBindingData
+        let fieldCount = entity.FSharpFields.Count
+        let writtenFieldCount =
+            match recordBindingData with
+            | TypedRecordBinding(_, _, fields)
+            | QualifiedFieldRecordBinding(_, fields) -> List.length fields
+        fieldCount > 0 && writtenFieldCount < fieldCount
 
-    let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, posOpt: pos option) displayContext entity = 
+    let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, pos: pos) displayContext entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let fieldsWritten =
@@ -156,24 +142,17 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             | QualifiedFieldRecordBinding(_, fieldsWritten) -> fieldsWritten
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
-        match posOpt with
-        | Some pos ->
-            let stub = RecordStubGenerator.formatRecord
-                           pos.Column
-                           indentSize
-                           "failwith \"Uninitialized field\""
-                           displayContext
-                           entity
-                           fieldsWritten
-            let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
-            buffer.Insert(current, stub) |> ignore
-        | None -> ()
-            // TODO: handle this case
-//        | None ->
-//            let range = getRange interfaceData
-//            let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
-//            buffer.Insert(current, " with") |> ignore
-//            buffer.Insert(current + 5, stub) |> ignore
+
+        let stub = RecordStubGenerator.formatRecord
+                       pos.Column
+                       indentSize
+                       "failwith \"Uninitialized field\""
+                       displayContext
+                       entity
+                       fieldsWritten
+        let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
+        buffer.Insert(current, stub) |> ignore
+
         transaction.Complete()
 
     let generateRecordStub span data displayContext entity =
@@ -182,12 +161,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             member x.DisplayText = CommandName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = 
-                if shouldGenerateRecordStub data entity then
-                    handleGenerateRecordStub span data displayContext entity
-                else
-                    // TODO: in the future, this should not display a msg box, too annoying
-                    messageBoxError Resource.generateRecordStubsErrorMessage }
+            member x.Invoke() = handleGenerateRecordStub span data displayContext entity }
 
     member x.GetSmartTagActions(span: SnapshotSpan, data, displayContext, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
@@ -205,13 +179,13 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             seq {
                 match currentWord, recordDefinition with
-                | Some word, Some (data, displayContext, entity) ->
+                | Some word, Some (data, displayContext, entity) when shouldGenerateRecordStub data entity ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<RecordStubGeneratorSmartTag>(span, 
-                            RecordStubGeneratorSmartTag(x.GetSmartTagActions(span, data, displayContext, entity)))
-                            :> ITagSpan<_>
+                    yield TagSpan<_>(span, 
+                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(span, data, displayContext, entity)))
+                          :> ITagSpan<_>
                 | _ -> ()
             }
 
-        member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
-        member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
+        [<CLIEvent>]
+        member x.TagsChanged = tagsChanged.Publish

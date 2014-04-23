@@ -11,7 +11,6 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-// TODO remove all debugs
 #if INTERACTIVE
 let debug x =
     Printf.ksprintf (printfn "[RecordStubGenerator] %s") x
@@ -191,7 +190,8 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 debug "ReturnTypeInfo: %A" ty
 
                 match expr with
-                // TODO: situation 1: buggy parse tree when a type annotation is given before the '='
+                // Situation 1:
+                // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
                 // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
                 | SynExpr.Typed(SynExpr.Record(_inheritOpt, _copyOpt, fields, _range),
                                 _,
