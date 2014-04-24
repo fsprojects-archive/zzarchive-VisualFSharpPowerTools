@@ -247,3 +247,15 @@ let _ =
                                       raise (System.NotImplementedException())
   }
 }
+
+//type Dict<'T> = IDictionary<int, 'T>
+//
+//let _ =
+//     { new Dict<string> }
+//
+//type IB = IList<int>
+//
+//type IC = IB
+//
+//let _ =
+//     { new IC }
