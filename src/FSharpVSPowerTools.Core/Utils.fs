@@ -34,6 +34,18 @@ module Option =
         | Some x -> Some x
         | None -> v
     
+[<RequireQualifiedAccess>]
+module Async =
+    /// Transforms an Async value using the specified function.
+    [<CompiledName("Map")>]
+    let map (mapping : 'T -> 'U) (value : Async<'T>) : Async<'U> =
+        async {
+            // Get the input value.
+            let! x = value
+            // Apply the mapping function and return the result.
+            return mapping x
+        }
+
 /// Maybe computation expression builder, copied from ExtCore library
 /// https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs
 [<Sealed>]
@@ -154,6 +166,13 @@ type AsyncMaybeBuilder () =
                 this.Delay (fun () ->
                     body enum.Current)))
 
+[<RequireQualifiedAccess; CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module AsyncMaybe =
+    let liftMaybe (maybe: Option<'T>) : Async<_ option> =
+        async { return maybe }
+
+    let inline liftAsync (async : Async<'T>) : Async<_ option> =
+        async |> Async.map Some
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
