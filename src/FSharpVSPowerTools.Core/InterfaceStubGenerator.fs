@@ -10,11 +10,45 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type InterfaceData =
     | Interface of SynType * SynMemberDefns option
     | ObjExpr of SynType * SynBinding list
+    member x.Range =
+        match x with
+        | InterfaceData.Interface(typ, _) -> 
+            typ.Range
+        | InterfaceData.ObjExpr(typ, _) -> 
+            typ.Range
+    member x.MemberCount =
+        match x with
+        | InterfaceData.Interface(_, None) -> 
+            0
+        | InterfaceData.Interface(_, Some members) -> 
+            List.length members
+        | InterfaceData.ObjExpr(_, bindings) ->
+            List.length bindings
+    member x.TypeParameters = 
+        match x with
+        | InterfaceData.Interface(typ, _)
+        | InterfaceData.ObjExpr(typ, _) ->
+            match typ with
+            | SynType.App(_, _, ts, _, _, _, _)
+            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
+                let (|TypeIdent|_|) = function
+                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
+                        match req with
+                        | NoStaticReq -> 
+                            Some ("'" + s.idText)
+                        | HeadTypeStaticReq -> 
+                            Some ("^" + s.idText)
+                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
+                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
+                    | _ -> 
+                        None
+                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
+            | _ ->
+                [||]
 
 module InterfaceStubGenerator =
     type internal ColumnIndentedTextWriter() =
