@@ -250,10 +250,15 @@ let _ =
 
 module M =
     type D = System.IDisposable
+type IWithUpperCaseArgs =
+    abstract Method: Arg1: int -> ARg2: int -> aRg3: int -> arG4: int -> arg5: int -> arg1: int -> unit
 
     let _ = { new D with
                   member x.Dispose(): unit = 
                       raise (System.NotImplementedException())
+let _ = { new IWithUpperCaseArgs with
+              member x.Method (arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg11: int): unit =
+                raise (System.NotImplementedException()) }
  }
 
 //type Dict<'T> = IDictionary<int, 'T>

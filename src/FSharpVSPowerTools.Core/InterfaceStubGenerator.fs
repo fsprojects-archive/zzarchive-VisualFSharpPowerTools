@@ -149,32 +149,47 @@ module InterfaceStubGenerator =
     let internal keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
 
     // Format each argument, including its name and type 
-    let internal formatArgUsage ctx hasTypeAnnotation i (arg: FSharpParameter) = 
+    let internal formatArgUsage ctx hasTypeAnnotation (allNames: Map<string, int>) (arg: FSharpParameter) = 
         let nm = 
             match arg.Name with 
             | None -> 
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
-                else "arg" + string i 
-            | Some nm -> 
-                // Avoid name capturing caused by object idents
-                if nm = ctx.ObjectIdent then
-                    sprintf "%s%i" nm i
-                elif Set.contains nm keywordSet then
-                    sprintf "``%s``" nm
-                else nm
-        // Detect an optional argument 
+                else sprintf "arg%d" (allNames |> Map.toList |> List.map snd |> List.sumBy (function 0 -> 1 | x -> x))
+            | Some nm when Set.contains nm keywordSet -> sprintf "``%s``" nm
+            | Some nm when Char.IsUpper nm.[0] -> 
+                (string (Char.ToLower nm.[0])) + (nm.Substring(1))
+            | Some nm -> nm
+
+        let nm, allNames = 
+            match nm, allNames |> Map.tryFind nm with
+            | "()", _ -> nm, allNames
+            | _, Some count -> 
+                let count = count + 1
+                sprintf "%s%d" nm count, allNames |> Map.add nm count
+            | _ -> nm, allNames |> Map.add nm 0
+
+        // Detect an optional argument
         let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
-        if hasTypeAnnotation && argName <> "()" then 
+        (if hasTypeAnnotation && argName <> "()" then 
             argName + ": " + formatType ctx arg.Type
-        else argName
+        else argName),
+        allNames
 
     let internal formatArgsUsage ctx hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
         let isItemIndexer = (v.IsInstanceMember && v.DisplayName = "Item")
-        let counter = let n = ref 0 in fun () -> incr n; !n
         let unit, argSep, tupSep = "()", " ", ", "
         args
-        |> List.map (List.map (fun x -> formatArgUsage ctx hasTypeAnnotation (counter()) x))
+        |> List.fold (fun (acc: string list list, allNames) args ->
+            let acc', allNames' =
+                args 
+                |> List.fold (fun (acc: string list, allNames) arg -> 
+                    let name, allNames = formatArgUsage ctx hasTypeAnnotation allNames arg
+                    name :: acc, allNames) ([], allNames)
+            List.rev acc' :: acc, allNames') 
+            ([], Map.ofList [ ctx.ObjectIdent, 0 ])
+        |> fst 
+        |> List.rev
         |> List.map (function 
             | [] -> unit 
             | [arg] when arg = unit -> unit
