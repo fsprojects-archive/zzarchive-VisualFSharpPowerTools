@@ -94,12 +94,74 @@ type MaybeBuilder () =
                 x.Delay (fun () ->
                     body enum.Current)))
 
+[<Sealed>]
+type AsyncMaybeBuilder () =
+    // 'T -> M<'T>
+    member (*inline*) x.Return value : Async<'T option> = Some value |> async.Return
+
+    // M<'T> -> M<'T>
+    member (*inline*) x.ReturnFrom value : Async<'T option> = value
+
+    // unit -> M<'T>
+    member (*inline*) x.Zero () : Async<unit option> =
+        Some ()     // TODO : Should this be None?
+        |> async.Return
+
+    // (unit -> M<'T>) -> M<'T>
+    member x.Delay (f : unit -> Async<'T option>) : Async<'T option> = f ()
+
+    // M<'T> -> M<'T> -> M<'T>
+    // or
+    // M<unit> -> M<'T> -> M<'T>
+    member (*inline*) x.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
+        async {
+            let! r1' = r1
+            match r1' with
+            | None -> return None
+            | Some () -> return! r2
+        }
+
+    // M<'T> * ('T -> M<'U>) -> M<'U>
+    member (*inline*) x.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
+        async {
+            let! value' = value
+            match value' with
+            | None -> return None
+            | Some result -> return! f result
+        }
+    // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
+    member x.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
+        try body resource
+        finally 
+            if resource <> null then resource.Dispose ()
+
+    // (unit -> bool) * M<'T> -> M<'T>
+    member x.While (guard, body : Async<_ option>) : Async<_ option> =
+        if guard () then
+            // OPTIMIZE : This could be simplified so we don't need to make calls to Bind and While.
+            x.Bind (body, (fun () -> x.While (guard, body)))
+        else
+            x.Zero ()
+
+    // seq<'T> * ('T -> M<'U>) -> M<'U>
+    // or
+    // seq<'T> * ('T -> M<'U>) -> seq<M<'U>>
+    member this.For (sequence : seq<_>, body : 'T -> Async<unit option>) : Async<_ option> =
+        // OPTIMIZE : This could be simplified so we don't need to make calls to Using, While, Delay.
+        this.Using (sequence.GetEnumerator (), fun enum ->
+            this.While (
+                enum.MoveNext,
+                this.Delay (fun () ->
+                    body enum.Current)))
+
+
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
     let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
     let inline debug msg = Printf.kprintf System.Diagnostics.Debug.WriteLine msg
     let inline fail msg = Printf.kprintf System.Diagnostics.Debug.Fail msg
     let maybe = MaybeBuilder()
+    let asyncMaybe = AsyncMaybeBuilder()
     
     let tryCast<'a> (o: obj): 'a option = 
         match o with
