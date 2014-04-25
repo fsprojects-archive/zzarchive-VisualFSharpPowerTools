@@ -83,7 +83,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                                 | Some (fsSymbolUse, _), Some point when (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord ->
                                     let entity = fsSymbolUse.Symbol :?> FSharpEntity
                                     // The entity might correspond to another symbol 
-                                    if entity.IsInterface && entity.DisplayName = symbol.Text then
+                                    if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text then
                                         interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
                                         currentWord <- Some newWord
                                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
@@ -105,12 +105,6 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
-    let getRange = function
-        | InterfaceData.Interface(typ, _) -> 
-            typ.Range
-        | InterfaceData.ObjExpr(typ, _) -> 
-            typ.Range
-
     let inferStartColumn = function
         | InterfaceData.Interface(_, Some (m :: _)) ->
             let line = buffer.CurrentSnapshot.GetLineFromLineNumber(m.Range.StartLine-1)
@@ -122,50 +116,21 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             str.Length - str.TrimStart(' ').Length
         | iface ->
             // There is no implemented member, we indent the content at the start column of the interface
-            (getRange iface).StartColumn
-
-    let countMembers = function
-        | InterfaceData.Interface(_, None) -> 
-            0
-        | InterfaceData.Interface(_, Some members) -> 
-            List.length members
-        | InterfaceData.ObjExpr(_, bindings) ->
-            List.length bindings
-
-    let getTypeParameters = function
-        | InterfaceData.Interface(typ, _)
-        | InterfaceData.ObjExpr(typ, _) ->
-            match typ with
-            | SynType.App(_, _, ts, _, _, _, _)
-            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
-                let (|TypeIdent|_|) = function
-                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
-                        match req with
-                        | NoStaticReq -> 
-                            Some ("'" + s.idText)
-                        | HeadTypeStaticReq -> 
-                            Some ("^" + s.idText)
-                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
-                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
-                    | _ -> 
-                        None
-                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
-            | _ ->
-                [||]
+            iface.Range.StartColumn
 
     // Check whether the interface has been fully implemented
-    let shouldImplementInterface (interfaceData, _) (entity: FSharpEntity) =
+    let shouldImplementInterface (interfaceData: InterfaceData, _) (entity: FSharpEntity) =
         // TODO: counting members is not enough.
         // We should match member signatures, 
         // it will be tricky in case of specialized interface implementation
         let count = InterfaceStubGenerator.countInterfaceMembers entity
-        count > 0 && count > countMembers interfaceData
+        count > 0 && count > interfaceData.MemberCount
 
     let handleImplementInterface (span: SnapshotSpan) (interfaceData, posOpt: pos option) displayContext entity = 
         let startColumn = inferStartColumn interfaceData
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let typeParams = getTypeParameters interfaceData
+        let typeParams = interfaceData.TypeParameters
         let stub = InterfaceStubGenerator.formatInterface 
                         startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" displayContext entity
 
@@ -175,7 +140,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
             buffer.Insert(current, stub) |> ignore
         | None ->
-            let range = getRange interfaceData
+            let range = interfaceData.Range
             let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
             buffer.Insert(current, " with") |> ignore
             buffer.Insert(current + 5, stub) |> ignore
