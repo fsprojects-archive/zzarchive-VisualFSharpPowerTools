@@ -205,7 +205,7 @@ member x.Compare(x1: 'a, y: 'a): int =
 [<Test>]
 let ``should escape keywords in arguments``() =
     checkInterfaceStub 173 15 "    interface IKeyword with" ["IKeyword"] """
-member x.Method(``member``: int): unit = 
+member x.Method(``member``: int) (member1: int) (member2: int): unit = 
     raise (System.NotImplementedException())
 """
 
@@ -238,7 +238,7 @@ member x.GetEnumerator(): System.Collections.IEnumerator =
 [<Test>]
 let ``should fix leading upper case letter in argument names``() =
     checkInterfaceStub 251 15 "let _ = { new IWithUpperCaseArgs with" ["IWithUpperCaseArgs"] """
-member x.Method(arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg11: int): unit = 
+member x.Method(arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg2: int): unit = 
     raise (System.NotImplementedException())
 """
 

@@ -174,6 +174,32 @@ module AsyncMaybe =
     let inline liftAsync (async : Async<'T>) : Async<_ option> =
         async |> Async.map Some
 
+[<RequireQualifiedAccess>]
+module String =
+    let lowerCaseFirstChar (str: string) =
+        match str with
+        | null -> null
+        | str ->
+            match str.ToCharArray() |> Array.toList with
+            | [] -> str
+            | h :: t when Char.IsUpper h -> String (Char.ToLower h :: t |> List.toArray)
+            | _ -> str
+
+    let extractTrailingIndex (str: string) =
+        match str with
+        | null -> null, None
+        | _ ->
+            str 
+            |> Seq.toList 
+            |> List.rev 
+            |> Seq.takeWhile Char.IsDigit 
+            |> Seq.toArray 
+            |> Array.rev
+            |> fun chars -> String(chars)
+            |> function
+               | "" -> str, None
+               | index -> str.Substring (0, str.Length - index.Length), Some (int index)
+
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
     let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
@@ -252,6 +278,3 @@ module Pervasive =
         static member GetFileNameSafe path =
             try Path.GetFileName path
             with _ -> path
-
-    open Microsoft.FSharp.Compiler.SourceCodeServices
-

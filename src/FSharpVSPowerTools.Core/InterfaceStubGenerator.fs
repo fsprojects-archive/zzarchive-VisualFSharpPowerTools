@@ -149,24 +149,45 @@ module InterfaceStubGenerator =
     let internal keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
 
     // Format each argument, including its name and type 
-    let internal formatArgUsage ctx hasTypeAnnotation (allNames: Map<string, int>) (arg: FSharpParameter) = 
+    let internal formatArgUsage ctx hasTypeAnnotation (namesWithIndexes: Map<string, Set<int>>) (arg: FSharpParameter) = 
         let nm = 
             match arg.Name with 
-            | None -> 
+            | None ->
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
-                else sprintf "arg%d" (allNames |> Map.toList |> List.map snd |> List.sumBy (function 0 -> 1 | x -> x))
-            | Some nm when Set.contains nm keywordSet -> sprintf "``%s``" nm
-            | Some nm when Char.IsUpper nm.[0] -> 
-                (string (Char.ToLower nm.[0])) + (nm.Substring(1))
-            | Some nm -> nm
+                else sprintf "arg%d" (namesWithIndexes |> Map.toList |> List.map snd |> List.sumBy Set.count |> max 1)
+            | Some x -> String.lowerCaseFirstChar x
+        
+        let nm, namesWithIndexes =
+            match nm with
+            | "()" -> nm, namesWithIndexes
+            | _ ->
+                let nm, index = String.extractTrailingIndex nm
+                
+                let index, namesWithIndexes =
+                    match namesWithIndexes |> Map.tryFind nm, index with
+                    | Some indexes, Some index ->
+                        let rec getAvailableIndex idx =
+                            match indexes |> Set.contains idx with
+                            | true -> getAvailableIndex (idx + 1)
+                            | false -> idx
+                        let index = getAvailableIndex index
+                        Some index, namesWithIndexes |> Map.add nm (indexes |> Set.add index)
+                    | Some indexes, None ->
+                        let rec getAvailableIndex idx =
+                            match indexes |> Set.contains idx with
+                            | true -> getAvailableIndex (idx + 1)
+                            | false -> idx
+                        let index = getAvailableIndex 1
+                        Some index, namesWithIndexes |> Map.add nm (indexes |> Set.add index)
+                    | None, Some index -> Some index, namesWithIndexes |> Map.add nm (Set.ofList [index])
+                    | None, None -> None, namesWithIndexes |> Map.add nm Set.empty
 
-        let nm, allNames = 
-            match nm, allNames |> Map.tryFind nm with
-            | "()", _ -> nm, allNames
-            | _, Some count -> 
-                let count = count + 1
-                sprintf "%s%d" nm count, allNames |> Map.add nm count
-            | _ -> nm, allNames |> Map.add nm 0
+                (match index with
+                 | Some index -> sprintf "%s%d" nm index
+                 | None -> nm)
+                , namesWithIndexes
+
+        let nm = if Set.contains nm keywordSet then sprintf "``%s``" nm else nm
 
         // Detect an optional argument
         let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
@@ -174,20 +195,20 @@ module InterfaceStubGenerator =
         (if hasTypeAnnotation && argName <> "()" then 
             argName + ": " + formatType ctx arg.Type
         else argName),
-        allNames
+        namesWithIndexes
 
     let internal formatArgsUsage ctx hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
         let isItemIndexer = (v.IsInstanceMember && v.DisplayName = "Item")
         let unit, argSep, tupSep = "()", " ", ", "
         args
-        |> List.fold (fun (acc: string list list, allNames) args ->
-            let acc', allNames' =
+        |> List.fold (fun (argsSoFar: string list list, namesWithIndexes) args ->
+            let argsSoFar', namesWithIndexes =
                 args 
                 |> List.fold (fun (acc: string list, allNames) arg -> 
                     let name, allNames = formatArgUsage ctx hasTypeAnnotation allNames arg
-                    name :: acc, allNames) ([], allNames)
-            List.rev acc' :: acc, allNames') 
-            ([], Map.ofList [ ctx.ObjectIdent, 0 ])
+                    name :: acc, allNames) ([], namesWithIndexes)
+            List.rev argsSoFar' :: argsSoFar, namesWithIndexes) 
+            ([], Map.ofList [ ctx.ObjectIdent, Set.empty ])
         |> fst 
         |> List.rev
         |> List.map (function 

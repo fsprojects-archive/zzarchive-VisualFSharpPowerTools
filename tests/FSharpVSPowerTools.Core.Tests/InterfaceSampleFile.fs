@@ -167,11 +167,11 @@ let _ =
  }
 
 type IKeyword =
-    abstract Method: ``member``:int -> unit
+    abstract Method: ``member``: int -> Member: int -> member1: int -> unit
 
 type OKeyword =
     interface IKeyword with
-        member x.Method(``member``: int): unit = 
+        member x.Method(``member``: int) (member1: int) (member2: int): unit = 
             raise (System.NotImplementedException())
 
 let xx =
@@ -251,7 +251,7 @@ let _ =
 module M =
     type D = System.IDisposable
 type IWithUpperCaseArgs =
-    abstract Method: Arg1: int -> ARg2: int -> aRg3: int -> arG4: int -> arg5: int -> arg1: int -> unit
+    abstract Method: Arg1: int -> ARg2: int -> aRg3: int -> arG4: int -> arg5: int -> arg2: int -> unit
 
     let _ = { new D with
                   member x.Dispose(): unit = 
