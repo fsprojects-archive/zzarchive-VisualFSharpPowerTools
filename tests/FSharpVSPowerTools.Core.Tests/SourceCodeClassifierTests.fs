@@ -151,9 +151,9 @@ let ``value type``() =
 
 [<Test>]
 let ``DU case of function``() =
-    checkCategories 49 [ ReferenceType, 5, 19; PatternCase, 22, 30; ReferenceType, 35, 39; ReferenceType, 43, 47 ]
-    checkCategories 50 [ PatternCase, 5, 13; Function, 14, 22; PatternCase, 26, 34 ]
-    checkCategories 51 [ PatternCase, 6, 14; PatternCase, 34, 42; Function, 43, 47; Function, 51, 55 ]
+    checkCategories 49 [ ReferenceType, 5, 19; ReferenceType, 35, 39; ReferenceType, 43, 47 ]
+    checkCategories 50 [ PatternCase, 5, 13; Function, 14, 22 ]
+    checkCategories 51 [ PatternCase, 34, 42; Function, 43, 47; Function, 51, 55 ]
 
 [<Test>]
 let ``double quoted function without spaces``() = checkCategories 52 [ Function, 4, 45 ]

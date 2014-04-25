@@ -53,10 +53,13 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | :? FSharpGenericParameter
     | :? FSharpStaticParameter -> 
         TypeParameter
-    | :? FSharpUnionCase
-    | :? FSharpActivePatternCase -> 
+    | :? FSharpActivePatternCase
+    | :? FSharpUnionCase when symbolUse.IsFromPattern ->
         PatternCase
-
+    | :? FSharpField as f 
+        when (f.DeclaringEntity.IsFSharpRecord || f.DeclaringEntity.IsEnum) && symbolUse.IsFromPattern ->
+        PatternCase
+        
     | :? FSharpField as f ->
         if f.IsMutable || isReferenceCell f.FieldType then MutableVar
         elif f.Accessibility.IsPublic then PublicField 
