@@ -76,7 +76,7 @@ let getInterfaceStub nonGeneric line col lineStr idents =
     match symbolUse with
     | Some s when (s.Symbol :? FSharpEntity) ->
         let e = s.Symbol :?> FSharpEntity
-        if e.IsInterface then
+        if InterfaceStubGenerator.isInterface e then
             let typeParams = if nonGeneric then [||] else [|"'a"|]
             Some (InterfaceStubGenerator.formatInterface 0 4 typeParams "x" "raise (System.NotImplementedException())" s.DisplayContext e)
         else 
@@ -206,6 +206,13 @@ member x.Compare(x1: 'a, y: 'a): int =
 let ``should escape keywords in arguments``() =
     checkInterfaceStub 173 15 "    interface IKeyword with" ["IKeyword"] """
 member x.Method(``member``: int): unit = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should handle type alias``() =
+    checkInterfaceStub 254 19 "    let _ = { new D with" ["D"] """
+member x.Dispose(): unit = 
     raise (System.NotImplementedException())
 """
 

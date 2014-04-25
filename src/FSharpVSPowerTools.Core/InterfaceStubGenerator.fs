@@ -141,7 +141,7 @@ module InterfaceStubGenerator =
     let internal bracket (str: string) = 
         if str.Contains(" ") then "(" + str + ")" else str
 
-    let internal formatTypeWithSubstitution ctx (typ: FSharpType) =
+    let internal formatType ctx (typ: FSharpType) =
         let genericDefinition = typ.Format(ctx.DisplayContext)
         (genericDefinition, ctx.TypeInstantations)
         ||> Map.fold (fun s k v -> s.Replace(k, v))
@@ -156,7 +156,7 @@ module InterfaceStubGenerator =
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
                 else "arg" + string i 
             | Some nm -> 
-                // Avoid name capturing by object idents
+                // Avoid name capturing caused by object idents
                 if nm = ctx.ObjectIdent then
                     sprintf "%s%i" nm i
                 elif Set.contains nm keywordSet then
@@ -166,7 +166,7 @@ module InterfaceStubGenerator =
         let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
         if hasTypeAnnotation && argName <> "()" then 
-            argName + ": " + formatTypeWithSubstitution ctx arg.Type
+            argName + ": " + formatType ctx arg.Type
         else argName
 
     let internal formatArgsUsage ctx hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
@@ -227,7 +227,7 @@ module InterfaceStubGenerator =
             | [[]], true, _ -> [], Some retType
             | _, _, _ -> argInfos, Some retType
 
-        let retType = defaultArg (retType |> Option.map (formatTypeWithSubstitution ctx)) "unit"
+        let retType = defaultArg (retType |> Option.map (formatType ctx)) "unit"
         let usage = buildUsage argInfos
 
         ctx.Writer.WriteLine("")
@@ -276,12 +276,16 @@ module InterfaceStubGenerator =
         else
             e.GenericParameters
 
+    let rec internal getNonAbbreviatedType (typ: FSharpType) =
+        if typ.HasTypeDefinition && typ.TypeDefinition.IsFSharpAbbreviation then
+            getNonAbbreviatedType typ.AbbreviatedType
+        else typ
+
     /// Filter out duplicated interfaces in inheritance chain
     let rec internal getInterfaces (e: FSharpEntity) = 
         seq { for iface in e.AllInterfaces ->
-                let instantiations = Seq.zip (getGenericParameters e) iface.GenericArguments |> Seq.toList
-                let newIface = iface.Instantiate(instantiations)
-                newIface.TypeDefinition 
+                let typ = getNonAbbreviatedType iface
+                typ.TypeDefinition 
         }
         |> Seq.distinct
 
@@ -299,11 +303,6 @@ module InterfaceStubGenerator =
 
     let rec isInterface (e: FSharpEntity) =
         e.IsInterface || (e.IsFSharpAbbreviation && isInterface e.AbbreviatedType.TypeDefinition)
-
-    let rec internal getNonAbbreviatedType (typ: FSharpType) =
-        if typ.HasTypeDefinition && typ.TypeDefinition.IsFSharpAbbreviation then
-            getNonAbbreviatedType typ.AbbreviatedType
-        else typ
 
     /// Generate stub implementation of an interface at a start column
     let formatInterface startColumn indentation (typeInstances: string []) objectIdent 

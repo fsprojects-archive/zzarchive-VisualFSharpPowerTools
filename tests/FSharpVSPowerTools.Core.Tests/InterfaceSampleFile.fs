@@ -248,6 +248,14 @@ let _ =
   }
 }
 
+module M =
+    type D = System.IDisposable
+
+    let _ = { new D with
+                  member x.Dispose(): unit = 
+                      raise (System.NotImplementedException())
+ }
+
 //type Dict<'T> = IDictionary<int, 'T>
 //
 //let _ =
