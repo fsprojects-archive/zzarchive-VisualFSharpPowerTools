@@ -92,8 +92,6 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
-        | InterfaceData.Interface(typ, _)
-        | InterfaceData.ObjExpr(typ, _) -> typ.Range
     let inferStartColumn = function
         | InterfaceData.Interface(_, Some (m :: _)) ->
             let line = buffer.CurrentSnapshot.GetLineFromLineNumber(m.Range.StartLine-1)

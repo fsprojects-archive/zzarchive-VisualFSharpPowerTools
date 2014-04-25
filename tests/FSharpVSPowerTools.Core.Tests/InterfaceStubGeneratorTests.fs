@@ -237,7 +237,7 @@ member x.GetEnumerator(): System.Collections.IEnumerator =
 
 [<Test>]
 let ``should fix leading upper case letter in argument names``() =
-    checkInterfaceStub 251 15 "let _ = { new IWithUpperCaseArgs with" ["IWithUpperCaseArgs"] """
+    checkInterfaceStub 261 15 "let _ = { new IWithUpperCaseArgs with" ["IWithUpperCaseArgs"] """
 member x.Method(arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg2: int): unit = 
     raise (System.NotImplementedException())
 """
