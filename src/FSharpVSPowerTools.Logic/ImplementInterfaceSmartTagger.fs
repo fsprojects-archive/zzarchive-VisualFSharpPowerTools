@@ -72,7 +72,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                 let! (fsSymbolUse, _) = 
                     vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
                 // Recheck cursor position to ensure it's still in new word
-                let! point = AsyncMaybe.liftMaybe (buffer.GetSnapshotPoint view.Caret.Position)
+                let! point = buffer.GetSnapshotPoint view.Caret.Position |> AsyncMaybe.liftMaybe
                 return 
                     if (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord then
                         let entity = fsSymbolUse.Symbol :?> FSharpEntity
@@ -92,6 +92,8 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
+        | InterfaceData.Interface(typ, _)
+        | InterfaceData.ObjExpr(typ, _) -> typ.Range
     let inferStartColumn = function
         | InterfaceData.Interface(_, Some (m :: _)) ->
             let line = buffer.CurrentSnapshot.GetLineFromLineNumber(m.Range.StartLine-1)
