@@ -154,6 +154,7 @@ module InterfaceStubGenerator =
         match nm with
         | "()" -> nm, namesWithIndices
         | _ ->
+            let nm = String.lowerCaseFirstChar nm
             let nm, index = String.extractTrailingIndex nm
                 
             let index, namesWithIndices =
@@ -172,6 +173,7 @@ module InterfaceStubGenerator =
                 match index with
                 | Some index -> sprintf "%s%d" nm index
                 | None -> nm
+                
             let nm = if Set.contains nm keywordSet then sprintf "``%s``" nm else nm
             nm, namesWithIndices
 
@@ -182,7 +184,7 @@ module InterfaceStubGenerator =
             | None ->
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
                 else sprintf "arg%d" (namesWithIndices |> Map.toList |> List.map snd |> List.sumBy Set.count |> max 1)
-            | Some x -> String.lowerCaseFirstChar x
+            | Some x -> x
         
         let nm, namesWithIndices = normalizeArgName namesWithIndices nm
         

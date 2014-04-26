@@ -1,6 +1,7 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#r "../../packages/FsCheck.0.9.2.0/lib/net40-Client/FsCheck.dll"
 #load "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
 #load "TestHelpers.fs"
 #else
@@ -249,6 +250,88 @@ member x.Item
     with set (v: int) (v1: int): unit = 
         raise (System.NotImplementedException())
 """
+
+open System
+open FsCheck
+
+type Args = Args of string list
+
+let allUnderscores (arg: string) = arg.ToCharArray() |> Array.forall (fun c -> c = '_')
+
+let keywords = 
+    Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
+    |> List.filter (not << allUnderscores)
+
+type Generators =
+    static member Args() : Arbitrary<Args> =
+        let shuffle =
+            let rnd = Random()
+
+            let swap (a: _ []) x y =
+                let tmp = a.[x]
+                a.[x] <- a.[y]
+                a.[y] <- tmp
+
+            fun l -> 
+                let a = Array.ofList l
+                Array.iteri (fun i _ -> swap a i (rnd.Next(i, Array.length a))) a
+                a |> Array.toList
+
+        let random = 
+            Arb.generate
+            |> Gen.suchThat (fun (x: string) -> 
+                x <> null && x.Length > 0 && not (Char.IsDigit x.[0])
+                && x.ToCharArray() |> Array.forall (fun c -> Char.IsLetterOrDigit c || c = '_')
+                && not (allUnderscores x))
+            |> Gen.nonEmptyListOf
+        let keywords = Gen.elements keywords
+        gen {
+            let! randoms = random
+            let! keywords = keywords |> Gen.listOf |> Gen.resize 50
+            return Args (shuffle (randoms @ keywords))
+        }
+        |> Arb.fromGen
+
+let reg() = Arb.register<Generators>() |> ignore
+do reg()
+
+let normalizeArgs =
+    List.fold (fun (acc, namesWithIndices) arg ->
+            let arg, namesWithIndices = InterfaceStubGenerator.normalizeArgName namesWithIndices arg
+            arg :: acc, namesWithIndices)
+        ([], Map.empty)
+    >> fst
+
+let inline (!) prop = reg(); Check.QuickThrowOnFailure prop
+
+[<Test>]
+let ``does not change number of args``() =
+    ! (fun (Args args) -> normalizeArgs args |> List.length = List.length args)
+    
+[<Test>]
+let ``no duplicated args``() =
+    ! (fun (Args args) ->
+        let normalized = normalizeArgs args
+        normalized |> Seq.distinct |> Seq.toList = normalized)
+
+[<Test>]
+let ``no keywords in args``() =
+    ! (fun (Args args) ->
+        let normalized = normalizeArgs args
+        set normalized |> Set.intersect (set keywords) = Set.empty)
+
+[<Test>]
+let ``no empty args``() =
+    ! (fun (Args args) ->
+        normalizeArgs args |> List.forall (not << String.IsNullOrWhiteSpace))
+
+[<Test>]
+let ``all args start with lower case letter``() =
+    ! (fun (Args args) ->
+        normalizeArgs args |> List.forall (fun arg -> 
+            let arg = if arg.StartsWith "``" then arg.Substring 2 else arg
+            let firstChar = arg.ToCharArray().[0]
+            Char.IsLower firstChar || firstChar = '_'))
 
 #if INTERACTIVE
 ``should generate stubs for simple interface``();;
