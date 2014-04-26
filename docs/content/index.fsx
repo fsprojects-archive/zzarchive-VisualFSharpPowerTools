@@ -17,7 +17,7 @@ The extension comes with independent commands which can be toggled on/off in "To
 
 Here are currently supported features:
 
- * [Auto-generating XMLDoc](xmldoc.html)
+ * [Auto-generating XmlDoc](xmldoc.html)
  * [Source code formatting](codeformatting.html)
  * [Navigation bar](navbar.html)
  * [Highlight references](highlightusage.html)
@@ -26,6 +26,7 @@ Here are currently supported features:
  * [NavigateTo](navigateto.html)
  * [Syntax coloring](syntaxcoloring.html)
  * [Folder organization](folderorganization.html)
+ * [Find all references](findallreferences.html)
   
 Contributing and copyright
 --------------------------

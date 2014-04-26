@@ -4,10 +4,10 @@
 #I "../../bin"
 
 (**
-Auto-generating XMLDoc
+Auto-generating XmlDoc
 -----------------------
 
-This feature, originally written by Brian McNamara, auto creates xml documentation boilerplate when you type triple-slash, following with `<` symbol.
+This feature, originally written by Brian McNamara, auto creates Xml documentation boilerplate when you type triple-slash, following with `<` symbol.
 
 For example, if you have the code:
 *)
@@ -39,11 +39,11 @@ module Version2 =
         printfn "%d: %s" x s
 
 (**
-Just type `///<` (the slashes and `<` simbol may be delemited by any number of whitespace symbols) on a blank line right before a member, 
+Just type `///<` (the slashes and `<` symbol may be delimited by any number of whitespace symbols) on a blank line right before a member, 
 type, or module-scoped let (before any attributes, if there are any), 
-and you get a blank XMLDoc template (if there wasn't already a non-empty XMLDoc there).
+and you get a blank XmlDoc template (if there wasn't already a non-empty XmlDoc there).
 *)
 
 (** This is how it looks like in action
-![Auto generate XML doc](img/auto_generate_xml_doc.gif)
+![Auto generate Xml doc](img/auto_generate_xml_doc.gif)
 *)
