@@ -242,6 +242,14 @@ member x.Method(arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg2
     raise (System.NotImplementedException())
 """
 
+[<Test>]
+let ``should not collide argument names in setters``() =
+    checkInterfaceStub 280 15 "let _ = { new IWithProperties with" ["IWithProperties"] """
+member x.Item
+    with set (v: int) (v1: int): unit = 
+        raise (System.NotImplementedException())
+"""
+
 #if INTERACTIVE
 ``should generate stubs for simple interface``();;
 ``should generate stubs for simple interface in object expressions``();;

@@ -273,3 +273,11 @@ let _ = { new IWithUpperCaseArgs with
 //
 //let _ =
 //     { new IC }
+
+type IWithProperties =
+    abstract Item: v: int -> int with set
+
+let _ = { new IWithProperties with
+                  member x.Item
+                      with set (v: int) (v1: int): unit = 
+                          raise (System.NotImplementedException()) }
