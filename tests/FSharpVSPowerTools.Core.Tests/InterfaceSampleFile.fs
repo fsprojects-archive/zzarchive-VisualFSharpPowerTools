@@ -167,11 +167,11 @@ let _ =
  }
 
 type IKeyword =
-    abstract Method: ``member``:int -> unit
+    abstract Method: ``member``: int -> Member: int -> member1: int -> unit
 
 type OKeyword =
     interface IKeyword with
-        member x.Method(``member``: int): unit = 
+        member x.Method(``member``: int) (member1: int) (member2: int): unit = 
             raise (System.NotImplementedException())
 
 let xx =
@@ -253,8 +253,14 @@ module M =
 
     let _ = { new D with
                   member x.Dispose(): unit = 
-                      raise (System.NotImplementedException())
- }
+                      raise (System.NotImplementedException()) }
+
+type IWithUpperCaseArgs =
+    abstract Method: Arg1: int -> ARg2: int -> aRg3: int -> arG4: int -> arg5: int -> arg2: int -> unit
+
+let _ = { new IWithUpperCaseArgs with
+              member x.Method (arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg11: int): unit =
+                raise (System.NotImplementedException()) }
 
 //type Dict<'T> = IDictionary<int, 'T>
 //
@@ -267,3 +273,11 @@ module M =
 //
 //let _ =
 //     { new IC }
+
+type IWithProperties =
+    abstract Item: v: int -> int with set
+
+let _ = { new IWithProperties with
+                  member x.Item
+                      with set (v: int) (v1: int): unit = 
+                          raise (System.NotImplementedException()) }

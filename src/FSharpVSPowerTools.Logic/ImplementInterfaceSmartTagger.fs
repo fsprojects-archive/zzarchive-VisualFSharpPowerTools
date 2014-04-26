@@ -59,48 +59,35 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         }
 
     let updateAtCaretPosition() =
-        match buffer.GetSnapshotPoint view.Caret.Position with
-        | Some point ->
-            maybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument()
-                let! project = ProjectProvider.createForDocument doc
-                let! newWord, symbol = vsLanguageService.GetSymbol(point, project)
-                return newWord, symbol, doc, project
-            }
-            |> function
-                | Some (newWord, symbol, doc, project) ->
-                    async {
-                        match symbol.Kind with
-                        | SymbolKind.Ident ->
-                            let! interfaceData = collectInterfaceData point doc project
-                            match interfaceData with
-                            | Some interfaceData ->
-                                let! results = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, 
-                                                    AllowStaleResults.MatchingSource)
-                                // Recheck cursor position to ensure it's still in new word
-                                match results, buffer.GetSnapshotPoint view.Caret.Position with
-                                | Some (fsSymbolUse, _), Some point when (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord ->
-                                    let entity = fsSymbolUse.Symbol :?> FSharpEntity
-                                    // The entity might correspond to another symbol 
-                                    if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text then
-                                        interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
-                                        currentWord <- Some newWord
-                                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                                        return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-                                    else
-                                        return interfaceDefinition <- None
-                                | _ ->
-                                    return interfaceDefinition <- None
-                            | None ->
-                                return interfaceDefinition <- None 
-                        | _ ->
-                            return interfaceDefinition <- None 
+        asyncMaybe {
+            let! point = buffer.GetSnapshotPoint view.Caret.Position |> AsyncMaybe.liftMaybe
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = dte.GetActiveDocument() |> AsyncMaybe.liftMaybe
+            let! project = ProjectProvider.createForDocument doc |> AsyncMaybe.liftMaybe
+            let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> AsyncMaybe.liftMaybe
 
-                    } |> Async.StartImmediate
-                | None ->
-                    interfaceDefinition <- None 
-        | None -> ()
+            match symbol.Kind with
+            | SymbolKind.Ident ->
+                let! interfaceData = collectInterfaceData point doc project
+                let! (fsSymbolUse, _) = 
+                    vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
+                // Recheck cursor position to ensure it's still in new word
+                let! point = buffer.GetSnapshotPoint view.Caret.Position |> AsyncMaybe.liftMaybe
+                return 
+                    if (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord then
+                        let entity = fsSymbolUse.Symbol :?> FSharpEntity
+                        // The entity might correspond to another symbol 
+                        if entity.IsInterface && entity.DisplayName = symbol.Text then
+                            interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
+                            currentWord <- Some newWord
+                            let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                            Some (tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                        else None
+                    else None
+            | _ -> return None 
+        }
+        |> Async.map (function None -> interfaceDefinition <- None | _ -> ())
+        |> Async.StartImmediate
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
@@ -184,6 +171,3 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
 
         member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
         member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
-
-
-

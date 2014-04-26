@@ -148,33 +148,67 @@ module InterfaceStubGenerator =
 
     let internal keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
 
+    type NamesWithIndices = Map<string, Set<int>>
+
+    let normalizeArgName (namesWithIndices: NamesWithIndices) nm =
+        match nm with
+        | "()" -> nm, namesWithIndices
+        | _ ->
+            let nm, index = String.extractTrailingIndex nm
+                
+            let index, namesWithIndices =
+                match namesWithIndices |> Map.tryFind nm, index with
+                | Some indexes, index ->
+                    let rec getAvailableIndex idx =
+                        if indexes |> Set.contains idx then 
+                            getAvailableIndex (idx + 1)
+                        else idx
+                    let index = index |> Option.getOrElse 1 |> getAvailableIndex
+                    Some index, namesWithIndices |> Map.add nm (indexes |> Set.add index)
+                | None, Some index -> Some index, namesWithIndices |> Map.add nm (Set.ofList [index])
+                | None, None -> None, namesWithIndices |> Map.add nm Set.empty
+
+            let nm = 
+                match index with
+                | Some index -> sprintf "%s%d" nm index
+                | None -> nm
+            let nm = if Set.contains nm keywordSet then sprintf "``%s``" nm else nm
+            nm, namesWithIndices
+
     // Format each argument, including its name and type 
-    let internal formatArgUsage ctx hasTypeAnnotation i (arg: FSharpParameter) = 
+    let internal formatArgUsage ctx hasTypeAnnotation (namesWithIndices: Map<string, Set<int>>) (arg: FSharpParameter) = 
         let nm = 
             match arg.Name with 
-            | None -> 
+            | None ->
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
-                else "arg" + string i 
-            | Some nm -> 
-                // Avoid name capturing caused by object idents
-                if nm = ctx.ObjectIdent then
-                    sprintf "%s%i" nm i
-                elif Set.contains nm keywordSet then
-                    sprintf "``%s``" nm
-                else nm
-        // Detect an optional argument 
+                else sprintf "arg%d" (namesWithIndices |> Map.toList |> List.map snd |> List.sumBy Set.count |> max 1)
+            | Some x -> String.lowerCaseFirstChar x
+        
+        let nm, namesWithIndices = normalizeArgName namesWithIndices nm
+        
+        // Detect an optional argument
         let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
-        if hasTypeAnnotation && argName <> "()" then 
+        (if hasTypeAnnotation && argName <> "()" then 
             argName + ": " + formatType ctx arg.Type
-        else argName
+        else argName),
+        namesWithIndices
 
     let internal formatArgsUsage ctx hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
         let isItemIndexer = (v.IsInstanceMember && v.DisplayName = "Item")
-        let counter = let n = ref 0 in fun () -> incr n; !n
         let unit, argSep, tupSep = "()", " ", ", "
+        let args, namesWithIndices =
+            args
+            |> List.fold (fun (argsSoFar: string list list, namesWithIndices) args ->
+                let argsSoFar', namesWithIndices =
+                    args 
+                    |> List.fold (fun (acc: string list, allNames) arg -> 
+                        let name, allNames = formatArgUsage ctx hasTypeAnnotation allNames arg
+                        name :: acc, allNames) ([], namesWithIndices)
+                List.rev argsSoFar' :: argsSoFar, namesWithIndices) 
+                ([], Map.ofList [ ctx.ObjectIdent, Set.empty ])
         args
-        |> List.map (List.map (fun x -> formatArgUsage ctx hasTypeAnnotation (counter()) x))
+        |> List.rev
         |> List.map (function 
             | [] -> unit 
             | [arg] when arg = unit -> unit
@@ -182,21 +216,24 @@ module InterfaceStubGenerator =
             | args when isItemIndexer -> String.concat tupSep args
             | args -> bracket (String.concat tupSep args))
         |> String.concat argSep
+        , namesWithIndices
   
     let internal formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
         let getParamArgs (argInfos: FSharpParameter list list) = 
-            let args =
+            let args, namesWithIndices =
                 match argInfos with
                 | [[x]] when v.IsGetterMethod && x.Name.IsNone 
-                            && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> ""
+                             && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> 
+                    "", Map.ofList [ctx.ObjectIdent, Set.empty]
                 | _  -> formatArgsUsage ctx true v argInfos
              
             if String.IsNullOrWhiteSpace(args) then "" 
             elif args.StartsWith("(") then args
             else sprintf "(%s)" args
+            , namesWithIndices
 
         let buildUsage argInfos = 
-            let parArgs = getParamArgs argInfos
+            let parArgs, _ = getParamArgs argInfos
             match v.IsMember, v.IsInstanceMember, v.LogicalName, v.DisplayName with
             // Constructors
             | _, _, ".ctor", _ -> "new" + parArgs
@@ -240,10 +277,11 @@ module InterfaceStubGenerator =
             ctx.Writer.WriteLine(usage)
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
-            | "" | "()" ->
+            | "", _ | "()", _ ->
                 ctx.Writer.WriteLine("with set (v: {0}): unit = ", retType)
-            | args ->
-                ctx.Writer.WriteLine("with set {0} (v: {1}): unit = ", args, retType)
+            | args, namesWithIndices ->
+                let valueArgName, _ = normalizeArgName namesWithIndices "v"
+                ctx.Writer.WriteLine("with set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
             ctx.Writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
                 ctx.Writer.WriteLine(line)
@@ -253,9 +291,9 @@ module InterfaceStubGenerator =
             ctx.Writer.WriteLine(usage)
             ctx.Writer.Indent ctx.Indentation
             match getParamArgs argInfos with
-            | "" ->
+            | "", _ ->
                 ctx.Writer.WriteLine("with get (): {0} = ", retType)
-            | args ->
+            | args, _ ->
                 ctx.Writer.WriteLine("with get {0}: {1} = ", args, retType)
             ctx.Writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
