@@ -45,11 +45,8 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         | loc ->
                             let projectsToCheck =
                                 match loc with
-                                | Some (SymbolDeclarationLocation.Project declProject) ->
-                                    let dependentProjects = ProjectProvider.getDependentProjects dte declProject
-                                    if dependentProjects |> List.exists (fun x -> x.ProjectFileName = declProject.ProjectFileName)
-                                    then dependentProjects
-                                    else declProject :: dependentProjects
+                                | Some (SymbolDeclarationLocation.Projects declProjects) ->
+                                    ProjectProvider.getDependentProjects dte declProjects
                                 // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
                                 // In order to find all its usages we have to check all F# projects.
                                 | _ -> 
@@ -77,7 +74,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         // Sort symbols by positions
                         symbolUses 
                         |> Seq.map snd 
-                        |> Seq.distinctBy (fun s -> s.RangeAlternate)
+                        //|> Seq.distinctBy (fun s -> s.RangeAlternate)
                         |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
                     |> Seq.concat
             

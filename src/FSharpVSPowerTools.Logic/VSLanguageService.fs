@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
 open System
+open System.IO
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
@@ -50,6 +51,18 @@ type VSLanguageService
         with e ->
             debug "[Language Service] %O exception occurs while querying lexing states." e
             Lexer.queryLexState source defines line
+
+    let filterUsesDuplicates (uses: FSharpSymbolUse[]) =
+        uses
+        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
+        |> Seq.groupBy (fst >> Path.GetFullPathSafe)
+        |> Seq.map (fun (_, symbolUses) -> 
+            // filter duplicates by positions
+            symbolUses 
+            |> Seq.map snd 
+            |> Seq.distinctBy (fun s -> s.RangeAlternate))
+        |> Seq.concat
+        |> Seq.toArray
     
     member x.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()
@@ -104,10 +117,14 @@ type VSLanguageService
                     |> List.map (fun p -> p.GetProjectCheckerOptions(instance))
                     |> Async.Parallel
 
-                return! 
+                let! res =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
                         (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 
                          currentLine, args, buildQueryLexState word.Snapshot.TextBuffer)
+                return 
+                    res 
+                    |> Option.map (fun (symbol, lastIdent, refs) -> 
+                        symbol, lastIdent, filterUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
@@ -123,19 +140,25 @@ type VSLanguageService
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 let! res = x.GetFSharpSymbolUse (word, sym, currentFile, projectProvider, stale)
-                return res |> Option.map (fun (_, checkResults) -> x.FindUsagesInFile (word, sym, checkResults))
+                return 
+                    res 
+                    |> Option.map (fun (_, checkResults) -> 
+                        x.FindUsagesInFile (word, sym, checkResults)
+                        |> Async.map (Option.map (fun (symbol, ident, refs) -> symbol, ident, filterUsesDuplicates refs)))
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
 
-    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
+    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults)
+        : Async<(FSharpSymbol * string * FSharpSymbolUse[]) option> =
         async {
             try 
                 let (_, _, endLine, _) = word.ToRange()
                 let currentLine = word.Start.GetContainingLine().GetText()
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
-                return! fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
+                let! res = fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
+                return res |> Option.map (fun (symbol, ident, refs) -> symbol, ident, filterUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while finding usages in file." e
                 return None
