@@ -772,3 +772,115 @@ let p = 1
     let r = { Record.Field = 1 }
     let refValue = ref 1
     refValue := !refValue + 1
+
+module InterfaceTests =
+    open System.Collections.Generic
+    let x: KeyValuePair<string, int> = failwith ""
+    let genericDictionary =
+        { new IDictionary<string, 'TV> with
+              member x.get_Item(key: string): 'TV = 
+                  raise (System.NotImplementedException())
+              
+              member x.set_Item(key: string, value: 'TV): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Keys(): System.Collections.Generic.ICollection<string> = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Values(): System.Collections.Generic.ICollection<'TV> = 
+                  raise (System.NotImplementedException())
+              
+              member x.ContainsKey(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(key: string, value: 'TV): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.TryGetValue(key: string, value: byref<'TV>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Count(): int = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_IsReadOnly(): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(item: KeyValuePair<string, 'TV>): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Clear(): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Contains(item: KeyValuePair<string, 'TV>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.CopyTo(array: KeyValuePair<string, 'TV> [], arrayIndex: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(item: KeyValuePair<string, 'TV>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.GetEnumerator(): System.Collections.Generic.IEnumerator<KeyValuePair<string, 'TV>> = 
+                  raise (System.NotImplementedException())
+              
+              member x.GetEnumerator(): System.Collections.IEnumerator = 
+                  raise (System.NotImplementedException())
+    }
+
+    let specificDictionary =
+        { new IDictionary<string, int> with
+              member x.get_Item(key: string): int = 
+                  raise (System.NotImplementedException())
+              
+              member x.set_Item(key: string, value: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Keys(): System.Collections.Generic.ICollection<string> = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Values(): System.Collections.Generic.ICollection<int> = 
+                  raise (System.NotImplementedException())
+              
+              member x.ContainsKey(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(key: string, value: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.TryGetValue(key: string, value: byref<int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Count(): int = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_IsReadOnly(): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(item: KeyValuePair<string, int>): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Clear(): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Contains(item: KeyValuePair<string, int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.CopyTo(array: KeyValuePair<string, int> [], arrayIndex: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(item: KeyValuePair<string, int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.GetEnumerator(): System.Collections.Generic.IEnumerator<KeyValuePair<string, int>> = 
+                  raise (System.NotImplementedException())
+              
+              member x.GetEnumerator(): System.Collections.IEnumerator = 
+                  raise (System.NotImplementedException())
+ }
+     

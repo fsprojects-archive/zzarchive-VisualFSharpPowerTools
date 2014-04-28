@@ -69,7 +69,7 @@ let allUsesOfAllSymbols =
 allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
 
-let getInterfaceStub nonGeneric line col lineStr idents =
+let getInterfaceStub typeParams line col lineStr idents =
     let results = 
         vsLanguageService.ParseAndCheckFileInProject(projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource)
         |> Async.RunSynchronously
@@ -78,20 +78,19 @@ let getInterfaceStub nonGeneric line col lineStr idents =
     | Some s when (s.Symbol :? FSharpEntity) ->
         let e = s.Symbol :?> FSharpEntity
         if InterfaceStubGenerator.isInterface e then
-            let typeParams = if nonGeneric then [||] else [|"'a"|]
             Some (InterfaceStubGenerator.formatInterface 0 4 typeParams "x" "raise (System.NotImplementedException())" s.DisplayContext e)
         else 
             None
     | _ -> None
 
 let checkInterfaceStub line col lineStr idents (expected: string) =
-    getInterfaceStub false line col lineStr idents 
+    getInterfaceStub [|"'a"|] line col lineStr idents 
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> Option.get
     |> assertEqual (expected.Replace("\r\n", "\n"))
 
-let checkInterfaceStubNonGeneric line col lineStr idents (expected: string) =
-    getInterfaceStub true line col lineStr idents 
+let checkInterfaceStubWith typeParams line col lineStr idents (expected: string) =
+    getInterfaceStub typeParams line col lineStr idents 
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> Option.get
     |> assertEqual (expected.Replace("\r\n", "\n"))
@@ -219,19 +218,15 @@ member x.Dispose(): unit =
 
 [<Test; Ignore("This test picks up generic version for some strange reason.")>]
 let ``should use qualified names when appropriate``() =
-    checkInterfaceStubNonGeneric 178 35 "    { new System.Collections.ICollection with" ["ICollection"] """
-member x.CopyTo(array: System.Array, index: int): unit = 
-    raise (System.NotImplementedException())
-
+    checkInterfaceStubWith [||] 178 35 "    { new System.Collections.ICollection with" ["ICollection"] """
 member x.get_Count(): int = 
     raise (System.NotImplementedException())
-
+member x.CopyTo(array: System.Array, index: int): unit = 
+    raise (System.NotImplementedException())
 member x.get_SyncRoot(): obj = 
     raise (System.NotImplementedException())
-
 member x.get_IsSynchronized(): bool = 
     raise (System.NotImplementedException())
-
 member x.GetEnumerator(): System.Collections.IEnumerator = 
     raise (System.NotImplementedException())
 """
@@ -249,6 +244,61 @@ let ``should not collide argument names in setters``() =
 member x.Item
     with set (v: int) (v1: int): unit = 
         raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should instantiate generic parameters on interfaces``() =
+    checkInterfaceStubWith [|"string"; "int"|] 285 15 "let _ = { new IDictionary<string, int> with" ["IDictionary"] """
+member x.get_Item(key: string): int = 
+    raise (System.NotImplementedException())
+
+member x.set_Item(key: string, value: int): unit = 
+    raise (System.NotImplementedException())
+
+member x.get_Keys(): ICollection<string> = 
+    raise (System.NotImplementedException())
+
+member x.get_Values(): ICollection<int> = 
+    raise (System.NotImplementedException())
+
+member x.ContainsKey(key: string): bool = 
+    raise (System.NotImplementedException())
+
+member x.Add(key: string, value: int): unit = 
+    raise (System.NotImplementedException())
+
+member x.Remove(key: string): bool = 
+    raise (System.NotImplementedException())
+
+member x.TryGetValue(key: string, value: byref<int>): bool = 
+    raise (System.NotImplementedException())
+
+member x.get_Count(): int = 
+    raise (System.NotImplementedException())
+
+member x.get_IsReadOnly(): bool = 
+    raise (System.NotImplementedException())
+
+member x.Add(item: KeyValuePair<string,int>): unit = 
+    raise (System.NotImplementedException())
+
+member x.Clear(): unit = 
+    raise (System.NotImplementedException())
+
+member x.Contains(item: KeyValuePair<string,int>): bool = 
+    raise (System.NotImplementedException())
+
+member x.CopyTo(array: KeyValuePair<string,int> [], arrayIndex: int): unit = 
+    raise (System.NotImplementedException())
+
+member x.Remove(item: KeyValuePair<string,int>): bool = 
+    raise (System.NotImplementedException())
+
+member x.GetEnumerator(): IEnumerator<KeyValuePair<string,int>> = 
+    raise (System.NotImplementedException())
+
+member x.GetEnumerator(): System.Collections.IEnumerator = 
+    raise (System.NotImplementedException())
 """
 
 open System

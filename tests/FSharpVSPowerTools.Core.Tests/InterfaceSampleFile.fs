@@ -281,3 +281,56 @@ let _ = { new IWithProperties with
                   member x.Item
                       with set (v: int) (v1: int): unit = 
                           raise (System.NotImplementedException()) }
+
+let _ = { new IDictionary<string, int> with
+              member x.get_Item(key: string): int = 
+                  raise (System.NotImplementedException())
+              
+              member x.set_Item(key: string, value: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Keys(): ICollection<string> = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Values(): ICollection<int> = 
+                  raise (System.NotImplementedException())
+              
+              member x.ContainsKey(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(key: string, value: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.TryGetValue(key: string, value: byref<int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Count(): int = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_IsReadOnly(): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(item: KeyValuePair<string,int>): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Clear(): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Contains(item: KeyValuePair<string,int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.CopyTo(array: KeyValuePair<string,int> [], arrayIndex: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(item: KeyValuePair<string,int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.GetEnumerator(): IEnumerator<KeyValuePair<string,int>> = 
+                  raise (System.NotImplementedException())
+              
+              member x.GetEnumerator(): System.Collections.IEnumerator = 
+                  raise (System.NotImplementedException())
+               }

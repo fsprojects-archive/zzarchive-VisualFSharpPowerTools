@@ -125,12 +125,12 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         match posOpt with
         | Some pos -> 
             let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
-            buffer.Insert(current, stub) |> ignore
+            buffer.Insert(current, stub + new String(' ', startColumn)) |> ignore
         | None ->
             let range = interfaceData.Range
             let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
             buffer.Insert(current, " with") |> ignore
-            buffer.Insert(current + 5, stub) |> ignore
+            buffer.Insert(current + 5, stub + new String(' ', startColumn)) |> ignore
         transaction.Complete()
 
     let implementInterface span data displayContext entity =

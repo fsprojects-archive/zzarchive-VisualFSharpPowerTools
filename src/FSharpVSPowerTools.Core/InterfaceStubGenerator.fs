@@ -84,12 +84,15 @@ module InterfaceStubGenerator =
             Writer: ColumnIndentedTextWriter
             /// Map generic types to specific instances for specialized interface implementation
             TypeInstantations: Map<string, string>
+            /// Data for interface instantiation
+            ArgInstantiations: (FSharpGenericParameter * FSharpType) seq
             /// Indentation inside method bodies
             Indentation: int
             /// Object identifier of the interface e.g. 'x', 'this', '__', etc.
             ObjectIdent: string
             /// A list of lines represents skeleton of each member
             MethodBody: string []
+            /// Context in order to display types in the short form
             DisplayContext: FSharpDisplayContext
         }
 
@@ -142,7 +145,7 @@ module InterfaceStubGenerator =
         if str.Contains(" ") then "(" + str + ")" else str
 
     let internal formatType ctx (typ: FSharpType) =
-        let genericDefinition = typ.Format(ctx.DisplayContext)
+        let genericDefinition = typ.Instantiate(Seq.toList ctx.ArgInstantiations).Format(ctx.DisplayContext)
         (genericDefinition, ctx.TypeInstantations)
         ||> Map.fold (fun s k v -> s.Replace(k, v))
 
@@ -252,8 +255,7 @@ module InterfaceStubGenerator =
 
         let modifiers =
             [ if v.InlineAnnotation = FSharpInlineAnnotation.AlwaysInline then yield "inline"
-              // Skip dispatch slot because we generate stub implementation
-              if v.IsDispatchSlot then () ]
+              if v.Accessibility.IsInternal then yield "internal" ]
 
         let argInfos = 
             v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
@@ -325,17 +327,18 @@ module InterfaceStubGenerator =
     let rec internal getInterfaces (e: FSharpEntity) = 
         seq { for iface in e.AllInterfaces ->
                 let typ = getNonAbbreviatedType iface
-                typ.TypeDefinition 
+                // Argument should be kept lazy so that it is only evaluated when instantiating a new type
+                typ.TypeDefinition, Seq.zip typ.TypeDefinition.GenericParameters typ.GenericArguments
         }
         |> Seq.distinct
 
     /// Get members in the decreasing order of inheritance chain
     let internal getInterfaceMembers (e: FSharpEntity) = 
         seq {
-            for iface in getInterfaces e do
-                yield! iface.MembersFunctionsAndValues |> Seq.filter (fun m -> 
+            for (iface, instantiations) in getInterfaces e do
+                yield! iface.MembersFunctionsAndValues |> Seq.choose (fun m -> 
                            // Use this hack when FCS doesn't return enough information on .NET properties
-                           iface.IsFSharp || not m.IsProperty)
+                           if iface.IsFSharp || not m.IsProperty then Some (m, instantiations) else None)
          }
 
     let countInterfaceMembers e =
@@ -346,7 +349,7 @@ module InterfaceStubGenerator =
 
     /// Generate stub implementation of an interface at a start column
     let formatInterface startColumn indentation (typeInstances: string []) objectIdent 
-        (methodBody: string) (displayContext: FSharpDisplayContext) (e: FSharpEntity) =
+            (methodBody: string) (displayContext: FSharpDisplayContext) (e: FSharpEntity) =
         Debug.Assert(isInterface e, "The entity should be an interface.")
         use writer = new ColumnIndentedTextWriter()
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
@@ -365,11 +368,11 @@ module InterfaceStubGenerator =
                 |> Seq.fold (fun acc (x, y) -> Map.add x y acc) insts
             else insts
 
-        let ctx = { Writer = writer; TypeInstantations = instantiations; Indentation = indentation; 
-                    ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
+        let ctx = { Writer = writer; TypeInstantations = instantiations; ArgInstantiations = Seq.empty;
+                    Indentation = indentation; ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
         writer.Indent startColumn
-        for v in getInterfaceMembers e do
-            formatMember ctx v
+        for (m, instantiations) in getInterfaceMembers e do
+            formatMember { ctx with ArgInstantiations = instantiations } m
         writer.Dump()
 
     let internal (|IndexerArg|) = function
