@@ -52,12 +52,11 @@ type VSLanguageService
             debug "[Language Service] %O exception occurs while querying lexing states." e
             Lexer.queryLexState source defines line
 
-    let filterUsesDuplicates (uses: FSharpSymbolUse[]) =
+    let filterSymbolUsesDuplicates (uses: FSharpSymbolUse[]) =
         uses
         |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
         |> Seq.groupBy (fst >> Path.GetFullPathSafe)
         |> Seq.map (fun (_, symbolUses) -> 
-            // filter duplicates by positions
             symbolUses 
             |> Seq.map snd 
             |> Seq.distinctBy (fun s -> s.RangeAlternate))
@@ -124,7 +123,7 @@ type VSLanguageService
                 return 
                     res 
                     |> Option.map (fun (symbol, lastIdent, refs) -> 
-                        symbol, lastIdent, filterUsesDuplicates refs)
+                        symbol, lastIdent, filterSymbolUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
@@ -144,13 +143,12 @@ type VSLanguageService
                     res 
                     |> Option.map (fun (_, checkResults) -> 
                         x.FindUsagesInFile (word, sym, checkResults)
-                        |> Async.map (Option.map (fun (symbol, ident, refs) -> symbol, ident, filterUsesDuplicates refs)))
+                        |> Async.map (Option.map (fun (symbol, ident, refs) -> symbol, ident, filterSymbolUsesDuplicates refs)))
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
 
-    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults)
-        : Async<(FSharpSymbol * string * FSharpSymbolUse[]) option> =
+    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
         async {
             try 
                 let (_, _, endLine, _) = word.ToRange()
@@ -158,7 +156,7 @@ type VSLanguageService
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
                 let! res = fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
-                return res |> Option.map (fun (symbol, ident, refs) -> symbol, ident, filterUsesDuplicates refs)
+                return res |> Option.map (fun (symbol, ident, refs) -> symbol, ident, filterSymbolUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while finding usages in file." e
                 return None
