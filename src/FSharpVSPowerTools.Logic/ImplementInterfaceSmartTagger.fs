@@ -77,7 +77,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     if (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord then
                         let entity = fsSymbolUse.Symbol :?> FSharpEntity
                         // The entity might correspond to another symbol 
-                        if entity.IsInterface && entity.DisplayName = symbol.Text then
+                        if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text then
                             interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
                             currentWord <- Some newWord
                             let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)

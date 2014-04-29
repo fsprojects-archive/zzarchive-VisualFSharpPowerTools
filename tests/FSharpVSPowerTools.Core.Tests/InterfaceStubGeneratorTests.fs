@@ -247,7 +247,7 @@ member x.Item
 """
 
 [<Test>]
-let ``should instantiate generic parameters on interfaces``() =
+let ``should replace generic parameters on interfaces``() =
     checkInterfaceStubWith [|"string"; "int"|] 285 15 "let _ = { new IDictionary<string, int> with" ["IDictionary"] """
 member x.get_Item(key: string): int = 
     raise (System.NotImplementedException())
@@ -298,6 +298,20 @@ member x.GetEnumerator(): IEnumerator<KeyValuePair<string,int>> =
     raise (System.NotImplementedException())
 
 member x.GetEnumerator(): System.Collections.IEnumerator = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should replace generic parameters for postfix type application``() =
+    checkInterfaceStubWith [|"int option"|] 340 15 "let _ = { new IMy<int option> with" ["IMy"] """
+member x.Method(arg1: int option): unit = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should replace generic parameters for prefix type application``() =
+    checkInterfaceStubWith [|"Choice<int, string>"|] 345 15 "let _ = { new IMy<Choice<int, string>> with" ["IMy"] """
+member x.Method(arg1: Choice<int, string>): unit = 
     raise (System.NotImplementedException())
 """
 

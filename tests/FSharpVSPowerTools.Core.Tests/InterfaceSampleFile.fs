@@ -334,3 +334,15 @@ let _ = { new IDictionary<string, int> with
               member x.GetEnumerator(): System.Collections.IEnumerator = 
                   raise (System.NotImplementedException())
                }
+
+type IMy<'a> = abstract Method: 'a -> unit
+
+let _ = { new IMy<int option> with
+              member x.Method(arg1: int option): unit = 
+                  raise (System.NotImplementedException())
+               }
+
+let _ = { new IMy<Choice<int, string>> with
+              member x.Method(arg1: Choice<int, string>): unit = 
+                  raise (System.NotImplementedException()) }
+              

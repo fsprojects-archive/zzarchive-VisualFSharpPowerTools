@@ -32,20 +32,37 @@ type InterfaceData =
         match x with
         | InterfaceData.Interface(typ, _)
         | InterfaceData.ObjExpr(typ, _) ->
+            let rec (|TypeIdent|_|) = function
+                | SynType.Var(SynTypar.Typar(s, req , _), _) ->
+                    match req with
+                    | NoStaticReq -> 
+                        Some ("'" + s.idText)
+                    | HeadTypeStaticReq -> 
+                        Some ("^" + s.idText)
+                | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
+                    xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
+                | SynType.App(t, _, ts, _, _, isPostfix, _) ->
+                    match t, ts with
+                    | TypeIdent typeName, [] -> Some typeName
+                    | TypeIdent typeName, [TypeIdent typeArg] -> 
+                        if isPostfix then 
+                            Some (sprintf "%s %s" typeArg typeName)
+                        else
+                            Some (sprintf "%s<%s>" typeName typeArg)
+                    | TypeIdent typeName, _ -> 
+                        let typeArgs = ts |> Seq.choose (|TypeIdent|_|) |> String.concat ", "
+                        if isPostfix then 
+                            Some (sprintf "(%s) %s" typeArgs typeName)
+                        else
+                            Some(sprintf "%s<%s>" typeName typeArgs)
+                    | _ ->
+                        debug "Unsupported case with %A and %A" t ts
+                        None
+                | _ -> 
+                    None
             match typ with
             | SynType.App(_, _, ts, _, _, _, _)
             | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
-                let (|TypeIdent|_|) = function
-                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
-                        match req with
-                        | NoStaticReq -> 
-                            Some ("'" + s.idText)
-                        | HeadTypeStaticReq -> 
-                            Some ("^" + s.idText)
-                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
-                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
-                    | _ -> 
-                        None
                 ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
             | _ ->
                 [||]
@@ -112,34 +129,8 @@ module InterfaceStubGenerator =
     let internal hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
         attribs |> Seq.exists (fun a -> isAttrib<'T>(a))
 
-    let internal (|MeasureProd|_|) (typ: FSharpType) = 
-        if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "*" && typ.GenericArguments.Count = 2 then
-            Some (typ.GenericArguments.[0], typ.GenericArguments.[1])
-        else None
-
-    let internal (|MeasureInv|_|) (typ: FSharpType) = 
-        if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "/" && typ.GenericArguments.Count = 1 then 
-            Some typ.GenericArguments.[0]
-        else None
-
-    let internal (|MeasureOne|_|) (typ: FSharpType) = 
-        if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "1" && typ.GenericArguments.Count = 0 then 
-            Some ()
-        else None
-
     let internal getTypeParameterName (typar: FSharpGenericParameter) =
         (if typar.IsSolveAtCompileTime then "^" else "'") + typar.Name
-
-    let internal formatTypeArgument (ctx: Context) (typar: FSharpGenericParameter) =
-        let genericName = getTypeParameterName typar
-        match ctx.TypeInstantations.TryFind(genericName) with
-        | Some specificName ->
-            specificName
-        | None ->
-            genericName
-
-    let internal formatTypeArguments ctx (typars:seq<FSharpGenericParameter>) =
-        Seq.map (formatTypeArgument ctx) typars |> List.ofSeq
 
     let internal bracket (str: string) = 
         if str.Contains(" ") then "(" + str + ")" else str
