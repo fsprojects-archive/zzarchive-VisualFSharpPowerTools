@@ -184,32 +184,34 @@ and
             indexPromises |> Array.map (fun tcs -> tcs.Task)
 
     let runSearch(indexTasks: Tasks.Task<Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
-        let processItem (item: Navigation.NavigableItem, name: string, isOperator: bool, matchKind: MatchKind) = 
-            let kind, textKind = 
-                match item.Kind with
-                | Navigation.NavigableItemKind.Exception -> NavigateToItemKind.Class, "exception"
-                | Navigation.NavigableItemKind.Field -> NavigateToItemKind.Field, "field"
-                | Navigation.NavigableItemKind.Constructor -> NavigateToItemKind.Class, "constructor"
-                | Navigation.NavigableItemKind.Member -> NavigateToItemKind.Method, "member"
-                | Navigation.NavigableItemKind.Module -> NavigateToItemKind.Module, "module"
-                | Navigation.NavigableItemKind.ModuleAbbreviation -> NavigateToItemKind.Module, "module abbreviation"
-                | Navigation.NavigableItemKind.ModuleValue -> NavigateToItemKind.Field, "module value"
-                | Navigation.NavigableItemKind.Property -> NavigateToItemKind.Property, "property"
-                | Navigation.NavigableItemKind.Type -> NavigateToItemKind.Class, "type"
-                | Navigation.NavigableItemKind.EnumCase -> NavigateToItemKind.EnumItem, "enum"
-                | Navigation.NavigableItemKind.UnionCase -> NavigateToItemKind.Class, "union case"
-            let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
+        let processItem (seen: HashSet<_>) (item: Navigation.NavigableItem, name: string, isOperator: bool, matchKind: MatchKind) = 
             let fileName, range01 = Microsoft.FSharp.Compiler.Range.Range.toFileZ item.Range
-            let extraData = { FileName = fileName; Span = range01; Description = textKind; }
             let itemName = if isOperator then "(" + name + ")" else name
-            let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
-            callback.AddItem navigateToItem
+            if (seen.Add(itemName, fileName, range01)) then
+                let kind, textKind = 
+                    match item.Kind with
+                    | Navigation.NavigableItemKind.Exception -> NavigateToItemKind.Class, "exception"
+                    | Navigation.NavigableItemKind.Field -> NavigateToItemKind.Field, "field"
+                    | Navigation.NavigableItemKind.Constructor -> NavigateToItemKind.Class, "constructor"
+                    | Navigation.NavigableItemKind.Member -> NavigateToItemKind.Method, "member"
+                    | Navigation.NavigableItemKind.Module -> NavigateToItemKind.Module, "module"
+                    | Navigation.NavigableItemKind.ModuleAbbreviation -> NavigateToItemKind.Module, "module abbreviation"
+                    | Navigation.NavigableItemKind.ModuleValue -> NavigateToItemKind.Field, "module value"
+                    | Navigation.NavigableItemKind.Property -> NavigateToItemKind.Property, "property"
+                    | Navigation.NavigableItemKind.Type -> NavigateToItemKind.Class, "type"
+                    | Navigation.NavigableItemKind.EnumCase -> NavigateToItemKind.EnumItem, "enum"
+                    | Navigation.NavigableItemKind.UnionCase -> NavigateToItemKind.Class, "union case"
+                let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
+                let extraData = { FileName = fileName; Span = range01; Description = textKind; }
+                let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
+                callback.AddItem navigateToItem
 
         let searchValueComputations = async {
+            let seen = HashSet()
             try
                 for i = 0 to indexTasks.Length - 1 do
                     let! index = Async.AwaitTask indexTasks.[i]
-                    index.Find(searchValue, processItem)
+                    index.Find(searchValue, processItem seen)
                     callback.ReportProgress(i + 1, indexTasks.Length)
             finally
                 callback.Done()
