@@ -96,9 +96,6 @@ namespace FSharpVSPowerTools
             chbImplementInterface.Checked = OptionsPage.ImplementInterfaceEnabled;
             chbFolderOrganization.Checked = OptionsPage.FolderOrganizationEnabled;
             chbFindAllReferences.Checked = OptionsPage.FindAllReferencesEnabled;
-
-            // Temporarily hide this option
-            chbImplementInterface.Visible = false;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
