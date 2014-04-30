@@ -104,9 +104,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                             let! results =
                                 match scope with
                                 | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
-                                | SymbolDeclarationLocation.Project declarationProject -> 
-                                    let dependentProjects = ProjectProvider.getDependentProjects dte declarationProject
-                                    vsLanguageService.FindUsages (cw, state.File, state.Project, declarationProject :: dependentProjects)
+                                | SymbolDeclarationLocation.Projects declarationProjects -> 
+                                    let dependentProjects = ProjectProvider.getDependentProjects dte declarationProjects
+                                    vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects)
                             let usages =
                                 results
                                 |> Option.map (fun (symbol, lastIdent, refs) -> 

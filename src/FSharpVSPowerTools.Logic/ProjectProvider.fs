@@ -14,7 +14,7 @@ type FilePath = string
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
     | File
-    | Project of IProjectProvider
+    | Projects of IProjectProvider list // source file where a symbol is declared may be included into several projects
 
 and IProjectProvider =
     abstract ProjectFileName: string
@@ -173,15 +173,20 @@ module ProjectProvider =
                     Some SymbolDeclarationLocation.File
                 else
                     let allProjects = dte.ListFSharpProjectsInSolution() |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
-                    match allProjects |> List.tryFind (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
-                    | Some declarationProject -> Some (SymbolDeclarationLocation.Project declarationProject)
-                    | _ -> None
+                    match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
+                    | [] -> None
+                    | projects -> Some (SymbolDeclarationLocation.Projects projects)
             | _ -> None
 
-    let getDependentProjects (dte: DTE) (project: IProjectProvider) =
+    let getDependentProjects (dte: DTE) (projects: IProjectProvider list) =
+        let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLower()) |> set
         dte.ListFSharpProjectsInSolution()
-        |> List.map (fun p -> ProjectProvider(p) :> IProjectProvider)
-        |> List.filter (fun p -> 
+        |> Seq.map (fun p -> ProjectProvider(p) :> IProjectProvider)
+        |> Seq.filter (fun p -> 
             p.GetReferencedProjects() 
-            |> List.exists (fun p -> String.Compare(p.ProjectFileName, project.ProjectFileName, true) = 0))
+            |> List.exists (fun p -> 
+                projectFileNames |> Set.contains (p.ProjectFileName.ToLower())))
+        |> Seq.append projects
+        |> Seq.distinctBy (fun p -> p.ProjectFileName.ToLower())
+        |> Seq.toList
 
