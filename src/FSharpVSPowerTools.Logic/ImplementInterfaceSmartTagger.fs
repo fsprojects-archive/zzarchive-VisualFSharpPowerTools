@@ -58,6 +58,9 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             return data
         }
 
+    let hasSameStartPos (r1: range) (r2: range) =
+        r1.Start = r2.Start
+
     let updateAtCaretPosition() =
         asyncMaybe {
             let! point = buffer.GetSnapshotPoint view.Caret.Position |> AsyncMaybe.liftMaybe
@@ -76,8 +79,8 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                 return 
                     if (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord then
                         let entity = fsSymbolUse.Symbol :?> FSharpEntity
-                        // The entity might correspond to another symbol 
-                        if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text then
+                        // The entity might correspond to another symbol so we check for symbol text and start ranges as well
+                        if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text && hasSameStartPos fsSymbolUse.RangeAlternate (fst interfaceData).Range  then
                             interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
                             currentWord <- Some newWord
                             let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
@@ -124,13 +127,13 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         use transaction = textUndoHistory.CreateTransaction("Implement Interface Explicitly")
         match posOpt with
         | Some pos -> 
-            let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
-            buffer.Insert(current, stub + new String(' ', startColumn)) |> ignore
+            let currentPos = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
+            buffer.Insert(currentPos, stub + new String(' ', startColumn)) |> ignore
         | None ->
             let range = interfaceData.Range
-            let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
-            buffer.Insert(current, " with") |> ignore
-            buffer.Insert(current + 5, stub + new String(' ', startColumn)) |> ignore
+            let currentPos = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
+            buffer.Insert(currentPos, " with") |> ignore
+            buffer.Insert(currentPos + 5, stub + new String(' ', startColumn)) |> ignore
         transaction.Complete()
 
     let implementInterface span data displayContext entity =

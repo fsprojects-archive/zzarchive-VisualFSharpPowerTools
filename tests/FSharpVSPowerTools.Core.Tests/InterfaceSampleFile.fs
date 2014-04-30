@@ -345,4 +345,9 @@ let _ = { new IMy<int option> with
 let _ = { new IMy<Choice<int, string>> with
               member x.Method(arg1: Choice<int, string>): unit = 
                   raise (System.NotImplementedException()) }
+
+let _ = { new IMy<int * int> with
+              member x.Method(arg1: int * int): unit = 
+                  raise (System.NotImplementedException()) }
+              
               

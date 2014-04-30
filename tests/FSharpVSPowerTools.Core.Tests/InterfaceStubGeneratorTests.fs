@@ -74,11 +74,19 @@ let getInterfaceStub typeParams line col lineStr idents =
         vsLanguageService.ParseAndCheckFileInProject(projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource)
         |> Async.RunSynchronously
     let symbolUse = results.GetSymbolUseAtLocation(line, col, lineStr, idents) |> Async.RunSynchronously
+    let typeParams = 
+        let ast = results.GetUntypedAst()
+        let pos = Range.Pos.fromZ (line-1) col
+        ast
+        |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)
+        |> Option.map (fun x -> x.TypeParameters)
+        |> fun opt -> defaultArg opt typeParams
     match symbolUse with
     | Some s when (s.Symbol :? FSharpEntity) ->
-        let e = s.Symbol :?> FSharpEntity
-        if InterfaceStubGenerator.isInterface e then
-            Some (InterfaceStubGenerator.formatInterface 0 4 typeParams "x" "raise (System.NotImplementedException())" s.DisplayContext e)
+        let entity = s.Symbol :?> FSharpEntity
+        if InterfaceStubGenerator.isInterface entity then
+            Some (InterfaceStubGenerator.formatInterface 0 4 typeParams 
+                    "x" "raise (System.NotImplementedException())" s.DisplayContext entity)
         else 
             None
     | _ -> None
@@ -303,17 +311,25 @@ member x.GetEnumerator(): System.Collections.IEnumerator =
 
 [<Test>]
 let ``should replace generic parameters for postfix type application``() =
-    checkInterfaceStubWith [|"int option"|] 340 15 "let _ = { new IMy<int option> with" ["IMy"] """
+    checkInterfaceStub 340 15 "let _ = { new IMy<int option> with" ["IMy"] """
 member x.Method(arg1: int option): unit = 
     raise (System.NotImplementedException())
 """
 
 [<Test>]
 let ``should replace generic parameters for prefix type application``() =
-    checkInterfaceStubWith [|"Choice<int, string>"|] 345 15 "let _ = { new IMy<Choice<int, string>> with" ["IMy"] """
+    checkInterfaceStub 345 15 "let _ = { new IMy<Choice<int, string>> with" ["IMy"] """
 member x.Method(arg1: Choice<int, string>): unit = 
     raise (System.NotImplementedException())
 """
+
+[<Test>]
+let ``should replace generic parameters for tuple types``() =
+    checkInterfaceStub 349 15 "let _ = { new IMy<int * int> with" ["IMy"] """
+member x.Method(arg1: int * int): unit = 
+    raise (System.NotImplementedException())
+"""
+
 
 open System
 open FsCheck

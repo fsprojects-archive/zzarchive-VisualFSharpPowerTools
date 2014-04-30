@@ -58,6 +58,16 @@ type InterfaceData =
                     | _ ->
                         debug "Unsupported case with %A and %A" t ts
                         None
+                | SynType.Anon _ -> 
+                    Some "_"
+                | SynType.Tuple(ts, _) ->
+                    Some (ts |> Seq.choose (snd >> (|TypeIdent|_|)) |> String.concat " * ")
+                | SynType.Array(dimension, TypeIdent typeName, _) ->
+                    Some (sprintf "%s [%s]" typeName (new String(',', dimension-1)))
+                | SynType.MeasurePower(TypeIdent typeName, power, _) ->
+                    Some (sprintf "%s^%i" typeName power)
+                | SynType.MeasureDivide(TypeIdent numerator, TypeIdent denominator, _) ->
+                    Some (sprintf "%s/%s" numerator denominator)
                 | _ -> 
                     None
             match typ with
@@ -348,7 +358,8 @@ module InterfaceStubGenerator =
         let instantiations = 
             let insts =
                 Seq.zip typeParams typeInstances
-                |> Seq.filter(fun (t1, t2) -> t1 <> t2) 
+                // Filter out useless instances (replacing with the same name or wildcard)
+                |> Seq.filter(fun (t1, t2) -> t1 <> t2 && t2 <> "_") 
                 |> Map.ofSeq
             // A simple hack to handle instantiation of type alias 
             if e.IsFSharpAbbreviation then
