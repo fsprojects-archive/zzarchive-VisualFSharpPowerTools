@@ -165,8 +165,8 @@ and
             // TODO: consider making index more coarse grained (i.e. 1 TCS per project instead of file)
             let length = projects |> Array.sumBy(fun p -> p.SourceFiles.Length)
             let indexPromises = Array.init length (fun _ -> new Tasks.TaskCompletionSource<_>())
-            Tasks.Task.Run(fun() ->
-                let mutable i = 0
+            let fetchIndexes = async {
+                let i = ref 0
                 let counter = ref 0
                 let processNavigableItemsInFile items = 
                     // TODO: consider using linear scan implementation of IIndexedNavigableItems if number of items is small
@@ -175,12 +175,10 @@ and
                     indexPromises.[!counter].SetResult(indexBuilder.BuildIndex())
                     incr counter
 
-                while i < projects.Length && not processProjectsCTS.IsCancellationRequested do
-                    do fsharpLanguageService.ProcessNavigableItemsInProject(openedDocuments, projects.[i], processNavigableItemsInFile, processProjectsCTS.Token)
-                       |> Async.RunSynchronously
-                    i <- i + 1
-            )
-            |> ignore
+                while !i < projects.Length && not processProjectsCTS.IsCancellationRequested do
+                    do! fsharpLanguageService.ProcessNavigableItemsInProject(openedDocuments, projects.[!i], processNavigableItemsInFile, processProjectsCTS.Token)
+                    incr i }
+            Async.Start fetchIndexes
             indexPromises |> Array.map (fun tcs -> tcs.Task)
 
     let runSearch(indexTasks: Tasks.Task<Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
