@@ -19,7 +19,7 @@
 
 #### 0.3.1 - February 25 2014
 * Fix the issue where multiple replacements are wrong if performed in a single line
-* Use Ctrl + R R key binding for rename refactoring
+* Use Ctrl + R, Ctrl + R key binding for rename refactoring
 
 #### 0.3.2 - February 26 2014
 * Fix the NRE when there is no project or solution
@@ -54,7 +54,7 @@
 #### 0.6.1 - April 14 2014
 * Fix the issue where rename refactoring is applied after cancelled by 'Esc'
 
-#### 1.0.0 - Unreleased
+#### 1.0.0 - April 26 2014
 * Implement Find all references
 * Improve robustness of XmlDoc generation
 * Improve performance on large solutions
