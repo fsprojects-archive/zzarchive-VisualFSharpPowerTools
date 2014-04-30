@@ -92,7 +92,10 @@ type SnapshotPoint with
         let startPos = x.Snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
         let endPos = x.Snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
         SnapshotSpan(x.Snapshot, startPos, endPos - startPos)
-    member x.InSpan (span: SnapshotSpan) = x.CompareTo span.Start >= 0 && x.CompareTo span.End <= 0
+    member x.InSpan (span: SnapshotSpan) = 
+        // The old snapshot might not be available anymore, we compare on updated snapshot
+        let point = x.TranslateTo(span.Snapshot, PointTrackingMode.Positive)
+        point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
 
 type SnapshotSpan with
     /// Return corresponding zero-based range

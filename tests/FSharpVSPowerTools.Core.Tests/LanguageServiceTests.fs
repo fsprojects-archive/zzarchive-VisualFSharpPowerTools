@@ -271,6 +271,55 @@ let ``should find usages of fully qualified record fields``() =
         [ (770, 9, 15) ]
           // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
 
+let getFirstSymbol line col lineStr symbolText =
+    let results = vsLanguageService.ParseAndCheckFileInProject(   
+                               projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.No)
+                  |> Async.RunSynchronously
+    results.GetSymbolUseAtLocation (line+1, col, lineStr, [symbolText])
+    |> Async.RunSynchronously
+
+[<Test; Ignore>]
+let ``should instantiate types correctly``() =
+    let symbolUse = getFirstSymbol 810 26 "              member x.Add(item: KeyValuePair<'K, 'V>): unit = " "Add"
+    let symbol = symbolUse.Value.Symbol :?> FSharpMemberFunctionOrValue
+    let genericType = symbol.FullType.GenericArguments.[0]
+    let genericSymbolUse = getFirstSymbol 779 15 "        { new IDictionary<'K, 'V> with" "IDictionary"
+    let genericParams = (genericSymbolUse.Value.Symbol :?> FSharpEntity).GenericParameters
+    let context = genericSymbolUse.Value.DisplayContext
+    let specificSymbolUse = getFirstSymbol 777 9 "    let x: KeyValuePair<string, int> = failwith \"\"" "x"
+    let specificType = (specificSymbolUse.Value.Symbol :?> FSharpMemberFunctionOrValue).FullType
+    let specificParams = specificType.GenericArguments
+    let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
+    printfn "Generic type: %A" genericType
+    printfn "Specific type: %A" specificType
+    printfn "Generic params: %A" genericParams
+    printfn "Specific params: %A" specificParams
+    printfn "Instantiated type: %A" instantiatedType
+    instantiatedType.Format context |> assertEqual (specificType.Format context)
+
+[<Test>]
+let ``should instantiate types on a single entity``() =
+    let symbolUse = getFirstSymbol 833 39 "        { new IDictionary<string, int> with" "IDictionary"
+    let context = symbolUse.Value.DisplayContext
+    let symbol = symbolUse.Value.Symbol :?> FSharpEntity
+    let entity = symbol.DeclaredInterfaces.[0].TypeDefinition
+    let genericParams = entity.GenericParameters
+    let specificParams = symbol.DeclaredInterfaces.[0].GenericArguments
+    let currentMember = entity.MembersFunctionsAndValues.[5]
+    let genericType = currentMember.FullType
+    let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
+    printfn "Checking member: %O" currentMember.DisplayName
+    printfn "Generic type: %A" genericType
+    printfn "Generic params: %A" genericParams
+    printfn "Specific params: %A" specificParams
+    printfn "Instantiated type: %A" instantiatedType
+    instantiatedType.Format context |> assertEqual "KeyValuePair<'TKey,'TValue> [] * int -> unit"
+
+#if INTERACTIVE
+``should instantiate types on a single entity``();;
+``should instantiate types correctly``();;
+#endif
+
 type ITempSource = 
     inherit System.IDisposable
     abstract FilePath: string
@@ -332,7 +381,7 @@ let ``ProcessParseTree should prefer open documents``() =
 let ``ProcessParseTree should react on cancellation``() =
     use f1 = tempSource "module Foo"
     let seen = ResizeArray()
-    let cts = new System.Threading.CancellationTokenSource();
+    let cts = new System.Threading.CancellationTokenSource()
     cts.Cancel()
     vsLanguageService.ProcessParseTrees(
         projectFileName,
