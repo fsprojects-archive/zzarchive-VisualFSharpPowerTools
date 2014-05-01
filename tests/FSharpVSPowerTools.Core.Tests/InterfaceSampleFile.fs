@@ -162,8 +162,8 @@ let _ =
 
 let _ =
     { new IComparer<'a> with
-        member x.Compare(x1: 'a, y: 'a): int = 
-            raise (System.NotImplementedException())
+          member x.Compare(x1: 'a, y: 'a): int = 
+              raise (System.NotImplementedException())
  }
 
 type IKeyword =
@@ -171,8 +171,8 @@ type IKeyword =
 
 type OKeyword =
     interface IKeyword with
-              member x.Method(``member``: int) (member1: int) (member2: int): unit = 
-                  raise (System.NotImplementedException())              
+        member x.Method(``member``: int) (member1: int) (member2: int): unit = 
+            raise (System.NotImplementedException())                     
 
 let xx =
     { new System.Collections.ICollection with
@@ -247,6 +247,7 @@ let _ =
                                   
                                   member x.GetEnumerator(): System.Collections.IEnumerator = 
                                       raise (System.NotImplementedException())
+                                  
   }
 }
 
