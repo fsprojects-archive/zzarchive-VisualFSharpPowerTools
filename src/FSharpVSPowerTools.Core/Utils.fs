@@ -166,7 +166,7 @@ type AsyncMaybeBuilder () =
                 this.Delay (fun () ->
                     body enum.Current)))
 
-[<RequireQualifiedAccess; CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AsyncMaybe =
     let liftMaybe (maybe: Option<'T>) : Async<_ option> =
         async { return maybe }
