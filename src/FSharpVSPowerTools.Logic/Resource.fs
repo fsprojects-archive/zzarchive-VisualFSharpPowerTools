@@ -29,6 +29,7 @@ module Resource =
     let newFolderDialogTitle = vsPackageTitle + " - New Folder"
     let renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
 
-    let [<Literal>] implementInterfaceErrorMessage = "All members of this interface have been implemented."
+    let [<Literal>] interfaceEmptyStatusMessage = "This interface has no member."
+    let [<Literal>] interfaceFilledStatusMessage = "All members of this interface have been implemented."
 
     let [<Literal>] findAllReferenceStatusMessage = "The caret must be on a valid expression to find all references."

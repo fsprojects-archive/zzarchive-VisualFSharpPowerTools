@@ -86,7 +86,7 @@ let getInterfaceStub typeParams line col lineStr idents =
         let entity = s.Symbol :?> FSharpEntity
         if InterfaceStubGenerator.isInterface entity then
             Some (InterfaceStubGenerator.formatInterface 0 4 typeParams 
-                    "x" "raise (System.NotImplementedException())" s.DisplayContext entity)
+                    "x" "raise (System.NotImplementedException())" s.DisplayContext Set.empty entity)
         else 
             None
     | _ -> None

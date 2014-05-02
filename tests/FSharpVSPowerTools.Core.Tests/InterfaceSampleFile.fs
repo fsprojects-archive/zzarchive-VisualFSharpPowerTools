@@ -162,8 +162,8 @@ let _ =
 
 let _ =
     { new IComparer<'a> with
-        member x.Compare(x1: 'a, y: 'a): int = 
-            raise (System.NotImplementedException())
+          member x.Compare(x1: 'a, y: 'a): int = 
+              raise (System.NotImplementedException())
  }
 
 type IKeyword =
@@ -172,16 +172,10 @@ type IKeyword =
 type OKeyword =
     interface IKeyword with
         member x.Method(``member``: int) (member1: int) (member2: int): unit = 
-            raise (System.NotImplementedException())
+            raise (System.NotImplementedException())                     
 
 let xx =
     { new System.Collections.ICollection with
-        member x.CopyTo(array: System.Array, index: int): unit = 
-            raise (System.NotImplementedException())
-        
-        member x.get_Count(): int = 
-            raise (System.NotImplementedException())
-        
         member x.get_SyncRoot(): obj = 
             raise (System.NotImplementedException())
         
@@ -190,16 +184,24 @@ let xx =
         
         member x.GetEnumerator(): System.Collections.IEnumerator = 
             raise (System.NotImplementedException())
+        
+        member x.CopyTo(array: System.Array, index: int): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.get_Count(): int = 
+            raise (System.NotImplementedException())
+        
  }
 
 let yy = { new IA<_> with
-    member x.M
-        with get (): 'a = 
-            raise (System.NotImplementedException())
-    
-    member x.N
-        with get (): 'a = 
-            raise (System.NotImplementedException())
+               member x.M
+                   with get (): 'a = 
+                       raise (System.NotImplementedException())
+               
+               member x.N
+                   with get (): 'a = 
+                       raise (System.NotImplementedException())
+               
 }
 
 let _ =
@@ -245,6 +247,7 @@ let _ =
                                   
                                   member x.GetEnumerator(): System.Collections.IEnumerator = 
                                       raise (System.NotImplementedException())
+                                  
   }
 }
 
@@ -253,7 +256,8 @@ module M =
 
     let _ = { new D with
                   member x.Dispose(): unit = 
-                      raise (System.NotImplementedException()) }
+                      raise (System.NotImplementedException())
+                   }
 
 type IWithUpperCaseArgs =
     abstract Method: Arg1: int -> ARg2: int -> aRg3: int -> arG4: int -> arg5: int -> arg2: int -> unit
@@ -278,11 +282,15 @@ type IWithProperties =
     abstract Item: v: int -> int with set
 
 let _ = { new IWithProperties with
-                  member x.Item
-                      with set (v: int) (v1: int): unit = 
-                          raise (System.NotImplementedException()) }
+              member x.Item
+                  with set (v: int) (v1: int): unit = 
+                      raise (System.NotImplementedException())
+                }
 
 let _ = { new IDictionary<string, int> with
+              member x.GetEnumerator(): System.Collections.IEnumerator = 
+                  raise (System.NotImplementedException())
+              
               member x.get_Item(key: string): int = 
                   raise (System.NotImplementedException())
               
@@ -331,8 +339,6 @@ let _ = { new IDictionary<string, int> with
               member x.GetEnumerator(): IEnumerator<KeyValuePair<string,int>> = 
                   raise (System.NotImplementedException())
               
-              member x.GetEnumerator(): System.Collections.IEnumerator = 
-                  raise (System.NotImplementedException())
                }
 
 type IMy<'a> = abstract Method: 'a -> unit
@@ -340,6 +346,7 @@ type IMy<'a> = abstract Method: 'a -> unit
 let _ = { new IMy<int option> with
               member x.Method(arg1: int option): unit = 
                   raise (System.NotImplementedException())
+               
                }
 
 let _ = { new IMy<Choice<int, string>> with
