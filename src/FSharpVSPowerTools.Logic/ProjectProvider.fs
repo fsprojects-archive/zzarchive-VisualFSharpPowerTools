@@ -158,7 +158,7 @@ module ProjectProvider =
     let getSymbolUsageScope (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
         let isPrivateToFile = 
             match symbol with 
-            | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || m.Accessibility.IsPrivate
+            | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
             | :? FSharpEntity as m -> m.Accessibility.IsPrivate
             | :? FSharpGenericParameter -> true
             | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
