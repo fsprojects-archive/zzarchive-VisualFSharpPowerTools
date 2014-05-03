@@ -219,7 +219,7 @@ member x.Method(``member``: int) (member1: int) (member2: int): unit =
 
 [<Test>]
 let ``should handle type alias``() =
-    checkInterfaceStub 254 19 "    let _ = { new D with" ["D"] """
+    checkInterfaceStub 257 19 "    let _ = { new D with" ["D"] """
 member x.Dispose(): unit = 
     raise (System.NotImplementedException())
 """
@@ -241,14 +241,14 @@ member x.GetEnumerator(): System.Collections.IEnumerator =
 
 [<Test>]
 let ``should fix leading upper case letter in argument names``() =
-    checkInterfaceStub 261 15 "let _ = { new IWithUpperCaseArgs with" ["IWithUpperCaseArgs"] """
+    checkInterfaceStub 265 15 "let _ = { new IWithUpperCaseArgs with" ["IWithUpperCaseArgs"] """
 member x.Method(arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg2: int): unit = 
     raise (System.NotImplementedException())
 """
 
 [<Test>]
 let ``should not collide argument names in setters``() =
-    checkInterfaceStub 280 15 "let _ = { new IWithProperties with" ["IWithProperties"] """
+    checkInterfaceStub 284 15 "let _ = { new IWithProperties with" ["IWithProperties"] """
 member x.Item
     with set (v: int) (v1: int): unit = 
         raise (System.NotImplementedException())
@@ -256,7 +256,7 @@ member x.Item
 
 [<Test>]
 let ``should replace generic parameters on interfaces``() =
-    checkInterfaceStubWith [|"string"; "int"|] 285 15 "let _ = { new IDictionary<string, int> with" ["IDictionary"] """
+    checkInterfaceStubWith [|"string"; "int"|] 290 15 "let _ = { new IDictionary<string, int> with" ["IDictionary"] """
 member x.get_Item(key: string): int = 
     raise (System.NotImplementedException())
 
@@ -311,21 +311,21 @@ member x.GetEnumerator(): System.Collections.IEnumerator =
 
 [<Test>]
 let ``should replace generic parameters for postfix type application``() =
-    checkInterfaceStub 340 15 "let _ = { new IMy<int option> with" ["IMy"] """
+    checkInterfaceStub 346 15 "let _ = { new IMy<int option> with" ["IMy"] """
 member x.Method(arg1: int option): unit = 
     raise (System.NotImplementedException())
 """
 
 [<Test>]
 let ``should replace generic parameters for prefix type application``() =
-    checkInterfaceStub 345 15 "let _ = { new IMy<Choice<int, string>> with" ["IMy"] """
+    checkInterfaceStub 352 15 "let _ = { new IMy<Choice<int, string>> with" ["IMy"] """
 member x.Method(arg1: Choice<int, string>): unit = 
     raise (System.NotImplementedException())
 """
 
 [<Test>]
 let ``should replace generic parameters for tuple types``() =
-    checkInterfaceStub 349 15 "let _ = { new IMy<int * int> with" ["IMy"] """
+    checkInterfaceStub 356 15 "let _ = { new IMy<int * int> with" ["IMy"] """
 member x.Method(arg1: int * int): unit = 
     raise (System.NotImplementedException())
 """
