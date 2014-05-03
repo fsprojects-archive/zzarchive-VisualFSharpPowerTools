@@ -64,9 +64,9 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         elif f.Accessibility.IsPublic then PublicField 
         else Other
 
-    | :? FSharpEntity as e ->
+    | :? FSharpEntity as entity ->
         //debug "%A (type: %s)" e (e.GetType().Name)
-        let e, ty = getEntityAbbreviatedType e
+        let e, ty = getEntityAbbreviatedType entity
         if e.IsEnum || e.IsValueType then ValueType
         elif 
            // FCS returns two FSharpSymbolUse for each type provider declaration.
@@ -74,7 +74,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
            // "XmlProvider" (which is the right one) and "XmlProvider<"<root>1<root>">".
            // CompiledName of the latter differs from its DisplayName, so we can filter it out. 
            // Ideally, FCS should not return the long symbol use at all.
-           (e.IsClass && (not (isProvidedType e) || e.CompiledName = e.DisplayName))
+           (e.IsClass && (entity.IsFSharpAbbreviation || not (isProvidedType e) || e.CompiledName = e.DisplayName))
            || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure 
            || ((e.IsProvided || e.IsProvidedAndErased || e.IsProvidedAndGenerated) && e.CompiledName = e.DisplayName)
