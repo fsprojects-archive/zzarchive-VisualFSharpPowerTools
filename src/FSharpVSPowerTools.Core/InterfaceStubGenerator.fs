@@ -441,24 +441,18 @@ module InterfaceStubGenerator =
     let internal (|IndexerArgList|) xs =
         List.collect (|IndexerArg|) xs
 
-    let internal inRange (r: range) pos = 
-        if posEq r.Start r.End then
-            posGeq pos r.Start && posGeq r.End pos
-        else
-            posGeq pos r.Start && posGeq r.End pos
-
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =
         let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
             List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
         and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, range)) =
-            if not <| inRange range pos then
+            if not <| rangeContainsPos range pos then
                 None
             else
                 List.tryPick walkSynModuleDecl decls
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
-            if not <| inRange decl.Range pos then
+            if not <| rangeContainsPos decl.Range pos then
                 None
             else
                 match decl with
@@ -482,14 +476,14 @@ module InterfaceStubGenerator =
                     None
 
         and walkSynTypeDefn(TypeDefn(_componentInfo, representation, members, range)) = 
-            if not <| inRange range pos then
+            if not <| rangeContainsPos range pos then
                 None
             else
                 walkSynTypeDefnRepr representation
                 |> Option.orElse (List.tryPick walkSynMemberDefn members)        
 
         and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
-            if not <| inRange typeDefnRepr.Range pos then
+            if not <| rangeContainsPos typeDefnRepr.Range pos then
                 None
             else
                 match typeDefnRepr with
@@ -499,7 +493,7 @@ module InterfaceStubGenerator =
                     None
 
         and walkSynMemberDefn (memberDefn: SynMemberDefn) =
-            if not <| inRange memberDefn.Range pos then
+            if not <| rangeContainsPos memberDefn.Range pos then
                 None
             else
                 match memberDefn with
@@ -508,7 +502,7 @@ module InterfaceStubGenerator =
                 | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, expr, _r1, _r2) ->
                     walkExpr expr
                 | SynMemberDefn.Interface(interfaceType, members, _range) ->
-                    if inRange interfaceType.Range pos then
+                    if rangeContainsPos interfaceType.Range pos then
                         Some(InterfaceData.Interface(interfaceType, members))
                     else
                         Option.bind (List.tryPick walkSynMemberDefn) members
@@ -530,7 +524,7 @@ module InterfaceStubGenerator =
             walkExpr expr
 
         and walkExpr expr =
-            if not <| inRange expr.Range pos then 
+            if not <| rangeContainsPos expr.Range pos then 
                 None
             else
                 match expr with
@@ -558,11 +552,11 @@ module InterfaceStubGenerator =
                 | SynExpr.ObjExpr(ty, baseCallOpt, binds, ifaces, _range1, _range2) -> 
                     match baseCallOpt with
                     | None -> 
-                        if inRange ty.Range pos then
+                        if rangeContainsPos ty.Range pos then
                             Some (InterfaceData.ObjExpr(ty, binds))
                         else
                             ifaces |> List.tryPick (fun (InterfaceImpl(ty, binds, range)) ->
-                                if inRange range pos then 
+                                if rangeContainsPos range pos then 
                                     Some (InterfaceData.ObjExpr(ty, binds))
                                 else None)
                     | Some _ -> 
