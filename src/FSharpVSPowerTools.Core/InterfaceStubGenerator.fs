@@ -441,8 +441,11 @@ module InterfaceStubGenerator =
     let internal (|IndexerArgList|) xs =
         List.collect (|IndexerArg|) xs
 
-    let internal inRange range pos = 
-        AstTraversal.rangeContainsPosLeftEdgeInclusive range pos
+    let internal inRange (r: range) pos = 
+        if posEq r.Start r.End then
+            posGeq pos r.Start && posGeq r.End pos
+        else
+            posGeq pos r.Start && posGeq r.End pos
 
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =
         let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
