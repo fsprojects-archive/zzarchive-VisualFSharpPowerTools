@@ -52,10 +52,11 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                 |> Option.map (fun iface -> 
                     let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
                     let endPosOfWidth =
-                        tokens |> List.tryPick (fun (t: TokenInformation) ->
-                                    if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column && t.TokenName = "WITH" then
-                                        Some (Pos.fromZ line (t.RightColumn + 1))
-                                    else None)
+                        tokens 
+                        |> List.tryPick (fun (t: TokenInformation) ->
+                                if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column && t.TokenName = "WITH" then
+                                    Some (Pos.fromZ line (t.RightColumn + 1))
+                                else None)
                     { InterfaceData = iface; EndPosOfWith = endPosOfWidth; Tokens = tokens })
             return data
         }
@@ -107,25 +108,24 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         lineStr.Length - lineStr.TrimStart(' ').Length
 
     let inferStartColumn indentSize state = 
-        match state.InterfaceData with
-        | InterfaceData.Interface(_, Some (m :: _)) ->
-            let lineStr = buffer.CurrentSnapshot.GetLineFromLineNumber(m.Range.StartLine-1).GetText()
+        match InterfaceStubGenerator.getMemberNameAndRanges state.InterfaceData with
+        | (_, range) :: _ ->
+            let lineStr = buffer.CurrentSnapshot.GetLineFromLineNumber(range.StartLine-1).GetText()
             getLineIdent lineStr
-        | InterfaceData.Interface _ as iface ->
-            // 'interface ISomething with' is often in a new line, we use the indentation of that line
-            let lineStr = buffer.CurrentSnapshot.GetLineFromLineNumber(iface.Range.StartLine-1).GetText()
-            getLineIdent lineStr + indentSize
-        | InterfaceData.ObjExpr(_, b :: _) -> 
-            let lineStr = buffer.CurrentSnapshot.GetLineFromLineNumber(b.RangeOfBindingSansRhs.StartLine-1).GetText()
-            getLineIdent lineStr
-        | InterfaceData.ObjExpr _ as iface ->
-            state.Tokens 
-            |> List.tryPick (fun (t: TokenInformation) ->
-                        if t.CharClass = TokenCharKind.Keyword && t.TokenName = "NEW" then
-                            Some (t.LeftColumn + indentSize)
-                        else None)
-            // There is no reference point, we indent the content at the start column of the interface
-            |> Option.getOrElse iface.Range.StartColumn
+        | [] ->
+            match state.InterfaceData with
+            | InterfaceData.Interface _ as iface ->
+                // 'interface ISomething with' is often in a new line, we use the indentation of that line
+                let lineStr = buffer.CurrentSnapshot.GetLineFromLineNumber(iface.Range.StartLine-1).GetText()
+                getLineIdent lineStr + indentSize
+            | InterfaceData.ObjExpr _ as iface ->
+                state.Tokens 
+                |> List.tryPick (fun (t: TokenInformation) ->
+                            if t.CharClass = TokenCharKind.Keyword && t.TokenName = "NEW" then
+                                Some (t.LeftColumn + indentSize)
+                            else None)
+                // There is no reference point, we indent the content at the start column of the interface
+                |> Option.getOrElse iface.Range.StartColumn
 
     // Check whether the interface is empty
     let shouldImplementInterface _interfaceState (entity: FSharpEntity) =
@@ -169,7 +169,8 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                                 | Some s -> s.Start.GetContainingLine().GetText()
                                 | None -> String.Empty
                             results.GetSymbolUseAtLocation(range.StartLine, range.EndColumn, lineStr, [name])
-                        let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures getMemberByLocation displayContext state.InterfaceData
+                        let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures 
+                                                               getMemberByLocation displayContext state.InterfaceData
                         return handleImplementInterface span state displayContext implementedMemberSignatures entity
                     }
                     |> Async.StartImmediate
