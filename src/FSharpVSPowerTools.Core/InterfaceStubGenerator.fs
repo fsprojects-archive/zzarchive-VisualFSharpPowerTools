@@ -337,56 +337,57 @@ module InterfaceStubGenerator =
     let hasNoInterfaceMember e =
         getInterfaceMembers e |> Seq.isEmpty
 
+    let internal (|LongIdentPattern|_|) = function
+        | SynPat.LongIdent(LongIdentWithDots(xs, _), _, _, _, _, _) ->
+            let (name, range) = xs |> Seq.map (fun x -> x.idText, x.idRange) |> Seq.last
+            Some(name, range)
+        | _ -> 
+            None
+
+    let internal (|MemberNameAndRange|_|) = function
+        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, LongIdentPattern(name, range), _retTy, _expr, _bindingRange, _seqPoint) ->
+            Some(name, range)
+        | _ ->
+            None
+
+    /// Get associated member names and ranges
+    /// In case of properties, intrinsic ranges might not be correct for the purpose of getting
+    /// positions of 'member', which indicate the indentation for generating new members
+    let getMemberNameAndRanges = function
+        | InterfaceData.Interface(_, None) -> 
+            []
+        | InterfaceData.Interface(_, Some memberDefns) -> 
+            memberDefns
+            |> Seq.choose (function (SynMemberDefn.Member(binding, _)) -> Some binding | _ -> None)
+            |> Seq.choose (|MemberNameAndRange|_|)
+            |> Seq.toList
+        | InterfaceData.ObjExpr(_, bindings) -> 
+            List.choose (|MemberNameAndRange|_|) bindings
+
     /// Ideally this info should be returned in error symbols from FCS
     /// Because it isn't, we implement a crude way of getting member signatures:
     ///  (1) Crack ASTs to get member names and their associated ranges
     ///  (2) Check symbols of those members based on ranges
     ///  (3) If any symbol found, capture its member signature 
     let getImplementedMemberSignatures (getMemberByLocation: string * range -> Async<FSharpSymbolUse option>) displayContext interfaceData = 
-        let (|LongIdentPattern|_|) = function
-            | SynPat.LongIdent(LongIdentWithDots(xs, _), _, _, _, _, _) ->
-                let (name, range) = xs |> Seq.map (fun x -> x.idText, x.idRange) |> Seq.last
-                Some(name, range)
-            | _ -> 
-                None
-
-        let (|MemberNameAndRange|_|) = function
-            | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, LongIdentPattern(name, range), _retTy, _expr, _bindingRange, _seqPoint) ->
-                Some(name, range)
-            | _ ->
-                None
-
         let formatMemberSignature (symbolUse: FSharpSymbolUse) =
             Debug.Assert(symbolUse.Symbol :? FSharpMemberFunctionOrValue, "Only accept symbol use of members.")
-            let m = symbolUse.Symbol :?> FSharpMemberFunctionOrValue
-            try 
+            try
+                let m = symbolUse.Symbol :?> FSharpMemberFunctionOrValue 
                 let signature = sprintf "%s:%s" m.DisplayName (m.FullType.Format(displayContext))
                 Some (signature.Replace(" ", ""))
             with _ ->
                 None
         async {
-            match interfaceData with
-            | InterfaceData.Interface(_, None) -> 
-                return Set.empty
-            | InterfaceData.Interface(_, Some memberDefns) -> 
-                let! symbolUses =
-                    memberDefns
-                    |> Seq.choose (function (SynMemberDefn.Member(binding, _)) -> Some binding | _ -> None)
-                    |> Seq.choose (|MemberNameAndRange|_|)
-                    |> Seq.map getMemberByLocation
-                    |> Async.Parallel
-                return symbolUses |> Seq.choose (Option.bind formatMemberSignature)
-                                  |> Set.ofSeq
-            | InterfaceData.ObjExpr(_, bindings) -> 
-                let! symbolUses =
-                    bindings
-                    |> Seq.choose (|MemberNameAndRange|_|)
-                    |> Seq.map getMemberByLocation
-                    |> Async.Parallel
-                return symbolUses |> Seq.choose (Option.bind formatMemberSignature)
-                                  |> Set.ofSeq
+            let! symbolUses = 
+                getMemberNameAndRanges interfaceData
+                |> Seq.map getMemberByLocation
+                |> Async.Parallel
+            return symbolUses |> Seq.choose (Option.bind formatMemberSignature)
+                              |> Set.ofSeq
         }
 
+    /// Check whether an entity is an interface or type abbreviation of an interface
     let rec isInterface (e: FSharpEntity) =
         e.IsInterface || (e.IsFSharpAbbreviation && isInterface e.AbbreviatedType.TypeDefinition)
 
