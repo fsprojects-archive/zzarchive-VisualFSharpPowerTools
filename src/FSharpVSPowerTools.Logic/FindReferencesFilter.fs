@@ -26,6 +26,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     let getDocumentState() =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            dte.Documents.SaveAll()
             let projectItems = maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetActiveDocument()

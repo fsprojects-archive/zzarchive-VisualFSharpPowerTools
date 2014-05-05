@@ -34,8 +34,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                //let leafProjects = getLeafProjects dte (dte.GetActiveDocument().Value.ProjectItem.ContainingProject)
-                //leafProjects |> List.map (fun p -> p.UniqueName) |> debug "Leaf dependent projects: %A"
+                dte.Documents.SaveAll()
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
