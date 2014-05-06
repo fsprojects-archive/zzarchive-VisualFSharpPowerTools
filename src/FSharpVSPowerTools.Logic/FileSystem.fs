@@ -5,6 +5,7 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.Text
 open System.IO
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.VisualStudio.Text
 
 type Version = int
 
@@ -17,8 +18,9 @@ type FileSystem (openDocumentsTracker: OpenDocumentsTracker) =
             
     let getOpenDocContent (fileName: string) =
         openDocumentsTracker.TryFindOpenDocument fileName
-        |> Option.map (fun snapshot -> snapshot.GetText())
-        |> Option.map Encoding.UTF8.GetBytes
+        |> Option.map (fun snapshot -> 
+            let textDoc = snapshot.TextBuffer.Properties.[typeof<ITextDocument>] :?> ITextDocument
+            snapshot.GetText() |> textDoc.Encoding.GetBytes)
 
     interface IFileSystem with
         // Implement the service to open files for reading and writing
