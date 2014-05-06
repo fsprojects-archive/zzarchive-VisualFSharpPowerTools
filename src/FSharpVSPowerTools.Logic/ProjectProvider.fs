@@ -119,14 +119,7 @@ module ProjectProvider =
 
             member x.GetProjectCheckerOptions languageService =
                 let x = x :> IProjectProvider
-                let hasDirtyFiles = 
-                    project.DTE.Documents
-                    |> Seq.cast<Document> 
-                    |> Seq.exists (fun doc -> (not doc.Saved) && sourceFiles() |> Array.exists (fun sf -> sf = doc.FullName))
-
-                async {
-                    return languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions, hasDirtyFiles)
-                }
+                async { return languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions) }
                             
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")

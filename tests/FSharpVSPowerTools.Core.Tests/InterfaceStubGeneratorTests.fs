@@ -21,7 +21,6 @@ let fileName = Path.Combine(__SOURCE_DIRECTORY__, "InterfaceSampleFile.fs")
 let source = File.ReadAllText(fileName)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 
-let sourceFiles = [| fileName |]
 let args = 
   [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
@@ -34,7 +33,7 @@ let args =
 
 let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
-let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, false) 
+let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], args) 
 
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()

@@ -188,7 +188,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           
       // We are in a project - construct options using current properties
       else
-        async { return x.GetProjectCheckerOptions(projFilename, files, args, false) }
+        async { return x.GetProjectCheckerOptions(projFilename, files, args) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
@@ -225,7 +225,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       }
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
-  member x.GetProjectCheckerOptions(projFilename, files, args, reload) =
+  member x.GetProjectCheckerOptions(projFilename, files, args) =
     // We are in a project - construct options using current properties
     //Debug.WriteLine (sprintf "GetProjectCheckerOptions: Creating for project '%s'" projFilename )
 
@@ -234,7 +234,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       ProjectOptions = args
       IsIncompleteTypeCheckEnvironment = false
       UseScriptResolutionRules = false
-      LoadTime = if reload then DateTime.Now else fakeDateTimeRepresentingTimeLoaded projFilename
+      LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
       UnresolvedReferences = None
       ReferencedProjects = [||] }
 

@@ -1,53 +1,49 @@
 ﻿namespace FSharpVSPowerTools
 
+open System
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
-open EnvDTE
 open System.Text
 open System.IO
+open FSharpVSPowerTools.ProjectSystem
 
-type FileSystem (dte: DTE) =
+type Version = int
+
+type FileSystem (openDocumentsTracker: OpenDocumentsTracker) =
     static let defaultFileSystem = Shim.FileSystem
 
-    let getDirtyDoc (fileName: string) =
-        maybe {
-            let openDocs = dte.Documents |> Seq.cast<Document> |> Seq.map (fun doc -> doc, doc.FullName, doc.Saved) |> Seq.toList
-            let! doc, _, _ = openDocs |> List.tryFind (fun (_, fullName, saved) -> fullName = fileName && not saved)
-            return doc
-        }
-
-    let getDirtyFileContent (fileName: string) =
-        maybe {
-            let! doc = getDirtyDoc fileName
-            let textDoc = doc.Object("TextDocument") :?> TextDocument
-            return textDoc.StartPoint.CreateEditPoint().GetText(textDoc.EndPoint) }
-
-    let getDirtyFileBinaryContent fileName =
-        debug "[VFS] Getting %s content..." fileName
-        getDirtyFileContent fileName |> Option.map Encoding.UTF8.GetBytes
+    let getOpenDocVersion (fileName: string) =
+        openDocumentsTracker.TryFindOpenDocument fileName
+        |> Option.map (fun snapshot -> snapshot.Version.VersionNumber)
+            
+    let getOpenDocContent (fileName: string) =
+        openDocumentsTracker.TryFindOpenDocument fileName
+        |> Option.map (fun snapshot -> snapshot.GetText())
+        |> Option.map Encoding.UTF8.GetBytes
 
     interface IFileSystem with
         // Implement the service to open files for reading and writing
         member x.FileStreamReadShim fileName = 
-            match getDirtyFileBinaryContent fileName with
-            | Some bytes -> new MemoryStream (bytes) :> _
-            | _ -> defaultFileSystem.FileStreamReadShim fileName
+            getOpenDocContent fileName
+            |> Option.map (fun bytes -> new MemoryStream (bytes) :> Stream)
+            |> Option.getOrElse (defaultFileSystem.FileStreamReadShim fileName)
 
         member x.FileStreamCreateShim fileName = defaultFileSystem.FileStreamCreateShim fileName
         member x.FileStreamWriteExistingShim fileName = defaultFileSystem.FileStreamWriteExistingShim fileName
         
         member x.ReadAllBytesShim fileName =
-            getDirtyFileBinaryContent fileName |> Option.getOrElse (defaultFileSystem.ReadAllBytesShim fileName)
+            getOpenDocContent fileName |> Option.getOrElse (defaultFileSystem.ReadAllBytesShim fileName)
         
         // Implement the service related to temporary paths and file time stamps
         member x.GetTempPathShim() = defaultFileSystem.GetTempPathShim()
+        
         member x.GetLastWriteTimeShim fileName =
-            match getDirtyFileContent fileName with
-            | Some content -> 
-                let h = hash content
-                let dt = System.DateTime(abs (int64 h % 103231L))
+            match getOpenDocVersion fileName with
+            | Some ver ->
+                let dt = DateTime (int64 ver)
                 debug "[VFS] %s: %d" fileName dt.Ticks
                 dt
-            | _ -> defaultFileSystem.GetLastWriteTimeShim fileName
+            | None -> defaultFileSystem.GetLastWriteTimeShim fileName
+        
         member x.GetFullPathShim fileName = defaultFileSystem.GetFullPathShim fileName
         member x.IsInvalidPathShim fileName = defaultFileSystem.IsInvalidPathShim fileName
         member x.IsPathRootedShim fileName = defaultFileSystem.IsPathRootedShim fileName

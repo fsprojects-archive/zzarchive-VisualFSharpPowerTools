@@ -43,3 +43,5 @@ type OpenDocumentsTracker
     member x.MapOpenDocuments f = 
         // use current collection snapshot
         Seq.map f openDocuments
+
+    member x.TryFindOpenDocument path = Map.tryFind path openDocuments
