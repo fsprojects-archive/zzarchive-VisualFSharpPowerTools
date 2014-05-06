@@ -6,6 +6,7 @@ open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.FSharp.Compiler.Ast
 
 // --------------------------------------------------------------------------------------
@@ -322,29 +323,32 @@ type LanguageService (dirtyNotify) =
         return! projectResults.GetUsesOfSymbol(symbol)
     }
 
+  
+
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions seq, 
                                                     fileName, source, line:int, col, lineStr, args, queryLexState) =
-     async { 
-         match Lexer.getSymbol source line col lineStr args queryLexState with
-         | Some symbol ->
-             let! projectCheckResults = x.ParseAndCheckFileInProject(currentProjectOptions, fileName, source, AllowStaleResults.MatchingSource)
-             let! result = projectCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
-             match result with
-             | Some fsSymbolUse ->
-                 let! refs =
-                    dependentProjectsOptions
-                    |> Seq.map (fun opts ->
-                          async {
-                            let! projectResults = checker.ParseAndCheckProject opts
-                            let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
-                            debug "--> GetUsesOfSymbol: Project = %s, Opts = %A, Results = %A" opts.ProjectFileName opts refs
-                            return refs })
-                    |> Async.Parallel
-                 let refs = Array.concat refs
-                 return Some(fsSymbolUse.Symbol, symbol.Text, refs)
-             | None -> return None
-         | None -> return None 
+     asyncMaybe { 
+         let! symbol = Lexer.getSymbol source line col lineStr args queryLexState |> liftMaybe
+         let! projectCheckResults = 
+            liftAsync (x.ParseAndCheckFileInProject(currentProjectOptions, fileName, source, AllowStaleResults.No))
+         let! fsSymbolUse = projectCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
+         let! _, _, symbolUsesInCurrentFile = 
+            projectCheckResults.GetUsesOfSymbolInFileAtLocation(line, symbol.RightColumn, lineStr, symbol.Text)
+  
+         let! refs =
+             dependentProjectsOptions
+             |> Seq.map (fun opts ->
+                  async {
+                    let! projectResults = checker.ParseAndCheckProject opts
+                    let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
+                    debug "--> GetUsesOfSymbol: Project = %s, Opts = %A, Results = %A" opts.ProjectFileName opts refs
+                    return refs |> Array.filter (fun su -> su.FileName <> fileName)
+                  })
+             |> Async.Parallel
+             |> liftAsync
+         let refs = Array.append symbolUsesInCurrentFile (Array.concat refs)
+         return fsSymbolUse.Symbol, symbol.Text, refs
      }
 
   member x.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)

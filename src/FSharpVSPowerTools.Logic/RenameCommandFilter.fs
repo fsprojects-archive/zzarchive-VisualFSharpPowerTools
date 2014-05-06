@@ -34,7 +34,6 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                dte.Documents.SaveAll()
                 let! doc = dte.GetActiveDocument()
                 let! project = ProjectProvider.createForDocument doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
@@ -85,6 +84,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
                     // in order to by able to make accurate symbol comparisons during renaming.
                     vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
+                
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -105,6 +105,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                                 | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
                                 | SymbolDeclarationLocation.Projects declarationProjects -> 
                                     let dependentProjects = ProjectProvider.getDependentProjects dte declarationProjects
+                                    ProjectProvider.saveOpenDocuments dte dependentProjects
                                     vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects)
                             let usages =
                                 results

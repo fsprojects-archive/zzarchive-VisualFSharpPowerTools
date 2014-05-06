@@ -26,7 +26,6 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     let getDocumentState() =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            dte.Documents.SaveAll()
             let projectItems = maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetActiveDocument()
@@ -55,8 +54,8 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                                     if allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName) 
                                     then allProjects 
                                     else project :: allProjects
-    
-                            vsLanguageService.FindUsages (span, file, project, projectsToCheck) 
+                            ProjectProvider.saveOpenDocuments dte projectsToCheck
+                            vsLanguageService.FindUsages (span, file, project, projectsToCheck)
                     return res |> Option.map (fun (_, _, refs) -> refs, sym)
                 | _ -> return None
             | _ -> return None
