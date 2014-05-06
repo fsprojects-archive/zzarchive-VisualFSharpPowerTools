@@ -8,6 +8,8 @@ open Fake.Git
 open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open System
+open System.IO
+open System.Text.RegularExpressions
 
 // --------------------------------------------------------------------------------------
 // START TODO: Provide project-specific details below
@@ -103,9 +105,9 @@ Target "Build" (fun _ ->
 
 Target "CleanVSIX" (fun _ ->
     ZipHelper.Unzip "bin/vsix" "bin/FSharpVSPowerTools.vsix"
-    let regex = System.Text.RegularExpressions.Regex("bin")
+    let regex = Regex("bin")
     let filesToKeep =
-      System.IO.Directory.GetFiles("bin", "*.dll")
+      Directory.GetFiles("bin", "*.dll")
       |> Seq.map (fun fileName -> regex.Replace(fileName, "bin/vsix", 1))
     let filesToDelete = 
       Seq.fold (--) (!! "bin/vsix/*.dll") filesToKeep
@@ -115,7 +117,6 @@ Target "CleanVSIX" (fun _ ->
     DeleteFiles filesToDelete
     ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
 )
-
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
@@ -192,10 +193,12 @@ Target "All" DoNothing
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
-  ==> "CleanVSIX"
   ==> "UnitTests"
   ==> "IntegrationTests"
   ==> "Main"
+
+"Build"
+  ==> "CleanVSIX"
 
 "Main"
   =?> ("ExtraIntegrationTests", isLocalBuild)
