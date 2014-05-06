@@ -40,7 +40,7 @@ let isFSharpProject (project: EnvDTE.Project) =
     project <> null && project.Kind <> null && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
 
 let isPhysicalFolderKind (kind: string) =
-    kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFolder, StringComparison.OrdinalIgnoreCase)
+    kind. Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFolder, StringComparison.OrdinalIgnoreCase)
 
 let isPhysicalFileKind (kind: string) =
     kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFile, StringComparison.OrdinalIgnoreCase)
@@ -190,18 +190,6 @@ type ProjectItem with
         Option.ofNull x
         |> Option.bind (fun item ->
             try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
-
-    member x.TryGetProperty name = 
-        let property = x.Properties |> Seq.cast<Property> |> Seq.tryFind (fun p -> p.Name = name)
-        match property with
-        | Some p -> Some (p.Value :?> string)
-        | None -> None
-
-    member x.GetProperty name = 
-        let property = x.TryGetProperty name
-        match property with
-        | Some p -> p
-        | None -> raise(new ArgumentException("name"))
 
 type Project with
     member x.GetReferencedProjects() = 

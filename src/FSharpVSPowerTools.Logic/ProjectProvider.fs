@@ -190,3 +190,18 @@ module ProjectProvider =
         |> Seq.distinctBy (fun p -> p.ProjectFileName.ToLower())
         |> Seq.toList
 
+    /// Saves all open documents that belong to the given projects.
+    let saveOpenDocuments (dte: DTE) (projects: IProjectProvider seq) =
+        let saveDocuments (files: Set<FilePath>) =
+            dte.Documents
+            |> Seq.cast<Document>
+            |> Seq.filter (fun doc -> files |> Set.contains doc.FullName)
+            |> Seq.iter (fun doc -> 
+                if not doc.Saved then
+                    doc.Save() |> debug "%s has been saved (%O)" doc.FullName)
+    
+        projects
+        |> Seq.map (fun p -> p.SourceFiles) 
+        |> Seq.concat
+        |> Set.ofSeq
+        |> saveDocuments
