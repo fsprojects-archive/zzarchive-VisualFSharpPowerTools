@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
@@ -58,6 +58,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.Integrat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.Tests", "tests\FSharpVSPowerTools.Tests\FSharpVSPowerTools.Tests.csproj", "{11D1DE7D-B08F-4524-BBB5-D729223F0396}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.Breadcrumb", "src\FSharpVSPowerTools.Breadcrumb\FSharpVSPowerTools.Breadcrumb.csproj", "{5EFFEE52-FFB3-463F-9C78-E16608C83DB6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -92,6 +94,10 @@ Global
 		{11D1DE7D-B08F-4524-BBB5-D729223F0396}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{11D1DE7D-B08F-4524-BBB5-D729223F0396}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{11D1DE7D-B08F-4524-BBB5-D729223F0396}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EFFEE52-FFB3-463F-9C78-E16608C83DB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EFFEE52-FFB3-463F-9C78-E16608C83DB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EFFEE52-FFB3-463F-9C78-E16608C83DB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EFFEE52-FFB3-463F-9C78-E16608C83DB6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) Microsoft Open Technologies, Inc.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="FSharpVSPowerTools.68b42cfe-c752-4094-8dba-ed48aa81cac8" Version="0.1" Language="en-US" Publisher="MSOPENTECH" />
+    <DisplayName>FSharpVSPowerTools.Breadcrumb</DisplayName>
+    <Description xml:space="preserve">This package deploys a breadcrumb that will allow the VS Gallery to issue update notifications for the FSharpVSPowerTools.  
+
+It is intended to be deployed with the Visual FSharp Tools Installer.</Description>
+    <License>License.txt</License>
+    <Icon>logo.png</Icon>
+    <PreviewImage>preview.png</PreviewImage>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[12.0,13.0]" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+  </Dependencies>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="File" Path="source.extension.vsixmanifest" />
+  </Assets>
+</PackageManifest>
