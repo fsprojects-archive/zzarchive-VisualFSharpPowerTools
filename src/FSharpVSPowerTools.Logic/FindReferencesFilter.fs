@@ -35,7 +35,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
             match projectItems with
             | Some (file, project, span, sym) ->
-                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, sym, file, project, AllowStaleResults.No)
+                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, sym, file, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
                 | Some (symbolUse, fileScopedCheckResults) ->
                     let! res = 

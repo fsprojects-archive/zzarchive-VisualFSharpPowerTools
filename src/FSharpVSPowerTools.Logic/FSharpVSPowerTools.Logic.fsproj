@@ -65,6 +65,7 @@
     <Compile Include="ThemeManager.fs" />
     <Compile Include="ProjectSystem.fs" />
     <Compile Include="ProjectProvider.fs" />
+    <Compile Include="FileSystem.fs" />
     <Compile Include="VSLanguageService.fs" />
     <Compile Include="OpenDocumentsTracker.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />

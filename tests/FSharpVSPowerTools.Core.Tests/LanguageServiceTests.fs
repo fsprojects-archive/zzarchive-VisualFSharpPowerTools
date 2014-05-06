@@ -32,7 +32,8 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, false)
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
 
@@ -68,10 +69,8 @@ let allUsesOfAllSymbols =
 //allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
 
-let getUsesOfSymbol line col lineStr =
-    vsLanguageService.GetUsesOfSymbolAtLocationInFile(projectFileName, fileName, source, sourceFiles, 
-                                                      line, col, lineStr, args, framework, AllowStaleResults.No, 
-                                                      Lexer.queryLexState)
+let getUsesOfSymbol line col lineStr = 
+    languageService.GetUsesOfSymbolAtLocationInFile(opts, fileName, source, line, col, lineStr, args, AllowStaleResults.No, Lexer.queryLexState)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, symbolUses) -> 
         symbolUses |> Array.map (fun x -> 
@@ -272,10 +271,9 @@ let ``should find usages of fully qualified record fields``() =
           // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
 
 let getFirstSymbol line col lineStr symbolText =
-    let results = vsLanguageService.ParseAndCheckFileInProject(   
-                               projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.No)
-                  |> Async.RunSynchronously
-    results.GetSymbolUseAtLocation (line+1, col, lineStr, [symbolText])
+    async {
+        let! results = languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No)
+        return! results.GetSymbolUseAtLocation (line+1, col, lineStr, [symbolText]) }
     |> Async.RunSynchronously
 
 [<Test; Ignore>]
@@ -339,7 +337,7 @@ let ``ProcessParseTree should be called for all files in project``() =
     use f1 = tempSource "module M1"
     use f2 = tempSource "module M2"
     let seen = ResizeArray()
-    vsLanguageService.ProcessParseTrees(
+    languageService.ProcessParseTrees(
         projectFileName, 
         Map.empty, 
         [| f1.FilePath; f2.FilePath |], 
@@ -356,7 +354,7 @@ let ``ProcessParseTree should be called for all files in project``() =
 let ``ProcessParseTree should prefer open documents``() =
     use f1 = tempSource "module Foo"
     let seen = ResizeArray()
-    vsLanguageService.ProcessParseTrees(
+    languageService.ProcessParseTrees(
         projectFileName,
         [f1.FilePath, "module Bar"] |> Map.ofList, 
         [| f1.FilePath|], 
@@ -383,7 +381,7 @@ let ``ProcessParseTree should react on cancellation``() =
     let seen = ResizeArray()
     let cts = new System.Threading.CancellationTokenSource()
     cts.Cancel()
-    vsLanguageService.ProcessParseTrees(
+    languageService.ProcessParseTrees(
         projectFileName,
         Map.empty, 
         [| f1.FilePath|], 

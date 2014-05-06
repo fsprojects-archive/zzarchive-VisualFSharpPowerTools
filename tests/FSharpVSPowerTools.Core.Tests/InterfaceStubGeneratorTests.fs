@@ -34,6 +34,8 @@ let args =
 
 let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, false) 
+
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
 
@@ -71,7 +73,7 @@ allUsesOfAllSymbols |> List.iter (printfn "%A")
 
 let getInterfaceStub typeParams line col lineStr idents =
     let results = 
-        vsLanguageService.ParseAndCheckFileInProject(projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource)
+        vsLanguageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.MatchingSource)
         |> Async.RunSynchronously
     let symbolUse = results.GetSymbolUseAtLocation(line, col, lineStr, idents) |> Async.RunSynchronously
     let typeParams = 

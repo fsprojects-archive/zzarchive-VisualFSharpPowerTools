@@ -19,7 +19,8 @@ type VSLanguageService
      editorFactory: IVsEditorAdaptersFactoryService,
      fsharpLanguageService: FSharpLanguageService) =
 
-    let mutable instance = LanguageService (fun _ -> ())
+    let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
+    let mutable instance = LanguageService (ignore, FileSystem dte)
     
     let invalidateProject (projectItem: EnvDTE.ProjectItem) =
         async {
@@ -27,13 +28,11 @@ type VSLanguageService
             if box project <> null && isFSharpProject project then
                 let p = ProjectProvider.createForProject project
                 debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-                let! opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
-                                                       p.CompilerOptions, p.TargetFramework)
+                let! opts = p.GetProjectCheckerOptions instance
                 return instance.InvalidateConfiguration(opts)
         }
         |> Async.StartImmediate
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
     let events = dte.Events :?> EnvDTE80.Events2
     let projectItemsEvents = events.ProjectItemsEvents
     do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
@@ -41,7 +40,7 @@ type VSLanguageService
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
     do events.SolutionEvents.add_AfterClosing (fun _ -> 
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
-        instance <- LanguageService (fun _ -> ()))
+        instance <- LanguageService (ignore, FileSystem dte))
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
@@ -80,13 +79,11 @@ type VSLanguageService
         Lexer.tokenizeLine source args line lineStr (buildQueryLexState textBuffer)
 
     member x.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
-       instance.ParseFileInProject(
-            projectProvider.ProjectFileName,
-            currentFile,
-            source,
-            projectProvider.SourceFiles,
-            projectProvider.CompilerOptions,
-            projectProvider.TargetFramework) 
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            return! 
+                instance.ParseFileInProject(opts, currentFile, source) 
+        }
 
     member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
         instance.ProcessParseTrees(
@@ -165,30 +162,18 @@ type VSLanguageService
     member x.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
             let (_, _, endLine, _) = word.ToRange()
-            let projectFileName = projectProvider.ProjectFileName
             let source = word.Snapshot.GetText()
             let currentLine = word.Start.GetContainingLine().GetText()
-            let framework = projectProvider.TargetFramework
-            let args = projectProvider.CompilerOptions
-            let sourceFiles = projectProvider.SourceFiles
-            let! results = instance.ParseAndCheckFileInProject(   
-                               projectFileName, currentFile, source, sourceFiles, args, framework, stale)
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            let! results = instance.ParseAndCheckFileInProject(opts, currentFile, source, stale)
             let! symbol = results.GetSymbolUseAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
         }
 
     member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
-            let projectFileName = projectProvider.ProjectFileName
             let source = snapshot.GetText()
-            let framework = projectProvider.TargetFramework
             let args = projectProvider.CompilerOptions
-            let sourceFiles = 
-                match projectProvider.SourceFiles with
-                // If there is no source file, use currentFile as an independent script
-                | [||] -> [| currentFile |] 
-                | files -> files
-
             let lexer = 
                 let getLineStr line =
                     let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
@@ -201,23 +186,15 @@ type VSLanguageService
                     member x.TokenizeLine line =
                         Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
-            let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(
-                                projectFileName, currentFile, source, sourceFiles, args, framework, stale)
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale)
             return symbolUses, lexer
         }
 
     member x.ParseFileInProject (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider) = 
         async {
-            let projectFileName = projectProvider.ProjectFileName
-            let source = snapshot.GetText()
-            let framework = projectProvider.TargetFramework
-            let args = projectProvider.CompilerOptions
-            let sourceFiles = 
-                match projectProvider.SourceFiles with
-                | [||] -> [| currentFile |] 
-                | files -> files
-
-            return! instance.ParseFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework)
+            let! opts = projectProvider.GetProjectCheckerOptions(instance)
+            return! instance.ParseFileInProject(opts, currentFile, snapshot.GetText())
         }
 
     member x.Checker = instance.Checker
