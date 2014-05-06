@@ -84,7 +84,7 @@ Target "AssemblyInfo" (fun _ ->
 Target "RestorePackages" RestorePackages
 
 Target "Clean" (fun _ ->
-    CleanDirs ["bin"; "temp"]
+    CleanDirs ["bin"; "bin/vsix"; "temp"]
 )
 
 Target "CleanDocs" (fun _ ->
@@ -95,11 +95,27 @@ Target "CleanDocs" (fun _ ->
 // Build library & test project
 
 Target "Build" (fun _ ->
-    // We only like to build only one solution
+    // We would like to build only one solution
     !! (solutionFile + ".sln")
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 )
+
+Target "CleanVSIX" (fun _ ->
+    ZipHelper.Unzip "bin/vsix" "bin/FSharpVSPowerTools.vsix"
+    let regex = System.Text.RegularExpressions.Regex("bin")
+    let filesToKeep =
+      System.IO.Directory.GetFiles("bin", "*.dll")
+      |> Seq.map (fun fileName -> regex.Replace(fileName, "bin/vsix", 1))
+    let filesToDelete = 
+      Seq.fold (--) (!! "bin/vsix/*.dll") filesToKeep
+        -- "bin/vsix/FsXaml.Wpf.TypeProvider.dll"
+        ++ "bin/vsix/Microsoft.VisualStudio*"
+        ++ "bin/vsix/Microsoft.Build*"
+    DeleteFiles filesToDelete
+    ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
+)
+
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
@@ -176,6 +192,7 @@ Target "All" DoNothing
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
+  ==> "CleanVSIX"
   ==> "UnitTests"
   ==> "IntegrationTests"
   ==> "Main"
