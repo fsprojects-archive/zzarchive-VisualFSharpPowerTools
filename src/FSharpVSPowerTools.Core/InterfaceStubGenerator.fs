@@ -331,7 +331,7 @@ module InterfaceStubGenerator =
             for (iface, instantiations) in getInterfaces e do
                 yield! iface.MembersFunctionsAndValues |> Seq.choose (fun m -> 
                            // Use this hack when FCS doesn't return enough information on .NET properties
-                           if iface.IsFSharp || not m.IsProperty then Some (m, instantiations) else None)
+                           if (iface.IsFSharp || not m.IsProperty) && not m.IsEvent then Some (m, instantiations) else None)
          }
 
     let hasNoInterfaceMember e =
@@ -364,6 +364,13 @@ module InterfaceStubGenerator =
         | InterfaceData.ObjExpr(_, bindings) -> 
             List.choose (|MemberNameAndRange|_|) bindings
 
+    // Sometimes interface members are stored in the form of `IInterface<'T> -> ...` so we need to get the 2nd generic arguments
+    let internal (|MemberFunctionType|) (m: FSharpMemberFunctionOrValue) =
+        let typ = m.FullType
+        if typ.IsFunctionType && typ.GenericArguments.Count = 2 && m.IsProperty && m.EnclosingEntity.IsFSharp then
+            typ.GenericArguments.[1]
+        else typ
+
     /// Ideally this info should be returned in error symbols from FCS
     /// Because it isn't, we implement a crude way of getting member signatures:
     ///  (1) Crack ASTs to get member names and their associated ranges
@@ -373,8 +380,9 @@ module InterfaceStubGenerator =
         let formatMemberSignature (symbolUse: FSharpSymbolUse) =
             Debug.Assert(symbolUse.Symbol :? FSharpMemberFunctionOrValue, "Only accept symbol use of members.")
             try
-                let m = symbolUse.Symbol :?> FSharpMemberFunctionOrValue 
-                let signature = sprintf "%s:%s" m.DisplayName (m.FullType.Format(displayContext))
+                let m = symbolUse.Symbol :?> FSharpMemberFunctionOrValue
+                let typ = m.FullType
+                let signature = sprintf "%s:%s" m.DisplayName (typ.Format(displayContext))
                 Some (signature.Replace(" ", ""))
             with _ ->
                 None
@@ -419,11 +427,10 @@ module InterfaceStubGenerator =
             |> Seq.filter (fun (m, insts) -> 
                 // FullType might throw exceptions due to bugs in FCS
                 try
-                    Debug.Assert(m.FullType.IsFunctionType, "An interface member has to be of function type.")
-                    let fullSignature = sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts }  m.FullType)
-                    // Sometimes interface members are stored in the form of `IInterface<'T> -> ...` so we need to get the 2nd generic arguments
-                    let partialSignature = sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts }  m.FullType.GenericArguments.[1])
-                    not (Set.contains (fullSignature.Replace(" ", "")) excludedMemberSignatures || Set.contains (partialSignature.Replace(" ", "")) excludedMemberSignatures) 
+                    match m with
+                    | MemberFunctionType typ -> 
+                        let signature = sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts }  typ)
+                        not (Set.contains (signature.Replace(" ", "")) excludedMemberSignatures) 
                 with _ -> true)
         // All members are already implemented
         if Seq.isEmpty missingMembers then
