@@ -55,7 +55,7 @@ type VSLanguageService
     do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
     do events.SolutionEvents.add_AfterClosing (fun _ -> 
-        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+        //instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
         instance <- LanguageService (ignore, FileSystem openDocumentsTracker))
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
