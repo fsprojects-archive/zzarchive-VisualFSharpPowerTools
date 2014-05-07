@@ -238,25 +238,15 @@ let private UnassignedThreadId = -1
 
 type ForegroundThreadGuard private() = 
     static let mutable threadId = UnassignedThreadId
-    static let mutable context = null
     static member BindThread() =
         if threadId <> UnassignedThreadId then 
             () // fail "Thread is already set"
         threadId <- Thread.CurrentThread.ManagedThreadId
-        context <- SynchronizationContext.Current
     static member CheckThread() =
         if threadId = UnassignedThreadId then 
             fail "Thread not set"
         if threadId <> Thread.CurrentThread.ManagedThreadId then
             fail "Accessed from the wrong thread"
-    static member ExecInForegroundThread f = 
-        async {
-            let currentContext = SynchronizationContext.Current
-            do! Async.SwitchToContext context
-            let result = f()
-            do! Async.SwitchToContext currentContext 
-            return result } 
-        |> Async.RunSynchronously
 
 module ViewChange =
     let layoutEvent (view: ITextView) = 

@@ -12,9 +12,7 @@ type FileSystem (openDocumentsTracker: OpenDocumentsTracker) =
 
     let getOpenDocContent (fileName: string) =
         openDocumentsTracker.TryFindOpenDocument fileName
-        |> Option.map (fun doc -> 
-            ForegroundThreadGuard.ExecInForegroundThread (fun _ ->
-                doc.Snapshot.GetText() |> doc.Encoding.GetBytes))
+        |> Option.map (fun doc -> doc.Snapshot.GetText() |> doc.Encoding.GetBytes)
 
     interface IFileSystem with
         member x.FileStreamReadShim fileName = 
@@ -27,10 +25,10 @@ type FileSystem (openDocumentsTracker: OpenDocumentsTracker) =
         
         member x.GetLastWriteTimeShim fileName =
             openDocumentsTracker.TryFindOpenDocument fileName
-            |> Option.bind (fun doc -> ForegroundThreadGuard.ExecInForegroundThread (fun _ ->
+            |> Option.bind (fun doc ->
                 if doc.Document.IsDirty then
                     Some doc.LastChangeTime
-                else None))
+                else None)
             |> Option.getOrElse (defaultFileSystem.GetLastWriteTimeShim fileName)
         
         member x.GetTempPathShim() = defaultFileSystem.GetTempPathShim()
