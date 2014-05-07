@@ -26,15 +26,15 @@ type VSLanguageService
         async {
             let! opts = project.GetProjectCheckerOptions(instance)
             let projectFiles = Set.ofArray project.SourceFiles 
-            let openedProjectFileVersions = 
-                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc.Snapshot.Version.VersionNumber)
-                |> Seq.choose (fun (file, ver) -> if projectFiles |> Set.contains file then Some ver else None)
+            let openDocumentsChangeTimes = 
+                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc.LastChangeTime)
+                |> Seq.choose (fun (file, changeTime) -> if projectFiles |> Set.contains file then Some changeTime else None)
                 |> Seq.toList 
         
             return 
-                match openedProjectFileVersions with
+                match openDocumentsChangeTimes with
                 | [] -> opts
-                | vers -> { opts with LoadTime = DateTime (vers |> List.sum |> int64) }
+                | changeTimes -> { opts with LoadTime = max opts.LoadTime (List.max changeTimes) }
         }
 
     let invalidateProject (projectItem: EnvDTE.ProjectItem) =
