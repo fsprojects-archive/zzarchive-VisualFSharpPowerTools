@@ -8,6 +8,8 @@ open Fake.Git
 open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open System
+open System.IO
+open System.Text.RegularExpressions
 
 // --------------------------------------------------------------------------------------
 // START TODO: Provide project-specific details below
@@ -84,7 +86,7 @@ Target "AssemblyInfo" (fun _ ->
 Target "RestorePackages" RestorePackages
 
 Target "Clean" (fun _ ->
-    CleanDirs ["bin"; "temp"]
+    CleanDirs ["bin"; "bin/vsix"; "temp"]
 )
 
 Target "CleanDocs" (fun _ ->
@@ -95,10 +97,25 @@ Target "CleanDocs" (fun _ ->
 // Build library & test project
 
 Target "Build" (fun _ ->
-    // We only like to build only one solution
+    // We would like to build only one solution
     !! (solutionFile + ".sln")
     |> MSBuildRelease "" "Rebuild"
     |> ignore
+)
+
+Target "CleanVSIX" (fun _ ->
+    ZipHelper.Unzip "bin/vsix" "bin/FSharpVSPowerTools.vsix"
+    let regex = Regex("bin")
+    let filesToKeep =
+      Directory.GetFiles("bin", "*.dll")
+      |> Seq.map (fun fileName -> regex.Replace(fileName, "bin/vsix", 1))
+    let filesToDelete = 
+      Seq.fold (--) (!! "bin/vsix/*.dll") filesToKeep
+        -- "bin/vsix/FsXaml.Wpf.TypeProvider.dll"
+        ++ "bin/vsix/Microsoft.VisualStudio*"
+        ++ "bin/vsix/Microsoft.Build*"
+    DeleteFiles filesToDelete
+    ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
 )
 
 // --------------------------------------------------------------------------------------
@@ -179,6 +196,9 @@ Target "All" DoNothing
   ==> "UnitTests"
   ==> "IntegrationTests"
   ==> "Main"
+
+"Build"
+  ==> "CleanVSIX"
 
 "Main"
   =?> ("ExtraIntegrationTests", isLocalBuild)
