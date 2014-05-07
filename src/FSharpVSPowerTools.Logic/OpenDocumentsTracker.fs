@@ -9,11 +9,12 @@ open Microsoft.VisualStudio.Text.Editor
 
 [<NoComparison>]
 type OpenDocument =
-    { Snapshot: ITextSnapshot 
+    { Document: ITextDocument
+      Snapshot: ITextSnapshot 
       Encoding: Encoding
       LastChangeTime: DateTime }
-    static member Create snapshot encoding = 
-        { Snapshot = snapshot; Encoding = encoding; LastChangeTime = DateTime.Now }
+    static member Create document snapshot encoding = 
+        { Document = document; Snapshot = snapshot; Encoding = encoding; LastChangeTime = DateTime.Now }
 
 [<Export(typeof<OpenDocumentsTracker>)>]
 type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: ITextDocumentFactoryService) =
@@ -27,20 +28,18 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
             let path = doc.FilePath
             let rec textBufferChanged (args: TextContentChangedEventArgs) =
                 ForegroundThreadGuard.CheckThread()
-                
-                openDocuments <- Map.add path (OpenDocument.Create args.After doc.Encoding) openDocuments
+                openDocuments <- Map.add path (OpenDocument.Create doc args.After doc.Encoding) openDocuments
 
             and textBufferChangedSubscription: IDisposable = view.TextBuffer.Changed.Subscribe(textBufferChanged)
             and viewClosed _ = 
                 ForegroundThreadGuard.CheckThread()
-
                 textBufferChangedSubscription.Dispose()
                 viewClosedSubscription.Dispose()
                 openDocuments <- Map.remove path openDocuments
 
             and viewClosedSubscription: IDisposable = view.Closed.Subscribe viewClosed
             
-            openDocuments <- Map.add path (OpenDocument.Create view.TextBuffer.CurrentSnapshot doc.Encoding) openDocuments
+            openDocuments <- Map.add path (OpenDocument.Create doc view.TextBuffer.CurrentSnapshot doc.Encoding) openDocuments
 
         | _ -> ()
     

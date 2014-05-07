@@ -43,7 +43,7 @@ type VSLanguageService
             if box project <> null && isFSharpProject project then
                 let p = ProjectProvider.createForProject project
                 debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-                let! opts = getProjectOptions p
+                let! opts = p.GetProjectCheckerOptions instance
                 return instance.InvalidateConfiguration(opts)
         }
         |> Async.StartImmediate
@@ -95,7 +95,7 @@ type VSLanguageService
 
     member x.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
         async {
-            let! opts = getProjectOptions projectProvider
+            let! opts = projectProvider.GetProjectCheckerOptions instance
             return! instance.ParseFileInProject(opts, currentFile, source) 
         }
 
@@ -178,7 +178,7 @@ type VSLanguageService
             let (_, _, endLine, _) = word.ToRange()
             let source = word.Snapshot.GetText()
             let currentLine = word.Start.GetContainingLine().GetText()
-            let! opts = getProjectOptions projectProvider
+            let! opts = projectProvider.GetProjectCheckerOptions instance
             let! results = instance.ParseAndCheckFileInProject(opts, currentFile, source, stale)
             let! symbol = results.GetSymbolUseAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
@@ -200,14 +200,14 @@ type VSLanguageService
                     member x.TokenizeLine line =
                         Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
-            let! opts = getProjectOptions projectProvider
+            let! opts = projectProvider.GetProjectCheckerOptions instance
             let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale)
             return symbolUses, lexer
         }
 
     member x.ParseFileInProject (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider) = 
         async {
-            let! opts = getProjectOptions projectProvider
+            let! opts = projectProvider.GetProjectCheckerOptions instance
             return! instance.ParseFileInProject(opts, currentFile, snapshot.GetText())
         }
 
