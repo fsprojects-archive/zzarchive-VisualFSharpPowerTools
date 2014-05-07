@@ -27,9 +27,10 @@ type VSLanguageService
             let! opts = project.GetProjectCheckerOptions(instance)
             let projectFiles = Set.ofArray project.SourceFiles 
             let openDocumentsChangeTimes = 
-                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc.LastChangeTime)
-                |> Seq.choose (fun (file, changeTime) -> if projectFiles |> Set.contains file then Some changeTime else None)
-                |> Seq.toList 
+                    openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
+                    |> Seq.choose (fun (file, doc) -> 
+                        if doc.Document.IsDirty && projectFiles |> Set.contains file then Some doc.LastChangeTime else None)
+                    |> Seq.toList
         
             return 
                 match openDocumentsChangeTimes with
