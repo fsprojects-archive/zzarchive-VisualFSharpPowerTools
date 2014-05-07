@@ -27,7 +27,7 @@ type VSLanguageService
             let! opts = project.GetProjectCheckerOptions(instance)
             let projectFiles = Set.ofArray project.SourceFiles 
             let openedProjectFileVersions = 
-                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, snapshot)) -> file, snapshot.Version.VersionNumber)
+                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc.Snapshot.Version.VersionNumber)
                 |> Seq.choose (fun (file, ver) -> if projectFiles |> Set.contains file then Some ver else None)
                 |> Seq.toList 
         

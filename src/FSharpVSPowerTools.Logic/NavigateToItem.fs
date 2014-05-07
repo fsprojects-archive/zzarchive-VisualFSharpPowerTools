@@ -150,7 +150,7 @@ and
                 |> List.map ProjectProvider.createForProject
 
             let openedDocuments = 
-                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path,snapshot)) -> path, snapshot.GetText())
+                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path, doc)) -> path, doc.Snapshot.GetText())
                 |> Map.ofSeq
 
             let projects = 

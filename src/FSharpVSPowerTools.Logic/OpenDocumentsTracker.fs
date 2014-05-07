@@ -1,30 +1,34 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
 open System
+open System.Text
 open System.Collections.Generic
 open System.ComponentModel.Composition
-
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 
+[<NoComparison>]
+type OpenDocument =
+    { Snapshot: ITextSnapshot 
+      Encoding: Encoding
+      LastChangeTime: DateTime }
+    static member Create snapshot encoding = 
+        { Snapshot = snapshot; Encoding = encoding; LastChangeTime = DateTime.Now }
+
 [<Export(typeof<OpenDocumentsTracker>)>]
-type OpenDocumentsTracker
-    [<ImportingConstructor>]
-    (
-        textDocumentFactoryService: ITextDocumentFactoryService
-    ) =
-    [<VolatileField>]    
+type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: ITextDocumentFactoryService) =
+    [<VolatileField>]
     let mutable openDocuments = Map.empty
 
     member x.RegisterView(view: IWpfTextView) = 
         ForegroundThreadGuard.CheckThread()
         match textDocumentFactoryService.TryGetTextDocument(view.TextBuffer) with
-        | true, document ->
-            let path = document.FilePath
+        | true, doc ->
+            let path = doc.FilePath
             let rec textBufferChanged (args: TextContentChangedEventArgs) =
                 ForegroundThreadGuard.CheckThread()
                 
-                openDocuments <- Map.add path args.After openDocuments
+                openDocuments <- Map.add path (OpenDocument.Create args.After doc.Encoding) openDocuments
 
             and textBufferChangedSubscription: IDisposable = view.TextBuffer.Changed.Subscribe(textBufferChanged)
             and viewClosed _ = 
@@ -36,7 +40,7 @@ type OpenDocumentsTracker
 
             and viewClosedSubscription: IDisposable = view.Closed.Subscribe viewClosed
             
-            openDocuments <- Map.add path view.TextBuffer.CurrentSnapshot openDocuments
+            openDocuments <- Map.add path (OpenDocument.Create view.TextBuffer.CurrentSnapshot doc.Encoding) openDocuments
 
         | _ -> ()
     
