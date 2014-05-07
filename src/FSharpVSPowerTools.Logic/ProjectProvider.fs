@@ -21,6 +21,7 @@ and IProjectProvider =
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
+    abstract OutputPath: string
     abstract GetReferencedProjects: unit -> IProjectProvider list
     abstract GetAllReferencedProjectFileNames: unit -> string list
     abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
@@ -80,6 +81,12 @@ module ProjectProvider =
             | Some(_, flags) -> flags
             | _ -> [||]
 
+        let getActiveConfigProperty (tag: string) =
+            let prop = try project.ConfigurationManager.ActiveConfiguration.Properties.[tag] with _ -> null
+            match prop with
+            | null -> null
+            | _ -> try prop.Value.ToString() with _ -> null
+
         let targetFramework() =
             match getProperty "TargetFrameworkMoniker" with
                 | null -> FSharpTargetFramework.NET_4_5
@@ -105,6 +112,7 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework()
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
+            member x.OutputPath = getActiveConfigProperty "OutputPath"
             
             member x.GetReferencedProjects() =
                 project.GetReferencedFSharpProjects()
@@ -118,8 +126,20 @@ module ProjectProvider =
                        else Some(Path.GetFileNameSafe file))
 
             member x.GetProjectCheckerOptions languageService =
-                let x = x :> IProjectProvider
-                languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
+                async {
+                    let x = x :> IProjectProvider
+                    let! opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
+                    let refs = x.GetReferencedProjects()
+                    return { opts with ReferencedProjects = 
+                                           [| for refp in refs do
+                                                yield refp.ProjectFileName, 
+                                                      refp.GetProjectCheckerOptions(languageService) 
+                                                      |> Async.RunSynchronously |]
+                                       ProjectOptions = 
+                                           [| yield! opts.ProjectOptions 
+                                              yield! refs |> List.map (fun p -> sprintf "-r:%s" p.OutputPath) |] }
+                        
+                }
             
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
@@ -131,6 +151,7 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework
             member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
             member x.SourceFiles = [| filePath |]
+            member x.OutputPath = Path.ChangeExtension(filePath, ".dll")
             member x.GetReferencedProjects() = []
             member x.GetAllReferencedProjectFileNames() = []
             member x.GetProjectCheckerOptions languageService =
