@@ -150,33 +150,31 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
   //   (b) they may be on on a timeout (to prevent blocking the UI thread)
   //   (c) only one request is active at a time, the rest are in the queue
 
-  let mbox = MailboxProcessor.Start(fun mbox ->
-    
-    async { 
-       while true do
-            Debug.WriteLine("Worker: Awaiting request") 
-            let! (fileName, source, options, reply: AsyncReplyChannel<_> ) = mbox.Receive()
-            
-            let fileName = fixFileName(fileName)            
-            
-            Debug.WriteLine("Worker: Parse and typecheck source...")
-            let! parseResults, checkAnswer = checker.ParseAndCheckFileInProject(fileName, 0, source,options, IsResultObsolete(fun () -> false), null )
-              
-            Debug.WriteLine(sprintf "Worker: Parse completed")
-
-            // Construct new typed parse result if the task succeeded
-            let results =
-              match checkAnswer with
-              | CheckFileAnswer.Succeeded(checkResults) ->
-                  // Handle errors on the GUI thread
-                  Debug.WriteLine(sprintf "LanguageService: Update typed info - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo)
-                  ParseAndCheckResults(checkResults, parseResults)
-              | _ -> 
-                  Debug.WriteLine("LanguageService: Update typed info - failed")
-                  ParseAndCheckResults.Empty
-                  
-            reply.Reply results
-        })
+  let mbox = MailboxProcessor.Start(fun mbox -> 
+      async { 
+          while true do
+              debug "Worker: Awaiting request"
+              let! (fileName, source, options, reply: AsyncReplyChannel<_>) = mbox.Receive()
+              let fileName = fixFileName (fileName)
+              debug "Worker: Parse and typecheck source..."
+              let! res = 
+                  Async.Catch (checker.ParseAndCheckFileInProject (fileName, 0, source, options, IsResultObsolete(fun () -> false), null))
+              debug "Worker: Parse completed"
+              // Construct new typed parse result if the task succeeded
+              let results = 
+                  match res with
+                  | Choice1Of2 (parseResults, CheckFileAnswer.Succeeded(checkResults)) ->
+                      // Handle errors on the GUI thread
+                      debug "[LanguageService] Update typed info - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo
+                      ParseAndCheckResults(checkResults, parseResults)
+                  | Choice1Of2 _ ->
+                      debug "[LanguageService] Update typed info - failed"
+                      ParseAndCheckResults.Empty
+                  | Choice2Of2 e -> 
+                      debug "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
+                      ParseAndCheckResults.Empty  
+              reply.Reply results
+      })
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
