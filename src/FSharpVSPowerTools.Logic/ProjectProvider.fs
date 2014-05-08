@@ -8,6 +8,7 @@ open FSharp.CompilerBinding
 open FSharpVSPowerTools
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp
 
 type FilePath = string
 
@@ -21,7 +22,7 @@ and IProjectProvider =
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
-    abstract OutputPath: string
+    abstract FullOutputFilePath: string
     abstract GetReferencedProjects: unit -> IProjectProvider list
     abstract GetAllReferencedProjectFileNames: unit -> string list
     abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
@@ -82,7 +83,8 @@ module ProjectProvider =
             | _ -> [||]
 
         let getActiveConfigProperty (tag: string) =
-            let prop = try project.ConfigurationManager.ActiveConfiguration.Properties.[tag] with _ -> null
+            let props = project.ConfigurationManager.ActiveConfiguration.Properties
+            let prop = try props.[tag] with _ -> null
             match prop with
             | null -> null
             | _ -> try prop.Value.ToString() with _ -> null
@@ -112,7 +114,8 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework()
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
-            member x.OutputPath = getActiveConfigProperty "OutputPath"
+            member x.FullOutputFilePath = 
+                Path.Combine (getProperty "FullPath", getActiveConfigProperty "OutputPath", getProperty "OutputFileName")
             
             member x.GetReferencedProjects() =
                 project.GetReferencedFSharpProjects()
@@ -130,15 +133,29 @@ module ProjectProvider =
                     let x = x :> IProjectProvider
                     let! opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
                     let refs = x.GetReferencedProjects()
-                    return { opts with ReferencedProjects = 
-                                           [| for refp in refs do
-                                                yield refp.ProjectFileName, 
-                                                      refp.GetProjectCheckerOptions(languageService) 
-                                                      |> Async.RunSynchronously |]
-                                       ProjectOptions = 
-                                           [| yield! opts.ProjectOptions 
-                                              yield! refs |> List.map (fun p -> sprintf "-r:%s" p.OutputPath) |] }
-                        
+                    let opts = { opts with ReferencedProjects = 
+                                               [| for refp in refs do
+                                                    yield refp.FullOutputFilePath, 
+                                                          refp.GetProjectCheckerOptions(languageService) 
+                                                          |> Async.RunSynchronously |] }
+
+                    let refProjectsFromCompilerOpts =
+                        opts.ProjectOptions 
+                        |> Seq.filter (fun x -> x.StartsWith("-r:"))
+                        |> Seq.map (fun x -> x.Substring(3).Trim())
+                        |> Set.ofSeq
+
+                    let ophanProjects = 
+                        opts.ReferencedProjects 
+                        |> Array.map fst 
+                        |> Array.filter (fun x -> not (refProjectsFromCompilerOpts |> Set.contains x))
+
+                    Debug.Assert (
+                        (ophanProjects = [||]), 
+                        sprintf "Not all referenced projects are in the compiler options: %A" ophanProjects)
+
+                    //debug "[ProjectProvider] Options for %s: %A" projectFileName opts
+                    return opts
                 }
             
     type private VirtualProjectProvider (filePath: string) = 
@@ -151,7 +168,7 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework
             member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
             member x.SourceFiles = [| filePath |]
-            member x.OutputPath = Path.ChangeExtension(filePath, ".dll")
+            member x.FullOutputFilePath = Path.ChangeExtension(filePath, ".dll")
             member x.GetReferencedProjects() = []
             member x.GetAllReferencedProjectFileNames() = []
             member x.GetProjectCheckerOptions languageService =
