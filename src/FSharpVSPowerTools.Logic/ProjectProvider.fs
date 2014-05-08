@@ -131,28 +131,32 @@ module ProjectProvider =
             member x.GetProjectCheckerOptions languageService =
                 async {
                     let x = x :> IProjectProvider
-                    let! opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
+                    let opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
                     let refs = x.GetReferencedProjects()
-                    let opts = { opts with ReferencedProjects = 
-                                               [| for refp in refs do
-                                                    yield refp.FullOutputFilePath, 
-                                                          refp.GetProjectCheckerOptions(languageService) 
-                                                          |> Async.RunSynchronously |] }
+                    let! refProjects =
+                        refs 
+                        |> List.map (fun p -> async {
+                            let! opts = p.GetProjectCheckerOptions languageService 
+                            return p.FullOutputFilePath, opts })
+                        |> Async.Parallel
+                    
+                    let opts = { opts with ReferencedProjects = refProjects }
 
-                    let refProjectsFromCompilerOpts =
+                    let refProjectsOutPaths = 
+                        opts.ReferencedProjects 
+                        |> Array.map fst 
+                        |> Set.ofArray
+
+                    let orphanedProjects =
                         opts.ProjectOptions 
                         |> Seq.filter (fun x -> x.StartsWith("-r:"))
                         |> Seq.map (fun x -> x.Substring(3).Trim())
                         |> Set.ofSeq
-
-                    let ophanProjects = 
-                        opts.ReferencedProjects 
-                        |> Array.map fst 
-                        |> Array.filter (fun x -> not (refProjectsFromCompilerOpts |> Set.contains x))
+                        |> Set.difference refProjectsOutPaths
 
                     Debug.Assert (
-                        (ophanProjects = [||]), 
-                        sprintf "Not all referenced projects are in the compiler options: %A" ophanProjects)
+                        Set.isEmpty orphanedProjects, 
+                        sprintf "Not all referenced projects are in the compiler options: %A" orphanedProjects)
 
                     //debug "[ProjectProvider] Options for %s: %A" projectFileName opts
                     return opts
