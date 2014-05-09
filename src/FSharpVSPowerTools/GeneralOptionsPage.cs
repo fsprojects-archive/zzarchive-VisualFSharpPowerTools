@@ -33,7 +33,7 @@ namespace FSharpVSPowerTools
             DepthColorizerEnabled = false;
             NavigateToEnabled = true;
             SyntaxColoringEnabled = true;
-            ImplementInterfaceEnabled = false;
+            InterfaceImplementationEnabled = true;
             FolderOrganizationEnabled = false;
             FindAllReferencesEnabled = true;
         }
@@ -127,7 +127,7 @@ namespace FSharpVSPowerTools
         public bool SyntaxColoringEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool ImplementInterfaceEnabled { get; set; }
+        public bool InterfaceImplementationEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FolderOrganizationEnabled { get; set; }
@@ -151,7 +151,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
                 _optionsControl.NavigateToEnabled = NavigateToEnabled;
                 _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
-                _optionsControl.ImplementInterfaceEnabled = ImplementInterfaceEnabled;
+                _optionsControl.InterfaceImplementationEnabled = InterfaceImplementationEnabled;
                 _optionsControl.FolderOrganizationEnabled = FolderOrganizationEnabled;
                 _optionsControl.FindAllReferencesEnabled = FindAllReferencesEnabled;
 
@@ -179,7 +179,7 @@ namespace FSharpVSPowerTools
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
                 SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
-                ImplementInterfaceEnabled = _optionsControl.ImplementInterfaceEnabled;
+                InterfaceImplementationEnabled = _optionsControl.InterfaceImplementationEnabled;
                 FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
                 FindAllReferencesEnabled = _optionsControl.FindAllReferencesEnabled;
             }
