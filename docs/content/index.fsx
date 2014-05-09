@@ -27,6 +27,7 @@ Here are currently supported features:
  * [Syntax coloring](syntaxcoloring.html)
  * [Folder organization](folderorganization.html)
  * [Find all references](findallreferences.html)
+ * [Implement interface](implementinterface.html)
   
 Contributing and copyright
 --------------------------

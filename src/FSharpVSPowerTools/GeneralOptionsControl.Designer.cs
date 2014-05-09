@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
-            this.chbImplementInterface = new System.Windows.Forms.CheckBox();
+            this.chbInterfaceImplementation = new System.Windows.Forms.CheckBox();
             this.chbFolderOrganization = new System.Windows.Forms.CheckBox();
             this.chbSyntaxColoring = new System.Windows.Forms.CheckBox();
             this.chbNavigateTo = new System.Windows.Forms.CheckBox();
@@ -51,7 +51,7 @@
             // 
             this.grbOptions.Controls.Add(this.chbFindAllReferences);
             this.grbOptions.Controls.Add(this.lblInformation);
-            this.grbOptions.Controls.Add(this.chbImplementInterface);
+            this.grbOptions.Controls.Add(this.chbInterfaceImplementation);
             this.grbOptions.Controls.Add(this.chbFolderOrganization);
             this.grbOptions.Controls.Add(this.chbSyntaxColoring);
             this.grbOptions.Controls.Add(this.chbNavigateTo);
@@ -73,13 +73,13 @@
             // 
             // chbImplementInterface
             // 
-            this.chbImplementInterface.AutoSize = true;
-            this.chbImplementInterface.Location = new System.Drawing.Point(212, 76);
-            this.chbImplementInterface.Name = "chbImplementInterface";
-            this.chbImplementInterface.Size = new System.Drawing.Size(118, 17);
-            this.chbImplementInterface.TabIndex = 12;
-            this.chbImplementInterface.Text = "Implement interface";
-            this.chbImplementInterface.UseVisualStyleBackColor = true;
+            this.chbInterfaceImplementation.AutoSize = true;
+            this.chbInterfaceImplementation.Location = new System.Drawing.Point(212, 76);
+            this.chbInterfaceImplementation.Name = "chbImplementInterface";
+            this.chbInterfaceImplementation.Size = new System.Drawing.Size(118, 17);
+            this.chbInterfaceImplementation.TabIndex = 12;
+            this.chbInterfaceImplementation.Text = "Implement interface";
+            this.chbInterfaceImplementation.UseVisualStyleBackColor = true;
             // 
             // chbFolderOrganization
             // 
@@ -264,7 +264,7 @@
         private System.Windows.Forms.CheckBox chbNavigateTo;
         private System.Windows.Forms.CheckBox chbFolderOrganization;
         private System.Windows.Forms.CheckBox chbSyntaxColoring;
-        private System.Windows.Forms.CheckBox chbImplementInterface;
+        private System.Windows.Forms.CheckBox chbInterfaceImplementation;
         private System.Windows.Forms.Label lblInformation;
         private System.Windows.Forms.CheckBox chbFindAllReferences;
     }

@@ -37,7 +37,7 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.ImplementInterfaceEnabled) return null;
+            if (!generalOptions.InterfaceImplementationEnabled) return null;
 
             return new ImplementInterfaceSmartTagger(textView, buffer, editorOptionsFactory,
                         undoHistoryRegistry.RegisterHistory(buffer), 
