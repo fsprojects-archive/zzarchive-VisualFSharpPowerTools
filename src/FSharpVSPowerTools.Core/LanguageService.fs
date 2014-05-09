@@ -181,8 +181,7 @@ type LanguageService (dirtyNotify) =
         x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
           
       // We are in a project - construct options using current properties
-      else
-        x.GetProjectCheckerOptions(projFilename, files, args)
+      else async { return x.GetProjectCheckerOptions(projFilename, files, args) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
@@ -220,26 +219,14 @@ type LanguageService (dirtyNotify) =
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
   member x.GetProjectCheckerOptions(projFilename, files, args) =
-    async {
-        let opts = 
-      
-          // We are in a project - construct options using current properties
-            //Debug.WriteLine (sprintf "GetProjectCheckerOptions: Creating for project '%s'" projFilename )
-
-            { ProjectFileName = projFilename
-              ProjectFileNames = files
-              ProjectOptions = args
-              IsIncompleteTypeCheckEnvironment = false
-              UseScriptResolutionRules = false
-              LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
-              UnresolvedReferences = None
-              ReferencedProjects = [||] }
-
-        // Print contents of check option for debugging purposes
-        //Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-        //                     opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
-        return opts
-    }
+      { ProjectFileName = projFilename
+        ProjectFileNames = files
+        ProjectOptions = args
+        IsIncompleteTypeCheckEnvironment = false
+        UseScriptResolutionRules = false
+        LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
+        UnresolvedReferences = None
+        ReferencedProjects = [||] }
 
   member x.ParseFileInProject(projectFilename, fileName:string, src, files, args, targetFramework) = 
     async {

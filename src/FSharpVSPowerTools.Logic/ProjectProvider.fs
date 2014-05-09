@@ -8,6 +8,7 @@ open FSharp.CompilerBinding
 open FSharpVSPowerTools
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp
 
 type FilePath = string
 
@@ -21,6 +22,7 @@ and IProjectProvider =
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
+    abstract FullOutputFilePath: string
     abstract GetReferencedProjects: unit -> IProjectProvider list
     abstract GetAllReferencedProjectFileNames: unit -> string list
     abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
@@ -80,6 +82,13 @@ module ProjectProvider =
             | Some(_, flags) -> flags
             | _ -> [||]
 
+        let getActiveConfigProperty (tag: string) =
+            let props = project.ConfigurationManager.ActiveConfiguration.Properties
+            let prop = try props.[tag] with _ -> null
+            match prop with
+            | null -> null
+            | _ -> try prop.Value.ToString() with _ -> null
+
         let targetFramework() =
             match getProperty "TargetFrameworkMoniker" with
                 | null -> FSharpTargetFramework.NET_4_5
@@ -105,6 +114,8 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework()
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
+            member x.FullOutputFilePath = 
+                Path.Combine (getProperty "FullPath", getActiveConfigProperty "OutputPath", getProperty "OutputFileName")
             
             member x.GetReferencedProjects() =
                 project.GetReferencedFSharpProjects()
@@ -118,8 +129,38 @@ module ProjectProvider =
                        else Some(Path.GetFileNameSafe file))
 
             member x.GetProjectCheckerOptions languageService =
-                let x = x :> IProjectProvider
-                languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
+                async {
+                    let x = x :> IProjectProvider
+                    let opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
+                    let refs = x.GetReferencedProjects()
+                    let! refProjects =
+                        refs 
+                        |> List.map (fun p -> async {
+                            let! opts = p.GetProjectCheckerOptions languageService 
+                            return p.FullOutputFilePath, opts })
+                        |> Async.Parallel
+                    
+                    let opts = { opts with ReferencedProjects = refProjects }
+
+                    let refProjectsOutPaths = 
+                        opts.ReferencedProjects 
+                        |> Array.map fst 
+                        |> Set.ofArray
+
+                    let orphanedProjects =
+                        opts.ProjectOptions 
+                        |> Seq.filter (fun x -> x.StartsWith("-r:"))
+                        |> Seq.map (fun x -> x.Substring(3).Trim())
+                        |> Set.ofSeq
+                        |> Set.difference refProjectsOutPaths
+
+                    Debug.Assert (
+                        Set.isEmpty orphanedProjects, 
+                        sprintf "Not all referenced projects are in the compiler options: %A" orphanedProjects)
+
+                    //debug "[ProjectProvider] Options for %s: %A" projectFileName opts
+                    return opts
+                }
             
     type private VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
@@ -131,6 +172,7 @@ module ProjectProvider =
             member x.TargetFramework = targetFramework
             member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
             member x.SourceFiles = [| filePath |]
+            member x.FullOutputFilePath = Path.ChangeExtension(filePath, ".dll")
             member x.GetReferencedProjects() = []
             member x.GetAllReferencedProjectFileNames() = []
             member x.GetProjectCheckerOptions languageService =
