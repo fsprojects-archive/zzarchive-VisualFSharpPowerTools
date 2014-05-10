@@ -65,10 +65,10 @@ namespace FSharpVSPowerTools
             set { chbSyntaxColoring.Checked = value; }
         }
 
-        public bool ImplementInterfaceEnabled
+        public bool InterfaceImplementationEnabled
         {
-            get { return chbImplementInterface.Checked; }
-            set { chbImplementInterface.Checked = value; }
+            get { return chbInterfaceImplementation.Checked; }
+            set { chbInterfaceImplementation.Checked = value; }
         }
 
         public bool FolderOrganizationEnabled
@@ -93,7 +93,7 @@ namespace FSharpVSPowerTools
             chbDepthColorizer.Checked = OptionsPage.DepthColorizerEnabled;
             chbNavigateTo.Checked = OptionsPage.NavigateToEnabled;
             chbSyntaxColoring.Checked = OptionsPage.SyntaxColoringEnabled;
-            chbImplementInterface.Checked = OptionsPage.ImplementInterfaceEnabled;
+            chbInterfaceImplementation.Checked = OptionsPage.InterfaceImplementationEnabled;
             chbFolderOrganization.Checked = OptionsPage.FolderOrganizationEnabled;
             chbFindAllReferences.Checked = OptionsPage.FindAllReferencesEnabled;
         }

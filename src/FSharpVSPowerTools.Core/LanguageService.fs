@@ -185,8 +185,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
           
       // We are in a project - construct options using current properties
-      else
-        async { return x.GetProjectCheckerOptions(projFilename, files, args) }
+      else async { return x.GetProjectCheckerOptions(projFilename, files, args) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
@@ -224,9 +223,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
   member x.GetProjectCheckerOptions(projFilename, files, args) =
-    // We are in a project - construct options using current properties
-    //Debug.WriteLine (sprintf "GetProjectCheckerOptions: Creating for project '%s'" projFilename )
-
     { ProjectFileName = projFilename
       ProjectFileNames = files
       ProjectOptions = args
@@ -235,10 +231,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
       UnresolvedReferences = None
       ReferencedProjects = [||] }
-
-// Print contents of check option for debugging purposes
-//Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-//                     opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
 
   member x.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
