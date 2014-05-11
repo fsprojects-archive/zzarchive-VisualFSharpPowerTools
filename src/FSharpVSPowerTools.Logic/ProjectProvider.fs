@@ -131,16 +131,15 @@ module ProjectProvider =
             member x.GetProjectCheckerOptions languageService =
                 async {
                     let x = x :> IProjectProvider
-                    let opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
                     let refs = x.GetReferencedProjects()
-                    let! refProjects =
+                    let! referencedProjects =
                         refs 
                         |> List.map (fun p -> async {
                             let! opts = p.GetProjectCheckerOptions languageService 
                             return p.FullOutputFilePath, opts })
                         |> Async.Parallel
                     
-                    let opts = { opts with ReferencedProjects = refProjects }
+                    let opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions, referencedProjects) 
 
                     let refProjectsOutPaths = 
                         opts.ReferencedProjects 
@@ -181,8 +180,14 @@ module ProjectProvider =
     let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
 
     let createForFileInProject (filePath: string) project: IProjectProvider option =
-        if not (project === null) && isFSharpProject project then
-            Some (ProjectProvider(project) :> _)
+        if not (project === null) && not (filePath === null) && isFSharpProject project then
+            let projectProvider = ProjectProvider(project) :> IProjectProvider
+            /// If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files 
+            /// Consequently, we should interprete it as a script
+            if Array.exists ((=) filePath) projectProvider.SourceFiles then
+                Some projectProvider
+            else
+                Some (VirtualProjectProvider(filePath) :> _)
         elif not (filePath === null) then
             let ext = Path.GetExtension filePath
             if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 

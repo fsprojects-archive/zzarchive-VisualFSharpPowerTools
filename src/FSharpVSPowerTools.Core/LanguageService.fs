@@ -115,7 +115,7 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
-  do match fileSystem with Some fs -> Shim.FileSystem <- fs | _ -> ()
+  do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
 
   // Create an instance of interactive checker. The callback is called by the F# compiler service
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
@@ -172,12 +172,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       ParseAndCheckResults.Empty
                   | Choice2Of2 e -> 
                       debug "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
+                      fail "ParseAndCheckFileInProject should not fail."
                       ParseAndCheckResults.Empty  
               reply.Reply results
       })
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
-  member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
+  member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, targetFramework) =
     let ext = Path.GetExtension(fileName)
     let opts = 
       if (ext = ".fsx" || ext = ".fsscript") then
@@ -185,7 +186,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
           
       // We are in a project - construct options using current properties
-      else async { return x.GetProjectCheckerOptions(projFilename, files, args) }
+      else async { return x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
@@ -222,7 +223,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       }
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
-  member x.GetProjectCheckerOptions(projFilename, files, args) =
+  member x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
     { ProjectFileName = projFilename
       ProjectFileNames = files
       ProjectOptions = args
@@ -230,7 +231,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       UseScriptResolutionRules = false
       LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
       UnresolvedReferences = None
-      ReferencedProjects = [||] }
+      ReferencedProjects = referencedProjects }
 
   member x.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
@@ -338,7 +339,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         async {
                           match options with
                           | None -> 
-                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
+                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, [||], targetFramework)
                           | Some opts -> 
                               return opts
                         }

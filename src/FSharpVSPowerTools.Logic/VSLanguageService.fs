@@ -35,7 +35,7 @@ type VSLanguageService
             return 
                 match openDocumentsChangeTimes with
                 | [] -> opts
-                | changeTimes -> { opts with LoadTime = max opts.LoadTime (List.max changeTimes) }
+                | changeTimes -> { opts with LoadTime = List.max (opts.LoadTime::changeTimes) }
         }
 
     let invalidateProject (projectItem: EnvDTE.ProjectItem) =
