@@ -115,7 +115,7 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 /// Provides functionality for working with the F# interactive checker running in background
 type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
-  do match fileSystem with Some fs -> Shim.FileSystem <- fs | _ -> ()
+  do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
 
   // Create an instance of interactive checker. The callback is called by the F# compiler service
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
@@ -172,6 +172,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       ParseAndCheckResults.Empty
                   | Choice2Of2 e -> 
                       debug "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
+                      fail "ParseAndCheckFileInProject should not fail."
                       ParseAndCheckResults.Empty  
               reply.Reply results
       })
