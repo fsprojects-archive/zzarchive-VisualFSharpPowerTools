@@ -26,7 +26,7 @@ let args =
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
 let opts = 
-    languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, args, framework)
+    languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, args, [||], framework)
     |> Async.RunSynchronously
 
 let checkCategories line (expected: (Category * int * int) list)  = 

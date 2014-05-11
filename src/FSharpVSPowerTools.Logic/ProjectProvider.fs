@@ -131,16 +131,15 @@ module ProjectProvider =
             member x.GetProjectCheckerOptions languageService =
                 async {
                     let x = x :> IProjectProvider
-                    let opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions)
                     let refs = x.GetReferencedProjects()
-                    let! refProjects =
+                    let! referencedProjects =
                         refs 
                         |> List.map (fun p -> async {
                             let! opts = p.GetProjectCheckerOptions languageService 
                             return p.FullOutputFilePath, opts })
                         |> Async.Parallel
                     
-                    let opts = { opts with ReferencedProjects = refProjects }
+                    let opts = languageService.GetProjectCheckerOptions (x.ProjectFileName, x.SourceFiles, x.CompilerOptions, referencedProjects) 
 
                     let refProjectsOutPaths = 
                         opts.ReferencedProjects 

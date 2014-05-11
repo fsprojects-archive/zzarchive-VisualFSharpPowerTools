@@ -178,7 +178,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       })
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
-  member x.GetCheckerOptions(fileName, projFilename, source, files, args, targetFramework) =
+  member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, targetFramework) =
     let ext = Path.GetExtension(fileName)
     let opts = 
       if (ext = ".fsx" || ext = ".fsscript") then
@@ -186,7 +186,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
           
       // We are in a project - construct options using current properties
-      else async { return x.GetProjectCheckerOptions(projFilename, files, args) }
+      else async { return x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
@@ -223,7 +223,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       }
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
-  member x.GetProjectCheckerOptions(projFilename, files, args) =
+  member x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
     { ProjectFileName = projFilename
       ProjectFileNames = files
       ProjectOptions = args
@@ -231,7 +231,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       UseScriptResolutionRules = false
       LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
       UnresolvedReferences = None
-      ReferencedProjects = [||] }
+      ReferencedProjects = referencedProjects }
 
   member x.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
@@ -339,7 +339,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         async {
                           match options with
                           | None -> 
-                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, targetFramework)
+                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, [||], targetFramework)
                           | Some opts -> 
                               return opts
                         }

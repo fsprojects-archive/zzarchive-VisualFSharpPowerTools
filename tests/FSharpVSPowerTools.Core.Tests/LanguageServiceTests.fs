@@ -33,7 +33,7 @@ let args =
 
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
-let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args)
+let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, [||])
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
 
