@@ -116,6 +116,7 @@ module ProjectProvider =
             member x.SourceFiles = sourceFiles()
             member x.FullOutputFilePath = 
                 Path.Combine (getProperty "FullPath", getActiveConfigProperty "OutputPath", getProperty "OutputFileName")
+                |> Path.GetFullPathSafe
             
             member x.GetReferencedProjects() =
                 project.GetReferencedFSharpProjects()
@@ -143,7 +144,7 @@ module ProjectProvider =
 
                     let refProjectsOutPaths = 
                         opts.ReferencedProjects 
-                        |> Array.map fst 
+                        |> Array.map fst
                         |> Set.ofArray
 
                     let orphanedProjects =
