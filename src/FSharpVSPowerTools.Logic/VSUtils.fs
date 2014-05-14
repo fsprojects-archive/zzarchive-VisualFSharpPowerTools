@@ -207,7 +207,10 @@ type Project with
     member x.GetReferencedProjects() = 
         (x.Object :?> VSProject).References
         |> Seq.cast<Reference>
-        |> Seq.choose (fun r -> Option.ofNull r.SourceProject)
+        |> Seq.choose (fun reference ->
+            reference
+            |> Option.ofNull
+            |> Option.bind (fun x -> Option.ofNull x.SourceProject))
         |> Seq.toList
 
     member x.GetReferencedFSharpProjects() = x.GetReferencedProjects() |> List.filter isFSharpProject
