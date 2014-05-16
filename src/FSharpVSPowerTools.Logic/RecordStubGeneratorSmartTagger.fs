@@ -55,7 +55,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                 let expr, lBraceLeftColumnCondition =
                     match recordBinding with
                     | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
-                    | QualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
+                    | QualifiedFieldRecordBinding(expr, _)
+                    | NonQualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
                 let exprStartLine1 = expr.Range.StartLine
                 let exprStartLine0 = exprStartLine1 - 1
 
@@ -98,17 +99,28 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                                     AllowStaleResults.MatchingSource)
                                 // Recheck cursor position to ensure it's still in new word
                                 match results, buffer.GetSnapshotPoint view.Caret.Position with
-                                | Some (fsSymbolUse, _), Some point when (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord ->
-                                    let entity = fsSymbolUse.Symbol :?> FSharpEntity
-                                    // The entity might correspond to another symbol 
-                                    if entity.IsFSharpRecord && entity.DisplayName = symbol.Text then
-                                        recordDefinition <- Some (recordBindingData, fsSymbolUse.DisplayContext, entity)
+                                | Some (fsSymbolUse, _), Some point when point.InSpan newWord ->
+
+                                    let newRecordDefinition =
+                                        match fsSymbolUse.Symbol with
+                                        // The entity might correspond to another symbol 
+                                        | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
+                                            Some (recordBindingData, fsSymbolUse.DisplayContext, entity)
+
+                                        // The entity might correspond to another symbol 
+                                        | :? FSharpField as field when field.DeclaringEntity.IsFSharpRecord && field.DisplayName = symbol.Text ->
+                                            Some (recordBindingData, fsSymbolUse.DisplayContext, field.DeclaringEntity)
+                                        | _ -> None
+
+                                    recordDefinition <- newRecordDefinition
+
+                                    match newRecordDefinition with
+                                    | Some _ ->
                                         currentWord <- Some newWord
                                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
+                                    | None -> ()
 
-                                        return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-                                    else
-                                        return recordDefinition <- None
                                 | _ ->
                                     return recordDefinition <- None
                             | None ->
@@ -130,7 +142,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         let writtenFieldCount =
             match recordBindingData with
             | TypedRecordBinding(_, _, fields)
-            | QualifiedFieldRecordBinding(_, fields) -> List.length fields
+            | QualifiedFieldRecordBinding(_, fields)
+            | NonQualifiedFieldRecordBinding(_, fields) -> List.length fields
         fieldCount > 0 && writtenFieldCount < fieldCount
 
     let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, pos: pos) displayContext entity = 
@@ -139,7 +152,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         let fieldsWritten =
             match recordBindingData with
             | TypedRecordBinding(_, _, fieldsWritten)
-            | QualifiedFieldRecordBinding(_, fieldsWritten) -> fieldsWritten
+            | QualifiedFieldRecordBinding(_, fieldsWritten)
+            | NonQualifiedFieldRecordBinding(_, fieldsWritten) -> fieldsWritten
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 

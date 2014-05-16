@@ -26,6 +26,7 @@ let inline setDebugObject (_: 'a) = ()
 type RecordBinding =
     | TypedRecordBinding of SynType * SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
     | QualifiedFieldRecordBinding of SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
+    | NonQualifiedFieldRecordBinding of SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
 
 [<NoComparison>]
 type private Context = {
@@ -207,6 +208,9 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                     | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
                         // TODO: we'll possibly have to look further down the tree
                         Some(QualifiedFieldRecordBinding(expr, fields))
+                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length = 1 ->
+                        // TODO: we'll possibly have to look further down the tree
+                        Some(NonQualifiedFieldRecordBinding(expr, fields))
                     | _ -> None
                 | _ -> walkExpr expr
 

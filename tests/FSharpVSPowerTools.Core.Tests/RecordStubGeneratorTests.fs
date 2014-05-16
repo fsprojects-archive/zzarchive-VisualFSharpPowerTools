@@ -160,7 +160,8 @@ let getRecordBindingData (pos: pos) (src: string) =
         let expr, lBraceLeftColumnCondition =
             match recordBindingExpTree with
             | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
-            | QualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
+            | QualifiedFieldRecordBinding(expr, _)
+            | NonQualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
 
         // Tokenize line where the record expression starts
         let exprStartLine1 = expr.Range.StartLine
@@ -186,13 +187,18 @@ let getRecordDefinitionFromPoint (pos: pos) (src: string) =
         let! endPosOfLBrace = endPosOfLBrace'
         let! symbolUse, _ = getSymbolUseAtPoint pos src
 
-        if symbolUse.Symbol :? FSharpEntity then
-            let entity = symbolUse.Symbol :?> FSharpEntity
+        match symbolUse.Symbol with
+        | :? FSharpEntity as entity ->
             if entity.IsFSharpRecord then
                 return! Some (recordBindingData, symbolUse.DisplayContext, entity, endPosOfLBrace)
             else
                 return! None
-        else
+        | :? FSharpField as field ->
+            if field.DeclaringEntity.IsFSharpRecord then
+                return! Some (recordBindingData, symbolUse.DisplayContext, field.DeclaringEntity, endPosOfLBrace)
+            else
+                return! None
+        | _ ->
             return! None
     }
 
@@ -201,7 +207,8 @@ let insertStubFromPos caretPos src =
     match recordDefnFromPt with
     | None -> src
     | Some(TypedRecordBinding(_, _, fieldsWritten), context, entity, insertPos)
-    | Some(QualifiedFieldRecordBinding(_, fieldsWritten), context, entity, insertPos) ->
+    | Some(QualifiedFieldRecordBinding(_, fieldsWritten), context, entity, insertPos)
+    | Some(NonQualifiedFieldRecordBinding(_, fieldsWritten), context, entity, insertPos) ->
         let insertColumn = insertPos.Column
         let fieldValue = "failwith \"\""
         let stub = RecordStubGenerator.formatRecord insertColumn 4 fieldValue context entity fieldsWritten
@@ -348,7 +355,7 @@ type MyRecord = {Field1: int; Field2: int}
 let x = { MyRecord.Field1 = 0; MyRecord.Field2 = 0 }"""
 
 [<Test>]
-let ``multiple-field stub generation with some fully-qualified fields already written`` () =
+let ``multiple-field stub generation with some qualified fields already written`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
 let x: MyRecord = { MyRecord.Field2 = 0 }"""
@@ -359,7 +366,7 @@ let x: MyRecord = { Field1 = failwith ""
                     MyRecord.Field2 = 0 }"""
 
 [<Test>]
-let ``multiple-field stub generation with all fully-qualified fields already written`` () =
+let ``multiple-field stub generation with all qualified fields already written`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
 let x: MyRecord = { MyRecord.Field1 = 0;
@@ -369,6 +376,27 @@ let x: MyRecord = { MyRecord.Field1 = 0;
 type MyRecord = {Field1: int; Field2: int}
 let x: MyRecord = { MyRecord.Field1 = 0;
                     MyRecord.Field2 = 0 }"""
+
+[<Test>]
+let ``multiple-field stub generation with some non-qualified fields already written`` () =
+    """
+type MyRecord = {Field1: int; Field2: int}
+let x = { Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 10)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: int}
+let x = { Field1 = failwith ""
+          Field2 = 0 }"""
+
+[<Test>]
+let ``multiple-field stub generation with all non-qualified fields already written`` () =
+    """
+type MyRecord = {Field1: int; Field2: int}
+let x = { Field1 = 0; Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 10)
+    |> assertSrcAreEqual """
+type MyRecord = {Field1: int; Field2: int}
+let x = { Field1 = 0; Field2 = 0 }"""
 
 
 #if INTERACTIVE
@@ -382,6 +410,8 @@ let x: MyRecord = { MyRecord.Field1 = 0;
 ``multiple-field stub generation when some fields are already written (2)`` ()
 ``multiple-field stub generation when all fields are already written (1)`` ()
 ``multiple-field stub generation when all fields are already written (2)`` ()
-``multiple-field stub generation with some fully-qualified fields already written`` ()
-``multiple-field stub generation with all fully-qualified fields already written`` ()
+``multiple-field stub generation with some qualified fields already written`` ()
+``multiple-field stub generation with all qualified fields already written`` ()
+``multiple-field stub generation with some non-qualified fields already written`` ()
+``multiple-field stub generation with all non-qualified fields already written`` ()
 #endif
