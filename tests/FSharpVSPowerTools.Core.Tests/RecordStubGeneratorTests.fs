@@ -22,15 +22,25 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
+let projectArgs =
+    [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
+
+let referencedProjects =
+    [|
+        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"
+        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll"
+        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll"
+        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll"
+        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll"
+        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll"
+        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
+    |]
+
 let args = 
-  [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
+    [|
+        yield! projectArgs
+        yield! referencedProjects
+    |]
 
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
@@ -73,9 +83,20 @@ let getSymbolUseAtPoint (pos: pos) (src: string) =
 
     match getSymbolAtPoint pos src with
     | Some symbol ->
+        let projectOptions: ProjectOptions =
+            { ProjectFileName = projFileName
+              ProjectFileNames = [| fileName |]
+              ProjectOptions = args
+              ReferencedProjects = Array.empty
+              IsIncompleteTypeCheckEnvironment = false
+              UseScriptResolutionRules = false
+              LoadTime = DateTime.UtcNow
+              UnresolvedReferences = None }
+
         let parseAndCheckResults =
-            languageService.ParseAndCheckFileInProject(
-                projFileName, fileName, src, files, args, framework, AllowStaleResults.MatchingSource)
+//            languageService.ParseAndCheckFileInProject(
+//                projFileName, fileName, src, files, args, framework, AllowStaleResults.MatchingSource)
+            languageService.ParseAndCheckFileInProject(projectOptions, fileName, src, AllowStaleResults.MatchingSource)
             |> Async.RunSynchronously
 
         // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
@@ -90,8 +111,19 @@ let tryFindRecordBindingExpTree (pos: pos) (src: string) =
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
 
+    let projectOptions: ProjectOptions =
+            { ProjectFileName = projFileName
+              ProjectFileNames = [| fileName |]
+              ProjectOptions = args
+              ReferencedProjects = Array.empty
+              IsIncompleteTypeCheckEnvironment = false
+              UseScriptResolutionRules = false
+              LoadTime = DateTime.UtcNow
+              UnresolvedReferences = None }
+
     let parseResults =
-        languageService.ParseFileInProject(projFileName, fileName, src, files, args, framework)
+//        languageService.ParseFileInProject(projFileName, fileName, src, files, args, framework)
+        languageService.ParseFileInProject(projectOptions, fileName, src)
         |> Async.RunSynchronously
 
     parseResults.ParseTree
