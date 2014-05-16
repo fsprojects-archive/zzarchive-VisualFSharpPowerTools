@@ -22,11 +22,9 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
-let projectArgs =
-    [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
-
-let referencedProjects =
+let args = 
     [|
+        "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-"
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll"
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll"
@@ -34,12 +32,6 @@ let referencedProjects =
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll"
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll"
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
-    |]
-
-let args = 
-    [|
-        yield! projectArgs
-        yield! referencedProjects
     |]
 
 let framework = FSharpTargetFramework.NET_4_5
@@ -94,8 +86,6 @@ let getSymbolUseAtPoint (pos: pos) (src: string) =
               UnresolvedReferences = None }
 
         let parseAndCheckResults =
-//            languageService.ParseAndCheckFileInProject(
-//                projFileName, fileName, src, files, args, framework, AllowStaleResults.MatchingSource)
             languageService.ParseAndCheckFileInProject(projectOptions, fileName, src, AllowStaleResults.MatchingSource)
             |> Async.RunSynchronously
 
@@ -122,7 +112,6 @@ let tryFindRecordBindingExpTree (pos: pos) (src: string) =
               UnresolvedReferences = None }
 
     let parseResults =
-//        languageService.ParseFileInProject(projFileName, fileName, src, files, args, framework)
         languageService.ParseFileInProject(projectOptions, fileName, src)
         |> Async.RunSynchronously
 
