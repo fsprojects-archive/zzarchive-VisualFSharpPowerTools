@@ -24,12 +24,14 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-let vsLanguageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let languageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let opts = 
+    languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, args, [||], framework)
+    |> Async.RunSynchronously
 
 let checkCategories line (expected: (Category * int * int) list)  = 
     let symbolsUses =
-        vsLanguageService.GetAllUsesOfAllSymbolsInFile
-            (projectFileName, fileName, source, sourceFiles, args, framework, AllowStaleResults.MatchingSource) 
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
 
     let lexer = 
@@ -42,8 +44,7 @@ let checkCategories line (expected: (Category * int * int) list)  =
                 Lexer.tokenizeLine source args line lineStr Lexer.queryLexState }
 
     let parseResults = 
-        vsLanguageService.ParseFileInProject(projectFileName, fileName, source, sourceFiles, args, framework)
-        |> Async.RunSynchronously
+        languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
     SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
     |> Array.choose (fun loc -> 
