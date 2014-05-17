@@ -177,18 +177,18 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 None
 
     and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
-        debug "Walk Binding"
+        //debug "Walk Binding"
         if not <| inRange binding.RangeOfBindingAndRhs pos then
-            debug "Not in range"
+            //debug "Not in range"
             None
         else
-            debug "In range (%A)" binding.RangeOfBindingAndRhs
-            debug "BindingReturnInfo: %A" retTy
-            debug "Expr: %A" expr
+            //debug "In range (%A)" binding.RangeOfBindingAndRhs
+            //debug "BindingReturnInfo: %A" retTy
+            //debug "Expr: %A" expr
             setDebugObject binding
             match retTy with
             | Some(SynBindingReturnInfo(ty, _range, _attributes)) ->
-                debug "ReturnTypeInfo: %A" ty
+                //debug "ReturnTypeInfo: %A" ty
 
                 match expr with
                 // Situation 1:
