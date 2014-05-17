@@ -92,7 +92,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         if func.CompiledName = ".ctor" then 
             if func.EnclosingEntity.IsValueType || func.EnclosingEntity.IsEnum then ValueType
             else ReferenceType
-        elif func.FullType.IsFunctionType && not func.IsPropertyGetterMethod && not func.IsPropertySetterMethod
+        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod
              && not symbolUse.IsFromComputationExpression then 
             if isOperator func.DisplayName then Other
             else Function
