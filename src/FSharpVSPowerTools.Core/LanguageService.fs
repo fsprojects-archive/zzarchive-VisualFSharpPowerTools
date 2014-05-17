@@ -5,9 +5,9 @@ open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
+open FSharpVSPowerTools
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -19,13 +19,13 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     static member Empty = ParseAndCheckResults(None)
 
-    member x.GetSymbolUseAtLocation(line, col, lineStr, identIsland) =
+    member x.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
         async {
             match infoOpt with 
             | None -> 
                 return None
             | Some (checkResults, _parseResults) -> 
-                return! checkResults.GetSymbolUseAtLocation(line, col, lineStr, identIsland)
+                return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
         }
 
     member x.GetUsesOfSymbolInFile(symbol) =
@@ -75,7 +75,7 @@ type AllowStaleResults =
     /// (such as a saved change in an earlier file in the compilation order, or a saved change in a project or DLL this project depends on).
     ///
     /// This gives good, fast, accurate results for repeated requests to the same file text. Semantic responsiveness will be degraded
-    /// during eiting of the file.
+    /// during edition of the file.
     | MatchingSource
     /// Don't allow stale results. This waits for all background changes relevant to the file to propagate, and forces a recheck of the file text
     /// regardless of whether if has been recently checked or not.

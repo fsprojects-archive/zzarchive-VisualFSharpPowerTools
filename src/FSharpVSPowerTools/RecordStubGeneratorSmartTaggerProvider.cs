@@ -13,8 +13,8 @@ namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
-    [TagType(typeof(ImplementInterfaceSmartTag))]
-    public class ImplementInterfaceSmartTaggerProvider : IViewTaggerProvider
+    [TagType(typeof(RecordStubGeneratorSmartTag))]
+    public class RecordStubGeneratorSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
@@ -33,12 +33,13 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.InterfaceImplementationEnabled) return null;
+            // TODO: make this optional
+            //var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            //if (!generalOptions.ImplementInterfaceEnabled) return null;
 
-            return new ImplementInterfaceSmartTagger(textView, buffer, editorOptionsFactory,
-                        undoHistoryRegistry.RegisterHistory(buffer), 
-                        fsharpVsLanguageService, serviceProvider) as ITagger<T>;
+            return new RecordStubGeneratorSmartTagger(textView, buffer, editorOptionsFactory,
+                undoHistoryRegistry.RegisterHistory(buffer),
+                fsharpVsLanguageService, serviceProvider) as ITagger<T>;
         }
     }
 }

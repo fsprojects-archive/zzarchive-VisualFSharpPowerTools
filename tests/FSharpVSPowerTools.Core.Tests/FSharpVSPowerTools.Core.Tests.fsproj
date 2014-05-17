@@ -10,7 +10,7 @@
     <RootNamespace>FSharpVSPowerTools.Core.UnitTests</RootNamespace>
     <AssemblyName>FSharpVSPowerTools.Core.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
-    <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
+    <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
     <Name>FSharpVSPowerTools.Core.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
@@ -62,6 +62,7 @@
     <Compile Include="XmlDocTests.fs" />
     <Compile Include="SourceCodeClassifierTests.fs" />
     <Compile Include="InterfaceStubGeneratorTests.fs" />
+    <Compile Include="RecordStubGeneratorTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsCheck">
