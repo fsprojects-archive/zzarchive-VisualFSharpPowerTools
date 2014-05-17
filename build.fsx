@@ -11,10 +11,6 @@ open System
 open System.IO
 open System.Text.RegularExpressions
 
-// --------------------------------------------------------------------------------------
-// START TODO: Provide project-specific details below
-// --------------------------------------------------------------------------------------
-
 // Information about the project are used
 //  - for version and project name in generated AssemblyInfo file
 //  - by the generated NuGet package 
@@ -51,13 +47,16 @@ let gitHome = "https://github.com/fsprojects"
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
-// --------------------------------------------------------------------------------------
-// END TODO: The rest of the file includes standard build steps 
-// --------------------------------------------------------------------------------------
-
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
+
+let isAppVeyorBuild = environVar "APPVEYOR" <> null
+let buildVersion = sprintf "%s-a%s" release.NugetVersion (DateTime.UtcNow.ToString "yyMMddHHmm")
+
+Target "BuildVersion" (fun _ ->
+    Shell.Exec("appveyor", sprintf "UpdateBuild -Version \"%s\"" buildVersion) |> ignore
+)
 
 // Generate assembly info files with the right version & up-to-date information
 Target "AssemblyInfo" (fun _ ->
@@ -190,6 +189,7 @@ Target "Main" DoNothing
 Target "All" DoNothing
 
 "Clean"
+  =?> ("BuildVersion", isAppVeyorBuild)
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
