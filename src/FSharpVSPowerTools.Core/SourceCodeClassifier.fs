@@ -78,7 +78,8 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
            || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure 
            || ((e.IsProvided || e.IsProvidedAndErased || e.IsProvidedAndGenerated) && e.CompiledName = e.DisplayName)
-           || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace) then
+           || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace)
+           || e.IsByRef then
             ReferenceType
         elif e.IsFSharpModule then Module
         else 
