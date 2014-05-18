@@ -265,27 +265,20 @@ type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, upd
     // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
     let events = events |> List.reduce Event.merge
-    let timer: Atom<DispatcherTimer option> = Atom None
+    let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle,      
+                                    Interval = TimeSpan.FromMilliseconds (float delayMillis))
 
     let startNewTimer() = 
-        timer.Swap (fun oldTimer -> 
-            oldTimer |> Option.iter (fun x -> x.Stop())
-            let newTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle,      
-                                               Interval = TimeSpan.FromMilliseconds (float delayMillis))
-            newTimer.Start()
-            Some newTimer
-        ) |> ignore
+        timer.Stop()
+        timer.Start()
         
     let rec awaitPauseAfterChange() =
         async { 
-            match timer.Value with
-            | Some timer ->
-                let! e = Async.EitherEvent(events, timer.Tick)
-                match e with
-                | Choice1Of2 _ -> 
-                    startNewTimer()
-                    do! awaitPauseAfterChange()
-                | _ -> ()
+            let! e = Async.EitherEvent(events, timer.Tick)
+            match e with
+            | Choice1Of2 _ -> 
+                startNewTimer()
+                do! awaitPauseAfterChange()
             | _ -> ()
         }
         
