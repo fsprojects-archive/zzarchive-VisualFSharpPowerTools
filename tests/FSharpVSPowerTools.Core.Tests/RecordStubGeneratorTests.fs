@@ -226,8 +226,7 @@ let insertStubFromPos caretPos src =
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
 let assertSrcAreEqual expectedSrc actualSrc =
-    assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
-
+    Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
 [<Test>]
 let ``single-field record stub generation`` () =
@@ -358,12 +357,12 @@ let x = { MyRecord.Field1 = 0; MyRecord.Field2 = 0 }"""
 let ``multiple-field stub generation with some qualified fields already written`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
-let x: MyRecord = { MyRecord.Field2 = 0 }"""
-    |> insertStubFromPos (Pos.fromZ 2 7)
+let x = Some { MyRecord.Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 2 16)
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: int}
-let x: MyRecord = { Field1 = failwith ""
-                    MyRecord.Field2 = 0 }"""
+let x = Some { Field1 = failwith ""
+               MyRecord.Field2 = 0 }"""
 
 [<Test>]
 let ``multiple-field stub generation with all qualified fields already written`` () =
@@ -381,12 +380,16 @@ let x: MyRecord = { MyRecord.Field1 = 0;
 let ``multiple-field stub generation with some non-qualified fields already written`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
-let x = { Field2 = 0 }"""
-    |> insertStubFromPos (Pos.fromZ 2 10)
+let x = 
+    let y = 0
+    { Field2 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 4 6)
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: int}
-let x = { Field1 = failwith ""
-          Field2 = 0 }"""
+let x = 
+    let y = 0
+    { Field1 = failwith ""
+      Field2 = 0 }"""
 
 [<Test>]
 let ``multiple-field stub generation with all non-qualified fields already written`` () =
@@ -398,6 +401,44 @@ let x = { Field1 = 0; Field2 = 0 }"""
 type MyRecord = {Field1: int; Field2: int}
 let x = { Field1 = 0; Field2 = 0 }"""
 
+[<Test>]
+let ``support record fields that are also records`` () =
+    """
+type Record1 = {Field11: int; Field12: int}
+type Record2 = {Field21: Record1; Field22: int}
+let x = { Field21 = { Field11 = 0 } }"""
+    |> insertStubFromPos (Pos.fromZ 3 10)
+    |> assertSrcAreEqual """
+type Record1 = {Field11: int; Field12: int}
+type Record2 = {Field21: Record1; Field22: int}
+let x = { Field22 = failwith ""
+          Field21 = { Field11 = 0 } }"""
+
+[<Test; Ignore "This feature should insert fields based on cursor positions">]
+let ``support record fields nested inside other records`` () =
+    """
+type Record1 = {Field11: int; Field12: int}
+type Record2 = {Field21: Record1; Field22: int}
+let x = { Field21 = { Field11 = 0 } }"""
+    |> insertStubFromPos (Pos.fromZ 3 22)
+    |> assertSrcAreEqual """
+type Record1 = {Field11: int; Field12: int}
+type Record2 = {Field21: Record1; Field22: int}
+let x = { Field22 = failwith ""
+          Field21 = { Field11 = 0 } }"""
+
+[<Test; Ignore "This feature should conform to fully-qualified access attributes">]
+let ``print fully-qualified field names on fully-qualified records`` () =
+    """
+[<RequireQualifiedAccess>]
+type MyRecord = {Field1: int; Field2: int}
+let x = { MyRecord.Field1 = 0 }"""
+    |> insertStubFromPos (Pos.fromZ 3 10)
+    |> assertSrcAreEqual """
+[<RequireQualifiedAccess>]
+type MyRecord = {Field1: int; Field2: int}
+let x = { MyRecord.Field2 = failwith ""
+          MyRecord.Field1 = 0 }"""
 
 #if INTERACTIVE
 ``single-field record stub generation`` ()
