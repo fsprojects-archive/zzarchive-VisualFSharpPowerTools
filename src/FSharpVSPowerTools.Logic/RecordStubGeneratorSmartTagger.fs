@@ -17,6 +17,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.Core.CodeGeneration
 open FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
+open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.CompilerBinding
 open Microsoft.FSharp.Compiler.Ast
@@ -33,7 +34,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     vsLanguageService: VSLanguageService,
                                     serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
-    let mutable currentWord: SnapshotSpan option = None
+    let mutable currentWord = None
     let mutable recordDefinition = None
 
     let [<Literal>] CommandName = "Generate record stubs"
@@ -78,60 +79,48 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         }
 
     let updateAtCaretPosition() =
-        match buffer.GetSnapshotPoint view.Caret.Position with
-        | Some point ->
-            maybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument()
-                let! project = ProjectProvider.createForDocument doc
-                let! newWord, symbol = vsLanguageService.GetSymbol(point, project)
-                return newWord, symbol, doc, project
-            }
-            |> function
-                | Some (newWord, symbol, doc, project) ->
-                    async {
-                        match symbol.Kind with
-                        | SymbolKind.Ident ->
-                            let! recordBindingData' = collectRecordBindingData point doc project
-                            match recordBindingData' with
-                            | Some recordBindingData ->
-                                let! results = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, 
-                                                    AllowStaleResults.MatchingSource)
-                                // Recheck cursor position to ensure it's still in new word
-                                match results, buffer.GetSnapshotPoint view.Caret.Position with
-                                | Some (fsSymbolUse, _), Some point when point.InSpan newWord ->
+        asyncMaybe {
+            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = dte.GetActiveDocument() |> liftMaybe
+            let! project = ProjectProvider.createForDocument doc |> liftMaybe
+            let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
 
-                                    let newRecordDefinition =
-                                        match fsSymbolUse.Symbol with
-                                        // The entity might correspond to another symbol 
-                                        | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
-                                            Some (recordBindingData, fsSymbolUse.DisplayContext, entity)
+            match symbol.Kind with
+            | SymbolKind.Ident ->
+                let! recordBindingData = collectRecordBindingData point doc project
+                let! (fsSymbolUse, _results) = 
+                    vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
+                // Recheck cursor position to ensure it's still in new word
+                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                if point.InSpan newWord then
+                    let newRecordDefinition =
+                        match fsSymbolUse.Symbol with
+                        // The entity might correspond to another symbol 
+                        | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
+                            Some (newWord, (recordBindingData, fsSymbolUse.DisplayContext, entity))
 
-                                        // The entity might correspond to another symbol 
-                                        | :? FSharpField as field when field.DeclaringEntity.IsFSharpRecord && field.DisplayName = symbol.Text ->
-                                            Some (recordBindingData, fsSymbolUse.DisplayContext, field.DeclaringEntity)
-                                        | _ -> None
+                        // The entity might correspond to another symbol 
+                        | :? FSharpField as field when field.DeclaringEntity.IsFSharpRecord && field.DisplayName = symbol.Text ->
+                            Some (newWord, (recordBindingData, fsSymbolUse.DisplayContext, field.DeclaringEntity))
+                        | _ -> None
 
-                                    recordDefinition <- newRecordDefinition
-
-                                    match newRecordDefinition with
-                                    | Some _ ->
-                                        currentWord <- Some newWord
-                                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-                                    | None -> ()
-
-                                | _ ->
-                                    return recordDefinition <- None
-                            | None ->
-                                return recordDefinition <- None 
-                        | _ ->
-                            return recordDefinition <- None 
-
-                    } |> Async.StartImmediate
-                | None ->
-                    recordDefinition <- None 
-        | None -> ()
+                    return! liftMaybe newRecordDefinition
+                else
+                    return! liftMaybe None
+            | _ -> return! liftMaybe None
+        }
+        |> Async.map (fun result -> 
+            let changed =
+                match recordDefinition, result, currentWord with
+                | None, None, _ -> false
+                | _, Some(newWord, _), Some oldWord -> newWord <> oldWord
+                | _ -> true
+            recordDefinition <- result
+            if changed then
+                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+        |> Async.StartImmediate
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
@@ -146,7 +135,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             | NonQualifiedFieldRecordBinding(_, fields) -> List.length fields
         fieldCount > 0 && writtenFieldCount < fieldCount
 
-    let handleGenerateRecordStub (span: SnapshotSpan) (recordBindingData, pos: pos) displayContext entity = 
+    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData, pos: pos) displayContext entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let fieldsWritten =
@@ -164,27 +153,24 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                        displayContext
                        entity
                        fieldsWritten
-        let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
+        let current = snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
         buffer.Insert(current, stub) |> ignore
 
         transaction.Complete()
 
-    let generateRecordStub span data displayContext entity =
+    let generateRecordStub snapshot data displayContext entity =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = CommandName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = handleGenerateRecordStub span data displayContext entity }
+            member x.Invoke() = handleGenerateRecordStub snapshot data displayContext entity }
 
-    member x.GetSmartTagActions(span: SnapshotSpan, data, displayContext, entity: FSharpEntity) =
+    member x.GetSmartTagActions(snapshot, data, displayContext, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
-        let trackingSpan = span.Snapshot.CreateTrackingSpan(span.Span, SpanTrackingMode.EdgeInclusive)
-        let _snapshot = trackingSpan.TextBuffer.CurrentSnapshot
-
-        actionList.Add(generateRecordStub span data displayContext entity)
+        actionList.Add(generateRecordStub snapshot data displayContext entity)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -192,11 +178,11 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     interface ITagger<RecordStubGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             seq {
-                match currentWord, recordDefinition with
-                | Some word, Some (data, displayContext, entity) when shouldGenerateRecordStub data entity ->
+                match recordDefinition with
+                | Some (word, (data, displayContext, entity)) when shouldGenerateRecordStub data entity ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<_>(span, 
-                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(span, data, displayContext, entity)))
+                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, data, displayContext, entity)))
                           :> ITagSpan<_>
                 | _ -> ()
             }
