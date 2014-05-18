@@ -1,6 +1,5 @@
 build_script:
   - ps: .\build.cmd
-test:
-  assemblies:
-     - FSharpVSPowerTools.Core.Tests.dll
-     - FSharpVSPowerTools.Tests.dll
+test: off
+artifacts:
+  - path: bin\FSharpVSPowerTools.vsix
