@@ -47,10 +47,6 @@ let private (|IndexerArg|) = function
 let private (|IndexerArgList|) xs =
     List.collect (|IndexerArg|) xs
 
-// TODO: copy-pasted from InterfaceStubGeneration
-let private inRange range pos = 
-    AstTraversal.rangeContainsPosLeftEdgeInclusive range pos
-
 let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     let writer = ctxt.Writer
 
@@ -105,13 +101,13 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
         List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
     and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, range)) =
-        if not <| inRange range pos then
+        if not <| rangeContainsPos range pos then
             None
         else
             List.tryPick walkSynModuleDecl decls
 
     and walkSynModuleDecl(decl: SynModuleDecl) =
-        if not <| inRange decl.Range pos then
+        if not <| rangeContainsPos decl.Range pos then
             None
         else
             match decl with
@@ -135,14 +131,14 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 None
 
     and walkSynTypeDefn(TypeDefn(_componentInfo, representation, members, range)) = 
-        if not <| inRange range pos then
+        if not <| rangeContainsPos range pos then
             None
         else
             walkSynTypeDefnRepr representation
             |> Option.orElse (List.tryPick walkSynMemberDefn members)        
 
     and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
-        if not <| inRange typeDefnRepr.Range pos then
+        if not <| rangeContainsPos typeDefnRepr.Range pos then
             None
         else
             match typeDefnRepr with
@@ -152,7 +148,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 None
 
     and walkSynMemberDefn (memberDefn: SynMemberDefn) =
-        if not <| inRange memberDefn.Range pos then
+        if not <| rangeContainsPos memberDefn.Range pos then
             None
         else
             match memberDefn with
@@ -178,44 +174,30 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
 
     and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
         //debug "Walk Binding"
-        if not <| inRange binding.RangeOfBindingAndRhs pos then
+        if not <| rangeContainsPos binding.RangeOfBindingAndRhs pos then
             //debug "Not in range"
             None
         else
             //debug "In range (%A)" binding.RangeOfBindingAndRhs
             //debug "BindingReturnInfo: %A" retTy
             //debug "Expr: %A" expr
-            setDebugObject binding
             match retTy with
             | Some(SynBindingReturnInfo(ty, _range, _attributes)) ->
                 //debug "ReturnTypeInfo: %A" ty
-
                 match expr with
                 // Situation 1:
                 // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
                 // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
-                | SynExpr.Typed(SynExpr.Record(_inheritOpt, _copyOpt, fields, _range),
-                                _,
-                                __range) ->
-                    // TODO: we'll possibly have to look further down the tree
-                    Some(TypedRecordBinding(ty, expr, fields))
+                | SynExpr.Typed(SynExpr.Record(_inheritOpt, _copyOpt, fields, _range0), _, _range1) ->
+                    fields 
+                    |> List.tryPick walkRecordField
+                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, fields)))
                 | _ -> walkExpr expr
             | None ->
-                match expr with
-                // let x = { f1 = e1; f2 = e2; ... }
-                | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
-                    match fields with
-                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
-                        // TODO: we'll possibly have to look further down the tree
-                        Some(QualifiedFieldRecordBinding(expr, fields))
-                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length = 1 ->
-                        // TODO: we'll possibly have to look further down the tree
-                        Some(NonQualifiedFieldRecordBinding(expr, fields))
-                    | _ -> None
-                | _ -> walkExpr expr
+                walkExpr expr
 
     and walkExpr expr =
-        if not <| inRange expr.Range pos then 
+        if not <| rangeContainsPos expr.Range pos then 
             None
         else
             match expr with
@@ -225,8 +207,19 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.Const(_synConst, _range) -> 
                 None
 
+            | SynExpr.Typed(synExpr, ty, _) ->
+                match synExpr with
+                // Situation 1:
+                // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
+                // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
+                | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
+                    fields 
+                    |> List.tryPick walkRecordField
+                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, fields)))
+                | _ -> 
+                walkExpr synExpr
+
             | SynExpr.Paren(synExpr, _, _, _)
-            | SynExpr.Typed(synExpr, _, _)
             | SynExpr.New(_, _, synExpr, _)
             | SynExpr.ArrayOrListOfSeqExpr(_, synExpr, _)
             | SynExpr.CompExpr(_, _, synExpr, _)
@@ -240,18 +233,20 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.ArrayOrList(_, synExprList, _range) ->
                 List.tryPick walkExpr synExprList
 
-            | SynExpr.Record(_inheritOpt, _copyOpt, _fields, _range) ->
-                // TODO: look in all expressions
-                None
+            | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
+                fields 
+                |> List.tryPick walkRecordField
+                |> Option.orElse (
+                    match fields with
+                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
+                            Some(QualifiedFieldRecordBinding(expr, fields))
+                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length = 1 ->
+                        Some(NonQualifiedFieldRecordBinding(expr, fields))
+                    | _ -> None)
 
-            | SynExpr.ObjExpr(_ty, baseCallOpt, binds, ifaces, _range1, _range2) -> 
-                match baseCallOpt with
-                | None ->
-                    List.tryPick walkBinding binds
-                    |> Option.orElse (List.tryPick walkSynInterfaceImpl ifaces)
-                | Some _ -> 
-                    // TODO: cover object expressions of normal objects
-                    None
+            | SynExpr.ObjExpr(_ty, _baseCallOpt, binds, ifaces, _range1, _range2) -> 
+                List.tryPick walkBinding binds
+                |> Option.orElse (List.tryPick walkSynInterfaceImpl ifaces)
 
             | SynExpr.While(_sequencePointInfoForWhileLoop, synExpr1, synExpr2, _range) ->
                 List.tryPick walkExpr [synExpr1; synExpr2]
@@ -357,6 +352,12 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.FromParseError(synExpr, _range)
             | SynExpr.DiscardAfterMissingQualificationAfterDot(synExpr, _range) -> 
                 walkExpr synExpr
+
+    and walkRecordField ((longIdents, _): RecordFieldName, synExprOpt, _) = 
+        if rangeContainsPos longIdents.Range pos then
+            None
+        else
+            Option.bind walkExpr synExprOpt
     
     and walkSynInterfaceImpl (InterfaceImpl(_synType, synBindings, _range)) =
         List.tryPick walkBinding synBindings
