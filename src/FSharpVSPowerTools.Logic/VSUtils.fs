@@ -264,28 +264,28 @@ open System.Windows.Threading
 type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
     // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
-    let events = events |> List.reduce Event.merge 
+    let events = events |> List.reduce Event.merge
+    let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle,      
+                                    Interval = TimeSpan.FromMilliseconds (float delayMillis))
 
     let startNewTimer() = 
-        let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle, 
-                                        Interval = TimeSpan.FromMilliseconds (float delayMillis))
+        timer.Stop()
         timer.Start()
-        timer
         
-    let rec awaitPauseAfterChange (timer: DispatcherTimer) = 
+    let rec awaitPauseAfterChange() =
         async { 
             let! e = Async.EitherEvent(events, timer.Tick)
             match e with
             | Choice1Of2 _ -> 
-                timer.Stop()
-                do! awaitPauseAfterChange (startNewTimer())
+                startNewTimer()
+                do! awaitPauseAfterChange()
             | _ -> ()
         }
         
     do async { 
         while true do
             do! Async.AwaitEvent events
-            do! awaitPauseAfterChange (startNewTimer())
+            do! awaitPauseAfterChange()
             update() }
        |> Async.StartImmediate
        // go ahead and synchronously get the first bit of info for the original rendering
