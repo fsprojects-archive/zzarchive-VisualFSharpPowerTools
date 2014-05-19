@@ -285,6 +285,7 @@ type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, upd
     do async { 
         while true do
             do! Async.AwaitEvent events
+            startNewTimer()
             do! awaitPauseAfterChange()
             update() }
        |> Async.StartImmediate
