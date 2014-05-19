@@ -14,7 +14,6 @@ open System.ComponentModel.Design
 open System.Diagnostics
 open System.Windows
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open Reflection
 

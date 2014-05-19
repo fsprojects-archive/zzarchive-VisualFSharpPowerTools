@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Core
+﻿namespace FSharpVSPowerTools
 
 type XmlDocable =
     | XmlDocable of int * int * string list

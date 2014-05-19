@@ -14,7 +14,7 @@ open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
-open FSharpVSPowerTools.Core
+open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
 type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: string, languageService: VSLanguageService) as self =

@@ -8,7 +8,6 @@ open System.ComponentModel
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
-open FSharp.CompilerBinding
 
 type MoveToFolderDialog = FsXaml.XAML< "MoveToFolderDialog.xaml" >
 

@@ -19,7 +19,6 @@ open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
 let args = 
@@ -35,7 +34,7 @@ let args =
     |]
 
 let framework = FSharpTargetFramework.NET_4_5
-let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let languageService = LanguageService(fun _ -> ())
 
 // [x] Get the syntax construct that you're interested in
 // [x] Get the position P where to insert the generated code
@@ -52,9 +51,9 @@ let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
 #load "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
 #endif
 
-open FSharpVSPowerTools.Core
-open FSharpVSPowerTools.Core.CodeGeneration
-open FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
+open FSharpVSPowerTools
+open FSharpVSPowerTools.CodeGeneration
+open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open Microsoft.FSharp.Compiler.Ast
 
 let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)

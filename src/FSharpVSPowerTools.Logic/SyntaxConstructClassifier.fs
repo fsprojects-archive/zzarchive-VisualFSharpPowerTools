@@ -7,10 +7,8 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Core
-open FSharpVSPowerTools.Core.SourceCodeClassifier
+open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
-open FSharp.CompilerBinding
 
 [<NoComparison>]
 type private ClassifierState =

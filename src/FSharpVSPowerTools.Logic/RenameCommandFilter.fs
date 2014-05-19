@@ -13,7 +13,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open FSharp.CompilerBinding
 
 module PkgCmdConst =
     let cmdidStandardRenameCommand = uint32 VSConstants.VSStd2KCmdID.RENAME // ECMD_RENAME

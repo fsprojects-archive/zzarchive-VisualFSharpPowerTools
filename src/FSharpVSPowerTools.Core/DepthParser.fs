@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Core
+﻿namespace FSharpVSPowerTools
 
 module internal DepthParsing =
 

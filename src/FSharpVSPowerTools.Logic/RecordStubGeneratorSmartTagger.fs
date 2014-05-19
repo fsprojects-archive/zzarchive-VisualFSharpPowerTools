@@ -14,12 +14,10 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Core
-open FSharpVSPowerTools.Core.CodeGeneration
-open FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
+open FSharpVSPowerTools.CodeGeneration
+open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
-open FSharp.CompilerBinding
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices

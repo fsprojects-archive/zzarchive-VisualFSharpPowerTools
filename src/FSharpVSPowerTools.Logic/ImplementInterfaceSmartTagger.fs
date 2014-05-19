@@ -12,11 +12,10 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
-open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
-open FSharp.CompilerBinding
+open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices

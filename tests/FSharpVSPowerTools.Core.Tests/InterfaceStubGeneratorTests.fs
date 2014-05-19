@@ -13,8 +13,8 @@ open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharp.CompilerBinding
-open FSharpVSPowerTools.Core
+open FSharpVSPowerTools
+open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.ProjectSystem
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "InterfaceSampleFile.fs")
@@ -32,7 +32,7 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let vsLanguageService = LanguageService(fun _ -> ())
 let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], args, [||]) 
 
 #if INTERACTIVE
