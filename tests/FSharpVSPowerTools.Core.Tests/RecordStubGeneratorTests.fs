@@ -427,7 +427,7 @@ type Record2 = {Field21: Record1; Field22: int}
 let x = { Field22 = failwith ""
           Field21 = { Field11 = 0 } }"""
 
-[<Test; Ignore "This feature should conform to fully-qualified access attributes">]
+[<Test>]
 let ``print fully-qualified field names on fully-qualified records`` () =
     """
 [<RequireQualifiedAccess>]

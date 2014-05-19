@@ -36,6 +36,8 @@ type private Context = {
     /// A single-line skeleton for each field
     FieldDefaultValue: string
     DisplayContext: FSharpDisplayContext
+    RecordTypeName: string
+    RequireQualifiedAccess: bool
 }
 
 // TODO: copy-pasted from InterfaceStubGeneration
@@ -53,16 +55,29 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     if not isFirstField then
         writer.WriteLine("")
     
-    writer.Write(" {0} = {1}", field.Name, ctxt.FieldDefaultValue)
+    let name = 
+        if ctxt.RequireQualifiedAccess then
+            sprintf "%s.%s" ctxt.RecordTypeName field.Name
+        else 
+            field.Name
+    
+    writer.Write(" {0} = {1}", name, ctxt.FieldDefaultValue)
+
+let internal isAttrib<'T> (attrib: FSharpAttribute)  =
+        attrib.AttributeType.CompiledName = typeof<'T>.Name
+
+let internal hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
+        attribs |> Seq.exists (fun a -> isAttrib<'T>(a))
 
 let formatRecord startColumn indentValue (fieldDefaultValue: string)
                  (displayContext: FSharpDisplayContext) (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
-
     use writer = new ColumnIndentedTextWriter()
-    let ctxt: Context =
-        { Writer = writer
+    let ctxt =
+        { RecordTypeName = entity.DisplayName
+          RequireQualifiedAccess = hasAttrib<RequireQualifiedAccessAttribute> entity.Attributes 
+          Writer = writer
           IndentValue = indentValue
           FieldDefaultValue = fieldDefaultValue
           DisplayContext = displayContext }
