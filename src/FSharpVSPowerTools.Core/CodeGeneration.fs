@@ -1,4 +1,5 @@
-﻿namespace FSharpVSPowerTools.Core
+﻿[<AutoOpen>]
+module FSharpVSPowerTools.CodeGeneration.Utils
 
 open System
 open System.IO
@@ -29,4 +30,18 @@ type internal ColumnIndentedTextWriter() =
     interface IDisposable with
         member x.Dispose() =
             stringWriter.Dispose()
-            indentWriter.Dispose()  
+            indentWriter.Dispose()
+
+open System.Collections.Generic
+open Microsoft.FSharp.Compiler.Ast
+open Microsoft.FSharp.Compiler.SourceCodeServices
+
+let (|IndexerArg|) = function
+    | SynIndexerArg.Two(e1, e2) -> [e1; e2]
+    | SynIndexerArg.One e -> [e]
+
+let (|IndexerArgList|) xs =
+    List.collect (|IndexerArg|) xs
+
+let hasAttribute<'T> (attrs: seq<FSharpAttribute>) =
+    attrs |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'T>.Name)

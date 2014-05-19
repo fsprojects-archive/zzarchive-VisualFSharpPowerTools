@@ -8,7 +8,7 @@ module FSharpVSPowerTools.Core.Tests.XmlDocTests
 #endif
 
 open System.IO
-open FSharpVSPowerTools.Core
+open FSharpVSPowerTools
 open NUnit.Framework
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")

@@ -1,4 +1,4 @@
-﻿namespace FSharp.CompilerBinding
+﻿namespace FSharpVSPowerTools
 
 open System
 open System.IO

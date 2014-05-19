@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Core.SourceCodeClassifier
+﻿module FSharpVSPowerTools.SourceCodeClassifier
 
 open System
 open System.Collections.Generic
@@ -6,7 +6,6 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
-open FSharp.CompilerBinding
 
 type Category =
     | ReferenceType

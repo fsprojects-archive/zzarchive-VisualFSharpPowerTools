@@ -3,9 +3,7 @@
 open System.IO
 open NUnit.Framework
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Core
-open FSharp.CompilerBinding
-open FSharpVSPowerTools.Core.SourceCodeClassifier
+open FSharpVSPowerTools.SourceCodeClassifier
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Coloring.fs")
 let source = File.ReadAllText(fileName)
@@ -24,7 +22,7 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-let languageService = FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let languageService = LanguageService(fun _ -> ())
 let opts = 
     languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, args, [||], framework)
     |> Async.RunSynchronously

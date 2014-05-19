@@ -12,7 +12,6 @@ open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharp.CompilerBinding
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
@@ -32,7 +31,7 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-let languageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let languageService = new LanguageService(fun _ -> ())
 let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, [||])
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()

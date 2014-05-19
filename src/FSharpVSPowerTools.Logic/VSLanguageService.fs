@@ -9,7 +9,6 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Editor
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.VisualStudio.TextManager.Interop
-open FSharp.CompilerBinding
 open FSharpVSPowerTools
 
 [<Export>]

@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
+﻿module FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 
 open System
 open System.IO
@@ -6,7 +6,6 @@ open System.Diagnostics
 open System.Collections.Generic
 open System.CodeDom.Compiler
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Core
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -20,7 +19,6 @@ let inline setDebugObject (o: 'a) = debugObject <- o
 #else
 let inline setDebugObject (_: 'a) = ()
 #endif
-
 
 [<NoEquality; NoComparison>]
 type RecordBinding =
@@ -36,16 +34,9 @@ type private Context = {
     /// A single-line skeleton for each field
     FieldDefaultValue: string
     DisplayContext: FSharpDisplayContext
+    RecordTypeName: string
+    RequireQualifiedAccess: bool
 }
-
-// TODO: copy-pasted from InterfaceStubGeneration
-let private (|IndexerArg|) = function
-    | SynIndexerArg.Two(e1, e2) -> [e1; e2]
-    | SynIndexerArg.One e -> [e]
-
-// TODO: copy-pasted from InterfaceStubGeneration
-let private (|IndexerArgList|) xs =
-    List.collect (|IndexerArg|) xs
 
 let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     let writer = ctxt.Writer
@@ -53,16 +44,23 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     if not isFirstField then
         writer.WriteLine("")
     
-    writer.Write(" {0} = {1}", field.Name, ctxt.FieldDefaultValue)
+    let name = 
+        if ctxt.RequireQualifiedAccess then
+            sprintf "%s.%s" ctxt.RecordTypeName field.Name
+        else 
+            field.Name
+    
+    writer.Write(" {0} = {1}", name, ctxt.FieldDefaultValue)
 
 let formatRecord startColumn indentValue (fieldDefaultValue: string)
                  (displayContext: FSharpDisplayContext) (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
-
     use writer = new ColumnIndentedTextWriter()
-    let ctxt: Context =
-        { Writer = writer
+    let ctxt =
+        { RecordTypeName = entity.DisplayName
+          RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
+          Writer = writer
           IndentValue = indentValue
           FieldDefaultValue = fieldDefaultValue
           DisplayContext = displayContext }

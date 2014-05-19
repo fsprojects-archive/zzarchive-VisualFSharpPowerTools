@@ -14,7 +14,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open FSharp.CompilerBinding
 
 [<RequireQualifiedAccess>]
 module PkgCmdConst =
