@@ -30,12 +30,11 @@ type InterfaceState =
       EndPosOfWith: pos option
       Tokens: TokenInformation list }
 
-/// This tagger will provide tags for every word in the buffer that
-/// matches the word currently under the cursor.
 type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer, 
                                    editorOptionsFactory: IEditorOptionsFactoryService, textUndoHistory: ITextUndoHistory,
                                    vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
+    let mutable currentWord = None
     let mutable state = None
 
     let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
@@ -66,35 +65,39 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let updateAtCaretPosition() =
         asyncMaybe {
             let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetActiveDocument() |> liftMaybe
-            let! project = ProjectProvider.createForDocument doc |> liftMaybe
-            let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
-
-            match symbol.Kind with
-            | SymbolKind.Ident ->
-                let! interfaceState = queryInterfaceState point doc project
-                let! (fsSymbolUse, results) = 
-                    vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
-                // Recheck cursor position to ensure it's still in new word
-                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-                return! 
-                    (if (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord then
-                        let entity = fsSymbolUse.Symbol :?> FSharpEntity
-                        // The entity might correspond to another symbol so we check for symbol text and start ranges as well
-                        if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text 
-                            && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
-                            Some (newWord, (interfaceState, fsSymbolUse.DisplayContext, entity, results))
-                        else None
-                     else None) |> liftMaybe
-            | _ -> return! (liftMaybe None)
+            match currentWord with
+            | Some word when point.InSpan word -> 
+                return! liftMaybe state
+            | _ ->
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let! doc = dte.GetActiveDocument() |> liftMaybe
+                let! project = ProjectProvider.createForDocument doc |> liftMaybe
+                let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
+                match symbol.Kind with
+                | SymbolKind.Ident ->
+                    let! interfaceState = queryInterfaceState point doc project
+                    let! (fsSymbolUse, results) = 
+                        vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
+                    // Recheck cursor position to ensure it's still in new word
+                    let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                    return!
+                       (match fsSymbolUse.Symbol with
+                        | :? FSharpEntity as entity when point.InSpan newWord ->
+                            // The entity might correspond to another symbol so we check for symbol text and start ranges as well
+                            if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text 
+                                && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
+                                Some (newWord, (interfaceState, fsSymbolUse.DisplayContext, entity, results))
+                            else None
+                        | _ -> None) |> liftMaybe
+                | _ -> return! liftMaybe None
         }
-        |> Async.map (fun res -> 
+        |> Async.map (fun result -> 
             let changed =
-                match state, res with
-                | None, None -> false
+                match state, result, currentWord with
+                | None, None, _ -> false
+                | _, Some (newWord, _), Some oldWord -> newWord <> oldWord
                 | _ -> true
-            state <- res
+            state <- result
             if changed then
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
@@ -130,7 +133,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let shouldImplementInterface _interfaceState (entity: FSharpEntity) =
         not (InterfaceStubGenerator.hasNoInterfaceMember entity)
 
-    let handleImplementInterface (span: SnapshotSpan) state displayContext implementedMemberSignatures entity = 
+    let handleImplementInterface (snapshot: ITextSnapshot) state displayContext implementedMemberSignatures entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let startColumn = inferStartColumn indentSize state
@@ -144,16 +147,16 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             use transaction = textUndoHistory.CreateTransaction("Implement Interface Explicitly")
             match state.EndPosOfWith with
             | Some pos -> 
-                let currentPos = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
+                let currentPos = snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
                 buffer.Insert(currentPos, stub + new String(' ', startColumn)) |> ignore
             | None ->
                 let range = state.InterfaceData.Range
-                let currentPos = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
+                let currentPos = snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
                 buffer.Insert(currentPos, " with") |> ignore
                 buffer.Insert(currentPos + 5, stub + new String(' ', startColumn)) |> ignore
             transaction.Complete()
 
-    let implementInterface (span: SnapshotSpan) (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
+    let implementInterface snapshot (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = "Implement Interface Explicitly"
@@ -164,27 +167,24 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     async {
                         let getMemberByLocation(name, range: range) =
                             let lineStr = 
-                                match fromFSharpPos span.Snapshot range with
-                                | Some s -> s.Start.GetContainingLine().GetText()
+                                match fromFSharpPos snapshot range with
+                                | Some span -> span.End.GetContainingLine().GetText()
                                 | None -> String.Empty
-                            results.GetSymbolUseAtLocation(range.StartLine, range.EndColumn, lineStr, [name])
+                            results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])
                         let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures 
                                                                getMemberByLocation displayContext state.InterfaceData
-                        return handleImplementInterface span state displayContext implementedMemberSignatures entity
+                        return handleImplementInterface snapshot state displayContext implementedMemberSignatures entity
                     }
                     |> Async.StartImmediate
                 else
                     let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                     statusBar.SetText(Resource.interfaceEmptyStatusMessage) |> ignore }
 
-    member x.GetSmartTagActions(span: SnapshotSpan, interfaceDefinition) =
+    member x.GetSmartTagActions(snapshot, interfaceDefinition) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
-        let trackingSpan = span.Snapshot.CreateTrackingSpan(span.Span, SpanTrackingMode.EdgeInclusive)
-        let _snapshot = trackingSpan.TextBuffer.CurrentSnapshot
-
-        actionList.Add(implementInterface span interfaceDefinition)
+        actionList.Add(implementInterface snapshot interfaceDefinition)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -196,10 +196,10 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                 | Some (word, interfaceDefinition) ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<ImplementInterfaceSmartTag>(span, 
-                            ImplementInterfaceSmartTag(x.GetSmartTagActions(span, interfaceDefinition)))
+                            ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
                             :> ITagSpan<_>
                 | _ -> ()
             }
 
-        member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
-        member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
+        [<CLIEvent>]
+        member x.TagsChanged = tagsChanged.Publish

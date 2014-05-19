@@ -138,7 +138,7 @@ member x.Method1(arg1: int): int =
     raise (System.NotImplementedException())
 """
 
-[<Test; Ignore "Breaking changes in FCS 0.0.48">]
+[<Test>]
 let ``should generate stubs for interfaces with multiple properties``() =
     checkInterfaceStub 98 11 "    { new Indexer3 with " ["Indexer3"] """
 member x.Item
@@ -158,14 +158,16 @@ member x.Item
         raise (System.NotImplementedException())
 """
 
-[<Test; Ignore "Breaking changes in FCS 0.0.48">]
+[<Test>]
 let ``should generate stubs for interfaces with non-F# properties``() =
     checkInterfaceStub 119 38 "    { new System.Collections.Generic.IList<'a> with" ["IList"] """
-member x.get_Item(index: int): 'a = 
-    raise (System.NotImplementedException())
+member x.Item
+    with get (index: int): 'a = 
+        raise (System.NotImplementedException())
 
-member x.set_Item(index: int, value: 'a): unit = 
-    raise (System.NotImplementedException())
+member x.Item
+    with set (index: int) (v: 'a): unit = 
+        raise (System.NotImplementedException())
 
 member x.IndexOf(item: 'a): int = 
     raise (System.NotImplementedException())
@@ -176,11 +178,13 @@ member x.Insert(index: int, item: 'a): unit =
 member x.RemoveAt(index: int): unit = 
     raise (System.NotImplementedException())
 
-member x.get_Count(): int = 
-    raise (System.NotImplementedException())
+member x.Count
+    with get (): int = 
+        raise (System.NotImplementedException())
 
-member x.get_IsReadOnly(): bool = 
-    raise (System.NotImplementedException())
+member x.IsReadOnly
+    with get (): bool = 
+        raise (System.NotImplementedException())
 
 member x.Add(item: 'a): unit = 
     raise (System.NotImplementedException())
@@ -228,14 +232,17 @@ member x.Dispose(): unit =
 [<Test; Ignore("This test picks up generic version for some strange reason.")>]
 let ``should use qualified names when appropriate``() =
     checkInterfaceStubWith [||] 178 35 "    { new System.Collections.ICollection with" ["ICollection"] """
-member x.get_Count(): int = 
-    raise (System.NotImplementedException())
+member x.Count
+    with get (): int =
+        raise (System.NotImplementedException())
 member x.CopyTo(array: System.Array, index: int): unit = 
     raise (System.NotImplementedException())
-member x.get_SyncRoot(): obj = 
-    raise (System.NotImplementedException())
-member x.get_IsSynchronized(): bool = 
-    raise (System.NotImplementedException())
+member x.SyncRoot = 
+    with get (): obj =
+        raise (System.NotImplementedException())
+member x.IsSynchronized = 
+    with get (): bool =
+        raise (System.NotImplementedException())
 member x.GetEnumerator(): System.Collections.IEnumerator = 
     raise (System.NotImplementedException())
 """
@@ -247,7 +254,7 @@ member x.Method(arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg2
     raise (System.NotImplementedException())
 """
 
-[<Test; Ignore "Breaking changes in FCS 0.0.48">]
+[<Test>]
 let ``should not collide argument names in setters``() =
     checkInterfaceStub 284 15 "let _ = { new IWithProperties with" ["IWithProperties"] """
 member x.Item
@@ -255,20 +262,24 @@ member x.Item
         raise (System.NotImplementedException())
 """
 
-[<Test; Ignore "Breaking changes in FCS 0.0.48">]
+[<Test>]
 let ``should replace generic parameters on interfaces``() =
     checkInterfaceStubWith [|"string"; "int"|] 290 15 "let _ = { new IDictionary<string, int> with" ["IDictionary"] """
-member x.get_Item(key: string): int = 
-    raise (System.NotImplementedException())
+member x.Item
+    with get (key: string): int = 
+        raise (System.NotImplementedException())
 
-member x.set_Item(key: string, value: int): unit = 
-    raise (System.NotImplementedException())
+member x.Item
+    with set (key: string) (v: int): unit = 
+        raise (System.NotImplementedException())
 
-member x.get_Keys(): ICollection<string> = 
-    raise (System.NotImplementedException())
+member x.Keys
+    with get (): ICollection<string> = 
+        raise (System.NotImplementedException())
 
-member x.get_Values(): ICollection<int> = 
-    raise (System.NotImplementedException())
+member x.Values
+    with get (): ICollection<int> = 
+        raise (System.NotImplementedException())
 
 member x.ContainsKey(key: string): bool = 
     raise (System.NotImplementedException())
@@ -282,11 +293,13 @@ member x.Remove(key: string): bool =
 member x.TryGetValue(key: string, value: byref<int>): bool = 
     raise (System.NotImplementedException())
 
-member x.get_Count(): int = 
-    raise (System.NotImplementedException())
+member x.Count
+    with get (): int = 
+        raise (System.NotImplementedException())
 
-member x.get_IsReadOnly(): bool = 
-    raise (System.NotImplementedException())
+member x.IsReadOnly
+    with get (): bool = 
+        raise (System.NotImplementedException())
 
 member x.Add(item: KeyValuePair<string,int>): unit = 
     raise (System.NotImplementedException())
@@ -330,7 +343,6 @@ let ``should replace generic parameters for tuple types``() =
 member x.Method(arg1: int * int): unit = 
     raise (System.NotImplementedException())
 """
-
 
 open System
 open FsCheck
