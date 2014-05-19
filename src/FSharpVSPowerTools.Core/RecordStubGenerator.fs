@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Core.CodeGeneration.RecordStubGenerator
+﻿module FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 
 open System
 open System.IO
@@ -6,7 +6,6 @@ open System.Diagnostics
 open System.Collections.Generic
 open System.CodeDom.Compiler
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Core
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -20,7 +19,6 @@ let inline setDebugObject (o: 'a) = debugObject <- o
 #else
 let inline setDebugObject (_: 'a) = ()
 #endif
-
 
 [<NoEquality; NoComparison>]
 type RecordBinding =
@@ -40,15 +38,6 @@ type private Context = {
     RequireQualifiedAccess: bool
 }
 
-// TODO: copy-pasted from InterfaceStubGeneration
-let private (|IndexerArg|) = function
-    | SynIndexerArg.Two(e1, e2) -> [e1; e2]
-    | SynIndexerArg.One e -> [e]
-
-// TODO: copy-pasted from InterfaceStubGeneration
-let private (|IndexerArgList|) xs =
-    List.collect (|IndexerArg|) xs
-
 let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     let writer = ctxt.Writer
 
@@ -63,12 +52,6 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     
     writer.Write(" {0} = {1}", name, ctxt.FieldDefaultValue)
 
-let internal isAttrib<'T> (attrib: FSharpAttribute)  =
-        attrib.AttributeType.CompiledName = typeof<'T>.Name
-
-let internal hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
-        attribs |> Seq.exists (fun a -> isAttrib<'T>(a))
-
 let formatRecord startColumn indentValue (fieldDefaultValue: string)
                  (displayContext: FSharpDisplayContext) (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
@@ -76,7 +59,7 @@ let formatRecord startColumn indentValue (fieldDefaultValue: string)
     use writer = new ColumnIndentedTextWriter()
     let ctxt =
         { RecordTypeName = entity.DisplayName
-          RequireQualifiedAccess = hasAttrib<RequireQualifiedAccessAttribute> entity.Attributes 
+          RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
           Writer = writer
           IndentValue = indentValue
           FieldDefaultValue = fieldDefaultValue

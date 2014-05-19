@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Core
+﻿namespace FSharpVSPowerTools.CodeGeneration
 
 open System
 open System.IO
@@ -98,12 +98,6 @@ module InterfaceStubGenerator =
             let revd = List.rev xs
             Some(List.rev revd.Tail, revd.Head)
 
-    let internal isAttrib<'T> (attrib: FSharpAttribute)  =
-        attrib.AttributeType.CompiledName = typeof<'T>.Name
-
-    let internal hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
-        attribs |> Seq.exists (fun a -> isAttrib<'T>(a))
-
     let internal getTypeParameterName (typar: FSharpGenericParameter) =
         (if typar.IsSolveAtCompileTime then "^" else "'") + typar.Name
 
@@ -158,7 +152,7 @@ module InterfaceStubGenerator =
         let nm, namesWithIndices = normalizeArgName namesWithIndices nm
         
         // Detect an optional argument
-        let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
+        let isOptionalArg = hasAttribute<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
         (if hasTypeAnnotation && argName <> "()" then 
             argName + ": " + formatType ctx arg.Type
@@ -215,7 +209,7 @@ module InterfaceStubGenerator =
             | _, true, _, name -> name + parArgs
             // Ordinary functions or values
             | false, _, _, name when 
-                not (hasAttrib<RequireQualifiedAccessAttribute> v.LogicalEnclosingEntity.Attributes) -> 
+                not (hasAttribute<RequireQualifiedAccessAttribute> v.LogicalEnclosingEntity.Attributes) -> 
                 name + " " + parArgs
             // Ordinary static members or things (?) that require fully qualified access
             | _, _, _, name -> name + parArgs
