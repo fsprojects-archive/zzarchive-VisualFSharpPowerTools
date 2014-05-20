@@ -20,11 +20,65 @@ let inline setDebugObject (o: 'a) = debugObject <- o
 let inline setDebugObject (_: 'a) = ()
 #endif
 
+type CopyExpressionOpt = (SynExpr * BlockSeparator) option
+type FieldExpressionList = (RecordFieldName * SynExpr option * BlockSeparator option) list
+
 [<NoEquality; NoComparison>]
 type RecordBinding =
-    | TypedRecordBinding of SynType * SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
-    | QualifiedFieldRecordBinding of SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
-    | NonQualifiedFieldRecordBinding of SynExpr * (RecordFieldName * SynExpr option * BlockSeparator option) list
+    | TypedRecordBinding of SynType * SynExpr * CopyExpressionOpt * FieldExpressionList
+    | QualifiedFieldRecordBinding of SynExpr * CopyExpressionOpt * FieldExpressionList
+    | NonQualifiedFieldRecordBinding of SynExpr * CopyExpressionOpt * FieldExpressionList
+
+    member x.CopyExpressionOpt =
+        match x with
+        | TypedRecordBinding(_, _, copyExprOpt, _)
+        | QualifiedFieldRecordBinding(_, copyExprOpt, _)
+        | NonQualifiedFieldRecordBinding(_, copyExprOpt, _) -> copyExprOpt
+
+    member x.Expression =
+        match x with
+        | TypedRecordBinding(_, expr, _, _)
+        | QualifiedFieldRecordBinding(expr, _, _)
+        | NonQualifiedFieldRecordBinding(expr, _, _) -> expr
+
+    member x.FieldExpressionList =
+        match x with
+        | TypedRecordBinding(_, _, _, fieldExpressions)
+        | QualifiedFieldRecordBinding(_, _, fieldExpressions)
+        | NonQualifiedFieldRecordBinding(_, _, fieldExpressions) -> fieldExpressions
+
+[<RequireQualifiedAccess>]
+[<NoComparison>]
+type RecordStubsInsertionPosition =
+    /// let record = {<insert-here>}
+    | AfterLeftBrace of pos
+
+    /// let y = { x with<insert-here> }
+    | AfterCopyExpression of pos
+
+    /// let x = { <insert-here>Field1 = ... }
+    | BeforeFirstField of pos
+
+    member x.Position =
+        match x with
+        | AfterLeftBrace pos
+        | AfterCopyExpression pos
+        | BeforeFirstField pos -> pos
+
+    static member FromRecordExpression (expr: RecordBinding) =
+        match expr.FieldExpressionList with
+        | [] ->
+            match expr.CopyExpressionOpt with
+            | None ->
+                let exprRange = expr.Expression.Range
+                AfterLeftBrace(Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1))
+            | Some(_toCopy, (withSeparator, _)) ->
+                AfterCopyExpression(withSeparator.End)
+
+        | fstFieldInfo :: _ ->
+            let ((fstField, _), _, _) = fstFieldInfo
+            BeforeFirstField(fstField.Range.Start)
+
 
 [<NoComparison>]
 type private Context = {
@@ -36,6 +90,7 @@ type private Context = {
     DisplayContext: FSharpDisplayContext
     RecordTypeName: string
     RequireQualifiedAccess: bool
+    PrependExtraSpace: bool
 }
 
 let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
@@ -50,25 +105,36 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
         else 
             field.Name
     
-    writer.Write("{0} = {1}", name, ctxt.FieldDefaultValue)
+    let prependedSpace = if ctxt.PrependExtraSpace then " " else ""
+    
+    writer.Write("{0}{1} = {2}", prependedSpace, name, ctxt.FieldDefaultValue)
 
-let formatRecord startColumn indentValue (fieldDefaultValue: string)
+let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (fieldDefaultValue: string)
                  (displayContext: FSharpDisplayContext) (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
     use writer = new ColumnIndentedTextWriter()
+    let startColumn = insertionPos.Position.Column
     let ctxt =
+        let prependExtraSpace =
+            match insertionPos with
+            | RecordStubsInsertionPosition.AfterCopyExpression _
+            | RecordStubsInsertionPosition.AfterLeftBrace _ -> true
+            | RecordStubsInsertionPosition.BeforeFirstField _ -> false
+
         { RecordTypeName = entity.DisplayName
           RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
           Writer = writer
           IndentValue = indentValue
           FieldDefaultValue = fieldDefaultValue
-          DisplayContext = displayContext }
+          DisplayContext = displayContext
+          PrependExtraSpace = prependExtraSpace }
 
     let fieldsWritten =
         fieldsWritten
         |> List.collect (function
             ((fieldName, _), _, _) ->
+                // Extract <Field> in qualified identifiers: A.B.<Field> = ...
                 if fieldName.Lid.Length > 0 then
                     [(fieldName.Lid.Item (fieldName.Lid.Length - 1)).idText]
                 else [])
@@ -186,10 +252,10 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 // Situation 1:
                 // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
                 // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
-                | SynExpr.Typed(SynExpr.Record(_inheritOpt, _copyOpt, fields, _range0), _, _range1) ->
+                | SynExpr.Typed(SynExpr.Record(_inheritOpt, copyOpt, fields, _range0), _, _range1) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, fields)))
+                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, copyOpt, fields)))
                 | _ -> walkExpr expr
             | None ->
                 walkExpr expr
@@ -210,10 +276,10 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 // Situation 1:
                 // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
                 // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
-                | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
+                | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, fields)))
+                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, copyOpt, fields)))
                 | _ -> 
                 walkExpr synExpr
 
@@ -231,15 +297,15 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.ArrayOrList(_, synExprList, _range) ->
                 List.tryPick walkExpr synExprList
 
-            | SynExpr.Record(_inheritOpt, _copyOpt, fields, _range) ->
+            | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                 fields 
                 |> List.tryPick walkRecordField
                 |> Option.orElse (
                     match fields with
                     | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
-                            Some(QualifiedFieldRecordBinding(expr, fields))
+                            Some(QualifiedFieldRecordBinding(expr, copyOpt, fields))
                     | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length = 1 ->
-                        Some(NonQualifiedFieldRecordBinding(expr, fields))
+                        Some(NonQualifiedFieldRecordBinding(expr, copyOpt, fields))
                     | _ -> None)
 
             | SynExpr.ObjExpr(_ty, _baseCallOpt, binds, ifaces, _range1, _range2) -> 

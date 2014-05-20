@@ -37,17 +37,6 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let [<Literal>] CommandName = "Generate record stubs"
 
-    let tryGetLeftPosOfFirstRecordField recordExprCategory =
-        match recordExprCategory with
-        | TypedRecordBinding(_, _, [])
-        | QualifiedFieldRecordBinding(_, [])
-        | NonQualifiedFieldRecordBinding(_, []) -> None
-        | TypedRecordBinding(_, _, fstFieldInfo :: _)
-        | QualifiedFieldRecordBinding(_, fstFieldInfo :: _)
-        | NonQualifiedFieldRecordBinding(_, fstFieldInfo :: _) ->
-            let (fieldIdentifier, _), _, _ = fstFieldInfo
-            Some (fieldIdentifier.Range.Start)
-
     // Try to:
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
@@ -62,47 +51,10 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             return maybe {
                 let! parsedInput = ast.ParseTree
                 let! recordBinding = RecordStubGenerator.tryFindRecordBinding pos parsedInput
+                let expr = recordBinding.Expression
 
-                let expr =
-                    match recordBinding with
-                    | TypedRecordBinding(_, expr, _)
-                    | QualifiedFieldRecordBinding(expr, _)
-                    | NonQualifiedFieldRecordBinding(expr, _) -> expr
-
-                let leftPosOfFirstRecordField' = tryGetLeftPosOfFirstRecordField recordBinding
-
-                match leftPosOfFirstRecordField' with
-                | Some leftPosOfFirstRecordField -> return recordBinding, leftPosOfFirstRecordField
-                | None ->
-                    let lBraceLeftColumnCondition =
-                        match recordBinding with
-                        | TypedRecordBinding(_, _, _) ->
-                            (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
-
-                        | QualifiedFieldRecordBinding(_, _)
-                        | NonQualifiedFieldRecordBinding(_, _) ->
-                            let isLBraceInExpressionRange (t: TokenInformation) =
-                                expr.Range.StartColumn <= t.LeftColumn && t.LeftColumn < caretColumn
-
-                            isLBraceInExpressionRange
-
-                    let exprStartLine1 = expr.Range.StartLine
-                    let exprStartLine0 = exprStartLine1 - 1
-
-                    // Tokenize line where the record expression starts
-                    let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, exprStartLine0) 
-
-                    // We want to go after the '{' that' is right after the caret position
-                    let! endPosOfLBrace =
-                        tokens
-                        |> List.tryPick (fun (t: TokenInformation) ->
-                                    if t.CharClass = TokenCharKind.Delimiter &&
-                                       (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
-                                       t.TokenName = "LBRACE" then
-                                        Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
-                                    else None)
-
-                    return recordBinding, endPosOfLBrace
+                let recordStubsInsertionPos = RecordStubsInsertionPosition.FromRecordExpression recordBinding
+                return recordBinding, recordStubsInsertionPos
             }
         }
 
@@ -154,35 +106,28 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     200us, updateAtCaretPosition)
 
     // Check whether the record has been fully defined
-    let shouldGenerateRecordStub (recordBindingData, _) (entity: FSharpEntity) =
+    let shouldGenerateRecordStub (recordBindingData: RecordBinding, _) (entity: FSharpEntity) =
         let fieldCount = entity.FSharpFields.Count
-        let writtenFieldCount =
-            match recordBindingData with
-            | TypedRecordBinding(_, _, fields)
-            | QualifiedFieldRecordBinding(_, fields)
-            | NonQualifiedFieldRecordBinding(_, fields) -> List.length fields
+        let writtenFieldCount = recordBindingData.FieldExpressionList.Length
         fieldCount > 0 && writtenFieldCount < fieldCount
 
-    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData, pos: pos) displayContext entity = 
+    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData: RecordBinding, insertionPos: _) displayContext entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let fieldsWritten =
-            match recordBindingData with
-            | TypedRecordBinding(_, _, fieldsWritten)
-            | QualifiedFieldRecordBinding(_, fieldsWritten)
-            | NonQualifiedFieldRecordBinding(_, fieldsWritten) -> fieldsWritten
+        let fieldsWritten = recordBindingData.FieldExpressionList
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 
         let stub = RecordStubGenerator.formatRecord
-                       pos.Column
+                       insertionPos
                        indentSize
                        "failwith \"Uninitialized field\""
                        displayContext
                        entity
                        fieldsWritten
-        let current = snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
-        buffer.Insert(current, stub) |> ignore
+        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Position.Line-1).Start.Position + insertionPos.Position.Column
+
+        buffer.Insert(currentLine, stub) |> ignore
 
         transaction.Complete()
 

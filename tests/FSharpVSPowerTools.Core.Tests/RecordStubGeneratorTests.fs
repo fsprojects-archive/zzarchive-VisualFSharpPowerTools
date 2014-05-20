@@ -126,79 +126,39 @@ let tokenizeLine (src: string) (lineIdx1: int) =
     let line = lines.[lineIdx0]
     Lexer.tokenizeLine src args (lineIdx0) line Lexer.queryLexState
 
-let tryGetLeftPosOfFirstRecordField recordExprCategory =
-    match recordExprCategory with
-    | TypedRecordBinding(_, _, [])
-    | QualifiedFieldRecordBinding(_, [])
-    | NonQualifiedFieldRecordBinding(_, []) -> None
-    | TypedRecordBinding(_, _, fstFieldInfo :: _)
-    | QualifiedFieldRecordBinding(_, fstFieldInfo :: _)
-    | NonQualifiedFieldRecordBinding(_, fstFieldInfo :: _) ->
-        let (fieldIdentifier, _), _, _ = fstFieldInfo
+let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordBinding) =
+    match recordExprCategory.FieldExpressionList with
+    | fieldInfo :: _ ->
+        let (fieldIdentifier, _), _, _ = fieldInfo
         Some (fieldIdentifier.Range.Start)
+    | [] -> None
 
 let getRecordBindingData (pos: pos) (src: string) =
     maybe {
         let! recordBindingExprTree = tryFindRecordBindingExpTree pos src
         let caretColumn = pos.Column
-        let expr =
-            match recordBindingExprTree with
-            | TypedRecordBinding(_, expr, _)
-            | QualifiedFieldRecordBinding(expr, _)
-            | NonQualifiedFieldRecordBinding(expr, _) -> expr
+        let expr = recordBindingExprTree.Expression
 
         let insertionPos =
-            let lPosOfFirstField = tryGetLeftPosOfFirstRecordField recordBindingExprTree
-
-            match lPosOfFirstField with
-            | Some _ -> lPosOfFirstField
-            | None ->
-                let lBraceLeftColumnCondition =
-                    match recordBindingExprTree with
-                    | TypedRecordBinding(_, expr, _) ->
-                        (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
-
-                    | QualifiedFieldRecordBinding(expr, _)
-                    | NonQualifiedFieldRecordBinding(expr, _) ->
-                        let isLBraceInExpressionRange (t: TokenInformation) =
-                            expr.Range.StartColumn <= t.LeftColumn && t.LeftColumn < caretColumn
-
-                        isLBraceInExpressionRange
-
-                // Tokenize line where the record expression starts
-                let exprStartLine1 = expr.Range.StartLine
-                let tokens = tokenizeLine src exprStartLine1
-                let exprStartLine0 = exprStartLine1 - 1
-
-                let endPosOfLBrace =
-                    tokens |> List.tryPick (fun (t: TokenInformation) ->
-                                if t.CharClass = TokenCharKind.Delimiter &&
-                                   // t.LeftColumn >= column: only if the expression is on the
-                                   // same line as the caret position
-                                   t.TokenName = "LBRACE" &&
-                                   (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) then
-                                   Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
-                                else None)
-                endPosOfLBrace
+            RecordStubsInsertionPosition.FromRecordExpression recordBindingExprTree
 
         return recordBindingExprTree, insertionPos
     }
 
 let getRecordDefinitionFromPoint (pos: pos) (src: string) =
     maybe {
-        let! recordBindingData, endPosOfLBrace' = getRecordBindingData pos src
-        let! endPosOfLBrace = endPosOfLBrace'
+        let! recordBindingData, insertionPos = getRecordBindingData pos src
         let! symbolUse, _ = getSymbolUseAtPoint pos src
 
         match symbolUse.Symbol with
         | :? FSharpEntity as entity ->
             if entity.IsFSharpRecord then
-                return! Some (recordBindingData, symbolUse.DisplayContext, entity, endPosOfLBrace)
+                return! Some (recordBindingData, symbolUse.DisplayContext, entity, insertionPos)
             else
                 return! None
         | :? FSharpField as field ->
             if field.DeclaringEntity.IsFSharpRecord then
-                return! Some (recordBindingData, symbolUse.DisplayContext, field.DeclaringEntity, endPosOfLBrace)
+                return! Some (recordBindingData, symbolUse.DisplayContext, field.DeclaringEntity, insertionPos)
             else
                 return! None
         | _ ->
@@ -209,14 +169,13 @@ let insertStubFromPos caretPos src =
     let recordDefnFromPt = getRecordDefinitionFromPoint caretPos src
     match recordDefnFromPt with
     | None -> src
-    | Some(TypedRecordBinding(_, _, fieldsWritten), context, entity, insertPos)
-    | Some(QualifiedFieldRecordBinding(_, fieldsWritten), context, entity, insertPos)
-    | Some(NonQualifiedFieldRecordBinding(_, fieldsWritten), context, entity, insertPos) ->
-        let insertColumn = insertPos.Column
+    | Some(recordExprData, context, entity, insertPos) ->
+        let fieldsWritten = recordExprData.FieldExpressionList
+        let insertColumn = insertPos.Position.Column
         let fieldValue = "failwith \"\""
-        let stub = RecordStubGenerator.formatRecord insertColumn 4 fieldValue context entity fieldsWritten
+        let stub = RecordStubGenerator.formatRecord insertPos 4 fieldValue context entity fieldsWritten
         let srcLines = srcToLineArray src
-        let insertLine0 = insertPos.Line - 1
+        let insertLine0 = insertPos.Position.Line - 1
         let curLine = srcLines.[insertLine0]
         let before, after = curLine.Substring(0, insertColumn), curLine.Substring(insertColumn)
 
@@ -231,41 +190,40 @@ let insertStubFromPos caretPos src =
 let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
-
 [<Test>]
 let ``single-field record stub generation`` () =
     """
 type MyRecord = { Field1: int }
-let x: MyRecord = {}"""
+let x: MyRecord = { }"""
     |> insertStubFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """
 type MyRecord = { Field1: int }
-let x: MyRecord = {Field1 = failwith ""}"""
+let x: MyRecord = { Field1 = failwith "" }"""
 
 [<Test>]
 let ``multiple-field record stub generation`` () =
     """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
-let x: MyRecord = {}"""
+let x: MyRecord = { }"""
     |> insertStubFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
-let x: MyRecord = {Field1 = failwith ""
-                   Field2 = failwith ""
-                   Field3 = failwith ""}"""
+let x: MyRecord = { Field1 = failwith ""
+                    Field2 = failwith ""
+                    Field3 = failwith "" }"""
 
 [<Test>]
 let ``single-field record stub generation in the middle of the file`` () =
     """
 module A
 type MyRecord = { Field1: int }
-let x: MyRecord = {}
+let x: MyRecord = { }
 do ()"""
     |> insertStubFromPos (Pos.fromZ 3 7)
     |> assertSrcAreEqual """
 module A
 type MyRecord = { Field1: int }
-let x: MyRecord = {Field1 = failwith ""}
+let x: MyRecord = { Field1 = failwith "" }
 do ()"""
 
 [<Test>]
@@ -273,15 +231,15 @@ let ``multiple-field record stub generation in the middle of the file`` () =
     """
 module A
 type MyRecord = { Field1: int; Field2: float }
-let x: MyRecord = {}
+let x: MyRecord = { }
 let y = 3
 do ()"""
     |> insertStubFromPos (Pos.fromZ 3 7)
     |> assertSrcAreEqual """
 module A
 type MyRecord = { Field1: int; Field2: float }
-let x: MyRecord = {Field1 = failwith ""
-                   Field2 = failwith ""}
+let x: MyRecord = { Field1 = failwith ""
+                    Field2 = failwith "" }
 let y = 3
 do ()"""
 
@@ -297,7 +255,7 @@ let x: MyRecord =
 type MyRecord = { Field1: int }
 let x: MyRecord =
 
-    {Field1 = failwith "" }"""
+    { Field1 = failwith "" }"""
 
 [<Test>]
 let ``multiple-field stub generation when left brace is on next line`` () =
@@ -305,14 +263,14 @@ let ``multiple-field stub generation when left brace is on next line`` () =
 type MyRecord = { Field1: int; Field2: char }
 let x: MyRecord =
 
-    {}"""
+    { }"""
     |> insertStubFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """
 type MyRecord = { Field1: int; Field2: char }
 let x: MyRecord =
 
-    {Field1 = failwith ""
-     Field2 = failwith ""}"""
+    { Field1 = failwith ""
+      Field2 = failwith "" }"""
 
 [<Test>]
 let ``multiple-field stub generation when some fields are already written (1)`` () =
@@ -465,12 +423,12 @@ let x = { MyRecord.Field2 = failwith ""
 let ``multiple-field record stub generation with record pattern in let binding`` () =
     """
 type Record = { Field1: int; Field2: int }
-let { Field1 = a; Field2 = b }: Record = {}"""
+let { Field1 = a; Field2 = b }: Record = { }"""
     |> insertStubFromPos (Pos.fromZ 2 34)
     |> assertSrcAreEqual """
 type Record = { Field1: int; Field2: int }
-let { Field1 = a; Field2 = b }: Record = {Field1 = failwith ""
-                                          Field2 = failwith ""}"""
+let { Field1 = a; Field2 = b }: Record = { Field1 = failwith ""
+                                           Field2 = failwith "" }"""
 
 [<Test>]
 let ``support fields with extra-space before them`` () =
@@ -515,7 +473,7 @@ let x = { Field1 = 0; Field2 = 0 }
 let y: Record = { x with Field2 = failwith ""
                          Field1 = 0 }"""
 
-[<Test; Ignore("Reactivate when proper support of copy-and-update is implemented")>]
+[<Test>]
 let ``support typed-record binding with empty copy-and-update expression`` () =
     """
 type Record = { Field1: int; Field2: int }
@@ -528,7 +486,8 @@ type Record = { Field1: int; Field2: int }
 
 let x = { Field1 = 0; Field2 = 0 }
 let y: Record = { x with Field1 = failwith ""
-                         Field2 = failwith ""}"""
+                         Field2 = failwith "" }"""
+
 
 #if INTERACTIVE
 ``single-field record stub generation`` ()
@@ -553,4 +512,5 @@ let y: Record = { x with Field1 = failwith ""
 ``support fields with extra-space before them`` ()
 ``support copy-and-update expression`` ()
 ``support typed-record binding with non-empty copy-and-update expression`` ()
+``support typed-record binding with empty copy-and-update expression`` ()
 #endif
