@@ -11,7 +11,7 @@ The feature is activated via a smart tagger on a record type or a record field i
 When the cursor is placed on one of these identifiers, the smart tagger will hint users at generating record field definitions.
 
 Note that if the current line is `let x = {` or `let x: Record = {`, the code might not be parseable (i.e. no semantic highlighting for the current line).
-We recommend users to generate interfaces while the code is parsable e.g. after writing `let x: Record = { }` or `{ Field1 = defaultValue }`.
+We recommend users to generate field stubs while the code is parsable e.g. after writing `let x: Record = { }` or `{ Field1 = defaultValue }`.
 
 See the demo screencasts below.
 
