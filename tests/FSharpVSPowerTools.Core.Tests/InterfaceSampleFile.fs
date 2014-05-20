@@ -366,5 +366,41 @@ type T1() =
         [<CLIEvent>]
         member x.M: IEvent<int> = 
             raise (System.NotImplementedException())
+
+type NewInfrastructure<'T> =
+    abstract ReadonlyProp: int
+    abstract ReadWriteProp: int with get, set
+
+let _ = { new NewInfrastructure<string> with
+              member x.ReadWriteProp
+                  with get (): int = 
+                      raise (System.NotImplementedException())
+                  and set (v: int): unit = 
+                      raise (System.NotImplementedException())
+              
+              member x.ReadonlyProp: int = 
+                  raise (System.NotImplementedException()) }
+
+type NewInfrastructure2<'T> =
+    [<CLIEvent>]
+    abstract CLIEvent: IEvent<int>
+    abstract ReadonlyProp: int
+
+let _ = { new NewInfrastructure2<string> with
+              [<CLIEvent>]
+              member x.CLIEvent: IEvent<_> = 
+                  raise (System.NotImplementedException())
+
+              member x.ReadonlyProp: int = 
+                  raise (System.NotImplementedException()) }
+
+let _ = { new System.ComponentModel.INotifyPropertyChanged with
+              [<CLIEvent>]
+              member x.PropertyChanged: IEvent<_, _> = 
+                  raise (System.NotImplementedException())
+               }
+              
+              
+              
         
         

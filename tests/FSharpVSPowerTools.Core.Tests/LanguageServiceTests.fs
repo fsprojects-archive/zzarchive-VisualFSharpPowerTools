@@ -287,11 +287,11 @@ let ``should instantiate types correctly``() =
     let specificType = (specificSymbolUse.Value.Symbol :?> FSharpMemberFunctionOrValue).FullType
     let specificParams = specificType.GenericArguments
     let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
-    printfn "Generic type: %A" genericType
-    printfn "Specific type: %A" specificType
-    printfn "Generic params: %A" genericParams
-    printfn "Specific params: %A" specificParams
-    printfn "Instantiated type: %A" instantiatedType
+//    printfn "Generic type: %A" genericType
+//    printfn "Specific type: %A" specificType
+//    printfn "Generic params: %A" genericParams
+//    printfn "Specific params: %A" specificParams
+//    printfn "Instantiated type: %A" instantiatedType
     instantiatedType.Format context |> assertEqual (specificType.Format context)
 
 [<Test>]
@@ -305,11 +305,11 @@ let ``should instantiate types on a single entity``() =
     let currentMember = entity.MembersFunctionsAndValues.[5]
     let genericType = currentMember.FullType
     let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
-    printfn "Checking member: %O" currentMember.DisplayName
-    printfn "Generic type: %A" genericType
-    printfn "Generic params: %A" genericParams
-    printfn "Specific params: %A" specificParams
-    printfn "Instantiated type: %A" instantiatedType
+//    printfn "Checking member: %O" currentMember.DisplayName
+//    printfn "Generic type: %A" genericType
+//    printfn "Generic params: %A" genericParams
+//    printfn "Specific params: %A" specificParams
+//    printfn "Instantiated type: %A" instantiatedType
     instantiatedType.Format context |> assertEqual "KeyValuePair<'TKey,'TValue> [] * int -> unit"
 
 #if INTERACTIVE

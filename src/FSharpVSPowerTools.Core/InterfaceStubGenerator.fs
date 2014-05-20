@@ -208,6 +208,9 @@ module InterfaceStubGenerator =
             (v.IsPropertySetterMethod && displayName.StartsWith("set_")) then
             displayName.[4..]
         else displayName
+
+    let internal isEventMember (m: FSharpMemberFunctionOrValue) =
+        m.IsEvent || hasAttribute<CLIEventAttribute> m.Attributes
     
     let internal formatMember (ctx: Context) m = 
         let getParamArgs (argInfos: FSharpParameter list list) (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
@@ -255,8 +258,6 @@ module InterfaceStubGenerator =
             let (_, _, setterArgInfos, _) = preprocess ctx setter
             let writer = ctx.Writer
             writer.WriteLine("")
-            if getter.IsEvent || hasAttribute<CLIEventAttribute> getter.Attributes then
-                writer.WriteLine("[<CLIEvent>]")
             writer.Write("member ")
             for modifier in modifiers do
                 writer.Write("{0} ", modifier)
@@ -290,7 +291,7 @@ module InterfaceStubGenerator =
             let (usage, modifiers, argInfos, retType) = preprocess ctx v
             let writer = ctx.Writer
             writer.WriteLine("")
-            if v.IsEvent || hasAttribute<CLIEventAttribute> v.Attributes then
+            if isEventMember v then
                 writer.WriteLine("[<CLIEvent>]")
             writer.Write("member ")
             for modifier in modifiers do
@@ -299,7 +300,8 @@ module InterfaceStubGenerator =
         
             if v.IsEvent then
                 writer.Write(usage)
-                writer.WriteLine(": {0} = ", retType)
+                // Yet another hack since FCS return type in the handler form.
+                writer.WriteLine(": {0} = ", if retType.StartsWith("IEvent") then retType else "IEvent<_, _>")
                 writer.Indent ctx.Indentation
                 for line in ctx.MethodBody do
                     writer.WriteLine(line)
@@ -446,6 +448,12 @@ module InterfaceStubGenerator =
     let internal removeWhitespace (str: string) = 
         str.Replace(" ", "")
 
+    let internal normalizeEventName (m: FSharpMemberFunctionOrValue) =
+        let name = m.DisplayName
+        if name.StartsWith("add_") then name.[4..]
+        elif name.StartsWith("remove_")  then name.[7..]
+        else name
+
     /// Ideally this info should be returned in error symbols from FCS
     /// Because it isn't, we implement a crude way of getting member signatures:
     ///  (1) Crack ASTs to get member names and their associated ranges
@@ -457,8 +465,9 @@ module InterfaceStubGenerator =
             try
                 let m = symbolUse.Symbol :?> FSharpMemberFunctionOrValue
                 match m.FullType with
-                | MemberFunctionType typ when m.IsEvent || hasAttribute<CLIEventAttribute> m.Attributes ->
-                    let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (typ.Format(displayContext)))
+                | _ when isEventMember m ->
+                    // Events don't have overloads so we use only display names for comparison
+                    let signature = normalizeEventName m
                     Some [signature]
                 | typ ->
                     let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (typ.Format(displayContext)))
@@ -507,8 +516,12 @@ module InterfaceStubGenerator =
             |> Seq.filter (fun (m, insts) -> 
                 // FullType might throw exceptions due to bugs in FCS
                 try
-                    let (TypeOfMember typ) = m 
-                    let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts }  typ))
+                    let signature =  
+                        if isEventMember m then
+                            normalizeEventName m
+                        else
+                            let (TypeOfMember typ) = m 
+                            removeWhitespace (sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts } typ))
                     not (Set.contains signature excludedMemberSignatures) 
                 with _ -> true)
         // All members have already been implemented
@@ -516,6 +529,7 @@ module InterfaceStubGenerator =
             String.Empty
         else
             writer.Indent startColumn
+
             let getReturnType v = snd (getArgTypes ctx v)
             let rec loop (members : (FSharpMemberFunctionOrValue * _) list) =
                 match members with
@@ -523,8 +537,8 @@ module InterfaceStubGenerator =
                 // we try to merge getters and setters when they seem to match.
                 // Assume that getter and setter come right after each other.
                 // They belong to the same property if names and return types are the same
-                | (getter, insts)::(setter, _) :: otherMembers
-                | (setter, insts)::(getter, _) :: otherMembers when
+                | (getter, insts) :: (setter, _) :: otherMembers
+                | (setter, _) :: (getter, insts) :: otherMembers when
                     getter.IsPropertyGetterMethod && setter.IsPropertySetterMethod &&
                     normalizePropertyName getter = normalizePropertyName setter &&
                     getReturnType getter = getReturnType setter ->
@@ -534,7 +548,14 @@ module InterfaceStubGenerator =
                     formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m)
                     loop otherMembers
                 | [] -> ()
-            loop (Seq.toList missingMembers)
+
+            missingMembers
+            |> Seq.sortBy (fun (m, _) -> 
+                // Sort by normalized name and return type so that getters and setters of the same properties
+                // are guaranteed to be neighbouring.
+                normalizePropertyName m, getReturnType m)
+            |> Seq.toList
+            |> loop
             writer.Dump()
 
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =

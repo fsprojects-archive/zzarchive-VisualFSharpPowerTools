@@ -65,5 +65,8 @@
 * Fix duplicated symbols and missing private symbols in Find All References
 * Enhance syntax coloring of type-provider-related source code
 * Reduce the size of VSIX output
+* Implement record stub generation
+* Fix the issue where VFPT is active during CPU idles
+* Return correct symbol information on dirty files and dirty projects
 
 
