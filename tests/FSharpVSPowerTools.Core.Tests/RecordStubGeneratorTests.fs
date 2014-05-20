@@ -46,9 +46,9 @@ let languageService = LanguageService(fun _ -> ())
 // [x] Handle case when all fields are written
 // [x] Handle pattern: let x = { MyRecord1.Field1 = 0 }
 // [x] Handle pattern: let x = { Field1 = 0 }
-// [ ] Add tests for SmartTag generation?
+// [x] Handle copy-and-update expression
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
-// [ ] Handle copy-and-update expression
+// [ ] Add tests for SmartTag generation?
 
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
@@ -116,16 +116,6 @@ let tryFindRecordBindingExpTree (pos: pos) (src: string) =
     parseResults.ParseTree
     |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
 
-let tokenizeLine (src: string) (lineIdx1: int) =
-    let lines =
-        src.Split('\n')
-        |> Array.mapi (fun i line -> i, line)
-        |> Map.ofArray
-
-    let lineIdx0 = lineIdx1 - 1 
-    let line = lines.[lineIdx0]
-    Lexer.tokenizeLine src args (lineIdx0) line Lexer.queryLexState
-
 let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordBinding) =
     match recordExprCategory.FieldExpressionList with
     | fieldInfo :: _ ->
@@ -138,9 +128,7 @@ let getRecordBindingData (pos: pos) (src: string) =
         let! recordBindingExprTree = tryFindRecordBindingExpTree pos src
         let caretColumn = pos.Column
         let expr = recordBindingExprTree.Expression
-
-        let insertionPos =
-            RecordStubsInsertionPosition.FromRecordExpression recordBindingExprTree
+        let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordBindingExprTree
 
         return recordBindingExprTree, insertionPos
     }
@@ -191,7 +179,7 @@ let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
 [<Test>]
-let ``single-field record stub generation`` () =
+let ``single-field typed record stub generation`` () =
     """
 type MyRecord = { Field1: int }
 let x: MyRecord = { }"""
@@ -201,7 +189,7 @@ type MyRecord = { Field1: int }
 let x: MyRecord = { Field1 = failwith "" }"""
 
 [<Test>]
-let ``multiple-field record stub generation`` () =
+let ``multiple-field typed record stub generation (1)`` () =
     """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
 let x: MyRecord = { }"""
@@ -211,6 +199,30 @@ type MyRecord = {Field1: int; Field2: float; Field3: float}
 let x: MyRecord = { Field1 = failwith ""
                     Field2 = failwith ""
                     Field3 = failwith "" }"""
+
+[<Test>]
+let ``multiple-field typed record stub generation (2)`` () =
+    """
+type Record = { Field1: int; Field2: int }
+let x = { } : Record"""
+    |> insertStubFromPos (Pos.fromZ 2 14)
+    |> assertSrcAreEqual """
+type Record = { Field1: int; Field2: int }
+let x = { Field1 = failwith ""
+          Field2 = failwith "" } : Record"""
+
+[<Test>]
+let ``multiple-field typed record stub generation (3)`` () =
+    """
+type Record = { Field1: int; Field2: int }
+let x = { Field1 = 0; Field2 = 0 }
+let y = { x with } : Record"""
+    |> insertStubFromPos (Pos.fromZ 3 21)
+    |> assertSrcAreEqual """
+type Record = { Field1: int; Field2: int }
+let x = { Field1 = 0; Field2 = 0 }
+let y = { x with Field1 = failwith ""
+                 Field2 = failwith "" } : Record"""
 
 [<Test>]
 let ``single-field record stub generation in the middle of the file`` () =
@@ -490,8 +502,10 @@ let y: Record = { x with Field1 = failwith ""
 
 
 #if INTERACTIVE
-``single-field record stub generation`` ()
-``multiple-field record stub generation`` ()
+``single-field typed record stub generation`` ()
+``multiple-field typed record stub generation (1)`` ()
+``multiple-field typed record stub generation (2)`` ()
+``multiple-field typed record stub generation (3)`` ()
 ``single-field record stub generation in the middle of the file`` ()
 ``multiple-field record stub generation in the middle of the file`` ()
 ``single-field stub generation when left brace is on next line`` ()
