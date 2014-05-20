@@ -55,7 +55,12 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                     match recordBinding with
                     | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
                     | QualifiedFieldRecordBinding(expr, _)
-                    | NonQualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
+                    | NonQualifiedFieldRecordBinding(expr, _) ->
+                        let isLBraceInExpressionRange (t: TokenInformation) =
+                            expr.Range.StartColumn <= t.LeftColumn && t.LeftColumn < caretColumn
+
+                        expr, isLBraceInExpressionRange
+
                 let exprStartLine1 = expr.Range.StartLine
                 let exprStartLine0 = exprStartLine1 - 1
 

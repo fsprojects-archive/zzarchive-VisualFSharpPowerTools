@@ -5,8 +5,9 @@
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
-      "../../src/FSharpVSPowerTools.Core/ColumnIndentedTextWriter.fs"
+      "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
+      "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
 #load "TestHelpers.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.RecordStubGeneratorTests
@@ -44,12 +45,9 @@ let languageService = LanguageService(fun _ -> ())
 // [x] Handle case when some fields are already written
 // [x] Handle case when all fields are written
 // [x] Handle pattern: let x = { MyRecord1.Field1 = 0 }
-// [ ] Handle pattern: let x = { Field1 = 0 }
+// [x] Handle pattern: let x = { Field1 = 0 }
 // [ ] Add tests for SmartTag generation?
-
-#if INTERACTIVE
-#load "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
-#endif
+// [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
 
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
@@ -160,7 +158,11 @@ let getRecordBindingData (pos: pos) (src: string) =
             match recordBindingExpTree with
             | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
             | QualifiedFieldRecordBinding(expr, _)
-            | NonQualifiedFieldRecordBinding(expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn < caretColumn)
+            | NonQualifiedFieldRecordBinding(expr, _) ->
+                let isLBraceInExpressionRange (t: TokenInformation) =
+                    expr.Range.StartColumn <= t.LeftColumn && t.LeftColumn < caretColumn
+
+                expr, isLBraceInExpressionRange
 
         // Tokenize line where the record expression starts
         let exprStartLine1 = expr.Range.StartLine
@@ -174,7 +176,7 @@ let getRecordBindingData (pos: pos) (src: string) =
                            // same line as the caret position
                            (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
                            t.TokenName = "LBRACE" then
-                            Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
+                           Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
                         else None)
 
         return recordBindingExpTree, endPosOfLBrace
@@ -226,6 +228,7 @@ let insertStubFromPos caretPos src =
 
 let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
+
 
 [<Test>]
 let ``single-field record stub generation`` () =
@@ -413,7 +416,7 @@ type Record2 = {Field21: Record1; Field22: int}
 let x = { Field22 = failwith ""
           Field21 = { Field11 = 0 } }"""
 
-[<Test; Ignore "This feature should insert fields based on cursor positions">]
+[<Test>]
 let ``support record fields nested inside other records`` () =
     """
 type Record1 = {Field11: int; Field12: int}
@@ -423,8 +426,8 @@ let x = { Field21 = { Field11 = 0 } }"""
     |> assertSrcAreEqual """
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1; Field22: int}
-let x = { Field22 = failwith ""
-          Field21 = { Field11 = 0 } }"""
+let x = { Field21 = { Field12 = failwith ""
+                      Field11 = 0 } }"""
 
 [<Test>]
 let ``print fully-qualified field names on fully-qualified records`` () =
@@ -438,6 +441,18 @@ let x = { MyRecord.Field1 = 0 }"""
 type MyRecord = {Field1: int; Field2: int}
 let x = { MyRecord.Field2 = failwith ""
           MyRecord.Field1 = 0 }"""
+
+[<Test>]
+let ``multiple-field record stub generation with record pattern in let binding`` () =
+    """
+type Record = { Field1: int; Field2: int }
+let { Field1 = a; Field2 = b }: Record = { }"""
+    |> insertStubFromPos (Pos.fromZ 2 34)
+    |> assertSrcAreEqual """
+type Record = { Field1: int; Field2: int }
+let { Field1 = a; Field2 = b }: Record = { Field1 = failwith ""
+                                           Field2 = failwith "" }"""
+
 
 #if INTERACTIVE
 ``single-field record stub generation`` ()
@@ -454,4 +469,7 @@ let x = { MyRecord.Field2 = failwith ""
 ``multiple-field stub generation with all qualified fields already written`` ()
 ``multiple-field stub generation with some non-qualified fields already written`` ()
 ``multiple-field stub generation with all non-qualified fields already written`` ()
+``support record fields that are also records`` ()
+``support record fields nested inside other records`` ()
+``print fully-qualified field names on fully-qualified records`` ()
 #endif
