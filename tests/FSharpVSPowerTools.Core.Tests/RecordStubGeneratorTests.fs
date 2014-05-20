@@ -141,12 +141,12 @@ let getRecordDefinitionFromPoint (pos: pos) (src: string) =
         match symbolUse.Symbol with
         | :? FSharpEntity as entity ->
             if entity.IsFSharpRecord then
-                return! Some (recordBindingData, symbolUse.DisplayContext, entity, insertionPos)
+                return! Some (recordBindingData, entity, insertionPos)
             else
                 return! None
         | :? FSharpField as field ->
             if field.DeclaringEntity.IsFSharpRecord then
-                return! Some (recordBindingData, symbolUse.DisplayContext, field.DeclaringEntity, insertionPos)
+                return! Some (recordBindingData, field.DeclaringEntity, insertionPos)
             else
                 return! None
         | _ ->
@@ -157,11 +157,11 @@ let insertStubFromPos caretPos src =
     let recordDefnFromPt = getRecordDefinitionFromPoint caretPos src
     match recordDefnFromPt with
     | None -> src
-    | Some(recordExprData, context, entity, insertPos) ->
+    | Some(recordExprData, entity, insertPos) ->
         let fieldsWritten = recordExprData.FieldExpressionList
         let insertColumn = insertPos.Position.Column
         let fieldValue = "failwith \"\""
-        let stub = RecordStubGenerator.formatRecord insertPos 4 fieldValue context entity fieldsWritten
+        let stub = RecordStubGenerator.formatRecord insertPos 4 fieldValue entity fieldsWritten
         let srcLines = srcToLineArray src
         let insertLine0 = insertPos.Position.Line - 1
         let curLine = srcLines.[insertLine0]

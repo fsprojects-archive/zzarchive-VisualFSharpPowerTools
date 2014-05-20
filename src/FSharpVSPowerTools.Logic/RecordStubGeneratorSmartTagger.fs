@@ -78,11 +78,11 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                         match fsSymbolUse.Symbol with
                         // The entity might correspond to another symbol 
                         | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
-                            Some (newWord, (recordBindingData, fsSymbolUse.DisplayContext, entity))
+                            Some (newWord, (recordBindingData, entity))
 
                         // The entity might correspond to another symbol 
                         | :? FSharpField as field when field.DeclaringEntity.IsFSharpRecord && field.DisplayName = symbol.Text ->
-                            Some (newWord, (recordBindingData, fsSymbolUse.DisplayContext, field.DeclaringEntity))
+                            Some (newWord, (recordBindingData, field.DeclaringEntity))
                         | _ -> None
 
                     return! liftMaybe newRecordDefinition
@@ -111,7 +111,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         let writtenFieldCount = recordBindingData.FieldExpressionList.Length
         fieldCount > 0 && writtenFieldCount < fieldCount
 
-    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData: RecordBinding, insertionPos: _) displayContext entity = 
+    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData: RecordBinding, insertionPos: _) entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let fieldsWritten = recordBindingData.FieldExpressionList
@@ -122,7 +122,6 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                        insertionPos
                        indentSize
                        "failwith \"Uninitialized field\""
-                       displayContext
                        entity
                        fieldsWritten
         let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Position.Line-1).Start.Position + insertionPos.Position.Column
@@ -131,19 +130,19 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
         transaction.Complete()
 
-    let generateRecordStub snapshot data displayContext entity =
+    let generateRecordStub snapshot data entity =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = CommandName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = handleGenerateRecordStub snapshot data displayContext entity }
+            member x.Invoke() = handleGenerateRecordStub snapshot data entity }
 
-    member x.GetSmartTagActions(snapshot, data, displayContext, entity: FSharpEntity) =
+    member x.GetSmartTagActions(snapshot, data, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
-        actionList.Add(generateRecordStub snapshot data displayContext entity)
+        actionList.Add(generateRecordStub snapshot data entity)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -152,10 +151,10 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             seq {
                 match recordDefinition with
-                | Some (word, (data, displayContext, entity)) when shouldGenerateRecordStub data entity ->
+                | Some (word, (data, entity)) when shouldGenerateRecordStub data entity ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<_>(span, 
-                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, data, displayContext, entity)))
+                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, data, entity)))
                           :> ITagSpan<_>
                 | _ -> ()
             }

@@ -87,7 +87,6 @@ type private Context = {
     IndentValue: int
     /// A single-line skeleton for each field
     FieldDefaultValue: string
-    DisplayContext: FSharpDisplayContext
     RecordTypeName: string
     RequireQualifiedAccess: bool
     PrependExtraSpace: bool
@@ -110,7 +109,7 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     writer.Write("{0}{1} = {2}", prependedSpace, name, ctxt.FieldDefaultValue)
 
 let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (fieldDefaultValue: string)
-                 (displayContext: FSharpDisplayContext) (entity: FSharpEntity)
+                 (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
     use writer = new ColumnIndentedTextWriter()
@@ -127,7 +126,6 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
           Writer = writer
           IndentValue = indentValue
           FieldDefaultValue = fieldDefaultValue
-          DisplayContext = displayContext
           PrependExtraSpace = prependExtraSpace }
 
     let fieldsWritten =
