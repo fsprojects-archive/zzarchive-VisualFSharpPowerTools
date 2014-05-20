@@ -33,13 +33,15 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            // TODO: make this optional
-            //var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            //if (!generalOptions.ImplementInterfaceEnabled) return null;
-
-            return new RecordStubGeneratorSmartTagger(textView, buffer, editorOptionsFactory,
-                undoHistoryRegistry.RegisterHistory(buffer),
-                fsharpVsLanguageService, serviceProvider) as ITagger<T>;
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (generalOptions != null && generalOptions.RecordStubGenerationEnabled)
+            {
+                return new RecordStubGeneratorSmartTagger(textView, buffer, editorOptionsFactory,
+                    undoHistoryRegistry.RegisterHistory(buffer),
+                    fsharpVsLanguageService, serviceProvider) as ITagger<T>;
+            }
+            else
+                return null;
         }
     }
 }

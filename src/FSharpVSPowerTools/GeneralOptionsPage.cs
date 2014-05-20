@@ -36,6 +36,7 @@ namespace FSharpVSPowerTools
             InterfaceImplementationEnabled = true;
             FolderOrganizationEnabled = false;
             FindAllReferencesEnabled = true;
+            RecordStubGenerationEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -135,6 +136,8 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FindAllReferencesEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool RecordStubGenerationEnabled { get; set; }
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -154,6 +157,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.InterfaceImplementationEnabled = InterfaceImplementationEnabled;
                 _optionsControl.FolderOrganizationEnabled = FolderOrganizationEnabled;
                 _optionsControl.FindAllReferencesEnabled = FindAllReferencesEnabled;
+                _optionsControl.RecordStubGenerationEnabled = RecordStubGenerationEnabled;
 
                 return _optionsControl;
             }

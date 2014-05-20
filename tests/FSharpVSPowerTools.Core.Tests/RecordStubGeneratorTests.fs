@@ -125,31 +125,6 @@ let tokenizeLine (src: string) (lineIdx1: int) =
     let line = lines.[lineIdx0]
     Lexer.tokenizeLine src args (lineIdx0) line Lexer.queryLexState
 
-//type VirtualTextEditor(src: string) =
-//    let splitLines (s: string) =
-//        s.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
-//
-//    let mutable lines = new ResizeArray<_>(splitLines src)
-//        
-//    member this.Line i = lines.[i]
-////    member this.InsertAt(lineIdx, col, str) =
-////        let line = lines.[lineIdx]
-////        assert (col >= 0 && col <= line.Length)
-////        let before, after = line.Substring(0, col), line.Substring(col)
-////        let lines = splitLines str
-////        match lines with
-////        | [||] -> ()
-////        | [|s0|] -> lines.[lineIdx] <- before + s0
-////                    lines.Insert(lineIdx + 1, after)
-////        | [|s0; s1|] -> lines.[lineIdx] <- before + s0
-////                        lines.Insert(lineIdx + 1, after)
-////        | _ -> ()
-//
-//    member this.GetText() =
-//        lines
-//        |> Seq.fold (fun state line -> state + Environment.NewLine + line) ""
-
-
 let getRecordBindingData (pos: pos) (src: string) =
     maybe {
         let! recordBindingExpTree = tryFindRecordBindingExpTree pos src
