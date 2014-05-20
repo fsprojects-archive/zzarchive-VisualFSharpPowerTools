@@ -186,6 +186,7 @@ namespace FSharpVSPowerTools
                 InterfaceImplementationEnabled = _optionsControl.InterfaceImplementationEnabled;
                 FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
                 FindAllReferencesEnabled = _optionsControl.FindAllReferencesEnabled;
+                RecordStubGenerationEnabled = _optionsControl.RecordStubGenerationEnabled;
             }
 
             base.OnApply(e);
