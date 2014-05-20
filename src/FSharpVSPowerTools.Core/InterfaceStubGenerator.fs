@@ -182,42 +182,13 @@ module InterfaceStubGenerator =
             | args -> bracket (String.concat tupSep args))
         |> String.concat argSep
         , namesWithIndices
-  
-    let internal formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
-        let getParamArgs (argInfos: FSharpParameter list list) = 
-            let args, namesWithIndices =
-                match argInfos with
-                | [[x]] when v.IsPropertyGetterMethod && x.Name.IsNone 
-                             && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> 
-                    "", Map.ofList [ctx.ObjectIdent, Set.empty]
-                | _  -> formatArgsUsage ctx true v argInfos
-             
-            if String.IsNullOrWhiteSpace(args) then "" 
-            elif args.StartsWith("(") then args
-            else sprintf "(%s)" args
-            , namesWithIndices
 
-        let buildUsage argInfos = 
-            let parArgs, _ = getParamArgs argInfos
-            match v.IsMember, v.IsInstanceMember, v.LogicalName, v.DisplayName with
-            // Constructors
-            | _, _, ".ctor", _ -> "new" + parArgs
-            // Properties (skipping arguments)
-            | _, true, _, name when v.IsPropertyGetterMethod || v.IsPropertySetterMethod -> 
-                if name.StartsWith("get_") || name.StartsWith("set_") then name.[4..] else name
-            // Ordinary instance members
-            | _, true, _, name -> name + parArgs
-            // Ordinary functions or values
-            | false, _, _, name when 
-                not (hasAttribute<RequireQualifiedAccessAttribute> v.LogicalEnclosingEntity.Attributes) -> 
-                name + " " + parArgs
-            // Ordinary static members or things (?) that require fully qualified access
-            | _, _, _, name -> name + parArgs
+    [<RequireQualifiedAccess>]
+    type MemberInfo =
+        | PropertyGetSet of FSharpMemberFunctionOrValue * FSharpMemberFunctionOrValue
+        | Member of FSharpMemberFunctionOrValue
 
-        let modifiers =
-            [ if v.InlineAnnotation = FSharpInlineAnnotation.AlwaysInline then yield "inline"
-              if v.Accessibility.IsInternal then yield "internal" ]
-
+    let internal getArgTypes (ctx: Context) (v: FSharpMemberFunctionOrValue) =
         let argInfos = 
             v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
             
@@ -229,43 +200,73 @@ module InterfaceStubGenerator =
             | [[]], true, _ -> [], Some retType
             | _, _, _ -> argInfos, Some retType
 
-        let retType = defaultArg (retType |> Option.map (formatType ctx)) "unit"
-        let usage = buildUsage argInfos
+        let retType = defaultArg (retType |> Option.map (formatType ctx)) "unit"      
+        argInfos, retType
 
-        let writer = ctx.Writer
-        writer.WriteLine("")
-        if v.IsEvent || hasAttribute<CLIEventAttribute> v.Attributes then
-            writer.WriteLine("[<CLIEvent>]")
-        writer.Write("member ")
-        for modifier in modifiers do
-            writer.Write("{0} ", modifier)
-        writer.Write("{0}.", ctx.ObjectIdent)
-        
-        if v.IsEvent then
-            writer.Write(usage)
-            writer.WriteLine(": {0} = ", retType)
-            writer.Indent ctx.Indentation
-            for line in ctx.MethodBody do
-                writer.WriteLine(line)
-            writer.Unindent ctx.Indentation
-        elif v.IsPropertySetterMethod then
+    let normalizePropertyName (v: FSharpMemberFunctionOrValue) =
+        let displayName = v.DisplayName
+        if (v.IsPropertyGetterMethod && displayName.StartsWith("get_")) || 
+            (v.IsPropertySetterMethod && displayName.StartsWith("set_")) then
+            displayName.[4..]
+        else displayName
+    
+    let internal formatMember (ctx: Context) m = 
+        let getParamArgs (argInfos: FSharpParameter list list) (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
+            let args, namesWithIndices =
+                match argInfos with
+                | [[x]] when v.IsPropertyGetterMethod && x.Name.IsNone 
+                                && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> 
+                    "", Map.ofList [ctx.ObjectIdent, Set.empty]
+                | _  -> formatArgsUsage ctx true v argInfos
+             
+            if String.IsNullOrWhiteSpace(args) then "" 
+            elif args.StartsWith("(") then args
+            else sprintf "(%s)" args
+            , namesWithIndices
+
+        let preprocess (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
+            let buildUsage argInfos = 
+                let parArgs, _ = getParamArgs argInfos ctx v
+                match v.IsMember, v.IsInstanceMember, v.LogicalName, v.DisplayName with
+                // Constructors
+                | _, _, ".ctor", _ -> "new" + parArgs
+                // Properties (skipping arguments)
+                | _, true, _, name when v.IsPropertyGetterMethod || v.IsPropertySetterMethod -> 
+                    if name.StartsWith("get_") || name.StartsWith("set_") then name.[4..] else name
+                // Ordinary instance members
+                | _, true, _, name -> name + parArgs
+                // Ordinary functions or values
+                | false, _, _, name when 
+                    not (hasAttribute<RequireQualifiedAccessAttribute> v.LogicalEnclosingEntity.Attributes) -> 
+                    name + " " + parArgs
+                // Ordinary static members or things (?) that require fully qualified access
+                | _, _, _, name -> name + parArgs
+
+            let modifiers =
+                [ if v.InlineAnnotation = FSharpInlineAnnotation.AlwaysInline then yield "inline"
+                  if v.Accessibility.IsInternal then yield "internal" ]
+
+            let argInfos, retType = getArgTypes ctx v
+            let usage = buildUsage argInfos
+            usage, modifiers, argInfos, retType
+
+        match m with
+        | MemberInfo.PropertyGetSet(getter, setter) ->
+            let (usage, modifiers, getterArgInfos, retType) = preprocess ctx getter
+            let (_, _, setterArgInfos, _) = preprocess ctx setter
+            let writer = ctx.Writer
+            writer.WriteLine("")
+            if getter.IsEvent || hasAttribute<CLIEventAttribute> getter.Attributes then
+                writer.WriteLine("[<CLIEvent>]")
+            writer.Write("member ")
+            for modifier in modifiers do
+                writer.Write("{0} ", modifier)
+            writer.Write("{0}.", ctx.ObjectIdent)
+
+            // Try to print getters and setters on the same identifier
             writer.WriteLine(usage)
             writer.Indent ctx.Indentation
-            match getParamArgs argInfos with
-            | "", _ | "()", _ ->
-                writer.WriteLine("with set (v: {0}): unit = ", retType)
-            | args, namesWithIndices ->
-                let valueArgName, _ = normalizeArgName namesWithIndices "v"
-                writer.WriteLine("with set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
-            writer.Indent ctx.Indentation
-            for line in ctx.MethodBody do
-                writer.WriteLine(line)
-            writer.Unindent ctx.Indentation
-            writer.Unindent ctx.Indentation
-        elif v.IsPropertyGetterMethod then
-            writer.WriteLine(usage)
-            writer.Indent ctx.Indentation
-            match getParamArgs argInfos with
+            match getParamArgs getterArgInfos ctx getter with
             | "", _ | "()", _ ->
                 writer.WriteLine("with get (): {0} = ", retType)
             | args, _ ->
@@ -274,14 +275,76 @@ module InterfaceStubGenerator =
             for line in ctx.MethodBody do
                 writer.WriteLine(line)
             writer.Unindent ctx.Indentation
-            writer.Unindent ctx.Indentation
-        else
-            writer.Write(usage)
-            writer.WriteLine(": {0} = ", retType)
+            match getParamArgs setterArgInfos ctx setter with
+            | "", _ | "()", _ ->
+                writer.WriteLine("and set (v: {0}): unit = ", retType)
+            | args, namesWithIndices ->
+                let valueArgName, _ = normalizeArgName namesWithIndices "v"
+                writer.WriteLine("and set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
             writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
                 writer.WriteLine(line)
             writer.Unindent ctx.Indentation
+            writer.Unindent ctx.Indentation
+
+        | MemberInfo.Member v ->
+            let (usage, modifiers, argInfos, retType) = preprocess ctx v
+            let writer = ctx.Writer
+            writer.WriteLine("")
+            if v.IsEvent || hasAttribute<CLIEventAttribute> v.Attributes then
+                writer.WriteLine("[<CLIEvent>]")
+            writer.Write("member ")
+            for modifier in modifiers do
+                writer.Write("{0} ", modifier)
+            writer.Write("{0}.", ctx.ObjectIdent)
+        
+            if v.IsEvent then
+                writer.Write(usage)
+                writer.WriteLine(": {0} = ", retType)
+                writer.Indent ctx.Indentation
+                for line in ctx.MethodBody do
+                    writer.WriteLine(line)
+                writer.Unindent ctx.Indentation
+            elif v.IsPropertySetterMethod then
+                writer.WriteLine(usage)
+                writer.Indent ctx.Indentation
+                match getParamArgs argInfos ctx v with
+                | "", _ | "()", _ ->
+                    writer.WriteLine("with set (v: {0}): unit = ", retType)
+                | args, namesWithIndices ->
+                    let valueArgName, _ = normalizeArgName namesWithIndices "v"
+                    writer.WriteLine("with set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
+                writer.Indent ctx.Indentation
+                for line in ctx.MethodBody do
+                    writer.WriteLine(line)
+                writer.Unindent ctx.Indentation
+                writer.Unindent ctx.Indentation
+            elif v.IsPropertyGetterMethod then
+                writer.Write(usage)
+                match getParamArgs argInfos ctx v with
+                | "", _ | "()", _ ->
+                    // Use the short-hand notation for getters without arguments
+                    writer.WriteLine(": {0} = ", retType)
+                    writer.Indent ctx.Indentation
+                    for line in ctx.MethodBody do
+                        writer.WriteLine(line)
+                    writer.Unindent ctx.Indentation
+                | args, _ ->
+                    writer.WriteLine("")
+                    writer.Indent ctx.Indentation
+                    writer.WriteLine("with get {0}: {1} = ", args, retType)
+                    writer.Indent ctx.Indentation
+                    for line in ctx.MethodBody do
+                        writer.WriteLine(line)
+                    writer.Unindent ctx.Indentation
+                    writer.Unindent ctx.Indentation
+            else
+                writer.Write(usage)
+                writer.WriteLine(": {0} = ", retType)
+                writer.Indent ctx.Indentation
+                for line in ctx.MethodBody do
+                    writer.WriteLine(line)
+                writer.Unindent ctx.Indentation
 
     let internal getGenericParameters (e: FSharpEntity) =
         if e.IsFSharpAbbreviation then
@@ -445,8 +508,23 @@ module InterfaceStubGenerator =
             String.Empty
         else
             writer.Indent startColumn
-            for (m, insts) in missingMembers do
-                formatMember { ctx with ArgInstantiations = insts } m
+            let getReturnType v = snd (getArgTypes ctx v)
+            let rec loop (members : (FSharpMemberFunctionOrValue * _) list) =
+                match members with
+                // We assume that getter and setter comes right after each other
+                // They belong to the same property if names and return types are the same
+                | (getter, insts)::(setter, _) :: otherMembers
+                | (setter, insts)::(getter, _) :: otherMembers when
+                    getter.IsPropertyGetterMethod && setter.IsPropertySetterMethod &&
+                    normalizePropertyName getter = normalizePropertyName setter &&
+                    getReturnType getter = getReturnType setter ->
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.PropertyGetSet(getter, setter))
+                    loop otherMembers
+                | (m, insts) :: otherMembers -> 
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m)
+                    loop otherMembers
+                | [] -> ()
+            loop (Seq.toList missingMembers)
             writer.Dump()
 
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =
