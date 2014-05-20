@@ -37,6 +37,17 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let [<Literal>] CommandName = "Generate record stubs"
 
+    let tryGetLeftPosOfFirstRecordField recordExprCategory =
+        match recordExprCategory with
+        | TypedRecordBinding(_, _, [])
+        | QualifiedFieldRecordBinding(_, [])
+        | NonQualifiedFieldRecordBinding(_, []) -> None
+        | TypedRecordBinding(_, _, fstFieldInfo :: _)
+        | QualifiedFieldRecordBinding(_, fstFieldInfo :: _)
+        | NonQualifiedFieldRecordBinding(_, fstFieldInfo :: _) ->
+            let (fieldIdentifier, _), _, _ = fstFieldInfo
+            Some (fieldIdentifier.Range.Start)
+
     // Try to:
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
@@ -51,33 +62,47 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             return maybe {
                 let! parsedInput = ast.ParseTree
                 let! recordBinding = RecordStubGenerator.tryFindRecordBinding pos parsedInput
-                let expr, lBraceLeftColumnCondition =
+
+                let expr =
                     match recordBinding with
-                    | TypedRecordBinding(_, expr, _) -> expr, (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
+                    | TypedRecordBinding(_, expr, _)
                     | QualifiedFieldRecordBinding(expr, _)
-                    | NonQualifiedFieldRecordBinding(expr, _) ->
-                        let isLBraceInExpressionRange (t: TokenInformation) =
-                            expr.Range.StartColumn <= t.LeftColumn && t.LeftColumn < caretColumn
+                    | NonQualifiedFieldRecordBinding(expr, _) -> expr
 
-                        expr, isLBraceInExpressionRange
+                let leftPosOfFirstRecordField' = tryGetLeftPosOfFirstRecordField recordBinding
 
-                let exprStartLine1 = expr.Range.StartLine
-                let exprStartLine0 = exprStartLine1 - 1
+                match leftPosOfFirstRecordField' with
+                | Some leftPosOfFirstRecordField -> return recordBinding, leftPosOfFirstRecordField
+                | None ->
+                    let lBraceLeftColumnCondition =
+                        match recordBinding with
+                        | TypedRecordBinding(_, _, _) ->
+                            (fun (t: TokenInformation) -> t.LeftColumn >= caretColumn)
 
-                // Tokenize line where the record expression starts
-                let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, exprStartLine0) 
+                        | QualifiedFieldRecordBinding(_, _)
+                        | NonQualifiedFieldRecordBinding(_, _) ->
+                            let isLBraceInExpressionRange (t: TokenInformation) =
+                                expr.Range.StartColumn <= t.LeftColumn && t.LeftColumn < caretColumn
 
-                // We want to go after the '{' that' is right after the caret position
-                let! endPosOfLBrace =
-                    tokens
-                    |> List.tryPick (fun (t: TokenInformation) ->
-                                if t.CharClass = TokenCharKind.Delimiter &&
-                                   (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
-                                   t.TokenName = "LBRACE" then
-                                    Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
-                                else None)
+                            isLBraceInExpressionRange
 
-                return recordBinding, endPosOfLBrace
+                    let exprStartLine1 = expr.Range.StartLine
+                    let exprStartLine0 = exprStartLine1 - 1
+
+                    // Tokenize line where the record expression starts
+                    let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, exprStartLine0) 
+
+                    // We want to go after the '{' that' is right after the caret position
+                    let! endPosOfLBrace =
+                        tokens
+                        |> List.tryPick (fun (t: TokenInformation) ->
+                                    if t.CharClass = TokenCharKind.Delimiter &&
+                                       (pos.Line <> exprStartLine1 || lBraceLeftColumnCondition t) &&
+                                       t.TokenName = "LBRACE" then
+                                        Some (Pos.fromZ exprStartLine0 (t.RightColumn + 1))
+                                    else None)
+
+                    return recordBinding, endPosOfLBrace
             }
         }
 

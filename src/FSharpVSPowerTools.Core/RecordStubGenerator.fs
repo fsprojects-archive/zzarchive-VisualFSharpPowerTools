@@ -50,7 +50,7 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
         else 
             field.Name
     
-    writer.Write(" {0} = {1}", name, ctxt.FieldDefaultValue)
+    writer.Write("{0} = {1}", name, ctxt.FieldDefaultValue)
 
 let formatRecord startColumn indentValue (fieldDefaultValue: string)
                  (displayContext: FSharpDisplayContext) (entity: FSharpEntity)
