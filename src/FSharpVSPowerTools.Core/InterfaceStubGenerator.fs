@@ -232,46 +232,56 @@ module InterfaceStubGenerator =
         let retType = defaultArg (retType |> Option.map (formatType ctx)) "unit"
         let usage = buildUsage argInfos
 
-        ctx.Writer.WriteLine("")
-        ctx.Writer.Write("member ")
+        let writer = ctx.Writer
+        writer.WriteLine("")
+        if v.IsEvent || hasAttribute<CLIEventAttribute> v.Attributes then
+            writer.WriteLine("[<CLIEvent>]")
+        writer.Write("member ")
         for modifier in modifiers do
-            ctx.Writer.Write("{0} ", modifier)
-        ctx.Writer.Write("{0}.", ctx.ObjectIdent)
+            writer.Write("{0} ", modifier)
+        writer.Write("{0}.", ctx.ObjectIdent)
         
-        if v.IsPropertySetterMethod then
-            ctx.Writer.WriteLine(usage)
-            ctx.Writer.Indent ctx.Indentation
+        if v.IsEvent then
+            writer.Write(usage)
+            writer.WriteLine(": {0} = ", retType)
+            writer.Indent ctx.Indentation
+            for line in ctx.MethodBody do
+                writer.WriteLine(line)
+            writer.Unindent ctx.Indentation
+        elif v.IsPropertySetterMethod then
+            writer.WriteLine(usage)
+            writer.Indent ctx.Indentation
             match getParamArgs argInfos with
             | "", _ | "()", _ ->
-                ctx.Writer.WriteLine("with set (v: {0}): unit = ", retType)
+                writer.WriteLine("with set (v: {0}): unit = ", retType)
             | args, namesWithIndices ->
                 let valueArgName, _ = normalizeArgName namesWithIndices "v"
-                ctx.Writer.WriteLine("with set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
-            ctx.Writer.Indent ctx.Indentation
+                writer.WriteLine("with set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
+            writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
-                ctx.Writer.WriteLine(line)
-            ctx.Writer.Unindent ctx.Indentation
-            ctx.Writer.Unindent ctx.Indentation
+                writer.WriteLine(line)
+            writer.Unindent ctx.Indentation
+            writer.Unindent ctx.Indentation
         elif v.IsPropertyGetterMethod then
-            ctx.Writer.WriteLine(usage)
-            ctx.Writer.Indent ctx.Indentation
+            writer.WriteLine(usage)
+            writer.Indent ctx.Indentation
             match getParamArgs argInfos with
-            | "", _ ->
-                ctx.Writer.WriteLine("with get (): {0} = ", retType)
+            | "", _ | "()", _ ->
+                writer.WriteLine("with get (): {0} = ", retType)
             | args, _ ->
-                ctx.Writer.WriteLine("with get {0}: {1} = ", args, retType)
-            ctx.Writer.Indent ctx.Indentation
+                writer.WriteLine("with get {0}: {1} = ", args, retType)
+            writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
-                ctx.Writer.WriteLine(line)
-            ctx.Writer.Unindent ctx.Indentation
-            ctx.Writer.Unindent ctx.Indentation
+                writer.WriteLine(line)
+            writer.Unindent ctx.Indentation
+            writer.Unindent ctx.Indentation
         else
-            ctx.Writer.Write(usage)
-            ctx.Writer.WriteLine(": {0} = ", retType)
-            ctx.Writer.Indent ctx.Indentation
+            writer.Write(usage)
+            writer.WriteLine(": {0} = ", retType)
+            writer.Indent ctx.Indentation
             for line in ctx.MethodBody do
-                ctx.Writer.WriteLine(line)
-            ctx.Writer.Unindent ctx.Indentation
+                writer.WriteLine(line)
+            writer.Unindent ctx.Indentation
 
     let internal getGenericParameters (e: FSharpEntity) =
         if e.IsFSharpAbbreviation then
@@ -299,9 +309,7 @@ module InterfaceStubGenerator =
             for (iface, instantiations) in getInterfaces e do
                 yield! iface.MembersFunctionsAndValues |> Seq.choose (fun m -> 
                            // Use this hack when FCS doesn't return enough information on .NET properties and events
-                           if not iface.IsFSharp && m.IsEvent && not (m.DisplayName.StartsWith "add_") && not (m.DisplayName.StartsWith "remove_") then 
-                               None
-                           elif m.IsProperty then 
+                           if m.IsProperty || m.IsEventAddMethod || m.IsEventRemoveMethod then 
                                None 
                            else Some (m, instantiations))
          }
@@ -440,13 +448,6 @@ module InterfaceStubGenerator =
             for (m, insts) in missingMembers do
                 formatMember { ctx with ArgInstantiations = insts } m
             writer.Dump()
-
-    let internal (|IndexerArg|) = function
-        | SynIndexerArg.Two(e1, e2) -> [e1; e2]
-        | SynIndexerArg.One e -> [e]
-
-    let internal (|IndexerArgList|) xs =
-        List.collect (|IndexerArg|) xs
 
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =
         let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 

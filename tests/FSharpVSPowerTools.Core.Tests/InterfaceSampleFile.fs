@@ -357,4 +357,15 @@ let _ = { new IMy<int * int> with
               member x.Method(arg1: int * int): unit = 
                   raise (System.NotImplementedException()) }
               
-              
+type IMyEvent<'a> = 
+    [<CLIEvent>]
+    abstract M: IEvent<'a>     
+    
+type T1() =
+    interface IMyEvent<int> with
+        [<CLIEvent>]
+        member x.M
+            with get (): IEvent<int> = 
+                raise (System.NotImplementedException())
+        
+        
