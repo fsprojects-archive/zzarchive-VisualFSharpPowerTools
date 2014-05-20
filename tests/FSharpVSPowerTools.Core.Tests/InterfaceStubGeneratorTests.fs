@@ -144,18 +144,15 @@ let ``should generate stubs for interfaces with multiple properties``() =
 member x.Item
     with get (): string = 
         raise (System.NotImplementedException())
-
-member x.Item
-    with set (v: string): unit = 
+    and set (v: string): unit = 
         raise (System.NotImplementedException())
 
 member x.Item
     with set (v: float): unit = 
         raise (System.NotImplementedException())
 
-member x.Item
-    with get (): int = 
-        raise (System.NotImplementedException())
+member x.Item: int = 
+    raise (System.NotImplementedException())
 """
 
 [<Test>]
@@ -164,9 +161,7 @@ let ``should generate stubs for interfaces with non-F# properties``() =
 member x.Item
     with get (index: int): 'a = 
         raise (System.NotImplementedException())
-
-member x.Item
-    with set (index: int) (v: 'a): unit = 
+    and set (index: int) (v: 'a): unit = 
         raise (System.NotImplementedException())
 
 member x.IndexOf(item: 'a): int = 
@@ -178,13 +173,11 @@ member x.Insert(index: int, item: 'a): unit =
 member x.RemoveAt(index: int): unit = 
     raise (System.NotImplementedException())
 
-member x.Count
-    with get (): int = 
-        raise (System.NotImplementedException())
+member x.Count: int = 
+    raise (System.NotImplementedException())
 
-member x.IsReadOnly
-    with get (): bool = 
-        raise (System.NotImplementedException())
+member x.IsReadOnly: bool = 
+    raise (System.NotImplementedException())
 
 member x.Add(item: 'a): unit = 
     raise (System.NotImplementedException())
@@ -232,17 +225,14 @@ member x.Dispose(): unit =
 [<Test; Ignore("This test picks up generic version for some strange reason.")>]
 let ``should use qualified names when appropriate``() =
     checkInterfaceStubWith [||] 178 35 "    { new System.Collections.ICollection with" ["ICollection"] """
-member x.Count
-    with get (): int =
-        raise (System.NotImplementedException())
+member x.Count: int =
+    raise (System.NotImplementedException())
 member x.CopyTo(array: System.Array, index: int): unit = 
     raise (System.NotImplementedException())
-member x.SyncRoot = 
-    with get (): obj =
-        raise (System.NotImplementedException())
-member x.IsSynchronized = 
-    with get (): bool =
-        raise (System.NotImplementedException())
+member x.SyncRoot: obj =
+    raise (System.NotImplementedException())
+member x.IsSynchronized: bool =
+    raise (System.NotImplementedException())
 member x.GetEnumerator(): System.Collections.IEnumerator = 
     raise (System.NotImplementedException())
 """
@@ -268,18 +258,14 @@ let ``should replace generic parameters on interfaces``() =
 member x.Item
     with get (key: string): int = 
         raise (System.NotImplementedException())
-
-member x.Item
-    with set (key: string) (v: int): unit = 
+    and set (key: string) (v: int): unit = 
         raise (System.NotImplementedException())
 
-member x.Keys
-    with get (): ICollection<string> = 
-        raise (System.NotImplementedException())
+member x.Keys: ICollection<string> = 
+    raise (System.NotImplementedException())
 
-member x.Values
-    with get (): ICollection<int> = 
-        raise (System.NotImplementedException())
+member x.Values: ICollection<int> = 
+    raise (System.NotImplementedException())
 
 member x.ContainsKey(key: string): bool = 
     raise (System.NotImplementedException())
@@ -293,13 +279,11 @@ member x.Remove(key: string): bool =
 member x.TryGetValue(key: string, value: byref<int>): bool = 
     raise (System.NotImplementedException())
 
-member x.Count
-    with get (): int = 
-        raise (System.NotImplementedException())
+member x.Count: int = 
+    raise (System.NotImplementedException())
 
-member x.IsReadOnly
-    with get (): bool = 
-        raise (System.NotImplementedException())
+member x.IsReadOnly: bool = 
+    raise (System.NotImplementedException())
 
 member x.Add(item: KeyValuePair<string,int>): unit = 
     raise (System.NotImplementedException())
@@ -341,6 +325,14 @@ member x.Method(arg1: Choice<int, string>): unit =
 let ``should replace generic parameters for tuple types``() =
     checkInterfaceStub 356 15 "let _ = { new IMy<int * int> with" ["IMy"] """
 member x.Method(arg1: int * int): unit = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should print the condensed form of events``() =
+    checkInterfaceStub 365 15 "    interface IMyEvent<int> with" ["IMyEvent"] """
+[<CLIEvent>]
+member x.M: IEvent<int> = 
     raise (System.NotImplementedException())
 """
 

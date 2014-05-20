@@ -183,14 +183,13 @@ module InterfaceStubGenerator =
         |> String.concat argSep
         , namesWithIndices
 
-    [<RequireQualifiedAccess>]
+    [<RequireQualifiedAccess; NoComparison>]
     type MemberInfo =
         | PropertyGetSet of FSharpMemberFunctionOrValue * FSharpMemberFunctionOrValue
         | Member of FSharpMemberFunctionOrValue
 
     let internal getArgTypes (ctx: Context) (v: FSharpMemberFunctionOrValue) =
-        let argInfos = 
-            v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
+        let argInfos = v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
             
         let retType = v.ReturnParameter.Type
 
@@ -387,8 +386,18 @@ module InterfaceStubGenerator =
         | _ -> 
             None
 
+    // Get name and associated range of a member
+    // On merged properties (consisting both getters and setters), they have the same range values,
+    // so we use 'get_' and 'set_' prefix to ensure corresponding symbols are retrieved correctly.
     let internal (|MemberNameAndRange|_|) = function
-        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, LongIdentPattern(name, range), _retTy, _expr, _bindingRange, _seqPoint) ->
+        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, SynValData(Some mf, _, _), LongIdentPattern(name, range), 
+                    _retTy, _expr, _bindingRange, _seqPoint) when mf.MemberKind = MemberKind.PropertyGet ->
+            if name.StartsWith("get_") then Some(name, range) else Some("get_" + name, range)
+        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, SynValData(Some mf, _, _), LongIdentPattern(name, range), 
+                    _retTy, _expr, _bindingRange, _seqPoint) when mf.MemberKind = MemberKind.PropertySet ->
+            if name.StartsWith("set_") then Some(name, range) else Some("set_" + name, range)
+        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, LongIdentPattern(name, range), 
+                    _retTy, _expr, _bindingRange, _seqPoint) ->
             Some(name, range)
         | _ ->
             None
@@ -407,7 +416,8 @@ module InterfaceStubGenerator =
         | InterfaceData.ObjExpr(_, bindings) -> 
             List.choose (|MemberNameAndRange|_|) bindings
 
-    // Sometimes interface members are stored in the form of `IInterface<'T> -> ...` so we need to get the 2nd generic arguments
+    // Sometimes interface members are stored in the form of `IInterface<'T> -> ...`,
+    // so we need to get the 2nd generic argument
     let internal (|MemberFunctionType|_|) (typ: FSharpType) =
         if typ.IsFunctionType && typ.GenericArguments.Count = 2 then
             Some typ.GenericArguments.[1]
@@ -443,15 +453,13 @@ module InterfaceStubGenerator =
     ///  (3) If any symbol found, capture its member signature 
     let getImplementedMemberSignatures (getMemberByLocation: string * range -> Async<FSharpSymbolUse option>) displayContext interfaceData = 
         let formatMemberSignature (symbolUse: FSharpSymbolUse) =
-            Debug.Assert(symbolUse.Symbol :? FSharpMemberFunctionOrValue, "Only accept symbol use of members.")
+            Debug.Assert(symbolUse.Symbol :? FSharpMemberFunctionOrValue, "Only accept symbol uses of members.")
             try
                 let m = symbolUse.Symbol :?> FSharpMemberFunctionOrValue
                 match m.FullType with
-                | EventFunctionType(argType, retType) when m.IsEvent ->
-                    let signature = removeWhitespace (sprintf "%s:%s->%s" m.DisplayName (argType.Format(displayContext)) 
-                                        (retType.Format(displayContext)))
-                    // CLI events correspond to two members add_* and remove_*
-                    Some [ sprintf "add_%s" signature; sprintf "remove_%s" signature]
+                | MemberFunctionType typ when m.IsEvent || hasAttribute<CLIEventAttribute> m.Attributes ->
+                    let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (typ.Format(displayContext)))
+                    Some [signature]
                 | typ ->
                     let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (typ.Format(displayContext)))
                     Some [signature]
@@ -481,7 +489,7 @@ module InterfaceStubGenerator =
         let instantiations = 
             let insts =
                 Seq.zip typeParams typeInstances
-                // Filter out useless instances (replacing with the same name or wildcard)
+                // Filter out useless instances (when it is replaced by the same name or by wildcard)
                 |> Seq.filter(fun (t1, t2) -> t1 <> t2 && t2 <> "_") 
                 |> Map.ofSeq
             // A simple hack to handle instantiation of type alias 
@@ -503,7 +511,7 @@ module InterfaceStubGenerator =
                     let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts }  typ))
                     not (Set.contains signature excludedMemberSignatures) 
                 with _ -> true)
-        // All members are already implemented
+        // All members have already been implemented
         if Seq.isEmpty missingMembers then
             String.Empty
         else
@@ -511,7 +519,9 @@ module InterfaceStubGenerator =
             let getReturnType v = snd (getArgTypes ctx v)
             let rec loop (members : (FSharpMemberFunctionOrValue * _) list) =
                 match members with
-                // We assume that getter and setter comes right after each other
+                // Since there is no unified source of information for properties,
+                // we try to merge getters and setters when they seem to match.
+                // Assume that getter and setter come right after each other.
                 // They belong to the same property if names and return types are the same
                 | (getter, insts)::(setter, _) :: otherMembers
                 | (setter, insts)::(getter, _) :: otherMembers when
@@ -773,7 +783,3 @@ module InterfaceStubGenerator =
             None
         | ParsedInput.ImplFile input -> 
             walkImplFileInput input
-
-
-
-

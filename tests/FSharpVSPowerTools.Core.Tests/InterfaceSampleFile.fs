@@ -364,8 +364,7 @@ type IMyEvent<'a> =
 type T1() =
     interface IMyEvent<int> with
         [<CLIEvent>]
-        member x.M
-            with get (): IEvent<int> = 
-                raise (System.NotImplementedException())
+        member x.M: IEvent<int> = 
+            raise (System.NotImplementedException())
         
         
