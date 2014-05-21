@@ -128,13 +128,13 @@ member x.Dispose(): unit =
 [<Test>]
 let ``should generate stubs for composite interface``() =
     checkInterfaceStub 31 25 "    interface Interface3 with " ["Interface3"] """
-member x.Method3(arg1: int): int = 
+member x.Method1(arg1: int): int = 
     raise (System.NotImplementedException())
 
 member x.Method2(arg1: int): int = 
     raise (System.NotImplementedException())
 
-member x.Method1(arg1: int): int = 
+member x.Method3(arg1: int): int = 
     raise (System.NotImplementedException())
 """
 
@@ -142,50 +142,22 @@ member x.Method1(arg1: int): int =
 let ``should generate stubs for interfaces with multiple properties``() =
     checkInterfaceStub 98 11 "    { new Indexer3 with " ["Indexer3"] """
 member x.Item
-    with get (): string = 
-        raise (System.NotImplementedException())
-
-member x.Item
-    with set (v: string): unit = 
-        raise (System.NotImplementedException())
-
-member x.Item
     with set (v: float): unit = 
         raise (System.NotImplementedException())
 
+member x.Item: int = 
+    raise (System.NotImplementedException())
+
 member x.Item
-    with get (): int = 
+    with get (): string = 
+        raise (System.NotImplementedException())
+    and set (v: string): unit = 
         raise (System.NotImplementedException())
 """
 
 [<Test>]
 let ``should generate stubs for interfaces with non-F# properties``() =
     checkInterfaceStub 119 38 "    { new System.Collections.Generic.IList<'a> with" ["IList"] """
-member x.Item
-    with get (index: int): 'a = 
-        raise (System.NotImplementedException())
-
-member x.Item
-    with set (index: int) (v: 'a): unit = 
-        raise (System.NotImplementedException())
-
-member x.IndexOf(item: 'a): int = 
-    raise (System.NotImplementedException())
-
-member x.Insert(index: int, item: 'a): unit = 
-    raise (System.NotImplementedException())
-
-member x.RemoveAt(index: int): unit = 
-    raise (System.NotImplementedException())
-
-member x.Count
-    with get (): int = 
-        raise (System.NotImplementedException())
-
-member x.IsReadOnly
-    with get (): bool = 
-        raise (System.NotImplementedException())
-
 member x.Add(item: 'a): unit = 
     raise (System.NotImplementedException())
 
@@ -198,13 +170,34 @@ member x.Contains(item: 'a): bool =
 member x.CopyTo(array: 'a [], arrayIndex: int): unit = 
     raise (System.NotImplementedException())
 
-member x.Remove(item: 'a): bool = 
+member x.Count: int = 
     raise (System.NotImplementedException())
 
 member x.GetEnumerator(): IEnumerator<'a> = 
     raise (System.NotImplementedException())
 
 member x.GetEnumerator(): System.Collections.IEnumerator = 
+    raise (System.NotImplementedException())
+
+member x.IndexOf(item: 'a): int = 
+    raise (System.NotImplementedException())
+
+member x.Insert(index: int, item: 'a): unit = 
+    raise (System.NotImplementedException())
+
+member x.IsReadOnly: bool = 
+    raise (System.NotImplementedException())
+
+member x.Item
+    with get (index: int): 'a = 
+        raise (System.NotImplementedException())
+    and set (index: int) (v: 'a): unit = 
+        raise (System.NotImplementedException())
+
+member x.Remove(item: 'a): bool = 
+    raise (System.NotImplementedException())
+
+member x.RemoveAt(index: int): unit = 
     raise (System.NotImplementedException())
 """
 
@@ -232,18 +225,19 @@ member x.Dispose(): unit =
 [<Test; Ignore("This test picks up generic version for some strange reason.")>]
 let ``should use qualified names when appropriate``() =
     checkInterfaceStubWith [||] 178 35 "    { new System.Collections.ICollection with" ["ICollection"] """
-member x.Count
-    with get (): int =
-        raise (System.NotImplementedException())
 member x.CopyTo(array: System.Array, index: int): unit = 
     raise (System.NotImplementedException())
-member x.SyncRoot = 
-    with get (): obj =
-        raise (System.NotImplementedException())
-member x.IsSynchronized = 
-    with get (): bool =
-        raise (System.NotImplementedException())
+
 member x.GetEnumerator(): System.Collections.IEnumerator = 
+    raise (System.NotImplementedException())
+
+member x.Count: int =
+    raise (System.NotImplementedException())
+
+member x.IsSynchronized: bool =
+    raise (System.NotImplementedException())
+
+member x.SyncRoot: obj =
     raise (System.NotImplementedException())
 """
 
@@ -265,41 +259,8 @@ member x.Item
 [<Test>]
 let ``should replace generic parameters on interfaces``() =
     checkInterfaceStubWith [|"string"; "int"|] 290 15 "let _ = { new IDictionary<string, int> with" ["IDictionary"] """
-member x.Item
-    with get (key: string): int = 
-        raise (System.NotImplementedException())
-
-member x.Item
-    with set (key: string) (v: int): unit = 
-        raise (System.NotImplementedException())
-
-member x.Keys
-    with get (): ICollection<string> = 
-        raise (System.NotImplementedException())
-
-member x.Values
-    with get (): ICollection<int> = 
-        raise (System.NotImplementedException())
-
-member x.ContainsKey(key: string): bool = 
-    raise (System.NotImplementedException())
-
 member x.Add(key: string, value: int): unit = 
     raise (System.NotImplementedException())
-
-member x.Remove(key: string): bool = 
-    raise (System.NotImplementedException())
-
-member x.TryGetValue(key: string, value: byref<int>): bool = 
-    raise (System.NotImplementedException())
-
-member x.Count
-    with get (): int = 
-        raise (System.NotImplementedException())
-
-member x.IsReadOnly
-    with get (): bool = 
-        raise (System.NotImplementedException())
 
 member x.Add(item: KeyValuePair<string,int>): unit = 
     raise (System.NotImplementedException())
@@ -310,16 +271,43 @@ member x.Clear(): unit =
 member x.Contains(item: KeyValuePair<string,int>): bool = 
     raise (System.NotImplementedException())
 
+member x.ContainsKey(key: string): bool = 
+    raise (System.NotImplementedException())
+
 member x.CopyTo(array: KeyValuePair<string,int> [], arrayIndex: int): unit = 
     raise (System.NotImplementedException())
 
-member x.Remove(item: KeyValuePair<string,int>): bool = 
+member x.Count: int = 
     raise (System.NotImplementedException())
 
 member x.GetEnumerator(): IEnumerator<KeyValuePair<string,int>> = 
     raise (System.NotImplementedException())
 
 member x.GetEnumerator(): System.Collections.IEnumerator = 
+    raise (System.NotImplementedException())
+
+member x.IsReadOnly: bool = 
+    raise (System.NotImplementedException())
+
+member x.Item
+    with get (key: string): int = 
+        raise (System.NotImplementedException())
+    and set (key: string) (v: int): unit = 
+        raise (System.NotImplementedException())
+
+member x.Keys: ICollection<string> = 
+    raise (System.NotImplementedException())
+
+member x.Remove(key: string): bool = 
+    raise (System.NotImplementedException())
+
+member x.Remove(item: KeyValuePair<string,int>): bool = 
+    raise (System.NotImplementedException())
+
+member x.TryGetValue(key: string, value: byref<int>): bool = 
+    raise (System.NotImplementedException())
+
+member x.Values: ICollection<int> = 
     raise (System.NotImplementedException())
 """
 
@@ -341,6 +329,27 @@ member x.Method(arg1: Choice<int, string>): unit =
 let ``should replace generic parameters for tuple types``() =
     checkInterfaceStub 356 15 "let _ = { new IMy<int * int> with" ["IMy"] """
 member x.Method(arg1: int * int): unit = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should print the condensed form of events``() =
+    checkInterfaceStub 365 15 "    interface IMyEvent<int> with" ["IMyEvent"] """
+[<CLIEvent>]
+member x.M: IEvent<int> = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should ensure properties are grouped correctly``() =
+    checkInterfaceStub 374 15 "let _ = { new NewInfrastructure<string> with" ["NewInfrastructure"] """
+member x.ReadWriteProp
+    with get (): int = 
+        raise (System.NotImplementedException())
+    and set (v: int): unit = 
+        raise (System.NotImplementedException())
+
+member x.ReadonlyProp: int = 
     raise (System.NotImplementedException())
 """
 

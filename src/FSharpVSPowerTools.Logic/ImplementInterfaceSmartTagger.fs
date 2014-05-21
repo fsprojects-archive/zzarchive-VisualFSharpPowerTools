@@ -33,7 +33,6 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                                    editorOptionsFactory: IEditorOptionsFactoryService, textUndoHistory: ITextUndoHistory,
                                    vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
-    let mutable currentWord = None
     let mutable state = None
 
     let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
@@ -64,37 +63,33 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let updateAtCaretPosition() =
         asyncMaybe {
             let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-            match currentWord with
-            | Some word when point.InSpan word -> 
-                return! liftMaybe state
-            | _ ->
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument() |> liftMaybe
-                let! project = ProjectProvider.createForDocument doc |> liftMaybe
-                let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
-                match symbol.Kind with
-                | SymbolKind.Ident ->
-                    let! interfaceState = queryInterfaceState point doc project
-                    let! (fsSymbolUse, results) = 
-                        vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
-                    // Recheck cursor position to ensure it's still in new word
-                    let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-                    return!
-                       (match fsSymbolUse.Symbol with
-                        | :? FSharpEntity as entity when point.InSpan newWord ->
-                            // The entity might correspond to another symbol so we check for symbol text and start ranges as well
-                            if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text 
-                                && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
-                                Some (newWord, (interfaceState, fsSymbolUse.DisplayContext, entity, results))
-                            else None
-                        | _ -> None) |> liftMaybe
-                | _ -> return! liftMaybe None
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = dte.GetActiveDocument() |> liftMaybe
+            let! project = ProjectProvider.createForDocument doc |> liftMaybe
+            let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
+            match symbol.Kind with
+            | SymbolKind.Ident ->
+                let! interfaceState = queryInterfaceState point doc project
+                let! (fsSymbolUse, results) = 
+                    vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
+                // Recheck cursor position to ensure it's still in new word
+                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                return!
+                    (match fsSymbolUse.Symbol with
+                    | :? FSharpEntity as entity when point.InSpan newWord ->
+                        // The entity might correspond to another symbol so we check for symbol text and start ranges as well
+                        if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text 
+                            && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
+                            Some (newWord, (interfaceState, fsSymbolUse.DisplayContext, entity, results))
+                        else None
+                    | _ -> None) |> liftMaybe
+            | _ -> return! liftMaybe None
         }
         |> Async.map (fun result -> 
             let changed =
-                match state, result, currentWord with
-                | None, None, _ -> false
-                | _, Some (newWord, _), Some oldWord -> newWord <> oldWord
+                match state, result with
+                | None, None -> false
+                | Some (oldWord, _), Some(newWord, _) -> newWord <> oldWord
                 | _ -> true
             state <- result
             if changed then
