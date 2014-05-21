@@ -83,6 +83,12 @@ namespace FSharpVSPowerTools
             set { chbFindAllReferences.Checked = value; }
         }
 
+        public bool RecordStubGenerationEnabled
+        {
+            get { return chbRecordStubGeneration.Checked; }
+            set { chbRecordStubGeneration.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
@@ -96,6 +102,7 @@ namespace FSharpVSPowerTools
             chbInterfaceImplementation.Checked = OptionsPage.InterfaceImplementationEnabled;
             chbFolderOrganization.Checked = OptionsPage.FolderOrganizationEnabled;
             chbFindAllReferences.Checked = OptionsPage.FindAllReferencesEnabled;
+            chbRecordStubGeneration.Checked = OptionsPage.RecordStubGenerationEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

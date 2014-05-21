@@ -28,6 +28,7 @@ Here are currently supported features:
  * [Folder organization](folderorganization.html)
  * [Find all references](findallreferences.html)
  * [Implement interface](implementinterface.html)
+ * [Record stub generation](recordstubgeneration.html)
   
 Contributing and copyright
 --------------------------
