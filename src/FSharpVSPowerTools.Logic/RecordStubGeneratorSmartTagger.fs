@@ -25,6 +25,32 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
+type VSSnapshot(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
+    interface ISnapshot with
+        member x.FullName = doc.FullName
+        member x.GetText() = snapshot.GetText()
+        member x.GetLineText0(line0) =
+            snapshot.GetLineFromLineNumber(int line0).GetText()
+
+        member x.GetLineText1(line1) =
+            snapshot.GetLineFromLineNumber(int line1 - 1).GetText()
+
+type CodeGenerationInfra
+    (serviceProvider: IServiceProvider,
+     languageService: VSLanguageService) =
+    interface ICodeGenerationInfra<IProjectProvider, SnapshotPoint, SnapshotSpan> with
+        member x.GetSymbolAtPosition(snapshot, pos) =
+            asyncMaybe {
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let! doc = dte.GetActiveDocument() |> liftMaybe
+                let! project = ProjectProvider.createForDocument doc |> liftMaybe
+                let! newWord, symbol = languageService.GetSymbol(pos, project) |> liftMaybe
+                return newWord, symbol
+            }
+
+        member x.ParseFileInProject(snapshot, project) =
+            languageService.ParseFileInProject(snapshot.FullName, snapshot.GetText(), project)
+
 type RecordStubGeneratorSmartTagger(view: ITextView,
                                     buffer: ITextBuffer,
                                     editorOptionsFactory: IEditorOptionsFactoryService,
@@ -37,22 +63,24 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let [<Literal>] CommandName = "Generate record stubs"
 
+    let codeGenInfra: ICodeGenerationInfra<_, _, _> =
+        upcast CodeGenerationInfra(serviceProvider, vsLanguageService)
+
     // Try to:
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
-    let collectRecordBindingData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
+    let collectRecordBindingData (snapshot: ISnapshot) (point: SnapshotPoint) (project: IProjectProvider) =
         async {
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
             let caretColumn = point.Position - point.GetContainingLine().Start.Position
-            let source = point.Snapshot.GetText()
-            let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
+//            let source = point.Snapshot.GetText()
+//            let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
+            let! ast = codeGenInfra.ParseFileInProject(snapshot, project)
             let pos = Pos.fromZ line caretColumn
 
             return maybe {
                 let! parsedInput = ast.ParseTree
                 let! recordBinding = RecordStubGenerator.tryFindRecordBinding pos parsedInput
-                let expr = recordBinding.Expression
-
                 let recordStubsInsertionPos = RecordStubsInsertionPosition.FromRecordExpression recordBinding
                 return recordBinding, recordStubsInsertionPos
             }
@@ -64,11 +92,15 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetActiveDocument() |> liftMaybe
             let! project = ProjectProvider.createForDocument doc |> liftMaybe
-            let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
+            let snapshot = VSSnapshot(doc, point.Snapshot)
+//            let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
+            let! newWord, symbol =
+                codeGenInfra.GetSymbolAtPosition(Unchecked.defaultof<_>, point)
 
             match symbol.Kind with
             | SymbolKind.Ident ->
-                let! recordBindingData = collectRecordBindingData point doc project
+//                let! recordBindingData = collectRecordBindingData point doc project
+                let! recordBindingData = collectRecordBindingData snapshot point project
                 let! (fsSymbolUse, _results) = 
                     vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
                 // Recheck cursor position to ensure it's still in new word

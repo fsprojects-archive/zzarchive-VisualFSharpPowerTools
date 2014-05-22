@@ -4,7 +4,6 @@ open System
 open System.IO
 open System.Diagnostics
 open System.Collections.Generic
-open System.CodeDom.Compiler
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
@@ -79,6 +78,38 @@ type RecordStubsInsertionPosition =
             let ((fstField, _), _, _) = fstFieldInfo
             BeforeFirstField(fstField.Range.Start)
 
+[<Measure>] type Line0
+[<Measure>] type Line1
+
+type Range = {
+    StartLine: int<Line1>
+    StartColumn: int
+    EndLine: int<Line1>
+    EndColumn: int
+}
+with
+    static member FromSymbolRange startLine startColumn endLine endColumn =
+        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
+          StartColumn = startColumn
+          EndLine = LanguagePrimitives.Int32WithMeasure endLine
+          EndColumn = endColumn }
+
+    static member FromSymbol(symbol: Symbol) =
+        let startLine, startColumn, endLine, endColumn = symbol.Range
+        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
+          StartColumn = startColumn
+          EndLine = LanguagePrimitives.Int32WithMeasure endLine
+          EndColumn = endColumn }
+
+type ISnapshot =
+    abstract FullName: string
+    abstract GetText: unit -> string
+    abstract GetLineText0: int<Line0> -> string
+    abstract GetLineText1: int<Line1> -> string
+
+type ICodeGenerationInfra<'Project, 'Pos, 'Range> =
+    abstract GetSymbolAtPosition: ISnapshot * pos:'Pos -> Async<('Range * Symbol) option>
+    abstract ParseFileInProject: ISnapshot * 'Project -> Async<ParseFileResults>
 
 [<NoComparison>]
 type private Context = {
