@@ -35,7 +35,7 @@ For user guides, please take a look at [the home page](http://fsprojects.github.
 Require Visual Studio 2013 and Visual Studio SDK 2013. 
 Run the `build.cmd` script or `FSharpVSPowerTools.sln` to build the solution.
 
-You can download the latest installer [here](https://ci.appveyor.com/api/buildjobs/683c775376wlog6q/artifacts/bin/FSharpVSPowerTools.vsix).
+You can download the latest installer [here](https://ci.appveyor.com/project/dungpa/visualfsharppowertools/build/artifacts).
 
 ### Getting involved
 Contributions are always welcome.
