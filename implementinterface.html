@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>navigateto</title>
+    <title>implementinterface</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Visual F# Power Tools (by F# Community) ">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko">
@@ -32,14 +32,17 @@
       <div class="row">
         <div class="span9" id="main">
           
-<h2>NavigateTo (Ctrl + ,) command</h2>
+<h2>Implement interface</h2>
 
-<p>This feature can also be activated through Edit --> NavigateTo menu. 
-It performs quick search to navigate between different locations in the source files.</p>
+<p>The feature is activated via a smart tagger on an interface identifier. 
+When the cursor is placed on an identifier of interface declaration or object expression, the smart tagger will hint users at generating relevant interfaces.</p>
 
-<p>Here is a screencast in VS2013 where symbols are returned from both C# and F# projects.</p>
+<p>Note that if the current line is <code>interface ISomeInterface with</code> or <code>new ISomeInterface with</code>, the code might not be parsable (i.e. no semantic highlighting for the current line).
+We recommend users to generate interfaces while the code is parsable e.g. after writing <code>interface ISomeInterface</code> or <code>new ISomeInterface</code>.</p>
 
-<p><img src="img/navigate_to.gif" alt="NavigateTo" /></p>
+<p>See the demo screencast below.</p>
+
+<p><img src="img/implement_interface.gif" alt="Implement interface" /></p>
 
 
         </div>
