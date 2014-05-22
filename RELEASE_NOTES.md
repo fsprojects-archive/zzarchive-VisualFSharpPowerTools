@@ -60,7 +60,7 @@
 * Improve performance on large solutions
 * Add validation after reformatting
 
-#### 1.1.0 - Unreleased
+#### 1.1.0 - May 22 2014
 * Add Implement Interface feature
 * Fix duplicated symbols and missing private symbols in Find All References
 * Enhance syntax coloring of type-provider-related source code
