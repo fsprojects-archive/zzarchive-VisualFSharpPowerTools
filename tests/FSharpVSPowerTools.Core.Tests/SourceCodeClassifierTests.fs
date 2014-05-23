@@ -53,6 +53,7 @@ let checkCategories line (expected: (Category * int * int) list)  =
             Some (loc.Category, span.StartCol, span.EndCol)
         | _ -> None)
     |> Array.toList
+    |> List.sortBy (fun (_, line, col) -> line, col)
     |> Collection.assertEquiv expected
 
 [<Test>]
@@ -320,3 +321,13 @@ let ``unit of measure``() =
 let ``custom numeric literal``() = 
     checkCategories 149 []    
     checkCategories 152 []
+
+[<Test>]
+let ``anonymous generic parameters``() =
+    checkCategories 154 [ Function, 8, 10; ReferenceType, 16, 19; ReferenceType, 34, 37 ]
+    checkCategories 155 [ Function, 8, 11; ReferenceType, 16, 19; ReferenceType, 34, 37 ] 
+    checkCategories 156 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
+    checkCategories 157 [ Function, 8, 10; ReferenceType, 15, 18; ReferenceType, 33, 36 ] 
+    checkCategories 158 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
+    checkCategories 159 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
+    checkCategories 160 [ Function, 8, 9; ReferenceType, 42, 46; ReferenceType, 83, 87 ]
