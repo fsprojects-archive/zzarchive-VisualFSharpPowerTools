@@ -94,7 +94,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let! doc = dte.GetActiveDocument() |> liftMaybe
             let! project = ProjectProvider.createForDocument doc |> liftMaybe
             let snapshot = VSSnapshot(doc, point.Snapshot)
-            let! symbolRange, recordExpression, recordDefinition, insertionPos = tryGetRecordDefinitionFromPos codeGenInfra project point snapshot
+            let! symbolRange, recordExpression, recordDefinition, insertionPos =
+                tryGetRecordDefinitionFromPos codeGenInfra project point snapshot
             let newWord = symbolRange
 
             // Recheck cursor position to ensure it's still in new word

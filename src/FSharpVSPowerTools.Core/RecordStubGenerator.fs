@@ -462,14 +462,6 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
-//let tryGetSymbolUseAtPoint (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) (snapshot: ISnapshot) =
-//    asyncMaybe {
-//        let! _, symbol = codeGenInfra.GetSymbolAtPosition(snapshot, pos)
-////        let parseAndCheckResults = codeGenInfra.ParseAndCheckFileInProject()
-//        ()
-//    }
-
-
 let tryFindRecordExpressionInBufferAtPos (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
     async {
         let! parseResults =
