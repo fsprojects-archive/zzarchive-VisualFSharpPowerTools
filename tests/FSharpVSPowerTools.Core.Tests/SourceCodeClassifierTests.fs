@@ -309,3 +309,9 @@ let ``byref argument``() =
         [ Function, 4, 27
           ReferenceType, 32, 37
           ValueType, 38, 41 ]
+
+[<Test>]
+let ``unit of measure``() =
+    checkCategories 145 [ ValueType, 7, 10; ReferenceType, 11, 13 ]
+    checkCategories 146 [ ReferenceType, 6, 8 ]
+    checkCategories 148 [ PublicField, 6, 12; ValueType, 14, 17; ReferenceType, 18, 20 ]

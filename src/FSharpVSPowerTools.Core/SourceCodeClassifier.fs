@@ -66,7 +66,8 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | :? FSharpEntity as entity ->
         //debug "%A (type: %s)" e (e.GetType().Name)
         let e, ty = getEntityAbbreviatedType entity
-        if e.IsEnum || e.IsValueType then ValueType
+        if e.IsEnum || e.IsValueType 
+           || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then ValueType
         elif 
            // FCS returns two FSharpSymbolUse for each type provider declaration.
            // I.e. for "type T = XmlProvider<"<root>1<root>">" it returns two uses of symbol "XmlProvider":
