@@ -12,7 +12,6 @@ type Category =
     | ValueType
     | PatternCase
     | Function
-    | PublicField
     | MutableVar
     | Quotation
     | Module
@@ -57,7 +56,6 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
     | :? FSharpField as f ->
         if f.IsMutable || isReferenceCell f.FieldType then MutableVar
-        elif f.Accessibility.IsPublic then PublicField 
         else Other
 
     | :? FSharpEntity as entity ->
@@ -121,8 +119,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
             lexer.GetSymbolAtLocation (r.End.Line - 1) (r.End.Column - 1)
             |> Option.bind (fun sym -> 
                 match sym.Kind with
-                | SymbolKind.Ident
-                | SymbolKind.Operator ->
+                | SymbolKind.Ident ->
                     // FCS returns inaccurate ranges for multiline method chains
                     // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
                     if r.StartLine < r.EndLine then

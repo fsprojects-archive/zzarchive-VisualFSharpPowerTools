@@ -134,8 +134,8 @@ let ``record``() =
     checkCategories 39 
         [ 
             ReferenceType, 5, 11
-            PublicField, 16, 24; ValueType, 26, 29
-            PublicField, 31, 44; Module, 49, 51; Module, 46, 48; ReferenceType, 52, 56 
+            ValueType, 26, 29
+            Module, 49, 51; Module, 46, 48; ReferenceType, 52, 56 
         ]
 
 [<Test>]
@@ -250,7 +250,7 @@ let ``complicated quotation layout``() =
 let ``quotation in lambda``() = checkCategories 107 [ Quotation, 17, 24 ]
 
 [<Test>]
-let ``quotation in record``() = checkCategories 109 [ PublicField, 10, 15; Quotation, 18, 25 ]
+let ``quotation in record``() = checkCategories 109 [ Quotation, 18, 25 ]
 
 [<Test>]
 let ``quotation in list expression``() = checkCategories 110 [ Quotation, 10, 17 ]
@@ -314,7 +314,7 @@ let ``byref argument``() =
 let ``unit of measure``() =
     checkCategories 145 [ ValueType, 7, 10; ReferenceType, 11, 13 ]
     checkCategories 146 [ ReferenceType, 6, 8 ]
-    checkCategories 148 [ PublicField, 6, 12; ValueType, 14, 17; ReferenceType, 18, 20 ]
+    checkCategories 148 [ ValueType, 14, 17; ReferenceType, 18, 20 ]
 
 [<Test>]
 let ``custom numeric literal``() = 
