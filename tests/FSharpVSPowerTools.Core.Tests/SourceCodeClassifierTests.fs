@@ -98,7 +98,7 @@ let ``static event``() =
 [<Test>]
 let ``constructors``() = 
     checkCategories 8 [ ReferenceType, 5, 10 ]
-    checkCategories 19 [ ReferenceType, 4, 7; ValueType, 12, 15; ReferenceType, 23, 28 ]
+    checkCategories 19 [ ValueType, 12, 15; ReferenceType, 23, 28 ]
 
 [<Test>]
 let ``interface implemented in a class``() = 
@@ -121,7 +121,7 @@ let ``fully qualified F# type constructor``() =
 
 [<Test>]
 let ``generic class declaration``() = 
-    checkCategories 34 [ ReferenceType, 5, 17; TypeParameter, 18, 20 ]
+    checkCategories 34 [ ReferenceType, 5, 17 ]
 
 [<Test>]
 let ``generic class instantiation``() = 
@@ -267,7 +267,7 @@ let ``quotation as default constructor arguments``() =
 
 [<Test>]
 let ``quotation as initialization of auto property``() = 
-    checkCategories 125 [ MutableVar, 15, 19; MutableVar, 22, 31; Quotation, 22, 31 ]
+    checkCategories 125 [ MutableVar, 15, 19; Quotation, 22, 31 ]
 
 [<Test>]
 let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40 ]
@@ -315,3 +315,8 @@ let ``unit of measure``() =
     checkCategories 145 [ ValueType, 7, 10; ReferenceType, 11, 13 ]
     checkCategories 146 [ ReferenceType, 6, 8 ]
     checkCategories 148 [ PublicField, 6, 12; ValueType, 14, 17; ReferenceType, 18, 20 ]
+
+[<Test>]
+let ``custom numeric literal``() = 
+    checkCategories 149 []    
+    checkCategories 152 []

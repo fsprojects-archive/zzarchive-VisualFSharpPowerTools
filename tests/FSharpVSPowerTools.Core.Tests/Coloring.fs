@@ -146,3 +146,7 @@ let _: int<ms> =
     1<ms>
 type RecordWithUnitOfMeasure =
     { Field1: int<ms> }
+let _ = 1I
+module NumericLiteralZ =
+    let FromInt32 (i: int) = i
+let _ = 77Z

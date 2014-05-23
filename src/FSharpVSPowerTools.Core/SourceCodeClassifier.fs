@@ -11,7 +11,6 @@ type Category =
     | ReferenceType
     | ValueType
     | PatternCase
-    | TypeParameter
     | Function
     | PublicField
     | MutableVar
@@ -52,8 +51,6 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
     match symbol with
     | :? FSharpGenericParameter
-    | :? FSharpStaticParameter -> 
-        TypeParameter
     | :? FSharpUnionCase
     | :? FSharpActivePatternCase -> 
         PatternCase
@@ -121,13 +118,18 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         allSymbolsUses
         |> Array.choose (fun su ->
             let r = su.RangeAlternate
-            // FCS returns inaccurate ranges for multiline method chains
-            // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
-            if r.StartLine < r.EndLine then
-                lexer.GetSymbolAtLocation (r.End.Line - 1) (r.End.Column - 1)
-                |> Option.map (fun s -> 
-                      su, { Line = r.End.Line; StartCol = r.End.Column - s.Text.Length; EndCol = r.End.Column })
-            else Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column }))
+            lexer.GetSymbolAtLocation (r.End.Line - 1) (r.End.Column - 1)
+            |> Option.bind (fun sym -> 
+                match sym.Kind with
+                | SymbolKind.Ident
+                | SymbolKind.Operator ->
+                    // FCS returns inaccurate ranges for multiline method chains
+                    // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+                    if r.StartLine < r.EndLine then
+                        Some (su, { Line = r.End.Line; StartCol = r.End.Column - sym.Text.Length; EndCol = r.End.Column })
+                    else 
+                        Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column })
+                | _ -> None))
       
     // index all symbol usages by LineNumber 
     let wordSpans = 
