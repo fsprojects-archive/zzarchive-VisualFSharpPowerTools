@@ -5,6 +5,7 @@ open System.IO
 open System.Diagnostics
 open System.Collections.Generic
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -23,28 +24,28 @@ type CopyExpressionOpt = (SynExpr * BlockSeparator) option
 type FieldExpressionList = (RecordFieldName * SynExpr option * BlockSeparator option) list
 
 [<NoEquality; NoComparison>]
-type RecordBinding =
-    | TypedRecordBinding of SynType * SynExpr * CopyExpressionOpt * FieldExpressionList
-    | QualifiedFieldRecordBinding of SynExpr * CopyExpressionOpt * FieldExpressionList
-    | NonQualifiedFieldRecordBinding of SynExpr * CopyExpressionOpt * FieldExpressionList
+type RecordExpression =
+    | TypedRecord of SynType * SynExpr * CopyExpressionOpt * FieldExpressionList
+    | RecordWithQualifiedField of SynExpr * CopyExpressionOpt * FieldExpressionList
+    | RecordWithNonQualifiedField of SynExpr * CopyExpressionOpt * FieldExpressionList
 
     member x.CopyExpressionOpt =
         match x with
-        | TypedRecordBinding(_, _, copyExprOpt, _)
-        | QualifiedFieldRecordBinding(_, copyExprOpt, _)
-        | NonQualifiedFieldRecordBinding(_, copyExprOpt, _) -> copyExprOpt
+        | TypedRecord(_, _, copyExprOpt, _)
+        | RecordWithQualifiedField(_, copyExprOpt, _)
+        | RecordWithNonQualifiedField(_, copyExprOpt, _) -> copyExprOpt
 
     member x.Expression =
         match x with
-        | TypedRecordBinding(_, expr, _, _)
-        | QualifiedFieldRecordBinding(expr, _, _)
-        | NonQualifiedFieldRecordBinding(expr, _, _) -> expr
+        | TypedRecord(_, expr, _, _)
+        | RecordWithQualifiedField(expr, _, _)
+        | RecordWithNonQualifiedField(expr, _, _) -> expr
 
     member x.FieldExpressionList =
         match x with
-        | TypedRecordBinding(_, _, _, fieldExpressions)
-        | QualifiedFieldRecordBinding(_, _, fieldExpressions)
-        | NonQualifiedFieldRecordBinding(_, _, fieldExpressions) -> fieldExpressions
+        | TypedRecord(_, _, _, fieldExpressions)
+        | RecordWithQualifiedField(_, _, fieldExpressions)
+        | RecordWithNonQualifiedField(_, _, fieldExpressions) -> fieldExpressions
 
 [<RequireQualifiedAccess>]
 [<NoComparison>]
@@ -64,7 +65,7 @@ type RecordStubsInsertionPosition =
         | AfterCopyExpression pos
         | BeforeFirstField pos -> pos
 
-    static member FromRecordExpression (expr: RecordBinding) =
+    static member FromRecordExpression (expr: RecordExpression) =
         match expr.FieldExpressionList with
         | [] ->
             match expr.CopyExpressionOpt with
@@ -108,8 +109,11 @@ type ISnapshot =
     abstract GetLineText1: int<Line1> -> string
 
 type ICodeGenerationInfra<'Project, 'Pos, 'Range> =
-    abstract GetSymbolAtPosition: ISnapshot * pos:'Pos -> Async<('Range * Symbol) option>
+    abstract GetSymbolAtPosition: ISnapshot * pos:'Pos -> Async<option<'Range * Symbol>>
+    abstract GetSymbolAndUseAtPositionOfKind: 'Project * ISnapshot * 'Pos * SymbolKind -> Async<option<'Range * Symbol * FSharpSymbolUse>>
     abstract ParseFileInProject: ISnapshot * 'Project -> Async<ParseFileResults>
+    // TODO: enhance this clumsy design
+    abstract ExtractFSharpPos: 'Pos -> pos
 
 [<NoComparison>]
 type private Context = {
@@ -187,7 +191,6 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
         writer.Write("")
 
     writer.Dump()
-
 
 let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
@@ -284,7 +287,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 | SynExpr.Typed(SynExpr.Record(_inheritOpt, copyOpt, fields, _range0), _, _range1) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, copyOpt, fields)))
+                    |> Option.orElse (Some(TypedRecord(ty, expr, copyOpt, fields)))
                 | _ -> walkExpr expr
             | None ->
                 walkExpr expr
@@ -308,7 +311,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, copyOpt, fields)))
+                    |> Option.orElse (Some(TypedRecord(ty, expr, copyOpt, fields)))
                 | _ -> 
                 walkExpr synExpr
 
@@ -332,9 +335,9 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 |> Option.orElse (
                     match fields with
                     | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
-                            Some(QualifiedFieldRecordBinding(expr, copyOpt, fields))
+                            Some(RecordWithQualifiedField(expr, copyOpt, fields))
                     | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length = 1 ->
-                        Some(NonQualifiedFieldRecordBinding(expr, copyOpt, fields))
+                        Some(RecordWithNonQualifiedField(expr, copyOpt, fields))
                     | _ -> None)
 
             | SynExpr.ObjExpr(_ty, _baseCallOpt, binds, ifaces, _range1, _range2) -> 
@@ -458,3 +461,48 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     match parsedInput with
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
+
+//let tryGetSymbolUseAtPoint (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) (snapshot: ISnapshot) =
+//    asyncMaybe {
+//        let! _, symbol = codeGenInfra.GetSymbolAtPosition(snapshot, pos)
+////        let parseAndCheckResults = codeGenInfra.ParseAndCheckFileInProject()
+//        ()
+//    }
+
+
+let tryFindRecordExpressionInBufferAtPos (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+    async {
+        let! parseResults =
+            codeGenInfra.ParseFileInProject(snapshot, project)
+        
+        return
+            parseResults.ParseTree
+            |> Option.bind (tryFindRecordBinding (codeGenInfra.ExtractFSharpPos(pos)))
+    }
+
+let tryGetRecordStubGenerationParamsAtPos (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+    asyncMaybe {
+        let! recordExpression = tryFindRecordExpressionInBufferAtPos codeGenInfra project pos snapshot
+        let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordExpression
+
+        return recordExpression, insertionPos
+    }
+
+let tryGetRecordDefinitionFromPos (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+    asyncMaybe {
+        let! recordExpression, insertionPos =
+            tryGetRecordStubGenerationParamsAtPos codeGenInfra project pos snapshot
+
+        let! symbolRange, symbol, symbolUse = codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, SymbolKind.Ident)
+
+        match symbolUse.Symbol with
+        | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
+            return! Some (symbolRange, recordExpression, entity, insertionPos) |> liftMaybe
+
+        | :? FSharpField as field when
+            field.DeclaringEntity.IsFSharpRecord &&
+            field.DisplayName = symbol.Text ->
+                return! Some (symbolRange, recordExpression, field.DeclaringEntity, insertionPos) |> liftMaybe
+        | _ ->
+            return! None |> liftMaybe
+    }

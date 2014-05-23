@@ -21,6 +21,7 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open Microsoft.FSharp.Compiler.Ast
@@ -38,6 +39,18 @@ let args =
     |]
 
 let languageService = LanguageService(fun _ -> ())
+let projectOptions: ProjectOptions =
+    let fileName = @"C:\file.fs"
+    let projFileName = @"C:\Project.fsproj"
+    let files = [| fileName |]
+    { ProjectFileName = projFileName
+      ProjectFileNames = [| fileName |]
+      ProjectOptions = args
+      ReferencedProjects = Array.empty
+      IsIncompleteTypeCheckEnvironment = false
+      UseScriptResolutionRules = false
+      LoadTime = DateTime.UtcNow
+      UnresolvedReferences = None }
 
 // [x] Get the syntax construct that you're interested in
 // [x] Get the position P where to insert the generated code
@@ -69,131 +82,81 @@ type VirtualSnapshot(src: string) =
         member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
 
 type CodeGenerationTestInfra() =
-    member x.GetSymbolAtPosition(snapshot, pos) =
-        (x :> ICodeGenerationInfra<_, _, _>).GetSymbolAtPosition(snapshot, pos)
-        |> Async.RunSynchronously
-
     interface ICodeGenerationInfra<ProjectOptions, pos, Range> with
-        member x.GetSymbolAtPosition(snapshot, pos) = async {
-            return 
-                maybe {
-                    let lineText = snapshot.GetLineText0 pos.Line0
-                    let src = snapshot.GetText()
-                    let! symbol = Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText args Lexer.queryLexState
-                    return Range.FromSymbol symbol, symbol
-                }
-        }
+        member x.GetSymbolAtPosition(snapshot, pos) =
+            asyncMaybe {
+                let lineText = snapshot.GetLineText0 pos.Line0
+                let src = snapshot.GetText()
+                let! symbol =
+                    Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText args Lexer.queryLexState
+                    |> liftMaybe
+
+                return Range.FromSymbol symbol, symbol
+            }
+
+        member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
+            asyncMaybe {
+                let x = x :> ICodeGenerationInfra<_, _, _>
+                let! range, symbol = x.GetSymbolAtPosition(snapshot, pos)
+                let src = snapshot.GetText()
+                let line = snapshot.GetLineText1 pos.Line1
+                let! parseAndCheckResults =
+                    languageService.ParseAndCheckFileInProject(project, snapshot.FullName, src, AllowStaleResults.MatchingSource)
+                    |> liftAsync
+
+                match symbol.Kind with
+                | k when k = kind ->
+                    // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
+                    // and not <pos.Column>, otherwise GetSymbolUseAtLocation won't find it
+                    let! symbolUse =
+                        parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
+                    return range, symbol, symbolUse
+                | _ -> return! None |> liftMaybe
+            }
 
         member x.ParseFileInProject(snapshot, projectOptions) =
             languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText())
 
+        member x.ExtractFSharpPos(pos) = pos
+
 let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
+
+let codeGenInfra: ICodeGenerationInfra<_, _, _> = upcast CodeGenerationTestInfra()
 
 let asSnapshot (src: string) = VirtualSnapshot(src) :> ISnapshot
 let getSymbolAtPoint (pos: pos) (snapshot: ISnapshot) =
-    let codeGenInfra = CodeGenerationTestInfra()
-
     codeGenInfra.GetSymbolAtPosition(snapshot, pos)
-    |> Option.map (fun (_, symbol) -> symbol)
+    |> Async.RunSynchronously
 
-let getSymbolUseAtPoint (pos: pos) (snapshot: ISnapshot) =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    let files = [| fileName |]
-//    let lines = srcToLineArray snapshot
-    let lineIdx0 = pos.Line - 1
-    let src = snapshot.GetText()
-    let line = snapshot.GetLineText1 pos.Line1
+let getSymbolAndUseAtPoint (pos: pos) (snapshot: ISnapshot) =
+    codeGenInfra.GetSymbolAndUseAtPositionOfKind(projectOptions, snapshot, pos, SymbolKind.Ident)
+    |> Async.RunSynchronously
 
-    match getSymbolAtPoint pos snapshot with
-    | Some symbol ->
-        let projectOptions: ProjectOptions =
-            { ProjectFileName = projFileName
-              ProjectFileNames = [| fileName |]
-              ProjectOptions = args
-              ReferencedProjects = Array.empty
-              IsIncompleteTypeCheckEnvironment = false
-              UseScriptResolutionRules = false
-              LoadTime = DateTime.UtcNow
-              UnresolvedReferences = None }
+let tryFindRecordBindingExpTree (pos: pos) (snapshot: ISnapshot) =
+    tryFindRecordExpressionInBufferAtPos codeGenInfra projectOptions pos snapshot
+    |> Async.RunSynchronously
 
-        let parseAndCheckResults =
-            languageService.ParseAndCheckFileInProject(projectOptions, fileName, src, AllowStaleResults.MatchingSource)
-            |> Async.RunSynchronously
-
-        // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
-        // and not <pos.Column>, otherwise GetSymbolUseAtLocation won't find it
-        parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
-        |> Async.RunSynchronously
-        |> Option.map (fun s -> s, parseAndCheckResults)
-    | _ -> None
-
-let tryFindRecordBindingExpTree (pos: pos) (src: string) =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    let files = [| fileName |]
-
-    let projectOptions: ProjectOptions =
-            { ProjectFileName = projFileName
-              ProjectFileNames = [| fileName |]
-              ProjectOptions = args
-              ReferencedProjects = Array.empty
-              IsIncompleteTypeCheckEnvironment = false
-              UseScriptResolutionRules = false
-              LoadTime = DateTime.UtcNow
-              UnresolvedReferences = None }
-
-    let parseResults =
-        languageService.ParseFileInProject(projectOptions, fileName, src)
-        |> Async.RunSynchronously
-
-    parseResults.ParseTree
-    |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
-
-let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordBinding) =
+let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordExpression) =
     match recordExprCategory.FieldExpressionList with
     | fieldInfo :: _ ->
         let (fieldIdentifier, _), _, _ = fieldInfo
         Some (fieldIdentifier.Range.Start)
     | [] -> None
 
-let getRecordBindingData (pos: pos) (src: string) =
-    maybe {
-        let! recordBindingExprTree = tryFindRecordBindingExpTree pos src
-        let caretColumn = pos.Column
-        let expr = recordBindingExprTree.Expression
-        let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordBindingExprTree
+let tryGetRecordStubGenerationParams (pos: pos) (snapshot: ISnapshot) =
+    tryGetRecordStubGenerationParamsAtPos codeGenInfra projectOptions pos snapshot
+    |> Async.RunSynchronously
 
-        return recordBindingExprTree, insertionPos
-    }
-
-let getRecordDefinitionFromPoint (pos: pos) (snapshot: ISnapshot) =
-    maybe {
-        let src = snapshot.GetText()
-        let! recordBindingData, insertionPos = getRecordBindingData pos src
-        let! symbolUse, _ = getSymbolUseAtPoint pos snapshot
-
-        match symbolUse.Symbol with
-        | :? FSharpEntity as entity ->
-            if entity.IsFSharpRecord then
-                return! Some (recordBindingData, entity, insertionPos)
-            else
-                return! None
-        | :? FSharpField as field ->
-            if field.DeclaringEntity.IsFSharpRecord then
-                return! Some (recordBindingData, field.DeclaringEntity, insertionPos)
-            else
-                return! None
-        | _ ->
-            return! None
-    }
+let tryGetRecordDefinitionFromPos (pos: pos) (snapshot: ISnapshot) =
+    tryGetRecordDefinitionFromPos codeGenInfra projectOptions pos snapshot
+    |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
     let snapshot: ISnapshot = upcast VirtualSnapshot(src)
-    let recordDefnFromPt = getRecordDefinitionFromPoint caretPos snapshot
+    let recordDefnFromPt = tryGetRecordDefinitionFromPos caretPos snapshot
     match recordDefnFromPt with
     | None -> src
-    | Some(recordExprData, entity, insertPos) ->
+    | Some(_, recordExprData, entity, insertPos) ->
         let fieldsWritten = recordExprData.FieldExpressionList
         let insertColumn = insertPos.Position.Column
         let fieldValue = "failwith \"\""
