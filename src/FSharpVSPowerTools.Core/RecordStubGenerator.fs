@@ -21,32 +21,13 @@ let inline setDebugObject (o: 'a) = debugObject <- o
 let inline setDebugObject (_: 'a) = ()
 #endif
 
-type CopyExpr = SynExpr * BlockSeparator
-type FieldExprList = (RecordFieldName * SynExpr option * BlockSeparator option) list
-
 [<NoEquality; NoComparison>]
-type RecordExpr =
-    | TypedRecord of SynType * SynExpr * option<CopyExpr> * FieldExprList
-    | RecordWithQualifiedField of SynExpr * option<CopyExpr> * FieldExprList
-    | RecordWithNonQualifiedField of SynExpr * option<CopyExpr> * FieldExprList
+type RecordExpr = {
+    Expr: SynExpr
+    CopyExprOption: option<SynExpr * BlockSeparator>
+    FieldExprList: (RecordFieldName * SynExpr option * BlockSeparator option) list
+}
 
-    member x.CopyExprOption =
-        match x with
-        | TypedRecord(_, _, copyExprOpt, _)
-        | RecordWithQualifiedField(_, copyExprOpt, _)
-        | RecordWithNonQualifiedField(_, copyExprOpt, _) -> copyExprOpt
-
-    member x.Expr =
-        match x with
-        | TypedRecord(_, expr, _, _)
-        | RecordWithQualifiedField(expr, _, _)
-        | RecordWithNonQualifiedField(expr, _, _) -> expr
-
-    member x.FieldExprList =
-        match x with
-        | TypedRecord(_, _, _, fieldExpressions)
-        | RecordWithQualifiedField(_, _, fieldExpressions)
-        | RecordWithNonQualifiedField(_, _, fieldExpressions) -> fieldExpressions
 
 [<RequireQualifiedAccess>]
 [<NoComparison>]
@@ -244,7 +225,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             //debug "BindingReturnInfo: %A" retTy
             //debug "Expr: %A" expr
             match retTy with
-            | Some(SynBindingReturnInfo(ty, _range, _attributes)) ->
+            | Some(SynBindingReturnInfo(_ty, _range, _attributes)) ->
                 //debug "ReturnTypeInfo: %A" ty
                 match expr with
                 // Situation 1:
@@ -253,7 +234,9 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 | SynExpr.Typed(SynExpr.Record(_inheritOpt, copyOpt, fields, _range0), _, _range1) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecord(ty, expr, copyOpt, fields)))
+                    |> Option.orElse (Some { Expr = expr
+                                             CopyExprOption = copyOpt
+                                             FieldExprList = fields })
                 | _ -> walkExpr expr
             | None ->
                 walkExpr expr
@@ -269,7 +252,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.Const(_synConst, _range) -> 
                 None
 
-            | SynExpr.Typed(synExpr, ty, _) ->
+            | SynExpr.Typed(synExpr, _ty, _) ->
                 match synExpr with
                 // Situation 1:
                 // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
@@ -277,7 +260,9 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecord(ty, expr, copyOpt, fields)))
+                    |> Option.orElse (Some { Expr = expr
+                                             CopyExprOption = copyOpt
+                                             FieldExprList = fields })
                 | _ -> 
                 walkExpr synExpr
 
@@ -300,11 +285,11 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 |> List.tryPick walkRecordField
                 |> Option.orElse (
                     match fields with
-                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
-                            Some(RecordWithQualifiedField(expr, copyOpt, fields))
-                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length = 1 ->
-                        Some(RecordWithNonQualifiedField(expr, copyOpt, fields))
-                    | _ -> None)
+                    | [] -> None
+                    | _ ->
+                        Some { Expr = expr
+                               CopyExprOption = copyOpt
+                               FieldExprList = fields })
 
             | SynExpr.ObjExpr(_ty, _baseCallOpt, binds, ifaces, _range1, _range2) -> 
                 List.tryPick walkBinding binds
