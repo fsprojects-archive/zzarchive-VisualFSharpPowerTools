@@ -137,7 +137,7 @@ let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOption
 
 let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService()
 
-let asSnapshot (src: string) = MockDocument(src) :> IDocument
+let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAtPosition(project, document, pos)
 
@@ -145,16 +145,9 @@ let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
     |> Async.RunSynchronously
 
-let tryFindRecordBindingExpTree (pos: pos) (snapshot: IDocument) =
-    tryFindRecordExpressionInBufferAtPos codeGenInfra project pos snapshot
+let tryFindRecordExpr (pos: pos) (snapshot: IDocument) =
+    tryFindRecordExprInBufferAtPos codeGenInfra project pos snapshot
     |> Async.RunSynchronously
-
-let tryGetLeftPosOfFirstRecordField (recordExpr: RecordExpr) =
-    match recordExpr.FieldExprList with
-    | fieldInfo :: _ ->
-        let (fieldIdentifier, _), _, _ = fieldInfo
-        Some (fieldIdentifier.Range.Start)
-    | [] -> None
 
 let tryGetRecordStubGenerationParams (pos: pos) (document: IDocument) =
     tryGetRecordStubGenerationParamsAtPos codeGenInfra project pos document
@@ -165,9 +158,9 @@ let tryGetRecordDefinitionFromPos (pos: pos) (document: IDocument) =
     |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
-    let snapshot: IDocument = upcast MockDocument(src)
-    let recordDefnFromPt = tryGetRecordDefinitionFromPos caretPos snapshot
-    match recordDefnFromPt with
+    let document: IDocument = upcast MockDocument(src)
+    let recordDefFromPos = tryGetRecordDefinitionFromPos caretPos document
+    match recordDefFromPos with
     | None -> src
     | Some(_, recordExprData, entity, insertPos) ->
         let fieldsWritten = recordExprData.FieldExprList

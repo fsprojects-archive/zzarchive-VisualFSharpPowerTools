@@ -413,7 +413,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
-let tryFindRecordExpressionInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let tryFindRecordExprInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     async {
         let! parseResults =
             codeGenService.ParseFileInProject(document, project)
@@ -425,7 +425,7 @@ let tryFindRecordExpressionInBufferAtPos (codeGenService: ICodeGenerationService
 
 let tryGetRecordStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
-        let! recordExpression = tryFindRecordExpressionInBufferAtPos codeGenService project pos document
+        let! recordExpression = tryFindRecordExprInBufferAtPos codeGenService project pos document
         let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordExpression
 
         return recordExpression, insertionPos
