@@ -25,45 +25,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type VSDocument(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
-    interface IDocument with
-        member x.FullName = doc.FullName
-        member x.GetText() = snapshot.GetText()
-        member x.GetLineText0(line0) =
-            snapshot.GetLineFromLineNumber(int line0).GetText()
-
-        member x.GetLineText1(line1) =
-            snapshot.GetLineFromLineNumber(int line1 - 1).GetText()
-
-type CodeGenerationService(languageService: VSLanguageService) =
-    interface ICodeGenerationService<IProjectProvider, SnapshotPoint, SnapshotSpan> with
-        member x.GetSymbolAtPosition(project, _document, pos) =
-            asyncMaybe {
-                let! range, symbol = languageService.GetSymbol(pos, project) |> liftMaybe
-                return range, symbol
-            }
-        
-        member x.GetSymbolAndUseAtPositionOfKind(project, document, pos, kind) =
-            asyncMaybe {
-                let x = x :> ICodeGenerationService<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(project, document, pos)
-
-                match symbol.Kind with
-                | k when k = kind ->
-                    let! symbolUse, _ =
-                        languageService.GetFSharpSymbolUse(range, symbol, document.FullName, project, AllowStaleResults.MatchingSource)
-                    return range, symbol, symbolUse
-                | _ -> return! None |> liftMaybe
-            }
-
-        member x.ParseFileInProject(document, project) =
-            languageService.ParseFileInProject(document.FullName, document.GetText(), project)
-        
-        member x.ExtractFSharpPos(pos) =
-            let line = pos.Snapshot.GetLineNumberFromPosition pos.Position
-            let caretColumn = pos.Position - pos.GetContainingLine().Start.Position
-            Pos.fromZ line caretColumn
-
 type RecordStubGeneratorSmartTagger(view: ITextView,
                                     buffer: ITextBuffer,
                                     editorOptionsFactory: IEditorOptionsFactoryService,
@@ -116,15 +77,15 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     200us, updateAtCaretPosition)
 
     // Check whether the record has been fully defined
-    let shouldGenerateRecordStub (recordBindingData: RecordExpr) (entity: FSharpEntity) =
+    let shouldGenerateRecordStub (recordExpr: RecordExpr) (entity: FSharpEntity) =
         let fieldCount = entity.FSharpFields.Count
-        let writtenFieldCount = recordBindingData.FieldExprList.Length
+        let writtenFieldCount = recordExpr.FieldExprList.Length
         fieldCount > 0 && writtenFieldCount < fieldCount
 
-    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData: RecordExpr) (insertionPos: _) entity = 
+    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordExpr: RecordExpr) (insertionPos: _) entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let fieldsWritten = recordBindingData.FieldExprList
+        let fieldsWritten = recordExpr.FieldExprList
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 
@@ -140,13 +101,13 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
         transaction.Complete()
 
-    let generateRecordStub snapshot expression insertionPos entity =
+    let generateRecordStub snapshot recordExpr insertionPos entity =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = CommandName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = handleGenerateRecordStub snapshot expression insertionPos entity }
+            member x.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
 
     member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()

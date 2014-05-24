@@ -88,6 +88,7 @@
     <Compile Include="MoveToFolderDialog.fs" />
     <Compile Include="FolderMenuUI.fs" />
     <Compile Include="FolderMenuCommands.fs" />
+    <Compile Include="CodeGenerationService.fs" />
     <Compile Include="ImplementInterfaceSmartTagger.fs" />
     <Compile Include="RecordStubGeneratorSmartTagger.fs" />
     <Compile Include="LibraryNode.fs" />

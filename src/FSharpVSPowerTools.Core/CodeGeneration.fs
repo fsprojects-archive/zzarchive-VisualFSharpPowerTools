@@ -19,7 +19,7 @@ type IDocument =
     abstract GetLineText1: int<Line1> -> string
 
 type ICodeGenerationService<'Project, 'Pos, 'Range> =
-    abstract GetSymbolAtPosition: 'Project * IDocument * pos:'Pos -> Async<option<'Range * Symbol>>
+    abstract GetSymbolAtPosition: 'Project * IDocument * pos:'Pos -> option<'Range * Symbol>
     abstract GetSymbolAndUseAtPositionOfKind: 'Project * IDocument * 'Pos * SymbolKind -> Async<option<'Range * Symbol * FSharpSymbolUse>>
     abstract ParseFileInProject: IDocument * 'Project -> Async<ParseFileResults>
     // TODO: enhance this clumsy design

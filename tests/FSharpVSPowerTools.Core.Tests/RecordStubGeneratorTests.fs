@@ -99,12 +99,11 @@ type MockDocument(src: string) =
 type CodeGenerationTestService() =
     interface ICodeGenerationService<ProjectOptions, pos, Range> with
         member x.GetSymbolAtPosition(_project, snapshot, pos) =
-            asyncMaybe {
-                let lineText = snapshot.GetLineText0 pos.Line0
-                let src = snapshot.GetText()
+            let lineText = snapshot.GetLineText0 pos.Line0
+            let src = snapshot.GetText()
+            maybe {
                 let! symbol =
                     Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText args Lexer.queryLexState
-                    |> liftMaybe
 
                 return Range.FromSymbol symbol, symbol
             }
@@ -112,7 +111,7 @@ type CodeGenerationTestService() =
         member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
             asyncMaybe {
                 let x = x :> ICodeGenerationService<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos)
+                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos) |> liftMaybe
                 let src = snapshot.GetText()
                 let line = snapshot.GetLineText1 pos.Line1
                 let! parseAndCheckResults =
@@ -141,7 +140,6 @@ let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestSer
 let asSnapshot (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAtPosition(project, document, pos)
-    |> Async.RunSynchronously
 
 let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
@@ -151,8 +149,8 @@ let tryFindRecordBindingExpTree (pos: pos) (snapshot: IDocument) =
     tryFindRecordExpressionInBufferAtPos codeGenInfra project pos snapshot
     |> Async.RunSynchronously
 
-let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordExpr) =
-    match recordExprCategory.FieldExprList with
+let tryGetLeftPosOfFirstRecordField (recordExpr: RecordExpr) =
+    match recordExpr.FieldExprList with
     | fieldInfo :: _ ->
         let (fieldIdentifier, _), _, _ = fieldInfo
         Some (fieldIdentifier.Range.Start)

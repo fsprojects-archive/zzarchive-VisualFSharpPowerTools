@@ -413,30 +413,30 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
-let tryFindRecordExpressionInBufferAtPos (codeGenInfra: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+let tryFindRecordExpressionInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     async {
         let! parseResults =
-            codeGenInfra.ParseFileInProject(snapshot, project)
+            codeGenService.ParseFileInProject(document, project)
         
         return
             parseResults.ParseTree
-            |> Option.bind (tryFindRecordBinding (codeGenInfra.ExtractFSharpPos(pos)))
+            |> Option.bind (tryFindRecordBinding (codeGenService.ExtractFSharpPos(pos)))
     }
 
-let tryGetRecordStubGenerationParamsAtPos (codeGenInfra: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+let tryGetRecordStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
-        let! recordExpression = tryFindRecordExpressionInBufferAtPos codeGenInfra project pos snapshot
+        let! recordExpression = tryFindRecordExpressionInBufferAtPos codeGenService project pos document
         let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordExpression
 
         return recordExpression, insertionPos
     }
 
-let tryGetRecordDefinitionFromPos (codeGenInfra: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+let tryGetRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! recordExpression, insertionPos =
-            tryGetRecordStubGenerationParamsAtPos codeGenInfra project pos snapshot
+            tryGetRecordStubGenerationParamsAtPos codeGenService project pos document
 
-        let! symbolRange, symbol, symbolUse = codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, SymbolKind.Ident)
+        let! symbolRange, symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 
         match symbolUse.Symbol with
         | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
