@@ -145,8 +145,8 @@ let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
     |> Async.RunSynchronously
 
-let tryFindRecordExpr (pos: pos) (snapshot: IDocument) =
-    tryFindRecordExprInBufferAtPos codeGenInfra project pos snapshot
+let tryFindRecordExpr (pos: pos) (document: IDocument) =
+    tryFindRecordExprInBufferAtPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
 let tryGetRecordStubGenerationParams (pos: pos) (document: IDocument) =
