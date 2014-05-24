@@ -52,6 +52,7 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
+// TODO: write design doc
 // [x] Get the syntax construct that you're interested in
 // [x] Get the position P where to insert the generated code
 // [x] Get the symbol S on which the caret is
