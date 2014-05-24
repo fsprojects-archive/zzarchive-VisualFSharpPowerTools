@@ -25,8 +25,8 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type VSSnapshot(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
-    interface ISnapshot with
+type VSDocument(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
+    interface IDocument with
         member x.FullName = doc.FullName
         member x.GetText() = snapshot.GetText()
         member x.GetLineText0(line0) =
@@ -35,34 +35,29 @@ type VSSnapshot(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
         member x.GetLineText1(line1) =
             snapshot.GetLineFromLineNumber(int line1 - 1).GetText()
 
-type CodeGenerationInfra
-    (serviceProvider: IServiceProvider,
-     languageService: VSLanguageService) =
-    interface ICodeGenerationInfra<IProjectProvider, SnapshotPoint, SnapshotSpan> with
-        member x.GetSymbolAtPosition(_snapshot, pos) =
+type CodeGenerationService(languageService: VSLanguageService) =
+    interface ICodeGenerationService<IProjectProvider, SnapshotPoint, SnapshotSpan> with
+        member x.GetSymbolAtPosition(project, _document, pos) =
             asyncMaybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument() |> liftMaybe
-                let! project = ProjectProvider.createForDocument doc |> liftMaybe
                 let! range, symbol = languageService.GetSymbol(pos, project) |> liftMaybe
                 return range, symbol
             }
         
-        member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
+        member x.GetSymbolAndUseAtPositionOfKind(project, document, pos, kind) =
             asyncMaybe {
-                let x = x :> ICodeGenerationInfra<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(snapshot, pos)
+                let x = x :> ICodeGenerationService<_, _, _>
+                let! range, symbol = x.GetSymbolAtPosition(project, document, pos)
 
                 match symbol.Kind with
                 | k when k = kind ->
                     let! symbolUse, _ =
-                        languageService.GetFSharpSymbolUse(range, symbol, snapshot.FullName, project, AllowStaleResults.MatchingSource)
+                        languageService.GetFSharpSymbolUse(range, symbol, document.FullName, project, AllowStaleResults.MatchingSource)
                     return range, symbol, symbolUse
                 | _ -> return! None |> liftMaybe
             }
 
-        member x.ParseFileInProject(snapshot, project) =
-            languageService.ParseFileInProject(snapshot.FullName, snapshot.GetText(), project)
+        member x.ParseFileInProject(document, project) =
+            languageService.ParseFileInProject(document.FullName, document.GetText(), project)
         
         member x.ExtractFSharpPos(pos) =
             let line = pos.Snapshot.GetLineNumberFromPosition pos.Position
@@ -81,8 +76,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let [<Literal>] CommandName = "Generate record stubs"
 
-    let codeGenInfra: ICodeGenerationInfra<_, _, _> =
-        upcast CodeGenerationInfra(serviceProvider, vsLanguageService)
+    let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
 
     // Try to:
     // - Identify record expression binding
@@ -93,9 +87,9 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetActiveDocument() |> liftMaybe
             let! project = ProjectProvider.createForDocument doc |> liftMaybe
-            let snapshot = VSSnapshot(doc, point.Snapshot)
+            let vsDocument = VSDocument(doc, point.Snapshot)
             let! symbolRange, recordExpression, recordDefinition, insertionPos =
-                tryGetRecordDefinitionFromPos codeGenInfra project point snapshot
+                tryGetRecordDefinitionFromPos codeGenInfra project point vsDocument
             let newWord = symbolRange
 
             // Recheck cursor position to ensure it's still in new word
@@ -122,15 +116,15 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     200us, updateAtCaretPosition)
 
     // Check whether the record has been fully defined
-    let shouldGenerateRecordStub (recordBindingData: RecordExpression) (entity: FSharpEntity) =
+    let shouldGenerateRecordStub (recordBindingData: RecordExpr) (entity: FSharpEntity) =
         let fieldCount = entity.FSharpFields.Count
-        let writtenFieldCount = recordBindingData.FieldExpressionList.Length
+        let writtenFieldCount = recordBindingData.FieldExprList.Length
         fieldCount > 0 && writtenFieldCount < fieldCount
 
-    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData: RecordExpression) (insertionPos: _) entity = 
+    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData: RecordExpr) (insertionPos: _) entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let fieldsWritten = recordBindingData.FieldExpressionList
+        let fieldsWritten = recordBindingData.FieldExprList
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 

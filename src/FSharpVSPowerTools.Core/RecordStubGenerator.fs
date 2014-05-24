@@ -6,6 +6,7 @@ open System.Diagnostics
 open System.Collections.Generic
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
+open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -20,28 +21,28 @@ let inline setDebugObject (o: 'a) = debugObject <- o
 let inline setDebugObject (_: 'a) = ()
 #endif
 
-type CopyExpressionOpt = (SynExpr * BlockSeparator) option
-type FieldExpressionList = (RecordFieldName * SynExpr option * BlockSeparator option) list
+type CopyExpr = SynExpr * BlockSeparator
+type FieldExprList = (RecordFieldName * SynExpr option * BlockSeparator option) list
 
 [<NoEquality; NoComparison>]
-type RecordExpression =
-    | TypedRecord of SynType * SynExpr * CopyExpressionOpt * FieldExpressionList
-    | RecordWithQualifiedField of SynExpr * CopyExpressionOpt * FieldExpressionList
-    | RecordWithNonQualifiedField of SynExpr * CopyExpressionOpt * FieldExpressionList
+type RecordExpr =
+    | TypedRecord of SynType * SynExpr * option<CopyExpr> * FieldExprList
+    | RecordWithQualifiedField of SynExpr * option<CopyExpr> * FieldExprList
+    | RecordWithNonQualifiedField of SynExpr * option<CopyExpr> * FieldExprList
 
-    member x.CopyExpressionOpt =
+    member x.CopyExprOption =
         match x with
         | TypedRecord(_, _, copyExprOpt, _)
         | RecordWithQualifiedField(_, copyExprOpt, _)
         | RecordWithNonQualifiedField(_, copyExprOpt, _) -> copyExprOpt
 
-    member x.Expression =
+    member x.Expr =
         match x with
         | TypedRecord(_, expr, _, _)
         | RecordWithQualifiedField(expr, _, _)
         | RecordWithNonQualifiedField(expr, _, _) -> expr
 
-    member x.FieldExpressionList =
+    member x.FieldExprList =
         match x with
         | TypedRecord(_, _, _, fieldExpressions)
         | RecordWithQualifiedField(_, _, fieldExpressions)
@@ -65,12 +66,12 @@ type RecordStubsInsertionPosition =
         | AfterCopyExpression pos
         | BeforeFirstField pos -> pos
 
-    static member FromRecordExpression (expr: RecordExpression) =
-        match expr.FieldExpressionList with
+    static member FromRecordExpression (expr: RecordExpr) =
+        match expr.FieldExprList with
         | [] ->
-            match expr.CopyExpressionOpt with
+            match expr.CopyExprOption with
             | None ->
-                let exprRange = expr.Expression.Range
+                let exprRange = expr.Expr.Range
                 AfterLeftBrace(Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1))
             | Some(_toCopy, (withSeparator, _)) ->
                 AfterCopyExpression(withSeparator.End)
@@ -79,41 +80,6 @@ type RecordStubsInsertionPosition =
             let ((fstField, _), _, _) = fstFieldInfo
             BeforeFirstField(fstField.Range.Start)
 
-[<Measure>] type Line0
-[<Measure>] type Line1
-
-type Range = {
-    StartLine: int<Line1>
-    StartColumn: int
-    EndLine: int<Line1>
-    EndColumn: int
-}
-with
-    static member FromSymbolRange startLine startColumn endLine endColumn =
-        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
-          StartColumn = startColumn
-          EndLine = LanguagePrimitives.Int32WithMeasure endLine
-          EndColumn = endColumn }
-
-    static member FromSymbol(symbol: Symbol) =
-        let startLine, startColumn, endLine, endColumn = symbol.Range
-        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
-          StartColumn = startColumn
-          EndLine = LanguagePrimitives.Int32WithMeasure endLine
-          EndColumn = endColumn }
-
-type ISnapshot =
-    abstract FullName: string
-    abstract GetText: unit -> string
-    abstract GetLineText0: int<Line0> -> string
-    abstract GetLineText1: int<Line1> -> string
-
-type ICodeGenerationInfra<'Project, 'Pos, 'Range> =
-    abstract GetSymbolAtPosition: ISnapshot * pos:'Pos -> Async<option<'Range * Symbol>>
-    abstract GetSymbolAndUseAtPositionOfKind: 'Project * ISnapshot * 'Pos * SymbolKind -> Async<option<'Range * Symbol * FSharpSymbolUse>>
-    abstract ParseFileInProject: ISnapshot * 'Project -> Async<ParseFileResults>
-    // TODO: enhance this clumsy design
-    abstract ExtractFSharpPos: 'Pos -> pos
 
 [<NoComparison>]
 type private Context = {
@@ -462,7 +428,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
-let tryFindRecordExpressionInBufferAtPos (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+let tryFindRecordExpressionInBufferAtPos (codeGenInfra: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
     async {
         let! parseResults =
             codeGenInfra.ParseFileInProject(snapshot, project)
@@ -472,7 +438,7 @@ let tryFindRecordExpressionInBufferAtPos (codeGenInfra: ICodeGenerationInfra<'Pr
             |> Option.bind (tryFindRecordBinding (codeGenInfra.ExtractFSharpPos(pos)))
     }
 
-let tryGetRecordStubGenerationParamsAtPos (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+let tryGetRecordStubGenerationParamsAtPos (codeGenInfra: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
     asyncMaybe {
         let! recordExpression = tryFindRecordExpressionInBufferAtPos codeGenInfra project pos snapshot
         let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordExpression
@@ -480,7 +446,7 @@ let tryGetRecordStubGenerationParamsAtPos (codeGenInfra: ICodeGenerationInfra<'P
         return recordExpression, insertionPos
     }
 
-let tryGetRecordDefinitionFromPos (codeGenInfra: ICodeGenerationInfra<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
+let tryGetRecordDefinitionFromPos (codeGenInfra: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) snapshot =
     asyncMaybe {
         let! recordExpression, insertionPos =
             tryGetRecordStubGenerationParamsAtPos codeGenInfra project pos snapshot

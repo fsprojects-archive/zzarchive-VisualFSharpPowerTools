@@ -39,7 +39,7 @@ let args =
     |]
 
 let languageService = LanguageService(fun _ -> ())
-let projectOptions: ProjectOptions =
+let project: ProjectOptions =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
@@ -71,19 +71,34 @@ type pos with
     member x.Column0 = x.Column
     member x.Column1 = x.Column + 1
 
-type VirtualSnapshot(src: string) =
+type Range = {
+    StartLine: int<Line1>
+    StartColumn: int
+    EndLine: int<Line1>
+    EndColumn: int
+}
+with
+    static member FromSymbol(symbol: Symbol) =
+        let startLine, startColumn, endLine, endColumn = symbol.Range
+        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
+          StartColumn = startColumn
+          EndLine = LanguagePrimitives.Int32WithMeasure endLine
+          EndColumn = endColumn }
+
+
+type MockDocument(src: string) =
     let lines =
         ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
 
-    interface ISnapshot with
+    interface IDocument with
         member x.FullName = @"C:\file.fs"
         member x.GetText() = src
         member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
         member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
 
-type CodeGenerationTestInfra() =
-    interface ICodeGenerationInfra<ProjectOptions, pos, Range> with
-        member x.GetSymbolAtPosition(snapshot, pos) =
+type CodeGenerationTestService() =
+    interface ICodeGenerationService<ProjectOptions, pos, Range> with
+        member x.GetSymbolAtPosition(_project, snapshot, pos) =
             asyncMaybe {
                 let lineText = snapshot.GetLineText0 pos.Line0
                 let src = snapshot.GetText()
@@ -96,8 +111,8 @@ type CodeGenerationTestInfra() =
 
         member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
             asyncMaybe {
-                let x = x :> ICodeGenerationInfra<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(snapshot, pos)
+                let x = x :> ICodeGenerationService<_, _, _>
+                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos)
                 let src = snapshot.GetText()
                 let line = snapshot.GetLineText1 pos.Line1
                 let! parseAndCheckResults =
@@ -121,43 +136,43 @@ type CodeGenerationTestInfra() =
 
 let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
 
-let codeGenInfra: ICodeGenerationInfra<_, _, _> = upcast CodeGenerationTestInfra()
+let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService()
 
-let asSnapshot (src: string) = VirtualSnapshot(src) :> ISnapshot
-let getSymbolAtPoint (pos: pos) (snapshot: ISnapshot) =
-    codeGenInfra.GetSymbolAtPosition(snapshot, pos)
+let asSnapshot (src: string) = MockDocument(src) :> IDocument
+let getSymbolAtPoint (pos: pos) (document: IDocument) =
+    codeGenInfra.GetSymbolAtPosition(project, document, pos)
     |> Async.RunSynchronously
 
-let getSymbolAndUseAtPoint (pos: pos) (snapshot: ISnapshot) =
-    codeGenInfra.GetSymbolAndUseAtPositionOfKind(projectOptions, snapshot, pos, SymbolKind.Ident)
+let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
+    codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
     |> Async.RunSynchronously
 
-let tryFindRecordBindingExpTree (pos: pos) (snapshot: ISnapshot) =
-    tryFindRecordExpressionInBufferAtPos codeGenInfra projectOptions pos snapshot
+let tryFindRecordBindingExpTree (pos: pos) (snapshot: IDocument) =
+    tryFindRecordExpressionInBufferAtPos codeGenInfra project pos snapshot
     |> Async.RunSynchronously
 
-let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordExpression) =
-    match recordExprCategory.FieldExpressionList with
+let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordExpr) =
+    match recordExprCategory.FieldExprList with
     | fieldInfo :: _ ->
         let (fieldIdentifier, _), _, _ = fieldInfo
         Some (fieldIdentifier.Range.Start)
     | [] -> None
 
-let tryGetRecordStubGenerationParams (pos: pos) (snapshot: ISnapshot) =
-    tryGetRecordStubGenerationParamsAtPos codeGenInfra projectOptions pos snapshot
+let tryGetRecordStubGenerationParams (pos: pos) (document: IDocument) =
+    tryGetRecordStubGenerationParamsAtPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
-let tryGetRecordDefinitionFromPos (pos: pos) (snapshot: ISnapshot) =
-    tryGetRecordDefinitionFromPos codeGenInfra projectOptions pos snapshot
+let tryGetRecordDefinitionFromPos (pos: pos) (document: IDocument) =
+    tryGetRecordDefinitionFromPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
-    let snapshot: ISnapshot = upcast VirtualSnapshot(src)
+    let snapshot: IDocument = upcast MockDocument(src)
     let recordDefnFromPt = tryGetRecordDefinitionFromPos caretPos snapshot
     match recordDefnFromPt with
     | None -> src
     | Some(_, recordExprData, entity, insertPos) ->
-        let fieldsWritten = recordExprData.FieldExpressionList
+        let fieldsWritten = recordExprData.FieldExprList
         let insertColumn = insertPos.Position.Column
         let fieldValue = "failwith \"\""
         let stub = RecordStubGenerator.formatRecord insertPos 4 fieldValue entity fieldsWritten
