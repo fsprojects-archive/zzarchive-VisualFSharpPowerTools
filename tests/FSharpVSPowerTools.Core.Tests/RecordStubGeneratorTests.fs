@@ -21,6 +21,10 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
+open FSharpVSPowerTools.CodeGeneration
+open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
+open Microsoft.FSharp.Compiler.Ast
 
 let args = 
     [|
@@ -34,8 +38,19 @@ let args =
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
     |]
 
-let framework = FSharpTargetFramework.NET_4_5
 let languageService = LanguageService(fun _ -> ())
+let project: ProjectOptions =
+    let fileName = @"C:\file.fs"
+    let projFileName = @"C:\Project.fsproj"
+    let files = [| fileName |]
+    { ProjectFileName = projFileName
+      ProjectFileNames = [| fileName |]
+      ProjectOptions = args
+      ReferencedProjects = Array.empty
+      IsIncompleteTypeCheckEnvironment = false
+      UseScriptResolutionRules = false
+      LoadTime = DateTime.UtcNow
+      UnresolvedReferences = None }
 
 // [x] Get the syntax construct that you're interested in
 // [x] Get the position P where to insert the generated code
@@ -50,115 +65,105 @@ let languageService = LanguageService(fun _ -> ())
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
 // [ ] Add tests for SmartTag generation?
 
-open FSharpVSPowerTools
-open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
-open Microsoft.FSharp.Compiler.Ast
+type pos with
+    member x.Line0: int<Line0> = LanguagePrimitives.Int32WithMeasure(x.Line - 1)
+    member x.Line1: int<Line1> = LanguagePrimitives.Int32WithMeasure(x.Line)
+    member x.Column0 = x.Column
+    member x.Column1 = x.Column + 1
+
+type Range = {
+    StartLine: int<Line1>
+    StartColumn: int
+    EndLine: int<Line1>
+    EndColumn: int
+}
+with
+    static member FromSymbol(symbol: Symbol) =
+        let startLine, startColumn, endLine, endColumn = symbol.Range
+        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
+          StartColumn = startColumn
+          EndLine = LanguagePrimitives.Int32WithMeasure endLine
+          EndColumn = endColumn }
+
+
+type MockDocument(src: string) =
+    let lines =
+        ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
+
+    interface IDocument with
+        member x.FullName = @"C:\file.fs"
+        member x.GetText() = src
+        member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
+        member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
+
+type CodeGenerationTestService() =
+    interface ICodeGenerationService<ProjectOptions, pos, Range> with
+        member x.GetSymbolAtPosition(_project, snapshot, pos) =
+            let lineText = snapshot.GetLineText0 pos.Line0
+            let src = snapshot.GetText()
+            maybe {
+                let! symbol =
+                    Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText args Lexer.queryLexState
+
+                return Range.FromSymbol symbol, symbol
+            }
+
+        member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
+            asyncMaybe {
+                let x = x :> ICodeGenerationService<_, _, _>
+                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos) |> liftMaybe
+                let src = snapshot.GetText()
+                let line = snapshot.GetLineText1 pos.Line1
+                let! parseAndCheckResults =
+                    languageService.ParseAndCheckFileInProject(project, snapshot.FullName, src, AllowStaleResults.MatchingSource)
+                    |> liftAsync
+
+                match symbol.Kind with
+                | k when k = kind ->
+                    // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
+                    // and not <pos.Column>, otherwise GetSymbolUseAtLocation won't find it
+                    let! symbolUse =
+                        parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
+                    return range, symbol, symbolUse
+                | _ -> return! None |> liftMaybe
+            }
+
+        member x.ParseFileInProject(snapshot, projectOptions) =
+            languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText())
+
+        member x.ExtractFSharpPos(pos) = pos
 
 let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
 
-let getSymbolAtPoint (pos: pos) (src: string) =
-    let lines = srcToLineArray src
-    let lineIdx0 = pos.Line - 1 
-    let line = lines.[lineIdx0]
-    Lexer.getSymbol src lineIdx0 pos.Column line args Lexer.queryLexState
+let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService()
 
-let getSymbolUseAtPoint (pos: pos) (src: string) =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    let files = [| fileName |]
-    let lines = srcToLineArray src
-    let lineIdx0 = pos.Line - 1
-    let line = lines.[lineIdx0]
+let asDocument (src: string) = MockDocument(src) :> IDocument
+let getSymbolAtPoint (pos: pos) (document: IDocument) =
+    codeGenInfra.GetSymbolAtPosition(project, document, pos)
 
-    match getSymbolAtPoint pos src with
-    | Some symbol ->
-        let projectOptions: ProjectOptions =
-            { ProjectFileName = projFileName
-              ProjectFileNames = [| fileName |]
-              ProjectOptions = args
-              ReferencedProjects = Array.empty
-              IsIncompleteTypeCheckEnvironment = false
-              UseScriptResolutionRules = false
-              LoadTime = DateTime.UtcNow
-              UnresolvedReferences = None }
+let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
+    codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
+    |> Async.RunSynchronously
 
-        let parseAndCheckResults =
-            languageService.ParseAndCheckFileInProject(projectOptions, fileName, src, AllowStaleResults.MatchingSource)
-            |> Async.RunSynchronously
+let tryFindRecordExpr (pos: pos) (document: IDocument) =
+    tryFindRecordExprInBufferAtPos codeGenInfra project pos document
+    |> Async.RunSynchronously
 
-        // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
-        // and not <pos.Column>, otherwise GetSymbolUseAtLocation won't find it
-        parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
-        |> Async.RunSynchronously
-        |> Option.map (fun s -> s, parseAndCheckResults)
-    | _ -> None
+let tryGetRecordStubGenerationParams (pos: pos) (document: IDocument) =
+    tryGetRecordStubGenerationParamsAtPos codeGenInfra project pos document
+    |> Async.RunSynchronously
 
-let tryFindRecordBindingExpTree (pos: pos) (src: string) =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    let files = [| fileName |]
-
-    let projectOptions: ProjectOptions =
-            { ProjectFileName = projFileName
-              ProjectFileNames = [| fileName |]
-              ProjectOptions = args
-              ReferencedProjects = Array.empty
-              IsIncompleteTypeCheckEnvironment = false
-              UseScriptResolutionRules = false
-              LoadTime = DateTime.UtcNow
-              UnresolvedReferences = None }
-
-    let parseResults =
-        languageService.ParseFileInProject(projectOptions, fileName, src)
-        |> Async.RunSynchronously
-
-    parseResults.ParseTree
-    |> Option.bind (RecordStubGenerator.tryFindRecordBinding pos)
-
-let tryGetLeftPosOfFirstRecordField (recordExprCategory: RecordBinding) =
-    match recordExprCategory.FieldExpressionList with
-    | fieldInfo :: _ ->
-        let (fieldIdentifier, _), _, _ = fieldInfo
-        Some (fieldIdentifier.Range.Start)
-    | [] -> None
-
-let getRecordBindingData (pos: pos) (src: string) =
-    maybe {
-        let! recordBindingExprTree = tryFindRecordBindingExpTree pos src
-        let caretColumn = pos.Column
-        let expr = recordBindingExprTree.Expression
-        let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordBindingExprTree
-
-        return recordBindingExprTree, insertionPos
-    }
-
-let getRecordDefinitionFromPoint (pos: pos) (src: string) =
-    maybe {
-        let! recordBindingData, insertionPos = getRecordBindingData pos src
-        let! symbolUse, _ = getSymbolUseAtPoint pos src
-
-        match symbolUse.Symbol with
-        | :? FSharpEntity as entity ->
-            if entity.IsFSharpRecord then
-                return! Some (recordBindingData, entity, insertionPos)
-            else
-                return! None
-        | :? FSharpField as field ->
-            if field.DeclaringEntity.IsFSharpRecord then
-                return! Some (recordBindingData, field.DeclaringEntity, insertionPos)
-            else
-                return! None
-        | _ ->
-            return! None
-    }
+let tryGetRecordDefinitionFromPos (pos: pos) (document: IDocument) =
+    tryGetRecordDefinitionFromPos codeGenInfra project pos document
+    |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
-    let recordDefnFromPt = getRecordDefinitionFromPoint caretPos src
-    match recordDefnFromPt with
+    let document: IDocument = upcast MockDocument(src)
+    let recordDefFromPos = tryGetRecordDefinitionFromPos caretPos document
+    match recordDefFromPos with
     | None -> src
-    | Some(recordExprData, entity, insertPos) ->
-        let fieldsWritten = recordExprData.FieldExpressionList
+    | Some(_, recordExprData, entity, insertPos) ->
+        let fieldsWritten = recordExprData.FieldExprList
         let insertColumn = insertPos.Position.Column
         let fieldValue = "failwith \"\""
         let stub = RecordStubGenerator.formatRecord insertPos 4 fieldValue entity fieldsWritten
@@ -189,7 +194,7 @@ type MyRecord = { Field1: int }
 let x: MyRecord = { Field1 = failwith "" }"""
 
 [<Test>]
-let ``multiple-field typed record stub generation (1)`` () =
+let ``multiple-field typed record stub generation 1`` () =
     """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
 let x: MyRecord = { }"""
@@ -201,7 +206,7 @@ let x: MyRecord = { Field1 = failwith ""
                     Field3 = failwith "" }"""
 
 [<Test>]
-let ``multiple-field typed record stub generation (2)`` () =
+let ``multiple-field typed record stub generation 2`` () =
     """
 type Record = { Field1: int; Field2: int }
 let x = { } : Record"""
@@ -212,7 +217,7 @@ let x = { Field1 = failwith ""
           Field2 = failwith "" } : Record"""
 
 [<Test>]
-let ``multiple-field typed record stub generation (3)`` () =
+let ``multiple-field typed record stub generation 3`` () =
     """
 type Record = { Field1: int; Field2: int }
 let x = { Field1 = 0; Field2 = 0 }
@@ -285,7 +290,7 @@ let x: MyRecord =
       Field2 = failwith "" }"""
 
 [<Test>]
-let ``multiple-field stub generation when some fields are already written (1)`` () =
+let ``multiple-field stub generation when some fields are already written 1`` () =
     """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
 let x: MyRecord = { Field1 = 0 }"""
@@ -297,7 +302,7 @@ let x: MyRecord = { Field2 = failwith ""
                     Field1 = 0 }"""
 
 [<Test>]
-let ``multiple-field stub generation when some fields are already written (2)`` () =
+let ``multiple-field stub generation when some fields are already written 2`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
 let x = { MyRecord.Field2 = 0 }"""
@@ -308,7 +313,7 @@ let x = { Field1 = failwith ""
           MyRecord.Field2 = 0 }"""
 
 [<Test>]
-let ``multiple-field stub generation when all fields are already written (1)`` () =
+let ``multiple-field stub generation when all fields are already written 1`` () =
     """
 type MyRecord = {Field1: int; Field2: float}
 let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
@@ -318,7 +323,7 @@ type MyRecord = {Field1: int; Field2: float}
 let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
 
 [<Test>]
-let ``multiple-field stub generation when all fields are already written (2)`` () =
+let ``multiple-field stub generation when all fields are already written 2`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
 let x = { MyRecord.Field1 = 0; MyRecord.Field2 = 0 }"""
@@ -389,11 +394,13 @@ let x = { Field22 = failwith ""
           Field21 = { Field11 = 0 } }"""
 
 [<Test>]
-let ``support record fields nested inside other records (1)`` () =
+let ``support record fields nested inside other records 1`` () =
     """
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1; Field22: int}
 let x = { Field21 = { Field11 = 0 } }"""
+//    |> asDocument
+//    |> tryGetRecordStubGenerationParams (Pos.fromZ 3 22)
     |> insertStubFromPos (Pos.fromZ 3 22)
     |> assertSrcAreEqual """
 type Record1 = {Field11: int; Field12: int}
@@ -402,7 +409,7 @@ let x = { Field21 = { Field12 = failwith ""
                       Field11 = 0 } }"""
 
 [<Test>]
-let ``support record fields nested inside other records (2)`` () =
+let ``support record fields nested inside other records 2`` () =
     """
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1}
@@ -441,6 +448,18 @@ let { Field1 = a; Field2 = b }: Record = { }"""
 type Record = { Field1: int; Field2: int }
 let { Field1 = a; Field2 = b }: Record = { Field1 = failwith ""
                                            Field2 = failwith "" }"""
+
+
+//let res =
+//    """
+//type Record1 = {Field11: int; Field12: int}
+//type Record2 = {Field21: Record1}
+//let x = { Field21 = {  Field11 = 0 } }"""
+//    |> asDocument
+//    |> tryFindRecordExpr (Pos.fromZ 3 24)
+//
+//res.Value.FieldExprList
+//|> insertStubFromPos (Pos.fromZ 3 24)
 
 [<Test>]
 let ``support fields with extra-space before them`` () =
@@ -503,24 +522,24 @@ let y: Record = { x with Field1 = failwith ""
 
 #if INTERACTIVE
 ``single-field typed record stub generation`` ()
-``multiple-field typed record stub generation (1)`` ()
-``multiple-field typed record stub generation (2)`` ()
-``multiple-field typed record stub generation (3)`` ()
+``multiple-field typed record stub generation 1`` ()
+``multiple-field typed record stub generation 2`` ()
+``multiple-field typed record stub generation 3`` ()
 ``single-field record stub generation in the middle of the file`` ()
 ``multiple-field record stub generation in the middle of the file`` ()
 ``single-field stub generation when left brace is on next line`` ()
 ``multiple-field stub generation when left brace is on next line`` ()
-``multiple-field stub generation when some fields are already written (1)`` ()
-``multiple-field stub generation when some fields are already written (2)`` ()
-``multiple-field stub generation when all fields are already written (1)`` ()
-``multiple-field stub generation when all fields are already written (2)`` ()
+``multiple-field stub generation when some fields are already written 1`` ()
+``multiple-field stub generation when some fields are already written 2`` ()
+``multiple-field stub generation when all fields are already written 1`` ()
+``multiple-field stub generation when all fields are already written 2`` ()
 ``multiple-field stub generation with some qualified fields already written`` ()
 ``multiple-field stub generation with all qualified fields already written`` ()
 ``multiple-field stub generation with some non-qualified fields already written`` ()
 ``multiple-field stub generation with all non-qualified fields already written`` ()
 ``support record fields that are also records`` ()
-``support record fields nested inside other records (1)`` ()
-``support record fields nested inside other records (2)`` ()
+``support record fields nested inside other records 1`` ()
+``support record fields nested inside other records 2`` ()
 ``print fully-qualified field names on fully-qualified records`` ()
 ``multiple-field record stub generation with record pattern in let binding`` ()
 ``support fields with extra-space before them`` ()
