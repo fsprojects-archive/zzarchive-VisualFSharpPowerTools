@@ -70,6 +70,7 @@
     <Compile Include="InterfaceStubGenerator.fs" />
     <Compile Include="RecordStubGenerator.fs" />
     <Compile Include="NavigateToIndex.fs" />
+    <Compile Include="UnionTypeCaseGenerator.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
