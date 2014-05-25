@@ -399,6 +399,8 @@ let ``support record fields nested inside other records 1`` () =
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1; Field22: int}
 let x = { Field21 = { Field11 = 0 } }"""
+//    |> asDocument
+//    |> tryGetRecordStubGenerationParams (Pos.fromZ 3 22)
     |> insertStubFromPos (Pos.fromZ 3 22)
     |> assertSrcAreEqual """
 type Record1 = {Field11: int; Field12: int}
@@ -446,6 +448,18 @@ let { Field1 = a; Field2 = b }: Record = { }"""
 type Record = { Field1: int; Field2: int }
 let { Field1 = a; Field2 = b }: Record = { Field1 = failwith ""
                                            Field2 = failwith "" }"""
+
+
+//let res =
+//    """
+//type Record1 = {Field11: int; Field12: int}
+//type Record2 = {Field21: Record1}
+//let x = { Field21 = {  Field11 = 0 } }"""
+//    |> asDocument
+//    |> tryFindRecordExpr (Pos.fromZ 3 24)
+//
+//res.Value.FieldExprList
+//|> insertStubFromPos (Pos.fromZ 3 24)
 
 [<Test>]
 let ``support fields with extra-space before them`` () =

@@ -140,19 +140,20 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
     writer.Dump()
 
 let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
+    let inline getIfPosInRange range f =
+        if rangeContainsPos range pos then f()
+        else None
+    
     let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
         List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
     and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, range)) =
-        if not <| rangeContainsPos range pos then
-            None
-        else
+        getIfPosInRange range (fun () ->
             List.tryPick walkSynModuleDecl decls
+        )
 
     and walkSynModuleDecl(decl: SynModuleDecl) =
-        if not <| rangeContainsPos decl.Range pos then
-            None
-        else
+        getIfPosInRange decl.Range (fun () ->
             match decl with
             | SynModuleDecl.Exception(ExceptionDefn(_repr, synMembers, _defnRange), _range) -> 
                 List.tryPick walkSynMemberDefn synMembers
@@ -172,28 +173,25 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynModuleDecl.HashDirective _
             | SynModuleDecl.Open _ -> 
                 None
+        )
 
     and walkSynTypeDefn(TypeDefn(_componentInfo, representation, members, range)) = 
-        if not <| rangeContainsPos range pos then
-            None
-        else
+        getIfPosInRange range (fun () ->
             walkSynTypeDefnRepr representation
             |> Option.orElse (List.tryPick walkSynMemberDefn members)        
+        )
 
     and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
-        if not <| rangeContainsPos typeDefnRepr.Range pos then
-            None
-        else
+        getIfPosInRange typeDefnRepr.Range (fun () ->
             match typeDefnRepr with
             | SynTypeDefnRepr.ObjectModel(_kind, members, _range) ->
                 List.tryPick walkSynMemberDefn members
             | SynTypeDefnRepr.Simple(_repr, _range) -> 
                 None
+        )
 
     and walkSynMemberDefn (memberDefn: SynMemberDefn) =
-        if not <| rangeContainsPos memberDefn.Range pos then
-            None
-        else
+        getIfPosInRange memberDefn.Range (fun () ->
             match memberDefn with
             | SynMemberDefn.AbstractSlot(_synValSig, _memberFlags, _range) ->
                 None
@@ -214,13 +212,10 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynMemberDefn.Inherit _
             | SynMemberDefn.ImplicitCtor _ -> 
                 None
+        )
 
     and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
-        //debug "Walk Binding"
-        if not <| rangeContainsPos binding.RangeOfBindingAndRhs pos then
-            //debug "Not in range"
-            None
-        else
+        getIfPosInRange binding.RangeOfBindingAndRhs (fun () ->
             //debug "In range (%A)" binding.RangeOfBindingAndRhs
             //debug "BindingReturnInfo: %A" retTy
             //debug "Expr: %A" expr
@@ -240,11 +235,10 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 | _ -> walkExpr expr
             | None ->
                 walkExpr expr
+        )
 
     and walkExpr expr =
-        if not <| rangeContainsPos expr.Range pos then 
-            None
-        else
+        getIfPosInRange expr.Range (fun () ->
             match expr with
             | SynExpr.Quote(synExpr1, _, synExpr2, _, _range) ->
                 List.tryPick walkExpr [synExpr1; synExpr2]
@@ -399,6 +393,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.FromParseError(synExpr, _range)
             | SynExpr.DiscardAfterMissingQualificationAfterDot(synExpr, _range) -> 
                 walkExpr synExpr
+        )
 
     and walkRecordField ((longIdents, _): RecordFieldName, synExprOpt, _) = 
         if rangeContainsPos longIdents.Range pos then
