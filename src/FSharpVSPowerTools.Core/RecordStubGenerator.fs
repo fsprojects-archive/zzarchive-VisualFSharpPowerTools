@@ -28,38 +28,38 @@ type RecordExpr = {
     FieldExprList: (RecordFieldName * SynExpr option * BlockSeparator option) list
 }
 
-
 [<RequireQualifiedAccess>]
-[<NoComparison>]
-type RecordStubsInsertionPosition =
+type PositionKind =
     /// let record = {<insert-here>}
-    | AfterLeftBrace of pos
-
+    | AfterLeftBrace
     /// let y = { x with<insert-here> }
-    | AfterCopyExpression of pos
-
+    | AfterCopyExpression
     /// let x = { <insert-here>Field1 = ... }
-    | BeforeFirstField of pos
+    | BeforeFirstField
 
-    member x.Position =
-        match x with
-        | AfterLeftBrace pos
-        | AfterCopyExpression pos
-        | BeforeFirstField pos -> pos
-
+[<NoComparison>]
+type RecordStubsInsertionPosition = {
+    Kind: PositionKind
+    Position: pos
+}
+with
     static member FromRecordExpression (expr: RecordExpr) =
         match expr.FieldExprList with
         | [] ->
             match expr.CopyExprOption with
             | None ->
                 let exprRange = expr.Expr.Range
-                AfterLeftBrace(Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1))
+                let pos = Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1)
+                { Kind = PositionKind.AfterLeftBrace
+                  Position = pos }
             | Some(_toCopy, (withSeparator, _)) ->
-                AfterCopyExpression(withSeparator.End)
+                { Kind = PositionKind.AfterCopyExpression
+                  Position = withSeparator.End }
 
         | fstFieldInfo :: _ ->
             let ((fstField, _), _, _) = fstFieldInfo
-            BeforeFirstField(fstField.Range.Start)
+            { Kind = PositionKind.BeforeFirstField
+              Position = fstField.Range.Start }
 
 
 [<NoComparison>]
@@ -98,10 +98,10 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
     let startColumn = insertionPos.Position.Column
     let ctxt =
         let prependExtraSpace =
-            match insertionPos with
-            | RecordStubsInsertionPosition.AfterCopyExpression _
-            | RecordStubsInsertionPosition.AfterLeftBrace _ -> true
-            | RecordStubsInsertionPosition.BeforeFirstField _ -> false
+            match insertionPos.Kind with
+            | PositionKind.AfterCopyExpression
+            | PositionKind.AfterLeftBrace -> true
+            | PositionKind.BeforeFirstField -> false
 
         { RecordTypeName = entity.DisplayName
           RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
