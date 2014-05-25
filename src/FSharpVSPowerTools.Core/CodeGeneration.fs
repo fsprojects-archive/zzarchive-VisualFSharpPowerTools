@@ -34,7 +34,6 @@ type internal ColumnIndentedTextWriter() =
 
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler.Ast
-open Microsoft.FSharp.Compiler.SourceCodeServices
 
 let (|IndexerArg|) = function
     | SynIndexerArg.Two(e1, e2) -> [e1; e2]
@@ -42,6 +41,3 @@ let (|IndexerArg|) = function
 
 let (|IndexerArgList|) xs =
     List.collect (|IndexerArg|) xs
-
-let hasAttribute<'T> (attrs: seq<FSharpAttribute>) =
-    attrs |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'T>.Name)
