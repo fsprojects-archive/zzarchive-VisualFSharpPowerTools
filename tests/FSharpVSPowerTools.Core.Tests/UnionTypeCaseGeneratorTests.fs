@@ -7,6 +7,7 @@
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
+      "../../src/FSharpVSPowerTools.Core/UnionTypeCaseGenerator.fs"
 #load "TestHelpers.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.UnionTypeCaseGeneratorTests
@@ -22,6 +23,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
+open FSharpVSPowerTools.CodeGeneration.UnionTypeCaseGenerator
 open Microsoft.FSharp.Compiler.Ast
 
 let args = 
@@ -120,24 +122,60 @@ type CodeGenerationTestService() =
 
 let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
 
-let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService()
+let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService()
 
 let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
-    codeGenInfra.GetSymbolAtPosition(project, document, pos)
+    codeGenService.GetSymbolAtPosition(project, document, pos)
 
 let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
-    codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
+    codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
     |> Async.RunSynchronously
 
-//let tryFindRecordExpr (pos: pos) (snapshot: IDocument) =
-//    tryFindRecordExprInBufferAtPos codeGenInfra project pos snapshot
-//    |> Async.RunSynchronously
+let tryFindMatchExpr (pos: pos) (document: IDocument) =
+    tryFindMatchExprInBufferAtPos codeGenService project pos document
+    |> Async.RunSynchronously
 
-"""
+let tryGetUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+    asyncMaybe {
+        let! matchExpression = tryFindMatchExprInBufferAtPos codeGenService project pos document
+        let! symbolRange, symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
+
+        match symbolUse.Symbol with
+        | :? FSharpUnionCase as case when case.ReturnType.TypeDefinition.IsFSharpUnion ->
+            return! Some (symbolRange, matchExpression, case.ReturnType.TypeDefinition) |> liftMaybe
+        | :? FSharpEntity as entity when entity.IsFSharpUnion ->
+            return! Some (symbolRange, matchExpression, entity) |> liftMaybe
+        | _ ->
+            return! None |> liftMaybe
+    }
+
+let tryGetUnionTypeDefinition pos document =
+    tryGetUnionTypeDefinitionFromPos codeGenService project pos document
+    |> Async.RunSynchronously
+
+
+let x, y, z =
+    """
 type Union = Case1 | Case2
 
-let f (x: Union) =
-    match x with"""
-|> asDocument
-|> getSymbolAtPoint (Pos.fromZ 4 10)
+let f union =
+    match union with
+    | Case2 -> ()"""
+    |> asDocument
+    |> tryGetUnionTypeDefinition (Pos.fromZ 5 6)
+    |> Option.get
+
+let x, y, z =
+    """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Union.Case2 -> ()"""
+    |> asDocument
+    |> tryGetUnionTypeDefinition (Pos.fromZ 5 6)
+    |> Option.get
+
+(x.Symbol :?> FSharpUnionCase).ReturnType.TypeDefinition
+//|> tryFindMatchExpr (Pos.fromZ 4 4)
