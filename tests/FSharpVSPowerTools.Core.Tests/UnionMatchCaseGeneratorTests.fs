@@ -136,22 +136,8 @@ let tryFindMatchExpr (pos: pos) (document: IDocument) =
     tryFindMatchExprInBufferAtPos codeGenService project pos document
     |> Async.RunSynchronously
 
-let tryGetUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
-    asyncMaybe {
-        let! matchExpression = tryFindMatchExprInBufferAtPos codeGenService project pos document
-        let! symbolRange, symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
-
-        match symbolUse.Symbol with
-        | :? FSharpUnionCase as case when case.ReturnType.TypeDefinition.IsFSharpUnion ->
-            return! Some (symbolRange, matchExpression, case.ReturnType.TypeDefinition) |> liftMaybe
-        | :? FSharpEntity as entity when entity.IsFSharpUnion ->
-            return! Some (symbolRange, matchExpression, entity) |> liftMaybe
-        | _ ->
-            return! None |> liftMaybe
-    }
-
-let tryGetUnionTypeDefinition pos document =
-    tryGetUnionTypeDefinitionFromPos codeGenService project pos document
+let tryFindUnionTypeDefinition (pos: pos) document =
+    tryFindUnionTypeDefinitionFromPos codeGenService project pos document
     |> Async.RunSynchronously
 
 let tryFindMatchCaseGenerationParam pos document =
@@ -160,18 +146,16 @@ let tryFindMatchCaseGenerationParam pos document =
 
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let unionTypeDefFromPos = tryGetUnionTypeDefinition caretPos document
+    let unionTypeDefFromPos = tryFindUnionTypeDefinition caretPos document
     match unionTypeDefFromPos with
     | None -> src
-    | Some(range, matchExpr, entity) ->
-        let insertPos = getInsertionPos matchExpr
+    | Some(range, matchExpr, entity, insertionPos) ->
         let indentValue = getIndentValue matchExpr
-        let clausesWritten = matchExpr.Clauses
-        let insertColumn = insertPos.Column
+        let insertColumn = insertionPos.Column
         let caseValue = "failwith \"\""
-        let stub = UnionMatchCaseGenerator.formatMatchExpr insertPos indentValue caseValue entity clausesWritten
+        let stub = UnionMatchCaseGenerator.formatMatchExpr indentValue caseValue matchExpr entity
         let srcLines = srcToLineArray src
-        let insertLine0 = insertPos.Line - 1
+        let insertLine0 = insertionPos.Line - 1
         let curLine = srcLines.[insertLine0]
         let before, after = curLine.Substring(0, insertColumn), curLine.Substring(insertColumn)
 
@@ -185,7 +169,31 @@ let insertCasesFromPos caretPos src =
 
 // [ ] Handle case where first case doesn't start with '|'
 
-let expr =
+// TODO: dedup from RecordStubGeneratorTests.fs
+let assertSrcAreEqual expectedSrc actualSrc =
+    Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
+
+[<Test>]
+let ``union match case generation when all cases are writen`` () =
+    """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Case1 -> ()
+    | Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 6)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Case1 -> ()
+    | Case2 -> ()"""
+
+
+[<Test>]
+let ``union match case generation with multiple-argument constructors`` () =
     """
 type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 
@@ -193,6 +201,34 @@ let f union =
     match union with
     | Case1 -> ()"""
     |> insertCasesFromPos (Pos.fromZ 5 6)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+
+let f union =
+    match union with
+    | Case2 -> failwith ""
+    | Case3(_) -> failwith ""
+    | Case4(_, _) -> failwith ""
+    | Case1 -> ()"""
+
+[<Test; Ignore("Reactivate when capable of identifying combined clauses")>]
+let ``union match case generation with combined clauses`` () =
+    """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Case1
+    | Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 6)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Case1
+    | Case2 -> ()"""
+
 
 // Union match case without argument patterns
 //// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range

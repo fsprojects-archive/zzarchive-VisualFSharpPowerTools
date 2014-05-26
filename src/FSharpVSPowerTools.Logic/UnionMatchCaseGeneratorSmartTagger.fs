@@ -46,14 +46,14 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
             let! doc = dte.GetActiveDocument() |> liftMaybe
             let! project = ProjectProvider.createForDocument doc |> liftMaybe
             let vsDocument = VSDocument(doc, point.Snapshot)
-            let! symbolRange, recordExpression, recordDefinition, insertionPos =
-                tryGetRecordDefinitionFromPos codeGenInfra project point vsDocument
+            let! symbolRange, matchExpr, unionTypeDefinition, insertionPos =
+                tryFindUnionTypeDefinitionFromPos codeGenInfra project point vsDocument
             let newWord = symbolRange
 
             // Recheck cursor position to ensure it's still in new word
             let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
             if point.InSpan newWord then
-                return! Some(newWord, recordExpression, recordDefinition, insertionPos)
+                return! Some(newWord, matchExpr, unionTypeDefinition, insertionPos)
                         |> liftMaybe
             else
                 return! liftMaybe None
@@ -73,43 +73,36 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
-    let shouldGenerateUnionTypeCases (matchExpr: MatchExpr) (entity: FSharpEntity) =
-        let caseCount = entity.UnionCases.Count
-        let writtenCaseCount = matchExpr.FieldExprList.Length
-        caseCount > 0 && writtenCaseCount < caseCount
-
-    let handleGenerateUnionTypeCase (snapshot: ITextSnapshot) (matchExpr: MatchExpr) (insertionPos: _) entity = 
+    let handleGenerateUnionMatchCases (snapshot: ITextSnapshot) (matchExpr: MatchExpr) (insertionPos: pos) entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let fieldsWritten = matchExpr.FieldExprList
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 
-        let stub = UnionTypeCaseGenerator.formatRecord
-                       insertionPos
+        let stub = UnionMatchCaseGenerator.formatMatchExpr
                        indentSize
-                       "failwith \"Uninitialized field\""
+                       "failwith \"Unhandled case\""
+                       matchExpr
                        entity
-                       fieldsWritten
-        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Position.Line-1).Start.Position + insertionPos.Position.Column
+        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Line-1).Start.Position + insertionPos.Column
 
         buffer.Insert(currentLine, stub) |> ignore
 
         transaction.Complete()
 
-    let generateUnionTypeCase snapshot recordExpr insertionPos entity =
+    let generateUnionMatchCase snapshot matchExpr insertionPos entity =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = CommandName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = handleGenerateUnionTypeCase snapshot recordExpr insertionPos entity }
+            member x.Invoke() = handleGenerateUnionMatchCases snapshot matchExpr insertionPos entity }
 
     member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
-        actionList.Add(generateUnionTypeCase snapshot expression insertionPos entity)
+        actionList.Add(generateUnionMatchCase snapshot expression insertionPos entity)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -118,7 +111,7 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<UnionMatchCaseGeneratorSmartTag> seq =
             seq {
                 match unionDefinition with
-                | Some (word, expression, entity, insertionPos) when shouldGenerateUnionTypeCases expression entity ->
+                | Some (word, expression, entity, insertionPos) when shouldGenerateUnionMatchCases expression entity ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<_>(span, 
                                      UnionMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))

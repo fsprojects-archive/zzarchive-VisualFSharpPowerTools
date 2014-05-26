@@ -13,7 +13,7 @@ namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
-    [TagType(typeof(RecordStubGeneratorSmartTag))]
+    [TagType(typeof(UnionMatchCaseGeneratorSmartTag))]
     public class UnionMatchCaseGeneratorSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]

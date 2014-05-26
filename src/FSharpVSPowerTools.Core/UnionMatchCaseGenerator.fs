@@ -63,10 +63,25 @@ let private formatCase (ctxt: Context) isFirstCase (case: FSharpUnionCase) =
     
     writer.Write("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
 
-let formatMatchExpr (insertionPos: pos) (indentValue: int) (caseDefaultValue: string)
-                    (entity: FSharpEntity)
-                    (clausesWritten: SynMatchClause list) =
-    assert entity.IsFSharpRecord
+let getWrittenCases (matchExpr: MatchExpr) =
+    matchExpr.Clauses
+    |> List.choose (function
+        | Clause(SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _, _, _, _),
+                 None, _, _, _) when unionCaseLongIdent.Length > 0 ->
+            Some (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText
+        | _ -> None)
+    |> Set.ofList
+
+let shouldGenerateUnionMatchCases (matchExpr: MatchExpr) (entity: FSharpEntity) =
+    let caseCount = entity.UnionCases.Count
+    let writtenCaseCount =
+        getWrittenCases matchExpr
+        |> Set.count
+    caseCount > 0 && writtenCaseCount < caseCount
+
+let formatMatchExpr (indentValue: int) (caseDefaultValue: string)
+                    (matchExpr: MatchExpr) (entity: FSharpEntity) =
+    assert entity.IsFSharpUnion
     use writer = new ColumnIndentedTextWriter()
     let ctxt =
         { UnionTypeName = entity.DisplayName
@@ -74,15 +89,7 @@ let formatMatchExpr (insertionPos: pos) (indentValue: int) (caseDefaultValue: st
           Writer = writer
           CaseDefaultValue = caseDefaultValue}
 
-    let casesWritten =
-        clausesWritten
-        |> List.choose (function
-            | Clause(SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _, _, _, _),
-                     None, _, _, _) when unionCaseLongIdent.Length > 0 ->
-                Some (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText
-            | _ -> None)
-        |> Set.ofList
-
+    let casesWritten = getWrittenCases matchExpr
     let casesToWrite =
         entity.UnionCases
         |> Seq.filter (fun case -> not <| casesWritten.Contains case.Name)
@@ -357,4 +364,18 @@ let tryFindMatchCaseGenerationParamsAtPos (codeGenService: ICodeGenerationServic
         let insertionPos = getInsertionPos matchExpr
 
         return matchExpr, insertionPos
+    }
+
+let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+    asyncMaybe {
+        let! matchExpr, insertionPos = tryFindMatchCaseGenerationParamsAtPos codeGenService project pos document
+        let! symbolRange, _symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
+
+        match symbolUse.Symbol with
+        | :? FSharpUnionCase as case when case.ReturnType.TypeDefinition.IsFSharpUnion ->
+            return! Some (symbolRange, matchExpr, case.ReturnType.TypeDefinition, insertionPos) |> liftMaybe
+        | :? FSharpEntity as entity when entity.IsFSharpUnion ->
+            return! Some (symbolRange, matchExpr, entity, insertionPos) |> liftMaybe
+        | _ ->
+            return! None |> liftMaybe
     }
