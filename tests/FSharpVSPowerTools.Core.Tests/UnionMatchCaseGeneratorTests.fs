@@ -174,7 +174,23 @@ let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
 [<Test>]
-let ``union match case generation when all cases are writen`` () =
+let ``single union match case generation when the unique case is written`` () =
+    """
+type Union = Case1
+
+let f union =
+    match union with
+    | Case1 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 6)
+    |> assertSrcAreEqual """
+type Union = Case1
+
+let f union =
+    match union with
+    | Case1 -> ()"""
+
+[<Test>]
+let ``union match case generation when all cases are written 1`` () =
     """
 type Union = Case1 | Case2
 
@@ -191,6 +207,40 @@ let f union =
     | Case1 -> ()
     | Case2 -> ()"""
 
+[<Test>]
+let ``union match case generation when all cases are written 2`` () =
+    """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    Case1 -> ()
+    | Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 4)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    Case1 -> ()
+    | Case2 -> ()"""
+
+[<Test; Ignore("Activate when it can handle pipe before first match clause")>]
+let ``union match case generation when first clause doesn't start with '|'`` () =
+    """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 4)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    Case1 -> failwith ""
+    | Case2 -> ()"""
 
 [<Test>]
 let ``union match case generation with multiple-argument constructors`` () =
@@ -230,6 +280,7 @@ let f union =
     | Union.Case1 -> failwith ""
     | Union.Case2 -> ()"""
 
+
 [<Test; Ignore("Reactivate when capable of identifying combined clauses")>]
 let ``union match case generation with combined clauses`` () =
     """
@@ -246,6 +297,44 @@ type Union = Case1 | Case2
 let f union =
     match union with
     | Case1
+    | Case2 -> ()"""
+
+[<Test; Ignore("Reactivate when capable of identifying combined clauses with arguments")>]
+let ``union match case generation with combined clauses with multiple args`` () =
+    """
+type Union = Case1 | Case2 of int
+
+let f union =
+    match union with
+    | Case1
+    | Case2 _ -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 6)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2 of int
+
+let f union =
+    match union with
+    | Case1
+    | Case2 _ -> ()"""
+
+
+[<Test>]
+let ``union match case generation with guards written`` () =
+    """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Case2 when 1 = 2 -> ()
+    | Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 6)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Case1 -> failwith ""
+    | Case2 when 1 = 2 -> ()
     | Case2 -> ()"""
 
 
