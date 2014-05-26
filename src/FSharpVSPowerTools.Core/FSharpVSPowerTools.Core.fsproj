@@ -71,6 +71,7 @@
     <Compile Include="RecordStubGenerator.fs" />
     <Compile Include="NavigateToIndex.fs" />
     <Compile Include="UnionTypeCaseGenerator.fs" />
+    <Compile Include="UnionMatchCaseGenerator.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

@@ -106,6 +106,7 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
         { RecordTypeName = entity.DisplayName
           RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
           Writer = writer
+          // TODO: delete
           IndentValue = indentValue
           FieldDefaultValue = fieldDefaultValue
           PrependExtraSpace = prependExtraSpace }

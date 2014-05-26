@@ -7,10 +7,10 @@
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
-      "../../src/FSharpVSPowerTools.Core/UnionTypeCaseGenerator.fs"
+      "../../src/FSharpVSPowerTools.Core/UnionMatchCaseGenerator.fs"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.UnionTypeCaseGeneratorTests
+module FSharpVSPowerTools.Core.Tests.UnionMatchCaseGeneratorTests
 #endif
 
 open NUnit.Framework
@@ -23,7 +23,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.UnionTypeCaseGenerator
+open FSharpVSPowerTools.CodeGeneration.UnionMatchCaseGenerator
 open Microsoft.FSharp.Compiler.Ast
 
 let args = 
@@ -154,28 +154,53 @@ let tryGetUnionTypeDefinition pos document =
     tryGetUnionTypeDefinitionFromPos codeGenService project pos document
     |> Async.RunSynchronously
 
+let tryFindMatchCaseGenerationParam pos document =
+    tryFindMatchCaseGenerationParamsAtPos codeGenService project pos document
+    |> Async.RunSynchronously
 
-let x, y, z =
+let insertCasesFromPos caretPos src =
+    let document: IDocument = upcast MockDocument(src)
+    let unionTypeDefFromPos = tryGetUnionTypeDefinition caretPos document
+    match unionTypeDefFromPos with
+    | None -> src
+    | Some(range, matchExpr, entity) ->
+        let insertPos = getInsertionPos matchExpr
+        let indentValue = getIndentValue matchExpr
+        let clausesWritten = matchExpr.Clauses
+        let insertColumn = insertPos.Column
+        let caseValue = "failwith \"\""
+        let stub = UnionMatchCaseGenerator.formatMatchExpr insertPos indentValue caseValue entity clausesWritten
+        let srcLines = srcToLineArray src
+        let insertLine0 = insertPos.Line - 1
+        let curLine = srcLines.[insertLine0]
+        let before, after = curLine.Substring(0, insertColumn), curLine.Substring(insertColumn)
+
+        srcLines.[insertLine0] <- before + stub + after
+
+        if srcLines.Length = 0 then
+            "" 
+        else
+            srcLines
+            |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
+
+// [ ] Handle case where first case doesn't start with '|'
+
+let expr =
     """
-type Union = Case1 | Case2
+type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 
 let f union =
     match union with
-    | Case2 -> ()"""
-    |> asDocument
-    |> tryGetUnionTypeDefinition (Pos.fromZ 5 6)
-    |> Option.get
+    | Case1 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 6)
 
-let x, y, z =
-    """
-type Union = Case1 | Case2
+// Union match case without argument patterns
+//// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range
+//// LongIdent(LongIdentWithDots[(Case2, rangeList: [])], identOption: null, typlDecl: null, constrArgs: Pats [], accessOpt: null, _range)
+//expr.[0].RangeOfGuardAndRhs
 
-let f union =
-    match union with
-    | Union.Case2 -> ()"""
-    |> asDocument
-    |> tryGetUnionTypeDefinition (Pos.fromZ 5 6)
-    |> Option.get
-
-(x.Symbol :?> FSharpUnionCase).ReturnType.TypeDefinition
-//|> tryFindMatchExpr (Pos.fromZ 4 4)
+// Union match case with argument patterns
+//// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range
+//// New: _synConstrArg
+//// LongIdent(LongIdentWithDots[(Case3, rangeList: [])], identOption: null, typlDecl: null, constrArgs: Pats [Wild...], accessOpt: null, _range)
+//expr.[1].Pattern

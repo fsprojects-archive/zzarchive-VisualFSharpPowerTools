@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.CodeGeneration.UnionTypeCaseGenerator
+﻿module FSharpVSPowerTools.CodeGeneration.UnionMatchCaseGenerator
 
 open System
 open System.IO
@@ -13,10 +13,94 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 [<NoEquality; NoComparison>]
 type MatchExpr = {
+    MatchWithRange: range
     Expr: SynExpr
     MatchedExpr: SynExpr
     Clauses: SynMatchClause list
 }
+
+let getInsertionPos (matchExpr: MatchExpr) =
+    Pos.fromZ
+        (matchExpr.MatchWithRange.EndLine - 1)
+        (matchExpr.MatchWithRange.EndColumn)
+
+let getIndentValue (matchExpr: MatchExpr) =
+    matchExpr.MatchWithRange.StartColumn
+    
+
+[<NoComparison>]
+type private Context = {
+    Writer: ColumnIndentedTextWriter
+    /// A single-line skeleton for each case
+    CaseDefaultValue: string
+    UnionTypeName: string
+    RequireQualifiedAccess: bool
+}
+
+let private formatCase (ctxt: Context) isFirstCase (case: FSharpUnionCase) =
+    let writer = ctxt.Writer
+
+    writer.WriteLine("")
+    
+    let name = 
+        if ctxt.RequireQualifiedAccess then
+            sprintf "%s.%s" ctxt.UnionTypeName case.Name
+        else 
+            case.Name
+
+    let paramsPattern =
+        let unionCaseFieldsCount = case.UnionCaseFields.Count
+        if unionCaseFieldsCount <= 0 then
+            ""
+        else
+            [|
+                yield "(_"
+                for _ in 1 .. unionCaseFieldsCount - 1 do
+                    yield ", _"
+                yield ")"
+            |]
+            |> String.Concat
+    
+    writer.Write("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+
+let formatMatchExpr (insertionPos: pos) (indentValue: int) (caseDefaultValue: string)
+                    (entity: FSharpEntity)
+                    (clausesWritten: SynMatchClause list) =
+    assert entity.IsFSharpRecord
+    use writer = new ColumnIndentedTextWriter()
+    let ctxt =
+        { UnionTypeName = entity.DisplayName
+          RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
+          Writer = writer
+          CaseDefaultValue = caseDefaultValue}
+
+    let casesWritten =
+        clausesWritten
+        |> List.choose (function
+            | Clause(SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _, _, _, _),
+                     None, _, _, _) when unionCaseLongIdent.Length > 0 ->
+                Some (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText
+            | _ -> None)
+        |> Set.ofList
+
+    let casesToWrite =
+        entity.UnionCases
+        |> Seq.filter (fun case -> not <| casesWritten.Contains case.Name)
+
+    writer.Indent indentValue
+    match List.ofSeq casesToWrite with
+    | [] -> ()
+    | firstCase :: otherFields ->
+        formatCase ctxt true firstCase
+        otherFields
+        |> List.iter (formatCase ctxt false)
+
+    // special case when fields are already written
+//    if not casesWritten.IsEmpty && casesWritten.Count < entity.UnionCases.Count then
+//        writer.WriteLine("")
+//        writer.Write("")
+
+    writer.Dump()
 
 let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
     let inline getIfPosInRange range f =
@@ -145,13 +229,17 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
 
             | SynExpr.MatchLambda(_isExnMatch, _argm, synMatchClauseList, _spBind, _wholem) -> 
                 synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e)
-            | SynExpr.Match(_sequencePointInfoForBinding, synExpr, synMatchClauseList, _, _range) as matchExpr ->
+            | SynExpr.Match(sequencePointInfoForBinding, synExpr, synMatchClauseList, _, _range) as matchExpr ->
                 walkExpr synExpr
                 |> Option.orElse (synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e))
                 |> Option.orElse (
-                    Some { Expr = matchExpr
-                           MatchedExpr = synExpr
-                           Clauses = synMatchClauseList }
+                    match sequencePointInfoForBinding with
+                    | SequencePointAtBinding range ->
+                        Some { MatchWithRange = range
+                               Expr = matchExpr
+                               MatchedExpr = synExpr
+                               Clauses = synMatchClauseList }
+                    | _ -> None
                 )
 
             | SynExpr.App(_exprAtomicFlag, _isInfix, synExpr1, synExpr2, _range) ->
@@ -261,4 +349,12 @@ let tryFindMatchExprInBufferAtPos (codeGenService: ICodeGenerationService<'Proje
         return
             parseResults.ParseTree
             |> Option.bind (tryFindMatchExpression (codeGenService.ExtractFSharpPos(pos)))
+    }
+
+let tryFindMatchCaseGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+    asyncMaybe {
+        let! matchExpr = tryFindMatchExprInBufferAtPos codeGenService project pos document
+        let insertionPos = getInsertionPos matchExpr
+
+        return matchExpr, insertionPos
     }
