@@ -211,6 +211,25 @@ let f union =
     | Case4(_, _) -> failwith ""
     | Case1 -> ()"""
 
+[<Test>]
+let ``union match case generation with required qualified access`` () =
+    """
+[<RequireQualifiedAccess>]
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Union.Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 6 6)
+    |> assertSrcAreEqual """
+[<RequireQualifiedAccess>]
+type Union = Case1 | Case2
+
+let f union =
+    match union with
+    | Union.Case1 -> failwith ""
+    | Union.Case2 -> ()"""
+
 [<Test; Ignore("Reactivate when capable of identifying combined clauses")>]
 let ``union match case generation with combined clauses`` () =
     """

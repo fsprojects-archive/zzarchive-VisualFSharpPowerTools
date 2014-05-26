@@ -35,7 +35,7 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
     let mutable currentWord = None
     let mutable unionDefinition = None
 
-    let [<Literal>] CommandName = "Generate union type cases"
+    let [<Literal>] CommandName = "Generate union match cases"
 
     let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
 
