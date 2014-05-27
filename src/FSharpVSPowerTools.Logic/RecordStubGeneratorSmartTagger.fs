@@ -37,64 +37,35 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let [<Literal>] CommandName = "Generate record stubs"
 
+    let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
+
     // Try to:
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
-    let collectRecordBindingData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
-        async {
-            let line = point.Snapshot.GetLineNumberFromPosition point.Position
-            let caretColumn = point.Position - point.GetContainingLine().Start.Position
-            let source = point.Snapshot.GetText()
-            let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
-            let pos = Pos.fromZ line caretColumn
-
-            return maybe {
-                let! parsedInput = ast.ParseTree
-                let! recordBinding = RecordStubGenerator.tryFindRecordBinding pos parsedInput
-                let expr = recordBinding.Expression
-
-                let recordStubsInsertionPos = RecordStubsInsertionPosition.FromRecordExpression recordBinding
-                return recordBinding, recordStubsInsertionPos
-            }
-        }
-
     let updateAtCaretPosition() =
         asyncMaybe {
             let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetActiveDocument() |> liftMaybe
             let! project = ProjectProvider.createForDocument doc |> liftMaybe
-            let! newWord, symbol = vsLanguageService.GetSymbol(point, project) |> liftMaybe
+            let vsDocument = VSDocument(doc, point.Snapshot)
+            let! symbolRange, recordExpression, recordDefinition, insertionPos =
+                tryGetRecordDefinitionFromPos codeGenInfra project point vsDocument
+            let newWord = symbolRange
 
-            match symbol.Kind with
-            | SymbolKind.Ident ->
-                let! recordBindingData = collectRecordBindingData point doc project
-                let! (fsSymbolUse, _results) = 
-                    vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
-                // Recheck cursor position to ensure it's still in new word
-                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-                if point.InSpan newWord then
-                    let newRecordDefinition =
-                        match fsSymbolUse.Symbol with
-                        // The entity might correspond to another symbol 
-                        | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
-                            Some (newWord, (recordBindingData, entity))
-
-                        // The entity might correspond to another symbol 
-                        | :? FSharpField as field when field.DeclaringEntity.IsFSharpRecord && field.DisplayName = symbol.Text ->
-                            Some (newWord, (recordBindingData, field.DeclaringEntity))
-                        | _ -> None
-
-                    return! liftMaybe newRecordDefinition
-                else
-                    return! liftMaybe None
-            | _ -> return! liftMaybe None
+            // Recheck cursor position to ensure it's still in new word
+            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+            if point.InSpan newWord then
+                return! Some(newWord, recordExpression, recordDefinition, insertionPos)
+                        |> liftMaybe
+            else
+                return! liftMaybe None
         }
         |> Async.map (fun result -> 
             let changed =
                 match recordDefinition, result, currentWord with
                 | None, None, _ -> false
-                | _, Some(newWord, _), Some oldWord -> newWord <> oldWord
+                | _, Some(newWord, _, _, _), Some oldWord -> newWord <> oldWord
                 | _ -> true
             recordDefinition <- result
             if changed then
@@ -106,15 +77,15 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     200us, updateAtCaretPosition)
 
     // Check whether the record has been fully defined
-    let shouldGenerateRecordStub (recordBindingData: RecordBinding, _) (entity: FSharpEntity) =
+    let shouldGenerateRecordStub (recordExpr: RecordExpr) (entity: FSharpEntity) =
         let fieldCount = entity.FSharpFields.Count
-        let writtenFieldCount = recordBindingData.FieldExpressionList.Length
+        let writtenFieldCount = recordExpr.FieldExprList.Length
         fieldCount > 0 && writtenFieldCount < fieldCount
 
-    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordBindingData: RecordBinding, insertionPos: _) entity = 
+    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordExpr: RecordExpr) (insertionPos: _) entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let fieldsWritten = recordBindingData.FieldExpressionList
+        let fieldsWritten = recordExpr.FieldExprList
 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 
@@ -130,19 +101,19 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
         transaction.Complete()
 
-    let generateRecordStub snapshot data entity =
+    let generateRecordStub snapshot recordExpr insertionPos entity =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = CommandName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = handleGenerateRecordStub snapshot data entity }
+            member x.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
 
-    member x.GetSmartTagActions(snapshot, data, entity: FSharpEntity) =
+    member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
-        actionList.Add(generateRecordStub snapshot data entity)
+        actionList.Add(generateRecordStub snapshot expression insertionPos entity)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -151,10 +122,10 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             seq {
                 match recordDefinition with
-                | Some (word, (data, entity)) when shouldGenerateRecordStub data entity ->
+                | Some (word, expression, entity, insertionPos) when shouldGenerateRecordStub expression entity ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<_>(span, 
-                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, data, entity)))
+                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
                           :> ITagSpan<_>
                 | _ -> ()
             }

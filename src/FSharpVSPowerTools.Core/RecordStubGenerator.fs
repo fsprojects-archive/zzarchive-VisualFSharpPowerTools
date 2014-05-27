@@ -4,8 +4,9 @@ open System
 open System.IO
 open System.Diagnostics
 open System.Collections.Generic
-open System.CodeDom.Compiler
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
+open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -20,64 +21,45 @@ let inline setDebugObject (o: 'a) = debugObject <- o
 let inline setDebugObject (_: 'a) = ()
 #endif
 
-type CopyExpressionOpt = (SynExpr * BlockSeparator) option
-type FieldExpressionList = (RecordFieldName * SynExpr option * BlockSeparator option) list
-
 [<NoEquality; NoComparison>]
-type RecordBinding =
-    | TypedRecordBinding of SynType * SynExpr * CopyExpressionOpt * FieldExpressionList
-    | QualifiedFieldRecordBinding of SynExpr * CopyExpressionOpt * FieldExpressionList
-    | NonQualifiedFieldRecordBinding of SynExpr * CopyExpressionOpt * FieldExpressionList
-
-    member x.CopyExpressionOpt =
-        match x with
-        | TypedRecordBinding(_, _, copyExprOpt, _)
-        | QualifiedFieldRecordBinding(_, copyExprOpt, _)
-        | NonQualifiedFieldRecordBinding(_, copyExprOpt, _) -> copyExprOpt
-
-    member x.Expression =
-        match x with
-        | TypedRecordBinding(_, expr, _, _)
-        | QualifiedFieldRecordBinding(expr, _, _)
-        | NonQualifiedFieldRecordBinding(expr, _, _) -> expr
-
-    member x.FieldExpressionList =
-        match x with
-        | TypedRecordBinding(_, _, _, fieldExpressions)
-        | QualifiedFieldRecordBinding(_, _, fieldExpressions)
-        | NonQualifiedFieldRecordBinding(_, _, fieldExpressions) -> fieldExpressions
+type RecordExpr = {
+    Expr: SynExpr
+    CopyExprOption: option<SynExpr * BlockSeparator>
+    FieldExprList: (RecordFieldName * SynExpr option * BlockSeparator option) list
+}
 
 [<RequireQualifiedAccess>]
-[<NoComparison>]
-type RecordStubsInsertionPosition =
+type PositionKind =
     /// let record = {<insert-here>}
-    | AfterLeftBrace of pos
-
+    | AfterLeftBrace
     /// let y = { x with<insert-here> }
-    | AfterCopyExpression of pos
-
+    | AfterCopyExpression
     /// let x = { <insert-here>Field1 = ... }
-    | BeforeFirstField of pos
+    | BeforeFirstField
 
-    member x.Position =
-        match x with
-        | AfterLeftBrace pos
-        | AfterCopyExpression pos
-        | BeforeFirstField pos -> pos
-
-    static member FromRecordExpression (expr: RecordBinding) =
-        match expr.FieldExpressionList with
+[<NoComparison>]
+type RecordStubsInsertionPosition = {
+    Kind: PositionKind
+    Position: pos
+}
+with
+    static member FromRecordExpression (expr: RecordExpr) =
+        match expr.FieldExprList with
         | [] ->
-            match expr.CopyExpressionOpt with
+            match expr.CopyExprOption with
             | None ->
-                let exprRange = expr.Expression.Range
-                AfterLeftBrace(Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1))
+                let exprRange = expr.Expr.Range
+                let pos = Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1)
+                { Kind = PositionKind.AfterLeftBrace
+                  Position = pos }
             | Some(_toCopy, (withSeparator, _)) ->
-                AfterCopyExpression(withSeparator.End)
+                { Kind = PositionKind.AfterCopyExpression
+                  Position = withSeparator.End }
 
         | fstFieldInfo :: _ ->
             let ((fstField, _), _, _) = fstFieldInfo
-            BeforeFirstField(fstField.Range.Start)
+            { Kind = PositionKind.BeforeFirstField
+              Position = fstField.Range.Start }
 
 
 [<NoComparison>]
@@ -116,10 +98,10 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
     let startColumn = insertionPos.Position.Column
     let ctxt =
         let prependExtraSpace =
-            match insertionPos with
-            | RecordStubsInsertionPosition.AfterCopyExpression _
-            | RecordStubsInsertionPosition.AfterLeftBrace _ -> true
-            | RecordStubsInsertionPosition.BeforeFirstField _ -> false
+            match insertionPos.Kind with
+            | PositionKind.AfterCopyExpression
+            | PositionKind.AfterLeftBrace -> true
+            | PositionKind.BeforeFirstField -> false
 
         { RecordTypeName = entity.DisplayName
           RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
@@ -157,21 +139,21 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
 
     writer.Dump()
 
-
 let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
+    let inline getIfPosInRange range f =
+        if rangeContainsPos range pos then f()
+        else None
+    
     let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
         List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
     and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, range)) =
-        if not <| rangeContainsPos range pos then
-            None
-        else
+        getIfPosInRange range (fun () ->
             List.tryPick walkSynModuleDecl decls
+        )
 
     and walkSynModuleDecl(decl: SynModuleDecl) =
-        if not <| rangeContainsPos decl.Range pos then
-            None
-        else
+        getIfPosInRange decl.Range (fun () ->
             match decl with
             | SynModuleDecl.Exception(ExceptionDefn(_repr, synMembers, _defnRange), _range) -> 
                 List.tryPick walkSynMemberDefn synMembers
@@ -191,28 +173,25 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynModuleDecl.HashDirective _
             | SynModuleDecl.Open _ -> 
                 None
+        )
 
     and walkSynTypeDefn(TypeDefn(_componentInfo, representation, members, range)) = 
-        if not <| rangeContainsPos range pos then
-            None
-        else
+        getIfPosInRange range (fun () ->
             walkSynTypeDefnRepr representation
             |> Option.orElse (List.tryPick walkSynMemberDefn members)        
+        )
 
     and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
-        if not <| rangeContainsPos typeDefnRepr.Range pos then
-            None
-        else
+        getIfPosInRange typeDefnRepr.Range (fun () ->
             match typeDefnRepr with
             | SynTypeDefnRepr.ObjectModel(_kind, members, _range) ->
                 List.tryPick walkSynMemberDefn members
             | SynTypeDefnRepr.Simple(_repr, _range) -> 
                 None
+        )
 
     and walkSynMemberDefn (memberDefn: SynMemberDefn) =
-        if not <| rangeContainsPos memberDefn.Range pos then
-            None
-        else
+        getIfPosInRange memberDefn.Range (fun () ->
             match memberDefn with
             | SynMemberDefn.AbstractSlot(_synValSig, _memberFlags, _range) ->
                 None
@@ -233,18 +212,15 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynMemberDefn.Inherit _
             | SynMemberDefn.ImplicitCtor _ -> 
                 None
+        )
 
     and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
-        //debug "Walk Binding"
-        if not <| rangeContainsPos binding.RangeOfBindingAndRhs pos then
-            //debug "Not in range"
-            None
-        else
+        getIfPosInRange binding.RangeOfBindingAndRhs (fun () ->
             //debug "In range (%A)" binding.RangeOfBindingAndRhs
             //debug "BindingReturnInfo: %A" retTy
             //debug "Expr: %A" expr
             match retTy with
-            | Some(SynBindingReturnInfo(ty, _range, _attributes)) ->
+            | Some(SynBindingReturnInfo(_ty, _range, _attributes)) ->
                 //debug "ReturnTypeInfo: %A" ty
                 match expr with
                 // Situation 1:
@@ -253,15 +229,16 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 | SynExpr.Typed(SynExpr.Record(_inheritOpt, copyOpt, fields, _range0), _, _range1) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, copyOpt, fields)))
+                    |> Option.orElse (Some { Expr = expr
+                                             CopyExprOption = copyOpt
+                                             FieldExprList = fields })
                 | _ -> walkExpr expr
             | None ->
                 walkExpr expr
+        )
 
     and walkExpr expr =
-        if not <| rangeContainsPos expr.Range pos then 
-            None
-        else
+        getIfPosInRange expr.Range (fun () ->
             match expr with
             | SynExpr.Quote(synExpr1, _, synExpr2, _, _range) ->
                 List.tryPick walkExpr [synExpr1; synExpr2]
@@ -269,7 +246,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.Const(_synConst, _range) -> 
                 None
 
-            | SynExpr.Typed(synExpr, ty, _) ->
+            | SynExpr.Typed(synExpr, _ty, _) ->
                 match synExpr with
                 // Situation 1:
                 // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
@@ -277,7 +254,9 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                     fields 
                     |> List.tryPick walkRecordField
-                    |> Option.orElse (Some(TypedRecordBinding(ty, expr, copyOpt, fields)))
+                    |> Option.orElse (Some { Expr = expr
+                                             CopyExprOption = copyOpt
+                                             FieldExprList = fields })
                 | _ -> 
                 walkExpr synExpr
 
@@ -300,11 +279,11 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
                 |> List.tryPick walkRecordField
                 |> Option.orElse (
                     match fields with
-                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length >= 2 ->
-                            Some(QualifiedFieldRecordBinding(expr, copyOpt, fields))
-                    | ((fieldName, true), _, _) :: _ when fieldName.Lid.Length = 1 ->
-                        Some(NonQualifiedFieldRecordBinding(expr, copyOpt, fields))
-                    | _ -> None)
+                    | [] -> None
+                    | _ ->
+                        Some { Expr = expr
+                               CopyExprOption = copyOpt
+                               FieldExprList = fields })
 
             | SynExpr.ObjExpr(_ty, _baseCallOpt, binds, ifaces, _range1, _range2) -> 
                 List.tryPick walkBinding binds
@@ -414,6 +393,7 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.FromParseError(synExpr, _range)
             | SynExpr.DiscardAfterMissingQualificationAfterDot(synExpr, _range) -> 
                 walkExpr synExpr
+        )
 
     and walkRecordField ((longIdents, _): RecordFieldName, synExprOpt, _) = 
         if rangeContainsPos longIdents.Range pos then
@@ -427,3 +407,40 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     match parsedInput with
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
+
+let tryFindRecordExprInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+    async {
+        let! parseResults =
+            codeGenService.ParseFileInProject(document, project)
+        
+        return
+            parseResults.ParseTree
+            |> Option.bind (tryFindRecordBinding (codeGenService.ExtractFSharpPos(pos)))
+    }
+
+let tryGetRecordStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+    asyncMaybe {
+        let! recordExpression = tryFindRecordExprInBufferAtPos codeGenService project pos document
+        let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordExpression
+
+        return recordExpression, insertionPos
+    }
+
+let tryGetRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+    asyncMaybe {
+        let! recordExpression, insertionPos =
+            tryGetRecordStubGenerationParamsAtPos codeGenService project pos document
+
+        let! symbolRange, symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
+
+        match symbolUse.Symbol with
+        | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
+            return! Some (symbolRange, recordExpression, entity, insertionPos) |> liftMaybe
+
+        | :? FSharpField as field when
+            field.DeclaringEntity.IsFSharpRecord &&
+            field.DisplayName = symbol.Text ->
+                return! Some (symbolRange, recordExpression, field.DeclaringEntity, insertionPos) |> liftMaybe
+        | _ ->
+            return! None |> liftMaybe
+    }

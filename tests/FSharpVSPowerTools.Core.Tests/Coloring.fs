@@ -141,3 +141,20 @@ module Module2 =
 let _ = System.Linq.Enumerable.Range(0, 1)
 let _ = [1] |> Seq.sort |> Seq.toList |> List.rev
 let ``func with byref arg`` (p: byref<int>) = ()
+[<Measure>] type ms
+let _: int<ms> = 
+    1<ms>
+type RecordWithUnitOfMeasure =
+    { Field1: int<ms> }
+let _ = 1I
+module NumericLiteralZ =
+    let FromInt32 (i: int) = i
+let _ = 77Z
+module AnonymousGenericParameters =
+    let f' () : Map<_,   _> = new Map<_,   _>([])
+    let f''() : Map<_,   _> =     Map<_,   _>([])
+    let g () : Map<'a,  _> = new Map<'a,  _>([])
+    let g'() : Map<'a,  _> =     Map<'a,  _>([])
+    let h () : Map<_,  'b> = new Map<_,  'b>([])
+    let i () : Map<'a, 'b> = new Map<'a, 'b>([])
+    let j () : System.Collections.Generic.List<_> = new System.Collections.Generic.List<_>()

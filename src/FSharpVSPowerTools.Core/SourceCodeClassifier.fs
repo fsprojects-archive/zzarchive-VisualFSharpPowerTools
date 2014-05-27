@@ -11,9 +11,7 @@ type Category =
     | ReferenceType
     | ValueType
     | PatternCase
-    | TypeParameter
     | Function
-    | PublicField
     | MutableVar
     | Quotation
     | Module
@@ -52,21 +50,19 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
 
     match symbol with
     | :? FSharpGenericParameter
-    | :? FSharpStaticParameter -> 
-        TypeParameter
     | :? FSharpUnionCase
     | :? FSharpActivePatternCase -> 
         PatternCase
 
     | :? FSharpField as f ->
         if f.IsMutable || isReferenceCell f.FieldType then MutableVar
-        elif f.Accessibility.IsPublic then PublicField 
         else Other
 
     | :? FSharpEntity as entity ->
         //debug "%A (type: %s)" e (e.GetType().Name)
         let e, ty = getEntityAbbreviatedType entity
-        if e.IsEnum || e.IsValueType then ValueType
+        if e.IsEnum || e.IsValueType 
+           || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then ValueType
         elif 
            // FCS returns two FSharpSymbolUse for each type provider declaration.
            // I.e. for "type T = XmlProvider<"<root>1<root>">" it returns two uses of symbol "XmlProvider":
@@ -120,13 +116,17 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         allSymbolsUses
         |> Array.choose (fun su ->
             let r = su.RangeAlternate
-            // FCS returns inaccurate ranges for multiline method chains
-            // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
-            if r.StartLine < r.EndLine then
-                lexer.GetSymbolAtLocation (r.End.Line - 1) (r.End.Column - 1)
-                |> Option.map (fun s -> 
-                      su, { Line = r.End.Line; StartCol = r.End.Column - s.Text.Length; EndCol = r.End.Column })
-            else Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column }))
+            lexer.GetSymbolAtLocation (r.End.Line - 1) (r.End.Column - 1)
+            |> Option.bind (fun sym -> 
+                match sym.Kind with
+                | SymbolKind.Ident ->
+                    // FCS returns inaccurate ranges for multiline method chains
+                    // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+                    if r.StartLine < r.EndLine then
+                        Some (su, { Line = r.End.Line; StartCol = r.End.Column - sym.Text.Length; EndCol = r.End.Column })
+                    else 
+                        Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column })
+                | _ -> None))
       
     // index all symbol usages by LineNumber 
     let wordSpans = 

@@ -53,6 +53,7 @@ let checkCategories line (expected: (Category * int * int) list)  =
             Some (loc.Category, span.StartCol, span.EndCol)
         | _ -> None)
     |> Array.toList
+    |> List.sortBy (fun (_, line, col) -> line, col)
     |> Collection.assertEquiv expected
 
 [<Test>]
@@ -98,7 +99,7 @@ let ``static event``() =
 [<Test>]
 let ``constructors``() = 
     checkCategories 8 [ ReferenceType, 5, 10 ]
-    checkCategories 19 [ ReferenceType, 4, 7; ValueType, 12, 15; ReferenceType, 23, 28 ]
+    checkCategories 19 [ ValueType, 12, 15; ReferenceType, 23, 28 ]
 
 [<Test>]
 let ``interface implemented in a class``() = 
@@ -121,7 +122,7 @@ let ``fully qualified F# type constructor``() =
 
 [<Test>]
 let ``generic class declaration``() = 
-    checkCategories 34 [ ReferenceType, 5, 17; TypeParameter, 18, 20 ]
+    checkCategories 34 [ ReferenceType, 5, 17 ]
 
 [<Test>]
 let ``generic class instantiation``() = 
@@ -134,8 +135,8 @@ let ``record``() =
     checkCategories 39 
         [ 
             ReferenceType, 5, 11
-            PublicField, 16, 24; ValueType, 26, 29
-            PublicField, 31, 44; Module, 49, 51; Module, 46, 48; ReferenceType, 52, 56 
+            ValueType, 26, 29
+            Module, 49, 51; Module, 46, 48; ReferenceType, 52, 56 
         ]
 
 [<Test>]
@@ -250,7 +251,7 @@ let ``complicated quotation layout``() =
 let ``quotation in lambda``() = checkCategories 107 [ Quotation, 17, 24 ]
 
 [<Test>]
-let ``quotation in record``() = checkCategories 109 [ PublicField, 10, 15; Quotation, 18, 25 ]
+let ``quotation in record``() = checkCategories 109 [ Quotation, 18, 25 ]
 
 [<Test>]
 let ``quotation in list expression``() = checkCategories 110 [ Quotation, 10, 17 ]
@@ -267,7 +268,7 @@ let ``quotation as default constructor arguments``() =
 
 [<Test>]
 let ``quotation as initialization of auto property``() = 
-    checkCategories 125 [ MutableVar, 15, 19; MutableVar, 22, 31; Quotation, 22, 31 ]
+    checkCategories 125 [ MutableVar, 15, 19; Quotation, 22, 31 ]
 
 [<Test>]
 let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40 ]
@@ -309,3 +310,24 @@ let ``byref argument``() =
         [ Function, 4, 27
           ReferenceType, 32, 37
           ValueType, 38, 41 ]
+
+[<Test>]
+let ``unit of measure``() =
+    checkCategories 145 [ ValueType, 7, 10; ReferenceType, 11, 13 ]
+    checkCategories 146 [ ReferenceType, 6, 8 ]
+    checkCategories 148 [ ValueType, 14, 17; ReferenceType, 18, 20 ]
+
+[<Test>]
+let ``custom numeric literal``() = 
+    checkCategories 149 []    
+    checkCategories 152 []
+
+[<Test>]
+let ``anonymous generic parameters``() =
+    checkCategories 154 [ Function, 8, 10; ReferenceType, 16, 19; ReferenceType, 34, 37 ]
+    checkCategories 155 [ Function, 8, 11; ReferenceType, 16, 19; ReferenceType, 34, 37 ] 
+    checkCategories 156 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
+    checkCategories 157 [ Function, 8, 10; ReferenceType, 15, 18; ReferenceType, 33, 36 ] 
+    checkCategories 158 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
+    checkCategories 159 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
+    checkCategories 160 [ Function, 8, 9; ReferenceType, 42, 46; ReferenceType, 83, 87 ]
