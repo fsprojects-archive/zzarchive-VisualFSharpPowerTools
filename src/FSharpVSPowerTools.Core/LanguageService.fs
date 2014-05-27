@@ -172,7 +172,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       ParseAndCheckResults.Empty
                   | Choice2Of2 e -> 
                       debug "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
-                      fail "ParseAndCheckFileInProject should not fail."
+                      fail "ParseAndCheckFileInProject fails. There is probably a bug in the language service."
                       ParseAndCheckResults.Empty  
               reply.Reply results
       })

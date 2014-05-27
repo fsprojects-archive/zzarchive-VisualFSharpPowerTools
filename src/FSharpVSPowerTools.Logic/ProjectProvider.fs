@@ -61,8 +61,8 @@ module ProjectProvider =
             Path.Combine(currentDir, fileName)
     
         let getSourcesAndFlags = 
-            // warning! this place is very brittle because of assumption it makes about the underlying structure of F# DTE project
-            // code below will work in VS2011\VS2012 but compatibility with further versions are not guaranteed
+            // Warning! this place is very brittle because of assumption it makes about the underlying structure of F# DTE project
+            // code below will work in VS2012\VS2013 but compatibility with further versions are not guaranteed
             let underlyingProjectField = project.GetType().GetField("project", InstanceNonPublic)
             let underlyingProject = underlyingProjectField.GetValue(project)
 
@@ -82,8 +82,7 @@ module ProjectProvider =
             | _ -> [||]
 
         let getActiveConfigProperty (tag: string) =
-            let props = project.ConfigurationManager.ActiveConfiguration.Properties
-            let prop = try props.[tag] with _ -> null
+            let prop = try project.ConfigurationManager.ActiveConfiguration.Properties.[tag] with _ -> null
             match prop with
             | null -> null
             | _ -> try prop.Value.ToString() with _ -> null
