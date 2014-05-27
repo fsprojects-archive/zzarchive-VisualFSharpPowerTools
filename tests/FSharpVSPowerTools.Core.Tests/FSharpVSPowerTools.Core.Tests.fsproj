@@ -63,6 +63,7 @@
     <Compile Include="SourceCodeClassifierTests.fs" />
     <Compile Include="InterfaceStubGeneratorTests.fs" />
     <Compile Include="RecordStubGeneratorTests.fs" />
+    <Compile Include="NavigateToIndexTests.fs" />
     <None Include="DepthColorizerSampleFile.fs">
       <Link>DepthColorizerSampleFile.fs</Link>
     </None>

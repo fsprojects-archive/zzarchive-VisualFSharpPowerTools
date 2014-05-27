@@ -31,66 +31,6 @@ type NavigateToItemExtraData =
         Description: string
     }
 
-module Index =
-    open System.Globalization
-    
-    [<System.Diagnostics.DebuggerDisplay("{DebugString()}")>]
-    type private IndexEntry(str: string, offset: int, item: Navigation.NavigableItem, isOperator: bool) =
-        member x.String = str
-        member x.Offset = offset
-        member x.Length = str.Length - offset
-        member x.Item = item
-        member x.IsOperator = isOperator
-        member x.StartsWith (s: string) = 
-            if s.Length > x.Length then 
-                false
-            else
-                CultureInfo.CurrentCulture.CompareInfo.IndexOf(str, s, offset, s.Length, CompareOptions.IgnoreCase) = offset
-        member private x.DebugString() = sprintf "%s (offset %d) (%s)" (str.Substring offset) offset str
-
-    let private IndexEntryComparer =
-        {
-            new IComparer<IndexEntry> with
-                member x.Compare(a, b) = 
-                    CultureInfo.CurrentCulture.CompareInfo.Compare(a.String, a.Offset, b.String, b.Offset, CompareOptions.IgnoreCase)
-        }
-        
-    type IIndexedNavigableItems =
-        abstract Find: searchValue: string * itemProcessor: (Navigation.NavigableItem * string * bool * MatchKind-> unit) -> unit
-
-    type Builder() =
-        let entries = ResizeArray()
-
-        member x.Add(items: seq<Navigation.NavigableItem>) =
-            for item in items do
-                let isOperator, name = 
-                    if PrettyNaming.IsMangledOpName item.Name then 
-                        true, PrettyNaming.DecompileOpName item.Name 
-                    else 
-                        false, item.Name
-                for i = 0 to name.Length - 1 do
-                    entries.Add(IndexEntry(name, i, item, isOperator))
-
-        member x.BuildIndex() =
-            entries.Sort(IndexEntryComparer)
-            {
-                new IIndexedNavigableItems with
-                    member x.Find(searchValue, processor) = 
-                        let entryToFind = IndexEntry(searchValue, 0, Unchecked.defaultof<_>, Unchecked.defaultof<_>)
-                        let mutable pos = entries.BinarySearch(entryToFind, IndexEntryComparer)
-                        if pos < 0 then pos <- ~~~pos
-                        while pos < entries.Count && entries.[pos].StartsWith searchValue do
-                            let entry = entries.[pos]
-                            let matchKind = 
-                                if entry.Offset = 0 then
-                                    if entry.Length = searchValue.Length then MatchKind.Exact
-                                    else MatchKind.Prefix
-                                else MatchKind.Substring
-                            processor(entry.Item, entry.String, entry.IsOperator, matchKind)
-                            pos <- pos + 1
-            }
-
-
 [<Package("f152487e-9a22-4cf9-bee6-a8f7c77f828d")>]
 [<Export(typeof<INavigateToItemProviderFactory>)>]
 type NavigateToItemProviderFactory 
@@ -170,7 +110,7 @@ and
                 let counter = ref 0
                 let processNavigableItemsInFile items = 
                     // TODO: consider using linear scan implementation of IIndexedNavigableItems if number of items is small
-                    let indexBuilder = Index.Builder()
+                    let indexBuilder = Navigation.Index.Builder()
                     indexBuilder.Add items
                     indexPromises.[!counter].SetResult(indexBuilder.BuildIndex())
                     incr counter
@@ -181,8 +121,8 @@ and
             Async.Start fetchIndexes
             indexPromises |> Array.map (fun tcs -> tcs.Task)
 
-    let runSearch(indexTasks: Tasks.Task<Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
-        let processItem (seen: HashSet<_>) (item: Navigation.NavigableItem, name: string, isOperator: bool, matchKind: MatchKind) = 
+    let runSearch(indexTasks: Tasks.Task<Navigation.Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
+        let processItem (seen: HashSet<_>) (item: Navigation.NavigableItem, name: string, isOperator: bool, matchKind: Navigation.Index.MatchKind) = 
             let fileName, range01 = Microsoft.FSharp.Compiler.Range.Range.toFileZ item.Range
             let itemName = if isOperator then "(" + name + ")" else name
             if (seen.Add(itemName, fileName, range01)) then
@@ -201,7 +141,7 @@ and
                     | Navigation.NavigableItemKind.UnionCase -> NavigateToItemKind.Class, "union case"
                 let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
                 let extraData = { FileName = fileName; Span = range01; Description = textKind; }
-                let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
+                let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, enum (int matchKind), itemDisplayFactory)
                 callback.AddItem navigateToItem
 
         let searchValueComputations = async {
