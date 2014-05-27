@@ -99,10 +99,14 @@ type FSharpLanguageService [<ImportingConstructor>]
         lambda.Compile().Invoke
     )
     
-    let colorStateLookupType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
+    let lexStateOfColorState = lazy (
+        let ty = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
+        let m = ty.GetMethod "LexStateOfColorState"
+        let lambda = Expr.Lambda<Func<int, int64>>(Expr.Call(m, Expr.Parameter(typeof<int>)))
+        lambda.Compile().Invoke
+    )
 
     member x.GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
         getColorStateAtStartOfLine.Value(vsColorState, line)
 
-    member x.LexStateOfColorState(colorState: int): int64 =
-        colorStateLookupType.Value?LexStateOfColorState(colorState)
+    member x.LexStateOfColorState(colorState: int): int64 = lexStateOfColorState.Value colorState
