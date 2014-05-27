@@ -15,7 +15,8 @@ open FSharpVSPowerTools
 type VSLanguageService
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider, 
-     editorFactory: IVsEditorAdaptersFactoryService, fsharpLanguageService: FSharpLanguageService,
+     editorFactory: IVsEditorAdaptersFactoryService, 
+     fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: OpenDocumentsTracker) =
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()

@@ -35,9 +35,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let mutable currentWord = None
     let mutable recordDefinition = None
 
-    let [<Literal>] CommandName = "Generate record stubs"
-
-    let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
 
     // Try to:
     // - Identify record expression binding
@@ -50,7 +48,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let! project = ProjectProvider.createForDocument doc |> liftMaybe
             let vsDocument = VSDocument(doc, point.Snapshot)
             let! symbolRange, recordExpression, recordDefinition, insertionPos =
-                tryGetRecordDefinitionFromPos codeGenInfra project point vsDocument
+                tryGetRecordDefinitionFromPos codeGenService project point vsDocument
             let newWord = symbolRange
 
             // Recheck cursor position to ensure it's still in new word
@@ -87,7 +85,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let fieldsWritten = recordExpr.FieldExprList
 
-        use transaction = textUndoHistory.CreateTransaction(CommandName)
+        use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
 
         let stub = RecordStubGenerator.formatRecord
                        insertionPos
@@ -104,7 +102,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let generateRecordStub snapshot recordExpr insertionPos entity =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = CommandName
+            member x.DisplayText = Resource.recordGenerationCommandName
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }

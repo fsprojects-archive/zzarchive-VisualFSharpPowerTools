@@ -112,7 +112,7 @@ type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<
     // was once useful for debugging
     let trace s = 
         let ticks = System.DateTime.Now.Ticks
-        System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
+        debug "%O:%O" ticks s
         ()
     
     let mutable pixelsPerChar = 7.0 // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.

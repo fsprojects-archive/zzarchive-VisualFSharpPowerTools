@@ -35,7 +35,7 @@ type ThemeManager [<ImportingConstructor>]
             | VisualStudioVersion.VS2013 ->
                 String.Format(@"Software\Microsoft\VisualStudio\12.0\{0}", categoryName)
             | v ->
-                Debug.WriteLine("Unknown Visual Studio version detected while updating theme colors: {0}", v)
+                debug "Unknown Visual Studio version detected while updating theme colors: %O" v
                 null
         use key = Registry.CurrentUser.OpenSubKey(keyName)
         match key with

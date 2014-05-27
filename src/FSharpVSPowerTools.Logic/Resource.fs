@@ -33,3 +33,6 @@ module Resource =
     let [<Literal>] interfaceFilledStatusMessage = "All members of this interface have been implemented."
 
     let [<Literal>] findAllReferenceStatusMessage = "The caret must be on a valid expression to find all references."
+
+    let [<Literal>] implementInterfaceCommandName = "Implement Interface Explicitly"
+    let [<Literal>] recordGenerationCommandName = "Generate record stubs"

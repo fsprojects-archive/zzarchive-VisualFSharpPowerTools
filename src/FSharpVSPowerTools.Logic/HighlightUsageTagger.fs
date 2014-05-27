@@ -155,5 +155,5 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                 Logging.logException e
                 upcast []
         
-        member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
-        member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
+        [<CLIEvent>]
+        member x.TagsChanged = tagsChanged.Publish
