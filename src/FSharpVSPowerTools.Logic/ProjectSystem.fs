@@ -71,6 +71,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 
+type Expr = System.Linq.Expressions.Expression
 exception AssemblyMissingException of string
 
 [<Export>]
@@ -89,11 +90,19 @@ type FSharpLanguageService [<ImportingConstructor>]
                        logException ex
                        raise ex
 
-    let vsTextColorStateType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
+    let getColorStateAtStartOfLine = lazy (
+        let ty = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
+        let m = ty.GetMethod "GetColorStateAtStartOfLine"
+        let lambda = 
+            Expr.Lambda<Func<IVsTextColorState, int, int>>(
+                Expr.Call(m, Expr.Parameter(typeof<IVsTextColorState>), Expr.Parameter(typeof<int>)))
+        lambda.Compile().Invoke
+    )
+    
     let colorStateLookupType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
 
     member x.GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
-        vsTextColorStateType.Value?GetColorStateAtStartOfLine(vsColorState, line)
+        getColorStateAtStartOfLine.Value(vsColorState, line)
 
     member x.LexStateOfColorState(colorState: int): int64 =
         colorStateLookupType.Value?LexStateOfColorState(colorState)
