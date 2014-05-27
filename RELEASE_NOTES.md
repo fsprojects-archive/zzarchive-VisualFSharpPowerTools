@@ -69,4 +69,6 @@
 * Fix the issue where VFPT is active during CPU idles
 * Return correct symbol information on dirty files and dirty projects
 
+#### 1.2.0 - Unreleased
+
 

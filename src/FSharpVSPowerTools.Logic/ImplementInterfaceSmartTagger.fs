@@ -138,7 +138,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore
         else
-            use transaction = textUndoHistory.CreateTransaction("Implement Interface Explicitly")
+            use transaction = textUndoHistory.CreateTransaction(Resource.implementInterfaceCommandName)
             match state.EndPosOfWith with
             | Some pos -> 
                 let currentPos = snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
@@ -153,7 +153,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let implementInterface snapshot (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = "Implement Interface Explicitly"
+            member x.DisplayText = Resource.implementInterfaceCommandName
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = 
