@@ -55,30 +55,31 @@ module Index =
             entries.Sort(IndexEntryComparer)
             {
                 new IIndexedNavigableItems with
-                    member x.Find(searchValue, processor) = 
-                        let entryToFind = IndexEntry(searchValue, 0, Unchecked.defaultof<_>, Unchecked.defaultof<_>)
-                        let initial = 
-                            let p = entries.BinarySearch(entryToFind, IndexEntryComparer)
-                            if p < 0 then ~~~p else p
-                        let handle index = 
-                            let entry = entries.[index]
-                            let matchKind = 
-                                if entry.Offset = 0 then
-                                    if entry.Length = searchValue.Length then MatchKind.Exact
-                                    else MatchKind.Prefix
-                                else MatchKind.Substring
-                            processor(entry.Item, entry.String, entry.IsOperator, matchKind)
+                    member x.Find(searchValue, processor) =
+                        if entries.Count > 0 then 
+                            let entryToFind = IndexEntry(searchValue, 0, Unchecked.defaultof<_>, Unchecked.defaultof<_>)
+                            let initial = 
+                                let p = entries.BinarySearch(entryToFind, IndexEntryComparer)
+                                if p < 0 then ~~~p else p
+                            let handle index = 
+                                let entry = entries.[index]
+                                let matchKind = 
+                                    if entry.Offset = 0 then
+                                        if entry.Length = searchValue.Length then MatchKind.Exact
+                                        else MatchKind.Prefix
+                                    else MatchKind.Substring
+                                processor(entry.Item, entry.String, entry.IsOperator, matchKind)
                         
-                        // in case if there are multiple matching items binary search might return not the first one.
-                        // in this case we'll walk backwards searching for the applicable answers
-                        let mutable pos = initial
-                        while pos >= 0  && entries.[pos].StartsWith searchValue do
-                            handle pos
-                            pos <- pos - 1
+                            // in case if there are multiple matching items binary search might return not the first one.
+                            // in this case we'll walk backwards searching for the applicable answers
+                            let mutable pos = initial
+                            while pos >= 0  && entries.[pos].StartsWith searchValue do
+                                handle pos
+                                pos <- pos - 1
 
-                        // value of 'initial' position was already handled on the previous step so here we'll bump it
-                        let mutable pos = initial + 1
-                        while pos < entries.Count && entries.[pos].StartsWith searchValue do
-                            handle pos
-                            pos <- pos + 1
+                            // value of 'initial' position was already handled on the previous step so here we'll bump it
+                            let mutable pos = initial + 1
+                            while pos < entries.Count && entries.[pos].StartsWith searchValue do
+                                handle pos
+                                pos <- pos + 1
             }
