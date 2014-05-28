@@ -346,6 +346,31 @@ let f union =
     | Case2 when 1 = 2 -> ()
     | Case2 -> ()"""
 
+[<Test>]
+let ``nested union match case generation`` () =
+    """
+type Union1 = Case1 | Case2
+type Union2 = Case3 * int | Case4 of Union1 | Case5
+
+let f union2 =
+    match union2 with
+    | Case3 _ -> ()
+    | Case4(union1) ->
+        match union1 with
+        | Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 9 10)
+    |> assertSrcAreEqual """
+type Union1 = Case1 | Case2
+type Union2 = Case3 * int | Case4 of Union1 | Case5
+
+let f union2 =
+    match union2 with
+    | Case3 _ -> ()
+    | Case4(union1) ->
+        match union1 with
+        | Case1 -> failwith ""
+        | Case2 -> ()"""
+
 // Union match case without argument patterns
 //// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range
 //// LongIdent(LongIdentWithDots[(Case2, rangeList: [])], identOption: null, typlDecl: null, constrArgs: Pats [], accessOpt: null, _range)
