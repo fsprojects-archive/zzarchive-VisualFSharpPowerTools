@@ -90,9 +90,11 @@ type FSharpLanguageService [<ImportingConstructor>]
                        logException ex
                        raise ex
 
+    let staticFlags = BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static
+
     let getColorStateAtStartOfLine = lazy (
         let ty = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
-        let m = ty.GetMethod "GetColorStateAtStartOfLine"
+        let m = ty.GetMethod ("GetColorStateAtStartOfLine", staticFlags)
         let lambda = 
             Expr.Lambda<Func<IVsTextColorState, int, int>>(
                 Expr.Call(m, Expr.Parameter(typeof<IVsTextColorState>), Expr.Parameter(typeof<int>)))
@@ -101,7 +103,7 @@ type FSharpLanguageService [<ImportingConstructor>]
     
     let lexStateOfColorState = lazy (
         let ty = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
-        let m = ty.GetMethod "LexStateOfColorState"
+        let m = ty.GetMethod ("LexStateOfColorState", staticFlags)
         let lambda = Expr.Lambda<Func<int, int64>>(Expr.Call(m, Expr.Parameter(typeof<int>)))
         lambda.Compile().Invoke
     )
