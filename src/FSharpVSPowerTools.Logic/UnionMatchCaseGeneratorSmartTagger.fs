@@ -27,7 +27,6 @@ type UnionMatchCaseGeneratorSmartTag(actionSets) =
 
 type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
                                         buffer: ITextBuffer,
-                                        editorOptionsFactory: IEditorOptionsFactoryService,
                                         textUndoHistory: ITextUndoHistory,
                                         vsLanguageService: VSLanguageService,
                                         serviceProvider: IServiceProvider) as self =
@@ -37,7 +36,7 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
 
     let [<Literal>] CommandName = "Generate union match cases"
 
-    let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     let updateAtCaretPosition() =
         asyncMaybe {
@@ -47,7 +46,7 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
             let! project = ProjectProvider.createForDocument doc |> liftMaybe
             let vsDocument = VSDocument(doc, point.Snapshot)
             let! symbolRange, matchExpr, unionTypeDefinition, insertionPos =
-                tryFindUnionTypeDefinitionFromPos codeGenInfra project point vsDocument
+                tryFindUnionTypeDefinitionFromPos codeGenService project point vsDocument
             let newWord = symbolRange
 
             // Recheck cursor position to ensure it's still in new word
@@ -73,17 +72,15 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
-    let handleGenerateUnionMatchCases (snapshot: ITextSnapshot) (matchExpr: MatchExpr) (insertionPos: pos) entity = 
-        let editorOptions = editorOptionsFactory.GetOptions(buffer)
-        let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-
+    let handleGenerateUnionMatchCases (snapshot: ITextSnapshot) (matchExpr: MatchExpr) (insertionParams: _) entity = 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 
         let stub = UnionMatchCaseGenerator.formatMatchExpr
-                       indentSize
+                       insertionParams
                        "failwith \"Unhandled case\""
                        matchExpr
                        entity
+        let insertionPos = insertionParams.InsertionPos
         let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Line-1).Start.Position + insertionPos.Column
 
         buffer.Insert(currentLine, stub) |> ignore

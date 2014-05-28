@@ -19,6 +19,7 @@ type MatchExpr = {
     Clauses: SynMatchClause list
 }
 
+[<NoComparison>]
 type UnionMatchCasesInsertionParams = {
     InsertionPos: pos
     FirstClauseStartsWithPipe: bool
@@ -118,12 +119,6 @@ let formatMatchExpr insertionParams (caseDefaultValue: string)
     //              | Case3 -> ()
     //                ^
 
-    // TODO: remove comment if not necessary
-    // special case when fields are already written
-//    if not casesWritten.IsEmpty && casesWritten.Count < entity.UnionCases.Count then
-//        writer.WriteLine("")
-//        writer.Write("")
-
     writer.Dump()
 
 let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
@@ -201,7 +196,7 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
                 None
         )
 
-    and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
+    and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, _retTy, expr, _bindingRange, _seqPoint) as binding) =
         getIfPosInRange binding.RangeOfBindingAndRhs (fun () -> walkExpr expr)
 
     and walkExpr expr =
@@ -375,11 +370,11 @@ let tryFindMatchExprInBufferAtPos (codeGenService: ICodeGenerationService<'Proje
             |> Option.bind (tryFindMatchExpression (codeGenService.ExtractFSharpPos(pos)))
     }
 
-let tryFindTokenInRange
+let tryFindTokenLPosInRange
     (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
-    (range: 'Range) (document: IDocument) (predicate: TokenInformation -> bool)  =
+    (range: range) (document: IDocument) (predicate: TokenInformation -> bool) =
     let lines = seq {
-        for line in (int range.StartLine) .. (int range.EndLine) do
+        for line in range.StartLine .. range.EndLine do
             yield! codeGenService.TokenizeLine(project, document, (line * 1<Line1>))
                    |> List.map (fun tokenInfo -> line * 1<Line1>, tokenInfo)
     }
@@ -390,54 +385,46 @@ let tryFindTokenInRange
             tokenInfo.LeftColumn >= range.StartColumn &&
             tokenInfo.RightColumn < range.EndColumn &&
             predicate tokenInfo
-        elif range.StartLine = line1 then
+        elif range.StartLine = int line1 then
             tokenInfo.LeftColumn >= range.StartColumn &&
             predicate tokenInfo
-        elif line1 = range.EndLine then
+        elif int line1 = range.EndLine then
             tokenInfo.RightColumn < range.EndColumn &&
             predicate tokenInfo
         else
             predicate tokenInfo
     )
     |> Option.map (fun (line1, tokenInfo) ->
-        tokenInfo, codeGenService.CreateRange(startLine=line1,
-                                              startColumn=tokenInfo.LeftColumn,
-                                              endLine=line1,
-                                              endColumn=tokenInfo.RightColumn + 1)
+        tokenInfo, (Pos.fromZ (int line1 - 1) tokenInfo.LeftColumn)
     )
 
-let tryFindBarTokenInRange
+let tryFindBarTokenLPosInRange
     (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
-    (range: 'Range) (document: IDocument) =
-    tryFindTokenInRange codeGenService project range document
+    (range: range) (document: IDocument) =
+    tryFindTokenLPosInRange codeGenService project range document
         (fun tokenInfo -> tokenInfo.TokenName = "BAR")
 
-let tryGetRangeBetweenWithAndFirstClause (codeGenService: ICodeGenerationService<_, _, 'Range>) matchExpr =
+let tryGetRangeBetweenWithAndFirstClause matchExpr =
     maybe {
         let! fstClause =
             match matchExpr.Clauses with
             | hd :: _ -> Some hd
             | _ -> None
 
-        let range = unionRanges matchExpr.MatchWithRange.EndRange fstClause.Range.StartRange
-        return codeGenService.CreateRange(range.StartLine * 1<Line1>,
-                                          range.StartColumn,
-                                          range.EndLine * 1<Line1>,
-                                          range.EndColumn)
+        return unionRanges matchExpr.MatchWithRange.EndRange fstClause.Range.StartRange
     }
 
-let getInsertionParams codeGenService project document (matchExpr: MatchExpr) =
-    let barTokenFindResult =
+let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) project document (matchExpr: MatchExpr) =
+    let barTokenLPosFindResult =
         maybe {
-            let! rangeBetweenWithAndClause =
-                tryGetRangeBetweenWithAndFirstClause codeGenService matchExpr
-            return! tryFindBarTokenInRange codeGenService project rangeBetweenWithAndClause document
+            let! rangeBetweenWithAndClause = tryGetRangeBetweenWithAndFirstClause matchExpr
+            return! tryFindBarTokenLPosInRange codeGenService project rangeBetweenWithAndClause document
         }
 
-    match barTokenFindResult, matchExpr.Clauses with
-    | Some(_, tokenRange), _ ->
+    match barTokenLPosFindResult, matchExpr.Clauses with
+    | Some(_, tokenLPos), _ ->
         // Before first clause's '|'
-        { InsertionPos = Pos.fromZ (int tokenRange.StartLine - 1) tokenRange.StartColumn
+        { InsertionPos = tokenLPos
           FirstClauseStartsWithPipe = true }
     | None, [] -> 
         // After 'with' keyword

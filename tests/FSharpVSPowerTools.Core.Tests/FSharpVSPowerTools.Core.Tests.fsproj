@@ -62,6 +62,7 @@
     <Compile Include="XmlDocTests.fs" />
     <Compile Include="SourceCodeClassifierTests.fs" />
     <Compile Include="InterfaceStubGeneratorTests.fs" />
+    <Compile Include="CodeGenerationTestService.fs" />
     <Compile Include="RecordStubGeneratorTests.fs" />
     <Compile Include="NavigateToIndexTests.fs" />
     <Compile Include="UnionTypeCaseGeneratorTests.fs" />

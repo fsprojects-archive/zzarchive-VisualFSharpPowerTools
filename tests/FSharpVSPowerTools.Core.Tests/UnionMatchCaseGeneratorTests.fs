@@ -8,7 +8,8 @@
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
       "../../src/FSharpVSPowerTools.Core/UnionMatchCaseGenerator.fs"
-#load "TestHelpers.fs"
+      "TestHelpers.fs"
+      "CodeGenerationTestService.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.UnionMatchCaseGeneratorTests
 #endif
@@ -24,6 +25,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionMatchCaseGenerator
+open FSharpVSPowerTools.Core.Tests
 open Microsoft.FSharp.Compiler.Ast
 
 let args = 
@@ -52,33 +54,6 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
-type pos with
-    member x.Line0: int<Line0> = LanguagePrimitives.Int32WithMeasure(x.Line - 1)
-    member x.Line1: int<Line1> = LanguagePrimitives.Int32WithMeasure(x.Line)
-    member x.Column0 = x.Column
-    member x.Column1 = x.Column + 1
-
-type Range = {
-    StartLine: int<Line1>
-    StartColumn: int
-    EndLine: int<Line1>
-    EndColumn: int
-}
-with
-    interface IRange with
-        member x.EndColumn: int = x.EndColumn
-        member x.EndLine: int<Line1> = x.EndLine
-        member x.StartColumn: int = x.StartColumn
-        member x.StartLine: int<Line1> = x.StartLine
-
-    static member FromSymbol(symbol: Symbol) =
-        let startLine, startColumn, endLine, endColumn = symbol.Range
-        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
-          StartColumn = startColumn
-          EndLine = LanguagePrimitives.Int32WithMeasure endLine
-          EndColumn = endColumn }
-
-
 type MockDocument(src: string) =
     let lines =
         ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
@@ -89,57 +64,9 @@ type MockDocument(src: string) =
         member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
         member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
 
-type CodeGenerationTestService() =
-    interface ICodeGenerationService<ProjectOptions, pos, Range> with
-        member x.CreateRange(startLine: int<Line1>, startColumn: int, endLine: int<Line1>, endColumn: int): Range = 
-            { StartLine = startLine
-              StartColumn = startColumn
-              EndLine = endLine
-              EndColumn = endColumn }
-        
-        member x.TokenizeLine(_project, document: IDocument, line1: int<Line1>): TokenInformation list = 
-                let line0 = int line1 - 1 
-                let line = document.GetLineText1(line1)
-                Lexer.tokenizeLine (document.GetText()) args line0 line Lexer.queryLexState
-        
-        member x.GetSymbolAtPosition(_project, snapshot, pos) =
-            let lineText = snapshot.GetLineText0 pos.Line0
-            let src = snapshot.GetText()
-            maybe {
-                let! symbol =
-                    Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText args Lexer.queryLexState
-
-                return Range.FromSymbol symbol, symbol
-            }
-
-        member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
-            asyncMaybe {
-                let x = x :> ICodeGenerationService<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos) |> liftMaybe
-                let src = snapshot.GetText()
-                let line = snapshot.GetLineText1 pos.Line1
-                let! parseAndCheckResults =
-                    languageService.ParseAndCheckFileInProject(project, snapshot.FullName, src, AllowStaleResults.MatchingSource)
-                    |> liftAsync
-
-                match symbol.Kind with
-                | k when k = kind ->
-                    // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
-                    // and not <pos.Column>, otherwise GetSymbolUseAtLocation won't find it
-                    let! symbolUse =
-                        parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
-                    return range, symbol, symbolUse
-                | _ -> return! None |> liftMaybe
-            }
-
-        member x.ParseFileInProject(snapshot, projectOptions) =
-            languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText())
-
-        member x.ExtractFSharpPos(pos) = pos
-
 let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
 
-let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService()
+let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
 
 let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
@@ -190,32 +117,12 @@ let insertCasesFromPos caretPos src =
             srcLines
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
-// [ ] Handle case where first case doesn't start with '|'
+// [x] Handle case where first case doesn't start with '|'
 
 // TODO: dedup from RecordStubGeneratorTests.fs
 let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
-
-
-do
-    """
-type Union = Case1
-
-let f union =
-    match union with
-    | Case1 -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 6)
-//    |> (fun document ->
-//        maybe {
-//            let! range = tryGetRangeBetweenWithAndFirstClause (Pos.fromZ 5 6) document
-//            return! tryFindTokenInRange
-//                        range
-//                        (fun tokenInfo -> tokenInfo.TokenName = "BAR")
-//                        document
-//        }
-//    )
-    |> ignore
 
 [<Test>]
 let ``single union match case generation when the unique case is written`` () =
@@ -223,15 +130,13 @@ let ``single union match case generation when the unique case is written`` () =
 type Union = Case1
 
 let f union =
-    match union with
-    | Case1 -> ()"""
+    match union with | Case1 -> ()"""
     |> insertCasesFromPos (Pos.fromZ 5 6)
     |> assertSrcAreEqual """
 type Union = Case1
 
 let f union =
-    match union with
-    | Case1 -> ()"""
+    match union with | Case1 -> ()"""
 
 [<Test>]
 let ``union match case generation when all cases are written 1`` () =
@@ -257,17 +162,13 @@ let ``union match case generation when all cases are written 2`` () =
 type Union = Case1 | Case2
 
 let f union =
-    match union with
-    Case1 -> ()
-    | Case2 -> ()"""
+    match union with Case1 -> () | Case2 -> ()"""
     |> insertCasesFromPos (Pos.fromZ 5 4)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f union =
-    match union with
-    Case1 -> ()
-    | Case2 -> ()"""
+    match union with Case1 -> () | Case2 -> ()"""
 
 [<Test>]
 let ``union match case generation when first clause doesn't start with '|'`` () =

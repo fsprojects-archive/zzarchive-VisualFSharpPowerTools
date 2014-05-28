@@ -37,7 +37,7 @@ namespace FSharpVSPowerTools
             // TODO reactivate check
             if (generalOptions != null)// && generalOptions.RecordStubGenerationEnabled)
             {
-                return new UnionMatchCaseGeneratorSmartTagger(textView, buffer, editorOptionsFactory,
+                return new UnionMatchCaseGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
                     fsharpVsLanguageService, serviceProvider) as ITagger<T>;
             }

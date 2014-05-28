@@ -35,7 +35,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
 
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     // Try to:
     // - Identify record expression binding
