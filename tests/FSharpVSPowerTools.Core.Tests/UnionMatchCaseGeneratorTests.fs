@@ -123,6 +123,53 @@ let insertCasesFromPos caretPos src =
 let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
+let tryGetWrittenCases (pos: pos) (src: string) =
+    src
+    |> asDocument
+    |> tryFindMatchExpr pos
+    |> Option.map (getWrittenCases)
+    |> Option.getOrElse Set.empty
+
+let _ =
+    """type Union = Case1 | Case2 | Case3 of bool | Case4 of int * int
+let f union = match union with
+    | Case3 true
+    | Case3(i)
+    | Case4(3, _) -> ()"""
+    |> tryGetWrittenCases (Pos.fromZ 2 6)
+//    |> assertEqual (set ["Case3"])
+
+let _ =
+    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case2 | Union.Case2 | Case4(_,_)
+    | Case3 _
+    | Union.Case4 _ -> ()
+"""
+    |> tryGetWrittenCases (Pos.fromZ 2 6)
+    |> assertEqual (set ["Case2"; "Case3"; "Case4"])
+
+let _ =
+    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case4(_,_) -> ()"""
+    |> tryGetWrittenCases (Pos.fromZ 2 6)
+    |> assertEqual (set ["Case4"])
+    
+let _ =
+    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case2 & Case4(_,_) -> ()"""
+    |> tryGetWrittenCases (Pos.fromZ 2 6)
+    |> assertEqual (set [])
+
+let _ =
+    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case2 & Case2 -> ()"""
+    |> tryGetWrittenCases (Pos.fromZ 2 6)
+    |> assertEqual (set ["Case2"])
+
 
 [<Test>]
 let ``single union match case generation when the unique case is written`` () =
@@ -226,7 +273,7 @@ let f union =
     | Union.Case2 -> ()"""
 
 
-[<Test; Ignore("Reactivate when capable of identifying combined clauses")>]
+[<Test>]
 let ``union match case generation with combined clauses`` () =
     """
 type Union = Case1 | Case2
@@ -244,7 +291,25 @@ let f union =
     | Case1
     | Case2 -> ()"""
 
-[<Test; Ignore("Reactivate when capable of identifying combined clauses with arguments")>]
+[<Test>]
+let ``union match case generation with parenthesized cases`` () =
+    """
+type Union = Case1 | Case2 of int
+
+let f union =
+    match union with
+    | (Case2(x))
+    | ((((Case1)))) -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 7)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2 of int
+
+let f union =
+    match union with
+    | (Case2(x))
+    | ((((Case1)))) -> ()"""
+
+[<Test>]
 let ``union match case generation with combined clauses with multiple args`` () =
     """
 type Union = Case1 | Case2 of int
@@ -261,7 +326,6 @@ let f union =
     match union with
     | Case1
     | Case2 _ -> ()"""
-
 
 [<Test>]
 let ``union match case generation with guards written`` () =
@@ -281,7 +345,6 @@ let f union =
     | Case1 -> failwith ""
     | Case2 when 1 = 2 -> ()
     | Case2 -> ()"""
-
 
 // Union match case without argument patterns
 //// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range

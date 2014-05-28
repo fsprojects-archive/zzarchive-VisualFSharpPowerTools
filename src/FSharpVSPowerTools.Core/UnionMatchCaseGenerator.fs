@@ -35,91 +35,6 @@ type private Context = {
     RequireQualifiedAccess: bool
 }
 
-let getWrittenCases (matchExpr: MatchExpr) =
-    matchExpr.Clauses
-    |> List.choose (function
-        | Clause(SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _, _, _, _),
-                 None, _, _, _) when unionCaseLongIdent.Length > 0 ->
-            Some (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText
-        | _ -> None)
-    |> Set.ofList
-
-let shouldGenerateUnionMatchCases (matchExpr: MatchExpr) (entity: FSharpEntity) =
-    let caseCount = entity.UnionCases.Count
-    let writtenCaseCount =
-        getWrittenCases matchExpr
-        |> Set.count
-    caseCount > 0 && writtenCaseCount < caseCount
-
-let private formatCase (ctxt: Context) writePipeBefore (case: FSharpUnionCase) =
-    let writer = ctxt.Writer
-    let name = 
-        if ctxt.RequireQualifiedAccess then
-            sprintf "%s.%s" ctxt.UnionTypeName case.Name
-        else 
-            case.Name
-
-    let paramsPattern =
-        let unionCaseFieldsCount = case.UnionCaseFields.Count
-        if unionCaseFieldsCount <= 0 then
-            ""
-        else
-            [|
-                yield "(_"
-                for _ in 1 .. unionCaseFieldsCount - 1 do
-                    yield ", _"
-                yield ")"
-            |]
-            |> String.Concat
-
-    if writePipeBefore then
-        writer.WriteLine("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
-        writer.Write("")
-    else
-        writer.WriteLine("{0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
-        writer.Write("| ")
-
-let formatMatchExpr insertionParams (caseDefaultValue: string)
-                    (matchExpr: MatchExpr) (entity: FSharpEntity) =
-    assert entity.IsFSharpUnion
-    use writer = new ColumnIndentedTextWriter()
-    let ctxt =
-        { UnionTypeName = entity.DisplayName
-          RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
-          Writer = writer
-          CaseDefaultValue = caseDefaultValue}
-
-    let casesWritten = getWrittenCases matchExpr
-    let casesToWrite =
-        entity.UnionCases
-        |> Seq.filter (fun case -> not <| casesWritten.Contains case.Name)
-
-    let indentValue = insertionParams.InsertionPos.Column
-
-    writer.Indent indentValue
-
-    let writePipeBefore = insertionParams.FirstClauseStartsWithPipe
-    match List.ofSeq casesToWrite with
-    | [] -> ()
-    | firstCase :: otherCases ->
-        formatCase ctxt writePipeBefore firstCase
-        otherCases
-        |> List.iter (formatCase ctxt writePipeBefore)
-    
-    // Scenario when first case doesn't start with pipe
-    // match x with Case3 -> ()
-    //              ^
-    //
-    // match x with Case1 -> ()
-    //              | Case3 -> () 
-    //                ^
-    //
-    // match x with Case1 -> ()
-    //              | Case2 -> ()
-    //              | Case3 -> ()
-    //                ^
-
-    writer.Dump()
 
 let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
     let inline getIfPosInRange range f =
@@ -360,6 +275,97 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
+let getWrittenCases (matchExpr: MatchExpr) =
+    let trueForAll pred list =
+        List.exists (pred >> not) list = false
+
+    let rec checkPattern pat =
+        match pat with
+        | SynPat.Const(_const, _) -> false
+        // TODO: figure out if these cases are supposed to happen or not
+        | SynPat.Or(_, _, _)
+        | SynPat.Ands(_, _)
+        | SynPat.LongIdent(_, _, _, _, _, _)
+        | SynPat.ArrayOrList(_, _, _)
+        | SynPat.Null(_)
+        | SynPat.InstanceMember(_, _, _, _, _)
+        | SynPat.IsInst(_, _)
+        | SynPat.QuoteExpr(_, _)
+        | SynPat.DeprecatedCharRange(_, _, _)
+        | SynPat.FromParseError(_, _) -> false
+
+        | SynPat.Tuple(innerPatList, _) ->
+            innerPatList
+            |> trueForAll checkPattern
+            
+        | SynPat.Record(recordInnerPatList, _) ->
+            recordInnerPatList
+            |> List.map (fun (_, innerPat) -> innerPat)
+            |> trueForAll checkPattern
+
+        | SynPat.OptionalVal(_, _) -> true
+        | SynPat.Wild(_) -> true
+        | SynPat.Named(innerPat, _, _, _, _)
+        | SynPat.Typed(innerPat, _, _)
+        | SynPat.Attrib(innerPat, _, _)
+        | SynPat.Paren(innerPat, _) -> checkPattern innerPat
+
+    let getIfArgsAreFree constructorArgs func =
+        match constructorArgs with
+        | SynConstructorArgs.Pats patList ->
+            if trueForAll checkPattern patList then
+                Some (func())
+            else
+                None
+        | SynConstructorArgs.NamePatPairs(namedPatList, _) ->
+            // TODO: handle named patterns
+            let patList =
+                namedPatList
+                |> List.unzip
+                |> (fun (_, pat) -> pat)
+
+            if trueForAll checkPattern patList then
+                Some (func())
+            else
+                None
+        
+    let rec getCasesInPattern (pat: SynPat) =
+        match pat with
+        | SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _,
+                           constructorArgs, _, _)
+          when unionCaseLongIdent.Length > 0 ->
+            getIfArgsAreFree constructorArgs (fun () ->
+                [ (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText ]
+            )
+            |> Option.getOrElse []
+
+        | SynPat.Or(left, right, _) ->
+            (getCasesInPattern left) @ (getCasesInPattern right)
+        | SynPat.Ands(patList, _) ->
+            patList
+            |> List.map (getCasesInPattern >> Set.ofList)
+            |> Set.intersectMany
+            |> Set.toList
+        | SynPat.Paren(innerPat, _) -> getCasesInPattern innerPat
+        | _ -> []
+
+    let rec getCasesInClause (x: SynMatchClause) =
+        match x with
+        | Clause(pat, None, _, _, _) -> getCasesInPattern pat
+        | _ -> []
+
+    matchExpr.Clauses
+    |> List.collect (getCasesInClause)
+    |> Set.ofList
+
+
+let shouldGenerateUnionMatchCases (matchExpr: MatchExpr) (entity: FSharpEntity) =
+    let caseCount = entity.UnionCases.Count
+    let writtenCaseCount =
+        getWrittenCases matchExpr
+        |> Set.count
+    caseCount > 0 && writtenCaseCount < caseCount
+
 let tryFindMatchExprInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     async {
         let! parseResults =
@@ -461,3 +467,73 @@ let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'P
         | _ ->
             return! None |> liftMaybe
     }
+
+let private formatCase (ctxt: Context) writePipeBefore (case: FSharpUnionCase) =
+    let writer = ctxt.Writer
+    let name = 
+        if ctxt.RequireQualifiedAccess then
+            sprintf "%s.%s" ctxt.UnionTypeName case.Name
+        else 
+            case.Name
+
+    let paramsPattern =
+        let unionCaseFieldsCount = case.UnionCaseFields.Count
+        if unionCaseFieldsCount <= 0 then
+            ""
+        else
+            [|
+                yield "(_"
+                for _ in 1 .. unionCaseFieldsCount - 1 do
+                    yield ", _"
+                yield ")"
+            |]
+            |> String.Concat
+
+    if writePipeBefore then
+        writer.WriteLine("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+        writer.Write("")
+    else
+        writer.WriteLine("{0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+        writer.Write("| ")
+
+let formatMatchExpr insertionParams (caseDefaultValue: string)
+                    (matchExpr: MatchExpr) (entity: FSharpEntity) =
+    assert entity.IsFSharpUnion
+    use writer = new ColumnIndentedTextWriter()
+    let ctxt =
+        { UnionTypeName = entity.DisplayName
+          RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
+          Writer = writer
+          CaseDefaultValue = caseDefaultValue}
+
+    let casesWritten = getWrittenCases matchExpr
+    let casesToWrite =
+        entity.UnionCases
+        |> Seq.filter (fun case -> not <| casesWritten.Contains case.Name)
+
+    let indentValue = insertionParams.InsertionPos.Column
+
+    writer.Indent indentValue
+
+    let writePipeBefore = insertionParams.FirstClauseStartsWithPipe
+    match List.ofSeq casesToWrite with
+    | [] -> ()
+    | firstCase :: otherCases ->
+        formatCase ctxt writePipeBefore firstCase
+        otherCases
+        |> List.iter (formatCase ctxt writePipeBefore)
+    
+    // Scenario when first case doesn't start with pipe
+    // match x with Case3 -> ()
+    //              ^
+    //
+    // match x with Case1 -> ()
+    //              | Case3 -> () 
+    //                ^
+    //
+    // match x with Case1 -> ()
+    //              | Case2 -> ()
+    //              | Case3 -> ()
+    //                ^
+
+    writer.Dump()
