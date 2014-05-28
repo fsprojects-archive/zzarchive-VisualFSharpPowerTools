@@ -88,11 +88,6 @@ let tryFindMatchCaseGenerationParam pos document =
     tryFindMatchCaseInsertionParamsAtPos codeGenService project pos document
     |> Async.RunSynchronously
 
-let tokenizeLine (document: IDocument) (lineIdx1: int<Line1>) =
-    let lineIdx0 = int lineIdx1 - 1 
-    let line = document.GetLineText1(lineIdx1)
-    Lexer.tokenizeLine (document.GetText()) args (lineIdx0) line Lexer.queryLexState
-
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let unionTypeDefFromPos = tryFindUnionTypeDefinition caretPos document
@@ -130,45 +125,43 @@ let tryGetWrittenCases (pos: pos) (src: string) =
     |> Option.map (getWrittenCases)
     |> Option.getOrElse Set.empty
 
-let _ =
-    """type Union = Case1 | Case2 | Case3 of bool | Case4 of int * int
+
+module ClausesAnalysisTests =
+    [<Test>]
+    let ``OR patterns with constants and identifiers`` () =
+        """type Union = Case1 | Case2 | Case3 of bool | Case4 of int * int
 let f union = match union with
     | Case3 true
     | Case3(i)
     | Case4(3, _) -> ()"""
-    |> tryGetWrittenCases (Pos.fromZ 2 6)
-//    |> assertEqual (set ["Case3"])
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set ["Case3"])
 
-let _ =
-    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+    [<Test>]
+    let ``OR patterns with wildcards and qualified identifiers`` () =
+        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 let f union = match union with
     | Case2 | Union.Case2 | Case4(_,_)
     | Case3 _
-    | Union.Case4 _ -> ()
-"""
-    |> tryGetWrittenCases (Pos.fromZ 2 6)
-    |> assertEqual (set ["Case2"; "Case3"; "Case4"])
+    | Union.Case4 _ -> ()"""
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set ["Case2"; "Case3"; "Case4"])
 
-let _ =
-    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
-let f union = match union with
-    | Case4(_,_) -> ()"""
-    |> tryGetWrittenCases (Pos.fromZ 2 6)
-    |> assertEqual (set ["Case4"])
-    
-let _ =
-    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
-let f union = match union with
-    | Case2 & Case4(_,_) -> ()"""
-    |> tryGetWrittenCases (Pos.fromZ 2 6)
-    |> assertEqual (set [])
-
-let _ =
-    """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+    [<Test>]
+    let ``redundant simple AND pattern`` () =
+        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 let f union = match union with
     | Case2 & Case2 -> ()"""
-    |> tryGetWrittenCases (Pos.fromZ 2 6)
-    |> assertEqual (set ["Case2"])
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set ["Case2"])
+
+    [<Test>]
+    let ``AND pattern with wildcards`` () =
+        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case2 & Case4(_,_) -> ()"""
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set [])
 
 
 [<Test>]
