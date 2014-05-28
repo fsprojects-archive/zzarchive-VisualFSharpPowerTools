@@ -19,14 +19,11 @@ type MatchExpr = {
     Clauses: SynMatchClause list
 }
 
-let getInsertionPos (matchExpr: MatchExpr) =
-    Pos.fromZ
-        (matchExpr.MatchWithRange.EndLine - 1)
-        (matchExpr.MatchWithRange.EndColumn)
+type UnionMatchCasesInsertionParams = {
+    InsertionPos: pos
+    FirstClauseStartsWithPipe: bool
+}
 
-let getIndentValue (matchExpr: MatchExpr) =
-    matchExpr.MatchWithRange.StartColumn
-    
 
 [<NoComparison>]
 type private Context = {
@@ -37,11 +34,24 @@ type private Context = {
     RequireQualifiedAccess: bool
 }
 
-let private formatCase (ctxt: Context) isFirstCase (case: FSharpUnionCase) =
-    let writer = ctxt.Writer
+let getWrittenCases (matchExpr: MatchExpr) =
+    matchExpr.Clauses
+    |> List.choose (function
+        | Clause(SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _, _, _, _),
+                 None, _, _, _) when unionCaseLongIdent.Length > 0 ->
+            Some (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText
+        | _ -> None)
+    |> Set.ofList
 
-    writer.WriteLine("")
-    
+let shouldGenerateUnionMatchCases (matchExpr: MatchExpr) (entity: FSharpEntity) =
+    let caseCount = entity.UnionCases.Count
+    let writtenCaseCount =
+        getWrittenCases matchExpr
+        |> Set.count
+    caseCount > 0 && writtenCaseCount < caseCount
+
+let private formatCase (ctxt: Context) writePipeBefore (case: FSharpUnionCase) =
+    let writer = ctxt.Writer
     let name = 
         if ctxt.RequireQualifiedAccess then
             sprintf "%s.%s" ctxt.UnionTypeName case.Name
@@ -60,26 +70,15 @@ let private formatCase (ctxt: Context) isFirstCase (case: FSharpUnionCase) =
                 yield ")"
             |]
             |> String.Concat
-    
-    writer.Write("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
 
-let getWrittenCases (matchExpr: MatchExpr) =
-    matchExpr.Clauses
-    |> List.choose (function
-        | Clause(SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _, _, _, _),
-                 None, _, _, _) when unionCaseLongIdent.Length > 0 ->
-            Some (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText
-        | _ -> None)
-    |> Set.ofList
+    if writePipeBefore then
+        writer.WriteLine("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+        writer.Write("")
+    else
+        writer.WriteLine("{0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+        writer.Write("| ")
 
-let shouldGenerateUnionMatchCases (matchExpr: MatchExpr) (entity: FSharpEntity) =
-    let caseCount = entity.UnionCases.Count
-    let writtenCaseCount =
-        getWrittenCases matchExpr
-        |> Set.count
-    caseCount > 0 && writtenCaseCount < caseCount
-
-let formatMatchExpr (indentValue: int) (caseDefaultValue: string)
+let formatMatchExpr insertionParams (caseDefaultValue: string)
                     (matchExpr: MatchExpr) (entity: FSharpEntity) =
     assert entity.IsFSharpUnion
     use writer = new ColumnIndentedTextWriter()
@@ -94,14 +93,32 @@ let formatMatchExpr (indentValue: int) (caseDefaultValue: string)
         entity.UnionCases
         |> Seq.filter (fun case -> not <| casesWritten.Contains case.Name)
 
+    let indentValue = insertionParams.InsertionPos.Column
+
     writer.Indent indentValue
+
+    let writePipeBefore = insertionParams.FirstClauseStartsWithPipe
     match List.ofSeq casesToWrite with
     | [] -> ()
-    | firstCase :: otherFields ->
-        formatCase ctxt true firstCase
-        otherFields
-        |> List.iter (formatCase ctxt false)
+    | firstCase :: otherCases ->
+        formatCase ctxt writePipeBefore firstCase
+        otherCases
+        |> List.iter (formatCase ctxt writePipeBefore)
+    
+    // Scenario when first case doesn't start with pipe
+    // match x with Case3 -> ()
+    //              ^
+    //
+    // match x with Case1 -> ()
+    //              | Case3 -> () 
+    //                ^
+    //
+    // match x with Case1 -> ()
+    //              | Case2 -> ()
+    //              | Case3 -> ()
+    //                ^
 
+    // TODO: remove comment if not necessary
     // special case when fields are already written
 //    if not casesWritten.IsEmpty && casesWritten.Count < entity.UnionCases.Count then
 //        writer.WriteLine("")
@@ -358,24 +375,102 @@ let tryFindMatchExprInBufferAtPos (codeGenService: ICodeGenerationService<'Proje
             |> Option.bind (tryFindMatchExpression (codeGenService.ExtractFSharpPos(pos)))
     }
 
-let tryFindMatchCaseGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let tryFindTokenInRange
+    (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
+    (range: 'Range) (document: IDocument) (predicate: TokenInformation -> bool)  =
+    let lines = seq {
+        for line in (int range.StartLine) .. (int range.EndLine) do
+            yield! codeGenService.TokenizeLine(project, document, (line * 1<Line1>))
+                   |> List.map (fun tokenInfo -> line * 1<Line1>, tokenInfo)
+    }
+
+    lines
+    |> Seq.tryFind (fun (line1, tokenInfo) ->
+        if range.StartLine = range.EndLine then
+            tokenInfo.LeftColumn >= range.StartColumn &&
+            tokenInfo.RightColumn < range.EndColumn &&
+            predicate tokenInfo
+        elif range.StartLine = line1 then
+            tokenInfo.LeftColumn >= range.StartColumn &&
+            predicate tokenInfo
+        elif line1 = range.EndLine then
+            tokenInfo.RightColumn < range.EndColumn &&
+            predicate tokenInfo
+        else
+            predicate tokenInfo
+    )
+    |> Option.map (fun (line1, tokenInfo) ->
+        tokenInfo, codeGenService.CreateRange(startLine=line1,
+                                              startColumn=tokenInfo.LeftColumn,
+                                              endLine=line1,
+                                              endColumn=tokenInfo.RightColumn + 1)
+    )
+
+let tryFindBarTokenInRange
+    (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
+    (range: 'Range) (document: IDocument) =
+    tryFindTokenInRange codeGenService project range document
+        (fun tokenInfo -> tokenInfo.TokenName = "BAR")
+
+let tryGetRangeBetweenWithAndFirstClause (codeGenService: ICodeGenerationService<_, _, 'Range>) matchExpr =
+    maybe {
+        let! fstClause =
+            match matchExpr.Clauses with
+            | hd :: _ -> Some hd
+            | _ -> None
+
+        let range = unionRanges matchExpr.MatchWithRange.EndRange fstClause.Range.StartRange
+        return codeGenService.CreateRange(range.StartLine * 1<Line1>,
+                                          range.StartColumn,
+                                          range.EndLine * 1<Line1>,
+                                          range.EndColumn)
+    }
+
+let getInsertionParams codeGenService project document (matchExpr: MatchExpr) =
+    let barTokenFindResult =
+        maybe {
+            let! rangeBetweenWithAndClause =
+                tryGetRangeBetweenWithAndFirstClause codeGenService matchExpr
+            return! tryFindBarTokenInRange codeGenService project rangeBetweenWithAndClause document
+        }
+
+    match barTokenFindResult, matchExpr.Clauses with
+    | Some(_, tokenRange), _ ->
+        // Before first clause's '|'
+        { InsertionPos = Pos.fromZ (int tokenRange.StartLine - 1) tokenRange.StartColumn
+          FirstClauseStartsWithPipe = true }
+    | None, [] -> 
+        // After 'with' keyword
+        { InsertionPos = Pos.fromZ (matchExpr.MatchWithRange.EndLine - 1)
+                                   (matchExpr.MatchWithRange.EndColumn)
+          FirstClauseStartsWithPipe = true }
+    | None, fstClause :: _ ->
+        // Before first clause, which doesn't start by '|'
+        { InsertionPos = Pos.fromZ (fstClause.Range.StartLine - 1)
+                                   (fstClause.Range.StartColumn)
+          FirstClauseStartsWithPipe = false }
+
+let getIndentValue (matchExpr: MatchExpr) =
+    matchExpr.MatchWithRange.StartColumn
+
+let tryFindMatchCaseInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! matchExpr = tryFindMatchExprInBufferAtPos codeGenService project pos document
-        let insertionPos = getInsertionPos matchExpr
+        let insertionParams = getInsertionParams codeGenService project document matchExpr
 
-        return matchExpr, insertionPos
+        return matchExpr, insertionParams
     }
 
 let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
-        let! matchExpr, insertionPos = tryFindMatchCaseGenerationParamsAtPos codeGenService project pos document
+        let! matchExpr, insertionParams = tryFindMatchCaseInsertionParamsAtPos codeGenService project pos document
         let! symbolRange, _symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 
         match symbolUse.Symbol with
         | :? FSharpUnionCase as case when case.ReturnType.TypeDefinition.IsFSharpUnion ->
-            return! Some (symbolRange, matchExpr, case.ReturnType.TypeDefinition, insertionPos) |> liftMaybe
+            return! Some (symbolRange, matchExpr, case.ReturnType.TypeDefinition, insertionParams) |> liftMaybe
         | :? FSharpEntity as entity when entity.IsFSharpUnion ->
-            return! Some (symbolRange, matchExpr, entity, insertionPos) |> liftMaybe
+            return! Some (symbolRange, matchExpr, entity, insertionParams) |> liftMaybe
         | _ ->
             return! None |> liftMaybe
     }

@@ -65,6 +65,12 @@ type Range = {
     EndColumn: int
 }
 with
+    interface IRange with
+        member x.EndColumn: int = x.EndColumn
+        member x.EndLine: int<Line1> = x.EndLine
+        member x.StartColumn: int = x.StartColumn
+        member x.StartLine: int<Line1> = x.StartLine
+
     static member FromSymbol(symbol: Symbol) =
         let startLine, startColumn, endLine, endColumn = symbol.Range
         { StartLine = LanguagePrimitives.Int32WithMeasure startLine
@@ -85,6 +91,17 @@ type MockDocument(src: string) =
 
 type CodeGenerationTestService() =
     interface ICodeGenerationService<ProjectOptions, pos, Range> with
+        member x.CreateRange(startLine: int<Line1>, startColumn: int, endLine: int<Line1>, endColumn: int): Range = 
+            { StartLine = startLine
+              StartColumn = startColumn
+              EndLine = endLine
+              EndColumn = endColumn }
+        
+        member x.TokenizeLine(_project, document: IDocument, line1: int<Line1>): TokenInformation list = 
+                let line0 = int line1 - 1 
+                let line = document.GetLineText1(line1)
+                Lexer.tokenizeLine (document.GetText()) args line0 line Lexer.queryLexState
+        
         member x.GetSymbolAtPosition(_project, snapshot, pos) =
             let lineText = snapshot.GetLineText0 pos.Line0
             let src = snapshot.GetText()
@@ -141,19 +158,25 @@ let tryFindUnionTypeDefinition (pos: pos) document =
     |> Async.RunSynchronously
 
 let tryFindMatchCaseGenerationParam pos document =
-    tryFindMatchCaseGenerationParamsAtPos codeGenService project pos document
+    tryFindMatchCaseInsertionParamsAtPos codeGenService project pos document
     |> Async.RunSynchronously
+
+let tokenizeLine (document: IDocument) (lineIdx1: int<Line1>) =
+    let lineIdx0 = int lineIdx1 - 1 
+    let line = document.GetLineText1(lineIdx1)
+    Lexer.tokenizeLine (document.GetText()) args (lineIdx0) line Lexer.queryLexState
 
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let unionTypeDefFromPos = tryFindUnionTypeDefinition caretPos document
     match unionTypeDefFromPos with
     | None -> src
-    | Some(range, matchExpr, entity, insertionPos) ->
-        let indentValue = getIndentValue matchExpr
+    | Some(range, matchExpr, entity, insertionParams) ->
+//        let indentValue = getIndentValue matchExpr
+        let insertionPos = insertionParams.InsertionPos
         let insertColumn = insertionPos.Column
         let caseValue = "failwith \"\""
-        let stub = UnionMatchCaseGenerator.formatMatchExpr indentValue caseValue matchExpr entity
+        let stub = UnionMatchCaseGenerator.formatMatchExpr insertionParams caseValue matchExpr entity
         let srcLines = srcToLineArray src
         let insertLine0 = insertionPos.Line - 1
         let curLine = srcLines.[insertLine0]
@@ -172,6 +195,27 @@ let insertCasesFromPos caretPos src =
 // TODO: dedup from RecordStubGeneratorTests.fs
 let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
+
+
+
+do
+    """
+type Union = Case1
+
+let f union =
+    match union with
+    | Case1 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 6)
+//    |> (fun document ->
+//        maybe {
+//            let! range = tryGetRangeBetweenWithAndFirstClause (Pos.fromZ 5 6) document
+//            return! tryFindTokenInRange
+//                        range
+//                        (fun tokenInfo -> tokenInfo.TokenName = "BAR")
+//                        document
+//        }
+//    )
+    |> ignore
 
 [<Test>]
 let ``single union match case generation when the unique case is written`` () =
@@ -225,7 +269,7 @@ let f union =
     Case1 -> ()
     | Case2 -> ()"""
 
-[<Test; Ignore("Activate when it can handle pipe before first match clause")>]
+[<Test>]
 let ``union match case generation when first clause doesn't start with '|'`` () =
     """
 type Union = Case1 | Case2
