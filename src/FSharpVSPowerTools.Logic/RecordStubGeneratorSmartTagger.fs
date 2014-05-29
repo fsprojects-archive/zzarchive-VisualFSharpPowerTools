@@ -32,8 +32,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     vsLanguageService: VSLanguageService,
                                     serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
-    let mutable currentWord = None
-    let mutable recordDefinition: (SnapshotSpan * _ * _ * _) option = None
+    let mutable currentWord: SnapshotSpan option = None
+    let mutable recordDefinition = None
 
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
 
@@ -41,38 +41,45 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
     let updateAtCaretPosition() =
-        match buffer.GetSnapshotPoint view.Caret.Position, recordDefinition with
-        | Some point, Some (word, _, _, _) when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
+        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+        | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
         | _ ->
-            asyncMaybe {
-                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument() |> liftMaybe
-                let! project = ProjectProvider.createForDocument doc |> liftMaybe
-                let vsDocument = VSDocument(doc, point.Snapshot)
-                let! symbolRange, recordExpression, recordDefinition, insertionPos =
-                    tryGetRecordDefinitionFromPos codeGenService project point vsDocument
-                let newWord = symbolRange
+            let res =
+                maybe {
+                    let! point = buffer.GetSnapshotPoint view.Caret.Position
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let! doc = dte.GetActiveDocument()
+                    let! project = ProjectProvider.createForDocument doc
+                    let! word, _ = vsLanguageService.GetSymbol(point, project) 
+                    return point, doc, project, word
+                }
+            match res with
+            | Some (point, doc, project, newWord) ->
+                let wordChanged = 
+                    match currentWord with
+                    | None -> true
+                    | Some oldWord -> newWord <> oldWord
+                if wordChanged then
+                    asyncMaybe {
+                        let vsDocument = VSDocument(doc, point.Snapshot)
+                        let! symbolRange, recordExpression, recordDefinition, insertionPos =
+                            tryGetRecordDefinitionFromPos codeGenService project point vsDocument
+                        let newWord = symbolRange
 
-                // Recheck cursor position to ensure it's still in new word
-                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-                if point.InSpan newWord then
-                    return! Some(newWord, recordExpression, recordDefinition, insertionPos)
-                            |> liftMaybe
-                else
-                    return! liftMaybe None
-            }
-            |> Async.map (fun result -> 
-                let changed =
-                    match recordDefinition, result, currentWord with
-                    | None, None, _ -> false
-                    | _, Some(newWord, _, _, _), Some oldWord -> newWord <> oldWord
-                    | _ -> true
-                recordDefinition <- result
-                if changed then
-                    let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                    tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
-            |> Async.StartImmediate
+                        // Recheck cursor position to ensure it's still in new word
+                        let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                        if point.InSpan newWord then
+                            return! Some (recordExpression, recordDefinition, insertionPos) |> liftMaybe
+                        else
+                            return! liftMaybe None
+                    }
+                    |> Async.map (fun result -> 
+                        recordDefinition <- result
+                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                    |> Async.StartImmediate
+                    currentWord <- Some newWord
+            | _ -> ()
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)
@@ -122,8 +129,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     interface ITagger<RecordStubGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             seq {
-                match recordDefinition with
-                | Some (word, expression, entity, insertionPos) when shouldGenerateRecordStub expression entity ->
+                match currentWord, recordDefinition with
+                | Some word, Some (expression, entity, insertionPos) when shouldGenerateRecordStub expression entity ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<_>(span, 
                                      RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
