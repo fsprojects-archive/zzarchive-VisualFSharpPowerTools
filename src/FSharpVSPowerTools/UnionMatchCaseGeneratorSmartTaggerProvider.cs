@@ -23,9 +23,6 @@ namespace FSharpVSPowerTools
         private IServiceProvider serviceProvider = null;
 
         [Import]
-        private IEditorOptionsFactoryService editorOptionsFactory = null;
-
-        [Import]
         private ITextUndoHistoryRegistry undoHistoryRegistry = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
