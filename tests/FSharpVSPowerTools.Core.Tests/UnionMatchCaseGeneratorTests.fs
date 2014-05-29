@@ -378,6 +378,38 @@ let f u =
     match u with
     | Case1, Case2 -> ()"""
 
+[<Test; Ignore("Reactivate when capable of identifying '::' pattern")>]
+let ``union match case generation is inactive on lists`` () =
+    """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | Case1 :: [Case1] -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 7)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | Case1 :: [Case1] -> ()"""
+
+[<Test>]
+let ``union match case generation is inactive on arrays`` () =
+    """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | [|Case1|] -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 8)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | [|Case1|] -> ()"""
+
 [<Test>]
 let ``generate identifier names when a union field has one`` () =
     """
