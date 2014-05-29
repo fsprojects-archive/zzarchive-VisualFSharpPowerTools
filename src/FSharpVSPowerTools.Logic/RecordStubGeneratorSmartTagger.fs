@@ -33,7 +33,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     serviceProvider: IServiceProvider) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord = None
-    let mutable recordDefinition = None
+    let mutable recordDefinition: (SnapshotSpan * _ * _ * _) option = None
 
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
 
@@ -41,38 +41,41 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
     let updateAtCaretPosition() =
-        asyncMaybe {
-            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetActiveDocument() |> liftMaybe
-            let! project = ProjectProvider.createForDocument doc |> liftMaybe
-            let vsDocument = VSDocument(doc, point.Snapshot)
-            let! symbolRange, recordExpression, recordDefinition, insertionPos =
-                tryGetRecordDefinitionFromPos codeGenService project point vsDocument
-            let newWord = symbolRange
+        match buffer.GetSnapshotPoint view.Caret.Position, recordDefinition with
+        | Some point, Some (word, _, _, _) when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
+        | _ ->
+            asyncMaybe {
+                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let! doc = dte.GetActiveDocument() |> liftMaybe
+                let! project = ProjectProvider.createForDocument doc |> liftMaybe
+                let vsDocument = VSDocument(doc, point.Snapshot)
+                let! symbolRange, recordExpression, recordDefinition, insertionPos =
+                    tryGetRecordDefinitionFromPos codeGenService project point vsDocument
+                let newWord = symbolRange
 
-            // Recheck cursor position to ensure it's still in new word
-            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-            if point.InSpan newWord then
-                return! Some(newWord, recordExpression, recordDefinition, insertionPos)
-                        |> liftMaybe
-            else
-                return! liftMaybe None
-        }
-        |> Async.map (fun result -> 
-            let changed =
-                match recordDefinition, result, currentWord with
-                | None, None, _ -> false
-                | _, Some(newWord, _, _, _), Some oldWord -> newWord <> oldWord
-                | _ -> true
-            recordDefinition <- result
-            if changed then
-                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
-        |> Async.StartImmediate
+                // Recheck cursor position to ensure it's still in new word
+                let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                if point.InSpan newWord then
+                    return! Some(newWord, recordExpression, recordDefinition, insertionPos)
+                            |> liftMaybe
+                else
+                    return! liftMaybe None
+            }
+            |> Async.map (fun result -> 
+                let changed =
+                    match recordDefinition, result, currentWord with
+                    | None, None, _ -> false
+                    | _, Some(newWord, _, _, _), Some oldWord -> newWord <> oldWord
+                    | _ -> true
+                recordDefinition <- result
+                if changed then
+                    let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                    tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+            |> Async.StartImmediate
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    200us, updateAtCaretPosition)
+                                    500us, updateAtCaretPosition)
 
     // Check whether the record has been fully defined
     let shouldGenerateRecordStub (recordExpr: RecordExpr) (entity: FSharpEntity) =
