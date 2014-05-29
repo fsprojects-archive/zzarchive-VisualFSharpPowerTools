@@ -883,4 +883,11 @@ module InterfaceTests =
               member x.GetEnumerator(): System.Collections.IEnumerator = 
                   raise (System.NotImplementedException())
  }
-     
+ 
+ module AdditionalOperators =
+    let (@) x y = ()
+    let _ = 1 @ 2
+    let (@@) x y = ()
+    let _ = 1 @@ 2
+    let (@.@) x y = ()
+    let _ = 1 @.@ 2

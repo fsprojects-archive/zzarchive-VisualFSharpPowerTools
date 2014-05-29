@@ -153,13 +153,27 @@ let ``should find usages of operators containing dots``() =
         [ (701, 10, 13); (702, 6, 9); (702, 12, 15); (704, 14, 17); (704, 21, 24); (704, 27, 30) ]
 
 [<Test>]
+let ``should find usages of operators containing 'at' symbol``() =
+    checkSymbolUsage
+        887 10 "    let (@) x y = ()"
+        [ (887, 9, 10); (888, 14, 15) ]
+
+    checkSymbolUsage
+        889 10 "    let (@@) x y = ()"
+        [ (889, 9, 11); (890, 14, 16) ]
+
+    checkSymbolUsage
+        891 10 "    let (@.@) x y = ()"
+        [ (891, 9, 12); (892, 14, 17) ]
+
+[<Test>]
 let ``should find fully qualified operator``() =
     checkSymbolUsage 
         728 9 "    M.N.(+.) 1 2" 
         [ (726, 17, 19); (728, 4, 11) ]
 
 [<Test>]
-let ``should find usages of symbols if where are operators containing dots on the same line``() =
+let ``should find usages of symbols if there are operators containing dots on the same line``() =
     let line = "    let x = 1 >>. ws >>. 2 >>. ws"
     let usages = [ (703, 8, 10); (704, 18, 20); (704, 31, 33) ]
     checkSymbolUsage 704 18 line usages

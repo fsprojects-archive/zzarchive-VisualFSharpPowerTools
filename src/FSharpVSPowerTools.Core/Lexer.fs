@@ -87,7 +87,12 @@ module Lexer =
         let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) token =
             match token.TokenName with
             | "QUOTE" -> GenericTypeParameterPrefix
-            | "INFIX_AT_HAT_OP" -> StaticallyResolvedTypeParameterPrefix
+            | "INFIX_AT_HAT_OP" ->
+                 // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.
+                 // We have to check the char itself to distingush one from another.
+                 if token.FullMatchedLength = 1 && lineStr.[token.LeftColumn] = '^' then 
+                    StaticallyResolvedTypeParameterPrefix
+                 else Other
             | _ -> Other
     
         // Operators: Filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
