@@ -81,11 +81,23 @@ module ProjectProvider =
             | Some(_, flags) -> flags
             | _ -> [||]
 
-        let getActiveConfigProperty (tag: string) =
-            let prop = try project.ConfigurationManager.ActiveConfiguration.Properties.[tag] with _ -> null
-            match prop with
-            | null -> null
-            | _ -> try prop.Value.ToString() with _ -> null
+        static let getActiveConfigProperty = 
+            let cache = System.Collections.Generic.Dictionary()
+            fun (project: Project, tag: string) ->
+                let key = project.FullName, tag
+                match cache.TryGetValue key with
+                | true, value -> 
+                    //debug "[Memoize] (%A) -> cached value %A" key value
+                    value
+                | _ ->
+                    let prop = try project.ConfigurationManager.ActiveConfiguration.Properties.[tag] with _ -> null
+                    let value = 
+                        match prop with
+                        | null -> null
+                        | _ -> try prop.Value.ToString() with _ -> null
+                    cache.[key] <- value
+                    //debug "[Memoize] (%A) -> NEW value %A" key value
+                    value
 
         let targetFramework() =
             match getProperty "TargetFrameworkMoniker" with
@@ -113,7 +125,7 @@ module ProjectProvider =
             member x.CompilerOptions = compilerOptions()
             member x.SourceFiles = sourceFiles()
             member x.FullOutputFilePath = 
-                Path.Combine (getProperty "FullPath", getActiveConfigProperty "OutputPath", getProperty "OutputFileName")
+                Path.Combine (getProperty "FullPath", getActiveConfigProperty (project, "OutputPath"), getProperty "OutputFileName")
                 |> Path.GetFullPathSafe
             
             member x.GetReferencedProjects() =
