@@ -378,6 +378,30 @@ let f u =
     match u with
     | Case1, Case2 -> ()"""
 
+[<Test>]
+let ``generate identifier names when a union field has one`` () =
+    """
+type Union =
+    | Case1 of arg1:int * int * arg3:string
+    | Case2 of arg1:int * arg2:string
+    | Case3
+
+let f x =
+    match x with
+    | Case3 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 8 6)
+    |> assertSrcAreEqual """
+type Union =
+    | Case1 of arg1:int * int * arg3:string
+    | Case2 of arg1:int * arg2:string
+    | Case3
+
+let f x =
+    match x with
+    | Case1(arg1, _, arg3) -> failwith ""
+    | Case2(arg1, arg2) -> failwith ""
+    | Case3 -> ()"""
+
 
 // Union match case without argument patterns
 //// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range

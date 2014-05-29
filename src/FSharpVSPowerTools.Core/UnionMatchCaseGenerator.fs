@@ -1,9 +1,10 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.UnionMatchCaseGenerator
 
 open System
-open System.IO
-open System.Diagnostics
 open System.Collections.Generic
+open System.Diagnostics
+open System.IO
+open System.Text.RegularExpressions
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
@@ -500,6 +501,8 @@ let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'P
             return! None |> liftMaybe
     }
 
+let private UnnamedFieldRegex = Regex("^Item[\d+]?$", RegexOptions.Compiled)
+
 let private formatCase (ctxt: Context) writePipeBefore (case: FSharpUnionCase) =
     let writer = ctxt.Writer
     let name = 
@@ -514,12 +517,14 @@ let private formatCase (ctxt: Context) writePipeBefore (case: FSharpUnionCase) =
             ""
         else
             [|
-                yield "(_"
-                for _ in 1 .. unionCaseFieldsCount - 1 do
-                    yield ", _"
-                yield ")"
+                for field in case.UnionCaseFields ->
+                    if UnnamedFieldRegex.IsMatch field.Name then
+                        "_"
+                    else
+                        field.Name
             |]
-            |> String.Concat
+            |> String.concat ", "
+            |> sprintf "(%s)"
 
     if writePipeBefore then
         writer.WriteLine("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
