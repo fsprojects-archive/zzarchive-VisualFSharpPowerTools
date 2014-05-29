@@ -158,3 +158,4 @@ module AnonymousGenericParameters =
     let h () : Map<_,  'b> = new Map<_,  'b>([])
     let i () : Map<'a, 'b> = new Map<'a, 'b>([])
     let j () : System.Collections.Generic.List<_> = new System.Collections.Generic.List<_>()
+type ArrayAlias = byte[]

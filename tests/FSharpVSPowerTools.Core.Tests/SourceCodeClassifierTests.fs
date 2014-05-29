@@ -331,3 +331,7 @@ let ``anonymous generic parameters``() =
     checkCategories 158 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
     checkCategories 159 [ Function, 8, 9; ReferenceType, 15, 18; ReferenceType, 33, 36 ]
     checkCategories 160 [ Function, 8, 9; ReferenceType, 42, 46; ReferenceType, 83, 87 ]
+
+[<Test; Ignore "FCS 0.0.48 restriction">]
+let ``array alias``() =
+    checkCategories 161 [ ReferenceType, 5, 15; ValueType, 18, 22 ]
