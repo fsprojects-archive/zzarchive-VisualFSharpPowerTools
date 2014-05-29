@@ -124,16 +124,6 @@ let tryGetWrittenCases (pos: pos) (src: string) =
     |> Option.map (getWrittenCases)
     |> Option.getOrElse Set.empty
 
-let e =
-    """
-type Union = Case1 | Case2
-
-let f u =
-    match u with
-    | Case1 & Case2 -> ()"""
-    |> asDocument
-    |> tryFindMatchExpr (Pos.fromZ 5 6)
-
 module ClausesAnalysisTests =
     [<Test>]
     let ``OR patterns with constants and identifiers`` () =
@@ -371,6 +361,23 @@ let f union2 =
         match union1 with
         | Case1 -> failwith ""
         | Case2 -> ()"""
+
+[<Test>]
+let ``union match case generation is inactive on tuples`` () =
+    """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | Case1, Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 7)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | Case1, Case2 -> ()"""
+
 
 // Union match case without argument patterns
 //// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range
