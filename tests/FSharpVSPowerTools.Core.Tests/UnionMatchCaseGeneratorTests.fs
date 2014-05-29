@@ -94,7 +94,6 @@ let insertCasesFromPos caretPos src =
     match unionTypeDefFromPos with
     | None -> src
     | Some(range, matchExpr, entity, insertionParams) ->
-//        let indentValue = getIndentValue matchExpr
         let insertionPos = insertionParams.InsertionPos
         let insertColumn = insertionPos.Column
         let caseValue = "failwith \"\""
@@ -125,6 +124,15 @@ let tryGetWrittenCases (pos: pos) (src: string) =
     |> Option.map (getWrittenCases)
     |> Option.getOrElse Set.empty
 
+let e =
+    """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | Case1 & Case2 -> ()"""
+    |> asDocument
+    |> tryFindMatchExpr (Pos.fromZ 5 6)
 
 module ClausesAnalysisTests =
     [<Test>]

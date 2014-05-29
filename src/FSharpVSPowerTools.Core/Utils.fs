@@ -33,6 +33,12 @@ module Option =
         function
         | Some x -> Some x
         | None -> v
+
+    /// Gets the option if Some x, otherwise try to get another value
+    let inline orTry f =
+        function
+        | Some x -> Some x
+        | None -> f()
     
 [<RequireQualifiedAccess>]
 module Async =

@@ -35,6 +35,35 @@ type private Context = {
     RequireQualifiedAccess: bool
 }
 
+let clauseIsCandidateForCodeGen (clause: SynMatchClause) =
+    let rec patIsCandidate (pat: SynPat) =
+        match pat with
+        | SynPat.Paren(innerPat, _)
+        | SynPat.Attrib(innerPat, _, _) -> patIsCandidate innerPat
+        | SynPat.Const(_, _) -> true
+        | SynPat.Wild(_) -> true
+        // TODO: check if we have to handle these cases
+        | SynPat.Typed(_, _, _)
+        | SynPat.Named(_, _, _, _, _)
+        | SynPat.OptionalVal(_, _) ->
+            false
+        | SynPat.Or(leftPat, rightPat, _) -> patIsCandidate leftPat && patIsCandidate rightPat
+        | SynPat.Ands(innerPatList, _) -> innerPatList
+                                          |> List.exists (patIsCandidate >> not)
+                                          |> not
+        | SynPat.LongIdent(_, _, _, _, _, _) -> true
+        | SynPat.Tuple(_, _) -> false
+        | SynPat.ArrayOrList(_, _, _) -> false
+        | SynPat.Record(_, _) -> false
+        | SynPat.Null(_) -> false
+        | SynPat.IsInst(_, _) -> false
+        | SynPat.QuoteExpr(_, _) -> false
+        | SynPat.DeprecatedCharRange(_, _, _) -> false
+        | SynPat.InstanceMember(_, _, _, _, _) -> false
+        | SynPat.FromParseError(_, _) -> false
+
+    match clause with
+    | Clause(pat, _, _, _, _) -> patIsCandidate pat
 
 let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
     let inline getIfPosInRange range f =
@@ -166,14 +195,17 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.Match(sequencePointInfoForBinding, synExpr, synMatchClauseList, _, _range) as matchExpr ->
                 walkExpr synExpr
                 |> Option.orElse (synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e))
-                |> Option.orElse (
-                    match sequencePointInfoForBinding with
-                    | SequencePointAtBinding range ->
-                        Some { MatchWithRange = range
-                               Expr = matchExpr
-                               MatchedExpr = synExpr
-                               Clauses = synMatchClauseList }
-                    | _ -> None
+                |> Option.orTry (fun () ->
+                    if List.exists (not << clauseIsCandidateForCodeGen) synMatchClauseList then
+                        None
+                    else
+                        match sequencePointInfoForBinding with
+                        | SequencePointAtBinding range ->
+                            Some { MatchWithRange = range
+                                   Expr = matchExpr
+                                   MatchedExpr = synExpr
+                                   Clauses = synMatchClauseList }
+                        | _ -> None
                 )
 
             | SynExpr.App(_exprAtomicFlag, _isInfix, synExpr1, synExpr2, _range) ->
