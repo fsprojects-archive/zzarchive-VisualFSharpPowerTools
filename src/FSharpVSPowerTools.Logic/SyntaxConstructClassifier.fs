@@ -120,12 +120,11 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             spans
         | None -> [||]
 
-
     interface IClassifier with
         // it's called for each visible line of code
-        member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) = 
+        member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
             try getClassificationSpans snapshotSpan :> _
             with e -> Logging.logException e; upcast [||]
-        
+
         [<CLIEvent>]
         member x.ClassificationChanged = classificationChanged.Publish

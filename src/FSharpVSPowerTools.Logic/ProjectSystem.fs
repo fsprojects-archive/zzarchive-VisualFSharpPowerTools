@@ -71,6 +71,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 
+type Expr = System.Linq.Expressions.Expression
 exception AssemblyMissingException of string
 
 [<Export>]
@@ -89,11 +90,26 @@ type FSharpLanguageService [<ImportingConstructor>]
                        logException ex
                        raise ex
 
-    let vsTextColorStateType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
-    let colorStateLookupType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
+    let staticFlags = BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static
+
+    let getColorStateAtStartOfLine = lazy (
+        let ty = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.VsTextColorState")
+        let m = ty.GetMethod ("GetColorStateAtStartOfLine", staticFlags)
+        let stateParam = Expr.Parameter typeof<IVsTextColorState>
+        let lineParam = Expr.Parameter typeof<int>
+        let lambda = Expr.Lambda<Func<IVsTextColorState, int, int>>(Expr.Call(m, stateParam, lineParam), stateParam, lineParam)
+        lambda.Compile().Invoke
+    )
+    
+    let lexStateOfColorState = lazy (
+        let ty = asm.Value.GetType("Microsoft.VisualStudio.FSharp.LanguageService.ColorStateLookup")
+        let m = ty.GetMethod ("LexStateOfColorState", staticFlags)
+        let lineParam = Expr.Parameter typeof<int>
+        let lambda = Expr.Lambda<Func<int, int64>>(Expr.Call(m, lineParam), lineParam)
+        lambda.Compile().Invoke
+    )
 
     member x.GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
-        vsTextColorStateType.Value?GetColorStateAtStartOfLine(vsColorState, line)
+        getColorStateAtStartOfLine.Value(vsColorState, line)
 
-    member x.LexStateOfColorState(colorState: int): int64 =
-        colorStateLookupType.Value?LexStateOfColorState(colorState)
+    member x.LexStateOfColorState(colorState: int): int64 = lexStateOfColorState.Value colorState
