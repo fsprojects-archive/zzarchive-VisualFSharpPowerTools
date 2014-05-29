@@ -10,6 +10,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
@@ -55,15 +56,15 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
             else span)
         |> Seq.toList
 
-    let doUpdate (currentRequest: SnapshotPoint, sym, newWord: SnapshotSpan, newWordSpans: seq<SnapshotSpan>, 
+    let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan, newWordSpans: seq<SnapshotSpan>, 
                   fileName: string, projectProvider: IProjectProvider) =
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.GetFSharpSymbolUse (newWord, sym, fileName, projectProvider, AllowStaleResults.MatchingSource)
+                    let! res = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, fileName, projectProvider, AllowStaleResults.MatchingSource)
                     match res with
                     | Some (_, checkResults) ->
-                        let! results = vsLanguageService.FindUsagesInFile (newWord, sym, checkResults)
+                        let! results = vsLanguageService.FindUsagesInFile (newWord, symbol, checkResults)
                         let refSpans =
                             results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans fileName lastIdent refs)
 
@@ -81,41 +82,37 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                 with e ->
                     logException e
                     synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
-            } |> Async.Start
-
-    let updateWordAdornments() =
-        let currentRequest = requestedPoint
-        // Find all words in the buffer like the one the caret is on
-
-        maybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetActiveDocument()
-            let! project = ProjectProvider.createForDocument doc
-            let! newWord, symbol = vsLanguageService.GetSymbol(currentRequest, project)
-            // If this is the same word we currently have, we're done (e.g. caret moved within a word).
-            match currentWord with
-            | Some cw when cw = newWord -> ()
-            | _ ->
-                // Find the new spans
-                let newSpans = 
-                    FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
-                    |> textSearchService.FindAll
-                // If we are still up-to-date (another change hasn't happened yet), do a real update
-                doUpdate (currentRequest, symbol, newWord, newSpans, doc.FullName, project) }
-        |> function
-           | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
-           | _ -> ()
+            }
 
     let updateAtCaretPosition () =
-        match buffer.GetSnapshotPoint view.Caret.Position with
-        | Some point ->
-            // If the new cursor position is still within the current word (and on the same snapshot),
-            // we don't need to check it.
-            match currentWord with
-            | Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
-            | _ ->
+        // If the new cursor position is still within the current word (and on the same snapshot),
+        // we don't need to check it.
+        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+        | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
+        | Some point, _ ->
+            asyncMaybe {
                 requestedPoint <- point
-                updateWordAdornments()
+                let currentRequest = requestedPoint
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let! doc = dte.GetActiveDocument() |> liftMaybe
+                let! project = ProjectProvider.createForDocument doc |> liftMaybe
+                match vsLanguageService.GetSymbol(currentRequest, project) with
+                | Some (newWord, symbol) ->
+                    // If this is the same word we currently have, we're done (e.g. caret moved within a word).
+                    match currentWord with
+                    | Some cw when cw = newWord -> ()
+                    | _ ->
+                        // Find the new spans
+                        let newSpans = 
+                            FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
+                            |> textSearchService.FindAll
+                        // If we are still up-to-date (another change hasn't happened yet), do a real update
+                        return! doUpdate (currentRequest, symbol, newWord, newSpans, doc.FullName, project) |> liftAsync
+                | None ->
+                    return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+            } 
+            |> Async.map (Option.iter id)
+            |> Async.Start
         | _ -> ()
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
