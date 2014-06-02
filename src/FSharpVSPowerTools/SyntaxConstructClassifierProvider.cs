@@ -322,9 +322,11 @@ namespace FSharpVSPowerTools
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
 
-        
         [Import]
         private ITextDocumentFactoryService textDocumentFactoryService = null;
+
+        [Import(typeof(ProjectFactory))]
+        private ProjectFactory projectFactory = null;
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
@@ -334,7 +336,8 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
                 return buffer.Properties.GetOrCreateSingletonProperty(() =>
-                    new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider));
+                    new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider,
+                                                  projectFactory));
 
             return null;
         }

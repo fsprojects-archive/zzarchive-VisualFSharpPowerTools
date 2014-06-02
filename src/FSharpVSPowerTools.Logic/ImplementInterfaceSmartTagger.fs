@@ -31,7 +31,8 @@ type InterfaceState =
 
 type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer, 
                                    editorOptionsFactory: IEditorOptionsFactoryService, textUndoHistory: ITextUndoHistory,
-                                   vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self =
+                                   vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
+                                   projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable state = None
@@ -70,7 +71,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetActiveDocument()
-                    let! project = ProjectProvider.createForDocument doc
+                    let! project = projectFactory.CreateForDocument doc
                     let! word, symbol = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word, symbol
                 }

@@ -24,7 +24,8 @@ type DocumentState =
       File: string
       Project: IProjectProvider }
 
-type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider) =
+type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
+                         projectFactory: ProjectFactory) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 
@@ -34,7 +35,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
-                let! project = ProjectProvider.createForDocument doc
+                let! project = projectFactory.CreateForDocument doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
             }
         state <- s
@@ -86,7 +87,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let symbolDeclarationLocation = ProjectProvider.getSymbolUsageScope fsSymbolUse.Symbol dte state.File
+                    let symbolDeclarationLocation = projectFactory.GetSymbolUsageScope fsSymbolUse.Symbol dte state.File
 
                     match symbolDeclarationLocation with
                     | Some scope  ->
@@ -102,7 +103,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                                 match scope with
                                 | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
                                 | SymbolDeclarationLocation.Projects declarationProjects -> 
-                                    let dependentProjects = ProjectProvider.getDependentProjects dte declarationProjects
+                                    let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
                                     vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects)
                             let usages =
                                 results

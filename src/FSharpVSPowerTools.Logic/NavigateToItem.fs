@@ -40,7 +40,8 @@ type NavigateToItemProviderFactory
         [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
         fsharpLanguageService: VSLanguageService,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
-        vsCompositionService: ICompositionService
+        vsCompositionService: ICompositionService,
+        projectFactory: ProjectFactory
     ) =
     
     let dte = serviceProvider.GetService<DTE, SDTE>()
@@ -70,7 +71,8 @@ type NavigateToItemProviderFactory
                 provider <- null
                 false
             else
-                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory)
+                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory,
+                                                       projectFactory)
                 true
 and
     NavigateToItemProvider
@@ -78,7 +80,8 @@ and
             openDocumentsTracker: OpenDocumentsTracker,
             serviceProvider: IServiceProvider,
             fsharpLanguageService: VSLanguageService,
-            itemDisplayFactory: INavigateToItemDisplayFactory
+            itemDisplayFactory: INavigateToItemDisplayFactory,
+            projectFactory: ProjectFactory
         ) = 
     let processProjectsCTS = new CancellationTokenSource()
     let mutable searchCTS = CancellationTokenSource.CreateLinkedTokenSource(processProjectsCTS.Token)
@@ -87,7 +90,7 @@ and
         lazy
             let listFSharpProjectsInSolution() = 
                 serviceProvider.GetService<DTE, SDTE>().ListFSharpProjectsInSolution() 
-                |> List.map ProjectProvider.createForProject
+                |> List.map projectFactory.CreateForProject
 
             let openedDocuments = 
                 openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path, doc)) -> path, doc.Snapshot.GetText())
@@ -98,7 +101,7 @@ and
                 | [] -> maybe {
                             let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
                             let! doc = dte.GetActiveDocument()
-                            return! ProjectProvider.createForDocument doc }
+                            return! projectFactory.CreateForDocument doc }
                             |> Option.toArray
                 | xs -> List.toArray xs
             

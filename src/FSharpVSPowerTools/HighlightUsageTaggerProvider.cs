@@ -27,6 +27,9 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         private IServiceProvider serviceProvider = null;
 
+        [Import(typeof(ProjectFactory))]
+        private ProjectFactory projectFactory = null;
+
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // Only provide highlighting on the top-level buffer
@@ -35,7 +38,8 @@ namespace FSharpVSPowerTools
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.HighlightUsageEnabled) return null;
 
-            return new HighlightUsageTagger(textView, buffer, textSearchService, fsharpVsLanguageService, serviceProvider) as ITagger<T>;
+            return new HighlightUsageTagger(textView, buffer, textSearchService, fsharpVsLanguageService, serviceProvider,
+                                            projectFactory) as ITagger<T>;
         }
     }
 }

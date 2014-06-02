@@ -24,7 +24,8 @@ type HighlightUsageTag() =
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
 type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchService: ITextSearchService, 
-                          vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self =
+                          vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
+                          projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
@@ -95,7 +96,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                 let currentRequest = requestedPoint
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument() |> liftMaybe
-                let! project = ProjectProvider.createForDocument doc |> liftMaybe
+                let! project = projectFactory.CreateForDocument doc |> liftMaybe
                 match vsLanguageService.GetSymbol(currentRequest, project) with
                 | Some (newWord, symbol) ->
                     // If this is the same word we currently have, we're done (e.g. caret moved within a word).
