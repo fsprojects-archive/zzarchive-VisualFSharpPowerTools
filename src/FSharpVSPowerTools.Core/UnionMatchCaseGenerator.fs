@@ -56,9 +56,7 @@ let clauseIsCandidateForCodeGen (clause: SynMatchClause) =
         | SynPat.OptionalVal(_, _) ->
             false
         | SynPat.Or(leftPat, rightPat, _) -> patIsCandidate leftPat && patIsCandidate rightPat
-        | SynPat.Ands(innerPatList, _) -> innerPatList
-                                          |> List.exists (patIsCandidate >> not)
-                                          |> not
+        | SynPat.Ands(innerPatList, _) -> List.forall patIsCandidate innerPatList
         | SynPat.LongIdent(_, _, _, _, _, _) -> true
         | SynPat.Tuple(_, _) -> false
         | SynPat.ArrayOrList(_, _, _) -> false
@@ -204,9 +202,7 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
                 walkExpr synExpr
                 |> Option.orElse (synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e))
                 |> Option.orTry (fun () ->
-                    if List.exists (not << clauseIsCandidateForCodeGen) synMatchClauseList then
-                        None
-                    else
+                    if List.forall clauseIsCandidateForCodeGen synMatchClauseList then
                         match sequencePointInfoForBinding with
                         | SequencePointAtBinding range ->
                             Some { MatchWithRange = range
@@ -214,6 +210,8 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
                                    MatchedExpr = synExpr
                                    Clauses = synMatchClauseList }
                         | _ -> None
+                    else
+                        None
                 )
 
             | SynExpr.App(_exprAtomicFlag, _isInfix, synExpr1, synExpr2, _range) ->
@@ -316,9 +314,6 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
 let getWrittenCases (matchExpr: MatchExpr) =
-    let trueForAll pred list =
-        List.exists (pred >> not) list = false
-
     let rec checkPattern pat =
         match pat with
         | SynPat.Const(_const, _) -> false
@@ -334,14 +329,12 @@ let getWrittenCases (matchExpr: MatchExpr) =
         | SynPat.DeprecatedCharRange(_, _, _)
         | SynPat.FromParseError(_, _) -> false
 
-        | SynPat.Tuple(innerPatList, _) ->
-            innerPatList
-            |> trueForAll checkPattern
+        | SynPat.Tuple(innerPatList, _) -> List.forall checkPattern innerPatList
             
         | SynPat.Record(recordInnerPatList, _) ->
             recordInnerPatList
             |> List.map (fun (_, innerPat) -> innerPat)
-            |> trueForAll checkPattern
+            |> List.forall checkPattern
 
         | SynPat.OptionalVal(_, _) -> true
         | SynPat.Wild(_) -> true
@@ -353,7 +346,7 @@ let getWrittenCases (matchExpr: MatchExpr) =
     let getIfArgsAreFree constructorArgs func =
         match constructorArgs with
         | SynConstructorArgs.Pats patList ->
-            if trueForAll checkPattern patList then
+            if List.forall checkPattern patList then
                 Some (func())
             else
                 None
@@ -364,7 +357,7 @@ let getWrittenCases (matchExpr: MatchExpr) =
                 |> List.unzip
                 |> (fun (_, pat) -> pat)
 
-            if trueForAll checkPattern patList then
+            if List.forall checkPattern patList then
                 Some (func())
             else
                 None
@@ -452,11 +445,7 @@ let tryFindBarTokenLPosInRange
 
 let tryGetRangeBetweenWithAndFirstClause (matchExpr: MatchExpr) =
     maybe {
-        let! fstClause =
-            match matchExpr.Clauses with
-            | hd :: _ -> Some hd
-            | _ -> None
-
+        let! fstClause = Seq.tryHead matchExpr.Clauses
         return unionRanges matchExpr.MatchWithRange.EndRange fstClause.Range.StartRange
     }
 
