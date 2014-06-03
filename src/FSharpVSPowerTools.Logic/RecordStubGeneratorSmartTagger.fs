@@ -92,14 +92,12 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordExpr: RecordExpr) (insertionPos: _) entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
-        let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let fieldsWritten = recordExpr.FieldExprList
 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
 
         let stub = RecordStubGenerator.formatRecord
                        insertionPos
-                       indentSize
                        "failwith \"Uninitialized field\""
                        entity
                        fieldsWritten
