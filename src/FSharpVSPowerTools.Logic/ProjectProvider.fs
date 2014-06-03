@@ -158,10 +158,10 @@ module ProjectProvider =
                     let refs = referencedProjects.Value
                     let! referencedProjects =
                         refs 
-                        |> List.map (fun p -> async {
+                        |> List.toArray
+                        |> Async.Array.map (fun p -> async {
                             let! opts = p.GetProjectCheckerOptions languageService 
                             return p.FullOutputFilePath, opts })
-                        |> Async.Parallel
                     
                     let opts = languageService.GetProjectCheckerOptions (
                                    projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects) 

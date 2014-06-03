@@ -126,8 +126,8 @@ type VSLanguageService
                 let! currentProjectOptions = getProjectOptions currentProject
                 let! projectsToCheckOptions = 
                     projectsToCheck 
-                    |> List.map getProjectOptions
-                    |> Async.Parallel
+                    |> List.toArray
+                    |> Async.Array.map getProjectOptions
 
                 let! res =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
