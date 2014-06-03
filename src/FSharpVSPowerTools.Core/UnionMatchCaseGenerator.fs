@@ -20,6 +20,13 @@ type MatchExpr = {
     Clauses: SynMatchClause list
 }
 
+[<NoEquality; NoComparison>]
+type MatchLambdaExpr = {
+    FunctionRange: range
+    Expr: SynExpr
+    Clauses: SynMatchClause list
+}
+
 [<NoComparison>]
 type UnionMatchCasesInsertionParams = {
     InsertionPos: pos
@@ -443,7 +450,7 @@ let tryFindBarTokenLPosInRange
     tryFindTokenLPosInRange codeGenService project range document
         (fun tokenInfo -> tokenInfo.TokenName = "BAR")
 
-let tryGetRangeBetweenWithAndFirstClause matchExpr =
+let tryGetRangeBetweenWithAndFirstClause (matchExpr: MatchExpr) =
     maybe {
         let! fstClause =
             match matchExpr.Clauses with
