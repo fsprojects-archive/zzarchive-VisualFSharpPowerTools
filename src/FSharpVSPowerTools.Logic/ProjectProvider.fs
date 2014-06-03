@@ -217,6 +217,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 
+[<Export>]
 type ProjectFactory
     [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
     let dte = serviceProvider.GetService<DTE, SDTE>()

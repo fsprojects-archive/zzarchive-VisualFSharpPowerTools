@@ -18,7 +18,7 @@ type VSLanguageService
      editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: OpenDocumentsTracker,
-     projectFactory: ProjectFactory) =
+     [<Import(typeof<ProjectFactory>)>] projectFactory: ProjectFactory) =
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
     let mutable instance = LanguageService (ignore, FileSystem openDocumentsTracker)
