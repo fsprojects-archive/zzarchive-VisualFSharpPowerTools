@@ -378,8 +378,24 @@ let f u =
     match u with
     | Case1, Case2 -> ()"""
 
-[<Test; Ignore("Reactivate when capable of identifying '::' pattern")>]
+[<Test>]
 let ``union match case generation is inactive on lists`` () =
+    """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | [Case1] -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 7)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | [Case1] -> ()"""
+
+[<Test>]
+let ``union match case generation is inactive on list cons pattern`` () =
     """
 type Union = Case1 | Case2
 
@@ -393,6 +409,22 @@ type Union = Case1 | Case2
 let f u =
     match u with
     | Case1 :: [Case1] -> ()"""
+
+[<Test>]
+let ``union match case generation is inactive on chained list cons pattern`` () =
+    """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | Case1 :: x :: Case2 :: [Case1] -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 5 7)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f u =
+    match u with
+    | Case1 :: x :: Case2 :: [Case1] -> ()"""
 
 [<Test>]
 let ``union match case generation is inactive on arrays`` () =

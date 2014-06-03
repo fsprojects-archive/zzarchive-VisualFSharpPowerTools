@@ -57,6 +57,8 @@ let clauseIsCandidateForCodeGen (clause: SynMatchClause) =
             false
         | SynPat.Or(leftPat, rightPat, _) -> patIsCandidate leftPat && patIsCandidate rightPat
         | SynPat.Ands(innerPatList, _) -> List.forall patIsCandidate innerPatList
+        | SynPat.LongIdent(LongIdentWithDots([ident], []), _, _, _, _, _)
+            when ident.idText = "op_ColonColon" -> false
         | SynPat.LongIdent(_, _, _, _, _, _) -> true
         | SynPat.Tuple(_, _) -> false
         | SynPat.ArrayOrList(_, _, _) -> false
