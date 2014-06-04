@@ -179,7 +179,9 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         | SynExpr.LetOrUse (_, _, bindings, body, _) -> 
             visitBindindgs bindings
             visitExpr body
-        | SynExpr.LetOrUseBang (_, _, _, _, _, body, _) -> visitExpr body
+        | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
+            visitExpr rhsExpr
+            visitExpr body
         | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) -> (!quotationRanges).Add range
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr

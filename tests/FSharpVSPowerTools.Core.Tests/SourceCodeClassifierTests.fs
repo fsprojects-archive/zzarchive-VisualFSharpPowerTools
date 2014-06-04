@@ -276,6 +276,20 @@ let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40
 [<Test>]
 let ``quotation in nested module``() = checkCategories 131 [ Quotation, 12, 19 ]
 
+
+[<Test>]
+let ``quotation inside computation expression``() =
+    checkCategories 166 [ Quotation, 16, 23 ]
+    checkCategories 167 [ Function, 11, 17; Quotation, 18, 25 ]
+    checkCategories 168 [ Function, 17, 20; Quotation, 21, 28 ]
+    checkCategories 170 [ Function, 20, 23; Quotation, 24, 31 ]
+    checkCategories 172 [ Function, 20, 23; Quotation, 24, 31 ]
+    checkCategories 173 [ Function, 12, 19; Quotation, 20, 28 ]
+    checkCategories 174 [ Quotation, 14, 21 ]
+    checkCategories 177 [ Quotation, 19, 26 ]
+    checkCategories 179 [ Function, 20, 23; Quotation, 24, 31 ]
+
+
 [<Test>]
 let ``tuple alias``() = 
     checkCategories 132 [ ReferenceType, 5, 10; ValueType, 13, 16; ReferenceType, 19, 25 ]    
