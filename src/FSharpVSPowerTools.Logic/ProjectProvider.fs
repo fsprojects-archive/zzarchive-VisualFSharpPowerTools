@@ -40,7 +40,7 @@ type private Cache<'k, 'v when 'k: comparison>() =
                     match msg with
                     | Get (key, creator, r) ->
                         match cache |> Map.tryFind key with
-                        | Some value -> 
+                        | Some value ->
                             debug "[Project cache] Return from cache for %A" key
                             r.Reply value
                             cache
@@ -49,7 +49,14 @@ type private Cache<'k, 'v when 'k: comparison>() =
                             debug "[Project cache] Creating new value for %A" key
                             r.Reply value
                             cache |> Map.add key value
-                    | Remove key -> cache |> Map.remove key) 
+                    | Remove key -> 
+                        match cache |> Map.tryFind key with
+                        | Some value -> 
+                            match box value with
+                            | :? IDisposable as d -> d.Dispose()
+                            | _ -> ()
+                            cache |> Map.remove key
+                        | _ -> cache) 
             }
         loop Map.empty)
     do agent.Error.Add (fail "%O")
@@ -76,6 +83,17 @@ module ProjectProvider =
     type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider) =
         static let mutable getField = None
         do Debug.Assert(project <> null, "Input project should be well-formed.")
+        let referencesChanged = Event<Project>()
+        let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> referencesChanged.Trigger project)
+        let refChanged = _dispReferencesEvents_ReferenceChangedEventHandler (fun _ -> referencesChanged.Trigger project)
+        let refRemoved = _dispReferencesEvents_ReferenceRemovedEventHandler (fun _ -> referencesChanged.Trigger project)
+        
+        do match project.VSProject with
+           | Some p -> 
+               p.Events.ReferencesEvents.add_ReferenceAdded refAdded
+               p.Events.ReferencesEvents.add_ReferenceChanged refChanged
+               p.Events.ReferencesEvents.add_ReferenceRemoved refRemoved
+           | _ -> debug "[ProjectProvider] Cannot subsribe for ReferencesEvents"
     
         let getProperty (tag: string) =
             let prop = try project.Properties.[tag] with _ -> null
@@ -187,6 +205,8 @@ module ProjectProvider =
                     return opts
             }
 
+        member x.ReferencesChanged = referencesChanged.Publish
+
         interface IProjectProvider with
             member x.ProjectFileName = projectFileName.Value
             member x.TargetFramework = targetFramework.Value
@@ -196,6 +216,14 @@ module ProjectProvider =
             member x.GetReferencedProjects() = referencedProjects.Value
             member x.GetAllReferencedProjectFileNames() = allReferencedProjects.Value
             member x.GetProjectCheckerOptions languageService = getProjectCheckerOptions languageService
+
+        interface IDisposable with
+            member x.Dispose() =
+                project.VSProject
+                |> Option.iter (fun p ->
+                     p.Events.ReferencesEvents.remove_ReferenceAdded refAdded
+                     p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
+                     p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
                             
     type internal VirtualProjectProvider (filePath: string) = 
         do Debug.Assert (filePath <> null, "FilePath should not be null.")
@@ -224,22 +252,30 @@ type ProjectFactory
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<string, ProjectProvider.ProjectProvider>()
  
-    let onProjectChanged (projectItem: ProjectItem) =
-        projectItem.VSProject
-        |> Option.iter (fun item ->
-                debug "[ProjectsCache] %s changed." projectItem.Name
-                cache.Remove item.Project.UniqueName)
+    let onProjectChanged (project: Project) =
+        debug "[ProjectFactory] %s changed." project.Name
+        cache.Remove project.UniqueName
+
+    let onProjectItemChanged (projectItem: ProjectItem) =
+        projectItem.VSProject |> Option.iter (fun item -> onProjectChanged item.Project)
  
     do match events with
         | Some events ->
-            events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-            events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
-            events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectChanged p)
-            debug "[SolutionEvents] Subscribed for ProjectItemsEvents"
-        | _ -> fail "[SolutionEvents] Cannot subscribe for ProjectItemsEvents"
+            events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
+            events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectItemChanged p)
+            events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)
+            events.ProjectsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
+            events.ProjectsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
+            events.SolutionEvents.add_ProjectRemoved (fun p -> onProjectChanged p)
+            events.SolutionEvents.add_ProjectRenamed (fun p _ -> onProjectChanged p) 
+            debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
+        | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
     member x.CreateForProject (project: Project): IProjectProvider = 
-        cache.Get project.UniqueName (fun _ -> ProjectProvider.ProjectProvider (project, x.CreateForProject)) :> _
+        cache.Get project.UniqueName (fun _ -> 
+            let provider = new ProjectProvider.ProjectProvider (project, x.CreateForProject)
+            provider.ReferencesChanged.Add(fun p -> onProjectChanged p)
+            provider) :> _
 
     member x.CreateForFileInProject (filePath: string) project: IProjectProvider option =
         if not (project === null) && not (filePath === null) && isFSharpProject project then
