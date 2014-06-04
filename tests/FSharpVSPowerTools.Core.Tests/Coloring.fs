@@ -178,3 +178,5 @@ let _ =
         else
             return! ret <@ 1 @>
     }
+let (|ActivePattern|_|) x = Some x
+let _ = (|ActivePattern|_|) 1

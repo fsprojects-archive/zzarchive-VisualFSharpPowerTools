@@ -112,7 +112,7 @@ let excludeWordSpan from what =
     else from
  
 let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, lexer: ILexer) =
-    let allSymbolsUses =
+    let allSymbolsUses' =
         allSymbolsUses
         |> Array.choose (fun su ->
             let r = su.RangeAlternate
@@ -130,14 +130,14 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
       
     // index all symbol usages by LineNumber 
     let wordSpans = 
-        allSymbolsUses
+        allSymbolsUses'
         |> Seq.map snd
         |> Seq.groupBy (fun span -> span.Line)
         |> Seq.map (fun (line, ranges) -> line, ranges)
         |> Map.ofSeq
 
     let spansBasedOnSymbolsUses = 
-        allSymbolsUses
+        allSymbolsUses'
         |> Seq.choose (fun (symbolUse, span) ->
             let span = 
                 match wordSpans.TryFind span.Line with

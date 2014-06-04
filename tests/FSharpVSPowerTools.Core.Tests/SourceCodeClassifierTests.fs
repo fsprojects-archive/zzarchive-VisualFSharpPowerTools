@@ -276,7 +276,6 @@ let ``quotation in property setter``() = checkCategories 127 [ Quotation, 31, 40
 [<Test>]
 let ``quotation in nested module``() = checkCategories 131 [ Quotation, 12, 19 ]
 
-
 [<Test>]
 let ``quotation inside computation expression``() =
     checkCategories 166 [ Quotation, 16, 23 ]
@@ -288,7 +287,6 @@ let ``quotation inside computation expression``() =
     checkCategories 174 [ Quotation, 14, 21 ]
     checkCategories 177 [ Quotation, 19, 26 ]
     checkCategories 179 [ Function, 20, 23; Quotation, 24, 31 ]
-
 
 [<Test>]
 let ``tuple alias``() = 
@@ -349,3 +347,8 @@ let ``anonymous generic parameters``() =
 [<Test; Ignore "FCS 0.0.48 restriction">]
 let ``array alias``() =
     checkCategories 161 [ ReferenceType, 5, 15; ValueType, 18, 22 ]
+
+[<Test; Ignore "Lexer cannot recognize (|P|_|) as an Ident at position of the last bar">]
+let ``active pattern``() =
+    checkCategories 181 [ PatternCase, 6, 19; PatternCase, 28, 32 ]
+    checkCategories 182 [ Function, 8, 27 ]
