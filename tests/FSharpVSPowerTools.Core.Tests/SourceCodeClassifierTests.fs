@@ -185,7 +185,7 @@ let ``complex method chain``() =
     checkCategories 70 
         [ ValueType, 15, 19; Function, 20, 27; Function, 30, 38; Function, 44, 53 ]
 
-[<Test; Ignore "Bug">]
+[<Test>]
 let ``generic type with ignored type parameter``() = checkCategories 71 [ ReferenceType, 8, 12 ]
 
 [<Test>]
