@@ -38,7 +38,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     let getProject() =
         maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath)
+            let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
             return! projectFactory.CreateForFileInProject doc.FilePath projectItem.ContainingProject }
 
     let updateSyntaxConstructClassifiers force =
