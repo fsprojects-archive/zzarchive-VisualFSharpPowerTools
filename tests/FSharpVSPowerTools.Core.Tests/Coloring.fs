@@ -159,3 +159,24 @@ module AnonymousGenericParameters =
     let i () : Map<'a, 'b> = new Map<'a, 'b>([])
     let j () : System.Collections.Generic.List<_> = new System.Collections.Generic.List<_>()
 type ArrayAlias = byte[]
+let _ = 
+    let ret x = async { return x }
+    let retZero _ = async { return () }
+    async { 
+        let _ = <@ 1 @>
+        do ignore <@ 1 @>
+        let! _ = ret <@ 1 @>
+        let! _ = if true then 
+                    ret <@ 1 @>
+                 else 
+                    ret <@ 2 @>
+        do! retZero <@ () @>
+        match <@ 1 @> with
+        | _ -> ()
+        if true then 
+            return <@ 1 @>
+        else
+            return! ret <@ 1 @>
+    }
+let (|ActivePattern|_|) x = Some x
+let _ = (|ActivePattern|_|) 1

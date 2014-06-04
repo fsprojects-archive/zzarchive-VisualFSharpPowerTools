@@ -276,12 +276,12 @@ let ``should find usages of properties with explicit getters and setters``() =
 [<Test>] 
 let ``should find usages of fully qualified record fields``() =
     checkSymbolUsage 770 9 "    type Record = { Field: int }"
-        [ (770, 9, 15) ]
-          // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
+        [ (770, 9, 15)
+          (771, 14, 20) ]
 
     checkSymbolUsage 771 14 "    let r = { Record.Field = 1 }"
-        [ (770, 9, 15) ]
-          // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
+        [ (770, 9, 15)
+          (771, 14, 20) ]
 
 let getFirstSymbol line col lineStr symbolText =
     async {

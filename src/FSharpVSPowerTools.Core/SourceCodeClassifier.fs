@@ -46,8 +46,6 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         && ty.TypeDefinition.IsFSharpRecord
         && ty.TypeDefinition.FullName = "Microsoft.FSharp.Core.FSharpRef`1"
 
-    let isProvidedType (e: FSharpEntity) = e.IsProvided || e.IsProvidedAndErased || e.IsProvidedAndGenerated
-
     match symbol with
     | :? FSharpGenericParameter
     | :? FSharpUnionCase
@@ -64,17 +62,15 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         if e.IsEnum || e.IsValueType 
            || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then ValueType
         elif 
-           // FCS returns two FSharpSymbolUse for each type provider declaration.
-           // I.e. for "type T = XmlProvider<"<root>1<root>">" it returns two uses of symbol "XmlProvider":
-           // "XmlProvider" (which is the right one) and "XmlProvider<"<root>1<root>">".
-           // CompiledName of the latter differs from its DisplayName, so we can filter it out. 
-           // Ideally, FCS should not return the long symbol use at all.
-           (e.IsClass && (entity.IsFSharpAbbreviation || not (isProvidedType e) || e.CompiledName = e.DisplayName))
+            
+           (e.IsClass && (not e.IsStaticInstantiation 
+                          // here we must use "entity", not "e" because "entity" could be an alias, but "e" is certainly cannot
+                          || entity.IsFSharpAbbreviation)) 
            || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure 
            || ((e.IsProvided || e.IsProvidedAndErased || e.IsProvidedAndGenerated) && e.CompiledName = e.DisplayName)
            || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace)
-           || e.IsByRef then
+           || e.IsByRef || e.IsArrayType then
             ReferenceType
         elif e.IsFSharpModule then Module
         else 
@@ -87,7 +83,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         if func.CompiledName = ".ctor" then 
             if func.EnclosingEntity.IsValueType || func.EnclosingEntity.IsEnum then ValueType
             else ReferenceType
-        elif func.FullType.IsFunctionType && not func.IsGetterMethod && not func.IsSetterMethod
+        elif func.FullType.IsFunctionType && not func.IsPropertyGetterMethod && not func.IsPropertySetterMethod
              && not symbolUse.IsFromComputationExpression then 
             if isOperator func.DisplayName then Other
             else Function
@@ -112,7 +108,7 @@ let excludeWordSpan from what =
     else from
  
 let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, lexer: ILexer) =
-    let allSymbolsUses =
+    let allSymbolsUses' =
         allSymbolsUses
         |> Array.choose (fun su ->
             let r = su.RangeAlternate
@@ -130,14 +126,14 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
       
     // index all symbol usages by LineNumber 
     let wordSpans = 
-        allSymbolsUses
+        allSymbolsUses'
         |> Seq.map snd
         |> Seq.groupBy (fun span -> span.Line)
         |> Seq.map (fun (line, ranges) -> line, ranges)
         |> Map.ofSeq
 
     let spansBasedOnSymbolsUses = 
-        allSymbolsUses
+        allSymbolsUses'
         |> Seq.choose (fun (symbolUse, span) ->
             let span = 
                 match wordSpans.TryFind span.Line with
@@ -179,7 +175,9 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         | SynExpr.LetOrUse (_, _, bindings, body, _) -> 
             visitBindindgs bindings
             visitExpr body
-        | SynExpr.LetOrUseBang (_, _, _, _, _, body, _) -> visitExpr body
+        | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
+            visitExpr rhsExpr
+            visitExpr body
         | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) -> (!quotationRanges).Add range
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr
