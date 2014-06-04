@@ -46,8 +46,6 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         && ty.TypeDefinition.IsFSharpRecord
         && ty.TypeDefinition.FullName = "Microsoft.FSharp.Core.FSharpRef`1"
 
-    let isProvidedType (e: FSharpEntity) = e.IsProvided || e.IsProvidedAndErased || e.IsProvidedAndGenerated
-
     match symbol with
     | :? FSharpGenericParameter
     | :? FSharpUnionCase
@@ -64,12 +62,10 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         if e.IsEnum || e.IsValueType 
            || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then ValueType
         elif 
-           // FCS returns two FSharpSymbolUse for each type provider declaration.
-           // I.e. for "type T = XmlProvider<"<root>1<root>">" it returns two uses of symbol "XmlProvider":
-           // "XmlProvider" (which is the right one) and "XmlProvider<"<root>1<root>">".
-           // CompiledName of the latter differs from its DisplayName, so we can filter it out. 
-           // Ideally, FCS should not return the long symbol use at all.
-           (e.IsClass && (entity.IsFSharpAbbreviation || not (isProvidedType e) || e.CompiledName = e.DisplayName))
+            
+           (e.IsClass && (not e.IsStaticInstantiation 
+                          // here we must use "entity", not "e" because "entity" could be an alias, but "e" is certainly cannot
+                          || entity.IsFSharpAbbreviation)) 
            || e.IsDelegate || e.IsFSharpExceptionDeclaration
            || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure 
            || ((e.IsProvided || e.IsProvidedAndErased || e.IsProvidedAndGenerated) && e.CompiledName = e.DisplayName)
