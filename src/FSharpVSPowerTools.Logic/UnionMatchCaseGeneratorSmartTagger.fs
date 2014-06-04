@@ -73,13 +73,13 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     200us, updateAtCaretPosition)
 
-    let handleGenerateUnionMatchCases (snapshot: ITextSnapshot) (matchExpr: MatchExpr) (insertionParams: _) entity = 
+    let handleGenerateUnionMatchCases (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr) (insertionParams: _) entity = 
         use transaction = textUndoHistory.CreateTransaction(CommandName)
 
         let stub = UnionMatchCaseGenerator.formatMatchExpr
                        insertionParams
                        "failwith \"Unhandled case\""
-                       matchExpr
+                       patMatchExpr
                        entity
         let insertionPos = insertionParams.InsertionPos
         let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Line-1).Start.Position + insertionPos.Column

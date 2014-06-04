@@ -27,6 +27,21 @@ type MatchLambdaExpr = {
     Clauses: SynMatchClause list
 }
 
+[<NoEquality; NoComparison>]
+type PatternMatchExpr =
+    | MatchExpr of MatchExpr
+    | MatchLambdaExpr of MatchLambdaExpr
+
+    member x.Expr =
+        match x with
+        | MatchExpr expr -> expr.Expr
+        | MatchLambdaExpr expr -> expr.Expr
+
+    member x.Clauses =
+        match x with
+        | MatchExpr expr -> expr.Clauses
+        | MatchLambdaExpr expr -> expr.Clauses
+
 [<NoComparison>]
 type UnionMatchCasesInsertionParams = {
     InsertionPos: pos
@@ -57,6 +72,7 @@ let clauseIsCandidateForCodeGen (clause: SynMatchClause) =
             false
         | SynPat.Or(leftPat, rightPat, _) -> patIsCandidate leftPat && patIsCandidate rightPat
         | SynPat.Ands(innerPatList, _) -> List.forall patIsCandidate innerPatList
+        // This is pattern: 'hd :: tail -> ...' 
         | SynPat.LongIdent(LongIdentWithDots([ident], []), _, _, _, _, _)
             when ident.idText = "op_ColonColon" -> false
         | SynPat.LongIdent(_, _, _, _, _, _) -> true
@@ -198,8 +214,21 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
             | SynExpr.For(_sequencePointInfoForForLoop, _ident, synExpr1, _, synExpr2, synExpr3, _range) -> 
                 List.tryPick walkExpr [synExpr1; synExpr2; synExpr3]
 
-            | SynExpr.MatchLambda(_isExnMatch, _argm, synMatchClauseList, _spBind, _wholem) -> 
-                synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e)
+            | SynExpr.MatchLambda(isExnMatch,
+                                  functionKeywordRange,
+                                  synMatchClauseList,
+                                  _, _wholeExprRange) as matchLambdaExpr -> 
+                synMatchClauseList
+                |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e)
+                |> Option.orTry (fun () ->
+                    if isExnMatch = false &&
+                       List.forall clauseIsCandidateForCodeGen synMatchClauseList then
+                        MatchLambdaExpr { FunctionRange = functionKeywordRange
+                                          Expr = matchLambdaExpr
+                                          Clauses = synMatchClauseList }
+                        |> Some
+                    else None
+                )
             | SynExpr.Match(sequencePointInfoForBinding, synExpr, synMatchClauseList, _, _range) as matchExpr ->
                 walkExpr synExpr
                 |> Option.orElse (synMatchClauseList |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e))
@@ -207,10 +236,11 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
                     if List.forall clauseIsCandidateForCodeGen synMatchClauseList then
                         match sequencePointInfoForBinding with
                         | SequencePointAtBinding range ->
-                            Some { MatchWithRange = range
-                                   Expr = matchExpr
-                                   MatchedExpr = synExpr
-                                   Clauses = synMatchClauseList }
+                            MatchExpr { MatchWithRange = range
+                                        Expr = matchExpr
+                                        MatchedExpr = synExpr
+                                        Clauses = synMatchClauseList }
+                            |> Some
                         | _ -> None
                     else
                         None
@@ -315,7 +345,7 @@ let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
     | ParsedInput.SigFile _input -> None
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
-let getWrittenCases (matchExpr: MatchExpr) =
+let getWrittenCases (patMatchExpr: PatternMatchExpr) =
     let rec checkPattern pat =
         match pat with
         | SynPat.Const(_const, _) -> false
@@ -389,15 +419,15 @@ let getWrittenCases (matchExpr: MatchExpr) =
         | Clause(pat, None, _, _, _) -> getCasesInPattern pat
         | _ -> []
 
-    matchExpr.Clauses
+    patMatchExpr.Clauses
     |> List.collect (getCasesInClause)
     |> Set.ofList
 
 
-let shouldGenerateUnionMatchCases (matchExpr: MatchExpr) (entity: FSharpEntity) =
+let shouldGenerateUnionMatchCases (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
     let caseCount = entity.UnionCases.Count
     let writtenCaseCount =
-        getWrittenCases matchExpr
+        getWrittenCases patMatchExpr
         |> Set.count
     caseCount > 0 && writtenCaseCount < caseCount
 
@@ -445,16 +475,22 @@ let tryFindBarTokenLPosInRange
     tryFindTokenLPosInRange codeGenService project range document
         (fun tokenInfo -> tokenInfo.TokenName = "BAR")
 
-let tryGetRangeBetweenWithAndFirstClause (matchExpr: MatchExpr) =
+let tryGetRangeWhereFirstBarTokenCouldExist (matchExpr: PatternMatchExpr) =
     maybe {
         let! fstClause = Seq.tryHead matchExpr.Clauses
-        return unionRanges matchExpr.MatchWithRange.EndRange fstClause.Range.StartRange
+
+        return
+            match matchExpr with
+            | MatchExpr expr ->
+                unionRanges expr.MatchWithRange.EndRange fstClause.Range.StartRange
+            | MatchLambdaExpr expr ->
+                unionRanges expr.FunctionRange.EndRange fstClause.Range.StartRange
     }
 
-let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) project document (matchExpr: MatchExpr) =
+let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) project document (matchExpr: PatternMatchExpr) =
     let barTokenLPosFindResult =
         maybe {
-            let! rangeBetweenWithAndClause = tryGetRangeBetweenWithAndFirstClause matchExpr
+            let! rangeBetweenWithAndClause = tryGetRangeWhereFirstBarTokenCouldExist matchExpr
             return! tryFindBarTokenLPosInRange codeGenService project rangeBetweenWithAndClause document
         }
 
@@ -464,10 +500,19 @@ let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) pr
         { InsertionPos = tokenLPos
           FirstClauseStartsWithPipe = true }
     | None, [] -> 
-        // After 'with' keyword
-        { InsertionPos = Pos.fromZ (matchExpr.MatchWithRange.EndLine - 1)
-                                   (matchExpr.MatchWithRange.EndColumn)
-          FirstClauseStartsWithPipe = true }
+        match matchExpr with
+        | MatchExpr expr ->
+            // After 'with' keyword
+            { InsertionPos = Pos.fromZ (expr.MatchWithRange.EndLine - 1)
+                                       (expr.MatchWithRange.EndColumn)
+              FirstClauseStartsWithPipe = true }
+
+        | MatchLambdaExpr expr ->
+            // After 'function' keyword
+            { InsertionPos = Pos.fromZ (expr.FunctionRange.EndLine - 1)
+                                       (expr.FunctionRange.EndColumn)
+              FirstClauseStartsWithPipe = true }
+
     | None, fstClause :: _ ->
         // Before first clause, which doesn't start by '|'
         { InsertionPos = Pos.fromZ (fstClause.Range.StartLine - 1)
@@ -532,7 +577,7 @@ let private formatCase (ctxt: Context) writePipeBefore (case: FSharpUnionCase) =
         writer.Write("| ")
 
 let formatMatchExpr insertionParams (caseDefaultValue: string)
-                    (matchExpr: MatchExpr) (entity: FSharpEntity) =
+                    (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
     assert entity.IsFSharpUnion
     use writer = new ColumnIndentedTextWriter()
     let ctxt =
@@ -541,7 +586,7 @@ let formatMatchExpr insertionParams (caseDefaultValue: string)
           Writer = writer
           CaseDefaultValue = caseDefaultValue}
 
-    let casesWritten = getWrittenCases matchExpr
+    let casesWritten = getWrittenCases patMatchExpr
     let casesToWrite =
         entity.UnionCases
         |> Seq.filter (fun case -> not <| casesWritten.Contains case.Name)

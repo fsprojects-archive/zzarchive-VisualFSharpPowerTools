@@ -176,6 +176,7 @@ type Union = Case1
 let f union =
     match union with | Case1 -> ()"""
 
+
 [<Test>]
 let ``union match case generation when all cases are written 1`` () =
     """
@@ -465,6 +466,36 @@ let f x =
     | Case1(arg1, _, arg3) -> failwith ""
     | Case2(arg1, arg2) -> failwith ""
     | Case3 -> ()"""
+
+[<Test>]
+let ``union match lambda case generation when first clause starts with '|'`` () =
+    """
+type Union = Case1 | Case2
+
+let f = function
+    | Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 4 6)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f = function
+    | Case1 -> failwith ""
+    | Case2 -> ()"""
+
+[<Test>]
+let ``union match lambda case generation when first clause doesn't start with '|'`` () =
+    """
+type Union = Case1 | Case2
+
+let f = function
+    Case2 -> ()"""
+    |> insertCasesFromPos (Pos.fromZ 4 6)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f = function
+    Case1 -> failwith ""
+    | Case2 -> ()"""
 
 
 // Union match case without argument patterns
