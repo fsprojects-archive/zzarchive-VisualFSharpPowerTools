@@ -27,7 +27,6 @@ type RecordStubGeneratorSmartTag(actionSets) =
 
 type RecordStubGeneratorSmartTagger(view: ITextView,
                                     buffer: ITextBuffer,
-                                    editorOptionsFactory: IEditorOptionsFactoryService,
                                     textUndoHistory: ITextUndoHistory,
                                     vsLanguageService: VSLanguageService,
                                     serviceProvider: IServiceProvider,

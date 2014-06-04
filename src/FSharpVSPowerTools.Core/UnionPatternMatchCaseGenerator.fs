@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.CodeGeneration.UnionMatchCaseGenerator
+﻿module FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 
 open System
 open System.Collections.Generic
@@ -89,7 +89,7 @@ let clauseIsCandidateForCodeGen (clause: SynMatchClause) =
     match clause with
     | Clause(pat, _, _, _, _) -> patIsCandidate pat
 
-let tryFindMatchExpression (pos: pos) (parsedInput: ParsedInput) =
+let tryFindPatternMatchExpr (pos: pos) (parsedInput: ParsedInput) =
     let inline getIfPosInRange range f =
         if rangeContainsPos range pos then f()
         else None
@@ -424,21 +424,21 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
     |> Set.ofList
 
 
-let shouldGenerateUnionMatchCases (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
+let shouldGenerateUnionPatternMatchCases (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
     let caseCount = entity.UnionCases.Count
     let writtenCaseCount =
         getWrittenCases patMatchExpr
         |> Set.count
     caseCount > 0 && writtenCaseCount < caseCount
 
-let tryFindMatchExprInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let tryFindPatternMatchExprInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     async {
         let! parseResults =
             codeGenService.ParseFileInProject(document, project)
         
         return
             parseResults.ParseTree
-            |> Option.bind (tryFindMatchExpression (codeGenService.ExtractFSharpPos(pos)))
+            |> Option.bind (tryFindPatternMatchExpr (codeGenService.ExtractFSharpPos(pos)))
     }
 
 let tryFindTokenLPosInRange
@@ -475,32 +475,32 @@ let tryFindBarTokenLPosInRange
     tryFindTokenLPosInRange codeGenService project range document
         (fun tokenInfo -> tokenInfo.TokenName = "BAR")
 
-let tryGetRangeWhereFirstBarTokenCouldExist (matchExpr: PatternMatchExpr) =
+let tryGetRangeWhereFirstBarTokenCouldExist (patMatchExpr: PatternMatchExpr) =
     maybe {
-        let! fstClause = Seq.tryHead matchExpr.Clauses
+        let! fstClause = Seq.tryHead patMatchExpr.Clauses
 
         return
-            match matchExpr with
+            match patMatchExpr with
             | MatchExpr expr ->
                 unionRanges expr.MatchWithRange.EndRange fstClause.Range.StartRange
             | MatchLambdaExpr expr ->
                 unionRanges expr.FunctionRange.EndRange fstClause.Range.StartRange
     }
 
-let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) project document (matchExpr: PatternMatchExpr) =
+let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) project document (patMatchExpr: PatternMatchExpr) =
     let barTokenLPosFindResult =
         maybe {
-            let! rangeBetweenWithAndClause = tryGetRangeWhereFirstBarTokenCouldExist matchExpr
+            let! rangeBetweenWithAndClause = tryGetRangeWhereFirstBarTokenCouldExist patMatchExpr
             return! tryFindBarTokenLPosInRange codeGenService project rangeBetweenWithAndClause document
         }
 
-    match barTokenLPosFindResult, matchExpr.Clauses with
+    match barTokenLPosFindResult, patMatchExpr.Clauses with
     | Some(_, tokenLPos), _ ->
         // Before first clause's '|'
         { InsertionPos = tokenLPos
           FirstClauseStartsWithPipe = true }
     | None, [] -> 
-        match matchExpr with
+        match patMatchExpr with
         | MatchExpr expr ->
             // After 'with' keyword
             { InsertionPos = Pos.fromZ (expr.MatchWithRange.EndLine - 1)
@@ -519,27 +519,24 @@ let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) pr
                                    (fstClause.Range.StartColumn)
           FirstClauseStartsWithPipe = false }
 
-let getIndentValue (matchExpr: MatchExpr) =
-    matchExpr.MatchWithRange.StartColumn
-
-let tryFindMatchCaseInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let tryFindCaseInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
-        let! matchExpr = tryFindMatchExprInBufferAtPos codeGenService project pos document
-        let insertionParams = getInsertionParams codeGenService project document matchExpr
+        let! patMatchExpr = tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
+        let insertionParams = getInsertionParams codeGenService project document patMatchExpr
 
-        return matchExpr, insertionParams
+        return patMatchExpr, insertionParams
     }
 
 let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
-        let! matchExpr, insertionParams = tryFindMatchCaseInsertionParamsAtPos codeGenService project pos document
+        let! patMatchExpr, insertionParams = tryFindCaseInsertionParamsAtPos codeGenService project pos document
         let! symbolRange, _symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 
         match symbolUse.Symbol with
         | :? FSharpUnionCase as case when case.ReturnType.TypeDefinition.IsFSharpUnion ->
-            return! Some (symbolRange, matchExpr, case.ReturnType.TypeDefinition, insertionParams) |> liftMaybe
+            return! Some (symbolRange, patMatchExpr, case.ReturnType.TypeDefinition, insertionParams) |> liftMaybe
         | :? FSharpEntity as entity when entity.IsFSharpUnion ->
-            return! Some (symbolRange, matchExpr, entity, insertionParams) |> liftMaybe
+            return! Some (symbolRange, patMatchExpr, entity, insertionParams) |> liftMaybe
         | _ ->
             return! None |> liftMaybe
     }

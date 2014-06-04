@@ -7,11 +7,11 @@
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
-      "../../src/FSharpVSPowerTools.Core/UnionMatchCaseGenerator.fs"
+      "../../src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs"
       "TestHelpers.fs"
       "CodeGenerationTestService.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.UnionMatchCaseGeneratorTests
+module FSharpVSPowerTools.Core.Tests.UnionPatternMatchCaseGeneratorTests
 #endif
 
 open NUnit.Framework
@@ -24,7 +24,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.UnionMatchCaseGenerator
+open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open FSharpVSPowerTools.Core.Tests
 open Microsoft.FSharp.Compiler.Ast
 
@@ -76,16 +76,16 @@ let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
     codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
     |> Async.RunSynchronously
 
-let tryFindMatchExpr (pos: pos) (document: IDocument) =
-    tryFindMatchExprInBufferAtPos codeGenService project pos document
+let tryFindPatternMatchExpr (pos: pos) (document: IDocument) =
+    tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
     |> Async.RunSynchronously
 
 let tryFindUnionTypeDefinition (pos: pos) document =
     tryFindUnionTypeDefinitionFromPos codeGenService project pos document
     |> Async.RunSynchronously
 
-let tryFindMatchCaseGenerationParam pos document =
-    tryFindMatchCaseInsertionParamsAtPos codeGenService project pos document
+let tryFindCaseInsertionParams pos document =
+    tryFindCaseInsertionParamsAtPos codeGenService project pos document
     |> Async.RunSynchronously
 
 let insertCasesFromPos caretPos src =
@@ -97,7 +97,8 @@ let insertCasesFromPos caretPos src =
         let insertionPos = insertionParams.InsertionPos
         let insertColumn = insertionPos.Column
         let caseValue = "failwith \"\""
-        let stub = UnionMatchCaseGenerator.formatMatchExpr insertionParams caseValue matchExpr entity
+        let stub = UnionPatternMatchCaseGenerator.formatMatchExpr
+                        insertionParams caseValue matchExpr entity
         let srcLines = srcToLineArray src
         let insertLine0 = insertionPos.Line - 1
         let curLine = srcLines.[insertLine0]
@@ -111,8 +112,6 @@ let insertCasesFromPos caretPos src =
             srcLines
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
-// [x] Handle case where first case doesn't start with '|'
-
 // TODO: dedup from RecordStubGeneratorTests.fs
 let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
@@ -120,7 +119,7 @@ let assertSrcAreEqual expectedSrc actualSrc =
 let tryGetWrittenCases (pos: pos) (src: string) =
     src
     |> asDocument
-    |> tryFindMatchExpr pos
+    |> tryFindPatternMatchExpr pos
     |> Option.map (getWrittenCases)
     |> Option.getOrElse Set.empty
 

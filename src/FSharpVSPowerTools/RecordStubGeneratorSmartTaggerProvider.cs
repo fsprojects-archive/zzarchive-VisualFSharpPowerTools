@@ -23,9 +23,6 @@ namespace FSharpVSPowerTools
         private IServiceProvider serviceProvider = null;
 
         [Import]
-        private IEditorOptionsFactoryService editorOptionsFactory = null;
-
-        [Import]
         private ITextUndoHistoryRegistry undoHistoryRegistry = null;
 
         [Import(typeof(ProjectFactory))]
@@ -39,7 +36,7 @@ namespace FSharpVSPowerTools
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (generalOptions != null && generalOptions.RecordStubGenerationEnabled)
             {
-                return new RecordStubGeneratorSmartTagger(textView, buffer, editorOptionsFactory,
+                return new RecordStubGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
                     fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
             }
