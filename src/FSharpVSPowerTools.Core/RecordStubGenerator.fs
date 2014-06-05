@@ -65,8 +65,6 @@ with
 [<NoComparison>]
 type private Context = {
     Writer: ColumnIndentedTextWriter
-    /// Indentation inside method bodies
-    IndentValue: int
     /// A single-line skeleton for each field
     FieldDefaultValue: string
     RecordTypeName: string
@@ -90,7 +88,7 @@ let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
     
     writer.Write("{0}{1} = {2}", prependedSpace, name, ctxt.FieldDefaultValue)
 
-let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (fieldDefaultValue: string)
+let formatRecord (insertionPos: RecordStubsInsertionPosition) (fieldDefaultValue: string)
                  (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
@@ -106,7 +104,6 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) indentValue (field
         { RecordTypeName = entity.DisplayName
           RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
           Writer = writer
-          IndentValue = indentValue
           FieldDefaultValue = fieldDefaultValue
           PrependExtraSpace = prependExtraSpace }
 

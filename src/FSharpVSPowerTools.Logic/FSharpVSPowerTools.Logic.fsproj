@@ -91,6 +91,7 @@
     <Compile Include="CodeGenerationService.fs" />
     <Compile Include="ImplementInterfaceSmartTagger.fs" />
     <Compile Include="RecordStubGeneratorSmartTagger.fs" />
+    <Compile Include="UnionMatchCaseGeneratorSmartTagger.fs" />
     <Compile Include="LibraryNode.fs" />
     <Compile Include="Library.fs" />
     <Compile Include="FindReferencesFilter.fs" />

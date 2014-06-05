@@ -18,12 +18,21 @@ type IDocument =
     abstract GetLineText0: int<Line0> -> string
     abstract GetLineText1: int<Line1> -> string
 
+type IRange =
+    abstract StartLine: int<Line1>
+    abstract StartColumn: int
+    abstract EndLine: int<Line1>
+    abstract EndColumn: int
+
 type ICodeGenerationService<'Project, 'Pos, 'Range> =
+    abstract TokenizeLine: 'Project * IDocument * int<Line1> -> TokenInformation list
     abstract GetSymbolAtPosition: 'Project * IDocument * pos:'Pos -> option<'Range * Symbol>
     abstract GetSymbolAndUseAtPositionOfKind: 'Project * IDocument * 'Pos * SymbolKind -> Async<option<'Range * Symbol * FSharpSymbolUse>>
     abstract ParseFileInProject: IDocument * 'Project -> Async<ParseFileResults>
     // TODO: enhance this clumsy design
     abstract ExtractFSharpPos: 'Pos -> pos
+//    abstract CreateRange: startLine: int<Line1> * startColumn: int * endLine: int<Line1> * endColumn: int -> 'Range
+    abstract CreateIRange: 'Range -> IRange
 
 
 [<AutoOpen>]

@@ -69,6 +69,7 @@
     <Compile Include="CodeGeneration.fs" />
     <Compile Include="InterfaceStubGenerator.fs" />
     <Compile Include="RecordStubGenerator.fs" />
+    <Compile Include="UnionMatchCaseGenerator.fs" />
     <Compile Include="NavigateToIndex.fs" />
     <Content Include="packages.config" />
   </ItemGroup>

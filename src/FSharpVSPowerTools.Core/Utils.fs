@@ -33,6 +33,12 @@ module Option =
         function
         | Some x -> Some x
         | None -> v
+
+    /// Gets the option if Some x, otherwise try to get another value
+    let inline orTry f =
+        function
+        | Some x -> Some x
+        | None -> f()
     
 // Async helper functions copied from https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/ControlCollections.Async.fs
 [<RequireQualifiedAccess>]

@@ -36,7 +36,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
 
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     // Try to:
     // - Identify record expression binding
@@ -93,14 +93,12 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordExpr: RecordExpr) (insertionPos: _) entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
-        let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let fieldsWritten = recordExpr.FieldExprList
 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
 
         let stub = RecordStubGenerator.formatRecord
                        insertionPos
-                       indentSize
                        "failwith \"Uninitialized field\""
                        entity
                        fieldsWritten

@@ -9,6 +9,7 @@
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
       "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
 #load "TestHelpers.fs"
+#load "CodeGenerationTestService.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.RecordStubGeneratorTests
 #endif
@@ -52,6 +53,7 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
+// TODO: write design doc
 // [x] Get the syntax construct that you're interested in
 // [x] Get the position P where to insert the generated code
 // [x] Get the symbol S on which the caret is
@@ -65,27 +67,6 @@ let project: ProjectOptions =
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
 // [ ] Add tests for SmartTag generation?
 
-type pos with
-    member x.Line0: int<Line0> = LanguagePrimitives.Int32WithMeasure(x.Line - 1)
-    member x.Line1: int<Line1> = LanguagePrimitives.Int32WithMeasure(x.Line)
-    member x.Column0 = x.Column
-    member x.Column1 = x.Column + 1
-
-type Range = {
-    StartLine: int<Line1>
-    StartColumn: int
-    EndLine: int<Line1>
-    EndColumn: int
-}
-with
-    static member FromSymbol(symbol: Symbol) =
-        let startLine, startColumn, endLine, endColumn = symbol.Range
-        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
-          StartColumn = startColumn
-          EndLine = LanguagePrimitives.Int32WithMeasure endLine
-          EndColumn = endColumn }
-
-
 type MockDocument(src: string) =
     let lines =
         ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
@@ -96,46 +77,9 @@ type MockDocument(src: string) =
         member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
         member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
 
-type CodeGenerationTestService() =
-    interface ICodeGenerationService<ProjectOptions, pos, Range> with
-        member x.GetSymbolAtPosition(_project, snapshot, pos) =
-            let lineText = snapshot.GetLineText0 pos.Line0
-            let src = snapshot.GetText()
-            maybe {
-                let! symbol =
-                    Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText args Lexer.queryLexState
-
-                return Range.FromSymbol symbol, symbol
-            }
-
-        member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
-            asyncMaybe {
-                let x = x :> ICodeGenerationService<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos) |> liftMaybe
-                let src = snapshot.GetText()
-                let line = snapshot.GetLineText1 pos.Line1
-                let! parseAndCheckResults =
-                    languageService.ParseAndCheckFileInProject(project, snapshot.FullName, src, AllowStaleResults.MatchingSource)
-                    |> liftAsync
-
-                match symbol.Kind with
-                | k when k = kind ->
-                    // NOTE: we must set <colAtEndOfNames> = symbol.RightColumn
-                    // and not <pos.Column>, otherwise GetSymbolUseAtLocation won't find it
-                    let! symbolUse =
-                        parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
-                    return range, symbol, symbolUse
-                | _ -> return! None |> liftMaybe
-            }
-
-        member x.ParseFileInProject(snapshot, projectOptions) =
-            languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText())
-
-        member x.ExtractFSharpPos(pos) = pos
-
 let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
 
-let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService()
+let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
 
 let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
@@ -166,7 +110,7 @@ let insertStubFromPos caretPos src =
         let fieldsWritten = recordExprData.FieldExprList
         let insertColumn = insertPos.Position.Column
         let fieldValue = "failwith \"\""
-        let stub = RecordStubGenerator.formatRecord insertPos 4 fieldValue entity fieldsWritten
+        let stub = RecordStubGenerator.formatRecord insertPos fieldValue entity fieldsWritten
         let srcLines = srcToLineArray src
         let insertLine0 = insertPos.Position.Line - 1
         let curLine = srcLines.[insertLine0]
