@@ -44,7 +44,7 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
             let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetActiveDocument() |> liftMaybe
-            let! project = projectFactory.CreateForDocument doc |> liftMaybe
+            let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
             let vsDocument = VSDocument(doc, point.Snapshot)
             let! symbolRange, matchExpr, unionTypeDefinition, insertionPos =
                 tryFindUnionTypeDefinitionFromPos codeGenService project point vsDocument

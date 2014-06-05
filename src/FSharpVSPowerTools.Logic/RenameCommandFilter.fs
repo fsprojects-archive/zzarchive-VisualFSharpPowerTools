@@ -35,7 +35,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument()
-                let! project = projectFactory.CreateForDocument doc
+                let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
             }
         state <- s
@@ -53,7 +53,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         let spans =
                             ranges
                             |> Seq.choose (fun range -> maybe {
-                                let! snapshotSpan = fromFSharpPos buffer.CurrentSnapshot range
+                                let! snapshotSpan = fromFSharpRange buffer.CurrentSnapshot range
                                 let i = snapshotSpan.GetText().LastIndexOf(oldText)
                                 return
                                     if i > 0 then 

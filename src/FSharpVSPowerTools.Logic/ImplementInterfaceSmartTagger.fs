@@ -71,7 +71,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetActiveDocument()
-                    let! project = projectFactory.CreateForDocument doc
+                    let! project = projectFactory.CreateForDocument buffer doc
                     let! word, symbol = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word, symbol
                 }
@@ -174,7 +174,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     async {
                         let getMemberByLocation(name, range: range) =
                             let lineStr = 
-                                match fromFSharpPos snapshot range with
+                                match fromFSharpRange snapshot range with
                                 | Some span -> span.End.GetContainingLine().GetText()
                                 | None -> String.Empty
                             results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])

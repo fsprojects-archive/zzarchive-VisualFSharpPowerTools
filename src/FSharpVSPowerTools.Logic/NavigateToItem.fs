@@ -99,14 +99,16 @@ and
             let projects = 
                 match listFSharpProjectsInSolution() with
                 | [] -> maybe {
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
+                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                             let! doc = dte.GetActiveDocument()
-                            return! projectFactory.CreateForDocument doc }
-                            |> Option.toArray
+                            let! openDoc = openDocumentsTracker.TryFindOpenDocument doc.FullName
+                            let buffer = openDoc.Document.TextBuffer
+                            return! projectFactory.CreateForDocument buffer doc }
+                        |> Option.toArray
                 | xs -> List.toArray xs
             
             // TODO: consider making index more coarse grained (i.e. 1 TCS per project instead of file)
-            let length = projects |> Array.sumBy(fun p -> p.SourceFiles.Length)
+            let length = projects |> Array.sumBy (fun p -> p.SourceFiles.Length)
             let indexPromises = Array.init length (fun _ -> new Tasks.TaskCompletionSource<_>())
             let fetchIndexes = async {
                 let i = ref 0

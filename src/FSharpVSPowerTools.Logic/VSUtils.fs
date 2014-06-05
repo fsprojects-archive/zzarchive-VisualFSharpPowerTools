@@ -14,7 +14,7 @@ open Microsoft.VisualStudio.Utilities
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
-let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
+let fromRange (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
     Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
     Debug.Assert(startLine <> endLine || startColumn < endColumn, 
                  sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
@@ -31,9 +31,9 @@ let fromPos (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColum
              startLine startColumn endLine endColumn
         None
     
-/// Retrieve snapshot from VS zero-based positions
-let fromFSharpPos (snapshot: ITextSnapshot) (r: range) = 
-    fromPos snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
+/// Retrieve snapshot span from VS zero-based positions
+let fromFSharpRange (snapshot: ITextSnapshot) (r: range) = 
+    fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
 
 let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 let isFSharpProject (project: EnvDTE.Project) = 
@@ -88,17 +88,13 @@ let isGenericTypeParameter = isTypeParameter '''
 let isStaticallyResolvedTypeParameter = isTypeParameter '^'
 
 type SnapshotPoint with
-    member x.FromRange (lineStart, colStart, lineEnd, colEnd) =
-        let startPos = x.Snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-        let endPos = x.Snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
-        SnapshotSpan(x.Snapshot, startPos, endPos - startPos)
     member x.InSpan (span: SnapshotSpan) = 
         // The old snapshot might not be available anymore, we compare on updated snapshot
         let point = x.TranslateTo(span.Snapshot, PointTrackingMode.Positive)
         point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
 
 type SnapshotSpan with
-    /// Return corresponding zero-based range
+    /// Return corresponding zero-based FCS range
     member x.ToRange() =
         let lineStart = x.Snapshot.GetLineNumberFromPosition(x.Start.Position)
         let lineEnd = x.Snapshot.GetLineNumberFromPosition(x.End.Position)

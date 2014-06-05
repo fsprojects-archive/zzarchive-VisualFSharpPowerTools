@@ -85,9 +85,13 @@ type VSLanguageService
         let col = point.Position - point.GetContainingLine().Start.Position
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions
+        let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
+            let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+            let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+            SnapshotSpan(snapshot, startPos, endPos - startPos)
                                 
         Lexer.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
-        |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
+        |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
 
     member x.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
         let snapshot = textBuffer.CurrentSnapshot
@@ -205,12 +209,6 @@ type VSLanguageService
             let! opts = projectProvider.GetProjectCheckerOptions instance
             let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale)
             return symbolUses, lexer
-        }
-
-    member x.ParseFileInProject (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider) = 
-        async {
-            let! opts = projectProvider.GetProjectCheckerOptions instance
-            return! instance.ParseFileInProject(opts, currentFile, snapshot.GetText())
         }
 
     member x.Checker = instance.Checker
