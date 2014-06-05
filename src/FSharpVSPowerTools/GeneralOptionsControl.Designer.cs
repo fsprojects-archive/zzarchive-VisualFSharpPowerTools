@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbUnionPatternMatchCaseGeneration = new System.Windows.Forms.CheckBox();
             this.chbRecordStubGeneration = new System.Windows.Forms.CheckBox();
             this.chbFindAllReferences = new System.Windows.Forms.CheckBox();
             this.lblInformation = new System.Windows.Forms.Label();
@@ -47,7 +48,6 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbUnionPatternMatchCaseGeneration = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -72,7 +72,7 @@ namespace FSharpVSPowerTools
             this.grbOptions.Controls.Add(this.chbXmlDoc);
             this.grbOptions.Location = new System.Drawing.Point(3, 3);
             this.grbOptions.Name = "grbOptions";
-            this.grbOptions.Size = new System.Drawing.Size(436, 293);
+            this.grbOptions.Size = new System.Drawing.Size(452, 293);
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
@@ -80,10 +80,12 @@ namespace FSharpVSPowerTools
             // chbUnionPatternMatchCaseGeneration
             // 
             this.chbUnionPatternMatchCaseGeneration.AutoSize = true;
+            this.chbUnionPatternMatchCaseGeneration.Checked = true;
+            this.chbUnionPatternMatchCaseGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbUnionPatternMatchCaseGeneration.ForeColor = System.Drawing.Color.DarkRed;
-            this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(212, 124);
+            this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(181, 124);
             this.chbUnionPatternMatchCaseGeneration.Name = "chbUnionPatternMatchCaseGeneration";
-            this.chbUnionPatternMatchCaseGeneration.Size = new System.Drawing.Size(205, 17);
+            this.chbUnionPatternMatchCaseGeneration.Size = new System.Drawing.Size(269, 17);
             this.chbUnionPatternMatchCaseGeneration.TabIndex = 16;
             this.chbUnionPatternMatchCaseGeneration.Text = "Union pattern match case generation (experimental)";
             this.chbUnionPatternMatchCaseGeneration.UseVisualStyleBackColor = true;
@@ -91,8 +93,10 @@ namespace FSharpVSPowerTools
             // chbRecordStubGeneration
             // 
             this.chbRecordStubGeneration.AutoSize = true;
+            this.chbRecordStubGeneration.Checked = true;
+            this.chbRecordStubGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbRecordStubGeneration.ForeColor = System.Drawing.Color.DarkRed;
-            this.chbRecordStubGeneration.Location = new System.Drawing.Point(212, 101);
+            this.chbRecordStubGeneration.Location = new System.Drawing.Point(181, 101);
             this.chbRecordStubGeneration.Name = "chbRecordStubGeneration";
             this.chbRecordStubGeneration.Size = new System.Drawing.Size(205, 17);
             this.chbRecordStubGeneration.TabIndex = 15;
@@ -104,7 +108,7 @@ namespace FSharpVSPowerTools
             this.chbFindAllReferences.AutoSize = true;
             this.chbFindAllReferences.Checked = true;
             this.chbFindAllReferences.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbFindAllReferences.Location = new System.Drawing.Point(212, 54);
+            this.chbFindAllReferences.Location = new System.Drawing.Point(181, 54);
             this.chbFindAllReferences.Name = "chbFindAllReferences";
             this.chbFindAllReferences.Size = new System.Drawing.Size(112, 17);
             this.chbFindAllReferences.TabIndex = 14;
@@ -123,7 +127,7 @@ namespace FSharpVSPowerTools
             // chbInterfaceImplementation
             // 
             this.chbInterfaceImplementation.AutoSize = true;
-            this.chbInterfaceImplementation.Location = new System.Drawing.Point(212, 77);
+            this.chbInterfaceImplementation.Location = new System.Drawing.Point(181, 77);
             this.chbInterfaceImplementation.Name = "chbInterfaceImplementation";
             this.chbInterfaceImplementation.Size = new System.Drawing.Size(118, 17);
             this.chbInterfaceImplementation.TabIndex = 12;
@@ -133,7 +137,7 @@ namespace FSharpVSPowerTools
             // chbFolderOrganization
             // 
             this.chbFolderOrganization.AutoSize = true;
-            this.chbFolderOrganization.Location = new System.Drawing.Point(212, 30);
+            this.chbFolderOrganization.Location = new System.Drawing.Point(181, 30);
             this.chbFolderOrganization.Name = "chbFolderOrganization";
             this.chbFolderOrganization.Size = new System.Drawing.Size(115, 17);
             this.chbFolderOrganization.TabIndex = 12;
@@ -269,7 +273,7 @@ namespace FSharpVSPowerTools
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.grbOptions);
             this.Name = "GeneralOptionsControl";
-            this.Size = new System.Drawing.Size(461, 310);
+            this.Size = new System.Drawing.Size(559, 310);
             this.Load += new System.EventHandler(this.GeneralOptionsControl_Load);
             this.grbOptions.ResumeLayout(false);
             this.grbOptions.PerformLayout();

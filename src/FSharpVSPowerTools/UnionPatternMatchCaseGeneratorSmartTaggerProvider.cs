@@ -34,8 +34,7 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            // TODO reactivate check
-            if (generalOptions != null)// && generalOptions.UnionPatternMatchCaseGenerationEnabled)
+            if (generalOptions != null && generalOptions.UnionPatternMatchCaseGenerationEnabled)
             {
                 return new UnionPatternMatchCaseGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
