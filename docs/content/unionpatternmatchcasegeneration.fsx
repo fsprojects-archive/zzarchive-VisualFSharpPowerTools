@@ -15,7 +15,15 @@ We recommend users to generate pattern match cases while the code is parsable e.
 
 See the demo screencasts below.
 
+Pattern match case generation
+
 ![Union pattern match case generation (non-qualified access)](img/pattern_match_case_generation_non_qualified.gif)
+
+Lambda pattern match case generation
+
+![Lambda union pattern match case generation (non-qualified access)](img/lambda_pattern_match_case_generation_non_qualified.gif)
+
+Handles union types with qualified access
 
 ![Union pattern match case generation (qualified access)](img/pattern_match_case_generation_qualified.gif)
 
