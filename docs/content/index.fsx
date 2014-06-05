@@ -29,6 +29,7 @@ Here are currently supported features:
  * [Find all references](findallreferences.html)
  * [Implement interface](implementinterface.html)
  * [Record stub generation](recordstubgeneration.html)
+ * [Union pattern match case generation](unionpatternmatchcasegeneration.html)
   
 Contributing and copyright
 --------------------------
