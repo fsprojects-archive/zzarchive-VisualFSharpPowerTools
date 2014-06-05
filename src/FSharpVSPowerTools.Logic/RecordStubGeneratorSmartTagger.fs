@@ -30,7 +30,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     editorOptionsFactory: IEditorOptionsFactoryService,
                                     textUndoHistory: ITextUndoHistory,
                                     vsLanguageService: VSLanguageService,
-                                    serviceProvider: IServiceProvider) as self =
+                                    serviceProvider: IServiceProvider,
+                                    projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
@@ -49,7 +50,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetActiveDocument()
-                    let! project = ProjectProvider.createForDocument doc
+                    let! project = projectFactory.CreateForDocument doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word
                 }

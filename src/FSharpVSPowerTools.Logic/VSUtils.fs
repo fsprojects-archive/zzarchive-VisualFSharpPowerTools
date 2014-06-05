@@ -217,6 +217,11 @@ type Project with
 
     member x.GetReferencedFSharpProjects() = x.GetReferencedProjects() |> List.filter isFSharpProject
 
+    member x.VSProject =
+        Option.ofNull x
+        |> Option.bind (fun project ->
+            try Option.ofNull (project.Object :?> VSProject) with _ -> None)
+
 let inline ensureSucceeded hr = 
     ErrorHandler.ThrowOnFailure hr
     |> ignore

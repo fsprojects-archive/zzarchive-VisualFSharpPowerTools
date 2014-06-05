@@ -16,7 +16,8 @@ type private ClassifierState =
       Spans: CategorizedColumnSpan[] }
 
 type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
-                                vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self = 
+                                vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
+                                projectFactory: ProjectFactory) as self = 
     
     let getClassficationType cat =
         match cat with
@@ -37,8 +38,8 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     let getProject() =
         maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath)
-            return! ProjectProvider.createForFileInProject doc.FilePath projectItem.ContainingProject }
+            let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
+            return! projectFactory.CreateForFileInProject doc.FilePath projectItem.ContainingProject }
 
     let updateSyntaxConstructClassifiers force =
         try

@@ -28,6 +28,9 @@ namespace FSharpVSPowerTools
         [Import]
         private ITextUndoHistoryRegistry undoHistoryRegistry = null;
 
+        [Import(typeof(ProjectFactory))]
+        private ProjectFactory projectFactory = null;
+
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // Only provide the smart tagger on the top-level buffer
@@ -38,7 +41,7 @@ namespace FSharpVSPowerTools
             {
                 return new RecordStubGeneratorSmartTagger(textView, buffer, editorOptionsFactory,
                     undoHistoryRegistry.RegisterHistory(buffer),
-                    fsharpVsLanguageService, serviceProvider) as ITagger<T>;
+                    fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
             }
             else
                 return null;

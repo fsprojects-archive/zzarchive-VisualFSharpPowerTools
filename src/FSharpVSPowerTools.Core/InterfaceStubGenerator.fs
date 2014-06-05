@@ -477,8 +477,8 @@ module InterfaceStubGenerator =
         async {
             let! symbolUses = 
                 getMemberNameAndRanges interfaceData
-                |> Seq.map getMemberByLocation
-                |> Async.Parallel
+                |> Seq.toArray
+                |> Async.Array.map getMemberByLocation
             return symbolUses |> Seq.choose (Option.bind formatMemberSignature)
                               |> Seq.concat
                               |> Set.ofSeq

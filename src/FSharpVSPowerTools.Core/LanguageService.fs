@@ -303,13 +303,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
              | Some fsSymbolUse ->
                  let! refs =
                     dependentProjectsOptions
-                    |> Seq.map (fun opts ->
+                    |> Seq.toArray
+                    |> Async.Array.map (fun opts ->
                           async {
                             let! projectResults = checker.ParseAndCheckProject opts
                             let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
                             debug "--> GetUsesOfSymbol: Project = %s, Opts = %A, Results = %A" opts.ProjectFileName opts refs
                             return refs })
-                    |> Async.Parallel
                  let refs = Array.concat refs
                  return Some(fsSymbolUse.Symbol, symbol.Text, refs)
              | None -> return None

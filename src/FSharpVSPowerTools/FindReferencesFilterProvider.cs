@@ -27,6 +27,9 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         private System.IServiceProvider serviceProvider = null;
 
+        [Import(typeof(ProjectFactory))]
+        private ProjectFactory projectFactory = null;
+
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
             var textView = editorFactory.GetWpfTextView(textViewAdapter);
@@ -35,7 +38,8 @@ namespace FSharpVSPowerTools
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.FindAllReferencesEnabled) return;
 
-            AddCommandFilter(textViewAdapter, new FindReferencesFilter(textView, fsharpVsLanguageService, serviceProvider));
+            AddCommandFilter(textViewAdapter, new FindReferencesFilter(textView, fsharpVsLanguageService, serviceProvider,
+                                                                       projectFactory));
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, FindReferencesFilter commandFilter)

@@ -17,7 +17,8 @@ type VSLanguageService
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider, 
      editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
-     openDocumentsTracker: OpenDocumentsTracker) =
+     openDocumentsTracker: OpenDocumentsTracker,
+     [<Import(typeof<ProjectFactory>)>] projectFactory: ProjectFactory) =
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
     let mutable instance = LanguageService (ignore, FileSystem openDocumentsTracker)
@@ -42,7 +43,7 @@ type VSLanguageService
         async {
             let project = projectItem.ContainingProject
             if box project <> null && isFSharpProject project then
-                let p = ProjectProvider.createForProject project
+                let p = projectFactory.CreateForProject project
                 debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
                 let! opts = p.GetProjectCheckerOptions instance
                 return instance.InvalidateConfiguration(opts)
@@ -125,8 +126,8 @@ type VSLanguageService
                 let! currentProjectOptions = getProjectOptions currentProject
                 let! projectsToCheckOptions = 
                     projectsToCheck 
-                    |> List.map getProjectOptions
-                    |> Async.Parallel
+                    |> List.toArray
+                    |> Async.Array.map getProjectOptions
 
                 let! res =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile

@@ -21,14 +21,15 @@ module PkgCmdConst =
     let guidBuiltinCmdSet = VSConstants.GUID_VSStandardCommandSet97
     let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
 
-type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider) =
+type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
+                          projectFactory: ProjectFactory) =
     let getDocumentState() =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItems = maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetActiveDocument()
-                let! project = ProjectProvider.createForDocument doc
+                let! project = projectFactory.CreateForDocument doc
                 let! span, sym = vsLanguageService.GetSymbol(caretPos, project)
                 return doc.FullName, project, span, sym }
 
@@ -38,18 +39,18 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 match symbolUse with
                 | Some (symbolUse, fileScopedCheckResults) ->
                     let! res = 
-                        match ProjectProvider.getSymbolUsageScope symbolUse.Symbol dte file with
+                        match projectFactory.GetSymbolUsageScope symbolUse.Symbol dte file with
                         | Some SymbolDeclarationLocation.File ->
                             vsLanguageService.FindUsagesInFile (span, sym, fileScopedCheckResults)
                         | loc ->
                             let projectsToCheck =
                                 match loc with
                                 | Some (SymbolDeclarationLocation.Projects declProjects) ->
-                                    ProjectProvider.getDependentProjects dte declProjects
+                                    projectFactory.GetDependentProjects dte declProjects
                                 // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
                                 // In order to find all its usages we have to check all F# projects.
                                 | _ -> 
-                                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map ProjectProvider.createForProject
+                                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map projectFactory.CreateForProject
                                     if allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName) 
                                     then allProjects 
                                     else project :: allProjects

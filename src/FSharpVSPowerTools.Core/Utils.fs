@@ -34,6 +34,7 @@ module Option =
         | Some x -> Some x
         | None -> v
     
+// Async helper functions copied from https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/ControlCollections.Async.fs
 [<RequireQualifiedAccess>]
 module Async =
     /// Transforms an Async value using the specified function.
@@ -45,6 +46,45 @@ module Async =
             // Apply the mapping function and return the result.
             return mapping x
         }
+
+    [<RequireQualifiedAccess>]    
+    module Array =
+        /// Async implementation of Array.map.
+        let map (mapping : 'T -> Async<'U>) (array : 'T[]) : Async<'U[]> =
+            let len = Array.length array
+            let result = Array.zeroCreate len
+
+            async {
+                // Apply the mapping function to each array element.
+                for i in 0 .. len - 1 do
+                    let! mappedValue = mapping array.[i]
+                    result.[i] <- mappedValue
+
+                // Return the completed results.
+                return result
+            }
+
+    [<RequireQualifiedAccess>]
+    module List =
+        let rec private mapImpl (mapping, mapped : 'U list, pending : 'T list) =
+            async {
+                match pending with
+                | [] ->
+                    // Reverse the list of mapped values before returning it.
+                    return List.rev mapped
+
+                | el :: pending ->
+                    // Apply the current list element to the mapping function.
+                    let! mappedEl = mapping el
+
+                    // Cons the result to the list of mapped values, then continue
+                    // mapping the rest of the pending list elements.
+                    return! mapImpl (mapping, mappedEl :: mapped, pending)
+                }
+
+        /// Async implementation of List.map.
+        let map (mapping : 'T -> Async<'U>) (list : 'T list) : Async<'U list> =
+            mapImpl (mapping, [], list)
 
 /// Maybe computation expression builder, copied from ExtCore library
 /// https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs
@@ -278,3 +318,14 @@ module Pervasive =
         static member GetFileNameSafe path =
             try Path.GetFileName path
             with _ -> path
+
+module Reflection =
+    open System.Reflection
+
+    type private Expr = System.Linq.Expressions.Expression
+    let instanceNonPublic = BindingFlags.Instance ||| BindingFlags.NonPublic
+    
+    let precompileFieldGet<'R>(f : FieldInfo) =
+        let p = Expr.Parameter(typeof<obj>)
+        let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
+        lambda.Compile().Invoke
