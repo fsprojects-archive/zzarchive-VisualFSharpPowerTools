@@ -139,6 +139,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool RecordStubGenerationEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool UnionPatternMatchCaseGenerationEnabled { get; set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -158,6 +161,7 @@ namespace FSharpVSPowerTools
                 _optionsControl.FolderOrganizationEnabled = FolderOrganizationEnabled;
                 _optionsControl.FindAllReferencesEnabled = FindAllReferencesEnabled;
                 _optionsControl.RecordStubGenerationEnabled = RecordStubGenerationEnabled;
+                _optionsControl.UnionPatternMatchCaseGenerationEnabled = UnionPatternMatchCaseGenerationEnabled;
 
                 return _optionsControl;
             }

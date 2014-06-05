@@ -89,6 +89,12 @@ namespace FSharpVSPowerTools
             set { chbRecordStubGeneration.Checked = value; }
         }
 
+        public bool UnionPatternMatchCaseGenerationEnabled
+        {
+            get { return chbUnionPatternMatchCaseGeneration.Checked; }
+            set { chbUnionPatternMatchCaseGeneration.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
@@ -103,6 +109,7 @@ namespace FSharpVSPowerTools
             chbFolderOrganization.Checked = OptionsPage.FolderOrganizationEnabled;
             chbFindAllReferences.Checked = OptionsPage.FindAllReferencesEnabled;
             chbRecordStubGeneration.Checked = OptionsPage.RecordStubGenerationEnabled;
+            chbUnionPatternMatchCaseGeneration.Checked = OptionsPage.UnionPatternMatchCaseGenerationEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
