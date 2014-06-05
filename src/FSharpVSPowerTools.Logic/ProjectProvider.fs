@@ -8,6 +8,10 @@ open FSharpVSPowerTools
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp
+open Microsoft.VisualStudio.Shell.Interop
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Text
 
 type FilePath = string
 
@@ -213,9 +217,9 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                     p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
                     p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
                             
-type internal VirtualProjectProvider (filePath: string) = 
-    do Debug.Assert (filePath <> null, "FilePath should not be null.")
-    let source = File.ReadAllText filePath
+type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) = 
+    do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
+    let source = buffer.CurrentSnapshot.GetText()
     let targetFramework = FSharpTargetFramework.NET_4_5
 
     interface IProjectProvider with
@@ -228,10 +232,6 @@ type internal VirtualProjectProvider (filePath: string) =
         member x.GetAllReferencedProjectFileNames() = []
         member x.GetProjectCheckerOptions languageService =
             languageService.GetScriptCheckerOptions (filePath, null, source, targetFramework)
-    
-open Microsoft.VisualStudio.Shell.Interop
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio.Shell
 
 [<Export>]
 type ProjectFactory
@@ -265,28 +265,28 @@ type ProjectFactory
             provider.ReferencesChanged.Add(fun p -> onProjectChanged p)
             provider) :> _
 
-    member x.CreateForFileInProject (filePath: string) project: IProjectProvider option =
+    member x.CreateForFileInProject (buffer: ITextBuffer) (filePath: string) project: IProjectProvider option =
         if not (project === null) && not (filePath === null) && isFSharpProject project then
             let projectProvider = x.CreateForProject project
-            /// If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files 
-            /// Consequently, we should interprete it as a script
+            // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files 
+            // Consequently, we should interprete it as a script
             if Array.exists ((=) filePath) projectProvider.SourceFiles then
                 Some projectProvider
             else
-                Some (VirtualProjectProvider(filePath) :> _)
+                Some (VirtualProjectProvider(buffer, filePath) :> _)
         elif not (filePath === null) then
             let ext = Path.GetExtension filePath
             if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
                 String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
                 String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
-                Some (VirtualProjectProvider(filePath) :> _)
+                Some (VirtualProjectProvider(buffer, filePath) :> _)
             else 
                 None
         else 
             None
 
-    member x.CreateForDocument (doc: Document) =
-        x.CreateForFileInProject doc.FullName doc.ProjectItem.ContainingProject
+    member x.CreateForDocument buffer (doc: Document) =
+        x.CreateForFileInProject buffer doc.FullName doc.ProjectItem.ContainingProject
 
     member x.GetSymbolUsageScope (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
         let isPrivateToFile = 

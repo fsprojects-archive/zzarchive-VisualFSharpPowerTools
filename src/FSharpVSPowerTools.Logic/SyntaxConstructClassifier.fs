@@ -13,7 +13,7 @@ open FSharpVSPowerTools.ProjectSystem
 [<NoComparison>]
 type private ClassifierState =
     { SnapshotSpan: SnapshotSpan
-      Spans: CategorizedColumnSpan[] }
+      Spans: CategorizedColumnSpan [] }
 
 type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
@@ -39,7 +39,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
-            return! projectFactory.CreateForFileInProject doc.FilePath projectItem.ContainingProject }
+            return! projectFactory.CreateForFileInProject doc.TextBuffer doc.FilePath projectItem.ContainingProject }
 
     let updateSyntaxConstructClassifiers force =
         try
@@ -63,7 +63,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                     let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
                                     let! allSymbolsUses, lexer =
                                         vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
-                                    let! parseResults = vsLanguageService.ParseFileInProject(snapshot, doc.FilePath, project)
+                                    let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
                                     let spans = 
                                         getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
@@ -75,8 +75,8 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                     // TextBuffer is null if a solution is closed at this moment
                                     if doc.TextBuffer <> null then
                                         let currentSnapshot = doc.TextBuffer.CurrentSnapshot
-                                        let snapshot = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-                                        classificationChanged.Trigger(self, ClassificationChangedEventArgs(snapshot))
+                                        let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+                                        classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
                                 with e -> Logging.logException e
                             finally isWorking <- false
                         } |> Async.Start
@@ -112,7 +112,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 |> Seq.choose (fun loc -> 
                     maybe {
                         let! clType = getClassficationType loc.Category
-                        let! span = fromPos state.SnapshotSpan.Snapshot (loc.WordSpan.ToRange())
+                        let! span = fromRange state.SnapshotSpan.Snapshot (loc.WordSpan.ToRange())
                         return clType, span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
                     })
                 |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)

@@ -47,7 +47,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
         |> Seq.choose (fun symbolUse -> 
             // We have to filter by full paths otherwise the range is invalid wrt current snapshot
             if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
-                fromFSharpPos view.TextSnapshot symbolUse.RangeAlternate
+                fromFSharpRange view.TextSnapshot symbolUse.RangeAlternate
             else None)
         |> Seq.map (fun span -> 
             // Sometimes F.C.S returns a composite identifier which should be truncated
@@ -96,7 +96,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                 let currentRequest = requestedPoint
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetActiveDocument() |> liftMaybe
-                let! project = projectFactory.CreateForDocument doc |> liftMaybe
+                let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
                 match vsLanguageService.GetSymbol(currentRequest, project) with
                 | Some (newWord, symbol) ->
                     // If this is the same word we currently have, we're done (e.g. caret moved within a word).

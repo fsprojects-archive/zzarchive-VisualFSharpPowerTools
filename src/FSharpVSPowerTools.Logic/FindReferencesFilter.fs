@@ -29,7 +29,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             let projectItems = maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetActiveDocument()
-                let! project = projectFactory.CreateForDocument doc
+                let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 let! span, sym = vsLanguageService.GetSymbol(caretPos, project)
                 return doc.FullName, project, span, sym }
 

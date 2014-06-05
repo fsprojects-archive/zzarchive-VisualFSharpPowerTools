@@ -50,7 +50,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetActiveDocument()
-                    let! project = projectFactory.CreateForDocument doc
+                    let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word
                 }
