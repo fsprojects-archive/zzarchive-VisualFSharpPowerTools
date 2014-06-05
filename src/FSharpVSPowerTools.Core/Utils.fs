@@ -318,3 +318,14 @@ module Pervasive =
         static member GetFileNameSafe path =
             try Path.GetFileName path
             with _ -> path
+
+module Reflection =
+    open System.Reflection
+
+    type private Expr = System.Linq.Expressions.Expression
+    let instanceNonPublic = BindingFlags.Instance ||| BindingFlags.NonPublic
+    
+    let precompileFieldGet<'R>(f : FieldInfo) =
+        let p = Expr.Parameter(typeof<obj>)
+        let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
+        lambda.Compile().Invoke
