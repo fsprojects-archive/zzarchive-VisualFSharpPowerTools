@@ -13,34 +13,11 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 [<NoEquality; NoComparison>]
-type MatchExpr = {
-    MatchWithRange: range
-    Expr: SynExpr
-    MatchedExpr: SynExpr
+type PatternMatchExpr = {
+    /// Range of 'match x with' or 'function'
+    MatchWithOrFunctionRange: range
     Clauses: SynMatchClause list
 }
-
-[<NoEquality; NoComparison>]
-type MatchLambdaExpr = {
-    FunctionRange: range
-    Expr: SynExpr
-    Clauses: SynMatchClause list
-}
-
-[<NoEquality; NoComparison>]
-type PatternMatchExpr =
-    | MatchExpr of MatchExpr
-    | MatchLambdaExpr of MatchLambdaExpr
-
-    member x.Expr =
-        match x with
-        | MatchExpr expr -> expr.Expr
-        | MatchLambdaExpr expr -> expr.Expr
-
-    member x.Clauses =
-        match x with
-        | MatchExpr expr -> expr.Clauses
-        | MatchLambdaExpr expr -> expr.Clauses
 
 [<NoComparison>]
 type UnionMatchCasesInsertionParams = {
@@ -223,9 +200,8 @@ let tryFindPatternMatchExpr (pos: pos) (parsedInput: ParsedInput) =
                 |> Option.orTry (fun () ->
                     if isExnMatch = false &&
                        List.forall clauseIsCandidateForCodeGen synMatchClauseList then
-                        MatchLambdaExpr { FunctionRange = functionKeywordRange
-                                          Expr = matchLambdaExpr
-                                          Clauses = synMatchClauseList }
+                        { MatchWithOrFunctionRange = functionKeywordRange
+                          Clauses = synMatchClauseList }
                         |> Some
                     else None
                 )
@@ -236,10 +212,8 @@ let tryFindPatternMatchExpr (pos: pos) (parsedInput: ParsedInput) =
                     if List.forall clauseIsCandidateForCodeGen synMatchClauseList then
                         match sequencePointInfoForBinding with
                         | SequencePointAtBinding range ->
-                            MatchExpr { MatchWithRange = range
-                                        Expr = matchExpr
-                                        MatchedExpr = synExpr
-                                        Clauses = synMatchClauseList }
+                            { MatchWithOrFunctionRange = range
+                              Clauses = synMatchClauseList }
                             |> Some
                         | _ -> None
                     else
@@ -478,13 +452,7 @@ let tryFindBarTokenLPosInRange
 let tryGetRangeWhereFirstBarTokenCouldExist (patMatchExpr: PatternMatchExpr) =
     maybe {
         let! fstClause = Seq.tryHead patMatchExpr.Clauses
-
-        return
-            match patMatchExpr with
-            | MatchExpr expr ->
-                unionRanges expr.MatchWithRange.EndRange fstClause.Range.StartRange
-            | MatchLambdaExpr expr ->
-                unionRanges expr.FunctionRange.EndRange fstClause.Range.StartRange
+        return unionRanges patMatchExpr.MatchWithOrFunctionRange.EndRange fstClause.Range.StartRange
     }
 
 let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) project document (patMatchExpr: PatternMatchExpr) =
@@ -500,19 +468,10 @@ let getInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>) pr
         { InsertionPos = tokenLPos
           FirstClauseStartsWithPipe = true }
     | None, [] -> 
-        match patMatchExpr with
-        | MatchExpr expr ->
-            // After 'with' keyword
-            { InsertionPos = Pos.fromZ (expr.MatchWithRange.EndLine - 1)
-                                       (expr.MatchWithRange.EndColumn)
-              FirstClauseStartsWithPipe = true }
-
-        | MatchLambdaExpr expr ->
-            // After 'function' keyword
-            { InsertionPos = Pos.fromZ (expr.FunctionRange.EndLine - 1)
-                                       (expr.FunctionRange.EndColumn)
-              FirstClauseStartsWithPipe = true }
-
+        // After 'with' or 'function' keyword
+        { InsertionPos = Pos.fromZ (patMatchExpr.MatchWithOrFunctionRange.EndLine - 1)
+                                   (patMatchExpr.MatchWithOrFunctionRange.EndColumn)
+          FirstClauseStartsWithPipe = true }
     | None, fstClause :: _ ->
         // Before first clause, which doesn't start by '|'
         { InsertionPos = Pos.fromZ (fstClause.Range.StartLine - 1)
