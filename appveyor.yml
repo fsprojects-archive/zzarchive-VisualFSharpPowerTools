@@ -2,4 +2,4 @@ build_script:
   - ps: .\build.cmd
 test: off
 artifacts:
-  - path: bin\FSharpVSPowerTools.vsix
+  - path: bin\*.vsix

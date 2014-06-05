@@ -92,7 +92,6 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
         fieldCount > 0 && writtenFieldCount < fieldCount
 
     let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordExpr: RecordExpr) (insertionPos: _) entity = 
-        let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let fieldsWritten = recordExpr.FieldExprList
 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)

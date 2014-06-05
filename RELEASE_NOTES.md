@@ -70,5 +70,8 @@
 * Return correct symbol information on dirty files and dirty projects
 
 #### 1.2.0 - Unreleased
+* Implement Union type pattern generation
+* Fix various bugs on syntax coloring
+* Improve responsiveness on big solutions
 
 

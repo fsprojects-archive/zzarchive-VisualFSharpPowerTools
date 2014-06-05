@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60BC93-E09B-4E5F-9D85-95A519479D54}"
 	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
 		build.fsx = build.fsx
 		CONTRIBUTING.md = CONTRIBUTING.md
 		README.md = README.md
@@ -111,8 +112,5 @@ Global
 		{D751E684-285F-494D-B402-98772A541C31} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{697E3311-F98F-4063-B20C-D59D44CB4FA8} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{11D1DE7D-B08F-4524-BBB5-D729223F0396} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

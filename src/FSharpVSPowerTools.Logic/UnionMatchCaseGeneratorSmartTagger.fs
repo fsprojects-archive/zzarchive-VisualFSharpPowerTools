@@ -29,7 +29,8 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
                                         buffer: ITextBuffer,
                                         textUndoHistory: ITextUndoHistory,
                                         vsLanguageService: VSLanguageService,
-                                        serviceProvider: IServiceProvider) as self =
+                                        serviceProvider: IServiceProvider,
+                                        projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord = None
     let mutable unionDefinition = None
@@ -43,7 +44,7 @@ type UnionMatchCaseGeneratorSmartTagger(view: ITextView,
             let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetActiveDocument() |> liftMaybe
-            let! project = ProjectProvider.createForDocument doc |> liftMaybe
+            let! project = projectFactory.CreateForDocument doc |> liftMaybe
             let vsDocument = VSDocument(doc, point.Snapshot)
             let! symbolRange, matchExpr, unionTypeDefinition, insertionPos =
                 tryFindUnionTypeDefinitionFromPos codeGenService project point vsDocument
