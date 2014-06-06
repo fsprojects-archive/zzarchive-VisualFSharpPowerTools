@@ -496,6 +496,40 @@ let f = function
     Case1 -> failwith ""
     | Case2 -> ()"""
 
+[<Test>]
+let ``generation is not triggered when caret on union type identifier but not on pattern match clause`` () =
+    """
+[<RequireQualifiedAccess>]
+type Union = Case1 | Case2
+
+let f x =
+    match x with
+    | Some 0 -> Union.Case2"""
+    |> insertCasesFromPos (Pos.fromZ 6 16)
+    |> assertSrcAreEqual """
+[<RequireQualifiedAccess>]
+type Union = Case1 | Case2
+
+let f x =
+    match x with
+    | Some 0 -> Union.Case2"""
+
+[<Test>]
+let ``generation is not triggered when caret on union case identifier but not on pattern match clause`` () =
+    """
+type Union = Case1 | Case2
+
+let f x =
+    match x with
+    | Some 0 -> Case2"""
+    |> insertCasesFromPos (Pos.fromZ 5 16)
+    |> assertSrcAreEqual """
+type Union = Case1 | Case2
+
+let f x =
+    match x with
+    | Some 0 -> Case2"""
+
 
 // Union match case without argument patterns
 //// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range
