@@ -159,12 +159,13 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                 if String.IsNullOrWhiteSpace file then None
                 else Some(Path.GetFileNameSafe file)))
 
+    let cache = ref None
+
     let getProjectCheckerOptions languageService =
-        let cache = ref None
         async {
             match !cache with
             | Some x -> return x
-            | _ ->
+            | None ->
                 let refs = referencedProjects.Value
                 let! referencedProjects =
                     refs 
@@ -176,21 +177,20 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                 let opts = languageService.GetProjectCheckerOptions (
                                 projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects) 
 
-                let refProjectsOutPaths = 
-                    opts.ReferencedProjects 
-                    |> Array.map fst
-                    |> Set.ofArray
+                let orphanedProjects = lazy (
+                    let refProjectsOutPaths = 
+                        opts.ReferencedProjects 
+                        |> Array.map fst
+                        |> Set.ofArray
 
-                let orphanedProjects =
                     opts.ProjectOptions 
                     |> Seq.filter (fun x -> x.StartsWith("-r:"))
                     |> Seq.map (fun x -> x.Substring(3).Trim())
                     |> Set.ofSeq
-                    |> Set.difference refProjectsOutPaths
+                    |> Set.difference refProjectsOutPaths)
 
-                Debug.Assert (
-                    Set.isEmpty orphanedProjects, 
-                    sprintf "Not all referenced projects are in the compiler options: %A" orphanedProjects)
+                Debug.Assert (Set.isEmpty orphanedProjects.Value, 
+                    sprintf "Not all referenced projects are in the compiler options: %A" orphanedProjects.Value)
 
                 //debug "[ProjectProvider] Options for %s: %A" projectFileName opts
                 cache := Some opts

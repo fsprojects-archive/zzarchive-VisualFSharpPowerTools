@@ -19,9 +19,6 @@ namespace FSharpVSPowerTools
     public class HighlightUsageTaggerProvider : IViewTaggerProvider
     {
         [Import]
-        private ITextSearchService textSearchService = null;
-
-        [Import]
         private VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
@@ -38,8 +35,8 @@ namespace FSharpVSPowerTools
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.HighlightUsageEnabled) return null;
 
-            return new HighlightUsageTagger(textView, buffer, textSearchService, fsharpVsLanguageService, serviceProvider,
-                                            projectFactory) as ITagger<T>;
+            return new HighlightUsageTagger(textView, buffer, fsharpVsLanguageService, 
+                                            serviceProvider, projectFactory) as ITagger<T>;
         }
     }
 }

@@ -23,8 +23,9 @@ type HighlightUsageTag() =
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
-type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchService: ITextSearchService, 
-                          vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
+type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
+                          vsLanguageService: VSLanguageService, 
+                          serviceProvider: IServiceProvider,
                           projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
@@ -41,7 +42,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let symbolUsesToSpans fileName (lastIdent: string) (symbolUses: FSharpSymbolUse[]) =
+    let symbolUsesToSpans fileName (lastIdent: string) (symbolUses: FSharpSymbolUse []) =
         let filePath = Path.GetFullPathSafe(fileName)
         symbolUses
         |> Seq.choose (fun symbolUse -> 
@@ -49,15 +50,16 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
             if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
                 fromFSharpRange view.TextSnapshot symbolUse.RangeAlternate
             else None)
-        |> Seq.map (fun span -> 
+        |> Seq.choose (fun span -> 
             // Sometimes F.C.S returns a composite identifier which should be truncated
             let index = span.GetText().LastIndexOf (lastIdent)
             if index > 0 then 
-                SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index)
-            else span)
+                Some (SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index))
+            elif index = 0 then Some span
+            else None)
         |> Seq.toList
 
-    let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan, newWordSpans: seq<SnapshotSpan>, 
+    let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan,
                   fileName: string, projectProvider: IProjectProvider) =
         async {
             if currentRequest = requestedPoint then
@@ -71,8 +73,6 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
 
                         match refSpans with
                         | Some references -> 
-                            let possibleSpans = HashSet(newWordSpans)
-                            let references = references |> List.filter possibleSpans.Contains
                             // Ignore symbols without any use
                             let word = if Seq.isEmpty references then None else Some newWord
                             synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
@@ -103,12 +103,8 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer, textSearchServic
                     match currentWord with
                     | Some cw when cw = newWord -> ()
                     | _ ->
-                        // Find the new spans
-                        let newSpans = 
-                            FindData(newWord.GetText(), newWord.Snapshot, FindOptions = FindOptions.MatchCase)
-                            |> textSearchService.FindAll
                         // If we are still up-to-date (another change hasn't happened yet), do a real update
-                        return! doUpdate (currentRequest, symbol, newWord, newSpans, doc.FullName, project) |> liftAsync
+                        return! doUpdate (currentRequest, symbol, newWord, doc.FullName, project) |> liftAsync
                 | None ->
                     return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             } 
