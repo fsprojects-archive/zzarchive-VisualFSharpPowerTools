@@ -82,12 +82,11 @@ namespace FSharpVSPowerTools
             this.chbUnionPatternMatchCaseGeneration.AutoSize = true;
             this.chbUnionPatternMatchCaseGeneration.Checked = true;
             this.chbUnionPatternMatchCaseGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbUnionPatternMatchCaseGeneration.ForeColor = System.Drawing.Color.DarkRed;
             this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(181, 124);
             this.chbUnionPatternMatchCaseGeneration.Name = "chbUnionPatternMatchCaseGeneration";
             this.chbUnionPatternMatchCaseGeneration.Size = new System.Drawing.Size(269, 17);
             this.chbUnionPatternMatchCaseGeneration.TabIndex = 16;
-            this.chbUnionPatternMatchCaseGeneration.Text = "Union pattern match case generation (experimental)";
+            this.chbUnionPatternMatchCaseGeneration.Text = "Union pattern match case generation";
             this.chbUnionPatternMatchCaseGeneration.UseVisualStyleBackColor = true;
             // 
             // chbRecordStubGeneration
@@ -95,12 +94,11 @@ namespace FSharpVSPowerTools
             this.chbRecordStubGeneration.AutoSize = true;
             this.chbRecordStubGeneration.Checked = true;
             this.chbRecordStubGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRecordStubGeneration.ForeColor = System.Drawing.Color.DarkRed;
             this.chbRecordStubGeneration.Location = new System.Drawing.Point(181, 101);
             this.chbRecordStubGeneration.Name = "chbRecordStubGeneration";
             this.chbRecordStubGeneration.Size = new System.Drawing.Size(205, 17);
             this.chbRecordStubGeneration.TabIndex = 15;
-            this.chbRecordStubGeneration.Text = "Record stub generation (experimental)";
+            this.chbRecordStubGeneration.Text = "Record stub generation";
             this.chbRecordStubGeneration.UseVisualStyleBackColor = true;
             // 
             // chbFindAllReferences
