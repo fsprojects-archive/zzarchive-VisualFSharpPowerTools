@@ -268,10 +268,12 @@ let ``should find usages of property initializers``() =
         [ (759, 19, 23)
           (761, 14, 18) ]
 
-[<Test; Ignore "FCS 0.0.36 does not support this">]
+[<Test>]
 let ``should find usages of properties with explicit getters and setters``() =
-    checkSymbolUsage 766 17 "        member x.Name"
-        [ (766, 17, 21)]
+    checkSymbolUsage 765 17 "        member x.Name with get() = 0 and set (v: int) = ()"
+        [ (765, 17, 21)
+          (767, 12, 35)
+          (768, 4, 27) ]
 
 [<Test>] 
 let ``should find usages of fully qualified record fields``() =
