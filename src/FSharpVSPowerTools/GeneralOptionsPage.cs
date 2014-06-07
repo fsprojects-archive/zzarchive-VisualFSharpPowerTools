@@ -5,7 +5,6 @@ using System.Configuration;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
-using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace FSharpVSPowerTools
@@ -18,7 +17,7 @@ namespace FSharpVSPowerTools
         private const string navBarConfig = "fsharp-navigationbar-enabled";
         private bool _navBarEnabledInAppConfig;
 
-        private Logger logger;
+        private readonly Logger logger;
 
         public GeneralOptionsPage()
         {
@@ -37,6 +36,7 @@ namespace FSharpVSPowerTools
             FolderOrganizationEnabled = false;
             FindAllReferencesEnabled = true;
             RecordStubGenerationEnabled = true;
+            UnionPatternMatchCaseGenerationEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -139,25 +139,31 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool RecordStubGenerationEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool UnionPatternMatchCaseGenerationEnabled { get; set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
             get
             {
-                _optionsControl = new GeneralOptionsControl();
-                _optionsControl.OptionsPage = this;
-                _optionsControl.XmlDocEnabled = XmlDocEnabled;
-                _optionsControl.FormattingEnabled = FormattingEnabled;
-                _optionsControl.NavBarEnabled = NavBarEnabled && _navBarEnabledInAppConfig;
-                _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
-                _optionsControl.RenameRefactoringEnabled = RenameRefactoringEnabled;
-                _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
-                _optionsControl.NavigateToEnabled = NavigateToEnabled;
-                _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
-                _optionsControl.InterfaceImplementationEnabled = InterfaceImplementationEnabled;
-                _optionsControl.FolderOrganizationEnabled = FolderOrganizationEnabled;
-                _optionsControl.FindAllReferencesEnabled = FindAllReferencesEnabled;
-                _optionsControl.RecordStubGenerationEnabled = RecordStubGenerationEnabled;
+                _optionsControl = new GeneralOptionsControl
+                                  {
+                                      OptionsPage = this,
+                                      XmlDocEnabled = this.XmlDocEnabled,
+                                      FormattingEnabled = this.FormattingEnabled,
+                                      NavBarEnabled = this.NavBarEnabled && this._navBarEnabledInAppConfig,
+                                      HighlightUsageEnabled = this.HighlightUsageEnabled,
+                                      RenameRefactoringEnabled = this.RenameRefactoringEnabled,
+                                      DepthColorizerEnabled = this.DepthColorizerEnabled,
+                                      NavigateToEnabled = this.NavigateToEnabled,
+                                      SyntaxColoringEnabled = this.SyntaxColoringEnabled,
+                                      InterfaceImplementationEnabled = this.InterfaceImplementationEnabled,
+                                      FolderOrganizationEnabled = this.FolderOrganizationEnabled,
+                                      FindAllReferencesEnabled = this.FindAllReferencesEnabled,
+                                      RecordStubGenerationEnabled = this.RecordStubGenerationEnabled,
+                                      UnionPatternMatchCaseGenerationEnabled = this.UnionPatternMatchCaseGenerationEnabled
+                                  };
 
                 return _optionsControl;
             }
@@ -187,6 +193,7 @@ namespace FSharpVSPowerTools
                 FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
                 FindAllReferencesEnabled = _optionsControl.FindAllReferencesEnabled;
                 RecordStubGenerationEnabled = _optionsControl.RecordStubGenerationEnabled;
+                UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
             }
 
             base.OnApply(e);

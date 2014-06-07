@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
 	ProjectSection(SolutionItems) = preProject
@@ -42,6 +42,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\recordstubgeneration.fsx = docs\content\recordstubgeneration.fsx
 		docs\content\rename.fsx = docs\content\rename.fsx
 		docs\content\syntaxcoloring.fsx = docs\content\syntaxcoloring.fsx
+		docs\content\unionpatternmatchcasegeneration.fsx = docs\content\unionpatternmatchcasegeneration.fsx
 		docs\content\xmldoc.fsx = docs\content\xmldoc.fsx
 	EndProjectSection
 EndProject

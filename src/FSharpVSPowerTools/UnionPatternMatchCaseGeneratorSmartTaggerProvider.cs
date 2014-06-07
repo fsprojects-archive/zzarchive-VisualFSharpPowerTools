@@ -13,8 +13,8 @@ namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
-    [TagType(typeof(UnionMatchCaseGeneratorSmartTag))]
-    public class UnionMatchCaseGeneratorSmartTaggerProvider : IViewTaggerProvider
+    [TagType(typeof(UnionPatternMatchCaseGeneratorSmartTag))]
+    public class UnionPatternMatchCaseGeneratorSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
@@ -34,10 +34,9 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            // TODO reactivate check
-            if (generalOptions != null)// && generalOptions.RecordStubGenerationEnabled)
+            if (generalOptions != null && generalOptions.UnionPatternMatchCaseGenerationEnabled)
             {
-                return new UnionMatchCaseGeneratorSmartTagger(textView, buffer,
+                return new UnionPatternMatchCaseGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
                     fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
             }

@@ -10,7 +10,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.UnionMatchCaseGenerator
+open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open Microsoft.FSharp.Compiler.Ast
 
 [<AutoOpen>]

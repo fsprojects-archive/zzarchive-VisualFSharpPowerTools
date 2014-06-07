@@ -65,7 +65,7 @@
     <Compile Include="CodeGenerationTestService.fs" />
     <Compile Include="RecordStubGeneratorTests.fs" />
     <Compile Include="NavigateToIndexTests.fs" />
-    <Compile Include="UnionMatchCaseGeneratorTests.fs" />
+    <Compile Include="UnionPatternMatchCaseGeneratorTests.fs" />
     <None Include="DepthColorizerSampleFile.fs">
       <Link>DepthColorizerSampleFile.fs</Link>
     </None>
