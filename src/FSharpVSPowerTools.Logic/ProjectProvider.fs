@@ -18,9 +18,10 @@ type FilePath = string
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
     | File
-    | Projects of IProjectProvider list // source file where a symbol is declared may be included into several projects
+    | Projects of IProjectProvider list // Source file where a symbol is declared may be included into several projects
 
 and IProjectProvider =
+    abstract IsForStandaloneScript: bool
     abstract ProjectFileName: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
@@ -200,6 +201,7 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
     member x.ReferencesChanged = referencesChanged.Publish
 
     interface IProjectProvider with
+        member x.IsForStandaloneScript = false
         member x.ProjectFileName = projectFileName.Value
         member x.TargetFramework = targetFramework.Value
         member x.CompilerOptions = compilerOptions.Value
@@ -223,6 +225,7 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
     let targetFramework = FSharpTargetFramework.NET_4_5
 
     interface IProjectProvider with
+        member x.IsForStandaloneScript = true
         member x.ProjectFileName = null
         member x.TargetFramework = targetFramework
         member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
@@ -288,7 +291,7 @@ type ProjectFactory
     member x.CreateForDocument buffer (doc: Document) =
         x.CreateForFileInProject buffer doc.FullName doc.ProjectItem.ContainingProject
 
-    member x.GetSymbolUsageScope (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
+    member x.GetSymbolUsageScope isStandalone (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath): SymbolDeclarationLocation option =
         let isPrivateToFile = 
             match symbol with 
             | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
@@ -297,19 +300,22 @@ type ProjectFactory
             | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
             | :? FSharpField as m -> m.Accessibility.IsPrivate
             | _ -> false
-        if isPrivateToFile then Some SymbolDeclarationLocation.File 
+        if isPrivateToFile then 
+            Some SymbolDeclarationLocation.File 
         else 
             match symbol.TryGetLocation() with
             | Some loc ->
                 let filePath = Path.GetFullPath loc.FileName
-                if filePath = currentFile && Path.GetExtension currentFile = ".fsx" then 
+                if isStandalone && filePath = currentFile then 
                     Some SymbolDeclarationLocation.File
+                elif isStandalone then
+                    None
                 else
                     let allProjects = dte.ListFSharpProjectsInSolution() |> List.map x.CreateForProject
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
                     | projects -> Some (SymbolDeclarationLocation.Projects projects)
-            | _ -> None
+            | None -> None
 
     member x.GetDependentProjects (dte: DTE) (projects: IProjectProvider list) =
         let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLower()) |> set

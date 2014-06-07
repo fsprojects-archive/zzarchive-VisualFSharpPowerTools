@@ -30,24 +30,24 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetActiveDocument()
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
-                let! span, sym = vsLanguageService.GetSymbol(caretPos, project)
-                return doc.FullName, project, span, sym }
+                let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
+                return doc.FullName, project, span, symbol }
 
             match projectItems with
-            | Some (file, project, span, sym) ->
-                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, sym, file, project, AllowStaleResults.MatchingSource)
+            | Some (file, project, span, symbol) ->
+                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, file, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
-                | Some (symbolUse, fileScopedCheckResults) ->
-                    let! res = 
-                        match projectFactory.GetSymbolUsageScope symbolUse.Symbol dte file with
+                | Some (fsSymbolUse, fileScopedCheckResults) ->
+                    let! results = 
+                        match projectFactory.GetSymbolUsageScope project.IsForStandaloneScript fsSymbolUse.Symbol dte file with
                         | Some SymbolDeclarationLocation.File ->
-                            vsLanguageService.FindUsagesInFile (span, sym, fileScopedCheckResults)
-                        | loc ->
+                            vsLanguageService.FindUsagesInFile (span, symbol, fileScopedCheckResults)
+                        | scope ->
                             let projectsToCheck =
-                                match loc with
+                                match scope with
                                 | Some (SymbolDeclarationLocation.Projects declProjects) ->
                                     projectFactory.GetDependentProjects dte declProjects
-                                // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
+                                // The symbol is declared in .NET framework, an external assembly or in a C# project within the solution.
                                 // In order to find all its usages we have to check all F# projects.
                                 | _ -> 
                                     let allProjects = dte.ListFSharpProjectsInSolution() |> List.map projectFactory.CreateForProject
@@ -56,7 +56,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                                     else project :: allProjects
     
                             vsLanguageService.FindUsages (span, file, project, projectsToCheck) 
-                    return res |> Option.map (fun (_, _, refs) -> refs, sym)
+                    return results |> Option.map (fun (_, _, references) -> references, symbol)
                 | _ -> return None
             | _ -> return None
         }
@@ -65,7 +65,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         async {
             let! references = getDocumentState()
             match references with
-            | Some (references, sym) ->
+            | Some (references, symbol) ->
                 let references = 
                     references
                     |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
@@ -79,7 +79,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             
                 let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
                 for reference in references do
-                    findResults.AddNode(FSharpLibraryNode(sym.Text, serviceProvider, reference))
+                    findResults.AddNode(FSharpLibraryNode(symbol.Text, serviceProvider, reference))
 
                 let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
                 let searchCriteria = 
@@ -88,7 +88,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD,
                         pIVsNavInfo = (findResults :> IVsNavInfo),
                         grfOptions = uint32 _VSOBSEARCHOPTIONS2.VSOBSO_LISTREFERENCES,
-                        szName = sym.Text)
+                        szName = symbol.Text)
 
                 let guid = ref PkgCmdConst.guidSymbolLibrary
                 ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
