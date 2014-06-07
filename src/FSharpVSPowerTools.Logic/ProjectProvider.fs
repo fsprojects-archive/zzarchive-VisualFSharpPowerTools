@@ -35,8 +35,14 @@ and IProjectProvider =
 type private CacheMessage<'k, 'v> =
     | Get of 'k * (unit -> 'v) * AsyncReplyChannel<'v>
     | Remove of 'k
+    | Clear
 
 type private Cache<'k, 'v when 'k: comparison>() =
+    let disposeValue value =
+        match box value with
+        | :? IDisposable as d -> d.Dispose()
+        | _ -> ()
+
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop (cache: Map<'k, 'v>) = 
             async {
@@ -57,16 +63,18 @@ type private Cache<'k, 'v when 'k: comparison>() =
                     | Remove key -> 
                         match cache |> Map.tryFind key with
                         | Some value -> 
-                            match box value with
-                            | :? IDisposable as d -> d.Dispose()
-                            | _ -> ()
+                            disposeValue value
                             cache |> Map.remove key
-                        | _ -> cache) 
+                        | _ -> cache
+                    | Clear -> 
+                        cache |> Map.toSeq |> Seq.iter (fun (_, value) -> disposeValue value)
+                        Map.empty) 
             }
         loop Map.empty)
     do agent.Error.Add (fail "%O")
     member x.Get key creator = agent.PostAndReply (fun r -> Get (key, creator, r))
     member x.Remove key = agent.Post (Remove key)
+    member x.Clear() = agent.Post Clear
 
 [<AutoOpen>]
 module FSharpSymbolExtensions =
@@ -251,6 +259,7 @@ type ProjectFactory
 
     do match events with
         | Some events ->
+            events.SolutionEvents.add_AfterClosing (fun _ -> cache.Clear())
             events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)
@@ -280,7 +289,7 @@ type ProjectFactory
                 String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
                 String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
                 Some (VirtualProjectProvider(buffer, filePath) :> _)
-            else 
+            else
                 None
         else 
             None
