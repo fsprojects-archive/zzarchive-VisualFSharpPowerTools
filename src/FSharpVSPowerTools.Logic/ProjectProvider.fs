@@ -18,9 +18,10 @@ type FilePath = string
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
     | File
-    | Projects of IProjectProvider list // source file where a symbol is declared may be included into several projects
+    | Projects of IProjectProvider list // Source file where a symbol is declared may be included into several projects
 
 and IProjectProvider =
+    abstract IsForStandaloneScript: bool
     abstract ProjectFileName: string
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
@@ -200,6 +201,7 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
     member x.ReferencesChanged = referencesChanged.Publish
 
     interface IProjectProvider with
+        member x.IsForStandaloneScript = false
         member x.ProjectFileName = projectFileName.Value
         member x.TargetFramework = targetFramework.Value
         member x.CompilerOptions = compilerOptions.Value
@@ -223,6 +225,7 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
     let targetFramework = FSharpTargetFramework.NET_4_5
 
     interface IProjectProvider with
+        member x.IsForStandaloneScript = true
         member x.ProjectFileName = null
         member x.TargetFramework = targetFramework
         member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
