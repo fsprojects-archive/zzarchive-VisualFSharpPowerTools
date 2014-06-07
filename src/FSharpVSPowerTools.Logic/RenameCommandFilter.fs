@@ -87,10 +87,10 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let symbolDeclarationLocation = projectFactory.GetSymbolUsageScope fsSymbolUse.Symbol dte state.File
+                    let symbolDeclarationLocation = projectFactory.GetSymbolUsageScope (state.Project :? VirtualProjectProvider) fsSymbolUse.Symbol dte state.File
 
                     match symbolDeclarationLocation with
-                    | Some scope  ->
+                    | Some scope ->
                         let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
                         let wnd = UI.loadRenameDialog model
                         let hostWnd = Window.GetWindow(view.VisualElement)
@@ -127,7 +127,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         | _ -> ()
 
     member x.ShowDialog (wnd: Window) =
-        let vsShell = serviceProvider.GetService(typeof<SVsUIShell>) :?> IVsUIShell
+        let vsShell = serviceProvider.GetService<IVsUIShell, SVsUIShell>()
         try
             if ErrorHandler.Failed(vsShell.EnableModeless(0)) then
                 Some false

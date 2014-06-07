@@ -288,7 +288,7 @@ type ProjectFactory
     member x.CreateForDocument buffer (doc: Document) =
         x.CreateForFileInProject buffer doc.FullName doc.ProjectItem.ContainingProject
 
-    member x.GetSymbolUsageScope (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
+    member x.GetSymbolUsageScope isStandalone (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath): SymbolDeclarationLocation option =
         let isPrivateToFile = 
             match symbol with 
             | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
@@ -297,19 +297,22 @@ type ProjectFactory
             | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
             | :? FSharpField as m -> m.Accessibility.IsPrivate
             | _ -> false
-        if isPrivateToFile then Some SymbolDeclarationLocation.File 
+        if isPrivateToFile then 
+            Some SymbolDeclarationLocation.File 
         else 
             match symbol.TryGetLocation() with
             | Some loc ->
                 let filePath = Path.GetFullPath loc.FileName
-                if filePath = currentFile && Path.GetExtension currentFile = ".fsx" then 
+                if isStandalone && filePath = currentFile then 
                     Some SymbolDeclarationLocation.File
+                elif isStandalone then
+                    None
                 else
                     let allProjects = dte.ListFSharpProjectsInSolution() |> List.map x.CreateForProject
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
                     | projects -> Some (SymbolDeclarationLocation.Projects projects)
-            | _ -> None
+            | None -> None
 
     member x.GetDependentProjects (dte: DTE) (projects: IProjectProvider list) =
         let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLower()) |> set

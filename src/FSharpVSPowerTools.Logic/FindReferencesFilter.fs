@@ -39,12 +39,12 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 match symbolUse with
                 | Some (symbolUse, fileScopedCheckResults) ->
                     let! res = 
-                        match projectFactory.GetSymbolUsageScope symbolUse.Symbol dte file with
+                        match projectFactory.GetSymbolUsageScope (project :? VirtualProjectProvider) symbolUse.Symbol dte file with
                         | Some SymbolDeclarationLocation.File ->
                             vsLanguageService.FindUsagesInFile (span, sym, fileScopedCheckResults)
-                        | loc ->
+                        | scope ->
                             let projectsToCheck =
-                                match loc with
+                                match scope with
                                 | Some (SymbolDeclarationLocation.Projects declProjects) ->
                                     projectFactory.GetDependentProjects dte declProjects
                                 // The symbol is declared in .NET framework, an external assembly or in a C# project withing the solution.
