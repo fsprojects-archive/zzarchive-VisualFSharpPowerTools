@@ -21,7 +21,7 @@ type VSLanguageService
      [<Import(typeof<ProjectFactory>)>] projectFactory: ProjectFactory) =
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
-    let mutable instance = LanguageService (ignore, FileSystem openDocumentsTracker)
+    let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
     
     let getProjectOptions (project: IProjectProvider) =
         async {
@@ -55,9 +55,10 @@ type VSLanguageService
     do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
-    do events.SolutionEvents.add_AfterClosing (fun _ -> 
-        //instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
-        instance <- LanguageService (ignore, FileSystem openDocumentsTracker))
+
+    do events.SolutionEvents.add_Opened (fun _ -> 
+        debug "[Language Service] Clearing FCS cache."
+        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients())
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
