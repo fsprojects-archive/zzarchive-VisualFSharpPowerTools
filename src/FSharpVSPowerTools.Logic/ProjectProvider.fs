@@ -73,13 +73,12 @@ module FSharpSymbolExtensions =
     type FSharpSymbol with
         member x.TryGetLocation() = Option.orElse x.ImplementationLocation x.DeclarationLocation
 
-type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider) =
+type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, onChanged: Project -> unit) =
     static let mutable getField = None
     do Debug.Assert(project <> null, "Input project should be well-formed.")
-    let referencesChanged = Event<Project>()
-    let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> referencesChanged.Trigger project)
-    let refChanged = _dispReferencesEvents_ReferenceChangedEventHandler (fun _ -> referencesChanged.Trigger project)
-    let refRemoved = _dispReferencesEvents_ReferenceRemovedEventHandler (fun _ -> referencesChanged.Trigger project)
+    let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
+    let refChanged = _dispReferencesEvents_ReferenceChangedEventHandler (fun _ -> onChanged project)
+    let refRemoved = _dispReferencesEvents_ReferenceRemovedEventHandler (fun _ -> onChanged project)
         
     do match project.VSProject with
         | Some p -> 
@@ -198,8 +197,6 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                 return opts
         }
 
-    member x.ReferencesChanged = referencesChanged.Publish
-
     interface IProjectProvider with
         member x.IsForStandaloneScript = false
         member x.ProjectFileName = projectFileName.Value
@@ -215,9 +212,9 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
         member x.Dispose() =
             project.VSProject
             |> Option.iter (fun p ->
-                    p.Events.ReferencesEvents.remove_ReferenceAdded refAdded
-                    p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
-                    p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
+                 p.Events.ReferencesEvents.remove_ReferenceAdded refAdded
+                 p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
+                 p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
                             
 type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) = 
     do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
@@ -236,20 +233,22 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
         member x.GetProjectCheckerOptions languageService =
             languageService.GetScriptCheckerOptions (filePath, null, source, targetFramework)
 
+type private ProjectUniqueName = string
+
 [<Export>]
 type ProjectFactory
     [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
-    let cache = Cache<string, ProjectProvider>()
- 
-    let onProjectChanged (project: Project) =
+    let cache = Cache<ProjectUniqueName, ProjectProvider>()
+    
+    let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
         cache.Remove project.UniqueName
 
     let onProjectItemChanged (projectItem: ProjectItem) =
         projectItem.VSProject |> Option.iter (fun item -> onProjectChanged item.Project)
- 
+
     do match events with
         | Some events ->
             events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
@@ -263,10 +262,8 @@ type ProjectFactory
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
     member x.CreateForProject (project: Project): IProjectProvider = 
-        cache.Get project.UniqueName (fun _ -> 
-            let provider = new ProjectProvider (project, x.CreateForProject)
-            provider.ReferencesChanged.Add(fun p -> onProjectChanged p)
-            provider) :> _
+        cache.Get project.UniqueName (fun _ ->
+            new ProjectProvider (project, x.CreateForProject, onProjectChanged)) :> _
 
     member x.CreateForFileInProject (buffer: ITextBuffer) (filePath: string) project: IProjectProvider option =
         if not (project === null) && not (filePath === null) && isFSharpProject project then
