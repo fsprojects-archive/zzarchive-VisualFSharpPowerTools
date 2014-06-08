@@ -56,8 +56,8 @@ type VSLanguageService
     do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
     do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
 
-    do events.SolutionEvents.add_Opened (fun _ -> 
-        debug "[Language Service] Clearing FCS cache."
+    do events.SolutionEvents.add_AfterClosing (fun _ -> 
+        debug "[Language Service] Clearing FCS caches."
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients())
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
