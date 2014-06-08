@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open System.Diagnostics
 open System.Windows.Threading
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text
@@ -116,38 +117,44 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                                     fun() -> try updateAtCaretPosition()
                                              with e -> Logging.logException e)
 
-    let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> seq = 
-        seq {
-                match currentWord with
-                | Some word when spans.Count <> 0 && wordSpans.Count <> 0 ->
-                    let wordSpans, word =
-                        match spans.[0].Snapshot = wordSpans.[0].Snapshot with
-                        | true -> wordSpans, word
-                        | false ->
-                            // If the requested snapshot isn't the same as the one our words are on, translate our spans
-                            // to the expected snapshot
-                            NormalizedSnapshotSpanCollection (wordSpans |> Seq.map (fun span -> 
-                                span.TranslateTo(spans.[0].Snapshot, SpanTrackingMode.EdgeExclusive))),
-                            word.TranslateTo(spans.[0].Snapshot, SpanTrackingMode.EdgeExclusive)
+    let tagSpan span = TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
 
-                    // First, yield back the word the cursor is under (if it overlaps)
-                    // Note that we'll yield back the same word again in the wordspans collection;
-                    // the duplication here is expected.
-                    if spans.OverlapsWith(NormalizedSnapshotSpanCollection word) then
-                        yield TagSpan<HighlightUsageTag>(word, HighlightUsageTag()) :> ITagSpan<_>
+    let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> list = 
+        [
+            match currentWord with
+            | Some word when spans.Count <> 0 && wordSpans.Count <> 0 -> 
+                let currentSnapshot = spans.[0].Snapshot
+                let wordSpans = 
+                    if currentSnapshot = wordSpans.[0].Snapshot then
+                        wordSpans
+                    else
+                        // If the requested snapshot isn't the same as the one our words are on, translate our spans
+                        // to the expected snapshot
+                        NormalizedSnapshotSpanCollection
+                            (wordSpans |> Seq.map (fun span -> span.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)))
+                
+                Debug.Assert (wordSpans.[0].Snapshot = currentSnapshot, "Current word and cached word spans are from same snapshot")
+                Debug.Assert (spans.[0].Snapshot = currentSnapshot, "Current word and current spans are from same snapshot")
 
-                    // Second, yield all the other words in the file
-                    for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) ->
-                        TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
-                | _ -> ()
-            }
+                let word = 
+                    if currentSnapshot = word.Snapshot then word
+                    else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
+                // First, yield back the word the cursor is under (if it overlaps)
+                // Note that we'll yield back the same word again in the wordspans collection;
+                // the duplication here is expected.
+                if spans.OverlapsWith(NormalizedSnapshotSpanCollection word) then yield tagSpan word
+                // Second, yield all the other words in the file
+                for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) -> tagSpan span
+            | _ -> ()
+        ]
 
     interface ITagger<HighlightUsageTag> with
         member x.GetTags spans =
-            try getTags spans
-            with e -> 
-                Logging.logException e
-                upcast []
+            upcast (
+                try getTags spans
+                with e -> 
+                    Logging.logException e
+                    [])
         
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
