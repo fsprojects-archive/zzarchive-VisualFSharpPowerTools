@@ -49,7 +49,7 @@ let private clauseIsCandidateForCodeGen (clause: SynMatchClause) =
             false
         | SynPat.Or(leftPat, rightPat, _) -> patIsCandidate leftPat && patIsCandidate rightPat
         | SynPat.Ands(innerPatList, _) -> List.forall patIsCandidate innerPatList
-        // This is pattern: 'hd :: tail -> ...' 
+        // This is the 'hd :: tail -> ...' pattern
         | SynPat.LongIdent(LongIdentWithDots([ident], []), _, _, _, _, _)
             when ident.idText = "op_ColonColon" -> false
         | SynPat.LongIdent(_, _, _, _, _, _) -> true
@@ -372,7 +372,6 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
             else
                 None
         | SynConstructorArgs.NamePatPairs(namedPatList, _) ->
-            // TODO: handle named patterns
             let patList =
                 namedPatList
                 |> List.unzip
@@ -429,34 +428,6 @@ let tryFindPatternMatchExprInBufferAtPos (codeGenService: ICodeGenerationService
             parseResults.ParseTree
             |> Option.bind (tryFindPatternMatchExpr (codeGenService.ExtractFSharpPos(pos)))
     }
-
-let tryFindTokenLPosInRange
-    (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
-    (range: range) (document: IDocument) (predicate: TokenInformation -> bool) =
-    let lines = seq {
-        for line in range.StartLine .. range.EndLine do
-            yield! codeGenService.TokenizeLine(project, document, (line * 1<Line1>))
-                   |> List.map (fun tokenInfo -> line * 1<Line1>, tokenInfo)
-    }
-
-    lines
-    |> Seq.tryFind (fun (line1, tokenInfo) ->
-        if range.StartLine = range.EndLine then
-            tokenInfo.LeftColumn >= range.StartColumn &&
-            tokenInfo.RightColumn < range.EndColumn &&
-            predicate tokenInfo
-        elif range.StartLine = int line1 then
-            tokenInfo.LeftColumn >= range.StartColumn &&
-            predicate tokenInfo
-        elif int line1 = range.EndLine then
-            tokenInfo.RightColumn < range.EndColumn &&
-            predicate tokenInfo
-        else
-            predicate tokenInfo
-    )
-    |> Option.map (fun (line1, tokenInfo) ->
-        tokenInfo, (Pos.fromZ (int line1 - 1) tokenInfo.LeftColumn)
-    )
 
 let tryFindBarTokenLPosInRange
     (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project

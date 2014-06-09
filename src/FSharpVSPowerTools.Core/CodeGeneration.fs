@@ -31,7 +31,6 @@ type ICodeGenerationService<'Project, 'Pos, 'Range> =
     abstract ParseFileInProject: IDocument * 'Project -> Async<ParseFileResults>
     // TODO: enhance this clumsy design
     abstract ExtractFSharpPos: 'Pos -> pos
-//    abstract CreateRange: startLine: int<Line1> * startColumn: int * endLine: int<Line1> * endColumn: int -> 'Range
     abstract CreateIRange: 'Range -> IRange
 
 
@@ -73,3 +72,50 @@ module Utils =
 
     let hasAttribute<'T> (attrs: seq<FSharpAttribute>) =
         attrs |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'T>.Name)
+
+    let tryFindTokenLPosInRange
+        (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
+        (range: range) (document: IDocument) (predicate: TokenInformation -> bool) =
+        let encounteredException = ref false
+        let lines = seq {
+            let currentLine = ref range.StartLine
+            printfn "rangeStart: %A" range.StartLine
+            printfn "rangeEnd: %A" range.EndLine
+            printfn "currentLine: %A" !currentLine
+            while !currentLine <= range.EndLine && not !encounteredException do
+                let line = !currentLine
+                printfn "%A" line
+                yield!
+                    try
+                        codeGenService.TokenizeLine(project, document, (line * 1<Line1>))
+                        |> List.map (fun tokenInfo -> line * 1<Line1>, tokenInfo)
+                    with _ ->
+                        printfn "Encountered exception"
+                        encounteredException := true
+                        []
+                
+                currentLine := !currentLine + 1
+        }
+
+        if !encounteredException then
+            // If an exception was thrown, it means that somehow a parsing error occurred
+            None
+        else
+            lines
+            |> Seq.tryFind (fun (line1, tokenInfo) ->
+                if range.StartLine = range.EndLine then
+                    tokenInfo.LeftColumn >= range.StartColumn &&
+                    tokenInfo.RightColumn < range.EndColumn &&
+                    predicate tokenInfo
+                elif range.StartLine = int line1 then
+                    tokenInfo.LeftColumn >= range.StartColumn &&
+                    predicate tokenInfo
+                elif int line1 = range.EndLine then
+                    tokenInfo.RightColumn < range.EndColumn &&
+                    predicate tokenInfo
+                else
+                    predicate tokenInfo
+            )
+            |> Option.map (fun (line1, tokenInfo) ->
+                tokenInfo, (Pos.fromZ (int line1 - 1) tokenInfo.LeftColumn)
+            )
