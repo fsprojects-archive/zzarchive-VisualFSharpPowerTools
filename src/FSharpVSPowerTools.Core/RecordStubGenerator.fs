@@ -12,8 +12,11 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // Algorithm
-// TODO: Make sure '}' is the last token of the expression
-// TODO: Careful when manipulating ranges returned by FCS which are sometimes incorrect
+// [x] Make sure '}' is the last token of the expression
+// [x] Make sure that the last field, if it exists, is assigned an expression
+// [x] Careful when manipulating ranges returned by FCS which are sometimes incorrect
+// [x] If fields is empty, then insert after '{' or 'with'
+// [x] If fields are not empty, insert after the last field's expression
 
 #if INTERACTIVE
 let debug x =
