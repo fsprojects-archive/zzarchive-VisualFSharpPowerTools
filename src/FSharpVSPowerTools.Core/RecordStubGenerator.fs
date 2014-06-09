@@ -47,8 +47,8 @@ type PositionKind =
 [<NoComparison>]
 type RecordStubsInsertionParams = {
     Kind: PositionKind
+    InsertionPos: pos
     IndentColumn: int
-    Position: pos
 }
 with
     static member TryCreateFromRecordExpression (expr: RecordExpr) =
@@ -60,12 +60,12 @@ with
                 let pos = Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1)
                 { Kind = PositionKind.AfterLeftBrace
                   IndentColumn = pos.Column + 1
-                  Position = pos }
+                  InsertionPos = pos }
                 |> Some
             | Some(_toCopy, (withSeparator, _)) ->
                 { Kind = PositionKind.AfterCopyExpression
                   IndentColumn = withSeparator.End.Column + 1
-                  Position = withSeparator.End }
+                  InsertionPos = withSeparator.End }
                 |> Some
         
         | _ ->
@@ -83,12 +83,12 @@ with
                 | Some expr, None ->
                     { Kind = PositionKind.AfterLastField
                       IndentColumn = indentColumn
-                      Position = expr.Range.End }
+                      InsertionPos = expr.Range.End }
                     |> Some
                 | Some _, Some (_range, Some semiColonEndPos) ->
                     { Kind = PositionKind.AfterLastField
                       IndentColumn = indentColumn
-                      Position = semiColonEndPos }
+                      InsertionPos = semiColonEndPos }
                     |> Some
                 | _, _ -> None
 
@@ -167,7 +167,7 @@ let formatRecord (insertionPos: RecordStubsInsertionParams) (fieldDefaultValue: 
 
     writer.Dump()
 
-let private tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
+let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInput) =
     let inline getIfPosInRange range f =
         if rangeContainsPos range pos then f()
         else None
@@ -437,7 +437,7 @@ let tryFindRecordExprInBufferAtPos (codeGenService: ICodeGenerationService<'Proj
         
         return
             parseResults.ParseTree
-            |> Option.bind (tryFindRecordBinding (codeGenService.ExtractFSharpPos(pos)))
+            |> Option.bind (tryFindRecordBindingInParsedInput (codeGenService.ExtractFSharpPos(pos)))
     }
 
 let checkThatRecordExprEndsWithRBrace (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>)
@@ -470,7 +470,7 @@ let checkThatRecordExprEndsWithRBrace (codeGenService: ICodeGenerationService<'P
     }
     |> Option.isSome
 
-let tryFindStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let tryFindStubInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! recordExpression = tryFindRecordExprInBufferAtPos codeGenService project pos document
         if checkThatRecordExprEndsWithRBrace codeGenService project document recordExpression then
@@ -484,7 +484,7 @@ let tryFindStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Pr
 let tryFindRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! recordExpression, insertionPos =
-            tryFindStubGenerationParamsAtPos codeGenService project pos document
+            tryFindStubInsertionParamsAtPos codeGenService project pos document
 
         let! symbolRange, symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 

@@ -74,7 +74,7 @@ let private posIsInLhsOfClause (pos: pos) (clause: SynMatchClause) =
     | Clause(_, Some guardExpr, _, patternRange, _) ->
         rangeContainsPos (unionRanges guardExpr.Range patternRange) pos
 
-let tryFindPatternMatchExpr (pos: pos) (parsedInput: ParsedInput) =
+let private tryFindPatternMatchExprInParsedInput (pos: pos) (parsedInput: ParsedInput) =
     let inline getIfPosInRange range f =
         if rangeContainsPos range pos then f()
         else None
@@ -430,7 +430,7 @@ let tryFindPatternMatchExprInBufferAtPos (codeGenService: ICodeGenerationService
         
         return
             parseResults.ParseTree
-            |> Option.bind (tryFindPatternMatchExpr (codeGenService.ExtractFSharpPos(pos)))
+            |> Option.bind (tryFindPatternMatchExprInParsedInput (codeGenService.ExtractFSharpPos(pos)))
     }
 
 let tryFindBarTokenLPosInRange
@@ -506,7 +506,7 @@ let tryFindCaseInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Pro
             return! None |> liftMaybe
     }
 
-let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! patMatchExpr, insertionParams = tryFindCaseInsertionParamsAtPos codeGenService project pos document
         let! symbolRange, _symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)

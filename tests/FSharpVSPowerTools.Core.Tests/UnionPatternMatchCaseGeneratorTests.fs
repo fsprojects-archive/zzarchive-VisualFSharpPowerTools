@@ -67,8 +67,8 @@ let tryFindPatternMatchExpr (pos: pos) (document: IDocument) =
     tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
     |> Async.RunSynchronously
 
-let tryFindUnionTypeDefinition (pos: pos) document =
-    tryFindUnionTypeDefinitionFromPos codeGenService project pos document
+let tryFindUnionDefinition (pos: pos) document =
+    tryFindUnionDefinitionFromPos codeGenService project pos document
     |> Async.RunSynchronously
 
 let tryFindCaseInsertionParams pos document =
@@ -77,7 +77,7 @@ let tryFindCaseInsertionParams pos document =
 
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let unionTypeDefFromPos = tryFindUnionTypeDefinition caretPos document
+    let unionTypeDefFromPos = tryFindUnionDefinition caretPos document
     match unionTypeDefFromPos with
     | None -> src
     | Some(range, matchExpr, entity, insertionParams) ->
@@ -99,14 +99,14 @@ let insertCasesFromPos caretPos src =
             srcLines
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
-let tryGetWrittenCases (pos: pos) (src: string) =
-    src
-    |> asDocument
-    |> tryFindPatternMatchExpr pos
-    |> Option.map (getWrittenCases)
-    |> Option.getOrElse Set.empty
-
 module ClausesAnalysisTests =
+    let private tryGetWrittenCases (pos: pos) (src: string) =
+        src
+        |> asDocument
+        |> tryFindPatternMatchExpr pos
+        |> Option.map (getWrittenCases)
+        |> Option.getOrElse Set.empty
+
     [<Test>]
     let ``OR patterns with constants and identifiers`` () =
         """type Union = Case1 | Case2 | Case3 of bool | Case4 of int * int

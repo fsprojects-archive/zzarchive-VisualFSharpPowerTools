@@ -86,8 +86,8 @@ let tryFindRecordExpr (pos: pos) (document: IDocument) =
     tryFindRecordExprInBufferAtPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
-let tryFindRecordStubGenerationParams (pos: pos) (document: IDocument) =
-    tryFindStubGenerationParamsAtPos codeGenInfra project pos document
+let tryFindStubInsertionParams (pos: pos) (document: IDocument) =
+    tryFindStubInsertionParamsAtPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
 let tryFindRecordDefinitionFromPos (pos: pos) (document: IDocument) =
@@ -100,11 +100,11 @@ let insertStubFromPos caretPos src =
     match recordDefFromPos with
     | Some(_, recordExprData, entity, insertPos) ->
         let fieldsWritten = recordExprData.FieldExprList
-        let insertColumn = insertPos.Position.Column
+        let insertColumn = insertPos.InsertionPos.Column
         let fieldValue = "failwith \"\""
         let stub = RecordStubGenerator.formatRecord insertPos fieldValue entity fieldsWritten
         let srcLines = srcToLineArray src
-        let insertLine0 = insertPos.Position.Line - 1
+        let insertLine0 = insertPos.InsertionPos.Line - 1
         let curLine = srcLines.[insertLine0]
         let before, after = curLine.Substring(0, insertColumn), curLine.Substring(insertColumn)
 

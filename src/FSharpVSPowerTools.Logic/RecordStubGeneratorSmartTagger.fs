@@ -100,7 +100,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                        "failwith \"Uninitialized field\""
                        entity
                        fieldsWritten
-        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Position.Line-1).Start.Position + insertionPos.Position.Column
+        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
 
         buffer.Insert(currentLine, stub) |> ignore
 

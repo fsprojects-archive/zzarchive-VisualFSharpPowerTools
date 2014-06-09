@@ -47,7 +47,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
             let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
             let vsDocument = VSDocument(doc, point.Snapshot)
             let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
-                tryFindUnionTypeDefinitionFromPos codeGenService project point vsDocument
+                tryFindUnionDefinitionFromPos codeGenService project point vsDocument
             let newWord = symbolRange
 
             // Recheck cursor position to ensure it's still in new word
