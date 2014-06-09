@@ -9,7 +9,7 @@
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
       "../../src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs"
       "TestHelpers.fs"
-      "CodeGenerationTestService.fs"
+      "CodeGenerationTestInfra.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.UnionPatternMatchCaseGeneratorTests
 #endif
