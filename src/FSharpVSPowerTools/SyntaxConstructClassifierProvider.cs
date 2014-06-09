@@ -3,11 +3,13 @@ using FSharpVSPowerTools.SyntaxColoring;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Windows.Media;
@@ -310,8 +312,10 @@ namespace FSharpVSPowerTools
     }
 
     [Export(typeof(IClassifierProvider))]
+    [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
-    public class SyntaxConstructClassifierProvider : IClassifierProvider
+    [TextViewRole(PredefinedTextViewRoles.Document)]
+    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener
     { 
         [Import]
         private IClassificationTypeRegistryService classificationRegistry = null;
@@ -328,6 +332,8 @@ namespace FSharpVSPowerTools
         [Import(typeof(ProjectFactory))]
         private ProjectFactory projectFactory = null;
 
+        private readonly Dictionary<ITextBuffer, IDisposable> classifiers = new Dictionary<ITextBuffer, IDisposable>();
+
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
@@ -336,10 +342,31 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
                 return buffer.Properties.GetOrCreateSingletonProperty(() =>
-                    new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider,
-                                                  projectFactory));
+                    {
+                        var classifier = new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider,
+                                                      projectFactory);
+                        classifiers.Add(buffer, classifier);
+                        return classifier;
+                    });
+
 
             return null;
+        }
+
+        public void SubjectBuffersConnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
+        {
+        }
+
+        public void SubjectBuffersDisconnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
+        {
+            if (reason != ConnectionReason.TextViewLifetime) return;
+
+            IDisposable classifier;
+            foreach (ITextBuffer buffer in subjectBuffers)
+            {
+                if (classifiers.TryGetValue(buffer, out classifier))
+                    classifier.Dispose();
+            }
         }
     }
 }

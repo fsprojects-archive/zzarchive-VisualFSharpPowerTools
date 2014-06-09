@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
@@ -84,24 +85,19 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         with e -> Logging.logException e
 
     let events = serviceProvider.GetService<EnvDTE.DTE, SDTE>().Events :?> EnvDTE80.Events2 
-    let rec onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
-        if doc.TextBuffer = null then
-            events.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler
-        else
-            maybe {
-                let! selfProject = getProject()
-                let builtProjectFileName = Path.GetFileName project
-                let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
-                if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
-                    debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers." 
-                          builtProjectFileName
-                    updateSyntaxConstructClassifiers true
-            } |> ignore)
+    let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
+        maybe {
+            let! selfProject = getProject()
+            let builtProjectFileName = Path.GetFileName project
+            let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
+            if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
+                debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers." 
+                        builtProjectFileName
+                updateSyntaxConstructClassifiers true
+        } |> ignore)
 
     do events.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler
     
-       //events.DocumentEvents(doc).add_OnClosed (fun _ -> ())
-
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
@@ -132,7 +128,14 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         // it's called for each visible line of code
         member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
             try getClassificationSpans snapshotSpan :> _
-            with e -> Logging.logException e; upcast [||]
+            with e -> 
+                Logging.logException e
+                upcast [||]
 
         [<CLIEvent>]
         member x.ClassificationChanged = classificationChanged.Publish
+
+    interface IDisposable with
+        member x.Dispose() = 
+            events.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler
+         
