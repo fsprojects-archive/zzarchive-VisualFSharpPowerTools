@@ -69,15 +69,12 @@ with
                 |> Some
         
         | _ ->
-            let lastFieldInfo =
-                expr.FieldExprList
-                |> List.rev
-                |> List.head
+            let lastFieldInfo = Seq.last expr.FieldExprList
             
             match lastFieldInfo with
             | _recordFieldName, None, _ -> None
-            | (LongIdentWithDots(identHead :: _, _), isSyntacticallyCorrect),
-              exprOpt, semiColonOpt when isSyntacticallyCorrect = true ->
+            | (LongIdentWithDots(identHead :: _, _), true as _isSyntacticallyCorrect),
+              exprOpt, semiColonOpt ->
                 let indentColumn = identHead.idRange.StartColumn
                 match exprOpt, semiColonOpt with
                 | Some expr, None ->
@@ -448,7 +445,7 @@ let checkThatRecordExprEndsWithRBrace (codeGenService: ICodeGenerationService<'P
             match expr.FieldExprList with
             | [] -> Some expr.Expr.Range
             | _ ->
-                let lastField = List.head (List.rev expr.FieldExprList)
+                let lastField = Seq.last expr.FieldExprList
                 match lastField with
                 | _fieldName, Some _fieldExpr, Some (semiColonRange, Some _semiColonEndPos) ->
                     // The last field ends with a ';'

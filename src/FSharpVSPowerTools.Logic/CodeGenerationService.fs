@@ -19,16 +19,6 @@ type VSDocument(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
         
 type CodeGenerationService(languageService: VSLanguageService, textBuffer: ITextBuffer) =
     interface ICodeGenerationService<IProjectProvider, SnapshotPoint, SnapshotSpan> with
-        member x.CreateIRange(snapshotSpan: SnapshotSpan): IRange =
-            let startLine0, startCol0, endLine0, endCol0 = snapshotSpan.ToRange()
-
-            { new IRange with
-                  member x.EndColumn: int = endCol0 + 1
-                  member x.EndLine: int<Line1> = (endLine0 + 1) * 1<Line1>
-                  member x.StartColumn: int = startCol0 + 1
-                  member x.StartLine: int<Line1> = (startLine0 + 1) * 1<Line1>
-            }
-        
         member x.TokenizeLine(project: IProjectProvider, _document: IDocument, line1: int<Line1>): TokenInformation list = 
             languageService.TokenizeLine(textBuffer, project.CompilerOptions, int line1 - 1)
         

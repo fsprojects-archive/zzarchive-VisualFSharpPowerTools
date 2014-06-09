@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfra
+﻿module FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
 open NUnit.Framework
 open System
@@ -40,8 +40,6 @@ with
 
 type CodeGenerationTestService(languageService: LanguageService, compilerOptions: string[]) =
     interface ICodeGenerationService<ProjectOptions, pos, Range> with
-        member x.CreateIRange(range: Range) = range :> IRange
-        
         member x.TokenizeLine(_project, document: IDocument, line1: int<Line1>): TokenInformation list = 
                 let line0 = int line1 - 1 
                 let line = document.GetLineText1(line1)

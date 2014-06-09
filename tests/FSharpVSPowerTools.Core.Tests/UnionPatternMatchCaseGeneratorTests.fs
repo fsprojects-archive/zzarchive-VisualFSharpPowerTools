@@ -25,7 +25,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
-open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfra
+open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 open Microsoft.FSharp.Compiler.Ast
 
 let args = 

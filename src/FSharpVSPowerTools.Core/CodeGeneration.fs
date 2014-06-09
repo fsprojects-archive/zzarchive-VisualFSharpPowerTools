@@ -31,7 +31,6 @@ type ICodeGenerationService<'Project, 'Pos, 'Range> =
     abstract ParseFileInProject: IDocument * 'Project -> Async<ParseFileResults>
     // TODO: enhance this clumsy design
     abstract ExtractFSharpPos: 'Pos -> pos
-    abstract CreateIRange: 'Range -> IRange
 
 
 [<AutoOpen>]

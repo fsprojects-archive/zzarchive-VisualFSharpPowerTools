@@ -63,7 +63,7 @@
     <Compile Include="NavigateToIndexTests.fs" />
     <Compile Include="SourceCodeClassifierTests.fs" />
     <Compile Include="InterfaceStubGeneratorTests.fs" />
-    <Compile Include="CodeGenerationTestInfra.fs" />
+    <Compile Include="CodeGenerationTestInfrastructure.fs" />
     <Compile Include="RecordStubGeneratorTests.fs" />
     <Compile Include="UnionPatternMatchCaseGeneratorTests.fs" />
     <None Include="DepthColorizerSampleFile.fs">
