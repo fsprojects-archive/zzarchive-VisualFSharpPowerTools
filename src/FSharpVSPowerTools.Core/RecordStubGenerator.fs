@@ -241,12 +241,8 @@ let private tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
 
     and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
         getIfPosInRange binding.RangeOfBindingAndRhs (fun () ->
-            //debug "In range (%A)" binding.RangeOfBindingAndRhs
-            //debug "BindingReturnInfo: %A" retTy
-            //debug "Expr: %A" expr
             match retTy with
             | Some(SynBindingReturnInfo(_ty, _range, _attributes)) ->
-                //debug "ReturnTypeInfo: %A" ty
                 match expr with
                 // Situation 1:
                 // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
