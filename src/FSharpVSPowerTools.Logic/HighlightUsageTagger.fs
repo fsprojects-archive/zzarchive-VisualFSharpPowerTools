@@ -133,9 +133,6 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                         NormalizedSnapshotSpanCollection
                             (wordSpans |> Seq.map (fun span -> span.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)))
                 
-                Debug.Assert (wordSpans.[0].Snapshot = currentSnapshot, "Current word and cached word spans are from same snapshot")
-                Debug.Assert (spans.[0].Snapshot = currentSnapshot, "Current word and current spans are from same snapshot")
-
                 let word = 
                     if currentSnapshot = word.Snapshot then word
                     else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
