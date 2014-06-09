@@ -522,8 +522,7 @@ let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'P
 
 let private UnnamedFieldRegex = Regex("^Item[\d+]?$", RegexOptions.Compiled)
 
-let private formatCase (ctxt: Context)
-    writePipeBefore (case: FSharpUnionCase) =
+let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
     let writer = ctxt.Writer
     let name = 
         if ctxt.RequireQualifiedAccess then
@@ -547,11 +546,7 @@ let private formatCase (ctxt: Context)
             |> sprintf "(%s)"
     
     writer.WriteLine("")
-
-    if writePipeBefore then
-        writer.Write("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
-    else
-        writer.Write("{0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+    writer.Write("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
 
 let formatMatchExpr insertionParams (caseDefaultValue: string)
                     (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
@@ -570,22 +565,7 @@ let formatMatchExpr insertionParams (caseDefaultValue: string)
 
     writer.Indent insertionParams.IndentColumn
 
-    let writePipeBefore = entity.UnionCases.Count >= 2
-
     casesToWrite
-    |> Seq.iter (formatCase ctxt writePipeBefore)
-    
-    // Scenario when first case doesn't start with pipe
-    // match x with Case3 -> ()
-    //              ^
-    //
-    // match x with Case1 -> ()
-    //              | Case3 -> () 
-    //                ^
-    //
-    // match x with Case1 -> ()
-    //              | Case2 -> ()
-    //              | Case3 -> ()
-    //                ^
+    |> Seq.iter (formatCase ctxt)
 
     writer.Dump()
