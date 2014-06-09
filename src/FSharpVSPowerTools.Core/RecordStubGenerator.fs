@@ -45,7 +45,7 @@ type PositionKind =
     | AfterLastField
 
 [<NoComparison>]
-type RecordStubsInsertionPosition = {
+type RecordStubsInsertionParams = {
     Kind: PositionKind
     IndentColumn: int
     Position: pos
@@ -119,7 +119,7 @@ let private formatField (ctxt: Context) prependNewLine
     
     writer.Write("{0}{1} = {2}", prependedSpace, name, ctxt.FieldDefaultValue)
 
-let formatRecord (insertionPos: RecordStubsInsertionPosition) (fieldDefaultValue: string)
+let formatRecord (insertionPos: RecordStubsInsertionParams) (fieldDefaultValue: string)
                  (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
@@ -474,7 +474,7 @@ let tryFindStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Pr
     asyncMaybe {
         let! recordExpression = tryFindRecordExprInBufferAtPos codeGenService project pos document
         if checkThatRecordExprEndsWithRBrace codeGenService project document recordExpression then
-            let! insertionPos = RecordStubsInsertionPosition.TryCreateFromRecordExpression recordExpression
+            let! insertionPos = RecordStubsInsertionParams.TryCreateFromRecordExpression recordExpression
                                 |> liftMaybe
             return recordExpression, insertionPos
         else

@@ -106,6 +106,20 @@ let tryGetWrittenCases (pos: pos) (src: string) =
     |> Option.map (getWrittenCases)
     |> Option.getOrElse Set.empty
 
+let x =
+    """type Union = Case1 | Case2 | Case3
+
+let f union =
+    match union with
+    | Case1 -> ()
+    | Case2 -> ()"""
+    |> asDocument
+    |> tryFindCaseInsertionParams (Pos.fromZ 4 6)
+//    |> tryFindPatternMatchExpr (Pos.fromZ 4 6)
+//    |> Option.map (fun e -> e.Clauses)
+    |> Option.get
+    |> snd
+
 module ClausesAnalysisTests =
     [<Test>]
     let ``OR patterns with constants and identifiers`` () =
@@ -198,15 +212,17 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    Case2 -> ()"""
+    Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 5 4)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f union =
     match union with
-    Case1 -> failwith ""
-    | Case2 -> ()"""
+    Case1 -> ()
+    | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``union match case generation with multiple-argument constructors`` () =
@@ -215,17 +231,19 @@ type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 
 let f union =
     match union with
-    | Case1 -> ()"""
+    | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 5 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 
 let f union =
     match union with
+    | Case1 -> ()
     | Case2 -> failwith ""
     | Case3(_) -> failwith ""
     | Case4(_, _) -> failwith ""
-    | Case1 -> ()"""
+"""
 
 [<Test>]
 let ``union match case generation with required qualified access`` () =
@@ -235,7 +253,8 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Union.Case2 -> ()"""
+    | Union.Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 6 6)
     |> assertSrcAreEqual """
 [<RequireQualifiedAccess>]
@@ -243,8 +262,9 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Union.Case1 -> failwith ""
-    | Union.Case2 -> ()"""
+    | Union.Case1 -> ()
+    | Union.Case2 -> failwith ""
+"""
 
 
 [<Test>]
@@ -308,17 +328,19 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Case2 when 1 = 2 -> ()
-    | Case2 -> ()"""
+    | Case1 -> ()
+    | Case1 when 1 = 2 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 5 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Case1 -> failwith ""
-    | Case2 when 1 = 2 -> ()
-    | Case2 -> ()"""
+    | Case1 -> ()
+    | Case1 when 1 = 2 -> ()
+    | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``nested union match case generation`` () =
@@ -331,7 +353,8 @@ let f union2 =
     | Case3 _ -> ()
     | Case4(union1) ->
         match union1 with
-        | Case2 -> ()"""
+        | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 9 10)
     |> assertSrcAreEqual """
 type Union1 = Case1 | Case2
@@ -342,8 +365,9 @@ let f union2 =
     | Case3 _ -> ()
     | Case4(union1) ->
         match union1 with
-        | Case1 -> failwith ""
-        | Case2 -> ()"""
+        | Case1 -> ()
+        | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``union match case generation is inactive on tuples`` () =
@@ -429,25 +453,27 @@ let f u =
 let ``generate identifier names when a union field has one`` () =
     """
 type Union =
-    | Case1 of arg1:int * int * arg3:string
-    | Case2 of arg1:int * arg2:string
-    | Case3
+    | Case1
+    | Case2 of arg1:int * int * arg3:string
+    | Case3 of arg1:int * arg2:string
 
 let f x =
     match x with
-    | Case3 -> ()"""
+    | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 8 6)
     |> assertSrcAreEqual """
 type Union =
-    | Case1 of arg1:int * int * arg3:string
-    | Case2 of arg1:int * arg2:string
-    | Case3
+    | Case1
+    | Case2 of arg1:int * int * arg3:string
+    | Case3 of arg1:int * arg2:string
 
 let f x =
     match x with
-    | Case1(arg1, _, arg3) -> failwith ""
-    | Case2(arg1, arg2) -> failwith ""
-    | Case3 -> ()"""
+    | Case1 -> ()
+    | Case2(arg1, _, arg3) -> failwith ""
+    | Case3(arg1, arg2) -> failwith ""
+"""
 
 [<Test>]
 let ``union match lambda case generation when first clause starts with '|'`` () =
@@ -455,14 +481,16 @@ let ``union match lambda case generation when first clause starts with '|'`` () 
 type Union = Case1 | Case2
 
 let f = function
-    | Case2 -> ()"""
+    | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 4 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f = function
-    | Case1 -> failwith ""
-    | Case2 -> ()"""
+    | Case1 -> ()
+    | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``union match lambda case generation when first clause doesn't start with '|'`` () =
@@ -470,14 +498,16 @@ let ``union match lambda case generation when first clause doesn't start with '|
 type Union = Case1 | Case2
 
 let f = function
-    Case2 -> ()"""
+    Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 4 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f = function
-    Case1 -> failwith ""
-    | Case2 -> ()"""
+    Case1 -> ()
+    | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``generation is not triggered when caret on union type identifier but not on pattern match clause`` () =
