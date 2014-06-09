@@ -8,8 +8,8 @@
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
       "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
-#load "TestHelpers.fs"
-#load "CodeGenerationTestService.fs"
+      "TestHelpers.fs"
+      "CodeGenerationTestService.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.RecordStubGeneratorTests
 #endif
@@ -19,13 +19,14 @@ open System
 open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
-open Microsoft.FSharp.Compiler.Ast
+open FSharpVSPowerTools.Core.Tests
 
 let args = 
     [|
@@ -85,6 +86,11 @@ let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAtPosition(project, document, pos)
 
+let tryFindRBraceLPosInRange
+    (range: range) (document: IDocument) =
+    tryFindTokenLPosInRange codeGenInfra project range document
+        (fun tokenInfo -> tokenInfo.TokenName = "RBRACE")
+
 let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
     |> Async.RunSynchronously
@@ -93,19 +99,18 @@ let tryFindRecordExpr (pos: pos) (document: IDocument) =
     tryFindRecordExprInBufferAtPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
-let tryGetRecordStubGenerationParams (pos: pos) (document: IDocument) =
-    tryGetRecordStubGenerationParamsAtPos codeGenInfra project pos document
+let tryFindRecordStubGenerationParams (pos: pos) (document: IDocument) =
+    tryFindStubGenerationParamsAtPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
-let tryGetRecordDefinitionFromPos (pos: pos) (document: IDocument) =
-    tryGetRecordDefinitionFromPos codeGenInfra project pos document
+let tryFindRecordDefinitionFromPos (pos: pos) (document: IDocument) =
+    tryFindRecordDefinitionFromPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let recordDefFromPos = tryGetRecordDefinitionFromPos caretPos document
+    let recordDefFromPos = tryFindRecordDefinitionFromPos caretPos document
     match recordDefFromPos with
-    | None -> src
     | Some(_, recordExprData, entity, insertPos) ->
         let fieldsWritten = recordExprData.FieldExprList
         let insertColumn = insertPos.Position.Column
@@ -123,9 +128,16 @@ let insertStubFromPos caretPos src =
         else
             srcLines
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
+    | _ -> src
+
+let getSrcBeforeAndAfterCodeGen (generateCode: string -> string) (src: string) =
+    src, generateCode src
 
 let assertSrcAreEqual expectedSrc actualSrc =
     Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
+
+let assertSrcWasNotChangedAfterCodeGen (srcBefore, srcAfter) =
+    assertSrcAreEqual srcBefore srcAfter
 
 [<Test>]
 let ``single-field typed record stub generation`` () =
@@ -241,51 +253,45 @@ let x: MyRecord = { Field1 = 0 }"""
     |> insertStubFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: float; Field3: float}
-let x: MyRecord = { Field2 = failwith ""
-                    Field3 = failwith ""
-                    Field1 = 0 }"""
+let x: MyRecord = { Field1 = 0
+                    Field2 = failwith ""
+                    Field3 = failwith "" }"""
 
 [<Test>]
 let ``multiple-field stub generation when some fields are already written 2`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
-let x = { MyRecord.Field2 = 0 }"""
+let x = { MyRecord.Field1 = 0 }"""
     |> insertStubFromPos (Pos.fromZ 2 11)
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: int}
-let x = { Field1 = failwith ""
-          MyRecord.Field2 = 0 }"""
+let x = { MyRecord.Field1 = 0
+          Field2 = failwith "" }"""
 
 [<Test>]
-let ``multiple-field stub generation when all fields are already written 1`` () =
-    """
-type MyRecord = {Field1: int; Field2: float}
-let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
-    |> insertStubFromPos (Pos.fromZ 2 7)
-    |> assertSrcAreEqual """
+let ``multiple-field stub generation when all fields are already written`` () =
+    [
+        """
 type MyRecord = {Field1: int; Field2: float}
 let x: MyRecord = { Field1 = 0; Field2 = 0.0 }"""
 
-[<Test>]
-let ``multiple-field stub generation when all fields are already written 2`` () =
-    """
+        """
 type MyRecord = {Field1: int; Field2: int}
 let x = { MyRecord.Field1 = 0; MyRecord.Field2 = 0 }"""
-    |> insertStubFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqual """
-type MyRecord = {Field1: int; Field2: int}
-let x = { MyRecord.Field1 = 0; MyRecord.Field2 = 0 }"""
+    ]
+    |> List.map (getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 2 11)))
+    |> List.iter assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``multiple-field stub generation with some qualified fields already written`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
-let x = Some { MyRecord.Field2 = 0 }"""
+let x = Some { MyRecord.Field1 = 0 }"""
     |> insertStubFromPos (Pos.fromZ 2 16)
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: int}
-let x = Some { Field1 = failwith ""
-               MyRecord.Field2 = 0 }"""
+let x = Some { MyRecord.Field1 = 0
+               Field2 = failwith "" }"""
 
 [<Test>]
 let ``multiple-field stub generation with all qualified fields already written`` () =
@@ -293,11 +299,8 @@ let ``multiple-field stub generation with all qualified fields already written``
 type MyRecord = {Field1: int; Field2: int}
 let x: MyRecord = { MyRecord.Field1 = 0;
                     MyRecord.Field2 = 0 }"""
-    |> insertStubFromPos (Pos.fromZ 2 7)
-    |> assertSrcAreEqual """
-type MyRecord = {Field1: int; Field2: int}
-let x: MyRecord = { MyRecord.Field1 = 0;
-                    MyRecord.Field2 = 0 }"""
+    |> getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 2 7))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``multiple-field stub generation with some non-qualified fields already written`` () =
@@ -305,24 +308,22 @@ let ``multiple-field stub generation with some non-qualified fields already writ
 type MyRecord = {Field1: int; Field2: int}
 let x = 
     let y = 0
-    { Field2 = 0 }"""
+    { Field1 = 0 }"""
     |> insertStubFromPos (Pos.fromZ 4 6)
     |> assertSrcAreEqual """
 type MyRecord = {Field1: int; Field2: int}
 let x = 
     let y = 0
-    { Field1 = failwith ""
-      Field2 = 0 }"""
+    { Field1 = 0
+      Field2 = failwith "" }"""
 
 [<Test>]
 let ``multiple-field stub generation with all non-qualified fields already written`` () =
     """
 type MyRecord = {Field1: int; Field2: int}
 let x = { Field1 = 0; Field2 = 0 }"""
-    |> insertStubFromPos (Pos.fromZ 2 10)
-    |> assertSrcAreEqual """
-type MyRecord = {Field1: int; Field2: int}
-let x = { Field1 = 0; Field2 = 0 }"""
+    |> getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 2 10))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``support record fields that are also records`` () =
@@ -334,8 +335,8 @@ let x = { Field21 = { Field11 = 0 } }"""
     |> assertSrcAreEqual """
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1; Field22: int}
-let x = { Field22 = failwith ""
-          Field21 = { Field11 = 0 } }"""
+let x = { Field21 = { Field11 = 0 }
+          Field22 = failwith "" }"""
 
 [<Test>]
 let ``support record fields nested inside other records 1`` () =
@@ -343,14 +344,12 @@ let ``support record fields nested inside other records 1`` () =
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1; Field22: int}
 let x = { Field21 = { Field11 = 0 } }"""
-//    |> asDocument
-//    |> tryGetRecordStubGenerationParams (Pos.fromZ 3 22)
     |> insertStubFromPos (Pos.fromZ 3 22)
     |> assertSrcAreEqual """
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1; Field22: int}
-let x = { Field21 = { Field12 = failwith ""
-                      Field11 = 0 } }"""
+let x = { Field21 = { Field11 = 0
+                      Field12 = failwith "" } }"""
 
 [<Test>]
 let ``support record fields nested inside other records 2`` () =
@@ -358,15 +357,15 @@ let ``support record fields nested inside other records 2`` () =
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1}
 let x = { Field21 = { 
-                     Field11 = 0 
+                     Field11 = 0
                         } }"""
     |> insertStubFromPos (Pos.fromZ 4 21)
     |> assertSrcAreEqual """
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1}
 let x = { Field21 = { 
+                     Field11 = 0
                      Field12 = failwith ""
-                     Field11 = 0 
                         } }"""
 
 [<Test>]
@@ -379,8 +378,8 @@ let x = { MyRecord.Field1 = 0 }"""
     |> assertSrcAreEqual """
 [<RequireQualifiedAccess>]
 type MyRecord = {Field1: int; Field2: int}
-let x = { MyRecord.Field2 = failwith ""
-          MyRecord.Field1 = 0 }"""
+let x = { MyRecord.Field1 = 0
+          MyRecord.Field2 = failwith "" }"""
 
 [<Test>]
 let ``multiple-field record stub generation with record pattern in let binding`` () =
@@ -393,18 +392,6 @@ type Record = { Field1: int; Field2: int }
 let { Field1 = a; Field2 = b }: Record = { Field1 = failwith ""
                                            Field2 = failwith "" }"""
 
-
-//let res =
-//    """
-//type Record1 = {Field11: int; Field12: int}
-//type Record2 = {Field21: Record1}
-//let x = { Field21 = {  Field11 = 0 } }"""
-//    |> asDocument
-//    |> tryFindRecordExpr (Pos.fromZ 3 24)
-//
-//res.Value.FieldExprList
-//|> insertStubFromPos (Pos.fromZ 3 24)
-
 [<Test>]
 let ``support fields with extra-space before them`` () =
     """
@@ -415,8 +402,8 @@ let x = { Field21 = {  Field11 = 0 } }"""
     |> assertSrcAreEqual """
 type Record1 = {Field11: int; Field12: int}
 type Record2 = {Field21: Record1}
-let x = { Field21 = {  Field12 = failwith ""
-                       Field11 = 0 } }"""
+let x = { Field21 = {  Field11 = 0
+                       Field12 = failwith "" } }"""
 
 [<Test>]
 let ``support copy-and-update expression`` () =
@@ -430,8 +417,8 @@ let y = { x with Field1 = 0 }"""
 type Record = { Field1: int; Field2: int }
 
 let x = { Field1 = 0; Field2 = 0 }
-let y = { x with Field2 = failwith ""
-                 Field1 = 0 }"""
+let y = { x with Field1 = 0
+                 Field2 = failwith "" }"""
 
 [<Test>]
 let ``support typed-record binding with non-empty copy-and-update expression`` () =
@@ -445,8 +432,8 @@ let y: Record = { x with Field1 = 0 }"""
 type Record = { Field1: int; Field2: int }
 
 let x = { Field1 = 0; Field2 = 0 }
-let y: Record = { x with Field2 = failwith ""
-                         Field1 = 0 }"""
+let y: Record = { x with Field1 = 0
+                         Field2 = failwith "" }"""
 
 [<Test>]
 let ``support typed-record binding with empty copy-and-update expression`` () =
@@ -463,6 +450,63 @@ let x = { Field1 = 0; Field2 = 0 }
 let y: Record = { x with Field1 = failwith ""
                          Field2 = failwith "" }"""
 
+[<Test>]
+let ``doesn't trigger code gen when record expr doesn't end by }`` () =
+    [
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = {"""
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Fiel"""
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1"""
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1 ="""
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1 = 0"""
+    ]
+    |> List.map (getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 2 7)))
+    |> List.iter (assertSrcWasNotChangedAfterCodeGen)
+
+[<Test>]
+let ``doesn't trigger code gen when record expr doesn't end by } when there's code after`` () =
+    [
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = {
+let y = seq { yield 0 } """
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Fiel
+let y = seq { yield 0 } """
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1
+let y = seq { yield 0 } """
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1 =
+let y = seq { yield 0 } """
+
+        """
+type MyRecord = {Field1: int; Field2: float}
+let x: MyRecord = { Field1 = 0
+let y = seq { yield 0 } """
+    ]
+    |> List.map (getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 2 7)))
+    |> List.iter (assertSrcWasNotChangedAfterCodeGen)
+
 
 #if INTERACTIVE
 ``single-field typed record stub generation`` ()
@@ -475,8 +519,7 @@ let y: Record = { x with Field1 = failwith ""
 ``multiple-field stub generation when left brace is on next line`` ()
 ``multiple-field stub generation when some fields are already written 1`` ()
 ``multiple-field stub generation when some fields are already written 2`` ()
-``multiple-field stub generation when all fields are already written 1`` ()
-``multiple-field stub generation when all fields are already written 2`` ()
+``multiple-field stub generation when all fields are already written`` ()
 ``multiple-field stub generation with some qualified fields already written`` ()
 ``multiple-field stub generation with all qualified fields already written`` ()
 ``multiple-field stub generation with some non-qualified fields already written`` ()
@@ -490,4 +533,6 @@ let y: Record = { x with Field1 = failwith ""
 ``support copy-and-update expression`` ()
 ``support typed-record binding with non-empty copy-and-update expression`` ()
 ``support typed-record binding with empty copy-and-update expression`` ()
+``doesn't trigger code gen when record expr doesn't end by }`` ()
+``doesn't trigger code gen when record expr doesn't end by } when there's code after`` ()
 #endif

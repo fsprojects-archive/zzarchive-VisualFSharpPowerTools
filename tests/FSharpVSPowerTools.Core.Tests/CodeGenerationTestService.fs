@@ -5,13 +5,12 @@ open System
 open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
-open Microsoft.FSharp.Compiler.Ast
 
 [<AutoOpen>]
 module PosHelpers =

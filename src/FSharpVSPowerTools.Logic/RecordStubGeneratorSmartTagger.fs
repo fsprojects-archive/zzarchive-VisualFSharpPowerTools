@@ -63,7 +63,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                     asyncMaybe {
                         let vsDocument = VSDocument(doc, point.Snapshot)
                         let! symbolRange, recordExpression, recordDefinition, insertionPos =
-                            tryGetRecordDefinitionFromPos codeGenService project point vsDocument
+                            tryFindRecordDefinitionFromPos codeGenService project point vsDocument
                         let newWord = symbolRange
 
                         // Recheck cursor position to ensure it's still in new word
