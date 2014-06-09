@@ -269,9 +269,8 @@ let private tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
 
             | SynExpr.Typed(synExpr, _ty, _) ->
                 match synExpr with
-                // Situation 1:
-                // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
-                // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
+                // Situation 2: record is typed on the right
+                // { f1 = e1; f2 = e2; ... } : MyRecord
                 | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                     fields 
                     |> List.tryPick walkRecordField
