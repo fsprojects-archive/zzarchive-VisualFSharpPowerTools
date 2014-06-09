@@ -11,6 +11,13 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
+// Algorithm
+// [x] Make sure '}' is the last token of the expression
+// [x] Make sure that the last field, if it exists, is assigned an expression
+// [x] Careful when manipulating ranges returned by FCS which are sometimes incorrect
+// [x] If fields is empty, then insert after '{' or 'with'
+// [x] If fields are not empty, insert after the last field's expression
+
 #if INTERACTIVE
 let debug x =
     Printf.ksprintf (printfn "[RecordStubGenerator] %s") x
@@ -34,16 +41,17 @@ type PositionKind =
     | AfterLeftBrace
     /// let y = { x with<insert-here> }
     | AfterCopyExpression
-    /// let x = { <insert-here>Field1 = ... }
-    | BeforeFirstField
+    /// let x = { Field1 = expr<insert-here> }
+    | AfterLastField
 
 [<NoComparison>]
 type RecordStubsInsertionPosition = {
     Kind: PositionKind
+    IndentColumn: int
     Position: pos
 }
 with
-    static member FromRecordExpression (expr: RecordExpr) =
+    static member TryCreateFromRecordExpression (expr: RecordExpr) =
         match expr.FieldExprList with
         | [] ->
             match expr.CopyExprOption with
@@ -51,16 +59,40 @@ with
                 let exprRange = expr.Expr.Range
                 let pos = Pos.fromZ (exprRange.StartLine - 1) (exprRange.StartColumn + 1)
                 { Kind = PositionKind.AfterLeftBrace
+                  IndentColumn = pos.Column + 1
                   Position = pos }
+                |> Some
             | Some(_toCopy, (withSeparator, _)) ->
                 { Kind = PositionKind.AfterCopyExpression
+                  IndentColumn = withSeparator.End.Column + 1
                   Position = withSeparator.End }
+                |> Some
+        
+        | _ ->
+            let lastFieldInfo =
+                expr.FieldExprList
+                |> List.rev
+                |> List.head
+            
+            match lastFieldInfo with
+            | _recordFieldName, None, _ -> None
+            | (LongIdentWithDots(identHead :: _, _), isSyntacticallyCorrect),
+              exprOpt, semiColonOpt when isSyntacticallyCorrect = true ->
+                let indentColumn = identHead.idRange.StartColumn
+                match exprOpt, semiColonOpt with
+                | Some expr, None ->
+                    { Kind = PositionKind.AfterLastField
+                      IndentColumn = indentColumn
+                      Position = expr.Range.End }
+                    |> Some
+                | Some _, Some (_range, Some semiColonEndPos) ->
+                    { Kind = PositionKind.AfterLastField
+                      IndentColumn = indentColumn
+                      Position = semiColonEndPos }
+                    |> Some
+                | _, _ -> None
 
-        | fstFieldInfo :: _ ->
-            let ((fstField, _), _, _) = fstFieldInfo
-            { Kind = PositionKind.BeforeFirstField
-              Position = fstField.Range.Start }
-
+            | _ -> None
 
 [<NoComparison>]
 type private Context = {
@@ -69,22 +101,21 @@ type private Context = {
     FieldDefaultValue: string
     RecordTypeName: string
     RequireQualifiedAccess: bool
-    PrependExtraSpace: bool
 }
 
-let private formatField (ctxt: Context) isFirstField (field: FSharpField) =
+let private formatField (ctxt: Context) prependNewLine
+    prependExtraSpace (field: FSharpField) =
     let writer = ctxt.Writer
 
-    if not isFirstField then
+    if prependNewLine then
         writer.WriteLine("")
     
     let name = 
-        if ctxt.RequireQualifiedAccess then
-            sprintf "%s.%s" ctxt.RecordTypeName field.Name
-        else 
-            field.Name
+        if ctxt.RequireQualifiedAccess
+        then sprintf "%s.%s" ctxt.RecordTypeName field.Name
+        else field.Name
     
-    let prependedSpace = if ctxt.PrependExtraSpace then " " else ""
+    let prependedSpace = if prependExtraSpace then " " else ""
     
     writer.Write("{0}{1} = {2}", prependedSpace, name, ctxt.FieldDefaultValue)
 
@@ -93,19 +124,11 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) (fieldDefaultValue
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
     assert entity.IsFSharpRecord
     use writer = new ColumnIndentedTextWriter()
-    let startColumn = insertionPos.Position.Column
     let ctxt =
-        let prependExtraSpace =
-            match insertionPos.Kind with
-            | PositionKind.AfterCopyExpression
-            | PositionKind.AfterLeftBrace -> true
-            | PositionKind.BeforeFirstField -> false
-
         { RecordTypeName = entity.DisplayName
           RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
           Writer = writer
-          FieldDefaultValue = fieldDefaultValue
-          PrependExtraSpace = prependExtraSpace }
+          FieldDefaultValue = fieldDefaultValue }
 
     let fieldsWritten =
         fieldsWritten
@@ -121,22 +144,30 @@ let formatRecord (insertionPos: RecordStubsInsertionPosition) (fieldDefaultValue
         entity.FSharpFields
         |> Seq.filter (fun field -> not <| fieldsWritten.Contains field.Name)
 
-    writer.Indent startColumn
+    writer.Indent insertionPos.IndentColumn
+
     match List.ofSeq fieldsToWrite with
     | [] -> ()
     | firstField :: otherFields ->
-        formatField ctxt true firstField
-        otherFields
-        |> List.iter (formatField ctxt false)
+        let prependNewLineToFstField, prependNewLineToOtherFields =
+            match insertionPos.Kind with
+            | PositionKind.AfterLastField -> true, true
+            | PositionKind.AfterLeftBrace 
+            | PositionKind.AfterCopyExpression -> false, true
 
-    // special case when fields are already written
-    if not fieldsWritten.IsEmpty && fieldsWritten.Count < entity.FSharpFields.Count then
-        writer.WriteLine("")
-        writer.Write("")
+        let prependExtraSpaceToFstField =
+            match insertionPos.Kind with
+            | PositionKind.AfterCopyExpression
+            | PositionKind.AfterLeftBrace -> true
+            | PositionKind.AfterLastField -> false
+
+        formatField ctxt prependNewLineToFstField prependExtraSpaceToFstField firstField
+        otherFields
+        |> List.iter (formatField ctxt prependNewLineToOtherFields false)
 
     writer.Dump()
 
-let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
+let private tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
     let inline getIfPosInRange range f =
         if rangeContainsPos range pos then f()
         else None
@@ -213,12 +244,8 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
 
     and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, retTy, expr, _bindingRange, _seqPoint) as binding) =
         getIfPosInRange binding.RangeOfBindingAndRhs (fun () ->
-            //debug "In range (%A)" binding.RangeOfBindingAndRhs
-            //debug "BindingReturnInfo: %A" retTy
-            //debug "Expr: %A" expr
             match retTy with
             | Some(SynBindingReturnInfo(_ty, _range, _attributes)) ->
-                //debug "ReturnTypeInfo: %A" ty
                 match expr with
                 // Situation 1:
                 // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
@@ -245,17 +272,15 @@ let tryFindRecordBinding (pos: pos) (parsedInput: ParsedInput) =
 
             | SynExpr.Typed(synExpr, _ty, _) ->
                 match synExpr with
-                // Situation 1:
-                // NOTE: 'buggy' parse tree when a type annotation is given before the '=' (but workable corner case)
-                // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
+                // Situation 2: record is typed on the right
+                // { f1 = e1; f2 = e2; ... } : MyRecord
                 | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                     fields 
                     |> List.tryPick walkRecordField
                     |> Option.orElse (Some { Expr = expr
                                              CopyExprOption = copyOpt
                                              FieldExprList = fields })
-                | _ -> 
-                walkExpr synExpr
+                | _ -> walkExpr synExpr
 
             | SynExpr.Paren(synExpr, _, _, _)
             | SynExpr.New(_, _, synExpr, _)
@@ -415,18 +440,51 @@ let tryFindRecordExprInBufferAtPos (codeGenService: ICodeGenerationService<'Proj
             |> Option.bind (tryFindRecordBinding (codeGenService.ExtractFSharpPos(pos)))
     }
 
-let tryGetRecordStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let checkThatRecordExprEndsWithRBrace (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>)
+    project document (expr: RecordExpr) =
+
+    maybe {
+        let! rangeWhereToLookForEnclosingRBrace =
+            match expr.FieldExprList with
+            | [] -> Some expr.Expr.Range
+            | _ ->
+                let lastField = List.head (List.rev expr.FieldExprList)
+                match lastField with
+                | _fieldName, Some _fieldExpr, Some (semiColonRange, Some _semiColonEndPos) ->
+                    // The last field ends with a ';'
+                    // Look here: { field = expr;<start> ... }<end>
+                    Some (unionRanges semiColonRange.EndRange expr.Expr.Range.EndRange)
+                    
+
+                | _fieldName, Some fieldExpr, _ ->
+                    // The last field doesn't end with a ';'
+                    // Look here: { field = expr<start> ... }<end>
+                    Some (unionRanges fieldExpr.Range.EndRange expr.Expr.Range.EndRange)
+
+                | _fieldName, None, _ ->
+                    // We don't allow generation when the last field isn't assigned an expression
+                    None
+        
+        return! tryFindTokenLPosInRange codeGenService project rangeWhereToLookForEnclosingRBrace document
+                (fun tokenInfo -> tokenInfo.TokenName = "RBRACE")
+    }
+    |> Option.isSome
+
+let tryFindStubGenerationParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! recordExpression = tryFindRecordExprInBufferAtPos codeGenService project pos document
-        let insertionPos = RecordStubsInsertionPosition.FromRecordExpression recordExpression
-
-        return recordExpression, insertionPos
+        if checkThatRecordExprEndsWithRBrace codeGenService project document recordExpression then
+            let! insertionPos = RecordStubsInsertionPosition.TryCreateFromRecordExpression recordExpression
+                                |> liftMaybe
+            return recordExpression, insertionPos
+        else
+            return! None |> liftMaybe
     }
 
-let tryGetRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
+let tryFindRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! recordExpression, insertionPos =
-            tryGetRecordStubGenerationParamsAtPos codeGenService project pos document
+            tryFindStubGenerationParamsAtPos codeGenService project pos document
 
         let! symbolRange, symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 

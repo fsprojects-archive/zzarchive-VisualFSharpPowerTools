@@ -25,7 +25,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
-open FSharpVSPowerTools.Core.Tests
+open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfra
 open Microsoft.FSharp.Compiler.Ast
 
 let args = 
@@ -54,21 +54,8 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
-type MockDocument(src: string) =
-    let lines =
-        ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
-
-    interface IDocument with
-        member x.FullName = @"C:\file.fs"
-        member x.GetText() = src
-        member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
-        member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
-
-let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
-
 let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
 
-let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
     codeGenService.GetSymbolAtPosition(project, document, pos)
 
@@ -111,10 +98,6 @@ let insertCasesFromPos caretPos src =
         else
             srcLines
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
-
-// TODO: dedup from RecordStubGeneratorTests.fs
-let assertSrcAreEqual expectedSrc actualSrc =
-    Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
 let tryGetWrittenCases (pos: pos) (src: string) =
     src

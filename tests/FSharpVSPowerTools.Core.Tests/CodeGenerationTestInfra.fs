@@ -1,25 +1,22 @@
-﻿namespace FSharpVSPowerTools.Core.Tests
+﻿module FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfra
 
 open NUnit.Framework
 open System
 open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
-open Microsoft.FSharp.Compiler.Ast
 
-[<AutoOpen>]
-module PosHelpers =
-    type pos with
-        member x.Line0: int<Line0> = LanguagePrimitives.Int32WithMeasure(x.Line - 1)
-        member x.Line1: int<Line1> = LanguagePrimitives.Int32WithMeasure(x.Line)
-        member x.Column0 = x.Column
-        member x.Column1 = x.Column + 1
+type pos with
+    member x.Line0: int<Line0> = LanguagePrimitives.Int32WithMeasure(x.Line - 1)
+    member x.Line1: int<Line1> = LanguagePrimitives.Int32WithMeasure(x.Line)
+    member x.Column0 = x.Column
+    member x.Column1 = x.Column + 1
 
 type Range = {
     StartLine: int<Line1>
@@ -84,3 +81,24 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
             languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText())
 
         member x.ExtractFSharpPos(pos) = pos
+
+
+type MockDocument(src: string) =
+    let lines =
+        ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
+
+    interface IDocument with
+        member x.FullName = @"C:\file.fs"
+        member x.GetText() = src
+        member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
+        member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
+
+
+[<AutoOpen>]
+module Helpers =
+    let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
+
+    let assertSrcAreEqual expectedSrc actualSrc =
+        Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
+
+    let asDocument (src: string) = MockDocument(src) :> IDocument
