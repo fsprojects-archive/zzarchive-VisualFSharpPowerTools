@@ -84,17 +84,24 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         with e -> Logging.logException e
 
     let events = serviceProvider.GetService<EnvDTE.DTE, SDTE>().Events :?> EnvDTE80.Events2 
-    do events.BuildEvents.add_OnBuildProjConfigDone (fun project _ _ _ _ ->
-        maybe {
-            let! selfProject = getProject()
-            let builtProjectFileName = Path.GetFileName project
-            let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
-            if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
-                debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers." 
-                      builtProjectFileName
-                updateSyntaxConstructClassifiers true
-        } |> ignore)
+    let rec onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
+        if doc.TextBuffer = null then
+            events.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler
+        else
+            maybe {
+                let! selfProject = getProject()
+                let builtProjectFileName = Path.GetFileName project
+                let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
+                if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
+                    debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers." 
+                          builtProjectFileName
+                    updateSyntaxConstructClassifiers true
+            } |> ignore)
+
+    do events.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler
     
+       //events.DocumentEvents(doc).add_OnClosed (fun _ -> ())
+
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
