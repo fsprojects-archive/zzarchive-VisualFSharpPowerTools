@@ -475,13 +475,35 @@ let tryFindInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>
               IndentColumn = last.Range.StartColumn }
             |> Some
 
+let checkThatPatternMatchExprEndsWithCompleteClause (expr: PatternMatchExpr) =
+    match List.rev expr.Clauses with
+    | [] -> false
+    | lastClause :: _ ->
+        match lastClause with
+        // In case when there's nothing in the RHS of the arrow
+        // FCS compiler apparently uses this particular AST representation
+        // but with unitRange = empty
+        | Clause(_, _, SynExpr.Const(SynConst.Unit, unitRange), _, _) ->
+            let rhsExprExists =
+                unitRange.StartLine <> unitRange.EndLine ||
+                unitRange.StartColumn <> unitRange.EndColumn
+
+            rhsExprExists && not (synExprContainsError expr.Expr)
+
+        | _ -> true && not (synExprContainsError expr.Expr)
+
+
 let tryFindCaseInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! patMatchExpr = tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
-        let! insertionParams = tryFindInsertionParams codeGenService project document patMatchExpr
-                               |> liftMaybe
 
-        return patMatchExpr, insertionParams
+        if checkThatPatternMatchExprEndsWithCompleteClause patMatchExpr then
+            let! insertionParams = tryFindInsertionParams codeGenService project document patMatchExpr
+                                   |> liftMaybe
+
+            return patMatchExpr, insertionParams
+        else
+            return! None |> liftMaybe
     }
 
 let tryFindUnionTypeDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =

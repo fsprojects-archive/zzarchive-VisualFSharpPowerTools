@@ -117,12 +117,6 @@ let insertStubFromPos caretPos src =
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
     | _ -> src
 
-let getSrcBeforeAndAfterCodeGen (generateCode: string -> string) (src: string) =
-    src, generateCode src
-
-let assertSrcWasNotChangedAfterCodeGen (srcBefore, srcAfter) =
-    assertSrcAreEqual srcBefore srcAfter
-
 [<Test>]
 let ``single-field typed record stub generation`` () =
     """

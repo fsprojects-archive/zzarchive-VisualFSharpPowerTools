@@ -102,3 +102,9 @@ module Helpers =
         Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
     let asDocument (src: string) = MockDocument(src) :> IDocument
+
+    let getSrcBeforeAndAfterCodeGen (generateCode: string -> string) (src: string) =
+        src, generateCode src
+
+    let assertSrcWasNotChangedAfterCodeGen (srcBefore, srcAfter) =
+        assertSrcAreEqual srcBefore srcAfter
