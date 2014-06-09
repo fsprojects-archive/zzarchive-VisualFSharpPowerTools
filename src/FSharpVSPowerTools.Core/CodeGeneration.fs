@@ -79,18 +79,13 @@ module Utils =
         let encounteredException = ref false
         let lines = seq {
             let currentLine = ref range.StartLine
-            printfn "rangeStart: %A" range.StartLine
-            printfn "rangeEnd: %A" range.EndLine
-            printfn "currentLine: %A" !currentLine
             while !currentLine <= range.EndLine && not !encounteredException do
                 let line = !currentLine
-                printfn "%A" line
                 yield!
                     try
                         codeGenService.TokenizeLine(project, document, (line * 1<Line1>))
                         |> List.map (fun tokenInfo -> line * 1<Line1>, tokenInfo)
                     with _ ->
-                        printfn "Encountered exception"
                         encounteredException := true
                         []
                 

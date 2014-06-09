@@ -26,7 +26,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
-open FSharpVSPowerTools.Core.Tests
+open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfra
 
 let args = 
     [|
@@ -54,7 +54,7 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
-// TODO: write design doc
+// [ ] write design doc
 // [x] Get the syntax construct that you're interested in
 // [x] Get the position P where to insert the generated code
 // [x] Get the symbol S on which the caret is
@@ -65,24 +65,11 @@ let project: ProjectOptions =
 // [x] Handle pattern: let x = { MyRecord1.Field1 = 0 }
 // [x] Handle pattern: let x = { Field1 = 0 }
 // [x] Handle copy-and-update expression
+// [x] Test that most unparseable expression don't trigger code gen
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
-// [ ] Add tests for SmartTag generation?
-
-type MockDocument(src: string) =
-    let lines =
-        ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
-
-    interface IDocument with
-        member x.FullName = @"C:\file.fs"
-        member x.GetText() = src
-        member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
-        member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
-
-let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
 
 let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
 
-let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
     codeGenInfra.GetSymbolAtPosition(project, document, pos)
 
@@ -132,9 +119,6 @@ let insertStubFromPos caretPos src =
 
 let getSrcBeforeAndAfterCodeGen (generateCode: string -> string) (src: string) =
     src, generateCode src
-
-let assertSrcAreEqual expectedSrc actualSrc =
-    Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
 let assertSrcWasNotChangedAfterCodeGen (srcBefore, srcAfter) =
     assertSrcAreEqual srcBefore srcAfter
