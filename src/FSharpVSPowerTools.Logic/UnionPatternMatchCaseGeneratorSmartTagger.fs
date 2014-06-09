@@ -71,7 +71,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
         |> Async.StartImmediate
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    200us, updateAtCaretPosition)
+                                    500us, updateAtCaretPosition)
 
     let handleGenerateUnionPatternMatchCases
         (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr)
@@ -109,15 +109,20 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
 
     interface ITagger<UnionPatternMatchCaseGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<UnionPatternMatchCaseGeneratorSmartTag> seq =
-            seq {
-                match unionDefinition with
-                | Some (word, expression, entity, insertionPos) when shouldGenerateUnionPatternMatchCases expression entity ->
-                    let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, 
-                                     UnionPatternMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
-                          :> ITagSpan<_>
-                | _ -> ()
-            }
+            try
+                [|
+                    match unionDefinition with
+                    | Some (word, expression, entity, insertionPos) when shouldGenerateUnionPatternMatchCases expression entity ->
+                        let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
+                        yield TagSpan<_>(span, 
+                                         UnionPatternMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
+                              :> ITagSpan<_>
+                    | _ -> ()
+                |]
+                |> Seq.ofArray
+            with e ->
+                Logging.logException e
+                Seq.empty
 
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
