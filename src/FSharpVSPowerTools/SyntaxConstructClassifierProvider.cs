@@ -365,7 +365,10 @@ namespace FSharpVSPowerTools
             foreach (ITextBuffer buffer in subjectBuffers)
             {
                 if (classifiers.TryGetValue(buffer, out classifier))
+                {
                     classifier.Dispose();
+                    classifiers.Remove(buffer);
+                }
             }
         }
     }
