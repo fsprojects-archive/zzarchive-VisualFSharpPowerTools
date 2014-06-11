@@ -68,35 +68,14 @@ let project: ProjectOptions =
 // [x] Test that most unparseable expression don't trigger code gen
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
 
-let codeGenInfra: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
-
-let getSymbolAtPoint (pos: pos) (document: IDocument) =
-    codeGenInfra.GetSymbolAtPosition(project, document, pos)
-
-let tryFindRBraceLPosInRange
-    (range: range) (document: IDocument) =
-    tryFindTokenLPosInRange codeGenInfra project range document
-        (fun tokenInfo -> tokenInfo.TokenName = "RBRACE")
-
-let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
-    codeGenInfra.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
-    |> Async.RunSynchronously
-
-let tryFindRecordExpr (pos: pos) (document: IDocument) =
-    tryFindRecordExprInBufferAtPos codeGenInfra project pos document
-    |> Async.RunSynchronously
-
-let tryFindStubInsertionParams (pos: pos) (document: IDocument) =
-    tryFindStubInsertionParamsAtPos codeGenInfra project pos document
-    |> Async.RunSynchronously
-
-let tryFindRecordDefinitionFromPos (pos: pos) (document: IDocument) =
+let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument) =
     tryFindRecordDefinitionFromPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let recordDefFromPos = tryFindRecordDefinitionFromPos caretPos document
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), args)
+    let recordDefFromPos = tryFindRecordDefinitionFromPos codeGenService caretPos document
     match recordDefFromPos with
     | Some(_, recordExprData, entity, insertPos) ->
         let fieldsWritten = recordExprData.FieldExprList
