@@ -9,7 +9,7 @@
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
       "../../src/FSharpVSPowerTools.Core/RecordStubGenerator.fs"
       "TestHelpers.fs"
-      "CodeGenerationTestService.fs"
+      "CodeGenerationTestInfrastructure.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.RecordStubGeneratorTests
 #endif
@@ -427,6 +427,31 @@ type Record = { Field1: int; Field2: int }
 let x = { Field1 = 0; Field2 = 0 }
 let y: Record = { x with Field1 = failwith ""
                          Field2 = failwith "" }"""
+
+[<Test>]
+let ``uses correct indenting when inserting new line`` () =
+    [
+        """
+type Record1 = {Field1: int; Field2: int; Field3: int}
+let x = { Field1 = 0; Field2 = 0 }"""
+
+        """
+type Record1 = {Field1: int; Field2: int; Field3: int}
+let x = { Field1 = 0; Field2 = 0; }"""
+    ]
+    |> List.map (insertStubFromPos (Pos.fromZ 2 10))
+    |> assertSrcSeqAreEqual [
+        """
+type Record1 = {Field1: int; Field2: int; Field3: int}
+let x = { Field1 = 0; Field2 = 0
+          Field3 = failwith "" }"""
+
+        """
+type Record1 = {Field1: int; Field2: int; Field3: int}
+let x = { Field1 = 0; Field2 = 0;
+          Field3 = failwith "" }"""
+    ]
+
 
 [<Test>]
 let ``doesn't trigger code gen when record expr doesn't end by }`` () =

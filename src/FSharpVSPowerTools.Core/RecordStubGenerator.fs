@@ -69,26 +69,55 @@ with
                 |> Some
         
         | _ ->
+            // To know the indentation column,
+            // We want to find the first field to be on the last field line
+            // All fields f(i) start at line l(i)
+            // We want to 'f(k)' such that k = min { i >= k such that l(i) = l(k) }
+            // And l(k) = max { l(i) }
+            let fieldAndStartColumnAndLineIdxList =
+                expr.FieldExprList
+                |> List.choose (fun fieldInfo ->
+                    match fieldInfo with
+                    | (LongIdentWithDots(identHead :: _, _), true as _isSyntacticallyCorrect),
+                       _exprOpt, _semiColonOpt ->
+                        let fieldLine = identHead.idRange.StartLine
+                        let indentColumn = identHead.idRange.StartColumn
+                        Some (fieldInfo, indentColumn, fieldLine)
+                    | _ -> None
+                )
+
+            let maxLineIdx =
+                fieldAndStartColumnAndLineIdxList
+                |> List.unzip3
+                |> (fun (_, _, lineIdx) -> lineIdx)
+                |> List.max
+
+            let indentColumn =
+                fieldAndStartColumnAndLineIdxList
+                |> List.pick (fun (_, indentColumn, lineIdx) ->
+                    if lineIdx = maxLineIdx
+                    then Some indentColumn
+                    else None
+                )
+
             let lastFieldInfo = Seq.last expr.FieldExprList
-            
+
             match lastFieldInfo with
             | _recordFieldName, None, _ -> None
-            | (LongIdentWithDots(identHead :: _, _), true as _isSyntacticallyCorrect),
-              exprOpt, semiColonOpt ->
-                let indentColumn = identHead.idRange.StartColumn
-                match exprOpt, semiColonOpt with
-                | Some expr, None ->
+            | (LongIdentWithDots(_ :: _, _), true as _isSyntacticallyCorrect),
+              Some expr, semiColonOpt ->
+                match semiColonOpt with
+                | None ->
                     { Kind = PositionKind.AfterLastField
                       IndentColumn = indentColumn
                       InsertionPos = expr.Range.End }
                     |> Some
-                | Some _, Some (_range, Some semiColonEndPos) ->
+                | Some (_range, Some semiColonEndPos) ->
                     { Kind = PositionKind.AfterLastField
                       IndentColumn = indentColumn
                       InsertionPos = semiColonEndPos }
                     |> Some
-                | _, _ -> None
-
+                | _ -> None
             | _ -> None
 
 [<NoComparison>]

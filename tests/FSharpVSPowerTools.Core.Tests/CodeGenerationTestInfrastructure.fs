@@ -99,6 +99,10 @@ module Helpers =
     let assertSrcAreEqual expectedSrc actualSrc =
         Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
+    let assertSrcSeqAreEqual expectedSrcSeq actualSrcSeq =
+        Seq.zip expectedSrcSeq actualSrcSeq
+        |> Seq.iter (fun (expectedSrc, actualSrc) -> assertSrcAreEqual expectedSrc actualSrc)
+
     let asDocument (src: string) = MockDocument(src) :> IDocument
 
     let getSrcBeforeAndAfterCodeGen (generateCode: string -> string) (src: string) =
