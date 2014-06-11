@@ -32,38 +32,37 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
     
     let refreshFileImpl() = 
         async { 
-            try 
-                let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-                let sourceCodeOfTheFile = snapshot.GetText()
-                let syncContext = System.Threading.SynchronizationContext.Current
-                do! Async.SwitchToThreadPool()
-                let! ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService.Checker)
-                do! Async.SwitchToContext(syncContext)
+            let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
+            let sourceCodeOfTheFile = snapshot.GetText()
+            let syncContext = System.Threading.SynchronizationContext.Current
+            do! Async.SwitchToThreadPool()
+            let! ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService.Checker)
+            do! Async.SwitchToContext(syncContext)
 
-                let newResults =
-                    ranges 
-                    |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
-                        try 
-                            // -1 because F# reports 1-based line nums, whereas VS wants 0-based
-                            let startLine = snapshot.GetLineFromLineNumber (min (line - 1) (snapshot.LineCount - 1))
-                            let startPoint = startLine.Start.Add (min startCol startLine.Length)
-                            let endLine = snapshot.GetLineFromLineNumber (min (line - 1) (snapshot.LineCount - 1))
-                            let endPoint = endLine.Start.Add (min endCol endLine.Length)
-                            let trackingSpan = 
-                                snapshot.CreateTrackingSpan
-                                    (SnapshotSpan(startPoint, endPoint).Span, SpanTrackingMode.EdgeExclusive)
-                            (trackingSpan, info) :: res
-                        with e -> 
-                            debug "%O" e
-                            if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
-                            res) []
-                    |> List.rev
+            let newResults =
+                ranges 
+                |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
+                    try 
+                        // -1 because F# reports 1-based line nums, whereas VS wants 0-based
+                        let startLine = snapshot.GetLineFromLineNumber (min (line - 1) (snapshot.LineCount - 1))
+                        let startPoint = startLine.Start.Add (min startCol startLine.Length)
+                        let endLine = snapshot.GetLineFromLineNumber (min (line - 1) (snapshot.LineCount - 1))
+                        let endPoint = endLine.Start.Add (min endCol endLine.Length)
+                        let trackingSpan = 
+                            snapshot.CreateTrackingSpan
+                                (SnapshotSpan(startPoint, endPoint).Span, SpanTrackingMode.EdgeExclusive)
+                        (trackingSpan, info) :: res
+                    with e -> 
+                        debug "%O" e
+                        if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
+                        res) []
+                |> List.rev
 
-                lastResults.Swap (fun _ -> newResults) |> ignore
-                debug "[DepthTagger] Firing tagschanged"
-                tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))
-            with e -> Logging.logException e
-        } |> Async.StartImmediate
+            lastResults.Swap (fun _ -> newResults) |> ignore
+            debug "[DepthTagger] Firing tagschanged"
+            tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))
+        } 
+        |> Async.StartImmediateSafe
     
     let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent buffer], 500us, refreshFileImpl) 
     

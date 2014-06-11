@@ -106,7 +106,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                         state <- result
                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                         tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
-                    |> Async.StartImmediate
+                    |> Async.StartImmediateSafe
                     currentWord <- Some newWord
             | _ -> ()
 
@@ -182,7 +182,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                                                                getMemberByLocation displayContext state.InterfaceData
                         return handleImplementInterface snapshot state displayContext implementedMemberSignatures entity
                     }
-                    |> Async.StartImmediate
+                    |> Async.StartImmediateSafe
                 else
                     let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                     statusBar.SetText(Resource.interfaceEmptyStatusMessage) |> ignore }
