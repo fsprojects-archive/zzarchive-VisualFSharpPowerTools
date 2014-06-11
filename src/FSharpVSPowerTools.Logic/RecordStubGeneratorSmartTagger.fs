@@ -63,7 +63,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                     asyncMaybe {
                         let vsDocument = VSDocument(doc, point.Snapshot)
                         let! symbolRange, recordExpression, recordDefinition, insertionPos =
-                            tryGetRecordDefinitionFromPos codeGenService project point vsDocument
+                            tryFindRecordDefinitionFromPos codeGenService project point vsDocument
                         let newWord = symbolRange
 
                         // Recheck cursor position to ensure it's still in new word
@@ -100,7 +100,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                        "failwith \"Uninitialized field\""
                        entity
                        fieldsWritten
-        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Position.Line-1).Start.Position + insertionPos.Position.Column
+        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
 
         buffer.Insert(currentLine, stub) |> ignore
 

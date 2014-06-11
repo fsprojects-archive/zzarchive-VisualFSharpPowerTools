@@ -32,7 +32,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                                                serviceProvider: IServiceProvider,
                                                projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
-    let mutable currentWord = None
+    let mutable currentWord: SnapshotSpan option = None
     let mutable unionDefinition = None
 
     let [<Literal>] CommandName = "Generate union pattern match cases"
@@ -40,38 +40,51 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     let updateAtCaretPosition() =
-        asyncMaybe {
-            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetActiveDocument() |> liftMaybe
-            let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
-            let vsDocument = VSDocument(doc, point.Snapshot)
-            let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
-                tryFindUnionTypeDefinitionFromPos codeGenService project point vsDocument
-            let newWord = symbolRange
+        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+        | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
+        | _ ->
+            let res =
+                maybe {
+                    let! point = buffer.GetSnapshotPoint view.Caret.Position
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let! doc = dte.GetActiveDocument()
+                    let! project = projectFactory.CreateForDocument buffer doc
+                    let! word, _ = vsLanguageService.GetSymbol(point, project) 
+                    return point, doc, project, word
+                }
 
-            // Recheck cursor position to ensure it's still in new word
-            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-            if point.InSpan newWord then
-                return! Some(newWord, patMatchExpr, unionTypeDefinition, insertionPos)
-                        |> liftMaybe
-            else
-                return! liftMaybe None
-        }
-        |> Async.map (fun result -> 
-            let changed =
-                match unionDefinition, result, currentWord with
-                | None, None, _ -> false
-                | _, Some(newWord, _, _, _), Some oldWord -> newWord <> oldWord
-                | _ -> true
-            unionDefinition <- result
-            if changed then
-                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
-        |> Async.StartImmediate
+            match res with
+            | Some (point, doc, project, newWord) ->
+                let wordChanged = 
+                    match currentWord with
+                    | None -> true
+                    | Some oldWord -> newWord <> oldWord
+
+                if wordChanged then
+                    asyncMaybe {
+                        let vsDocument = VSDocument(doc, point.Snapshot)
+                        let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
+                            tryFindUnionDefinitionFromPos codeGenService project point vsDocument
+                        let newWord = symbolRange
+
+                        // Recheck cursor position to ensure it's still in new word
+                        let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                        if point.InSpan newWord then
+                            return! Some(patMatchExpr, unionTypeDefinition, insertionPos) |> liftMaybe
+                        else
+                            return! liftMaybe None
+                    }
+                    |> Async.map (fun result -> 
+                        unionDefinition <- result
+                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                    |> Async.StartImmediate
+
+                    currentWord <- Some newWord
+            | _ -> ()
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    200us, updateAtCaretPosition)
+                                    500us, updateAtCaretPosition)
 
     let handleGenerateUnionPatternMatchCases
         (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr)
@@ -109,15 +122,19 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
 
     interface ITagger<UnionPatternMatchCaseGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<UnionPatternMatchCaseGeneratorSmartTag> seq =
-            seq {
-                match unionDefinition with
-                | Some (word, expression, entity, insertionPos) when shouldGenerateUnionPatternMatchCases expression entity ->
-                    let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, 
-                                     UnionPatternMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
-                          :> ITagSpan<_>
-                | _ -> ()
-            }
+            try
+                seq [|
+                    match currentWord, unionDefinition with
+                    | Some word, Some (expression, entity, insertionPos) when shouldGenerateUnionPatternMatchCases expression entity ->
+                        let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
+                        yield TagSpan<_>(span, 
+                                         UnionPatternMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
+                              :> ITagSpan<_>
+                    | _ -> ()
+                |]
+            with e ->
+                Logging.logException e
+                Seq.empty
 
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish

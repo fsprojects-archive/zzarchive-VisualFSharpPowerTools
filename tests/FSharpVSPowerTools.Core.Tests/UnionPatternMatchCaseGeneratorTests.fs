@@ -9,7 +9,7 @@
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
       "../../src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs"
       "TestHelpers.fs"
-      "CodeGenerationTestService.fs"
+      "CodeGenerationTestInfrastructure.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.UnionPatternMatchCaseGeneratorTests
 #endif
@@ -25,7 +25,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
-open FSharpVSPowerTools.Core.Tests
+open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 open Microsoft.FSharp.Compiler.Ast
 
 let args = 
@@ -54,21 +54,8 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
-type MockDocument(src: string) =
-    let lines =
-        ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
-
-    interface IDocument with
-        member x.FullName = @"C:\file.fs"
-        member x.GetText() = src
-        member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
-        member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
-
-let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
-
 let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
 
-let asDocument (src: string) = MockDocument(src) :> IDocument
 let getSymbolAtPoint (pos: pos) (document: IDocument) =
     codeGenService.GetSymbolAtPosition(project, document, pos)
 
@@ -80,8 +67,8 @@ let tryFindPatternMatchExpr (pos: pos) (document: IDocument) =
     tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
     |> Async.RunSynchronously
 
-let tryFindUnionTypeDefinition (pos: pos) document =
-    tryFindUnionTypeDefinitionFromPos codeGenService project pos document
+let tryFindUnionDefinition (pos: pos) document =
+    tryFindUnionDefinitionFromPos codeGenService project pos document
     |> Async.RunSynchronously
 
 let tryFindCaseInsertionParams pos document =
@@ -90,7 +77,7 @@ let tryFindCaseInsertionParams pos document =
 
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let unionTypeDefFromPos = tryFindUnionTypeDefinition caretPos document
+    let unionTypeDefFromPos = tryFindUnionDefinition caretPos document
     match unionTypeDefFromPos with
     | None -> src
     | Some(range, matchExpr, entity, insertionParams) ->
@@ -112,18 +99,14 @@ let insertCasesFromPos caretPos src =
             srcLines
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
-// TODO: dedup from RecordStubGeneratorTests.fs
-let assertSrcAreEqual expectedSrc actualSrc =
-    Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
-
-let tryGetWrittenCases (pos: pos) (src: string) =
-    src
-    |> asDocument
-    |> tryFindPatternMatchExpr pos
-    |> Option.map (getWrittenCases)
-    |> Option.getOrElse Set.empty
-
 module ClausesAnalysisTests =
+    let private tryGetWrittenCases (pos: pos) (src: string) =
+        src
+        |> asDocument
+        |> tryFindPatternMatchExpr pos
+        |> Option.map (getWrittenCases)
+        |> Option.getOrElse Set.empty
+
     [<Test>]
     let ``OR patterns with constants and identifiers`` () =
         """type Union = Case1 | Case2 | Case3 of bool | Case4 of int * int
@@ -168,12 +151,8 @@ type Union = Case1
 
 let f union =
     match union with | Case1 -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 6)
-    |> assertSrcAreEqual """
-type Union = Case1
-
-let f union =
-    match union with | Case1 -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 6))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 
 [<Test>]
@@ -185,14 +164,8 @@ let f union =
     match union with
     | Case1 -> ()
     | Case2 -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 6)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f union =
-    match union with
-    | Case1 -> ()
-    | Case2 -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 6))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation when all cases are written 2`` () =
@@ -201,12 +174,8 @@ type Union = Case1 | Case2
 
 let f union =
     match union with Case1 -> () | Case2 -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 4)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f union =
-    match union with Case1 -> () | Case2 -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 4))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation when first clause doesn't start with '|'`` () =
@@ -215,15 +184,17 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    Case2 -> ()"""
+    Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 5 4)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f union =
     match union with
-    Case1 -> failwith ""
-    | Case2 -> ()"""
+    Case1 -> ()
+    | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``union match case generation with multiple-argument constructors`` () =
@@ -232,17 +203,19 @@ type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 
 let f union =
     match union with
-    | Case1 -> ()"""
+    | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 5 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
 
 let f union =
     match union with
+    | Case1 -> ()
     | Case2 -> failwith ""
     | Case3(_) -> failwith ""
     | Case4(_, _) -> failwith ""
-    | Case1 -> ()"""
+"""
 
 [<Test>]
 let ``union match case generation with required qualified access`` () =
@@ -252,7 +225,8 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Union.Case2 -> ()"""
+    | Union.Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 6 6)
     |> assertSrcAreEqual """
 [<RequireQualifiedAccess>]
@@ -260,8 +234,9 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Union.Case1 -> failwith ""
-    | Union.Case2 -> ()"""
+    | Union.Case1 -> ()
+    | Union.Case2 -> failwith ""
+"""
 
 
 [<Test>]
@@ -273,14 +248,8 @@ let f union =
     match union with
     | Case1
     | Case2 -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 6)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f union =
-    match union with
-    | Case1
-    | Case2 -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 6))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation with parenthesized cases`` () =
@@ -291,14 +260,8 @@ let f union =
     match union with
     | (Case2(x))
     | ((((Case1)))) -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2 of int
-
-let f union =
-    match union with
-    | (Case2(x))
-    | ((((Case1)))) -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 7))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation with combined clauses with multiple args`` () =
@@ -309,14 +272,8 @@ let f union =
     match union with
     | Case1
     | Case2 _ -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 6)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2 of int
-
-let f union =
-    match union with
-    | Case1
-    | Case2 _ -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 6))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation with guards written`` () =
@@ -325,17 +282,19 @@ type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Case2 when 1 = 2 -> ()
-    | Case2 -> ()"""
+    | Case1 -> ()
+    | Case1 when 1 = 2 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 5 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f union =
     match union with
-    | Case1 -> failwith ""
-    | Case2 when 1 = 2 -> ()
-    | Case2 -> ()"""
+    | Case1 -> ()
+    | Case1 when 1 = 2 -> ()
+    | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``nested union match case generation`` () =
@@ -348,7 +307,8 @@ let f union2 =
     | Case3 _ -> ()
     | Case4(union1) ->
         match union1 with
-        | Case2 -> ()"""
+        | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 9 10)
     |> assertSrcAreEqual """
 type Union1 = Case1 | Case2
@@ -359,8 +319,9 @@ let f union2 =
     | Case3 _ -> ()
     | Case4(union1) ->
         match union1 with
-        | Case1 -> failwith ""
-        | Case2 -> ()"""
+        | Case1 -> ()
+        | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``union match case generation is inactive on tuples`` () =
@@ -370,13 +331,8 @@ type Union = Case1 | Case2
 let f u =
     match u with
     | Case1, Case2 -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f u =
-    match u with
-    | Case1, Case2 -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 7))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation is inactive on lists`` () =
@@ -386,13 +342,8 @@ type Union = Case1 | Case2
 let f u =
     match u with
     | [Case1] -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f u =
-    match u with
-    | [Case1] -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 7))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation is inactive on list cons pattern`` () =
@@ -402,13 +353,8 @@ type Union = Case1 | Case2
 let f u =
     match u with
     | Case1 :: [Case1] -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f u =
-    match u with
-    | Case1 :: [Case1] -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 7))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation is inactive on chained list cons pattern`` () =
@@ -418,13 +364,8 @@ type Union = Case1 | Case2
 let f u =
     match u with
     | Case1 :: x :: Case2 :: [Case1] -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f u =
-    match u with
-    | Case1 :: x :: Case2 :: [Case1] -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 7))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match case generation is inactive on arrays`` () =
@@ -434,37 +375,34 @@ type Union = Case1 | Case2
 let f u =
     match u with
     | [|Case1|] -> ()"""
-    |> insertCasesFromPos (Pos.fromZ 5 8)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
-
-let f u =
-    match u with
-    | [|Case1|] -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 8))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``generate identifier names when a union field has one`` () =
     """
 type Union =
-    | Case1 of arg1:int * int * arg3:string
-    | Case2 of arg1:int * arg2:string
-    | Case3
+    | Case1
+    | Case2 of arg1:int * int * arg3:string
+    | Case3 of arg1:int * arg2:string
 
 let f x =
     match x with
-    | Case3 -> ()"""
+    | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 8 6)
     |> assertSrcAreEqual """
 type Union =
-    | Case1 of arg1:int * int * arg3:string
-    | Case2 of arg1:int * arg2:string
-    | Case3
+    | Case1
+    | Case2 of arg1:int * int * arg3:string
+    | Case3 of arg1:int * arg2:string
 
 let f x =
     match x with
-    | Case1(arg1, _, arg3) -> failwith ""
-    | Case2(arg1, arg2) -> failwith ""
-    | Case3 -> ()"""
+    | Case1 -> ()
+    | Case2(arg1, _, arg3) -> failwith ""
+    | Case3(arg1, arg2) -> failwith ""
+"""
 
 [<Test>]
 let ``union match lambda case generation when first clause starts with '|'`` () =
@@ -472,14 +410,16 @@ let ``union match lambda case generation when first clause starts with '|'`` () 
 type Union = Case1 | Case2
 
 let f = function
-    | Case2 -> ()"""
+    | Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 4 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f = function
-    | Case1 -> failwith ""
-    | Case2 -> ()"""
+    | Case1 -> ()
+    | Case2 -> failwith ""
+"""
 
 [<Test>]
 let ``union match lambda case generation when first clause doesn't start with '|'`` () =
@@ -487,14 +427,105 @@ let ``union match lambda case generation when first clause doesn't start with '|
 type Union = Case1 | Case2
 
 let f = function
-    Case2 -> ()"""
+    Case1 -> ()
+"""
     |> insertCasesFromPos (Pos.fromZ 4 6)
     |> assertSrcAreEqual """
 type Union = Case1 | Case2
 
 let f = function
-    Case1 -> failwith ""
-    | Case2 -> ()"""
+    Case1 -> ()
+    | Case2 -> failwith ""
+"""
+
+[<Test>]
+let ``uses correct indenting when inserting new line, when first pattern starts on a new line`` () =
+    [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> () | Case2 -> ()
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         |
+     Case2 -> ()
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         | Case2 -> ()
+"""
+    ]
+    |> List.map (insertCasesFromPos (Pos.fromZ 4 6))
+    |> assertSrcSeqAreEqual [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> () | Case2 -> ()
+    | Case3 -> failwith ""
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         |
+     Case2 -> ()
+     | Case3 -> failwith ""
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         | Case2 -> ()
+         | Case3 -> failwith ""
+"""
+    ]
+
+[<Test>]
+let ``uses correct indenting when inserting new line, when first pattern starts on the same line`` () =
+    [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with | Case1 -> () | Case2 -> ()
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with Case1 -> () | Case2 -> ()
+"""
+    ]
+    |> List.map (insertCasesFromPos (Pos.fromZ 3 19))
+    |> assertSrcSeqAreEqual [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with | Case1 -> () | Case2 -> ()
+                 | Case3 -> failwith ""
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with Case1 -> () | Case2 -> ()
+                 | Case3 -> failwith ""
+"""
+]
 
 [<Test>]
 let ``generation is not triggered when caret on union type identifier but not on pattern match clause`` () =
@@ -505,14 +536,8 @@ type Union = Case1 | Case2
 let f x =
     match x with
     | Some 0 -> Union.Case2"""
-    |> insertCasesFromPos (Pos.fromZ 6 16)
-    |> assertSrcAreEqual """
-[<RequireQualifiedAccess>]
-type Union = Case1 | Case2
-
-let f x =
-    match x with
-    | Some 0 -> Union.Case2"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 6 16))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``generation is not triggered when caret on union case identifier but not on pattern match clause`` () =
@@ -522,22 +547,82 @@ type Union = Case1 | Case2
 let f x =
     match x with
     | Some 0 -> Case2"""
-    |> insertCasesFromPos (Pos.fromZ 5 16)
-    |> assertSrcAreEqual """
-type Union = Case1 | Case2
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 16))
+    |> assertSrcWasNotChangedAfterCodeGen
 
-let f x =
+[<Test>]
+let ``code gen isn't triggered when last pattern match clause is incomplete`` () =
+    [
+        """type Union = Case1 | Case2
+let f =
     match x with
-    | Some 0 -> Case2"""
+    Case1 -> """
+
+        """type Union = Case1 | Case2
+let f =
+    match x with
+    Case1"""
+
+        """type Union = Case1 | Case2
+let f =
+    function
+    Case1 -> """
+
+        """type Union = Case1 | Case2
+let f =
+    function
+    Case1"""
+    ]
+    |> List.map (getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 2 7)))
+    |> List.iter (assertSrcWasNotChangedAfterCodeGen)
 
 
-// Union match case without argument patterns
-//// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range
-//// LongIdent(LongIdentWithDots[(Case2, rangeList: [])], identOption: null, typlDecl: null, constrArgs: Pats [], accessOpt: null, _range)
-//expr.[0].RangeOfGuardAndRhs
+[<Test>]
+let ``code gen isn't triggered when last pattern match clause is incomplete but is followed by code`` () =
+    [
+        """type Union = Case1 | Case2
+let f =
+    match x with
+    Case1 ->
+    
+let y = 3"""
 
-// Union match case with argument patterns
-//// SynPat.LongIdent(_longIdentWithDots, _identOption, _synVarTyplDecl, _synConstrArg, _synAccessOpt, _range
-//// New: _synConstrArg
-//// LongIdent(LongIdentWithDots[(Case3, rangeList: [])], identOption: null, typlDecl: null, constrArgs: Pats [Wild...], accessOpt: null, _range)
-//expr.[1].Pattern
+        """type Union = Case1 | Case2
+let f =
+    match x with
+    Case1
+
+let y = 3"""
+
+        """type Union = Case1 | Case2
+let f =
+    match x with
+    Case1 ->
+
+    let y = 3"""
+
+        """type Union = Case1 | Case2
+let f =
+    match x with
+    Case1
+
+    let y = 3"""
+
+        """type Union = Case1 | Case2
+let f =
+    match x with
+    Case1 ->
+
+    let y = 3
+    y"""
+
+        """type Union = Case1 | Case2
+let f =
+    match x with
+    Case1
+
+    let y = 3
+    y"""
+    ]
+    |> List.map (getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 2 7)))
+    |> List.iter (assertSrcWasNotChangedAfterCodeGen)
