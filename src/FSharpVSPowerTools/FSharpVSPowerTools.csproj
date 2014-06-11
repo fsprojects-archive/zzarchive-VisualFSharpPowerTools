@@ -55,9 +55,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Fantomas.1.3.0\lib\FantomasLib.dll</HintPath>
     </Reference>
-    <Reference Include="FSharp.Compiler.Service, Version=0.0.52.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="FSharp.Compiler.Service, Version=0.0.54.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.52\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.54\lib\net40\FSharp.Compiler.Service.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.ComponentModelHost, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
