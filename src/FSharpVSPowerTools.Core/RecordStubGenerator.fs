@@ -86,39 +86,46 @@ with
                     | _ -> None
                 )
 
-            let maxLineIdx =
-                fieldAndStartColumnAndLineIdxList
-                |> List.unzip3
-                |> (fun (_, _, lineIdx) -> lineIdx)
-                |> List.max
+            maybe {
+                let! maxLineIdx =
+                    fieldAndStartColumnAndLineIdxList
+                    |> List.unzip3
+                    |> (fun (_, _, lineIdx) -> lineIdx)
+                    |> (function
+                        | [] -> None
+                        | nonEmptyList -> Some (List.max nonEmptyList)
+                    )
 
-            let indentColumn =
-                fieldAndStartColumnAndLineIdxList
-                |> List.pick (fun (_, indentColumn, lineIdx) ->
-                    if lineIdx = maxLineIdx
-                    then Some indentColumn
-                    else None
-                )
+                let indentColumn =
+                    fieldAndStartColumnAndLineIdxList
+                    |> List.pick (fun (_, indentColumn, lineIdx) ->
+                        if lineIdx = maxLineIdx
+                        then Some indentColumn
+                        else None
+                    )
 
-            let lastFieldInfo = Seq.last expr.FieldExprList
+                let lastFieldInfo = Seq.last expr.FieldExprList
 
-            match lastFieldInfo with
-            | _recordFieldName, None, _ -> None
-            | (LongIdentWithDots(_ :: _, _), true as _isSyntacticallyCorrect),
-              Some expr, semiColonOpt ->
-                match semiColonOpt with
-                | None ->
-                    { Kind = PositionKind.AfterLastField
-                      IndentColumn = indentColumn
-                      InsertionPos = expr.Range.End }
-                    |> Some
-                | Some (_range, Some semiColonEndPos) ->
-                    { Kind = PositionKind.AfterLastField
-                      IndentColumn = indentColumn
-                      InsertionPos = semiColonEndPos }
-                    |> Some
-                | _ -> None
-            | _ -> None
+                return!
+                    match lastFieldInfo with
+                    | _recordFieldName, None, _ -> None
+                    | (LongIdentWithDots(_ :: _, _), true as _isSyntacticallyCorrect),
+                      Some expr, semiColonOpt ->
+                        match semiColonOpt with
+                        | None ->
+                            { Kind = PositionKind.AfterLastField
+                              IndentColumn = indentColumn
+                              InsertionPos = expr.Range.End }
+                            |> Some
+                        | Some (_range, Some semiColonEndPos) ->
+                            { Kind = PositionKind.AfterLastField
+                              IndentColumn = indentColumn
+                              InsertionPos = semiColonEndPos }
+                            |> Some
+                        | _ -> None
+                    | _ -> None
+            }
+
 
 [<NoComparison>]
 type private Context = {
