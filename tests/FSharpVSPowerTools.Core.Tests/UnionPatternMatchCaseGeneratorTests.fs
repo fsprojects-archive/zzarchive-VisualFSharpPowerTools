@@ -40,7 +40,6 @@ let args =
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
     |]
 
-let languageService = LanguageService(fun _ -> ())
 let project: ProjectOptions =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
@@ -54,30 +53,14 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
-let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
-
-let getSymbolAtPoint (pos: pos) (document: IDocument) =
-    codeGenService.GetSymbolAtPosition(project, document, pos)
-
-let getSymbolAndUseAtPoint (pos: pos) (document: IDocument) =
-    codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
-    |> Async.RunSynchronously
-
-let tryFindPatternMatchExpr (pos: pos) (document: IDocument) =
-    tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
-    |> Async.RunSynchronously
-
-let tryFindUnionDefinition (pos: pos) document =
+let tryFindUnionDefinition codeGenService (pos: pos) document =
     tryFindUnionDefinitionFromPos codeGenService project pos document
-    |> Async.RunSynchronously
-
-let tryFindCaseInsertionParams pos document =
-    tryFindCaseInsertionParamsAtPos codeGenService project pos document
     |> Async.RunSynchronously
 
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let unionTypeDefFromPos = tryFindUnionDefinition caretPos document
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), args)
+    let unionTypeDefFromPos = tryFindUnionDefinition codeGenService caretPos document
     match unionTypeDefFromPos with
     | None -> src
     | Some(range, matchExpr, entity, insertionParams) ->
@@ -100,10 +83,16 @@ let insertCasesFromPos caretPos src =
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
 module ClausesAnalysisTests =
+    let tryFindPatternMatchExpr codeGenService (pos: pos) (document: IDocument) =
+        tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
+        |> Async.RunSynchronously
+
+
     let private tryGetWrittenCases (pos: pos) (src: string) =
+        let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), args)
         src
         |> asDocument
-        |> tryFindPatternMatchExpr pos
+        |> tryFindPatternMatchExpr codeGenService pos
         |> Option.map (getWrittenCases)
         |> Option.getOrElse Set.empty
 
