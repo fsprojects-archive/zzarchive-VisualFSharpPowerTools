@@ -27,7 +27,6 @@ type UnionMatchCasesInsertionParams = {
     IndentColumn: int
 }
 
-
 [<NoComparison>]
 type private Context = {
     Writer: ColumnIndentedTextWriter
@@ -415,7 +414,6 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
     |> List.collect (getCasesInClause)
     |> Set.ofList
 
-
 let shouldGenerateUnionPatternMatchCases (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
     let caseCount = entity.UnionCases.Count
     let writtenCaseCount =
@@ -445,35 +443,95 @@ let tryFindInsertionParams (codeGenService: ICodeGenerationService<_, _, 'Range>
         // Not possible normally
         None
 
-    | last :: secondLast :: _ ->
-        // try to find '|' between last and second last clauses
-        let rangeBetweenTheTwoLastClauses =
-            unionRanges secondLast.Range.EndRange last.Range.StartRange
+    | last :: _ ->
+        // Interesting cases:
+        //
+        // (1)
+        // match x with
+        // | Case1 -> () | Case2 -> ()
+        // <indent-here>
+        //
+        //
+        // (2)
+        // match x with
+        // Case1 -> () | Case2 -> ()
+        // <indent-here>
+        //
+        // (3)
+        // match x with
+        // | Case1 -> ()
+        //      | Case2 -> ()
+        //      <indent-here>
+        //
+        // (4)
+        // match x with
+        // | Case1 -> ()
+        //      |
+        //    Case2 -> ()
+        //    <indent-here>
+        //
+        // (5)
+        // match x with | Case1 -> () | Case2 -> ()
+        //              <indent-here>
 
-        maybe {
-            let! (_, barTokenLPos) =
-                tryFindBarTokenLPosInRange codeGenService project rangeBetweenTheTwoLastClauses document
+        // To know the indentation column,
+        // We want to find the first clause of the clauses that are on the same last line
+        // All clause f(i) start at line l(i)
+        // We want to 'f(k)' such that k = min { i >= k such that l(i) = l(k) }
+        // And l(k) = max { l(i) }
 
-            return { InsertionPos = last.Range.End
-                     IndentColumn = barTokenLPos.Column }
-        }
-    | [last] ->
-        // try to find '|' between (first = last) clause and 'match-with'/'function'
-        let rangeBetweenMatchWithOrFunctionAndFstClause =
-            unionRanges patMatchExpr.MatchWithOrFunctionRange.EndRange last.Range.StartRange
+        // TODO: report this bug: 
+        // when renaming it like this: ``list of (clause, line index)``
+        // FSI interactive bugs:
+        // error FS0192: internal error: binding null type in envBindTypeRef: list of (clause, line index)
+        let clauseAndLineIdxList =
+            [
+                for clause in patMatchExpr.Clauses do
+                    yield clause, clause.Range.StartLine
+            ]
+
+        // Get first of the clauses that are on the same last line
+        let lastLineIdx =
+            clauseAndLineIdxList
+            |> List.map (fun (_, lineIdx) -> lineIdx)
+            |> Seq.last
+
+        let firstClauseOnLastLine =
+            clauseAndLineIdxList
+            |> List.find (fun (_, lineIdx) -> lineIdx = lastLineIdx)
+            |> fst
+
+        // Find if this clause has a pipe before it on the same line as itself
+        let possibleBarLocationRange =
+            // Special case (5):
+            // 'match-with'/'function' is on the same line as the first clause
+            // on the last line
+            if patMatchExpr.MatchWithOrFunctionRange.EndLine
+               = firstClauseOnLastLine.Range.StartLine
+            then
+                unionRanges
+                    patMatchExpr.MatchWithOrFunctionRange.EndRange
+                    firstClauseOnLastLine.Range.StartRange
+            else
+                let clause = firstClauseOnLastLine
+                let start = mkPos clause.Range.StartLine 0
+                mkFileIndexRange (clause.Range.FileIndex) start clause.Range.Start
+
         let barTokenOpt =
-            tryFindBarTokenLPosInRange codeGenService project rangeBetweenMatchWithOrFunctionAndFstClause document
+            tryFindBarTokenLPosInRange codeGenService project 
+                possibleBarLocationRange document
 
         match barTokenOpt with
         | Some(_, barTokenLPos) ->
-            { InsertionPos = last.Range.End
-              IndentColumn = barTokenLPos.Column }
+            { IndentColumn = barTokenLPos.Column
+              InsertionPos = last.Range.End }
             |> Some
 
         | None ->
-            { InsertionPos = last.Range.End
-              IndentColumn = last.Range.StartColumn }
+            { IndentColumn = firstClauseOnLastLine.Range.StartColumn
+              InsertionPos = last.Range.End }
             |> Some
+
 
 let checkThatPatternMatchExprEndsWithCompleteClause (expr: PatternMatchExpr) =
     match List.rev expr.Clauses with

@@ -9,7 +9,7 @@
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
       "../../src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs"
       "TestHelpers.fs"
-      "CodeGenerationTestInfra.fs"
+      "CodeGenerationTestInfrastructure.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.UnionPatternMatchCaseGeneratorTests
 #endif
@@ -437,6 +437,95 @@ let f = function
     Case1 -> ()
     | Case2 -> failwith ""
 """
+
+[<Test>]
+let ``uses correct indenting when inserting new line, when first pattern starts on a new line`` () =
+    [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> () | Case2 -> ()
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         |
+     Case2 -> ()
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         | Case2 -> ()
+"""
+    ]
+    |> List.map (insertCasesFromPos (Pos.fromZ 4 6))
+    |> assertSrcSeqAreEqual [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> () | Case2 -> ()
+    | Case3 -> failwith ""
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         |
+     Case2 -> ()
+     | Case3 -> failwith ""
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with
+    | Case1 -> ()
+         | Case2 -> ()
+         | Case3 -> failwith ""
+"""
+    ]
+
+[<Test>]
+let ``uses correct indenting when inserting new line, when first pattern starts on the same line`` () =
+    [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with | Case1 -> () | Case2 -> ()
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with Case1 -> () | Case2 -> ()
+"""
+    ]
+    |> List.map (insertCasesFromPos (Pos.fromZ 3 19))
+    |> assertSrcSeqAreEqual [
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with | Case1 -> () | Case2 -> ()
+                 | Case3 -> failwith ""
+"""
+
+        """
+type Union = Case1 | Case2 | Case3
+let f x =
+    match x with Case1 -> () | Case2 -> ()
+                 | Case3 -> failwith ""
+"""
+]
 
 [<Test>]
 let ``generation is not triggered when caret on union type identifier but not on pattern match clause`` () =
