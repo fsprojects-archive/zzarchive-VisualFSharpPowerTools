@@ -17,6 +17,7 @@ type IDocument =
     abstract GetText: unit -> string
     abstract GetLineText0: int<Line0> -> string
     abstract GetLineText1: int<Line1> -> string
+    abstract LineCount: int 
 
 type IRange =
     abstract StartLine: int<Line1>
@@ -75,41 +76,41 @@ module Utils =
     let tryFindTokenLPosInRange
         (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
         (range: range) (document: IDocument) (predicate: TokenInformation -> bool) =
-        let encounteredException = ref false
-        let lines = seq {
-            let currentLine = ref range.StartLine
-            while !currentLine <= range.EndLine && not !encounteredException do
-                let line = !currentLine
-                yield!
-                    try
-                        codeGenService.TokenizeLine(project, document, (line * 1<Line1>))
-                        |> List.map (fun tokenInfo -> line * 1<Line1>, tokenInfo)
-                    with _ ->
-                        encounteredException := true
-                        []
+        // Normalize range
+        // NOTE: FCS compiler sometimes returns an invalid range. In particular, the
+        // range end limit can exceed the end limit of the document
+        let range =
+            if range.EndLine > document.LineCount then
+                let newEndLine = document.LineCount
+                let newEndColumn = document.GetLineText1(document.LineCount * 1<Line1>).Length
+                let newEndPos = mkPos newEndLine newEndColumn
                 
-                currentLine := !currentLine + 1
+                mkFileIndexRange (range.FileIndex) range.Start newEndPos
+            else
+                range
+            
+        let lineIdxAndTokenSeq = seq {
+            for lineIdx = range.StartLine to range.EndLine do
+                yield!
+                    codeGenService.TokenizeLine(project, document, (lineIdx * 1<Line1>))
+                    |> List.map (fun tokenInfo -> lineIdx * 1<Line1>, tokenInfo)
         }
 
-        if !encounteredException then
-            // If an exception was thrown, it means that somehow a parsing error occurred
-            None
-        else
-            lines
-            |> Seq.tryFind (fun (line1, tokenInfo) ->
-                if range.StartLine = range.EndLine then
-                    tokenInfo.LeftColumn >= range.StartColumn &&
-                    tokenInfo.RightColumn < range.EndColumn &&
-                    predicate tokenInfo
-                elif range.StartLine = int line1 then
-                    tokenInfo.LeftColumn >= range.StartColumn &&
-                    predicate tokenInfo
-                elif int line1 = range.EndLine then
-                    tokenInfo.RightColumn < range.EndColumn &&
-                    predicate tokenInfo
-                else
-                    predicate tokenInfo
-            )
-            |> Option.map (fun (line1, tokenInfo) ->
-                tokenInfo, (Pos.fromZ (int line1 - 1) tokenInfo.LeftColumn)
-            )
+        lineIdxAndTokenSeq
+        |> Seq.tryFind (fun (line1, tokenInfo) ->
+            if range.StartLine = range.EndLine then
+                tokenInfo.LeftColumn >= range.StartColumn &&
+                tokenInfo.RightColumn < range.EndColumn &&
+                predicate tokenInfo
+            elif range.StartLine = int line1 then
+                tokenInfo.LeftColumn >= range.StartColumn &&
+                predicate tokenInfo
+            elif int line1 = range.EndLine then
+                tokenInfo.RightColumn < range.EndColumn &&
+                predicate tokenInfo
+            else
+                predicate tokenInfo
+        )
+        |> Option.map (fun (line1, tokenInfo) ->
+            tokenInfo, (Pos.fromZ (int line1 - 1) tokenInfo.LeftColumn)
+        )

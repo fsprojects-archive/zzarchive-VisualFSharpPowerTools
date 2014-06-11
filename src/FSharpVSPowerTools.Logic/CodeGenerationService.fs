@@ -10,6 +10,7 @@ open FSharpVSPowerTools.ProjectSystem
 type VSDocument(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
     interface IDocument with
         member x.FullName = doc.FullName
+        member x.LineCount = snapshot.LineCount
         member x.GetText() = snapshot.GetText()
         member x.GetLineText0(line0) =
             snapshot.GetLineFromLineNumber(int line0).GetText()

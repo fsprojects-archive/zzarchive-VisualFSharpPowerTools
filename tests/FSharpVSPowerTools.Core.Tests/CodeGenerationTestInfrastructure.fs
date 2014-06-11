@@ -87,6 +87,7 @@ type MockDocument(src: string) =
 
     interface IDocument with
         member x.FullName = @"C:\file.fs"
+        member x.LineCount = lines.Count
         member x.GetText() = src
         member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
         member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]

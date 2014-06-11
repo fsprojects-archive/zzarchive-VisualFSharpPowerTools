@@ -538,7 +538,7 @@ let checkThatPatternMatchExprEndsWithCompleteClause (expr: PatternMatchExpr) =
     | [] -> false
     | lastClause :: _ ->
         match lastClause with
-        // In case when there's nothing in the RHS of the arrow
+        // In the case when there's nothing in the RHS of the arrow
         // FCS compiler apparently uses this particular AST representation
         // but with unitRange = empty
         | Clause(_, _, SynExpr.Const(SynConst.Unit, unitRange), _, _) ->
