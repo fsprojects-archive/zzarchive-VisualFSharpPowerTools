@@ -69,12 +69,13 @@ let project: ProjectOptions =
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
 
 let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument) =
+    let project = { project with ProjectFileNames = [| document.FullName |] }
     tryFindRecordDefinitionFromPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), args)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
     let recordDefFromPos = tryFindRecordDefinitionFromPos codeGenService caretPos document
     match recordDefFromPos with
     | Some(_, recordExprData, entity, insertPos) ->
