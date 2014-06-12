@@ -13,27 +13,10 @@ open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 
-type FilePath = string
-
-[<RequireQualifiedAccess; NoComparison>]
-type SymbolDeclarationLocation = 
-    | File
-    | Projects of IProjectProvider list // Source file where a symbol is declared may be included into several projects
-
-and IProjectProvider =
-    abstract IsForStandaloneScript: bool
-    abstract ProjectFileName: string
-    abstract TargetFramework: FSharpTargetFramework
-    abstract CompilerOptions: string []
-    abstract SourceFiles: string []
-    abstract FullOutputFilePath: string
-    abstract GetReferencedProjects: unit -> IProjectProvider list
-    abstract GetAllReferencedProjectFileNames: unit -> string list
-    abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
-
 [<NoComparison; NoEquality>]
 type private CacheMessage<'k, 'v> =
     | Get of 'k * (unit -> 'v) * AsyncReplyChannel<'v>
+    | TryGet of 'k * AsyncReplyChannel<'v option>
     | Remove of 'k
     | Clear
 
@@ -60,6 +43,9 @@ type private Cache<'k, 'v when 'k: comparison>() =
                             debug "[Project cache] Creating new value for %A" key
                             r.Reply value
                             cache |> Map.add key value
+                    | TryGet (key, r) ->
+                        r.Reply (cache |> Map.tryFind key)
+                        cache
                     | Remove key -> 
                         match cache |> Map.tryFind key with
                         | Some value -> 
@@ -73,6 +59,7 @@ type private Cache<'k, 'v when 'k: comparison>() =
         loop Map.empty)
     do agent.Error.Add (fail "%O")
     member x.Get key creator = agent.PostAndReply (fun r -> Get (key, creator, r))
+    member x.TryGet key = agent.PostAndReply (fun r -> TryGet (key, r))
     member x.Remove key = agent.Post (Remove key)
     member x.Clear() = agent.Post Clear
 
@@ -245,21 +232,28 @@ type private ProjectUniqueName = string
 
 [<Export>]
 type ProjectFactory
-    [<ImportingConstructor>] ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
+    [<ImportingConstructor>] 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+     [<Import(typeof<VSLanguageService>)>] vsLanguageService: VSLanguageService) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
-    
+
     let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
         cache.Remove project.UniqueName
 
     let onProjectItemChanged (projectItem: ProjectItem) =
-        projectItem.VSProject |> Option.iter (fun item -> onProjectChanged item.Project)
+        projectItem.VSProject |> Option.iter (fun item -> 
+            cache.TryGet item.Project.UniqueName
+            |> Option.iter (vsLanguageService.InvalidateProject >> Async.RunSynchronously) 
+            onProjectChanged item.Project)
 
     do match events with
         | Some events ->
-            events.SolutionEvents.add_AfterClosing (fun _ -> cache.Clear())
+            events.SolutionEvents.add_AfterClosing (fun _ -> 
+                vsLanguageService.ClearCaches()
+                cache.Clear())
             events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)

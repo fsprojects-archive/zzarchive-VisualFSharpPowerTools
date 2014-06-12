@@ -11,16 +11,31 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.VisualStudio.TextManager.Interop
 open FSharpVSPowerTools
 
+type FilePath = string
+
+[<RequireQualifiedAccess; NoComparison>]
+type SymbolDeclarationLocation = 
+    | File
+    | Projects of IProjectProvider list // Source file where a symbol is declared may be included into several projects
+
+and IProjectProvider =
+    abstract IsForStandaloneScript: bool
+    abstract ProjectFileName: string
+    abstract TargetFramework: FSharpTargetFramework
+    abstract CompilerOptions: string []
+    abstract SourceFiles: string []
+    abstract FullOutputFilePath: string
+    abstract GetReferencedProjects: unit -> IProjectProvider list
+    abstract GetAllReferencedProjectFileNames: unit -> string list
+    abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
+
 [<Export>]
 type VSLanguageService
     [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider, 
-     editorFactory: IVsEditorAdaptersFactoryService, 
+    (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
-     openDocumentsTracker: OpenDocumentsTracker,
-     [<Import(typeof<ProjectFactory>)>] projectFactory: ProjectFactory) =
+     openDocumentsTracker: OpenDocumentsTracker) =
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
     
     let getProjectOptions (project: IProjectProvider) =
@@ -38,27 +53,6 @@ type VSLanguageService
                 | [] -> opts
                 | changeTimes -> { opts with LoadTime = List.max (opts.LoadTime::changeTimes) }
         }
-
-    let invalidateProject (projectItem: EnvDTE.ProjectItem) =
-        async {
-            let project = projectItem.ContainingProject
-            if box project <> null && isFSharpProject project then
-                let p = projectFactory.CreateForProject project
-                debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-                let! opts = p.GetProjectCheckerOptions instance
-                return instance.InvalidateConfiguration(opts)
-        }
-        |> Async.StartImmediate
-
-    let events = dte.Events :?> EnvDTE80.Events2
-    let projectItemsEvents = events.ProjectItemsEvents
-    do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
-    do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
-    do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
-
-    do events.SolutionEvents.add_AfterClosing (fun _ -> 
-        debug "[Language Service] Clearing FCS caches."
-        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients())
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
@@ -212,4 +206,14 @@ type VSLanguageService
             return symbolUses, lexer
         }
 
+    member x.InvalidateProject (projectProvider: IProjectProvider) = 
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions(instance) 
+            return instance.Checker.InvalidateConfiguration opts
+        }
+
+    member x.ClearCaches() = 
+        debug "[Language Service] Clearing FCS caches."
+        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+    
     member x.Checker = instance.Checker
