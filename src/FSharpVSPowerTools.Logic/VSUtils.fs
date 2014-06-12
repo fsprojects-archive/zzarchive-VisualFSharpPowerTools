@@ -290,5 +290,33 @@ type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, upd
             do! awaitPauseAfterChange()
             update() }
        |> Async.StartImmediate
-       // go ahead and synchronously get the first bit of info for the original rendering
+       // Go ahead and synchronously get the first bit of info for the original rendering
        update()
+
+type Async with
+    /// An equivalence of Async.StartImmediate which catches and logs raised exceptions
+    static member StartImmediateSafe(computation, ?cancellationToken) =
+        let comp =
+            async {
+                let! result = Async.Catch computation
+                match result with
+                | Choice1Of2 _ -> ()
+                | Choice2Of2 e ->
+                    fail "The following exception occurs inside async block: %O" e
+                    Logging.logException e
+            }
+        Async.StartImmediate(comp, ?cancellationToken = cancellationToken)
+
+    /// An equivalence of Async.Start which catches and logs raised exceptions
+    static member StartSafe(computation, ?cancellationToken) =
+        let comp =
+            async {
+                let! result = Async.Catch computation
+                match result with
+                | Choice1Of2 _ -> ()
+                | Choice2Of2 e ->
+                    fail "The following exception occurs inside async block: %O" e
+                    Logging.logException e
+            }
+        Async.Start(comp, ?cancellationToken = cancellationToken)
+        

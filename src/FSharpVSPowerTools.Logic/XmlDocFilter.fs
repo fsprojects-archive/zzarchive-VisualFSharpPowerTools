@@ -64,7 +64,8 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                                 let middleSummaryLine = wpfTextView.TextSnapshot.GetLineFromLineNumber(lastLine.LineNumber - 1 - paramNames.Length)
                                 let _newCaret = wpfTextView.Caret.MoveTo(wpfTextView.GetTextViewLineContainingBufferPosition(middleSummaryLine.Start))
                                 ()
-                            } |> Async.StartImmediate
+                        } 
+                        |> Async.StartImmediateSafe
                     | _ -> ()
                 | _ -> ()
             passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)

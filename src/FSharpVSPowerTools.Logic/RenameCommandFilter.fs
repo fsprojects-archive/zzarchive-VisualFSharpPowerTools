@@ -123,7 +123,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     | _ -> return messageBoxError Resource.renameErrorMessage
                 | _ ->
                     return ()
-            } |> Async.StartImmediate
+            } |> Async.StartImmediateSafe
         | _ -> ()
 
     member x.ShowDialog (wnd: Window) =

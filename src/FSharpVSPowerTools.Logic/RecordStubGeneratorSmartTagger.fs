@@ -77,7 +77,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                         recordDefinition <- result
                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                         tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
-                    |> Async.StartImmediate
+                    |> Async.StartImmediateSafe
                     currentWord <- Some newWord
             | _ -> ()
 

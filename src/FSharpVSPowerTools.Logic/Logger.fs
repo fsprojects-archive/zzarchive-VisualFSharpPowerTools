@@ -27,10 +27,11 @@ type Logger
         | LogType.Warning -> OLEMSGICON.OLEMSGICON_WARNING
         | LogType.Error -> OLEMSGICON.OLEMSGICON_CRITICAL
 
-    let getShellService() = serviceProvider.GetService<IVsUIShell, SVsUIShell>()
+    let getShellService() = 
+        serviceProvider.GetService(typeof<SVsUIShell>) :?> IVsUIShell
 
     let getActivityLogService() =
-        let service = serviceProvider.GetService<IVsActivityLog, SVsActivityLog>()
+        let service = serviceProvider.GetService(typeof<SVsActivityLog>) :?> IVsActivityLog
         Option.ofNull service
 
     member x.Log logType message =
@@ -49,9 +50,9 @@ type Logger
     member x.MessageBox(logType, message) =
         let icon = getIcon logType
         let service = getShellService()
-        let result = 0
+        let result = ref 0
         service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, 
-            OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, ref result)
+            OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, result)
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Logging =

@@ -78,7 +78,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                         unionDefinition <- result
                         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                         tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
-                    |> Async.StartImmediate
+                    |> Async.StartImmediateSafe
 
                     currentWord <- Some newWord
             | _ -> ()

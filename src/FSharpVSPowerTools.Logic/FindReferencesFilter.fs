@@ -95,7 +95,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             | _ -> 
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                 statusBar.SetText(Resource.findAllReferencesStatusMessage) |> ignore 
-        } |> Async.StartImmediate
+        } |> Async.StartImmediateSafe
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
