@@ -110,12 +110,11 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                     return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             } 
             |> Async.map (Option.iter id)
-            |> Async.Start
+            |> Async.StartInThreadPoolSafe
         | _ -> ()
 
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
-                                    fun() -> try updateAtCaretPosition()
-                                             with e -> Logging.logException e)
+                                    updateAtCaretPosition)
 
     let tagSpan span = TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
 
