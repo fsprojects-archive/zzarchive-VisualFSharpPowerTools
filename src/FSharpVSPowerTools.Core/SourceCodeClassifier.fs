@@ -111,7 +111,7 @@ let excludeWordSpan from what =
 let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untypedAst: ParsedInput option, lexer: ILexer) =
     let allSymbolsUses' =
         allSymbolsUses
-        |> Seq.groupBy (fun (su, _) -> su.RangeAlternate.StartLine)
+        |> Seq.groupBy (fun (su, _) -> su.RangeAlternate.EndLine)
         |> Seq.map (fun (line, sus) ->
             let tokens = lexer.TokenizeLine (line - 1)
             sus
@@ -177,9 +177,13 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
                 match List.ofSeq spans with
                 | [span] -> span
                 | spans -> 
-                    match spans |> List.filter (fun span -> span.Category <> Unused) with
-                    | [] -> List.head spans
-                    | h :: _ -> h)
+                    spans 
+                    |> List.sortBy (fun span -> 
+                        match span.Category with
+                        | Unused -> 0
+                        | Other -> 2
+                        | _ -> 1)
+                    |> List.head)
         |> Seq.distinct
         |> Seq.toArray
 

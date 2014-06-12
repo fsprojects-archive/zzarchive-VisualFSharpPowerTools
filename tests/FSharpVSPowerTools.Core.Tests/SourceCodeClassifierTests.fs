@@ -196,7 +196,7 @@ let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ValueType, 
 let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
 
 [<Test>]
-let ``indexer``() = checkCategories 77 [ Function, 11, 12 ]
+let ``indexer``() = checkCategories 77 [ Module, 11, 12 ] 
 
 [<Test>]
 let ``mutable value``() = checkCategories 78 [ MutableVar, 12, 24 ]

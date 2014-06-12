@@ -71,48 +71,42 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                     debug "[SyntaxConstructClassifier] - Effective update"
                     async {
                         try
-                                    let total = Diagnostics.Stopwatch.StartNew()
-
                             let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
                             let! allSymbolsUses, lexer =
                                 vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
-                                    let unused = Diagnostics.Stopwatch.StartNew()
+                            let singleDefs = 
+                                allSymbolsUses
+                                |> Seq.groupBy (fun su -> su.Symbol)
+                                |> Seq.choose (fun (sym, uses) -> 
+                                    if Seq.length uses = 1 
+                                        && (Seq.head uses).IsFromDefinition 
+                                        && isSymbolLocalForProject sym then Some sym 
+                                    else None)
+                                |> Seq.toList
 
-                                    let singleDefs = 
-                                        allSymbolsUses
-                                        |> Seq.groupBy (fun su -> su.Symbol)
-                                        |> Seq.choose (fun (sym, uses) -> 
-                                            if Seq.length uses = 1 
-                                               && (Seq.head uses).IsFromDefinition 
-                                               && isSymbolLocalForProject sym then Some sym 
-                                            else None)
-                                        |> Seq.toList
-
-                                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                                     
-                                    let notUsedSymbols =
-                                        singleDefs 
-                                        |> List.choose (fun sym ->
-                                            match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
-                                            | Some SymbolDeclarationLocation.File -> Some sym
-                                            | Some (SymbolDeclarationLocation.Projects declProjects) ->
-                                                //let projectsToCheck = projectFactory.GetDependentProjects dte declProjects
-                                                if vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
-                                                   |> Async.RunSynchronously then None
-                                                else Some sym
-                                            | _ -> None)
+                            let notUsedSymbols =
+                                singleDefs 
+                                |> List.choose (fun sym ->
+                                    match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
+                                    | Some SymbolDeclarationLocation.File -> Some sym
+                                    | Some (SymbolDeclarationLocation.Projects declProjects) ->
+                                        //let projectsToCheck = projectFactory.GetDependentProjects dte declProjects
+                                        if vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
+                                            |> Async.RunSynchronously then None
+                                        else Some sym
+                                    | _ -> None)
                                     
-                                    let usedSymbolUses =
-                                        match notUsedSymbols with
-                                        | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
-                                        | _ ->
-                                            allSymbolsUses 
-                                            |> Array.map (fun su -> 
-                                                su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
-
-                                    unused.Stop()
+                            let usedSymbolUses =
+                                match notUsedSymbols with
+                                | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
+                                | _ ->
+                                    allSymbolsUses 
+                                    |> Array.map (fun su -> 
+                                        su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
 
                             let spans = 
                                 getCategoriesAndLocations (usedSymbolUses, parseResults.ParseTree, lexer)
@@ -121,14 +115,6 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             state.Swap (fun _ -> 
                                 Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
                                        Spans = spans }) |> ignore
-
-                                    total.Stop()
-                                    debug "[SyntaxConstructClassifier] Total = %d, Unused = %d (%f.1%%),
-                                           Total time = %O, Unused time = %O (%f.1%%)"
-                                           allSymbolsUses.Length notUsedSymbols.Length 
-                                           (float notUsedSymbols.Length * 100. / float allSymbolsUses.Length)
-                                           total.Elapsed unused.Elapsed 
-                                           (float unused.ElapsedTicks * 100. / float total.ElapsedTicks)
 
                             // TextBuffer is null if a solution is closed at this moment
                             if doc.TextBuffer <> null then
