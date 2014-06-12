@@ -41,7 +41,7 @@ let args =
     |]
 
 let languageService = LanguageService(fun _ -> ())
-let project: ProjectOptions =
+let project() =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
@@ -69,7 +69,7 @@ let project: ProjectOptions =
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
 
 let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument) =
-    let project = { project with ProjectFileNames = [| document.FullName |] }
+    let project = { project() with ProjectFileNames = [| document.FullName |] }
     tryFindRecordDefinitionFromPos codeGenInfra project pos document
     |> Async.RunSynchronously
 
