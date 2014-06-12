@@ -59,30 +59,30 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                     debug "[SyntaxConstructClassifier] - Effective update"
                     async {
                         try
-                            try
-                                let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
-                                let! allSymbolsUses, lexer =
-                                    vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
-                                let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
+                            let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
+                            let! allSymbolsUses, lexer =
+                                vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
+                            let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
-                                let spans = 
-                                    getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
-                                    |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                            let spans = 
+                                getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
+                                |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
-                                state.Swap (fun _ -> 
-                                    Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
-                                           Spans = spans }) |> ignore
-                                // TextBuffer is null if a solution is closed at this moment
-                                if doc.TextBuffer <> null then
-                                    let currentSnapshot = doc.TextBuffer.CurrentSnapshot
-                                    let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-                                    classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-                            with e -> Logging.logException e
-                        finally isWorking <- false
+                            state.Swap (fun _ -> 
+                                Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
+                                       Spans = spans }) |> ignore
+                            // TextBuffer is null if a solution is closed at this moment
+                            if doc.TextBuffer <> null then
+                                let currentSnapshot = doc.TextBuffer.CurrentSnapshot
+                                let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+                                classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
+                        finally 
+                            isWorking <- false
                     } |> Async.StartInThreadPoolSafe
                 | None -> ()
 
-    let events = serviceProvider.GetService<EnvDTE.DTE, SDTE>().Events :?> EnvDTE80.Events2 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let events = dte.Events :?> EnvDTE80.Events2 
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
         maybe {
             let! selfProject = getProject()
