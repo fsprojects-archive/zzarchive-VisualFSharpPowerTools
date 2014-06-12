@@ -252,6 +252,7 @@ type ProjectFactory
     
     let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
+        project.Save()
         cache.Remove project.UniqueName
 
     let onProjectItemChanged (projectItem: ProjectItem) =
