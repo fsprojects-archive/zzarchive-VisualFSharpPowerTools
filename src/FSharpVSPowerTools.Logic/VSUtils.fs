@@ -18,13 +18,11 @@ let fromRange (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endCol
     Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
     Debug.Assert(startLine <> endLine || startColumn < endColumn, 
                  sprintf "Single-line pos, but startCol = %d, endCol = %d" startColumn endColumn)
-
     try 
         let startPos = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position + startColumn
         let endPos = snapshot.GetLineFromLineNumber(endLine - 1).Start.Position + endColumn
         Debug.Assert(startPos < endPos, sprintf "startPos = %d, endPos = %d" startPos endPos)
         let length = endPos - startPos
-
         Some (SnapshotSpan(snapshot, startPos, length))
     with e ->
         fail "Attempt to create a SnapshotSpan with wrong arguments (StartLine = %d, StartColumn = %d, EndLine = %d, EndColumn = %d)"
@@ -298,24 +296,22 @@ type Async with
     static member StartImmediateSafe(computation, ?cancellationToken) =
         let comp =
             async {
-                let! result = Async.Catch computation
-                match result with
-                | Choice1Of2 _ -> ()
-                | Choice2Of2 e ->
-                    fail "The following exception occurs inside async block: %O" e
+                try
+                    return! computation
+                with e ->
+                    fail "The following exception occurs inside async blocks: %O" e
                     Logging.logException e
             }
         Async.StartImmediate(comp, ?cancellationToken = cancellationToken)
 
     /// An equivalence of Async.Start which catches and logs raised exceptions
-    static member StartSafe(computation, ?cancellationToken) =
+    static member StartInThreadPoolSafe(computation, ?cancellationToken) =
         let comp =
             async {
-                let! result = Async.Catch computation
-                match result with
-                | Choice1Of2 _ -> ()
-                | Choice2Of2 e ->
-                    fail "The following exception occurs inside async block: %O" e
+                try
+                    return! computation
+                with e ->
+                    fail "The following exception occurs inside async blocks: %O" e
                     Logging.logException e
             }
         Async.Start(comp, ?cancellationToken = cancellationToken)

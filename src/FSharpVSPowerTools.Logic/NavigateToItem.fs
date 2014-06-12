@@ -123,7 +123,7 @@ and
                 while !i < projects.Length && not processProjectsCTS.IsCancellationRequested do
                     do! fsharpLanguageService.ProcessNavigableItemsInProject(openedDocuments, projects.[!i], processNavigableItemsInFile, processProjectsCTS.Token)
                     incr i }
-            Async.Start fetchIndexes
+            Async.StartInThreadPoolSafe fetchIndexes
             indexPromises |> Array.map (fun tcs -> tcs.Task)
 
     let runSearch(indexTasks: Tasks.Task<Navigation.Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
@@ -160,7 +160,7 @@ and
                 callback.Done()
         }
         
-        Async.Start(searchValueComputations, cancellationToken = ct)
+        Async.StartInThreadPoolSafe(searchValueComputations, cancellationToken = ct)
 
     interface INavigateToItemProvider with
         member x.StartSearch(callback, searchValue) = 
