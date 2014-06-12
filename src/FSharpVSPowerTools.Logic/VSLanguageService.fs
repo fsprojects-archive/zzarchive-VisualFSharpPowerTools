@@ -32,12 +32,10 @@ and IProjectProvider =
 [<Export>]
 type VSLanguageService
     [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider, 
-     editorFactory: IVsEditorAdaptersFactoryService, 
+    (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: OpenDocumentsTracker) =
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
     
     let getProjectOptions (project: IProjectProvider) =
@@ -55,12 +53,6 @@ type VSLanguageService
                 | [] -> opts
                 | changeTimes -> { opts with LoadTime = List.max (opts.LoadTime::changeTimes) }
         }
-
-    let events = dte.Events :?> EnvDTE80.Events2
-
-    do events.SolutionEvents.add_AfterClosing (fun _ -> 
-        debug "[Language Service] Clearing FCS caches."
-        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients())
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
@@ -215,8 +207,13 @@ type VSLanguageService
         }
 
     member x.InvalidateProject (projectProvider: IProjectProvider) = 
-        projectProvider.GetProjectCheckerOptions(instance) 
-        |> Async.RunSynchronously
-        |> instance.Checker.InvalidateConfiguration
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions(instance) 
+            return instance.Checker.InvalidateConfiguration opts
+        }
 
+    member x.ClearCaches() = 
+        debug "[Language Service] Clearing FCS caches."
+        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+    
     member x.Checker = instance.Checker

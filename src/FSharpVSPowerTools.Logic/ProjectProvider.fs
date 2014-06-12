@@ -238,19 +238,22 @@ type ProjectFactory
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
-    
+
     let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
-        cache.TryGet project.UniqueName
-        |> Option.iter vsLanguageService.InvalidateProject
         cache.Remove project.UniqueName
 
     let onProjectItemChanged (projectItem: ProjectItem) =
-        projectItem.VSProject |> Option.iter (fun item -> onProjectChanged item.Project)
+        projectItem.VSProject |> Option.iter (fun item -> 
+            cache.TryGet item.Project.UniqueName
+            |> Option.iter (vsLanguageService.InvalidateProject >> Async.RunSynchronously) 
+            onProjectChanged item.Project)
 
     do match events with
         | Some events ->
-            events.SolutionEvents.add_AfterClosing (fun _ -> cache.Clear())
+            events.SolutionEvents.add_AfterClosing (fun _ -> 
+                vsLanguageService.ClearCaches()
+                cache.Clear())
             events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)
