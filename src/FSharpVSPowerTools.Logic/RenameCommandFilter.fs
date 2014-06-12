@@ -87,7 +87,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 match results with
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let symbolDeclarationLocation = projectFactory.GetSymbolUsageScope state.Project.IsForStandaloneScript fsSymbolUse.Symbol dte state.File
+                    let symbolDeclarationLocation = projectFactory.GetSymbolDeclarationLocation state.Project.IsForStandaloneScript fsSymbolUse.Symbol dte state.File
 
                     match symbolDeclarationLocation with
                     | Some scope ->

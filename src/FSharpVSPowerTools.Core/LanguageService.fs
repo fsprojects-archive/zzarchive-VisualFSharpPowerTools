@@ -104,8 +104,14 @@ type WordSpan =
     member x.ToRange() = x.Line, x.StartCol, x.Line, x.EndCol
 
 type ILexer = 
-    abstract GetSymbolAtLocation: line: int -> col: int -> Symbol option
+    abstract GetSymbolFromTokensAtLocation: TokenInformation list * line: int * col: int -> Symbol option
     abstract TokenizeLine: line: int -> TokenInformation list
+
+[<AutoOpen>]
+module LexerExtensions =
+    type ILexer with
+        member x.GetSymbolAtLocation (line: int, col: int) =
+            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
   
@@ -288,7 +294,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           | Some sym ->
                 let! checkResults = x.ParseAndCheckFileInProject(projectOptions, fileName, source, stale)
                 return! checkResults.GetUsesOfSymbolInFileAtLocation(line, sym.RightColumn, lineStr, sym.Text)
-          | None -> return None
+          | _ -> return None
       }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
@@ -313,7 +319,23 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                  let refs = Array.concat refs
                  return Some(fsSymbolUse.Symbol, symbol.Text, refs)
              | None -> return None
-         | None -> return None 
+         | _ -> return None 
+     }
+
+  /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
+  member x.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: ProjectOptions seq) =
+     async { 
+        return 
+            projectsOptions
+            |> Seq.exists (fun opts ->
+                async {
+                    let! projectResults = checker.ParseAndCheckProject opts
+                    let! refs = projectResults.GetUsesOfSymbol symbol
+                    return 
+                        if opts.ProjectFileName = currentProjectName then
+                            refs.Length > 1
+                        else refs.Length > 0 }
+                |> Async.RunSynchronously)
      }
 
   member x.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)

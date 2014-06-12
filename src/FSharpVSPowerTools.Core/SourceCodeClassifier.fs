@@ -15,6 +15,7 @@ type Category =
     | MutableVar
     | Quotation
     | Module
+    | Unused
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -107,34 +108,40 @@ let excludeWordSpan from what =
         { from with StartCol = what.EndCol + 1 } // the dot between parts
     else from
  
-let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, lexer: ILexer) =
+let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untypedAst: ParsedInput option, lexer: ILexer) =
     let allSymbolsUses' =
         allSymbolsUses
-        |> Array.choose (fun su ->
-            let r = su.RangeAlternate
-            lexer.GetSymbolAtLocation (r.End.Line - 1) (r.End.Column - 1)
-            |> Option.bind (fun sym -> 
-                match sym.Kind with
-                | SymbolKind.Ident ->
-                    // FCS returns inaccurate ranges for multiline method chains
-                    // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
-                    if r.StartLine < r.EndLine then
-                        Some (su, { Line = r.End.Line; StartCol = r.End.Column - sym.Text.Length; EndCol = r.End.Column })
-                    else 
-                        Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column })
-                | _ -> None))
-      
+        |> Seq.groupBy (fun (su, _) -> su.RangeAlternate.StartLine)
+        |> Seq.map (fun (line, sus) ->
+            let tokens = lexer.TokenizeLine (line - 1)
+            sus
+            |> Seq.choose (fun (su, used) ->
+                let r = su.RangeAlternate
+                lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1)
+                |> Option.bind (fun sym -> 
+                    match sym.Kind with
+                    | SymbolKind.Ident ->
+                        // FCS returns inaccurate ranges for multiline method chains
+                        // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+                        if r.StartLine < r.EndLine then
+                            Some (su, used, { Line = r.End.Line; StartCol = r.End.Column - sym.Text.Length; EndCol = r.End.Column })
+                        else 
+                            Some (su, used, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column })
+                    | _ -> None)))
+        |> Seq.concat
+        |> Seq.toArray
+       
     // index all symbol usages by LineNumber 
     let wordSpans = 
         allSymbolsUses'
-        |> Seq.map snd
+        |> Seq.map (fun (_,_,span) -> span)
         |> Seq.groupBy (fun span -> span.Line)
         |> Seq.map (fun (line, ranges) -> line, ranges)
         |> Map.ofSeq
 
     let spansBasedOnSymbolsUses = 
         allSymbolsUses'
-        |> Seq.choose (fun (symbolUse, span) ->
+        |> Seq.choose (fun (symbolUse, used, span) ->
             let span = 
                 match wordSpans.TryFind span.Line with
                 | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
@@ -146,7 +153,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
                     // This means that we have not managed to extract last part of a long ident accurately.
                     // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
                     // So we get ident from the lexer.
-                    match lexer.GetSymbolAtLocation (span.Line - 1) (span.EndCol - 1) with
+                    match lexer.GetSymbolAtLocation (span.Line - 1, span.EndCol - 1) with
                     | Some s -> 
                         match s.Kind with
                         | Ident -> 
@@ -159,9 +166,20 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
 
             let categorizedSpan =
                 if span'.EndCol <= span'.StartCol then None
-                else Some { Category = getCategory symbolUse; WordSpan = span' }
+                else Some { Category = 
+                                if not used then Unused 
+                                else getCategory symbolUse
+                            WordSpan = span' }
         
             categorizedSpan)
+        |> Seq.groupBy (fun span -> span.WordSpan)
+        |> Seq.map (fun (_, spans) -> 
+                match List.ofSeq spans with
+                | [span] -> span
+                | spans -> 
+                    match spans |> List.filter (fun span -> span.Category <> Unused) with
+                    | [] -> List.head spans
+                    | h :: _ -> h)
         |> Seq.distinct
         |> Seq.toArray
 
@@ -302,7 +320,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
 
     let allSpans = spansBasedOnSymbolsUses |> Array.append quotations
     
-    //for span in allSpans do
-       //debug "-=O=- %A" span
+//    for span in allSpans do
+//       debug "-=O=- %A" span
 
     allSpans

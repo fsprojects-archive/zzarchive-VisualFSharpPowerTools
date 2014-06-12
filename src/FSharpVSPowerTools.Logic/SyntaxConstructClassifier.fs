@@ -10,6 +10,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 [<NoComparison>]
 type private ClassifierState =
@@ -29,6 +30,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | MutableVar -> Some "FSharp.MutableVar"
         | Quotation -> Some "FSharp.Quotation"
         | Module -> Some "FSharp.Module"
+        | Unused -> Some "FSharp.Unused"
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
@@ -41,6 +43,16 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
             return! projectFactory.CreateForFileInProject doc.TextBuffer doc.FilePath projectItem.ContainingProject }
+
+    let isSymbolLocalForProject (symbol: FSharpSymbol) = 
+        match symbol with 
+        | :? FSharpParameter -> true
+        | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || not m.Accessibility.IsPublic
+        | :? FSharpEntity as m -> not m.Accessibility.IsPublic
+        | :? FSharpGenericParameter -> true
+        | :? FSharpUnionCase as m -> not m.Accessibility.IsPublic
+        | :? FSharpField as m -> not m.Accessibility.IsPublic
+        | _ -> false
 
     let updateSyntaxConstructClassifiers force =
         let snapshot = doc.TextBuffer.CurrentSnapshot
@@ -59,18 +71,65 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                     debug "[SyntaxConstructClassifier] - Effective update"
                     async {
                         try
+                                    let total = Diagnostics.Stopwatch.StartNew()
+
                             let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
                             let! allSymbolsUses, lexer =
                                 vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
+                                    let unused = Diagnostics.Stopwatch.StartNew()
+
+                                    let singleDefs = 
+                                        allSymbolsUses
+                                        |> Seq.groupBy (fun su -> su.Symbol)
+                                        |> Seq.choose (fun (sym, uses) -> 
+                                            if Seq.length uses = 1 
+                                               && (Seq.head uses).IsFromDefinition 
+                                               && isSymbolLocalForProject sym then Some sym 
+                                            else None)
+                                        |> Seq.toList
+
+                                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                                    
+                                    let notUsedSymbols =
+                                        singleDefs 
+                                        |> List.choose (fun sym ->
+                                            match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
+                                            | Some SymbolDeclarationLocation.File -> Some sym
+                                            | Some (SymbolDeclarationLocation.Projects declProjects) ->
+                                                //let projectsToCheck = projectFactory.GetDependentProjects dte declProjects
+                                                if vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
+                                                   |> Async.RunSynchronously then None
+                                                else Some sym
+                                            | _ -> None)
+                                    
+                                    let usedSymbolUses =
+                                        match notUsedSymbols with
+                                        | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
+                                        | _ ->
+                                            allSymbolsUses 
+                                            |> Array.map (fun su -> 
+                                                su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
+
+                                    unused.Stop()
+
                             let spans = 
-                                getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
+                                getCategoriesAndLocations (usedSymbolUses, parseResults.ParseTree, lexer)
                                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                             state.Swap (fun _ -> 
                                 Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
                                        Spans = spans }) |> ignore
+
+                                    total.Stop()
+                                    debug "[SyntaxConstructClassifier] Total = %d, Unused = %d (%f.1%%),
+                                           Total time = %O, Unused time = %O (%f.1%%)"
+                                           allSymbolsUses.Length notUsedSymbols.Length 
+                                           (float notUsedSymbols.Length * 100. / float allSymbolsUses.Length)
+                                           total.Elapsed unused.Elapsed 
+                                           (float unused.ElapsedTicks * 100. / float total.ElapsedTicks)
+
                             // TextBuffer is null if a solution is closed at this moment
                             if doc.TextBuffer <> null then
                                 let currentSnapshot = doc.TextBuffer.CurrentSnapshot

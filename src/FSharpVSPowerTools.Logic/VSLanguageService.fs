@@ -196,8 +196,8 @@ type VSLanguageService
                     snapshot.GetLineFromLineNumber(lineNumber).GetText() 
 
                 { new ILexer with
-                    member x.GetSymbolAtLocation line col =
-                        Lexer.getSymbol source line col (getLineStr line) args (buildQueryLexState snapshot.TextBuffer) 
+                    member x.GetSymbolFromTokensAtLocation (tokens, line, col) =
+                        Lexer.getSymbolFromTokens tokens line col (getLineStr line)
                     member x.TokenizeLine line =
                         Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
@@ -205,6 +205,15 @@ type VSLanguageService
             let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale)
             return symbolUses, lexer
         }
+
+    /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
+    member x.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: FilePath, projects: IProjectProvider list) =
+        async {
+            let! projectOptions = 
+                projects 
+                |> List.toArray
+                |> Async.Array.map getProjectOptions
+            return! instance.IsSymbolUsedInProjects (symbol, currentProjectName, projectOptions) }
 
     member x.InvalidateProject (projectProvider: IProjectProvider) = 
         async {

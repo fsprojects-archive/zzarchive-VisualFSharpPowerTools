@@ -31,12 +31,13 @@ let checkCategories line (expected: (Category * int * int) list)  =
     let symbolsUses =
         languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource) 
         |> Async.RunSynchronously
+        |> Array.map (fun su -> su, true)
 
     let lexer = 
         { new ILexer with
-            member x.GetSymbolAtLocation line col =
+            member x.GetSymbolFromTokensAtLocation (_tokens, line, col) =
                 let lineStr = sourceLines.[line]
-                Lexer.getSymbol source line col lineStr args Lexer.queryLexState 
+                Lexer.getSymbol source line col lineStr args Lexer.queryLexState
             member x.TokenizeLine line =
                 let lineStr = sourceLines.[line]
                 Lexer.tokenizeLine source args line lineStr Lexer.queryLexState }
@@ -195,7 +196,7 @@ let ``F# namespace``() = checkCategories 72 [ ReferenceType, 37, 41; ValueType, 
 let ``double quoted member``() = checkCategories 75 [ Function, 12, 25; Function, 28, 37 ]
 
 [<Test>]
-let ``indexer``() = checkCategories 77 [ Module, 11, 12; Function, 11, 12 ]
+let ``indexer``() = checkCategories 77 [ Function, 11, 12 ]
 
 [<Test>]
 let ``mutable value``() = checkCategories 78 [ MutableVar, 12, 24 ]

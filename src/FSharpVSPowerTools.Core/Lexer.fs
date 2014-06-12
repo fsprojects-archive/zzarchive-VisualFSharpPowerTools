@@ -69,7 +69,7 @@ module Lexer =
     let tokenizeLine source (args: string[]) line lineStr queryLexState =
         let defines =
             args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-                 |> Seq.toList
+                    |> Seq.toList
         let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
         let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
         let rec loop lexState acc =
@@ -79,8 +79,7 @@ module Lexer =
         loop (queryLexState source defines line) []
 
     // Returns symbol at a given position.
-    let getSymbol source line col lineStr (args: string[]) queryLexState: Symbol option =
-        let tokens = tokenizeLine source args line lineStr queryLexState
+    let getSymbolFromTokens (tokens: TokenInformation list) line col (lineStr: string): Symbol option =
         let isIdentifier t = t.CharClass = TokenCharKind.Identifier
         let isOperator t = t.ColorClass = TokenColorKind.Operator
     
@@ -94,7 +93,8 @@ module Lexer =
                     StaticallyResolvedTypeParameterPrefix
                  else Other
             | _ -> Other
-    
+
+       
         // Operators: Filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
         // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two).
         //
@@ -147,3 +147,6 @@ module Lexer =
               RightColumn = token.RightColumn + 1
               Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
     
+    let getSymbol source line col lineStr (args: string[]) queryLexState =
+        let tokens = tokenizeLine source args line lineStr queryLexState
+        getSymbolFromTokens tokens line col lineStr 

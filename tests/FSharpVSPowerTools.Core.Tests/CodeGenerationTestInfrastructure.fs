@@ -49,9 +49,7 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
             let lineText = snapshot.GetLineText0 pos.Line0
             let src = snapshot.GetText()
             maybe {
-                let! symbol =
-                    Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText compilerOptions Lexer.queryLexState
-
+                let! symbol = Lexer.getSymbol src (int pos.Line0) (int pos.Column0) lineText compilerOptions Lexer.queryLexState
                 return Range.FromSymbol symbol, symbol
             }
 
