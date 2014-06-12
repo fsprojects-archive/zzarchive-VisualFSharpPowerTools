@@ -55,8 +55,7 @@ let project() =
       UnresolvedReferences = None }
 
 let tryFindUnionDefinition codeGenService (pos: pos) (document: IDocument) =
-    let project = { project() with ProjectFileNames = [| document.FullName |] }
-    tryFindUnionDefinitionFromPos codeGenService project pos document
+    tryFindUnionDefinitionFromPos codeGenService (project()) pos document
     |> Async.RunSynchronously
 
 let insertCasesFromPos caretPos src =

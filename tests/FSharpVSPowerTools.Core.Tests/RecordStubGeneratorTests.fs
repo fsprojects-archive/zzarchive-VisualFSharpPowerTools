@@ -69,8 +69,7 @@ let project() =
 // [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
 
 let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument) =
-    let project = { project() with ProjectFileNames = [| document.FullName |] }
-    tryFindRecordDefinitionFromPos codeGenInfra project pos document
+    tryFindRecordDefinitionFromPos codeGenInfra (project()) pos document
     |> Async.RunSynchronously
 
 let insertStubFromPos caretPos src =
