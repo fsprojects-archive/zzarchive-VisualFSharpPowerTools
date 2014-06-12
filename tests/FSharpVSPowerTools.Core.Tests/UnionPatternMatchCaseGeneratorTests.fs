@@ -40,7 +40,8 @@ let args =
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
     |]
 
-let project: ProjectOptions =
+let languageService = LanguageService(fun _ -> ())
+let project() =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
@@ -53,13 +54,13 @@ let project: ProjectOptions =
       LoadTime = DateTime.UtcNow
       UnresolvedReferences = None }
 
-let tryFindUnionDefinition codeGenService (pos: pos) document =
-    tryFindUnionDefinitionFromPos codeGenService project pos document
+let tryFindUnionDefinition codeGenService (pos: pos) (document: IDocument) =
+    tryFindUnionDefinitionFromPos codeGenService (project()) pos document
     |> Async.RunSynchronously
 
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), args)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
     let unionTypeDefFromPos = tryFindUnionDefinition codeGenService caretPos document
     match unionTypeDefFromPos with
     | None -> src
@@ -84,7 +85,7 @@ let insertCasesFromPos caretPos src =
 
 module ClausesAnalysisTests =
     let tryFindPatternMatchExpr codeGenService (pos: pos) (document: IDocument) =
-        tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
+        tryFindPatternMatchExprInBufferAtPos codeGenService (project()) pos document
         |> Async.RunSynchronously
 
 
