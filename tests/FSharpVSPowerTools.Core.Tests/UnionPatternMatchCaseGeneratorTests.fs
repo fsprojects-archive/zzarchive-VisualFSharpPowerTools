@@ -41,7 +41,7 @@ let args =
     |]
 
 let languageService = LanguageService(fun _ -> ())
-let project: ProjectOptions =
+let project() =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
@@ -55,8 +55,7 @@ let project: ProjectOptions =
       UnresolvedReferences = None }
 
 let tryFindUnionDefinition codeGenService (pos: pos) (document: IDocument) =
-    let project = { project with ProjectFileNames = [| document.FullName |] }
-    tryFindUnionDefinitionFromPos codeGenService project pos document
+    tryFindUnionDefinitionFromPos codeGenService (project()) pos document
     |> Async.RunSynchronously
 
 let insertCasesFromPos caretPos src =
@@ -86,7 +85,7 @@ let insertCasesFromPos caretPos src =
 
 module ClausesAnalysisTests =
     let tryFindPatternMatchExpr codeGenService (pos: pos) (document: IDocument) =
-        tryFindPatternMatchExprInBufferAtPos codeGenService project pos document
+        tryFindPatternMatchExprInBufferAtPos codeGenService (project()) pos document
         |> Async.RunSynchronously
 
 

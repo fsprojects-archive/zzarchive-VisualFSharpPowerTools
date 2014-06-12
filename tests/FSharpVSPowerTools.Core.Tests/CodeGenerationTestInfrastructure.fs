@@ -84,10 +84,9 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
 type MockDocument(src: string) =
     let lines =
         ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
-    let fullName = String.Format(@"C:\file{0}.fs", Guid.NewGuid())
 
     interface IDocument with
-        member x.FullName = fullName
+        member x.FullName = @"C:\file.fs"
         member x.LineCount = lines.Count
         member x.GetText() = src
         member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
