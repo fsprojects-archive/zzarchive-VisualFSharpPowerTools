@@ -228,8 +228,6 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
         member x.GetProjectCheckerOptions languageService =
             languageService.GetScriptCheckerOptions (filePath, null, source, targetFramework)
 
-open FSharpVSPowerTools.AsyncMaybe
-
 type private ProjectUniqueName = string
 
 [<Export>]
