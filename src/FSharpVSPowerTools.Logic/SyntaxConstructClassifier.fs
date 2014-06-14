@@ -101,7 +101,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
     do events.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler
     
-    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
@@ -141,4 +141,5 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     interface IDisposable with
         member x.Dispose() = 
             events.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler
+            (docEventListener :> IDisposable).Dispose()
          

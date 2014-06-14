@@ -113,8 +113,8 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
             |> Async.StartInThreadPoolSafe
         | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
-                                    updateAtCaretPosition)
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
+                                                      updateAtCaretPosition)
 
     let tagSpan span = TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
 
@@ -154,3 +154,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
         
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
+
+    interface IDisposable with
+        member x.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()
