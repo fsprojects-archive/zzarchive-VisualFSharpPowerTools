@@ -373,4 +373,4 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                           |> Seq.map (fun sign -> sign.Entities :> seq<_>) 
                           |> Seq.concat
                           |> Seq.toList)
-         }
+         } 

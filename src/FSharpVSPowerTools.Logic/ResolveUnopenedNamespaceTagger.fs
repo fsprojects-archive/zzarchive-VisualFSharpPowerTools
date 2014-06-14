@@ -65,9 +65,14 @@ type ResolveUnopenedNamespaceSmartTagger
                             match res with 
                             | Some _ -> return! liftMaybe None
                             | None ->
-                                
+                                let! entities = vsLanguageService.GetAllEntities project
+                                let entitiesNames = 
+                                    entities 
+                                    |> Seq.map (fun e -> e.DisplayName)
+                                    |> Seq.truncate 5
+                                    |> Seq.toList
 
-                                return! Some (sym, [ "Test.Foo" ]) |> liftMaybe
+                                return! Some (sym, entitiesNames) |> liftMaybe
                     }
                     |> Async.map (fun result -> 
                         state <- result
