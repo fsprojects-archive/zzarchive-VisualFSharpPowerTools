@@ -24,6 +24,10 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
+type Entity = 
+    { Namespace: string
+      Name: string }
+
 type ResolveUnopenedNamespaceSmartTagger
          (view: ITextView, buffer: ITextBuffer, textUndoHistory: ITextUndoHistory,
           vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
@@ -31,7 +35,7 @@ type ResolveUnopenedNamespaceSmartTagger
           
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Symbol * string list) option = None
+    let mutable state: (Symbol * Entity list) option = None
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -69,8 +73,15 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let entitiesNames =
                                     entities 
                                     |> Seq.map (fun e -> try e.FullName with _ -> e.DisplayName)
-                                    |> Seq.filter (fun name -> name.EndsWith sym.Text)
-                                    //|> Seq.truncate 5
+                                    |> Seq.choose (fun name -> 
+                                        match name.LastIndexOf '.' with
+                                        | -1 -> 
+                                            if name = sym.Text then Some { Namespace = ""; Name = name } else None
+                                        | lastDotIndex -> 
+                                            let lastIdent = name.Substring (lastDotIndex + 1)
+                                            if lastIdent = sym.Text then 
+                                                Some { Namespace = name.Substring (0, lastDotIndex); Name = lastIdent }
+                                            else None)
                                     |> Seq.toList
 
                                 return! Some (sym, entitiesNames) |> liftMaybe
@@ -86,29 +97,54 @@ type ResolveUnopenedNamespaceSmartTagger
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
 
-    let openNamespace (_snapshot: ITextSnapshot) _ns = 
+    let openNamespace (_snapshot: SnapshotSpan) _ns = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         //let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
         //buffer.Insert(currentLine, stub) |> ignore
         transaction.Complete()
 
+    let fullyQualifySymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 
+        use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
+        //let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
+        //buffer.Insert(currentLine, stub) |> ignore
+        snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
+        transaction.Complete()
+
     let openNamespaceAction snapshot ns =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = ns
+            member x.DisplayText = "open " + ns
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = openNamespace snapshot ns
         }
 
-    member x.GetSmartTagActions(snapshot, candidates, _symbol) =
-        let actionList = 
-            candidates 
-            |> List.map (fun ns -> sprintf "open %s" ns) 
-            |> List.map (openNamespaceAction snapshot)
-            |> Seq.toReadOnlyCollection
+    let qualifySymbolAction snapshotSpan fullSymbolName =
+        { new ISmartTagAction with
+            member x.ActionSets = null
+            member x.DisplayText = fullSymbolName
+            member x.Icon = null
+            member x.IsEnabled = true
+            member x.Invoke() = fullyQualifySymbol snapshotSpan fullSymbolName
+        }
 
-        [ SmartTagActionSet(actionList) ] |> Seq.toReadOnlyCollection
+    let getSmartTagActions snapshotSpan candidates _symbol =
+        let openNamespaceActions = 
+            candidates
+            |> List.map (fun e -> e.Namespace) 
+            |> List.map (openNamespaceAction snapshotSpan)
+            
+        let qualifySymbolActions =
+            candidates
+            |> List.map (fun e -> 
+                match e.Namespace with
+                | "" -> e.Name
+                | ns -> ns + "." + e.Name)
+            |> List.map (qualifySymbolAction snapshotSpan)
+            
+        let actions = openNamespaceActions @ qualifySymbolActions |> Seq.toReadOnlyCollection
+
+        [ SmartTagActionSet(actions) ] |> Seq.toReadOnlyCollection
 
     interface ITagger<ResolveUnopenedNamespaceSmartTag> with
         member x.GetTags _spans =
@@ -116,11 +152,11 @@ type ResolveUnopenedNamespaceSmartTagger
                 match currentWord, state with
                 | Some word, Some (symbol, candidates) ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(x.GetSmartTagActions(word.Snapshot, candidates, symbol)))
+                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates symbol))
                           :> _
                 | _ -> ()
             }
-
+             
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
 
