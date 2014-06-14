@@ -58,6 +58,7 @@
   <ItemGroup>
     <None Include="packages.config" />
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="ResolveUnopenedNamespaceTagger.fs" />
     <Compile Include="Resource.fs" />
     <Compile Include="Logger.fs" />
     <Compile Include="VSUtils.fs" />
