@@ -28,14 +28,40 @@ type Entity =
     { Namespace: string
       Name: string }
 
+module Ast =
+    let findNearestOpenStatementBlock (pos: pos) (ast: ParsedInput) = 
+        let result = ref None
+        let doRange (range: range) = if range.StartLine < pos.Line then result := Some range
+
+        let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
+            List.iter walkSynModuleOrNamespace moduleOrNamespaceList
+
+        and walkSynModuleOrNamespace(SynModuleOrNamespace(_, _, decls, _, _, _, range)) =
+            doRange range
+            List.iter walkSynModuleDecl decls
+
+        and walkSynModuleDecl(decl: SynModuleDecl) =
+            match decl with
+            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
+            | SynModuleDecl.NestedModule(_, modules, _, _) -> List.iter walkSynModuleDecl modules
+            | SynModuleDecl.Open (_, range) -> doRange range
+            | _ -> ()
+
+        match ast with
+        | ParsedInput.SigFile _input -> ()
+        | ParsedInput.ImplFile input -> walkImplFileInput input
+        !result |> Option.map (fun res -> Pos.fromZ (res.StartLine - 1) (res.StartColumn + 1))
+         
 type ResolveUnopenedNamespaceSmartTagger
          (view: ITextView, buffer: ITextBuffer, textUndoHistory: ITextUndoHistory,
           vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
           projectFactory: ProjectFactory) as self =
+    
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
           
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Symbol * Entity list) option = None
+    let mutable state: (Symbol * Entity list * int * int) option = None
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -84,7 +110,18 @@ type ResolveUnopenedNamespaceSmartTagger
                                             else None)
                                     |> Seq.toList
 
-                                return! Some (sym, entitiesNames) |> liftMaybe
+                                let! checkResults = 
+                                    vsLanguageService.ParseFileInProject (doc.FullName, newWord.Snapshot.GetText(), project) |> liftAsync
+
+                                return! 
+                                    checkResults.ParseTree 
+                                    |> Option.map (fun tree ->
+                                        let line, column = 
+                                            match Ast.findNearestOpenStatementBlock (codeGenService.ExtractFSharpPos point) tree with
+                                            | Some pos -> pos.Line, pos.Column
+                                            | None -> 1, 1
+                                        sym, entitiesNames, line, column)
+                                    |> liftMaybe
                     }
                     |> Async.map (fun result -> 
                         state <- result
@@ -97,10 +134,11 @@ type ResolveUnopenedNamespaceSmartTagger
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
 
-    let openNamespace (_snapshot: SnapshotSpan) _ns = 
+    let openNamespace (snapshotSpan: SnapshotSpan) line col ns = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
-        //let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
+        let line = snapshotSpan.Snapshot.GetLineFromLineNumber(line).Start.Position + col
         //buffer.Insert(currentLine, stub) |> ignore
+        snapshotSpan.Snapshot.TextBuffer.Insert (line, "open " + ns) |> ignore
         transaction.Complete()
 
     let fullyQualifySymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 
@@ -110,13 +148,13 @@ type ResolveUnopenedNamespaceSmartTagger
         snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
         transaction.Complete()
 
-    let openNamespaceAction snapshot ns =
+    let openNamespaceAction snapshot line col ns =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = "open " + ns
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = openNamespace snapshot ns
+            member x.Invoke() = openNamespace snapshot line col ns
         }
 
     let qualifySymbolAction snapshotSpan fullSymbolName =
@@ -128,11 +166,11 @@ type ResolveUnopenedNamespaceSmartTagger
             member x.Invoke() = fullyQualifySymbol snapshotSpan fullSymbolName
         }
 
-    let getSmartTagActions snapshotSpan candidates _symbol =
+    let getSmartTagActions snapshotSpan candidates _symbol line col =
         let openNamespaceActions = 
             candidates
             |> List.map (fun e -> e.Namespace) 
-            |> List.map (openNamespaceAction snapshotSpan)
+            |> List.map (openNamespaceAction snapshotSpan line col)
             
         let qualifySymbolActions =
             candidates
@@ -150,9 +188,9 @@ type ResolveUnopenedNamespaceSmartTagger
         member x.GetTags _spans =
             seq {
                 match currentWord, state with
-                | Some word, Some (symbol, candidates) ->
+                | Some word, Some (symbol, candidates, line, col) ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates symbol))
+                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates symbol line col))
                           :> _
                 | _ -> ()
             }
