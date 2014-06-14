@@ -57,8 +57,17 @@ type ResolveUnopenedNamespaceSmartTagger
                         let! newWord, sym = vsLanguageService.GetSymbol (point, project) |> liftMaybe
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-                        if point.InSpan newWord then return! Some (sym, [ "Test.Foo" ]) |> liftMaybe
-                        else return! liftMaybe None 
+                        if not (point.InSpan newWord) then return! liftMaybe None
+                        else
+                            let! res = 
+                                vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
+                            
+                            match res with 
+                            | Some _ -> return! liftMaybe None
+                            | None ->
+                                
+
+                                return! Some (sym, [ "Test.Foo" ]) |> liftMaybe
                     }
                     |> Async.map (fun result -> 
                         state <- result
@@ -71,7 +80,7 @@ type ResolveUnopenedNamespaceSmartTagger
     let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)
 
-    let openNamespace (snapshot: ITextSnapshot) ns = 
+    let openNamespace (_snapshot: ITextSnapshot) _ns = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         //let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
         //buffer.Insert(currentLine, stub) |> ignore
@@ -86,24 +95,23 @@ type ResolveUnopenedNamespaceSmartTagger
             member x.Invoke() = openNamespace snapshot ns
         }
 
-    member x.GetSmartTagActions(snapshot, candidates, symbol) =
-        let actionSetList = ResizeArray<SmartTagActionSet>()
-        let actionList = ResizeArray<ISmartTagAction>()
-        actionList.AddRange (candidates |> List.map (fun ns -> sprintf "Open %s for %s" ns symbol.Text) 
-                                        |> List.map (openNamespaceAction snapshot))
-        let actionSet = SmartTagActionSet(actionList.AsReadOnly())
-        actionSetList.Add(actionSet)
-        actionSetList.AsReadOnly()
+    member x.GetSmartTagActions(snapshot, candidates, _symbol) =
+        let actionList = 
+            candidates 
+            |> List.map (fun ns -> sprintf "open %s" ns) 
+            |> List.map (openNamespaceAction snapshot)
+            |> Seq.toReadOnlyCollection
+
+        [ SmartTagActionSet(actionList) ] |> Seq.toReadOnlyCollection
 
     interface ITagger<ResolveUnopenedNamespaceSmartTag> with
-        member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<ResolveUnopenedNamespaceSmartTag> seq =
+        member x.GetTags _spans =
             seq {
                 match currentWord, state with
                 | Some word, Some (symbol, candidates) ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, 
-                                     ResolveUnopenedNamespaceSmartTag(x.GetSmartTagActions(word.Snapshot, candidates, symbol)))
-                          :> ITagSpan<_>
+                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(x.GetSmartTagActions(word.Snapshot, candidates, symbol)))
+                          :> _
                 | _ -> ()
             }
 

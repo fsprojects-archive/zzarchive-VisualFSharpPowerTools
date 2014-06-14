@@ -7,6 +7,8 @@ module Seq =
     let tryHead s =
         if Seq.isEmpty s then None else Some (Seq.head s)
 
+    let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
+
 [<RequireQualifiedAccess>]
 module Option =
     let inline ofNull value =

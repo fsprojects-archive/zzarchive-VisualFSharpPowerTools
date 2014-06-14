@@ -360,3 +360,17 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, src, stale)
             return! results.GetAllUsesOfAllSymbolsInFile()
         }
+
+    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions) =
+        async {
+            let! checkResults = checker.ParseAndCheckProject projectOptions
+            if checkResults.HasCriticalErrors then return None
+            else
+                return 
+                    Some (seq { yield checkResults.AssemblySignature
+                                yield! checkResults.ProjectContext.GetReferencedAssemblies() 
+                                       |> List.map (fun asm -> asm.Contents) }
+                          |> Seq.map (fun sign -> sign.Entities :> seq<_>) 
+                          |> Seq.concat
+                          |> Seq.toList)
+         }
