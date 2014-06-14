@@ -83,8 +83,8 @@ type ResolveUnopenedNamespaceSmartTagger
                     currentWord <- Some newWord
             | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    500us, updateAtCaretPosition)
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
+                                                      500us, updateAtCaretPosition)
 
     let openNamespace (_snapshot: ITextSnapshot) _ns = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
@@ -123,3 +123,7 @@ type ResolveUnopenedNamespaceSmartTagger
 
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
+
+    interface IDisposable with
+        member x.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()
