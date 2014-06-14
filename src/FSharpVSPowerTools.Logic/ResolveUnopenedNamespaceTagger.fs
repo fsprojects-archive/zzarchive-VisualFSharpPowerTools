@@ -31,26 +31,38 @@ type Entity =
 module Ast =
     let findNearestOpenStatementBlock (pos: pos) (ast: ParsedInput) = 
         let result = ref None
-        let doRange (range: range) = if range.StartLine < pos.Line then result := Some range
+        
+        let doRange (syn: obj) (line, col) = 
+            if line < pos.Line then 
+                match !result with
+                | None -> result := Some (syn, line, col)
+                | Some (_, oldLine, _) when oldLine < line -> 
+                    result := Some (syn, line, col)
+                | _ -> ()
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace(SynModuleOrNamespace(_, _, decls, _, _, _, range)) =
-            doRange range
+        and walkSynModuleOrNamespace(SynModuleOrNamespace(_, _, decls, _, _, _, range) as syn) =
+            doRange syn (range.StartLine, range.StartColumn)
             List.iter walkSynModuleDecl decls
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(_, modules, _, _) -> List.iter walkSynModuleDecl modules
-            | SynModuleDecl.Open (_, range) -> doRange range
+            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, _, _, _, _, range), modules, _, _) as syn ->
+                doRange syn (range.StartLine, range.StartColumn + 4)
+                List.iter walkSynModuleDecl modules
+            | SynModuleDecl.Open (_, range) as syn -> doRange syn (range.StartLine, range.StartColumn - 5)
             | _ -> ()
 
         match ast with
         | ParsedInput.SigFile _input -> ()
         | ParsedInput.ImplFile input -> walkImplFileInput input
-        !result |> Option.map (fun res -> Pos.fromZ (res.StartLine - 1) (res.StartColumn + 1))
+
+        let res = !result |> Option.map (fun (_, line, col) -> Pos.fromZ line col)
+        debug "[ResolveUnopenedNamespaceSmartTagger] Syn, line, col = %A, AST = %A" (!result) ast
+        res 
          
 type ResolveUnopenedNamespaceSmartTagger
          (view: ITextView, buffer: ITextBuffer, textUndoHistory: ITextUndoHistory,
@@ -136,15 +148,23 @@ type ResolveUnopenedNamespaceSmartTagger
 
     let openNamespace (snapshotSpan: SnapshotSpan) line col ns = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
-        let line = snapshotSpan.Snapshot.GetLineFromLineNumber(line).Start.Position + col
-        //buffer.Insert(currentLine, stub) |> ignore
-        snapshotSpan.Snapshot.TextBuffer.Insert (line, "open " + ns) |> ignore
+        let line' = snapshotSpan.Snapshot.GetLineFromLineNumber(line - 1).Start.Position
+        let snapshot = snapshotSpan.Snapshot.TextBuffer.Insert (line', (String.replicate col " ") + "open " + ns + Environment.NewLine)
+        let nextLine = snapshot.GetLineFromLineNumber line
+        // if there's not blank line between open declaration block and the rest of the code, we add one
+        let snapshot = 
+            if nextLine.GetText().Trim() <> "" then
+                snapshot.TextBuffer.Insert(nextLine.Start.Position, Environment.NewLine)
+            else snapshot
+        // for top level module we add a blank line between the module declaration and first open statement
+        if col = 0 then
+            let prevLine = snapshot.GetLineFromLineNumber (line - 2)
+            if not (prevLine.GetText().Trim().StartsWith "open") then
+                snapshot.TextBuffer.Insert(prevLine.End.Position, Environment.NewLine) |> ignore
         transaction.Complete()
 
     let fullyQualifySymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
-        //let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
-        //buffer.Insert(currentLine, stub) |> ignore
         snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
         transaction.Complete()
 
