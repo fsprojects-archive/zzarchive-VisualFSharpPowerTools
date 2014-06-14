@@ -28,7 +28,7 @@ type ResolveUnopenedNamespaceSmartTagger
          (view: ITextView, buffer: ITextBuffer, textUndoHistory: ITextUndoHistory,
           vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
           projectFactory: ProjectFactory) as self =
-
+          
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable state: (Symbol * string list) option = None
@@ -80,7 +80,7 @@ type ResolveUnopenedNamespaceSmartTagger
     let openNamespaceAction snapshot ns =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = Resource.recordGenerationCommandName
+            member x.DisplayText = ns
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = openNamespace snapshot ns
