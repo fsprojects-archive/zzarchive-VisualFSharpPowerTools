@@ -110,7 +110,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     currentWord <- Some newWord
             | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)
 
     let getLineIdent (lineStr: string) =
@@ -210,3 +210,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
 
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
+
+    interface IDisposable with
+        member x.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()

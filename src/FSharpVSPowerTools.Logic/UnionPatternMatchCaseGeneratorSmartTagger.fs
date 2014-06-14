@@ -83,7 +83,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                     currentWord <- Some newWord
             | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)
 
     let handleGenerateUnionPatternMatchCases
@@ -138,3 +138,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
 
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
+
+    interface IDisposable with
+        member x.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()

@@ -332,7 +332,7 @@ namespace FSharpVSPowerTools
         [Import(typeof(ProjectFactory))]
         private ProjectFactory projectFactory = null;
 
-        private readonly Dictionary<ITextBuffer, IDisposable> classifiers = new Dictionary<ITextBuffer, IDisposable>();
+        private readonly Type serviceType = typeof(SyntaxConstructClassifier);
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
@@ -341,13 +341,8 @@ namespace FSharpVSPowerTools
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return buffer.Properties.GetOrCreateSingletonProperty(() =>
-                    {
-                        var classifier = new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider,
-                                                      projectFactory);
-                        classifiers.Add(buffer, classifier);
-                        return classifier;
-                    });
+                return buffer.Properties.GetOrCreateSingletonProperty(serviceType, 
+                    () => new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider, projectFactory));
 
 
             return null;
@@ -364,10 +359,11 @@ namespace FSharpVSPowerTools
             IDisposable classifier;
             foreach (ITextBuffer buffer in subjectBuffers)
             {
-                if (classifiers.TryGetValue(buffer, out classifier))
+                if (buffer.Properties.TryGetProperty(serviceType, out classifier))
                 {
+                    bool success = buffer.Properties.RemoveProperty(serviceType);
+                    Debug.Assert(success, "Should be able to remove classifier from the buffer");
                     classifier.Dispose();
-                    classifiers.Remove(buffer);
                 }
             }
         }
