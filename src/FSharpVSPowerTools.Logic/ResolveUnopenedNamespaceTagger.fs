@@ -75,16 +75,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                             | Some (ns, pos) -> ns, pos
                                             | None -> None, { Line = 1; Col = 1 }
 
-                                        let entities =
-                                            entities 
-                                            |> List.choose (fun e ->
-                                                try Some e.FullName 
-                                                with _ -> 
-                                                    try Some e.DisplayName 
-                                                    with _ -> None)
-                                            |> List.choose (Entity.tryCreate currentNs sym.Text)
-                                             
-                                        entities, pos) 
+                                        entities |> List.choose (Entity.tryCreate currentNs sym.Text), pos) 
                                     |> liftMaybe 
                     }
                     |> Async.map (fun result -> 

@@ -24,3 +24,4 @@ let ``internal entities``() =
     (Some "Myns", "Now", "Myns.Nested.Now") ==> Some ("Nested", "Now")   
     (Some "Myns.Nested", "Now", "Myns.Nested.Nested2.Now") ==> Some ("Nested2", "Now")
     (Some "Myns.Nested", "Now", "Myns.Nested.Now") ==> None
+    (Some "Myns.Nested", "Now", "Myns.Nested2.Now") ==> Some ("Nested2", "Now")

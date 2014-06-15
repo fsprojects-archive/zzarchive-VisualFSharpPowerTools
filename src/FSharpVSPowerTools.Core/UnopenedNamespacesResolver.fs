@@ -1,10 +1,13 @@
 ﻿namespace FSharpVSPowerTools
 
-type Namespace = string
+open Microsoft.FSharp.Compiler.Ast
 
+type Namespace = LongIdent
+
+[<NoComparison; NoEquality>]
 type Entity = 
     { Namespace: Namespace
-      Name: string }
+      Name: string } 
     override x.ToString() = sprintf "%A" x
        
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
@@ -38,9 +41,8 @@ type Pos =
        
 module Ast =
     open System
-    open Microsoft.FSharp.Compiler.Ast
 
-    let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) : (Namespace option * Pos) option = 
+    let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) : (LongIdent option * Pos) option = 
         let result = ref None
         
         let doRange (ns: LongIdent option) line col = 
@@ -52,20 +54,22 @@ module Ast =
                 | _ -> ()
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
-            List.iter walkSynModuleOrNamespace moduleOrNamespaceList
+            List.iter (walkSynModuleOrNamespace []) moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace (SynModuleOrNamespace(ident, _, decls, _, _, _, range)) =
+        and walkSynModuleOrNamespace (parent: LongIdent) (SynModuleOrNamespace(ident, _, decls, _, _, _, range)) =
             if range.EndLine >= currentLine then
-                doRange (Some ident) range.StartLine range.StartColumn
-                List.iter walkSynModuleDecl decls
+                let fullIdent = parent @ ident
+                doRange (Some fullIdent) range.StartLine range.StartColumn
+                List.iter (walkSynModuleDecl fullIdent) decls
 
-        and walkSynModuleDecl(decl: SynModuleDecl) =
+        and walkSynModuleDecl (parent: LongIdent) (decl: SynModuleDecl) =
             match decl with
-            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
+            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace parent fragment
             | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules, _, range) ->
                 if range.EndLine >= currentLine then
-                    doRange (Some ident) range.StartLine (range.StartColumn + 4)
-                    List.iter walkSynModuleDecl modules
+                    let fullIdent = parent @ ident
+                    doRange (Some fullIdent) range.StartLine (range.StartColumn + 4)
+                    List.iter (walkSynModuleDecl fullIdent) modules
             | SynModuleDecl.Open (_, range) -> doRange None range.EndLine (range.StartColumn - 5)
             | _ -> ()
 
@@ -73,7 +77,6 @@ module Ast =
         | ParsedInput.SigFile _input -> ()
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
-        let res = !result |> Option.map (fun (ns, pos) -> 
-            ns |> Option.map (fun x -> String.Join(".", x)), { pos with Line = pos.Line + 1 }) 
+        let res = !result |> Option.map (fun (ns, pos) -> ns, { pos with Line = pos.Line + 1 }) 
         //debug "[ResolveUnopenedNamespaceSmartTagger] Ident, line, col = %A, AST = %A" (!result) ast
         res 

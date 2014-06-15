@@ -114,6 +114,14 @@ type ILexer =
     abstract TokenizeLine: line: int -> TokenInformation list
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
+
+//[<AutoOpen>]
+//module EntityHelper =
+//    let inline getFullName (entity: ^a) =
+//        try Seq.singleton (^a: (member FullName: string) entity)
+//        with _ ->
+//            try Seq.singleton (^a: (member DisplayName: string) entity) 
+//            with _ -> Seq.empty
   
 // --------------------------------------------------------------------------------------
 // Language service 
@@ -368,12 +376,19 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
+        let getFullName (symbol: FSharpSymbol) =
+            try Seq.singleton symbol.FullName
+            with _ ->
+                try Seq.singleton symbol.DisplayName
+                with _ -> Seq.empty
+
         let rec traverseEntity (entity: FSharpEntity) = 
             seq { if not entity.IsProvided then
-                    yield entity
+                    yield! getFullName entity
+                    for f in entity.MembersFunctionsAndValues do
+                        yield! getFullName f
                     for e in entity.NestedEntities do
-                        yield! traverseEntity e
-            }
+                        yield! traverseEntity e }
 
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
@@ -391,4 +406,4 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                     yield! traverseEntity e }) 
                         |> Seq.concat
                         |> Seq.toList)
-         }   
+         }    
