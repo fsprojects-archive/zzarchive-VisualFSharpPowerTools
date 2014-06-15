@@ -194,15 +194,11 @@ type ResolveUnopenedNamespaceSmartTagger
     let getSmartTagActions snapshotSpan candidates pos =
         let openNamespaceActions = 
             candidates
-            |> List.choose (fun e -> e.Namespace) 
-            |> List.map (openNamespaceAction snapshotSpan pos)
+            |> List.map (fun e -> openNamespaceAction snapshotSpan pos e.Namespace)
             
         let qualifySymbolActions =
             candidates
-            |> List.map (fun e -> 
-                match e.Namespace with
-                | None -> e.Name
-                | Some ns -> ns + "." + e.Name)
+            |> List.map (fun e -> e.Namespace + "." + e.Name)
             |> List.map (qualifySymbolAction snapshotSpan)
             
         let actions = openNamespaceActions @ qualifySymbolActions |> Seq.toReadOnlyCollection
