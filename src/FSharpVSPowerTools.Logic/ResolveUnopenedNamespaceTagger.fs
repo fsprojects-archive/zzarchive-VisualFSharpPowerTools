@@ -34,37 +34,39 @@ module Ast =
     let findNearestOpenStatementBlock (pos: pos) (ast: ParsedInput) : (Namespace option * pos) option = 
         let result = ref None
         
-        let doRange (ns: LongIdent option) (startLine, col, endLine) = 
-            if startLine < pos.Line && endLine >= pos.Line then 
+        let doRange (ns: LongIdent option) line col = 
+            if line < pos.Line then 
                 match !result with
-                | None -> result := Some (ns, startLine, col)
-                | Some (_, oldLine, _) when oldLine < startLine -> 
-                    result := Some (ns, startLine, col)
+                | None -> result := Some (ns, line, col)
+                | Some (oldNs, oldLine, _) when oldLine < line -> 
+                    result := Some (ns |> Option.orElse oldNs, line, col) 
                 | _ -> ()
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
         and walkSynModuleOrNamespace (SynModuleOrNamespace(ident, _, decls, _, _, _, range)) =
-            doRange (Some ident) (range.StartLine, range.StartColumn, range.EndLine)
-            List.iter walkSynModuleDecl decls
+            if range.EndLine >= pos.Line then
+                doRange (Some ident) range.StartLine range.StartColumn
+                List.iter walkSynModuleDecl decls
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, range), modules, _, _) ->
-                doRange (Some ident) (range.StartLine, range.StartColumn + 4, range.EndLine)
-                List.iter walkSynModuleDecl modules
-            | SynModuleDecl.Open (_, range) -> doRange None (range.StartLine, range.StartColumn - 5, range.EndLine)
+            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules, _, range) ->
+                if range.EndLine >= pos.Line then
+                    doRange (Some ident) range.StartLine (range.StartColumn + 4)
+                    List.iter walkSynModuleDecl modules
+            | SynModuleDecl.Open (_, range) -> doRange None range.EndLine (range.StartColumn - 5)
             | _ -> ()
 
-        match ast with
+        match ast with 
         | ParsedInput.SigFile _input -> ()
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
         let res = !result |> Option.map (fun (ns, line, col) -> 
             ns |> Option.map (fun x -> String.Join(".", x)), Pos.fromZ line col) 
-        //debug "[ResolveUnopenedNamespaceSmartTagger] Ident, line, col = %A, AST = %A" (!result) ast
+        debug "[ResolveUnopenedNamespaceSmartTagger] Ident, line, col = %A, AST = %A" (!result) ast
         res 
          
 type ResolveUnopenedNamespaceSmartTagger
