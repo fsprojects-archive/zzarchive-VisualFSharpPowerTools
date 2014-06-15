@@ -68,6 +68,9 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     member x.GetPartialAssemblySignature() =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.PartialAssemblySignature)
+
+    member x.ProjectContext =
+        infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
             
 
 [<RequireQualifiedAccess>]
@@ -378,8 +381,10 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 Some (seq { match checkResults.GetPartialAssemblySignature() with
                             | Some sign -> yield sign
                             | None -> ()
-                            //  yield! checkResults.ProjectContext.GetReferencedAssemblies() 
-                            //       |> List.map (fun asm -> asm.Contents) 
+                            match checkResults.ProjectContext with
+                            | Some ctx ->
+                                yield! ctx.GetReferencedAssemblies() |> List.map (fun asm -> asm.Contents)
+                            | None -> ()
                             }
                         |> Seq.map (fun sign -> 
                             seq { for e in sign.Entities do
