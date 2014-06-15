@@ -1,72 +1,20 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
 
-open System.Collections.Generic
-open System.Windows
-open System.Windows.Threading
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
-open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.FSharp.Compiler.Ast
-open Microsoft.FSharp.Compiler.Range
-open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type Pos = 
-    { Line: int
-      Col: int }
-       
-module Ast =
-    let findNearestOpenStatementBlock (pos: pos) (ast: ParsedInput) : (Namespace option * Pos) option = 
-        let result = ref None
-        
-        let doRange (ns: LongIdent option) line col = 
-            if line < pos.Line then 
-                match !result with
-                | None -> result := Some (ns, { Line = line; Col = col})
-                | Some (oldNs, { Line = oldLine}) when oldLine < line -> 
-                    result := Some (ns |> Option.orElse oldNs, { Line = line; Col = col }) 
-                | _ -> ()
-
-        let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
-            List.iter walkSynModuleOrNamespace moduleOrNamespaceList
-
-        and walkSynModuleOrNamespace (SynModuleOrNamespace(ident, _, decls, _, _, _, range)) =
-            if range.EndLine >= pos.Line then
-                doRange (Some ident) range.StartLine range.StartColumn
-                List.iter walkSynModuleDecl decls
-
-        and walkSynModuleDecl(decl: SynModuleDecl) =
-            match decl with
-            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules, _, range) ->
-                if range.EndLine >= pos.Line then
-                    doRange (Some ident) range.StartLine (range.StartColumn + 4)
-                    List.iter walkSynModuleDecl modules
-            | SynModuleDecl.Open (_, range) -> doRange None range.EndLine (range.StartColumn - 5)
-            | _ -> ()
-
-        match ast with 
-        | ParsedInput.SigFile _input -> ()
-        | ParsedInput.ImplFile input -> walkImplFileInput input
-
-        let res = !result |> Option.map (fun (ns, pos) -> 
-            ns |> Option.map (fun x -> String.Join(".", x)), { pos with Line = pos.Line + 1 }) 
-        //debug "[ResolveUnopenedNamespaceSmartTagger] Ident, line, col = %A, AST = %A" (!result) ast
-        res 
-         
 type ResolveUnopenedNamespaceSmartTagger
          (view: ITextView, buffer: ITextBuffer, textUndoHistory: ITextUndoHistory,
           vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
@@ -123,7 +71,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                     checkResults.ParseTree 
                                     |> Option.map (fun tree ->
                                         let currentNs, pos = 
-                                            match Ast.findNearestOpenStatementBlock (codeGenService.ExtractFSharpPos point) tree with
+                                            match Ast.findNearestOpenStatementBlock (codeGenService.ExtractFSharpPos point).Line tree with
                                             | Some (ns, pos) -> ns, pos
                                             | None -> None, { Line = 1; Col = 1 }
 
@@ -163,7 +111,7 @@ type ResolveUnopenedNamespaceSmartTagger
             else snapshot
         // for top level module we add a blank line between the module declaration and first open statement
         if pos.Col = 0 then
-            let prevLine = snapshot.GetLineFromLineNumber (line - 2)
+            let prevLine = snapshot.GetLineFromLineNumber (pos.Line - 2)
             if not (prevLine.GetText().Trim().StartsWith "open") then
                 snapshot.TextBuffer.Insert(prevLine.End.Position, Environment.NewLine) |> ignore
         transaction.Complete()
