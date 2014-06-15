@@ -32,28 +32,28 @@ module Ast =
     let findNearestOpenStatementBlock (pos: pos) (ast: ParsedInput) = 
         let result = ref None
         
-        let doRange (syn: obj) (line, col) = 
-            if line < pos.Line then 
+        let doRange (syn: obj) (startLine, col, endLine) = 
+            if startLine < pos.Line && endLine >= pos.Line then 
                 match !result with
-                | None -> result := Some (syn, line, col)
-                | Some (_, oldLine, _) when oldLine < line -> 
-                    result := Some (syn, line, col)
+                | None -> result := Some (syn, startLine, col)
+                | Some (_, oldLine, _) when oldLine < startLine -> 
+                    result := Some (syn, startLine, col)
                 | _ -> ()
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
         and walkSynModuleOrNamespace(SynModuleOrNamespace(_, _, decls, _, _, _, range) as syn) =
-            doRange syn (range.StartLine, range.StartColumn)
+            doRange syn (range.StartLine, range.StartColumn, range.EndLine)
             List.iter walkSynModuleDecl decls
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
             | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, _, _, _, _, range), modules, _, _) as syn ->
-                doRange syn (range.StartLine, range.StartColumn + 4)
+                doRange syn (range.StartLine, range.StartColumn + 4, range.EndLine)
                 List.iter walkSynModuleDecl modules
-            | SynModuleDecl.Open (_, range) as syn -> doRange syn (range.StartLine, range.StartColumn - 5)
+            | SynModuleDecl.Open (_, range) as syn -> doRange syn (range.StartLine, range.StartColumn - 5, range.EndLine)
             | _ -> ()
 
         match ast with
