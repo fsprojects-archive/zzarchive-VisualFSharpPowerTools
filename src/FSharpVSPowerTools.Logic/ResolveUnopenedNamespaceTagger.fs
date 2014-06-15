@@ -61,7 +61,7 @@ module Ast =
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
         let res = !result |> Option.map (fun (_, line, col) -> Pos.fromZ line col)
-        debug "[ResolveUnopenedNamespaceSmartTagger] Syn, line, col = %A, AST = %A" (!result) ast
+        //debug "[ResolveUnopenedNamespaceSmartTagger] Syn, line, col = %A, AST = %A" (!result) ast
         res 
          
 type ResolveUnopenedNamespaceSmartTagger
@@ -107,14 +107,15 @@ type ResolveUnopenedNamespaceSmartTagger
                             match res with 
                             | Some _ -> return! liftMaybe None
                             | None ->
-                                let! entities = vsLanguageService.GetAllEntities project
+                                let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
                                 let entitiesNames =
                                     entities 
-                                    |> Seq.map (fun e -> try e.FullName with _ -> e.DisplayName)
+                                    |> Seq.map (fun e ->
+                                        try e.FullName 
+                                        with _ -> e.DisplayName)
                                     |> Seq.choose (fun name -> 
                                         match name.LastIndexOf '.' with
-                                        | -1 -> 
-                                            if name = sym.Text then Some { Namespace = ""; Name = name } else None
+                                        | -1 -> None
                                         | lastDotIndex -> 
                                             let lastIdent = name.Substring (lastDotIndex + 1)
                                             if lastIdent = sym.Text then 

@@ -206,11 +206,11 @@ type VSLanguageService
             return symbolUses, lexer
         }
 
-     member x.GetAllEntities (project: IProjectProvider) =
-        async {
+     member x.GetAllEntities (fileName, source, project: IProjectProvider) =
+        async { 
             let! opts = project.GetProjectCheckerOptions(instance)
             try 
-                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies opts
+                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             with e -> 
                 debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
                 return None

@@ -65,6 +65,9 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
             with _ -> 
                 Debug.Assert(false, "couldn't update navigation items, ignoring")  
                 [| |]
+
+    member x.GetPartialAssemblySignature() =
+        infoOpt |> Option.map (fun (checkResults, _) -> checkResults.PartialAssemblySignature)
             
 
 [<RequireQualifiedAccess>]
@@ -361,16 +364,26 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             return! results.GetAllUsesOfAllSymbolsInFile()
         }
 
-    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions) =
+    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
+        let rec traverseEntity (entity: FSharpEntity) = 
+            seq { if not entity.IsProvided then
+                    yield entity
+                    for e in entity.NestedEntities do
+                        yield! traverseEntity e
+            }
+
         async {
-            let! checkResults = checker.ParseAndCheckProject projectOptions
-            if checkResults.HasCriticalErrors then return None
-            else
-                return 
-                    Some (seq { yield checkResults.AssemblySignature
-                                yield! checkResults.ProjectContext.GetReferencedAssemblies() 
-                                       |> List.map (fun asm -> asm.Contents) }
-                          |> Seq.map (fun sign -> sign.Entities :> seq<_>) 
-                          |> Seq.concat
-                          |> Seq.toList)
-         }  
+            let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
+            return 
+                Some (seq { match checkResults.GetPartialAssemblySignature() with
+                            | Some sign -> yield sign
+                            | None -> ()
+                            //  yield! checkResults.ProjectContext.GetReferencedAssemblies() 
+                            //       |> List.map (fun asm -> asm.Contents) 
+                            }
+                        |> Seq.map (fun sign -> 
+                            seq { for e in sign.Entities do
+                                    yield! traverseEntity e }) 
+                        |> Seq.concat
+                        |> Seq.toList)
+         }   

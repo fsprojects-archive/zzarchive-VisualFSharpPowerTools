@@ -1,11 +1,8 @@
 ﻿module FSharpVSPowerTools.SourceCodeClassifier
 
-open System
-open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
 
 type Category =
     | ReferenceType

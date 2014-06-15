@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools
 
 open System.Diagnostics
-open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type SymbolKind =
