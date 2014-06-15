@@ -3,8 +3,9 @@
 type Namespace = string
 
 type Entity = 
-    { Namespace: Namespace option
+    { Namespace: Namespace
       Name: string }
+    override x.ToString() = sprintf "%A" x
        
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Entity =
@@ -23,10 +24,10 @@ module Entity =
                         if rest.Length = 0 || rest.[0] <> '.' then None
                         else Some (rest.Substring 1)
                     | _ -> Some fullName
-                    |> Option.map (fun name ->
+                    |> Option.bind (fun name ->
                         match name.LastIndexOf '.' with
-                        | -1 -> { Namespace = None; Name = name }
+                        | -1 -> None
                         | lastDotIndex ->
-                            { Namespace = Some (name.Substring (0, lastDotIndex))
-                              Name = name.Substring (lastDotIndex + 1) })
+                            Some { Namespace = name.Substring (0, lastDotIndex)
+                                   Name = name.Substring (lastDotIndex + 1) })
                 else None)
