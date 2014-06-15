@@ -24,44 +24,47 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type Entity = 
-    { Namespace: string
-      Name: string }
+type Namespace = string
 
+type Entity = 
+    { Namespace: Namespace option
+      Name: string } 
+       
 module Ast =
-    let findNearestOpenStatementBlock (pos: pos) (ast: ParsedInput) = 
+    let findNearestOpenStatementBlock (pos: pos) (ast: ParsedInput) : (Namespace option * pos) option = 
         let result = ref None
         
-        let doRange (syn: obj) (startLine, col, endLine) = 
+        let doRange (ns: LongIdent option) (startLine, col, endLine) = 
             if startLine < pos.Line && endLine >= pos.Line then 
                 match !result with
-                | None -> result := Some (syn, startLine, col)
+                | None -> result := Some (ns, startLine, col)
                 | Some (_, oldLine, _) when oldLine < startLine -> 
-                    result := Some (syn, startLine, col)
+                    result := Some (ns, startLine, col)
                 | _ -> ()
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace(SynModuleOrNamespace(_, _, decls, _, _, _, range) as syn) =
-            doRange syn (range.StartLine, range.StartColumn, range.EndLine)
+        and walkSynModuleOrNamespace (SynModuleOrNamespace(ident, _, decls, _, _, _, range)) =
+            doRange (Some ident) (range.StartLine, range.StartColumn, range.EndLine)
             List.iter walkSynModuleDecl decls
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, _, _, _, _, range), modules, _, _) as syn ->
-                doRange syn (range.StartLine, range.StartColumn + 4, range.EndLine)
+            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, range), modules, _, _) ->
+                doRange (Some ident) (range.StartLine, range.StartColumn + 4, range.EndLine)
                 List.iter walkSynModuleDecl modules
-            | SynModuleDecl.Open (_, range) as syn -> doRange syn (range.StartLine, range.StartColumn - 5, range.EndLine)
+            | SynModuleDecl.Open (_, range) -> doRange None (range.StartLine, range.StartColumn - 5, range.EndLine)
             | _ -> ()
 
         match ast with
         | ParsedInput.SigFile _input -> ()
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
-        let res = !result |> Option.map (fun (_, line, col) -> Pos.fromZ line col)
-        //debug "[ResolveUnopenedNamespaceSmartTagger] Syn, line, col = %A, AST = %A" (!result) ast
+        let res = !result |> Option.map (fun (ns, line, col) -> 
+            ns |> Option.map (fun x -> String.Join(".", x)), Pos.fromZ line col) 
+        //debug "[ResolveUnopenedNamespaceSmartTagger] Ident, line, col = %A, AST = %A" (!result) ast
         res 
          
 type ResolveUnopenedNamespaceSmartTagger
@@ -73,7 +76,11 @@ type ResolveUnopenedNamespaceSmartTagger
           
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Symbol * Entity list * int * int) option = None
+    let mutable state: (Entity list * int * int) option = None 
+
+    let triggerTagsChanged() =
+        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -108,41 +115,57 @@ type ResolveUnopenedNamespaceSmartTagger
                             | Some _ -> return! liftMaybe None
                             | None ->
                                 let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
-                                let entitiesNames =
-                                    entities 
-                                    |> Seq.map (fun e ->
-                                        try e.FullName 
-                                        with _ -> e.DisplayName)
-                                    |> Seq.choose (fun name -> 
-                                        match name.LastIndexOf '.' with
-                                        | -1 -> None
-                                        | lastDotIndex -> 
-                                            let lastIdent = name.Substring (lastDotIndex + 1)
-                                            if lastIdent = sym.Text then 
-                                                Some { Namespace = name.Substring (0, lastDotIndex); Name = lastIdent }
-                                            else None)
-                                    |> Seq.toList
-
+                                
                                 let! checkResults = 
                                     vsLanguageService.ParseFileInProject (doc.FullName, newWord.Snapshot.GetText(), project) |> liftAsync
 
                                 return! 
                                     checkResults.ParseTree 
                                     |> Option.map (fun tree ->
-                                        let line, column = 
+                                        let currentNs, line, column = 
                                             match Ast.findNearestOpenStatementBlock (codeGenService.ExtractFSharpPos point) tree with
-                                            | Some pos -> pos.Line, pos.Column
-                                            | None -> 1, 1
-                                        sym, entitiesNames, line, column)
-                                    |> liftMaybe
+                                            | Some (ns, pos) -> ns, pos.Line, pos.Column
+                                            | None -> None, 1, 1
+
+                                        let entities =
+                                            entities 
+                                            |> Seq.choose (fun e ->
+                                                try Some e.FullName 
+                                                with _ -> 
+                                                    try Some e.DisplayName 
+                                                    with _ -> None)
+                                            |> Seq.choose (fun name -> 
+                                                match name.LastIndexOf '.' with
+                                                | -1 -> None
+                                                | lastDotIndex ->
+                                                    let lastIdent = name.Substring (lastDotIndex + 1)
+                                                    if lastIdent = sym.Text then
+                                                        match currentNs with
+                                                        | Some ns when name.StartsWith ns ->
+                                                            let rest = name.Substring ns.Length
+                                                            if rest.Length = 0 || rest.[0] <> '.' then None
+                                                            else Some (rest.Substring 1)
+                                                        | _ -> Some name
+                                                        |> Option.map (fun name ->
+                                                            match name.LastIndexOf '.' with
+                                                            | -1 -> { Namespace = None; Name = name }
+                                                            | lastDotIndex ->
+                                                                { Namespace = Some (name.Substring (0, lastDotIndex))
+                                                                  Name = name.Substring(lastDotIndex + 1) })
+                                                    else None)
+                                            |> Seq.toList
+                                             
+                                        entities, line, column) 
+                                    |> liftMaybe 
                     }
                     |> Async.map (fun result -> 
                         state <- result
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                        triggerTagsChanged())
                     |> Async.StartImmediateSafe
                     currentWord <- Some newWord
-            | _ -> ()
+            | _ -> 
+                currentWord <- None 
+                triggerTagsChanged()
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
@@ -187,18 +210,18 @@ type ResolveUnopenedNamespaceSmartTagger
             member x.Invoke() = fullyQualifySymbol snapshotSpan fullSymbolName
         }
 
-    let getSmartTagActions snapshotSpan candidates _symbol line col =
+    let getSmartTagActions snapshotSpan candidates line col =
         let openNamespaceActions = 
             candidates
-            |> List.map (fun e -> e.Namespace) 
+            |> List.choose (fun e -> e.Namespace) 
             |> List.map (openNamespaceAction snapshotSpan line col)
             
         let qualifySymbolActions =
             candidates
             |> List.map (fun e -> 
                 match e.Namespace with
-                | "" -> e.Name
-                | ns -> ns + "." + e.Name)
+                | None -> e.Name
+                | Some ns -> ns + "." + e.Name)
             |> List.map (qualifySymbolAction snapshotSpan)
             
         let actions = openNamespaceActions @ qualifySymbolActions |> Seq.toReadOnlyCollection
@@ -209,9 +232,9 @@ type ResolveUnopenedNamespaceSmartTagger
         member x.GetTags _spans =
             seq {
                 match currentWord, state with
-                | Some word, Some (symbol, candidates, line, col) ->
+                | Some word, Some (candidates, line, col) ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates symbol line col))
+                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates line col))
                           :> _
                 | _ -> ()
             }
