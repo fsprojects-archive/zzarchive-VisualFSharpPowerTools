@@ -73,7 +73,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                         let currentNs, pos = 
                                             match Ast.findNearestOpenStatementBlock (codeGenService.ExtractFSharpPos point).Line tree with
                                             | Some (ns, pos) -> ns, pos
-                                            | None -> None, { Line = 1; Col = 1 }
+                                            | None -> [||], { Line = 1; Col = 1 }
 
                                         entities |> List.choose (Entity.tryCreate currentNs sym.Text), pos) 
                                     |> liftMaybe 
