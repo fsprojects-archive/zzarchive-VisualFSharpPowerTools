@@ -39,8 +39,6 @@ type Pos =
       Col: int }
        
 module Ast =
-    open System
-
     let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) : (Namespace * Pos) option = 
         let result = ref None
         
