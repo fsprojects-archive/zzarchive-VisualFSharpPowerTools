@@ -31,8 +31,14 @@ open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 let file = "C:\\file.fs"
 let languageService = LanguageService(fun _ -> ())
 
-let forLine line source =
-    let parseResult = 
+type Line = int
+type Source = string
+type FullEntityName = string
+
+let forLine (line: Line) (source: Source) = source, line
+
+let andEntity (entity: FullEntityName) (source, line) =
+    let parseResult =
         languageService.ParseFileInProject(LanguageServiceTestHelper.projectOptions file, file, source) 
         |> Async.RunSynchronously
     if parseResult.ParseHadErrors then failwithf "Cannot parse input: %s, errors: %A" source parseResult.Errors
@@ -64,6 +70,7 @@ module TopLevel
 let _ = DateTime.Now
 """
     |> forLine 3
+    |> andEntity "System.DateTime"
     |> ns "TopLevel"
     |> position """
 module TopLevel
@@ -82,6 +89,7 @@ open Another
 let _ = DateTime.Now
 """
     |> forLine 5
+    |> andEntity "System.DateTime"
     |> ns "TopLevel"
     |> position """
 module TopLevel
@@ -103,6 +111,7 @@ open OneMore
 let _ = DateTime.Now
 """
     |> forLine 6
+    |> andEntity "System.DateTime"
     |> ns "TopLevel"
     |> position """
 module TopLevel
@@ -123,6 +132,7 @@ module Nested =
     let _ = DateTime.Now
 """
     |> forLine 4
+    |> andEntity "System.DateTime"
     |> ns "TopLevel.Nested"
     |> position """
 module TopLevel
@@ -142,6 +152,7 @@ module Nested =
     let _ = DateTime.Now
 """
     |> forLine 5
+    |> andEntity "System.DateTime"
     |> ns "TopLevel.Nested"
     |> position """
 module TopLevel
@@ -164,6 +175,7 @@ module Nested =
     let _ = DateTime.Now
 """
     |> forLine 7
+    |> andEntity "System.DateTime"
     |> ns "TopLevel.Nested"
     |> position """
 module TopLevel
@@ -175,3 +187,80 @@ module Nested =
 
     let _ = DateTime.Now
 """
+
+[<Test>]
+let ``external symbol in a double nested module, no other open declarations are present``() =
+    """
+module TopLevel
+
+module Nested =
+    module DoubleNested =
+        let _ = DateTime.Now
+"""
+    |> forLine 5
+    |> andEntity "System.DateTime"
+    |> ns "TopLevel.Nested.DoubleNested"
+    |> position """
+module TopLevel
+
+module Nested =
+    module DoubleNested =
+        #
+        let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``external symbol in a double nested module, other open declarations on all levels are present``() =
+    """
+module TopLevel
+
+open Another
+
+module Nested =
+    open OneMore
+
+    module DoubleNested =
+        open OneMore1
+
+        let _ = DateTime.Now
+"""
+    |> forLine 11
+    |> andEntity "System.DateTime"
+    |> ns "TopLevel.Nested.DoubleNested"
+    |> position """
+module TopLevel
+
+open Another
+
+module Nested =
+    open OneMore
+
+    module DoubleNested =
+        open OneMore1
+        #
+
+        let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``top level symbol declared in a nested module in the same file``() =
+    """
+module TopLevel
+
+module Nested =
+    type DateTime() = class end
+
+let _ = DateTime.Now
+"""
+    |> forLine 6
+    |> andEntity "TopLevel.Nested.DateTime"
+    |> ns "TopLevel"
+    |> position """
+module TopLevel
+
+module Nested =
+    type DateTime() = class end
+#
+let _ = DateTime.Now
+"""
+
