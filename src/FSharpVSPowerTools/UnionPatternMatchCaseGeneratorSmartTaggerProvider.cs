@@ -33,12 +33,15 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
+            var codeGenOptions = serviceProvider.GetService(typeof(CodeGenerationOptionsPage)) as CodeGenerationOptionsPage;
+
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (generalOptions != null && generalOptions.UnionPatternMatchCaseGenerationEnabled)
             {
                 return new UnionPatternMatchCaseGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
-                    fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
+                    fsharpVsLanguageService, serviceProvider,
+                    projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
             }
             else
                 return null;

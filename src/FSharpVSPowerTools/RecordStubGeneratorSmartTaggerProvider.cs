@@ -38,7 +38,8 @@ namespace FSharpVSPowerTools
             {
                 return new RecordStubGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
-                    fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
+                    fsharpVsLanguageService, serviceProvider,
+                    projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
             }
             else
                 return null;

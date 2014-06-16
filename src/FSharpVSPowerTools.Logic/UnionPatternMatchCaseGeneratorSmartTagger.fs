@@ -30,7 +30,8 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                                                textUndoHistory: ITextUndoHistory,
                                                vsLanguageService: VSLanguageService,
                                                serviceProvider: IServiceProvider,
-                                               projectFactory: ProjectFactory) as self =
+                                               projectFactory: ProjectFactory,
+                                               defaultBody: string) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable unionDefinition = None
@@ -93,7 +94,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
 
         let stub = UnionPatternMatchCaseGenerator.formatMatchExpr
                        insertionParams
-                       "failwith \"Unhandled case\""
+                       defaultBody
                        patMatchExpr
                        entity
         let insertionPos = insertionParams.InsertionPos

@@ -30,7 +30,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                                     textUndoHistory: ITextUndoHistory,
                                     vsLanguageService: VSLanguageService,
                                     serviceProvider: IServiceProvider,
-                                    projectFactory: ProjectFactory) as self =
+                                    projectFactory: ProjectFactory,
+                                    defaultBody: string) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
@@ -97,7 +98,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
         let stub = RecordStubGenerator.formatRecord
                        insertionPos
-                       "failwith \"Uninitialized field\""
+                       defaultBody
                        entity
                        fieldsWritten
         let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
