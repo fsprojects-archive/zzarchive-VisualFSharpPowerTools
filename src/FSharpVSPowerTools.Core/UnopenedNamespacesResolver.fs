@@ -43,7 +43,7 @@ module Ast =
         let result = ref None
         
         let doRange (ns: LongIdent) line col = 
-            if line < currentLine then 
+            if line <= currentLine then 
                 match !result with
                 | None -> result := Some (ns, { Line = line; Col = col})
                 | Some (oldNs, { Line = oldLine}) when oldLine < line -> 

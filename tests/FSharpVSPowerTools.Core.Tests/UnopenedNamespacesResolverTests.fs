@@ -53,11 +53,11 @@ let position expected (source, pos) =
     let line = pos.Line - 1
     if lines.Length < line + 1 then 
         failwithf "Pos.Line = %d is out of bound (source contain %d lines)" pos.Line lines.Length
-    let result = Array.append (Array.append lines.[0..line - 1] [|"#"|]) lines.[line..]
+    let result = Array.append (Array.append lines.[0..line - 1] [| (String.replicate pos.Col " ") + "#"|]) lines.[line..]
     result |> Collection.assertEqual (srcToLineArray expected)
 
 [<Test>]
-let ``find line to insert open statement for an external top level unresolved symbol``() =
+let ``external top level symbol, no other open declarations``() =
     """
 module TopLevel
 
@@ -70,4 +70,108 @@ module TopLevel
 #
 
 let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``external top level symbol, another open declaration is present``() =
+    """
+module TopLevel
+
+open Another
+
+let _ = DateTime.Now
+"""
+    |> forLine 5
+    |> ns "TopLevel"
+    |> position """
+module TopLevel
+
+open Another
+#
+
+let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``external top level symbol, other open declarations are present``() =
+    """
+module TopLevel
+
+open Another
+open OneMore
+
+let _ = DateTime.Now
+"""
+    |> forLine 6
+    |> ns "TopLevel"
+    |> position """
+module TopLevel
+
+open Another
+open OneMore
+#
+
+let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``external symbol in a nested module, no other open declarations``() =
+    """
+module TopLevel
+
+module Nested =
+    let _ = DateTime.Now
+"""
+    |> forLine 4
+    |> ns "TopLevel.Nested"
+    |> position """
+module TopLevel
+
+module Nested =
+    #
+    let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``external symbol in a nested module, another open declaration is present``() =
+    """
+module TopLevel
+
+module Nested =
+    open Another
+    let _ = DateTime.Now
+"""
+    |> forLine 5
+    |> ns "TopLevel.Nested"
+    |> position """
+module TopLevel
+
+module Nested =
+    open Another
+    #
+    let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``external symbol in a nested module, other open declarations are present``() =
+    """
+module TopLevel
+
+module Nested =
+    open Another
+    open OneMore
+
+    let _ = DateTime.Now
+"""
+    |> forLine 7
+    |> ns "TopLevel.Nested"
+    |> position """
+module TopLevel
+
+module Nested =
+    open Another
+    open OneMore
+    #
+
+    let _ = DateTime.Now
 """
