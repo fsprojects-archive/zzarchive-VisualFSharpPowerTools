@@ -39,11 +39,16 @@ type Pos =
       Col: int }
        
 module Ast =
-    let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) : (Namespace * Pos) option = 
+    type EndLine = int
+    type EntityFullName = string
+    type Ident = string
+
+    let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result = ref None
-        
+        let modules = ResizeArray<LongIdent * EndLine>()  
+         
         let doRange (ns: LongIdent) line col = 
-            if line <= currentLine then 
+            if line <= currentLine then
                 match !result with
                 | None -> result := Some (ns, { Line = line; Col = col})
                 | Some (oldNs, { Line = oldLine}) when oldLine < line -> 
@@ -57,16 +62,18 @@ module Ast =
             if range.EndLine >= currentLine then
                 let fullIdent = parent @ ident
                 doRange fullIdent range.StartLine range.StartColumn
+                modules.Add (fullIdent, range.EndLine)
                 List.iter (walkSynModuleDecl fullIdent) decls
 
         and walkSynModuleDecl (parent: LongIdent) (decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace parent fragment
-            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules, _, range) ->
+            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules', _, range) ->
                 if range.EndLine >= currentLine then
                     let fullIdent = parent @ ident
                     doRange fullIdent range.StartLine (range.StartColumn + 4)
-                    List.iter (walkSynModuleDecl fullIdent) modules
+                    modules.Add (fullIdent, range.EndLine) 
+                    List.iter (walkSynModuleDecl fullIdent) modules'
             | SynModuleDecl.Open (_, range) -> doRange [] range.EndLine (range.StartColumn - 5)
             | _ -> ()
 
@@ -77,4 +84,20 @@ module Ast =
         let res = !result |> Option.map (fun (ns, pos) -> 
             ns |> List.map (fun x -> string x) |> List.toArray, { pos with Line = pos.Line + 1 }) 
         //debug "[ResolveUnopenedNamespaceSmartTagger] Ident, line, col = %A, AST = %A" (!result) ast
-        res 
+        let modules = 
+            modules 
+            |> Seq.map (fun (m, endLine) -> String.Join (".", m |> Seq.map string), endLine) 
+            |> Seq.toList
+        fun (ident: Ident) (entityFullName: EntityFullName) ->
+            res 
+            |> Option.bind (fun (ns, pos) -> Entity.tryCreate ns ident entityFullName |> Option.map (fun e -> e, pos))
+            |> Option.map (fun (entity, pos) ->
+                entity,
+                match modules |> List.tryFind (fun (m, _) -> entityFullName.StartsWith m) with
+                | Some (m, endLine) -> 
+                    if entityFullName.Length > m.Length && entityFullName.[m.Length] = '.' then
+                        { pos with Line = endLine - 1 }
+                    else pos
+                | None -> pos)
+            
+            

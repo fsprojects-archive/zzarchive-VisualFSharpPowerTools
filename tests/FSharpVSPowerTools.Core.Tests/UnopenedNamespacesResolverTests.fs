@@ -36,8 +36,9 @@ type Source = string
 type FullEntityName = string
 
 let forLine (line: Line) (source: Source) = source, line
+let forIdent ident (source, line) = ident, source, line
 
-let andEntity (entity: FullEntityName) (source, line) =
+let forEntity (entity: FullEntityName) (ident, source: Source, line) =
     let parseResult =
         languageService.ParseFileInProject(LanguageServiceTestHelper.projectOptions file, file, source) 
         |> Async.RunSynchronously
@@ -45,22 +46,33 @@ let andEntity (entity: FullEntityName) (source, line) =
     match parseResult.ParseTree with
     | None -> failwithf "ParseTree is None for input: %s" source
     | Some tree ->
-        source, Ast.findNearestOpenStatementBlock line tree
+        match Ast.findNearestOpenStatementBlock line tree ident entity with
+        | None -> failwith "Cannot find nearest open statement block"
+        | Some (e, pos) -> source, e, pos
 
-let ns (expected: string) (source, actual) =
-    match actual with
-    | None -> failwithf "Expected Some (%A) but was None" expected
-    | Some (ns', pos) -> 
-        ns' |> assertEqual (expected.Split '.')
-        source, pos
-
-let position expected (source, pos) = 
+let result (expected: Source) (source: Source, entity, pos) = 
     let lines = srcToLineArray source
     let line = pos.Line - 1
     if lines.Length < line + 1 then 
         failwithf "Pos.Line = %d is out of bound (source contain %d lines)" pos.Line lines.Length
-    let result = Array.append (Array.append lines.[0..line - 1] [| (String.replicate pos.Col " ") + "#"|]) lines.[line..]
-    result |> Collection.assertEqual (srcToLineArray expected)
+    let result = 
+        Array.append (
+            Array.append 
+                lines.[0..line - 1] 
+                [| (String.replicate pos.Col " ") + "open " + entity.Namespace|]) 
+            lines.[line..]
+    try result |> Collection.assertEqual (srcToLineArray expected)
+    with _ ->
+        let withLineNumbers xs = 
+            xs
+            |> List.mapi (fun i x -> sprintf "%d: %s" i x)
+            |> String.concat "\r\n"
+
+        printfn 
+            "Expected:\n%s\nActual:\n%s" 
+            (expected |> srcToLineArray |> Array.toList |> withLineNumbers) 
+            (result |> Array.toList |> withLineNumbers)
+        reraise()
 
 [<Test>]
 let ``external top level symbol, no other open declarations``() =
@@ -70,11 +82,11 @@ module TopLevel
 let _ = DateTime.Now
 """
     |> forLine 3
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
-#
+open System
 
 let _ = DateTime.Now
 """
@@ -89,13 +101,13 @@ open Another
 let _ = DateTime.Now
 """
     |> forLine 5
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
 
 open Another
-#
+open System
 
 let _ = DateTime.Now
 """
@@ -111,14 +123,14 @@ open OneMore
 let _ = DateTime.Now
 """
     |> forLine 6
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
 
 open Another
 open OneMore
-#
+open System
 
 let _ = DateTime.Now
 """
@@ -132,13 +144,13 @@ module Nested =
     let _ = DateTime.Now
 """
     |> forLine 4
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel.Nested"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
 
 module Nested =
-    #
+    open System
     let _ = DateTime.Now
 """
 
@@ -152,14 +164,14 @@ module Nested =
     let _ = DateTime.Now
 """
     |> forLine 5
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel.Nested"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
 
 module Nested =
     open Another
-    #
+    open System
     let _ = DateTime.Now
 """
 
@@ -175,15 +187,15 @@ module Nested =
     let _ = DateTime.Now
 """
     |> forLine 7
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel.Nested"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
 
 module Nested =
     open Another
     open OneMore
-    #
+    open System
 
     let _ = DateTime.Now
 """
@@ -198,14 +210,14 @@ module Nested =
         let _ = DateTime.Now
 """
     |> forLine 5
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel.Nested.DoubleNested"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
 
 module Nested =
     module DoubleNested =
-        #
+        open System
         let _ = DateTime.Now
 """
 
@@ -225,9 +237,9 @@ module Nested =
         let _ = DateTime.Now
 """
     |> forLine 11
-    |> andEntity "System.DateTime"
-    |> ns "TopLevel.Nested.DoubleNested"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
 module TopLevel
 
 open Another
@@ -237,7 +249,7 @@ module Nested =
 
     module DoubleNested =
         open OneMore1
-        #
+        open System
 
         let _ = DateTime.Now
 """
@@ -250,17 +262,49 @@ module TopLevel
 module Nested =
     type DateTime() = class end
 
+let marker = ()
 let _ = DateTime.Now
 """
     |> forLine 6
-    |> andEntity "TopLevel.Nested.DateTime"
-    |> ns "TopLevel"
-    |> position """
+    |> forIdent "DateTime"
+    |> forEntity "TopLevel.Nested.DateTime"
+    |> result """
 module TopLevel
 
 module Nested =
     type DateTime() = class end
-#
+
+open Nested
+let marker = ()
 let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``top level symbol declared in a nested module in the same file, there is another module below``() =
+    """
+module TopLevel
+
+module Nested =
+    type DateTime() = class end
+
+let _ = DateTime.Now
+
+module Below =
+    let x = ()
+"""
+    |> forLine 6
+    |> forIdent "DateTime"
+    |> forEntity "TopLevel.Nested.DateTime"
+    |> result """
+module TopLevel
+
+module Nested =
+    type DateTime() = class end
+
+open Nested
+let _ = DateTime.Now
+
+module Below =
+    let x = ()
 """
 
