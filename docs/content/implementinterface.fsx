@@ -17,4 +17,8 @@ See the demo screencast below.
 
 ![Implement interface](img/implement_interface.gif)
 
+The default body of interface methods can be configured in 'F# Power Tools --> Code Generation' dialog.
+
+![Code generation](img/code_generation_options.png)
+
 *)

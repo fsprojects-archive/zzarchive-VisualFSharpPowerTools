@@ -21,4 +21,7 @@ See the demo screencasts below.
 
 ![Record stub generation (non-qualified field)](img/record_stub_generation_non_qualified_field.gif)
 
+The default value of record fields can be configured in 'F# Power Tools --> Code Generation' dialog.
+
+![Code generation](img/code_generation_options.png)
 *)
