@@ -33,8 +33,6 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var codeGenOptions = serviceProvider.GetService(typeof(CodeGenerationOptionsPage)) as CodeGenerationOptionsPage;
-
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (generalOptions != null && generalOptions.UnionPatternMatchCaseGenerationEnabled)
             {

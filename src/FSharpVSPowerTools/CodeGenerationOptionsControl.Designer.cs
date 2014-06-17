@@ -46,14 +46,14 @@
             this.grbBodyStyle.Controls.Add(this.rdbFailwith);
             this.grbBodyStyle.Location = new System.Drawing.Point(15, 3);
             this.grbBodyStyle.Name = "grbBodyStyle";
-            this.grbBodyStyle.Size = new System.Drawing.Size(427, 219);
+            this.grbBodyStyle.Size = new System.Drawing.Size(368, 204);
             this.grbBodyStyle.TabIndex = 0;
             this.grbBodyStyle.TabStop = false;
             this.grbBodyStyle.Text = "Generated member default body style";
             // 
             // tbxSourceCode
             // 
-            this.tbxSourceCode.Location = new System.Drawing.Point(154, 89);
+            this.tbxSourceCode.Location = new System.Drawing.Point(148, 89);
             this.tbxSourceCode.Name = "tbxSourceCode";
             this.tbxSourceCode.Size = new System.Drawing.Size(189, 20);
             this.tbxSourceCode.TabIndex = 4;

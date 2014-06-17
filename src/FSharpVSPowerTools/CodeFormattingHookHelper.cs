@@ -14,14 +14,14 @@ using FSharpVSPowerTools.CodeFormatting;
 namespace FSharpVSPowerTools
 {
     [Export(typeof(IWpfTextViewCreationListener))]
-    [Name("F# Dummy Command Hook")]
+    [Name("F# Formatting Command Hook")]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Interactive)]
     public class CodeFormattingHookHelper : IWpfTextViewCreationListener
     {
         private readonly IVsEditorAdaptersFactoryService _adaptersFactory;
         private readonly IEditorOptionsFactoryService _editorOptionsFactory;
-        private readonly IEditorOperationsFactoryService _editorOperationsFactorySerivce;
+        private readonly IEditorOperationsFactoryService _editorOperationsFactoryService;
         private readonly ITextBufferUndoManagerProvider _textBufferUndoManagerProvider;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
 
@@ -35,7 +35,7 @@ namespace FSharpVSPowerTools
         {
             _adaptersFactory = adaptersFactory;
             _editorOptionsFactory = editorOptionsFactory;
-            _editorOperationsFactorySerivce = editorOperationsFactoryService;
+            _editorOperationsFactoryService = editorOperationsFactoryService;
             _textBufferUndoManagerProvider = textBufferUndoManagerProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
         }
@@ -54,7 +54,7 @@ namespace FSharpVSPowerTools
 
         private CodeFormattingServices GetServices()
         {
-            return new CodeFormattingServices(_editorOptionsFactory, _editorOperationsFactorySerivce, _textBufferUndoManagerProvider, _textDocumentFactoryService);
+            return new CodeFormattingServices(_editorOptionsFactory, _editorOperationsFactoryService, _textBufferUndoManagerProvider, _textDocumentFactoryService);
         }
     }
 }
