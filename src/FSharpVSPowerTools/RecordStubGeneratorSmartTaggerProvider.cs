@@ -34,7 +34,7 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (generalOptions != null && generalOptions.RecordStubGenerationEnabled)
+            if (generalOptions != null && generalOptions.GenerateRecordStubEnabled)
             {
                 return new RecordStubGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),

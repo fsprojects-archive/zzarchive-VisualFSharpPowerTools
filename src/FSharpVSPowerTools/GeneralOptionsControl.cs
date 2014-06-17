@@ -77,7 +77,7 @@ namespace FSharpVSPowerTools
             set { chbFindAllReferences.Checked = value; }
         }
 
-        public bool RecordStubGenerationEnabled
+        public bool GenerateRecordStubEnabled
         {
             get { return chbRecordStubGeneration.Checked; }
             set { chbRecordStubGeneration.Checked = value; }
@@ -96,13 +96,13 @@ namespace FSharpVSPowerTools
             NavBarEnabled = _optionsPage.NavBarEnabled;
             HighlightUsageEnabled = _optionsPage.HighlightUsageEnabled;
             RenameRefactoringEnabled = _optionsPage.RenameRefactoringEnabled;
-            RenameRefactoringEnabled = _optionsPage.RenameRefactoringEnabled;
+            DepthColorizerEnabled = _optionsPage.DepthColorizerEnabled;
             NavigateToEnabled = _optionsPage.NavigateToEnabled;
             SyntaxColoringEnabled = _optionsPage.SyntaxColoringEnabled;
             InterfaceImplementationEnabled = _optionsPage.InterfaceImplementationEnabled;
             FolderOrganizationEnabled = _optionsPage.FolderOrganizationEnabled;
             FindAllReferencesEnabled = _optionsPage.FindAllReferencesEnabled;
-            RecordStubGenerationEnabled = _optionsPage.RecordStubGenerationEnabled;
+            GenerateRecordStubEnabled = _optionsPage.GenerateRecordStubEnabled;
             UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
         }
 

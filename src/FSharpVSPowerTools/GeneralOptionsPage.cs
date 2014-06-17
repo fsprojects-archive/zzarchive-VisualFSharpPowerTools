@@ -35,7 +35,7 @@ namespace FSharpVSPowerTools
             InterfaceImplementationEnabled = true;
             FolderOrganizationEnabled = false;
             FindAllReferencesEnabled = true;
-            RecordStubGenerationEnabled = true;
+            GenerateRecordStubEnabled = true;
             UnionPatternMatchCaseGenerationEnabled = true;
         }
 
@@ -137,7 +137,7 @@ namespace FSharpVSPowerTools
         public bool FindAllReferencesEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool RecordStubGenerationEnabled { get; set; }
+        public bool GenerateRecordStubEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool UnionPatternMatchCaseGenerationEnabled { get; set; }
@@ -175,7 +175,7 @@ namespace FSharpVSPowerTools
                 InterfaceImplementationEnabled = _optionsControl.InterfaceImplementationEnabled;
                 FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
                 FindAllReferencesEnabled = _optionsControl.FindAllReferencesEnabled;
-                RecordStubGenerationEnabled = _optionsControl.RecordStubGenerationEnabled;
+                GenerateRecordStubEnabled = _optionsControl.GenerateRecordStubEnabled;
                 UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
             }
 
