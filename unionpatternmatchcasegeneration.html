@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>syntaxcoloring</title>
+    <title>unionpatternmatchcasegeneration</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Visual F# Power Tools (by F# Community) ">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko">
@@ -32,43 +32,31 @@
       <div class="row">
         <div class="span9" id="main">
           
-<h2>Syntax coloring</h2>
+<h2>Union pattern match case generation</h2>
 
-<p>We currently support coloring:</p>
+<p>The feature is activated via a smart tagger on a union type or a union case constructor, inside a <code>match x with</code> or <code>function Case1 | Case2</code> expression. 
+When the cursor is placed on one of these identifiers, the smart tagger will suggest users to automatically generate pattern match clauses.</p>
 
-<ul>
-<li>types</li>
-<li>value types</li>
-<li>modules</li>
-<li>functions / methods</li>
-<li>quotations</li>
-<li>patterns (off by default)</li>
-<li>mutable variables / reference cells (off by default)</li>
-</ul>
+<p>Note that if the current line is <code>match x</code> or <code>function</code>, the code might not be parseable (i.e. no semantic highlighting for the current line).
+We recommend users to generate pattern match cases while the code is parsable e.g. after writing <code>match x with Case1 -&gt; ()</code> or <code>function Case1 -&gt; ()</code>.</p>
 
-<p>Here is how the editor looks like in blue &amp; dark theme:</p>
+<p>See the demo screencasts below.</p>
 
-<p><img src="img/syntax_coloring_demo_blue.png" alt="Syntax coloring" /></p>
+<p>Pattern match case generation</p>
 
-<p><img src="img/syntax_coloring_demo_dark.png" alt="Syntax coloring" /></p>
+<p><img src="img/pattern_match_case_generation_non_qualified.gif" alt="Union pattern match case generation (non-qualified access)" /></p>
 
-<h2>How to customize colors</h2>
+<p>Lambda pattern match case generation</p>
 
-<p>Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:</p>
+<p><img src="img/lambda_pattern_match_case_generation_non_qualified.gif" alt="Lambda union pattern match case generation (non-qualified access)" /></p>
 
-<ul>
-<li>F# Functions / Methods</li>
-<li>F# Modules</li>
-<li>F# Mutable Variables / Reference Cells</li>
-<li>F# Patterns</li>
-<li>F# Quotations</li>
-<li>F# Types</li>
-<li>F# Value Types</li>
-</ul>
+<p>Handles union types with qualified access</p>
 
-<p>You can press Ctrl + F in 'Display items' to quickly navigate to these colors.</p>
+<p><img src="img/pattern_match_case_generation_qualified.gif" alt="Union pattern match case generation (qualified access)" /></p>
 
-<p><img src="img/syntax_coloring_options.png" alt="Syntax coloring" /></p>
+<p>The default value of patterns' right-hand sides can be configured in 'F# Power Tools --> Code Generation' dialog.</p>
+
+<p><img src="img/code_generation_options.png" alt="Code generation" /></p>
 
 
         </div>
