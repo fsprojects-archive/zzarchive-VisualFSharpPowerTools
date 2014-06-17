@@ -54,9 +54,10 @@ let isEntity source (line: Line) (col: Col) =
 let ``type name in a binding is an entity``() =
     let isEntity = isEntity """
 module TopLevel
-let _ = DateTime.Now
+let x: DateTime = DateTime.Now
 """ 
-    isEntity 2 9 |> assertTrue
+    isEntity 2 10 |> assertTrue
+    isEntity 2 20 |> assertTrue
 
 [<Test>]
 let ``open declarations are not entities``() =
