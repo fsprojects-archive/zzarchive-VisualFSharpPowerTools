@@ -266,7 +266,7 @@ module Ast =
         let res = !result |> Option.map (fun (ns, pos) -> 
             ns |> List.map (fun x -> string x) |> List.toArray, { pos with Line = pos.Line + 1 }) 
         //debug "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
-        printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
+        //printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         let modules = 
             modules 
             |> Seq.map (fun (m, endLine) -> String.Join (".", m |> Seq.map string), endLine) 
