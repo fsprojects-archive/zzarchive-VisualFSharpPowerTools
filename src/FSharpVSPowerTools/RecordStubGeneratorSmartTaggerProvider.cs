@@ -34,11 +34,12 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (generalOptions != null && generalOptions.RecordStubGenerationEnabled)
+            if (generalOptions != null && generalOptions.GenerateRecordStubEnabled)
             {
                 return new RecordStubGeneratorSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
-                    fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
+                    fsharpVsLanguageService, serviceProvider,
+                    projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
             }
             else
                 return null;

@@ -123,6 +123,15 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CodeGenerationOptionsControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="CodeGenerationOptionsControl.Designer.cs">
+      <DependentUpon>CodeGenerationOptionsControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CodeGenerationOptionsPage.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -152,6 +161,7 @@
     <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="SyntaxConstructClassifierProvider.cs" />
     <Compile Include="UnionPatternMatchCaseGeneratorSmartTaggerProvider.cs" />
+    <Compile Include="Utils.cs" />
     <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -203,6 +213,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="CodeGenerationOptionsControl.resx">
+      <DependentUpon>CodeGenerationOptionsControl.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>

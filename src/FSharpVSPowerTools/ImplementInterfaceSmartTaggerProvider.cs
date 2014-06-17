@@ -37,11 +37,12 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.InterfaceImplementationEnabled) return null;
+            if (generalOptions == null || !generalOptions.InterfaceImplementationEnabled) return null;
 
-            return new ImplementInterfaceSmartTagger(textView, buffer, editorOptionsFactory,
-                        undoHistoryRegistry.RegisterHistory(buffer), 
-                        fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
+            return new ImplementInterfaceSmartTagger(textView, buffer, 
+                        editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer), 
+                        fsharpVsLanguageService, serviceProvider, projectFactory,
+                        Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
         }
     }
 }

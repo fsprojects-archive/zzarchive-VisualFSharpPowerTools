@@ -5,12 +5,13 @@ namespace FSharpVSPowerTools
 {
     public partial class GeneralOptionsControl : UserControl
     {
-        public GeneralOptionsControl()
+        private GeneralOptionsPage _optionsPage;
+        public GeneralOptionsControl(GeneralOptionsPage optionsPage)
         {
             InitializeComponent();
-        }
-        public GeneralOptionsPage OptionsPage { get; set; }
 
+            _optionsPage = optionsPage;
+        }
         public bool XmlDocEnabled
         {
             get { return chbXmlDoc.Checked; }
@@ -76,7 +77,7 @@ namespace FSharpVSPowerTools
             set { chbFindAllReferences.Checked = value; }
         }
 
-        public bool RecordStubGenerationEnabled
+        public bool GenerateRecordStubEnabled
         {
             get { return chbRecordStubGeneration.Checked; }
             set { chbRecordStubGeneration.Checked = value; }
@@ -90,19 +91,19 @@ namespace FSharpVSPowerTools
 
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
-            chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
-            chbFormatting.Checked = OptionsPage.FormattingEnabled;
-            chbNavBar.Checked = OptionsPage.NavBarEnabled;
-            chbHighlightUsage.Checked = OptionsPage.HighlightUsageEnabled;
-            chbRenameRefactoring.Checked = OptionsPage.RenameRefactoringEnabled;
-            chbDepthColorizer.Checked = OptionsPage.DepthColorizerEnabled;
-            chbNavigateTo.Checked = OptionsPage.NavigateToEnabled;
-            chbSyntaxColoring.Checked = OptionsPage.SyntaxColoringEnabled;
-            chbInterfaceImplementation.Checked = OptionsPage.InterfaceImplementationEnabled;
-            chbFolderOrganization.Checked = OptionsPage.FolderOrganizationEnabled;
-            chbFindAllReferences.Checked = OptionsPage.FindAllReferencesEnabled;
-            chbRecordStubGeneration.Checked = OptionsPage.RecordStubGenerationEnabled;
-            chbUnionPatternMatchCaseGeneration.Checked = OptionsPage.UnionPatternMatchCaseGenerationEnabled;
+            XmlDocEnabled = _optionsPage.XmlDocEnabled;
+            FormattingEnabled = _optionsPage.FormattingEnabled;
+            NavBarEnabled = _optionsPage.NavBarEnabled;
+            HighlightUsageEnabled = _optionsPage.HighlightUsageEnabled;
+            RenameRefactoringEnabled = _optionsPage.RenameRefactoringEnabled;
+            DepthColorizerEnabled = _optionsPage.DepthColorizerEnabled;
+            NavigateToEnabled = _optionsPage.NavigateToEnabled;
+            SyntaxColoringEnabled = _optionsPage.SyntaxColoringEnabled;
+            InterfaceImplementationEnabled = _optionsPage.InterfaceImplementationEnabled;
+            FolderOrganizationEnabled = _optionsPage.FolderOrganizationEnabled;
+            FindAllReferencesEnabled = _optionsPage.FindAllReferencesEnabled;
+            GenerateRecordStubEnabled = _optionsPage.GenerateRecordStubEnabled;
+            UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

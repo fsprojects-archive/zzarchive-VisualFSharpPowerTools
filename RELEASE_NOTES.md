@@ -73,5 +73,7 @@
 * Implement Union type pattern generation
 * Fix various bugs on syntax coloring
 * Improve responsiveness on big solutions
+* Improve memory usage
+* Protect against intermittent crashes
 
 
