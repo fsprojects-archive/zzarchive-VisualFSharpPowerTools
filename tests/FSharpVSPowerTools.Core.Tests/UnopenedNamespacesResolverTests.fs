@@ -31,24 +31,53 @@ open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 let file = "C:\\file.fs"
 let languageService = LanguageService(fun _ -> ())
 
-type Line = int
 type Source = string
+
+let parseSource (source: Source) =
+    let parseResult = 
+        languageService.ParseFileInProject(LanguageServiceTestHelper.projectOptions file, file, source) 
+        |> Async.RunSynchronously
+    if parseResult.ParseHadErrors then failwithf "Cannot parse input: %s, errors: %A" source parseResult.Errors
+    match parseResult.ParseTree with
+    | None -> failwithf "ParseTree is None for input: %s" source
+    | Some tree -> tree
+
+open Microsoft.FSharp.Compiler.Range
+
+type Line = int
+type Col = int
+
+let isEntity source (line: Line) (col: Col) =
+    Ast.isEntity (parseSource source) (Pos.fromZ line col)
+
+[<Test>]
+let ``type name in a binding is an entity``() =
+    let isEntity = isEntity """
+module TopLevel
+let _ = DateTime.Now
+""" 
+    isEntity 2 9 |> assertTrue
+
+[<Test>]
+let ``open declarations are not entities``() =
+    let isEntity = isEntity """
+module TopLevel
+open System.Threading.Tasks
+""" 
+    isEntity 1 5 |> assertFalse
+    isEntity 1 13 |> assertFalse
+    isEntity 1 24 |> assertFalse
+
 type FullEntityName = string
 
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
 let forEntity (entity: FullEntityName) (ident, source: Source, line) =
-    let parseResult =
-        languageService.ParseFileInProject(LanguageServiceTestHelper.projectOptions file, file, source) 
-        |> Async.RunSynchronously
-    if parseResult.ParseHadErrors then failwithf "Cannot parse input: %s, errors: %A" source parseResult.Errors
-    match parseResult.ParseTree with
-    | None -> failwithf "ParseTree is None for input: %s" source
-    | Some tree ->
-        match Ast.findNearestOpenStatementBlock line tree ident entity with
-        | None -> failwith "Cannot find nearest open statement block"
-        | Some (e, pos) -> source, e, pos
+    let tree = parseSource source
+    match Ast.findNearestOpenStatementBlock line tree ident entity with
+    | None -> failwith "Cannot find nearest open statement block"
+    | Some (e, pos) -> source, e, pos
 
 let result (expected: Source) (source: Source, entity, pos) = 
     let lines = srcToLineArray source

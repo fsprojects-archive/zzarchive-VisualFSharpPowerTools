@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
+open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 
 type Namespace = string[]
@@ -43,6 +44,33 @@ module Ast =
     type EntityFullName = string
     type Ident = string
 
+    let isEntity (ast: ParsedInput) (pos: Range.pos) : bool =
+        let inline ifPosInRange range f =
+            if Range.rangeContainsPos range pos then f()
+            else false
+
+        let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
+            List.exists walkSynModuleOrNamespace moduleOrNamespaceList
+
+        and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, _, _, range)) =
+            ifPosInRange range (fun _ -> List.exists walkSynModuleDecl decls)
+
+        and walkSynModuleDecl (decl: SynModuleDecl) =
+            match decl with
+            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
+            | SynModuleDecl.NestedModule(_, modules, _, range) ->
+                ifPosInRange range (fun _ -> List.exists walkSynModuleDecl modules)
+            | SynModuleDecl.Open _ -> false
+            | _ -> false
+
+        let res = 
+            match ast with 
+            | ParsedInput.SigFile _ -> false
+            | ParsedInput.ImplFile input -> walkImplFileInput input
+        if not res then
+            printfn "Not an entity for (%d, %d). Ast = %A" pos.Line pos.Column ast
+        res
+
     let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result = ref None
         let modules = ResizeArray<LongIdent * EndLine>()  
@@ -83,7 +111,8 @@ module Ast =
 
         let res = !result |> Option.map (fun (ns, pos) -> 
             ns |> List.map (fun x -> string x) |> List.toArray, { pos with Line = pos.Line + 1 }) 
-        //debug "[ResolveUnopenedNamespaceSmartTagger] Ident, line, col = %A, AST = %A" (!result) ast
+        //debug "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
+        printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         let modules = 
             modules 
             |> Seq.map (fun (m, endLine) -> String.Join (".", m |> Seq.map string), endLine) 
@@ -100,5 +129,5 @@ module Ast =
                             && entityFullName.Length > m.Length && entityFullName.[m.Length] = '.') with
                 | [] -> pos
                 | (_, endLine) as m :: _ ->
-                    printfn "All modules: %A, Win module: %A" modules m
+                    //printfn "All modules: %A, Win module: %A" modules m
                     { pos with Line = endLine + 1 })

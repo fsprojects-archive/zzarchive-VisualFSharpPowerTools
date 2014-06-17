@@ -62,17 +62,17 @@ type ResolveUnopenedNamespaceSmartTagger
                             match res with 
                             | Some _ -> return! liftMaybe None
                             | None ->
-                                let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
-                                
                                 let! checkResults = 
                                     vsLanguageService.ParseFileInProject (doc.FullName, newWord.Snapshot.GetText(), project) |> liftAsync
 
-                                return! 
-                                    checkResults.ParseTree 
-                                    |> Option.map (fun tree ->
-                                        let createEntity = Ast.findNearestOpenStatementBlock (codeGenService.ExtractFSharpPos point).Line tree sym.Text
-                                        entities |> List.choose createEntity)
-                                    |> liftMaybe 
+                                let pos = codeGenService.ExtractFSharpPos point
+                                let! parseTree = liftMaybe checkResults.ParseTree
+                                
+                                if Ast.isEntity parseTree pos then
+                                    let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
+                                    let createEntity = Ast.findNearestOpenStatementBlock pos.Line parseTree sym.Text
+                                    return entities |> List.choose createEntity
+                                else return! None |> liftMaybe
                     }
                     |> Async.map (fun result -> 
                         state <- result
