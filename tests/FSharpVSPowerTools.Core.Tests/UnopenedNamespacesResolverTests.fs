@@ -60,14 +60,38 @@ let x: DateTime = DateTime.Now
     isEntity 2 20 |> assertTrue
 
 [<Test>]
-let ``open declarations are not entities``() =
+let ``open declaration is not an entity``() =
     let isEntity = isEntity """
 module TopLevel
 open System.Threading.Tasks
 """ 
-    isEntity 1 5 |> assertFalse
-    isEntity 1 13 |> assertFalse
-    isEntity 1 24 |> assertFalse
+    isEntity 2 5 |> assertFalse
+    isEntity 2 13 |> assertFalse
+    isEntity 2 24 |> assertFalse
+
+[<Test>]
+let ``argument type annotation is an entity``() =
+    let isEntity = isEntity """
+module TopLevel
+let f (arg: DateTime) = ()
+""" 
+    isEntity 2 15 |> assertTrue
+
+[<Test>]
+let ``attribute is an entity``() =
+    let isEntity = isEntity """
+module TopLevel
+let f ([<Attribute1>] arg: DateTime) = ()
+type T() =
+    [<Attribute2>]
+    member x.Prop = ()
+    [<Attribute3>] static member StaticMember ([<Attribute4>] arg) = ()
+""" 
+    isEntity 2 11 |> assertTrue
+    isEntity 4 8 |> assertTrue
+    isEntity 6 8 |> assertTrue
+    isEntity 6 51 |> assertTrue
+
 
 type FullEntityName = string
 

@@ -57,8 +57,26 @@ module Ast =
         and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, _, _, r)) =
             ifPosInRange r (fun _ -> List.exists walkSynModuleDecl decls)
 
-        and walkBinding r (SynBinding.Binding(_, _, _, _, _, _, _, _, returnInfo, e, _, _)) = 
-            walkExpr r e 
+        and walkAttribute (attr: SynAttribute) = isPosInRange attr.Range
+
+        and walkPat = function
+            | SynPat.Ands (pats, _) -> List.exists walkPat pats
+            | SynPat.Named(pat, _, _, _, _) -> walkPat pat
+            | SynPat.Typed(pat, t, r) -> walkPat pat || walkType r t
+            | SynPat.Attrib(pat, attrs, _) -> walkPat pat || List.exists walkAttribute attrs
+            | SynPat.Or(pat1, pat2, _) -> List.exists walkPat [pat1; pat2]
+            | SynPat.LongIdent(_, _, _, _, _, r) -> isPosInRange r
+            | SynPat.Tuple(pats, _) -> List.exists walkPat pats
+            | SynPat.Paren(pat, _) -> walkPat pat
+            | SynPat.ArrayOrList(_, pats, _) -> List.exists walkPat pats
+            | SynPat.IsInst(t, r) -> walkType r t
+            | SynPat.QuoteExpr(e, r) -> walkExpr r e
+            | _ -> false
+
+        and walkBinding r (SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _)) =
+            List.exists walkAttribute attrs
+            || walkPat pat
+            || walkExpr r e 
             || (match returnInfo with
                 | Some (SynBindingReturnInfo (t, r, _)) -> walkType r t
                 | None -> false)
@@ -90,6 +108,7 @@ module Ast =
         and walkExpr range expr = ifPosInRange range <| fun _ ->
             match expr with
             | SynExpr.LongIdent (_, _, _, r) -> isPosInRange r
+            | SynExpr.Paren (e, _, _, r) -> walkExpr r e
             | SynExpr.Quote(_, _, e, _, r) -> walkExpr r e
             | SynExpr.Typed(e, _, r) -> walkExpr r e
             | SynExpr.Tuple(es, _, r) -> List.exists (walkExpr r ) es
@@ -146,6 +165,46 @@ module Ast =
             | SynExpr.DoBang(e, r) -> walkExpr r e
             | _ -> false
 
+        and walkSimplePat = function
+            | SynSimplePat.Attrib (pat, attrs, _) ->
+                walkSimplePat pat || List.exists walkAttribute attrs
+            | SynSimplePat.Typed(pat, t, r) -> 
+                walkSimplePat pat || walkType r t
+            | _ -> false
+
+        and walkField (SynField.Field(attrs, _, _, t, _, _, _, r)) =
+            List.exists walkAttribute attrs
+            || walkType r t
+
+        and walkMember = function
+            | SynMemberDefn.AbstractSlot (_, _, _) -> false
+            | SynMemberDefn.Member(binging, r) -> walkBinding r binging
+            | SynMemberDefn.ImplicitCtor(_, attrs, pats, _, _) -> 
+                List.exists walkAttribute attrs
+                || List.exists walkSimplePat pats
+            | SynMemberDefn.ImplicitInherit(t, e, _, r) -> walkType r t || walkExpr r e
+            | SynMemberDefn.LetBindings(bindings, _, _, r) -> List.exists (walkBinding r) bindings
+            | SynMemberDefn.Interface(t, members, r) -> 
+                walkType r t 
+                || match members with 
+                   | None -> false
+                   | Some members -> List.exists walkMember members
+            | SynMemberDefn.Inherit(t, _, r) -> walkType r t
+            | SynMemberDefn.ValField(field, _) -> walkField field
+            | SynMemberDefn.NestedType(tdef, _, _) -> walkTypeDefn tdef
+            | SynMemberDefn.AutoProperty(attrs, _, _, t, _, _, _, _, e, _, r) -> 
+                List.exists walkAttribute attrs
+                || match t with None -> false | Some t -> walkType r t
+                || walkExpr r e
+            | _ -> false
+
+        and walkTypeDefn (TypeDefn(_, repr, members, r)) =
+            ifPosInRange r (fun _ -> 
+                match repr with
+                | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.exists walkMember defns
+                | _ -> false
+                || List.exists walkMember members)
+
         and walkSynModuleDecl (decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
@@ -154,6 +213,8 @@ module Ast =
             | SynModuleDecl.Open _ -> false
             | SynModuleDecl.Let (_, bindings, r) ->
                 ifPosInRange r (fun _ -> List.exists (walkBinding r) bindings)
+            | SynModuleDecl.Types (types, r) -> 
+                ifPosInRange r (fun _ -> List.exists walkTypeDefn types)
             | _ -> false
 
         let res = 
@@ -221,6 +282,6 @@ module Ast =
                             entityFullName.StartsWith m 
                             && entityFullName.Length > m.Length && entityFullName.[m.Length] = '.') with
                 | [] -> pos
-                | (_, endLine) as m :: _ ->
+                | (_, endLine) as _m :: _ ->
                     //printfn "All modules: %A, Win module: %A" modules m
                     { pos with Line = endLine + 1 })
