@@ -273,8 +273,8 @@ module TopLevel
 
 module Nested =
     type DateTime() = class end
-
 open Nested
+
 let marker = ()
 let _ = DateTime.Now
 """
@@ -300,8 +300,8 @@ module TopLevel
 
 module Nested =
     type DateTime() = class end
-
 open Nested
+
 let _ = DateTime.Now
 
 module Below =

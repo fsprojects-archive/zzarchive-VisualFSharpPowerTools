@@ -69,10 +69,10 @@ module Ast =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace parent fragment
             | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules', _, range) ->
+                let fullIdent = parent @ ident
+                modules.Add (fullIdent, range.EndLine) 
                 if range.EndLine >= currentLine then
-                    let fullIdent = parent @ ident
                     doRange fullIdent range.StartLine (range.StartColumn + 4)
-                    modules.Add (fullIdent, range.EndLine) 
                     List.iter (walkSynModuleDecl fullIdent) modules'
             | SynModuleDecl.Open (_, range) -> doRange [] range.EndLine (range.StartColumn - 5)
             | _ -> ()
@@ -87,17 +87,18 @@ module Ast =
         let modules = 
             modules 
             |> Seq.map (fun (m, endLine) -> String.Join (".", m |> Seq.map string), endLine) 
+            |> Seq.sortBy (fun (m, _) -> -m.Length)
             |> Seq.toList
         fun (ident: Ident) (entityFullName: EntityFullName) ->
             res 
             |> Option.bind (fun (ns, pos) -> Entity.tryCreate ns ident entityFullName |> Option.map (fun e -> e, pos))
             |> Option.map (fun (entity, pos) ->
                 entity,
-                match modules |> List.tryFind (fun (m, _) -> entityFullName.StartsWith m) with
-                | Some (m, endLine) -> 
-                    if entityFullName.Length > m.Length && entityFullName.[m.Length] = '.' then
-                        { pos with Line = endLine - 1 }
-                    else pos
-                | None -> pos)
-            
-            
+                match modules 
+                      |> List.filter (fun (m, _) -> 
+                            entityFullName.StartsWith m 
+                            && entityFullName.Length > m.Length && entityFullName.[m.Length] = '.') with
+                | [] -> pos
+                | (_, endLine) as m :: _ ->
+                    printfn "All modules: %A, Win module: %A" modules m
+                    { pos with Line = endLine + 1 })
