@@ -108,6 +108,7 @@
             this.Controls.Add(this.grbBodyStyle);
             this.Name = "CodeGenerationOptionsControl";
             this.Size = new System.Drawing.Size(467, 235);
+            this.Load += new System.EventHandler(this.CodeGenerationOptionsControl_Load);
             this.grbBodyStyle.ResumeLayout(false);
             this.grbBodyStyle.PerformLayout();
             this.ResumeLayout(false);

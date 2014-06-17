@@ -34,13 +34,7 @@ namespace FSharpVSPowerTools
         {
             get
             {
-                _optionsControl = new CodeGenerationOptionsControl
-                                    {
-                                        OptionsPage = this,
-                                        DefaultBody = this.DefaultBody,
-                                        CodeGenerationOptions = this.CodeGenerationOptions
-                                    };
-                
+                _optionsControl = new CodeGenerationOptionsControl(this);
                 return _optionsControl;
             }
         }

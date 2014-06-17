@@ -147,24 +147,7 @@ namespace FSharpVSPowerTools
         {
             get
             {
-                _optionsControl = new GeneralOptionsControl
-                                  {
-                                      OptionsPage = this,
-                                      XmlDocEnabled = this.XmlDocEnabled,
-                                      FormattingEnabled = this.FormattingEnabled,
-                                      NavBarEnabled = this.NavBarEnabled && this._navBarEnabledInAppConfig,
-                                      HighlightUsageEnabled = this.HighlightUsageEnabled,
-                                      RenameRefactoringEnabled = this.RenameRefactoringEnabled,
-                                      DepthColorizerEnabled = this.DepthColorizerEnabled,
-                                      NavigateToEnabled = this.NavigateToEnabled,
-                                      SyntaxColoringEnabled = this.SyntaxColoringEnabled,
-                                      InterfaceImplementationEnabled = this.InterfaceImplementationEnabled,
-                                      FolderOrganizationEnabled = this.FolderOrganizationEnabled,
-                                      FindAllReferencesEnabled = this.FindAllReferencesEnabled,
-                                      RecordStubGenerationEnabled = this.RecordStubGenerationEnabled,
-                                      UnionPatternMatchCaseGenerationEnabled = this.UnionPatternMatchCaseGenerationEnabled
-                                  };
-
+                _optionsControl = new GeneralOptionsControl(this);
                 return _optionsControl;
             }
         }

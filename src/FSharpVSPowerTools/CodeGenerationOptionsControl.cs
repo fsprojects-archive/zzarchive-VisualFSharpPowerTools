@@ -12,9 +12,12 @@ namespace FSharpVSPowerTools
     }
     public partial class CodeGenerationOptionsControl : UserControl
     {
-        public CodeGenerationOptionsControl()
+        private CodeGenerationOptionsPage _optionsPage;
+        public CodeGenerationOptionsControl(CodeGenerationOptionsPage optionsPage)
         {
             InitializeComponent();
+
+            _optionsPage = optionsPage;
         }
         
         public CodeGenerationOptionsPage OptionsPage { get; set; }
@@ -53,6 +56,12 @@ namespace FSharpVSPowerTools
                         break;
                 }
             }
+        }
+
+        private void CodeGenerationOptionsControl_Load(object sender, EventArgs e)
+        {
+            DefaultBody = _optionsPage.DefaultBody;
+            CodeGenerationOptions = _optionsPage.CodeGenerationOptions;
         }
 
     }
