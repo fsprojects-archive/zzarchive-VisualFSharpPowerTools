@@ -376,11 +376,16 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
-        let getFullName (symbol: FSharpSymbol) =
+        let getFullName (symbol: FSharpEntity) =
             try Seq.singleton symbol.FullName
             with _ ->
                 try Seq.singleton symbol.DisplayName
                 with _ -> Seq.empty
+            |> Seq.map (fun fullName ->
+                 if fullName.EndsWith "Attribute" then
+                    [ fullName; fullName.Substring (0, fullName.Length - 9)]
+                 else [fullName])
+            |> Seq.concat
 
         let rec traverseEntity (entity: FSharpEntity) = 
             seq { if not entity.IsProvided then
