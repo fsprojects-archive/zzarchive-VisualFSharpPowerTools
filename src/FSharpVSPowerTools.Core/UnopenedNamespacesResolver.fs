@@ -250,9 +250,11 @@ module Ast =
         | ParsedInput.SigFile _ -> false
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
+    type Col = int
+
     let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result = ref None
-        let modules = ResizeArray<LongIdent * EndLine>()  
+        let modules = ResizeArray<LongIdent * EndLine * Col>()  
          
         let doRange (ns: LongIdent) line col = 
             if line <= currentLine then
@@ -265,11 +267,15 @@ module Ast =
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.iter (walkSynModuleOrNamespace []) moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace (parent: LongIdent) (SynModuleOrNamespace(ident, _, decls, _, _, _, range)) =
+        and walkSynModuleOrNamespace (parent: LongIdent) (SynModuleOrNamespace(ident, isModule, decls, _, _, _, range)) =
             if range.EndLine >= currentLine then
                 let fullIdent = parent @ ident
-                doRange fullIdent range.StartLine range.StartColumn
-                modules.Add (fullIdent, range.EndLine)
+                let startLine =
+                    if isModule then range.StartLine
+                    else range.StartLine - 1
+
+                doRange fullIdent startLine range.StartColumn
+                modules.Add (fullIdent, range.EndLine, range.StartColumn)
                 List.iter (walkSynModuleDecl fullIdent) decls
 
         and walkSynModuleDecl (parent: LongIdent) (decl: SynModuleDecl) =
@@ -277,7 +283,7 @@ module Ast =
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace parent fragment
             | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules', _, range) ->
                 let fullIdent = parent @ ident
-                modules.Add (fullIdent, range.EndLine) 
+                modules.Add (fullIdent, range.EndLine, range.StartColumn) 
                 if range.EndLine >= currentLine then
                     doRange fullIdent range.StartLine (range.StartColumn + 4)
                     List.iter (walkSynModuleDecl fullIdent) modules'
@@ -294,8 +300,9 @@ module Ast =
         //printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         let modules = 
             modules 
-            |> Seq.map (fun (m, endLine) -> String.Join (".", m |> Seq.map string), endLine) 
-            |> Seq.sortBy (fun (m, _) -> -m.Length)
+            |> Seq.filter (fun (_, endLine, _) -> endLine < currentLine)
+            |> Seq.map (fun (m, endLine, startCol) -> String.Join (".", m |> Seq.map string), endLine, startCol) 
+            |> Seq.sortBy (fun (m, _, _) -> -m.Length)
             |> Seq.toList
         fun (ident: Ident) (entityFullName: EntityFullName) ->
             res 
@@ -303,10 +310,10 @@ module Ast =
             |> Option.map (fun (entity, pos) ->
                 entity,
                 match modules 
-                      |> List.filter (fun (m, _) -> 
+                      |> List.filter (fun (m, _, _) -> 
                             entityFullName.StartsWith m 
                             && entityFullName.Length > m.Length && entityFullName.[m.Length] = '.') with
                 | [] -> pos
-                | (_, endLine) as _m :: _ ->
+                | (_, endLine, startCol) as _m :: _ ->
                     //printfn "All modules: %A, Win module: %A" modules m
-                    { pos with Line = endLine + 1 })
+                    { Line = endLine + 1; Col = startCol })

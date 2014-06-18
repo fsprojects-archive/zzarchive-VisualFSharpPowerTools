@@ -432,3 +432,70 @@ module Below =
     let x = ()
 """
 
+[<Test>]
+let ``symbol declared in another module in the same namespace``() =
+    """
+namespace TopNs
+
+module Nested =
+    type DateTime() = class end
+
+module Another =
+    let _ = DateTime.Now
+"""
+    |> forLine 7
+    |> forIdent "DateTime"
+    |> forEntity "TopNs.Nested.DateTime"
+    |> result """
+namespace TopNs
+
+module Nested =
+    type DateTime() = class end
+open Nested
+
+module Another =
+    let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``symbol declared in a top level record in a namespace, no other open statements``() =
+    """
+namespace TopNs
+
+type Record = 
+    { F: DateTime }
+"""
+    |> forLine 4
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
+namespace TopNs
+
+open System
+type Record = 
+    { F: DateTime }
+"""
+
+[<Test>]
+let ``symbol declared in a top level record in a namespace, there's another open statement``() =
+    """
+namespace TopNs
+
+open Another
+
+type Record = 
+    { F: DateTime }
+"""
+    |> forLine 6
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
+namespace TopNs
+
+open Another
+open System
+
+type Record = 
+    { F: DateTime }
+"""
+

@@ -406,5 +406,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             seq { for e in sign.Entities do
                                     yield! traverseEntity e }) 
                         |> Seq.concat
+                        |> Seq.distinct
                         |> Seq.toList)
          }    
