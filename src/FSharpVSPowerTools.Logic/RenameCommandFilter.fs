@@ -91,11 +91,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
                     match symbolDeclarationLocation with
                     | Some scope ->
-                        let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
-                        let wnd = UI.loadRenameDialog model
                         let hostWnd = Window.GetWindow(view.VisualElement)
-                        wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
-                        wnd.Owner <- hostWnd
+                        let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
+                        let wnd = UI.loadRenameDialog model hostWnd                        
                         let res = x.ShowDialog wnd
                         match res with
                         | Some true -> 

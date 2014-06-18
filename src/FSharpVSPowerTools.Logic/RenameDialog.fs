@@ -9,11 +9,46 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 
+open FSharp.ViewModule
+open FSharp.ViewModule.Validation
+
 type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 
-type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) =
-    let mutable name = originalName
-    let errorsChanged = Event<_,_>() 
+type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) as self =
+    inherit ViewModelBase()
+
+    let validateSymbols name =
+        let check validationCheck error = if validationCheck then None else Some error
+
+        debug "[Rename Refactoring] Check the following name: %s" name
+        let name = name.Trim()
+        match symbol.Kind, fSharpSymbol with
+        | _, :? FSharpUnionCase ->
+            // Union cases shouldn't be lowercase
+            check (isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0]))) Resource.validatingUnionCase 
+        | _, :? FSharpActivePatternCase ->
+                // Different from union cases, active patterns don't accept double-backtick identifiers
+                check (isIdentifier name && not (String.IsNullOrEmpty name) && Char.IsUpper(name.[0])) Resource.validatingActivePattern
+        | Operator, _ -> 
+            check (isOperator name) Resource.validatingOperator
+        | GenericTypeParameter, _ -> 
+            check (isGenericTypeParameter name) Resource.validatingGenericTypeParameter
+        | StaticallyResolvedTypeParameter, _ ->
+            check (isStaticallyResolvedTypeParameter name) Resource.validatingStaticallyResolvedTypeParameter
+        | (Ident | Other), _ ->
+            check (isIdentifier name) Resource.validatingIdentifier
+
+    // Using validation with custom name
+    let validateName = 
+        validate "Name" 
+        >> notNullOrWhitespace 
+        >> fixErrorsWithMessage Resource.validatingEmptyName
+        >> notEqual originalName
+        >> fixErrorsWithMessage Resource.validatingOriginalName
+        >> custom validateSymbols
+        >> result
+
+    let name = self.Factory.Backing(<@@ self.Name @@>, originalName, validateName)
     
     let location = 
         let fullName = fSharpSymbol.FullName
@@ -23,86 +58,14 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
             fullName.Remove locationLength
         else fullName
 
-    let validate name = 
-        debug "[Rename Refactoring] Check the following name: %s" name
-        let name = name.Trim()
-        match name with
-        | "" -> Choice2Of2 Resource.validatingEmptyName
-        | _ when name = originalName -> Choice2Of2 Resource.validatingOriginalName
-        | _ ->
-            match symbol.Kind, fSharpSymbol with
-            | _, :? FSharpUnionCase ->
-                // Union cases shouldn't be lowercase
-                if isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0])) then
-                    Choice1Of2()
-                else
-                    Choice2Of2 Resource.validatingUnionCase
-            | _, :? FSharpActivePatternCase ->
-                    // Different from union cases, active patterns don't accept double-backtick identifiers
-                    if isIdentifier name && not (String.IsNullOrEmpty name) && Char.IsUpper(name.[0]) then
-                        Choice1Of2()
-                    else
-                        Choice2Of2 Resource.validatingActivePattern
-            | Operator, _ ->
-                if isOperator name then Choice1Of2() 
-                else Choice2Of2 Resource.validatingOperator
-            | GenericTypeParameter, _ ->
-                if isGenericTypeParameter name then Choice1Of2()
-                else Choice2Of2 Resource.validatingGenericTypeParameter
-            | StaticallyResolvedTypeParameter, _ ->
-                if isStaticallyResolvedTypeParameter name then Choice1Of2()
-                else Choice2Of2 Resource.validatingStaticallyResolvedTypeParameter
-            | (Ident | Other), _ ->
-                if isIdentifier name then Choice1Of2()
-                else Choice2Of2 Resource.validatingIdentifier
-
-    let mutable validationResult = validate name
-    member x.Result = validationResult
-
-    member x.Name 
-        with get() = name 
-        and set (v: string) =
-                name <- v
-                validationResult <- validate name
-                errorsChanged.Trigger(x :> obj, DataErrorsChangedEventArgs("Name"))
-
-    member x.Location = location
+    member x.Name with get() = name.Value and set(v) = name.Value <- v
+    member x.Location with get() = location
     
-    interface INotifyDataErrorInfo with
-        member x.GetErrors _ = 
-            match validationResult with
-            | Choice2Of2 e -> [e]
-            | _ -> []
-            :> Collections.IEnumerable
-
-        member x.HasErrors = match validationResult with Choice2Of2 _ -> true | _ -> false
-        [<CLIEvent>]
-        member x.ErrorsChanged = errorsChanged.Publish
-
 [<RequireQualifiedAccess>]
 module UI =
-    let loadRenameDialog (viewModel: RenameDialogModel) =
+    let loadRenameDialog (viewModel: RenameDialogModel) owner =
         let window = RenameDialog().CreateRoot()
-
-        // Provides access to "code behind" style work
-        let accessor = RenameDialog.Accessor(window)
-
-        // Use this until we are able to do validation directly
-        accessor.txtName.TextChanged.Add(fun _ ->
-            accessor.btnOk.IsEnabled <- not (viewModel :> INotifyDataErrorInfo).HasErrors
-             )
-        accessor.btnOk.Click.Add(fun _ -> 
-            match viewModel.Result with
-            | Choice1Of2 _ ->
-                window.DialogResult <- Nullable true
-                window.Close()
-            | Choice2Of2 errorMsg ->
-                window.DialogResult <- Nullable false
-                messageBoxError errorMsg)
-        accessor.btnCancel.Click.Add(fun _ -> 
-            window.DialogResult <- Nullable false
-            window.Close())
-        window.DataContext <- viewModel
-        window.Loaded.Add (fun _ -> accessor.txtName.SelectAll())
+        window.Owner <- owner
+        window.DataContext <- viewModel        
         window
  
