@@ -45,6 +45,10 @@ module Ast =
     type Ident = string
 
     let isEntity (ast: ParsedInput) (pos: Range.pos) : bool =
+        let (|ConstructorPats|) = function
+            | Pats ps -> ps
+            | NamePatPairs(xs, _) -> List.map snd xs
+
         let ifPosInRange range f =
             if Range.rangeContainsPos range pos then f()
             else false
@@ -65,7 +69,7 @@ module Ast =
             | SynPat.Typed(pat, t, r) -> walkPat pat || walkType r t
             | SynPat.Attrib(pat, attrs, _) -> walkPat pat || List.exists walkAttribute attrs
             | SynPat.Or(pat1, pat2, _) -> List.exists walkPat [pat1; pat2]
-            | SynPat.LongIdent(_, _, _, _, _, r) -> isPosInRange r
+            | SynPat.LongIdent(_, _, _, ConstructorPats pats, _, r) -> List.exists walkPat pats
             | SynPat.Tuple(pats, _) -> List.exists walkPat pats
             | SynPat.Paren(pat, _) -> walkPat pat
             | SynPat.ArrayOrList(_, pats, _) -> List.exists walkPat pats
@@ -178,7 +182,11 @@ module Ast =
 
         and walkMember = function
             | SynMemberDefn.AbstractSlot (_, _, _) -> false
-            | SynMemberDefn.Member(binging, r) -> walkBinding r binging
+//            | SynMemberDefn.Member(SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _) as binding, r) -> 
+//                match pat with
+//                | SynPat.LongIdent _ ->
+//                    walkBinding r binding
+            | SynMemberDefn.Member(binding, r) -> walkBinding r binding
             | SynMemberDefn.ImplicitCtor(_, attrs, pats, _, _) -> 
                 List.exists walkAttribute attrs
                 || List.exists walkSimplePat pats
@@ -198,12 +206,31 @@ module Ast =
                 || walkExpr r e
             | _ -> false
 
-        and walkTypeDefn (TypeDefn(_, repr, members, r)) =
-            ifPosInRange r (fun _ -> 
-                match repr with
+        and walkEnumCase (EnumCase(attrs, _, _, _, _)) = List.exists walkAttribute attrs
+
+        and walkUnionCaseType r t =
+            match t with
+            | SynUnionCaseType.UnionCaseFields fields -> List.exists walkField fields
+            | SynUnionCaseType.UnionCaseFullType(t, _) -> walkType r t
+
+        and walkUnionCase (UnionCase(attrs, _, t, _, _, r)) = 
+            List.exists walkAttribute attrs
+            || walkUnionCaseType r t
+
+        and walkTypeDefnSimple = function
+            | SynTypeDefnSimpleRepr.Enum (cases, _) -> List.exists walkEnumCase cases
+            | SynTypeDefnSimpleRepr.Union(_, cases, _) -> List.exists walkUnionCase cases
+            | SynTypeDefnSimpleRepr.Record(_, fields, _) -> List.exists walkField fields
+            | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, r) -> walkType r t
+            | _ -> false
+
+        and walkTypeDefn (TypeDefn(ComponentInfo(attrs, _, _, _, _, _, _, _), repr, members, _)) =
+            List.exists walkAttribute attrs
+            ||
+            (match repr with
                 | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.exists walkMember defns
-                | _ -> false
-                || List.exists walkMember members)
+                | SynTypeDefnRepr.Simple(defn, _) -> walkTypeDefnSimple defn)
+            || List.exists walkMember members
 
         and walkSynModuleDecl (decl: SynModuleDecl) =
             match decl with
@@ -213,8 +240,7 @@ module Ast =
             | SynModuleDecl.Open _ -> false
             | SynModuleDecl.Let (_, bindings, r) ->
                 ifPosInRange r (fun _ -> List.exists (walkBinding r) bindings)
-            | SynModuleDecl.Types (types, r) -> 
-                ifPosInRange r (fun _ -> List.exists walkTypeDefn types)
+            | SynModuleDecl.Types (types, _) -> List.exists walkTypeDefn types
             | _ -> false
 
         let res = 

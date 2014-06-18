@@ -211,7 +211,7 @@ type VSLanguageService
             let! opts = project.GetProjectCheckerOptions(instance)
             try 
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
-            with e -> 
+            with e ->
                 debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
                 return None
         }

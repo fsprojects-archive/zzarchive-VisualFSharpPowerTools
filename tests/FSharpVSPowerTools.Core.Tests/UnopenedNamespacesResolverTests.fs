@@ -3,28 +3,28 @@
 open NUnit.Framework
 open FSharpVSPowerTools
 
-let (==>) (ns, ident, fullName) res = 
+let (=>) (ns, ident, fullName) res = 
     Entity.tryCreate (Array.ofList ns) ident fullName 
     |> assertEqual (res |> Option.map (fun (ns, name) -> { Namespace = ns; Name = name }))
 
 [<Test>] 
 let ``fully qualified external entities``() =
-    ([], "Now", "System.DateTime.Now") ==> Some ("System.DateTime", "Now")
-    ([], "Now", "System.Now") ==> Some ("System", "Now")
-    (["Myns"], "Now", "System.Now") ==> Some ("System", "Now")
-    (["Myns.Nested"], "Now", "System.Now") ==> Some ("System", "Now")
+    ([], "Now", "System.DateTime.Now") => Some ("System.DateTime", "Now")
+    ([], "Now", "System.Now") => Some ("System", "Now")
+    (["Myns"], "Now", "System.Now") => Some ("System", "Now")
+    (["Myns.Nested"], "Now", "System.Now") => Some ("System", "Now")
 
 [<Test>]
 let ``simple entities``() =
-    ([], "Now", "Now") ==> None  
-    (["Myns"], "Now", "Now") ==> None
+    ([], "Now", "Now") => None  
+    (["Myns"], "Now", "Now") => None
 
 [<Test>]
 let ``internal entities``() =
-    (["Myns"], "Now", "Myns.Nested.Now") ==> Some ("Nested", "Now")   
-    (["Myns"; "Nested"], "Now", "Myns.Nested.Nested2.Now") ==> Some ("Nested2", "Now")
-    (["Myns"; "Nested"], "Now", "Myns.Nested.Now") ==> None
-    (["Myns"; "Nested"], "Now", "Myns.Nested2.Now") ==> Some ("Nested2", "Now")
+    (["Myns"], "Now", "Myns.Nested.Now") => Some ("Nested", "Now")   
+    (["Myns"; "Nested"], "Now", "Myns.Nested.Nested2.Now") => Some ("Nested2", "Now")
+    (["Myns"; "Nested"], "Now", "Myns.Nested.Now") => None
+    (["Myns"; "Nested"], "Now", "Myns.Nested2.Now") => Some ("Nested2", "Now")
 
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
 
@@ -47,50 +47,98 @@ open Microsoft.FSharp.Compiler.Range
 type Line = int
 type Col = int
 
-let isEntity source (line: Line) (col: Col) =
-    Ast.isEntity (parseSource source) (Pos.fromZ line col)
+let checkEntity assertion source (points: (Line * Col) list) =
+    for line, col in points do
+        let tree = parseSource source
+        try
+            assertion (
+                Ast.isEntity tree (Pos.fromZ line col), 
+                sprintf "Line = %d, Col = %d" line col)
+        with _ ->
+            printfn "Ast: %A" tree
+            reraise()
+
+let (==>) = checkEntity Assert.IsTrue
+let (!=>) = checkEntity Assert.IsFalse
 
 [<Test>]
-let ``type name in a binding is an entity``() =
-    let isEntity = isEntity """
+let ``return type annotation is an entity``() =
+    """
 module TopLevel
-let x: DateTime = DateTime.Now
+let x: DateTime = ()
+type T() =
+    let field: DateTime option = None
+    member x.Prop: DateTime option = None
+    member x.Method(): DateTime option = None
 """ 
-    isEntity 2 10 |> assertTrue
-    isEntity 2 20 |> assertTrue
+    ==> [2, 9; 4, 17; 5, 21; 6, 25]
 
 [<Test>]
-let ``open declaration is not an entity``() =
-    let isEntity = isEntity """
+let ``type name in expression is an entity``() =
+    """
 module TopLevel
-open System.Threading.Tasks
+let x = DateTime.Now
+type T() =
+    let field = DateTime.Now
+    member x.Prop = DateTime.Now
+    member x.Method() = DateTime.Now
 """ 
-    isEntity 2 5 |> assertFalse
-    isEntity 2 13 |> assertFalse
-    isEntity 2 24 |> assertFalse
+    ==> [2, 10; 4, 18; 5, 22; 6, 26]
 
 [<Test>]
 let ``argument type annotation is an entity``() =
-    let isEntity = isEntity """
+    """
 module TopLevel
 let f (arg: DateTime) = ()
+type T() =
+    member x.Method (arg1: DateTime, arg2: TimeSpan) = ()
 """ 
-    isEntity 2 15 |> assertTrue
+    ==> [2, 15; 4, 29; 4, 45]
 
 [<Test>]
 let ``attribute is an entity``() =
-    let isEntity = isEntity """
+    """
 module TopLevel
-let f ([<Attribute1>] arg: DateTime) = ()
+let f ([<Attribute>] arg: DateTime) = ()
+[<Attribute>]
 type T() =
-    [<Attribute2>]
+    [<Attribute>]
     member x.Prop = ()
-    [<Attribute3>] static member StaticMember ([<Attribute4>] arg) = ()
+    [<Attribute>] static member StaticMember ([<Attribute>] arg) = ()
+[<Attribute>]
+type R = { [<Attribute>] F: int }
 """ 
-    isEntity 2 11 |> assertTrue
-    isEntity 4 8 |> assertTrue
-    isEntity 6 8 |> assertTrue
-    isEntity 6 51 |> assertTrue
+    ==> [2, 11; 3, 4; 5, 8; 7, 8; 7, 51; 8, 4; 9, 15]
+
+[<Test>]
+let ``open declaration is not an entity``() =
+    """
+module TopLevel
+open System.Threading.Tasks
+module M =
+    open System
+    let () = ()
+""" 
+    !=> [2, 5; 2, 13; 2, 24; 4, 11]
+    
+[<Test>]
+let ``module value is not an entity``() =
+    """
+module TopLevel
+let value = ()
+""" 
+    !=> [2, 6]
+
+[<Test>]
+let ``class member is not an entity``() =
+    """
+module TopLevel
+type C() =
+    member x.Member x = ()
+    member x.Prop = ()
+""" 
+    !=> [3, 15; 4, 15]
+
 
 
 type FullEntityName = string

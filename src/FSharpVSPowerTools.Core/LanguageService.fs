@@ -385,8 +385,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         let rec traverseEntity (entity: FSharpEntity) = 
             seq { if not entity.IsProvided then
                     yield! getFullName entity
-                    for f in entity.MembersFunctionsAndValues do
-                        yield! getFullName f
+                    // do not return functions, members and values for now
+                    //for f in entity.MembersFunctionsAndValues do
+                    //    yield! getFullName f
                     for e in entity.NestedEntities do
                         yield! traverseEntity e }
 

@@ -50,16 +50,18 @@ type ResolveUnopenedNamespaceSmartTagger
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    //let ctx = System.Threading.SynchronizationContext.Current
                     asyncMaybe {
                         let! newWord, sym = vsLanguageService.GetSymbol (point, project) |> liftMaybe
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
                         if not (point.InSpan newWord) then return! liftMaybe None
                         else
+                            //do! Async.SwitchToThreadPool() |> liftAsync
                             let! res = 
                                 vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
                             
-                            match res with 
+                            match res with
                             | Some _ -> return! liftMaybe None
                             | None ->
                                 let! checkResults = 
@@ -70,13 +72,14 @@ type ResolveUnopenedNamespaceSmartTagger
                                 
                                 if Ast.isEntity parseTree pos then
                                     let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
+                                    debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
                                     let createEntity = Ast.findNearestOpenStatementBlock pos.Line parseTree sym.Text
                                     return entities |> List.choose createEntity
                                 else return! None |> liftMaybe
                     }
                     |> Async.map (fun result -> 
-                        state <- result
-                        triggerTagsChanged())
+                         state <- result
+                         triggerTagsChanged() )
                     |> Async.StartImmediateSafe
                     currentWord <- Some newWord
             | _ -> 
