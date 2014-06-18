@@ -403,7 +403,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             | None -> ()
                             }
                         |> Seq.map (fun sign -> 
-                            seq { for e in sign.Entities do
+                            seq { for e in (try sign.Entities :> _ seq with _ -> Seq.empty) do
                                     yield! traverseEntity e }) 
                         |> Seq.concat
                         |> Seq.distinct

@@ -111,6 +111,46 @@ type R = { [<Attribute>] F: int }
     ==> [2, 11; 3, 4; 5, 8; 7, 8; 7, 51; 8, 4; 9, 15]
 
 [<Test>]
+let ``type in an object expression method body is an entity``() =
+    """
+module TopLevel
+let _ = { new IMy with 
+            method x.Method x = DateTime.Now }
+""" 
+    ==> [3, 34]
+
+[<Test>]
+let ``type in a let binging inside CE``() =
+    """
+module TopLevel
+let _ = 
+    async { 
+        let _ = DateTime.Now
+        return () 
+    }
+""" 
+    ==> [4, 18]
+
+[<Test>]
+let ``type as a qualifier in a function application in argument position``() =
+    """
+module TopLevel
+let _ = func (DateTime.Add 1)
+let _ = func1 1 (2, DateTime.Add 1)
+""" 
+    ==> [2, 16; 3, 22]
+
+[<Test>]
+let ``type in match``() =
+    """
+module TopLevel
+let _ = 
+    match 1 with
+    | Case1 -> DateTime.Now
+""" 
+    ==> [4, 17]
+
+[<Test>]
 let ``open declaration is not an entity``() =
     """
 module TopLevel

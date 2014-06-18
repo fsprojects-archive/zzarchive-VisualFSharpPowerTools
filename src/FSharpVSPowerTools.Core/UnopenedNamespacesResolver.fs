@@ -71,31 +71,29 @@ module Ast =
             | SynPat.Typed(pat, t, r) -> walkPat pat || walkType r t
             | SynPat.Attrib(pat, attrs, _) -> walkPat pat || List.exists walkAttribute attrs
             | SynPat.Or(pat1, pat2, _) -> List.exists walkPat [pat1; pat2]
-            | SynPat.LongIdent(_, _, _, ConstructorPats pats, _, r) -> 
+            | SynPat.LongIdent(_, _, _, ConstructorPats pats, _, _) -> 
                 List.exists walkPat pats
             | SynPat.Tuple(pats, _) -> List.exists walkPat pats
             | SynPat.Paren(pat, _) -> walkPat pat
             | SynPat.ArrayOrList(_, pats, _) -> List.exists walkPat pats
             | SynPat.IsInst(t, r) -> walkType r t
-            | SynPat.QuoteExpr(e, r) -> walkExpr r e
+            | SynPat.QuoteExpr(e, _) -> walkExpr e
             | _ -> false
 
-        and walkBinding r (SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _)) =
+        and walkBinding (SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _)) =
             List.exists walkAttribute attrs
             || walkPat pat
-            || walkExpr r e 
+            || walkExpr e 
             || (match returnInfo with
                 | Some (SynBindingReturnInfo (t, r, _)) -> walkType r t
                 | None -> false)
 
-        and walkInterfaceImpl r (InterfaceImpl(_, bindings, _)) =
-            List.exists (walkBinding r) bindings
+        and walkInterfaceImpl (InterfaceImpl(_, bindings, _)) =
+            List.exists walkBinding bindings
 
-        and walkIndexerArg r e = 
-            ifPosInRange r (fun _ ->
-                match e with
-                | SynIndexerArg.One e -> walkExpr r e
-                | SynIndexerArg.Two(e1, e2) -> List.exists (walkExpr r) [e1; e2])
+        and walkIndexerArg = function
+            | SynIndexerArg.One e -> walkExpr e
+            | SynIndexerArg.Two(e1, e2) -> List.exists walkExpr [e1; e2]
 
         and walkType r t =
             ifPosInRange r (fun _ ->
@@ -112,64 +110,68 @@ module Ast =
                 | SynType.MeasurePower(t, _, r) -> walkType r t
                 | _ -> false)
 
-        and walkExpr range expr = ifPosInRange range <| fun _ ->
-            match expr with
+        and walkClause (Clause(pat, e1, e2, _, _)) =
+            walkPat pat 
+            || walkExpr e2 
+            || match e1 with Some e -> walkExpr e | _ -> false
+
+        and walkExpr = function
             | SynExpr.LongIdent (_, _, _, r) -> isPosInRange r
-            | SynExpr.Paren (e, _, _, r) -> walkExpr r e
-            | SynExpr.Quote(_, _, e, _, r) -> walkExpr r e
-            | SynExpr.Typed(e, _, r) -> walkExpr r e
-            | SynExpr.Tuple(es, _, r) -> List.exists (walkExpr r ) es
-            | SynExpr.ArrayOrList(_, es, r) -> List.exists (walkExpr r) es
+            | SynExpr.Paren (e, _, _, _) -> walkExpr e
+            | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
+            | SynExpr.Typed(e, _, _) -> walkExpr e
+            | SynExpr.Tuple(es, _, _) -> List.exists walkExpr es
+            | SynExpr.ArrayOrList(_, es, _) -> List.exists walkExpr es
             | SynExpr.Record(_, _, fields, r) -> 
                 ifPosInRange r (fun _ ->
                     fields 
                     |> List.exists (fun (_, e, _) -> 
                         match e with
                         | None -> false
-                        | Some e -> walkExpr r e))
-            | SynExpr.New(_, _, e, r) -> walkExpr r e
-            | SynExpr.ObjExpr(_, _, bindings, ifaces, _, r) -> 
-                List.exists (walkBinding r) bindings || List.exists (walkInterfaceImpl r) ifaces
-            | SynExpr.While(_, e1, e2, r) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.For(_, _, e1, _, e2, e3, r) -> List.exists (walkExpr r) [e1; e2; e3]
-            | SynExpr.ForEach(_, _, _, _, e1, e2, r) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.ArrayOrListOfSeqExpr(_, e, r) -> walkExpr r e
-            | SynExpr.CompExpr(_, _, e, r) -> walkExpr r e
-            | SynExpr.Lambda(_, _, _, e, r) -> walkExpr r e
+                        | Some e -> walkExpr e))
+            | SynExpr.New(_, _, e, _) -> walkExpr e
+            | SynExpr.ObjExpr(_, _, bindings, ifaces, _, _) -> 
+                List.exists walkBinding bindings || List.exists walkInterfaceImpl ifaces
+            | SynExpr.While(_, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.exists walkExpr [e1; e2; e3]
+            | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExpr e
+            | SynExpr.CompExpr(_, _, e, _) -> walkExpr e
+            | SynExpr.Lambda(_, _, _, e, _) -> walkExpr e
             | SynExpr.MatchLambda(_, _, synMatchClauseList, _, _) -> 
-                synMatchClauseList |> List.exists (fun (Clause(_, _, e, r, _)) -> walkExpr r e)
-            | SynExpr.Match(_, _, synMatchClauseList, _, _) -> 
-                synMatchClauseList |> List.exists (fun (Clause(_, _, e, r, _)) -> walkExpr r e)
-            | SynExpr.Do(e, r) -> walkExpr r e
-            | SynExpr.Assert(e, r) -> walkExpr r e
-            | SynExpr.App(_, _, e1, e2, r) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.TypeApp(e, _, _, _, _, _, r) -> walkExpr r e
-            | SynExpr.LetOrUse(_, _, bindings, _, r) -> List.exists (walkBinding r) bindings
-            | SynExpr.TryWith(e, r, _, _, _, _, _) -> walkExpr r e
-            | SynExpr.TryFinally(e1, e2, r, _, _) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.Lazy(e, r) -> walkExpr r e
-            | SynExpr.Sequential(_, _, e1, e2, r) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.IfThenElse(e1, e2, e3, _, _, _, r) -> 
-                List.exists (walkExpr r) [e1; e2] || match e3 with None -> false | Some e -> walkExpr r e
+                List.exists walkClause synMatchClauseList
+            | SynExpr.Match(_, e, synMatchClauseList, _, _) -> 
+                walkExpr e || List.exists walkClause synMatchClauseList
+            | SynExpr.Do(e, _) -> walkExpr e
+            | SynExpr.Assert(e, _) -> walkExpr e
+            | SynExpr.App(_, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.TypeApp(e, _, _, _, _, _, _) -> walkExpr e
+            | SynExpr.LetOrUse(_, _, bindings, _, _) -> List.exists walkBinding bindings
+            | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
+            | SynExpr.TryFinally(e1, e2, _, _, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.Lazy(e, _) -> walkExpr e
+            | SynExpr.Sequential(_, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
+                List.exists walkExpr [e1; e2] || match e3 with None -> false | Some e -> walkExpr e
             | SynExpr.Ident _ -> true
-            | SynExpr.LongIdentSet(_, e, r) -> walkExpr r e
-            | SynExpr.DotGet(e, _, _, r) -> walkExpr r e
-            | SynExpr.DotSet(e, _, _, r) -> walkExpr r e
-            | SynExpr.DotIndexedGet(e, args, _, r) -> walkExpr r e || List.exists (walkIndexerArg r) args
-            | SynExpr.DotIndexedSet(e, args, _, _, _, r) -> walkExpr r e || List.exists (walkIndexerArg r) args
-            | SynExpr.NamedIndexedPropertySet(_, e1, e2, r) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, r) -> List.exists (walkExpr r) [e1; e2; e3]
-            | SynExpr.TypeTest(e, t, r) -> walkExpr r e || walkType r t
-            | SynExpr.Upcast(e, t, r) -> walkExpr r e || walkType r t
-            | SynExpr.Downcast(e, t, r) -> walkExpr r e || walkType r t
-            | SynExpr.InferredUpcast(e, r) -> walkExpr r e
-            | SynExpr.InferredDowncast(e, r) -> walkExpr r e
-            | SynExpr.AddressOf(_, e, _, r) -> walkExpr r e
-            | SynExpr.JoinIn(e1, _, e2, r) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.YieldOrReturn(_, e, r) -> walkExpr r e
-            | SynExpr.YieldOrReturnFrom(_, e, r) -> walkExpr r e
-            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, r) -> List.exists (walkExpr r) [e1; e2]
-            | SynExpr.DoBang(e, r) -> walkExpr r e
+            | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
+            | SynExpr.DotGet(e, _, _, _) -> walkExpr e
+            | SynExpr.DotSet(e, _, _, _) -> walkExpr e
+            | SynExpr.DotIndexedGet(e, args, _, _) -> walkExpr e || List.exists walkIndexerArg args
+            | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExpr e || List.exists walkIndexerArg args
+            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.exists walkExpr [e1; e2; e3]
+            | SynExpr.TypeTest(e, t, r) -> walkExpr e || walkType r t
+            | SynExpr.Upcast(e, t, r) -> walkExpr e || walkType r t
+            | SynExpr.Downcast(e, t, r) -> walkExpr e || walkType r t
+            | SynExpr.InferredUpcast(e, _) -> walkExpr e
+            | SynExpr.InferredDowncast(e, _) -> walkExpr e
+            | SynExpr.AddressOf(_, e, _, _) -> walkExpr e
+            | SynExpr.JoinIn(e1, _, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.YieldOrReturn(_, e, _) -> walkExpr e
+            | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
+            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.DoBang(e, _) -> walkExpr e
             | _ -> false
 
         and walkSimplePat = function
@@ -189,12 +191,12 @@ module Ast =
 //                match pat with
 //                | SynPat.LongIdent _ ->
 //                    walkBinding r binding
-            | SynMemberDefn.Member(binding, r) -> walkBinding r binding
+            | SynMemberDefn.Member(binding, _) -> walkBinding binding
             | SynMemberDefn.ImplicitCtor(_, attrs, pats, _, _) -> 
                 List.exists walkAttribute attrs
                 || List.exists walkSimplePat pats
-            | SynMemberDefn.ImplicitInherit(t, e, _, r) -> walkType r t || walkExpr r e
-            | SynMemberDefn.LetBindings(bindings, _, _, r) -> List.exists (walkBinding r) bindings
+            | SynMemberDefn.ImplicitInherit(t, e, _, r) -> walkType r t || walkExpr e
+            | SynMemberDefn.LetBindings(bindings, _, _, _) -> List.exists walkBinding bindings
             | SynMemberDefn.Interface(t, members, r) -> 
                 walkType r t 
                 || match members with 
@@ -206,7 +208,7 @@ module Ast =
             | SynMemberDefn.AutoProperty(attrs, _, _, t, _, _, _, _, e, _, r) -> 
                 List.exists walkAttribute attrs
                 || match t with None -> false | Some t -> walkType r t
-                || walkExpr r e
+                || walkExpr e
             | _ -> false
 
         and walkEnumCase (EnumCase(attrs, _, _, _, _)) = List.exists walkAttribute attrs
@@ -242,13 +244,16 @@ module Ast =
                 ifPosInRange range (fun _ -> List.exists walkSynModuleDecl modules)
             | SynModuleDecl.Open _ -> false
             | SynModuleDecl.Let (_, bindings, r) ->
-                ifPosInRange r (fun _ -> List.exists (walkBinding r) bindings)
+                ifPosInRange r (fun _ -> List.exists walkBinding bindings)
             | SynModuleDecl.Types (types, _) -> List.exists walkTypeDefn types
             | _ -> false
 
-        match ast with 
-        | ParsedInput.SigFile _ -> false
-        | ParsedInput.ImplFile input -> walkImplFileInput input
+        let res = 
+            match ast with 
+            | ParsedInput.SigFile _ -> false
+            | ParsedInput.ImplFile input -> walkImplFileInput input
+        //debug "%A" ast
+        res
 
     type Col = int
 
