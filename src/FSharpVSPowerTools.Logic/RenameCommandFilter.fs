@@ -77,9 +77,10 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
+        let cts = new System.Threading.CancellationTokenSource()
         match word with
         | Some (state, cw, symbol) ->
-            async {
+            let wf = async {
                 let! results = 
                     // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
                     // in order to by able to make accurate symbol comparisons during renaming.
@@ -92,36 +93,40 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     match symbolDeclarationLocation with
                     | Some scope ->
                         let hostWnd = Window.GetWindow(view.VisualElement)
-                        let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol)
+                        let renameWorkflow _ name = 
+                            async {
+                                let! results =
+                                    match scope with
+                                    | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
+                                    | SymbolDeclarationLocation.Projects declarationProjects -> 
+                                        let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
+                                        vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects)
+                                let usages =
+                                    results
+                                    |> Option.map (fun (symbol, lastIdent, refs) -> 
+                                        symbol, lastIdent,
+                                            refs 
+                                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
+                                            |> Seq.groupBy (fst >> Path.GetFullPath)
+                                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                                            |> Seq.toList)
+                                match usages with
+                                | Some (_, currentName, references) ->
+                                    return rename currentName name references
+                                | None -> 
+                                    return ()
+                            }
+
+                        let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol, cts, renameWorkflow)
                         let wnd = UI.loadRenameDialog model hostWnd                        
-                        let res = x.ShowDialog wnd
-                        match res with
-                        | Some true -> 
-                            let! results =
-                                match scope with
-                                | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
-                                | SymbolDeclarationLocation.Projects declarationProjects -> 
-                                    let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
-                                    vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects)
-                            let usages =
-                                results
-                                |> Option.map (fun (symbol, lastIdent, refs) -> 
-                                    symbol, lastIdent,
-                                        refs 
-                                        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                        |> Seq.groupBy (fst >> Path.GetFullPath)
-                                        |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
-                                        |> Seq.toList)
-                            match usages with
-                            | Some (_, currentName, references) ->
-                                return rename currentName model.Name references
-                            | None -> 
-                                return ()
+                        x.ShowDialog wnd |> ignore
+                        return ()
                         | _ -> return ()
                     | _ -> return messageBoxError Resource.renameErrorMessage
                 | _ ->
                     return ()
-            } |> Async.StartImmediateSafe
+            } 
+            Async.StartImmediateSafe(wf, cts.Token)
         | _ -> ()
 
     member x.ShowDialog (wnd: Window) =

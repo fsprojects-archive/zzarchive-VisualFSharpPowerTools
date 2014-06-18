@@ -6,11 +6,11 @@
              xmlns:local="clr-namespace:FSharpVSPowerTools.Refactoring;assembly=FSharpVSPowerTools.Logic" 
              mc:Ignorable="d" 
         WindowStyle="ToolWindow"
-        MinHeight="220"
+        MinHeight="250"
         MinWidth="450"
-        MaxHeight="220"
+        MaxHeight="250"
         Width="450" 
-        Height="220"
+        Height="Auto"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" 
         FocusManager.FocusedElement="{Binding ElementName=txtName}" 
@@ -23,8 +23,10 @@
                 <ResourceDictionary Source="pack://application:,,,/FSharpVSPowerTools.Logic;component/CommonResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <fsxaml:BooleanToVisibilityConverter x:Key="BoolToVis" />
             <Style TargetType="HeaderedContentControl">
                 <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Margin" Value="3" />
             </Style>
             <Style TargetType="Label">
                 <Setter Property="Padding" Value="0,5,0,0"/>
@@ -36,8 +38,14 @@
             </Style>
         </ResourceDictionary>
     </Window.Resources>
-    <DockPanel Margin="20">
-        <HeaderedContentControl DockPanel.Dock="Top">
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <HeaderedContentControl Grid.Row="0">
             <HeaderedContentControl.Header>
                 <Label Content="_New name:" Target="{Binding ElementName=txtName}" Margin="0,0,0,3"/>
             </HeaderedContentControl.Header>
@@ -48,19 +56,27 @@
                 Style="{StaticResource ValidatingTextBox}"/>
 
         </HeaderedContentControl>
-        <HeaderedContentControl DockPanel.Dock="Top">
+        <HeaderedContentControl Grid.Row="1">
             <HeaderedContentControl.Header>
                 <Label Content="Location:" Margin="0,0,0,3" />
             </HeaderedContentControl.Header>
             <TextBox IsEnabled="True" IsReadOnly="True" Text="{Binding Location, Mode=OneWay}" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
 
         </HeaderedContentControl>
-        <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
+
+        <HeaderedContentControl Grid.Row="2" Visibility="{Binding OperationExecuting, Converter={StaticResource BoolToVis}}">
+            <HeaderedContentControl.Header >
+                <Label Content="Status:" Margin="0,0,0,3" />
+            </HeaderedContentControl.Header>
+            <ProgressBar Height="20" IsIndeterminate="True" />
+
+        </HeaderedContentControl>
+        <StackPanel Margin="0,10" Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">
             <Button 
                 IsDefault="True" Height="25" Width="90" 
-                fsxaml:DefaultButton.DialogResultOnClick="True"
-                IsEnabled="{Binding IsValid}">OK</Button>
-            <Button Name="btnCancel" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
+                fsxaml:DefaultButton.DialogResultOnClick="True"                
+                Command="{Binding ExecuteCommand}" CommandParameter="{Binding Name}">OK</Button>
+            <Button Command="{Binding CancelCommand}" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
         </StackPanel>
-    </DockPanel>
+    </Grid>
 </Window>

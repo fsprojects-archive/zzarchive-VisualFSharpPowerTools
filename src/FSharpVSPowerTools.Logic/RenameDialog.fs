@@ -14,7 +14,7 @@ open FSharp.ViewModule.Validation
 
 type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 
-type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol) as self =
+type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FSharpSymbol, cts : System.Threading.CancellationTokenSource, workflow : Threading.SynchronizationContext -> string-> Async<unit>) as self =
     inherit ViewModelBase()
 
     let validateSymbols name =
@@ -58,8 +58,14 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
             fullName.Remove locationLength
         else fullName
 
+    let execute = self.Factory.CommandAsyncParamChecked(workflow, (fun _ -> self.IsValid), [ <@@ self.IsValid @@> ], cts.Token)
+    let cancel = self.Factory.CommandSync((fun _ -> cts.Cancel()))
+
     member x.Name with get() = name.Value and set(v) = name.Value <- v
     member x.Location with get() = location
+
+    member x.CancelCommand with get() = cancel
+    member x.ExecuteCommand with get() = execute
     
 [<RequireQualifiedAccess>]
 module UI =
