@@ -65,11 +65,14 @@ module Ast =
 
         and walkPat = function
             | SynPat.Ands (pats, _) -> List.exists walkPat pats
-            | SynPat.Named(pat, _, _, _, _) -> walkPat pat
+            | SynPat.Named(SynPat.Wild nameRange as pat, _, _, _, _) -> 
+                if isPosInRange nameRange then false
+                else walkPat pat
             | SynPat.Typed(pat, t, r) -> walkPat pat || walkType r t
             | SynPat.Attrib(pat, attrs, _) -> walkPat pat || List.exists walkAttribute attrs
             | SynPat.Or(pat1, pat2, _) -> List.exists walkPat [pat1; pat2]
-            | SynPat.LongIdent(_, _, _, ConstructorPats pats, _, r) -> List.exists walkPat pats
+            | SynPat.LongIdent(_, _, _, ConstructorPats pats, _, r) -> 
+                List.exists walkPat pats
             | SynPat.Tuple(pats, _) -> List.exists walkPat pats
             | SynPat.Paren(pat, _) -> walkPat pat
             | SynPat.ArrayOrList(_, pats, _) -> List.exists walkPat pats
@@ -243,13 +246,9 @@ module Ast =
             | SynModuleDecl.Types (types, _) -> List.exists walkTypeDefn types
             | _ -> false
 
-        let res = 
-            match ast with 
-            | ParsedInput.SigFile _ -> false
-            | ParsedInput.ImplFile input -> walkImplFileInput input
-        if not res then
-            printfn "Not an entity for (%d, %d). Ast = %A" pos.Line pos.Column ast
-        res
+        match ast with 
+        | ParsedInput.SigFile _ -> false
+        | ParsedInput.ImplFile input -> walkImplFileInput input
 
     let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result = ref None

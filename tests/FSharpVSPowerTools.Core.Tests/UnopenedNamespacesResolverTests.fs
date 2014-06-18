@@ -139,6 +139,28 @@ type C() =
 """ 
     !=> [3, 15; 4, 15]
 
+[<Test>]
+let ``type or module name is not an entity``() =
+    """
+module TopLevel
+type Class() = class end
+module Nested =
+    type Record = { F: int }
+""" 
+    !=> [1, 9; 2, 7; 3, 9; 4, 11]
+
+[<Test; Ignore "Cannot extract arg name from Named">]
+let ``argument name is not an entity``() =
+    """
+module TopLevel
+let func (arg: int) = ()
+type Class() =
+    let func (arg: int) = ()
+    member x.Method (arg: int) = ()
+""" 
+    !=> [2, 12; 4, 18; 5, 25]
+
+
 
 
 type FullEntityName = string
