@@ -33,15 +33,14 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            //var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            //if (generalOptions != null && generalOptions.RecordStubGenerationEnabled)
-            //{
+            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            if (generalOptions != null && generalOptions.ResolveUnopenedNamespacesEnabled)
+            {
                 return new ResolveUnopenedNamespaceSmartTagger(textView, buffer,
                     undoHistoryRegistry.RegisterHistory(buffer),
                     fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
-            //}
-            //else
-              //  return null;
+            }
+            else return null;
         }
     }
 }
