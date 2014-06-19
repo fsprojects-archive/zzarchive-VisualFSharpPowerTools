@@ -70,12 +70,23 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let pos = codeGenService.ExtractFSharpPos point
                                 let! parseTree = liftMaybe checkResults.ParseTree
                                 
-                                if Ast.isEntity parseTree pos then
-                                    let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
-                                    debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
-                                    let createEntity = Ast.findNearestOpenStatementBlock pos.Line parseTree sym.Text
-                                    return entities |> List.choose createEntity
-                                else return! None |> liftMaybe
+                                let! entityKind = Ast.getEntityKind parseTree pos |> liftMaybe
+                                let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
+                                let entities = 
+                                    match entityKind with
+                                    | Ast.Attribute ->
+                                        entities 
+                                        |> List.filter (fun e -> e.IsAttribute = true)
+                                    | Ast.Type -> entities
+                                    |> List.map (fun e -> 
+                                         [ yield e.FullName
+                                           if e.IsAttribute && e.FullName.EndsWith "Attribute" then  
+                                              yield e.FullName.Substring(0, e.FullName.Length - 9) ])
+                                    |> List.concat
+
+                                debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
+                                let createEntity = Ast.findNearestOpenStatementBlock pos.Line parseTree sym.Text
+                                return entities |> List.choose createEntity
                     }
                     |> Async.map (fun result -> 
                          state <- result

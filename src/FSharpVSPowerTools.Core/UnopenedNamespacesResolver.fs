@@ -43,214 +43,221 @@ module Ast =
     type EndLine = int
     type EntityFullName = string
     type Ident = string
+    
+    type EntityKind = 
+        | Attribute
+        | Type
 
-    let isEntity (ast: ParsedInput) (pos: Range.pos) : bool =
+    let getEntityKind (ast: ParsedInput) (pos: Range.pos) : EntityKind option =
         let (|ConstructorPats|) = function
             | Pats ps -> ps
             | NamePatPairs(xs, _) -> List.map snd xs
 
         let ifPosInRange range f =
             if Range.rangeContainsPos range pos then f()
-            else false
+            else None
 
-        let isPosInRange range = ifPosInRange range (fun _ -> true)
+        let isPosInRange range = 
+            match ifPosInRange range (fun _ -> Some()) with
+            | Some _ -> true
+            | None -> false
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
-            List.exists walkSynModuleOrNamespace moduleOrNamespaceList
+            List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
         and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, _, _, r)) =
-            ifPosInRange r (fun _ -> List.exists walkSynModuleDecl decls)
+            ifPosInRange r (fun _ -> List.tryPick walkSynModuleDecl decls)
 
-        and walkAttribute (attr: SynAttribute) = isPosInRange attr.Range
+        and walkAttribute (attr: SynAttribute) = 
+            if isPosInRange attr.Range then Some Attribute 
+            else None
 
         and walkPat = function
-            | SynPat.Ands (pats, _) -> List.exists walkPat pats
+            | SynPat.Ands (pats, _) -> List.tryPick walkPat pats
             | SynPat.Named(SynPat.Wild nameRange as pat, _, _, _, _) -> 
-                if isPosInRange nameRange then false
+                if isPosInRange nameRange then None
                 else walkPat pat
-            | SynPat.Typed(pat, t, r) -> walkPat pat || walkType r t
-            | SynPat.Attrib(pat, attrs, _) -> walkPat pat || List.exists walkAttribute attrs
-            | SynPat.Or(pat1, pat2, _) -> List.exists walkPat [pat1; pat2]
+            | SynPat.Typed(pat, t, r) -> walkPat pat |> Option.orElse (walkType r t)
+            | SynPat.Attrib(pat, attrs, _) -> walkPat pat |> Option.orElse (List.tryPick walkAttribute attrs)
+            | SynPat.Or(pat1, pat2, _) -> List.tryPick walkPat [pat1; pat2]
             | SynPat.LongIdent(_, _, _, ConstructorPats pats, _, _) -> 
-                List.exists walkPat pats
-            | SynPat.Tuple(pats, _) -> List.exists walkPat pats
+                List.tryPick walkPat pats
+            | SynPat.Tuple(pats, _) -> List.tryPick walkPat pats
             | SynPat.Paren(pat, _) -> walkPat pat
-            | SynPat.ArrayOrList(_, pats, _) -> List.exists walkPat pats
+            | SynPat.ArrayOrList(_, pats, _) -> List.tryPick walkPat pats
             | SynPat.IsInst(t, r) -> walkType r t
             | SynPat.QuoteExpr(e, _) -> walkExpr e
-            | _ -> false
+            | _ -> None
 
         and walkBinding (SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _)) =
-            List.exists walkAttribute attrs
-            || walkPat pat
-            || walkExpr e 
-            || (match returnInfo with
+            List.tryPick walkAttribute attrs
+            |> Option.orElse (walkPat pat)
+            |> Option.orElse (walkExpr e)
+            |> Option.orElse (
+                match returnInfo with
                 | Some (SynBindingReturnInfo (t, r, _)) -> walkType r t
-                | None -> false)
+                | None -> None)
 
         and walkInterfaceImpl (InterfaceImpl(_, bindings, _)) =
-            List.exists walkBinding bindings
+            List.tryPick walkBinding bindings
 
         and walkIndexerArg = function
             | SynIndexerArg.One e -> walkExpr e
-            | SynIndexerArg.Two(e1, e2) -> List.exists walkExpr [e1; e2]
+            | SynIndexerArg.Two(e1, e2) -> List.tryPick walkExpr [e1; e2]
 
         and walkType r t =
             ifPosInRange r (fun _ ->
                 match t with
-                | SynType.LongIdent _ -> true
-                | SynType.App(_, _, types, _, _, _, r) -> List.exists (walkType r) types
-                | SynType.LongIdentApp(_, _, _, types, _, _, r) -> List.exists (walkType r) types
-                | SynType.Tuple(ts, r) -> ts |> List.exists (fun (_, t) -> walkType r t)
+                | SynType.LongIdent _ -> Some Type
+                | SynType.App(_, _, types, _, _, _, r) -> List.tryPick (walkType r) types
+                | SynType.LongIdentApp(_, _, _, types, _, _, r) -> List.tryPick (walkType r) types
+                | SynType.Tuple(ts, r) -> ts |> List.tryPick (fun (_, t) -> walkType r t)
                 | SynType.Array(_, t, r) -> walkType r t
-                | SynType.Fun(t1, t2, r) -> walkType r t1 || walkType r t2
+                | SynType.Fun(t1, t2, r) -> walkType r t1 |> Option.orElse (walkType r t2)
                 | SynType.WithGlobalConstraints(t, _, r) -> walkType r t
                 | SynType.HashConstraint(t, r) -> walkType r t
-                | SynType.MeasureDivide(t1, t2, r) -> walkType r t1 || walkType r t2
+                | SynType.MeasureDivide(t1, t2, r) -> walkType r t1 |> Option.orElse (walkType r t2)
                 | SynType.MeasurePower(t, _, r) -> walkType r t
-                | _ -> false)
+                | _ -> None)
 
         and walkClause (Clause(pat, e1, e2, _, _)) =
             walkPat pat 
-            || walkExpr e2 
-            || match e1 with Some e -> walkExpr e | _ -> false
+            |> Option.orElse (walkExpr e2)
+            |> Option.orElse (match e1 with Some e -> walkExpr e | _ -> None)
 
         and walkExpr = function
-            | SynExpr.LongIdent (_, _, _, r) -> isPosInRange r
+            | SynExpr.LongIdent (_, _, _, r) -> if isPosInRange r then Some Type else None
             | SynExpr.Paren (e, _, _, _) -> walkExpr e
             | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
             | SynExpr.Typed(e, _, _) -> walkExpr e
-            | SynExpr.Tuple(es, _, _) -> List.exists walkExpr es
-            | SynExpr.ArrayOrList(_, es, _) -> List.exists walkExpr es
+            | SynExpr.Tuple(es, _, _) -> List.tryPick walkExpr es
+            | SynExpr.ArrayOrList(_, es, _) -> List.tryPick walkExpr es
             | SynExpr.Record(_, _, fields, r) -> 
                 ifPosInRange r (fun _ ->
                     fields 
-                    |> List.exists (fun (_, e, _) -> 
+                    |> List.tryPick (fun (_, e, _) -> 
                         match e with
-                        | None -> false
+                        | None -> None
                         | Some e -> walkExpr e))
             | SynExpr.New(_, _, e, _) -> walkExpr e
             | SynExpr.ObjExpr(_, _, bindings, ifaces, _, _) -> 
-                List.exists walkBinding bindings || List.exists walkInterfaceImpl ifaces
-            | SynExpr.While(_, e1, e2, _) -> List.exists walkExpr [e1; e2]
-            | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.exists walkExpr [e1; e2; e3]
-            | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+                List.tryPick walkBinding bindings |> Option.orElse (List.tryPick walkInterfaceImpl ifaces)
+            | SynExpr.While(_, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
+            | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.tryPick walkExpr [e1; e2; e3]
+            | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExpr e
             | SynExpr.CompExpr(_, _, e, _) -> walkExpr e
             | SynExpr.Lambda(_, _, _, e, _) -> walkExpr e
             | SynExpr.MatchLambda(_, _, synMatchClauseList, _, _) -> 
-                List.exists walkClause synMatchClauseList
+                List.tryPick walkClause synMatchClauseList
             | SynExpr.Match(_, e, synMatchClauseList, _, _) -> 
-                walkExpr e || List.exists walkClause synMatchClauseList
+                walkExpr e |> Option.orElse (List.tryPick walkClause synMatchClauseList)
             | SynExpr.Do(e, _) -> walkExpr e
             | SynExpr.Assert(e, _) -> walkExpr e
-            | SynExpr.App(_, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.App(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.TypeApp(e, _, _, _, _, _, _) -> walkExpr e
-            | SynExpr.LetOrUse(_, _, bindings, _, _) -> List.exists walkBinding bindings
+            | SynExpr.LetOrUse(_, _, bindings, _, _) -> List.tryPick walkBinding bindings
             | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
-            | SynExpr.TryFinally(e1, e2, _, _, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.Lazy(e, _) -> walkExpr e
-            | SynExpr.Sequential(_, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
-                List.exists walkExpr [e1; e2] || match e3 with None -> false | Some e -> walkExpr e
-            | SynExpr.Ident _ -> true
+                List.tryPick walkExpr [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExpr e)
+            | SynExpr.Ident _ -> Some Type
             | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
             | SynExpr.DotGet(e, _, _, _) -> walkExpr e
             | SynExpr.DotSet(e, _, _, _) -> walkExpr e
-            | SynExpr.DotIndexedGet(e, args, _, _) -> walkExpr e || List.exists walkIndexerArg args
-            | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExpr e || List.exists walkIndexerArg args
-            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.exists walkExpr [e1; e2]
-            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.exists walkExpr [e1; e2; e3]
-            | SynExpr.TypeTest(e, t, r) -> walkExpr e || walkType r t
-            | SynExpr.Upcast(e, t, r) -> walkExpr e || walkType r t
-            | SynExpr.Downcast(e, t, r) -> walkExpr e || walkType r t
+            | SynExpr.DotIndexedGet(e, args, _, _) -> walkExpr e |> Option.orElse (List.tryPick walkIndexerArg args)
+            | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExpr e |> Option.orElse (List.tryPick walkIndexerArg args)
+            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
+            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.tryPick walkExpr [e1; e2; e3]
+            | SynExpr.TypeTest(e, t, r) -> walkExpr e |> Option.orElse (walkType r t)
+            | SynExpr.Upcast(e, t, r) -> walkExpr e |> Option.orElse (walkType r t)
+            | SynExpr.Downcast(e, t, r) -> walkExpr e |> Option.orElse (walkType r t)
             | SynExpr.InferredUpcast(e, _) -> walkExpr e
             | SynExpr.InferredDowncast(e, _) -> walkExpr e
             | SynExpr.AddressOf(_, e, _, _) -> walkExpr e
-            | SynExpr.JoinIn(e1, _, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.JoinIn(e1, _, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.YieldOrReturn(_, e, _) -> walkExpr e
             | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
-            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.exists walkExpr [e1; e2]
+            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.DoBang(e, _) -> walkExpr e
-            | _ -> false
+            | _ -> None
 
         and walkSimplePat = function
             | SynSimplePat.Attrib (pat, attrs, _) ->
-                walkSimplePat pat || List.exists walkAttribute attrs
-            | SynSimplePat.Typed(pat, t, r) -> 
-                walkSimplePat pat || walkType r t
-            | _ -> false
+                walkSimplePat pat |> Option.orElse (List.tryPick walkAttribute attrs)
+            | SynSimplePat.Typed(pat, t, r) -> walkSimplePat pat |> Option.orElse (walkType r t)
+            | _ -> None
 
         and walkField (SynField.Field(attrs, _, _, t, _, _, _, r)) =
-            List.exists walkAttribute attrs
-            || walkType r t
+            List.tryPick walkAttribute attrs |> Option.orElse (walkType r t)
 
         and walkMember = function
-            | SynMemberDefn.AbstractSlot (_, _, _) -> false
+            | SynMemberDefn.AbstractSlot (_, _, _) -> None
 //            | SynMemberDefn.Member(SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _) as binding, r) -> 
 //                match pat with
 //                | SynPat.LongIdent _ ->
 //                    walkBinding r binding
             | SynMemberDefn.Member(binding, _) -> walkBinding binding
             | SynMemberDefn.ImplicitCtor(_, attrs, pats, _, _) -> 
-                List.exists walkAttribute attrs
-                || List.exists walkSimplePat pats
-            | SynMemberDefn.ImplicitInherit(t, e, _, r) -> walkType r t || walkExpr e
-            | SynMemberDefn.LetBindings(bindings, _, _, _) -> List.exists walkBinding bindings
+                List.tryPick walkAttribute attrs |> Option.orElse (List.tryPick walkSimplePat pats)
+            | SynMemberDefn.ImplicitInherit(t, e, _, r) -> walkType r t |> Option.orElse (walkExpr e)
+            | SynMemberDefn.LetBindings(bindings, _, _, _) -> List.tryPick walkBinding bindings
             | SynMemberDefn.Interface(t, members, r) -> 
                 walkType r t 
-                || match members with 
-                   | None -> false
-                   | Some members -> List.exists walkMember members
+                |> Option.orElse (
+                    match members with 
+                    | None -> None
+                    | Some members -> List.tryPick walkMember members)
             | SynMemberDefn.Inherit(t, _, r) -> walkType r t
             | SynMemberDefn.ValField(field, _) -> walkField field
             | SynMemberDefn.NestedType(tdef, _, _) -> walkTypeDefn tdef
             | SynMemberDefn.AutoProperty(attrs, _, _, t, _, _, _, _, e, _, r) -> 
-                List.exists walkAttribute attrs
-                || match t with None -> false | Some t -> walkType r t
-                || walkExpr e
-            | _ -> false
+                List.tryPick walkAttribute attrs
+                |> Option.orElse (match t with None -> None | Some t -> walkType r t)
+                |> Option.orElse (walkExpr e)
+            | _ -> None
 
-        and walkEnumCase (EnumCase(attrs, _, _, _, _)) = List.exists walkAttribute attrs
+        and walkEnumCase (EnumCase(attrs, _, _, _, _)) = List.tryPick walkAttribute attrs
 
         and walkUnionCaseType r t =
             match t with
-            | SynUnionCaseType.UnionCaseFields fields -> List.exists walkField fields
+            | SynUnionCaseType.UnionCaseFields fields -> List.tryPick walkField fields
             | SynUnionCaseType.UnionCaseFullType(t, _) -> walkType r t
 
         and walkUnionCase (UnionCase(attrs, _, t, _, _, r)) = 
-            List.exists walkAttribute attrs
-            || walkUnionCaseType r t
+            List.tryPick walkAttribute attrs |> Option.orElse (walkUnionCaseType r t)
 
         and walkTypeDefnSimple = function
-            | SynTypeDefnSimpleRepr.Enum (cases, _) -> List.exists walkEnumCase cases
-            | SynTypeDefnSimpleRepr.Union(_, cases, _) -> List.exists walkUnionCase cases
-            | SynTypeDefnSimpleRepr.Record(_, fields, _) -> List.exists walkField fields
+            | SynTypeDefnSimpleRepr.Enum (cases, _) -> List.tryPick walkEnumCase cases
+            | SynTypeDefnSimpleRepr.Union(_, cases, _) -> List.tryPick walkUnionCase cases
+            | SynTypeDefnSimpleRepr.Record(_, fields, _) -> List.tryPick walkField fields
             | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, r) -> walkType r t
-            | _ -> false
+            | _ -> None
 
         and walkTypeDefn (TypeDefn(ComponentInfo(attrs, _, _, _, _, _, _, _), repr, members, _)) =
-            List.exists walkAttribute attrs
-            ||
-            (match repr with
-                | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.exists walkMember defns
+            List.tryPick walkAttribute attrs
+            |> Option.orElse (
+                match repr with
+                | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.tryPick walkMember defns
                 | SynTypeDefnRepr.Simple(defn, _) -> walkTypeDefnSimple defn)
-            || List.exists walkMember members
+            |> Option.orElse (List.tryPick walkMember members)
 
         and walkSynModuleDecl (decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
             | SynModuleDecl.NestedModule(_, modules, _, range) ->
-                ifPosInRange range (fun _ -> List.exists walkSynModuleDecl modules)
-            | SynModuleDecl.Open _ -> false
+                ifPosInRange range (fun _ -> List.tryPick walkSynModuleDecl modules)
+            | SynModuleDecl.Open _ -> None
             | SynModuleDecl.Let (_, bindings, r) ->
-                ifPosInRange r (fun _ -> List.exists walkBinding bindings)
-            | SynModuleDecl.Types (types, _) -> List.exists walkTypeDefn types
-            | _ -> false
+                ifPosInRange r (fun _ -> List.tryPick walkBinding bindings)
+            | SynModuleDecl.Types (types, _) -> List.tryPick walkTypeDefn types
+            | _ -> None
 
         let res = 
             match ast with 
-            | ParsedInput.SigFile _ -> false
+            | ParsedInput.SigFile _ -> None
             | ParsedInput.ImplFile input -> walkImplFileInput input
         //debug "%A" ast
         res

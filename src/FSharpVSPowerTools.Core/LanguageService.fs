@@ -115,13 +115,9 @@ type ILexer =
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
-//[<AutoOpen>]
-//module EntityHelper =
-//    let inline getFullName (entity: ^a) =
-//        try Seq.singleton (^a: (member FullName: string) entity)
-//        with _ ->
-//            try Seq.singleton (^a: (member DisplayName: string) entity) 
-//            with _ -> Seq.empty
+type RawEntity =
+    { FullName: string
+      IsAttribute: bool }
   
 // --------------------------------------------------------------------------------------
 // Language service 
@@ -377,19 +373,41 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
         let getFullName (symbol: FSharpEntity) =
-            try Seq.singleton symbol.FullName
+            try Some symbol.FullName
             with _ ->
-                try Seq.singleton symbol.DisplayName
-                with _ -> Seq.empty
-            |> Seq.map (fun fullName ->
-                 if fullName.EndsWith "Attribute" then
-                    [ fullName; fullName.Substring (0, fullName.Length - 9)]
-                 else [fullName])
-            |> Seq.concat
+                try Some symbol.DisplayName
+                with _ -> None
+            
+        let isAttribute (entity: FSharpEntity) =
+            let getBaseType (entity: FSharpEntity) =
+                try 
+                    entity.BaseType 
+                    |> Option.bind (fun bt ->
+                         try Some bt.TypeDefinition with _ -> None)
+                with _ -> None
+
+            let rec isAttributeType (ty: FSharpEntity option) =
+                match ty with
+                | None -> false
+                | Some ty ->
+                    match getFullName ty with
+                    | None -> false
+                    | Some fullName ->
+                        if fullName = "System.Attribute" then true
+                        else isAttributeType (getBaseType ty)
+            isAttributeType (Some entity)
+
+        let createEntity (entity: FSharpEntity) =
+            getFullName entity
+            |> Option.map (fun fullName ->
+                 { FullName = fullName; IsAttribute = isAttribute entity }
+            )
 
         let rec traverseEntity (entity: FSharpEntity) = 
             seq { if not entity.IsProvided then
-                    yield! getFullName entity
+                    match createEntity entity with
+                    | Some x -> yield x
+                    | None -> ()
                     // do not return functions, members and values for now
                     //for f in entity.MembersFunctionsAndValues do
                     //    yield! getFullName f

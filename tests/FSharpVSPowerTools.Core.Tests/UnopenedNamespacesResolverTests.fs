@@ -52,14 +52,14 @@ let checkEntity assertion source (points: (Line * Col) list) =
         let tree = parseSource source
         try
             assertion (
-                Ast.isEntity tree (Pos.fromZ line col), 
+                Ast.getEntityKind tree (Pos.fromZ line col), 
                 sprintf "Line = %d, Col = %d" line col)
         with _ ->
             printfn "Ast: %A" tree
             reraise()
 
-let (==>) = checkEntity Assert.IsTrue
-let (!=>) = checkEntity Assert.IsFalse
+let (==>) = checkEntity (fun (kind, _) -> Assert.IsTrue kind.IsSome)
+let (!=>) = checkEntity (fun (kind, _) -> Assert.IsTrue kind.IsNone)
 
 [<Test>]
 let ``return type annotation is an entity``() =
