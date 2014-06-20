@@ -78,56 +78,68 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
         
-        let cts = new System.Threading.CancellationTokenSource()
-        let hostWnd = Window.GetWindow(view.VisualElement)
-        
         match word with
         | Some (state, cw, symbol) ->
-            let wf = async {
-                let! results = 
-                    // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
-                    // in order to by able to make accurate symbol comparisons during renaming.
-                    vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
-                match results with
-                | None ->
-                    return ()
-                | Some(fsSymbolUse, fileScopedCheckResults) ->
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let symbolDeclarationLocation = projectFactory.GetSymbolUsageScope state.Project.IsForStandaloneScript fsSymbolUse.Symbol dte state.File
+            // cancellation token source used to cancel all async operations throughout the rename process
+            let cts = new System.Threading.CancellationTokenSource()
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
 
-                    match symbolDeclarationLocation with
-                    | Some scope ->
-                        let renameWorkflow _ name = 
-                            async {
-                                let! results =
-                                    match scope with
-                                    | SymbolDeclarationLocation.File -> vsLanguageService.FindUsagesInFile (cw, symbol, fileScopedCheckResults)
-                                    | SymbolDeclarationLocation.Projects declarationProjects -> 
-                                        let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
-                                        vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects)
-                                let usages =
-                                    results
-                                    |> Option.map (fun (symbol, lastIdent, refs) -> 
-                                        symbol, lastIdent,
-                                            refs 
-                                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                            |> Seq.groupBy (fst >> Path.GetFullPath)
-                                            |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
-                                            |> Seq.toList)
-                                match usages with
-                                | Some (_, currentName, references) ->
-                                    return rename currentName name references
-                                | None -> 
-                                    return ()
-                            }
+            // This is the workflow used to initialize the rename operation.  It should return the appropriate scope and symbols on success, and cancel on failure
+            let initializationWorkflow = 
+                async {
+                    let! results = 
+                        // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
+                        // in order to by able to make accurate symbol comparisons during renaming.
+                        vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
+                    match results with
+                    | None ->
+                        return None
+                    | Some(fsSymbolUse, fileScopedCheckResults) ->
+                    
+                        let symbolDeclarationLocation = projectFactory.GetSymbolUsageScope state.Project.IsForStandaloneScript fsSymbolUse.Symbol dte state.File
 
-                        let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol, cts, renameWorkflow)
-                        let wnd = UI.loadRenameDialog model hostWnd                        
-                            
-                        x.ShowDialog wnd |> ignore                                        
-                    | _ -> return messageBoxError Resource.renameErrorMessage
-            } 
-            Async.StartImmediateSafe(wf, cts.Token)
+                        match symbolDeclarationLocation with
+                        | Some scope ->
+                            return Some(fileScopedCheckResults, scope, fsSymbolUse.Symbol) 
+                        | _ -> 
+                            cts.Cancel()
+                            messageBoxError Resource.renameErrorMessage
+                            return None
+                } 
+            
+            let renameWorkflow parseAndCheckResults symbolLocation name (progress : IProgress<(string * (int*int) option)>) = 
+                async {
+                    let! results =
+                        match symbolLocation with
+                        | SymbolDeclarationLocation.File -> 
+                            progress.Report("Renaming symbols in file...",None)
+                            vsLanguageService.FindUsagesInFile (cw, symbol, parseAndCheckResults)
+                        | SymbolDeclarationLocation.Projects declarationProjects -> 
+                            progress.Report("Performing Rename in projects...", None)
+                            let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
+                            progress.Report (sprintf "Performing Rename in %d projects..." dependentProjects.Length, None)
+                            vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, progress)
+                    let usages =
+                        results
+                        |> Option.map (fun (symbol, lastIdent, refs) -> 
+                            symbol, lastIdent,
+                                refs 
+                                |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
+                                |> Seq.groupBy (fst >> Path.GetFullPath)
+                                |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                                |> Seq.toList)
+                    match usages with
+                    | Some (_, currentName, references) ->
+                        progress.Report ("Performing Rename ...", None)
+                        return rename currentName name references
+                    | None -> 
+                        return ()
+                }
+
+            let hostWnd = Window.GetWindow(view.VisualElement)
+            let model = RenameDialogModel (cw.GetText(), symbol, initializationWorkflow, renameWorkflow, cts)
+            let wnd = UI.loadRenameDialog model hostWnd                        
+            x.ShowDialog wnd |> ignore
         | _ -> ()
 
     member x.ShowDialog (wnd: Window) =

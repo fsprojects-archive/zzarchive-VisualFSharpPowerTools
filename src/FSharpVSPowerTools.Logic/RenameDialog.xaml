@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:fsxaml="http://github.com/fsprojects/FsXaml"
              xmlns:local="clr-namespace:FSharpVSPowerTools.Refactoring;assembly=FSharpVSPowerTools.Logic" 
+             fsxaml:ViewController.Custom="{x:Type local:RenameDialogViewController}"
              mc:Ignorable="d" 
         WindowStyle="ToolWindow"
         MinHeight="240"
@@ -24,6 +25,8 @@
             </ResourceDictionary.MergedDictionaries>
 
             <fsxaml:BooleanToVisibilityConverter x:Key="BoolToVis" />
+            <fsxaml:BooleanToVisibilityOrHiddenConverter x:Key="BoolToVisOrHide" />
+            <fsxaml:BooleanToInverseConverter x:Key="TrueToFalse" />
             <Style TargetType="HeaderedContentControl">
                 <Setter Property="Focusable" Value="False"/>
                 <Setter Property="Margin" Value="3" />
@@ -48,8 +51,8 @@
             </HeaderedContentControl.Header>
             <TextBox 
                 x:Name="txtName" 
-                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                fsxaml:AutoSelectText.OnLoaded="True"
+                IsEnabled="False"
+                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"                 
                 Style="{StaticResource ValidatingTextBox}"/>
 
         </HeaderedContentControl>
@@ -61,15 +64,21 @@
 
         </HeaderedContentControl>
 
-        <HeaderedContentControl Grid.Row="2">
+        <HeaderedContentControl Grid.Row="2" Visibility="{Binding Executing, Converter={StaticResource BoolToVisOrHide}}">
             <HeaderedContentControl.Header >
                 <Label >
                     <Label.Content>
-                        <TextBlock Text="{Binding Path=Status, Mode=OneWay, StringFormat=Status: {0}}" IsEnabled="{Binding OperationExecuting}" Margin="0"/>
+                        <TextBlock 
+                            Text="{Binding Path=Status, Mode=OneWay, StringFormat=Status: {0}, FallbackValue=Status:}"                             
+                            Margin="0"/>
                     </Label.Content>
                 </Label>
             </HeaderedContentControl.Header>
-            <ProgressBar Height="{Binding ActualHeight, ElementName=txtName}" IsEnabled="{Binding OperationExecuting}" IsIndeterminate="{Binding OperationExecuting}" />
+            
+            <ProgressBar Height="{Binding ActualHeight, ElementName=txtName}"
+                         IsIndeterminate="{Binding HasProgress, Converter={StaticResource TrueToFalse}}" 
+                         Value="{Binding ProgressCurrent}"
+                         Maximum="{Binding ProgressMax}" />
 
         </HeaderedContentControl>
         <StackPanel Margin="0,10" Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">

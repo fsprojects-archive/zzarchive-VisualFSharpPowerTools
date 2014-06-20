@@ -293,7 +293,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions seq, 
-                                                    fileName, source, line:int, col, lineStr, args, queryLexState) =
+                                                    fileName, source, line:int, col, lineStr, args, queryLexState, progress : IProgress<(string * (int*int) option)> option) =
+     let report str = progress |> Option.iter (fun p -> p.Report str)    
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
          | Some symbol ->
@@ -301,11 +302,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
              let! result = projectCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
              match result with
              | Some fsSymbolUse ->
-                 let! refs =
-                    dependentProjectsOptions
-                    |> Seq.toArray
-                    |> Async.Array.map (fun opts ->
-                          async {
+                 let! refs =                    
+                    let dependentProjects = dependentProjectsOptions |> Seq.toArray
+                    
+                    dependentProjects |> Async.Array.mapi (fun index opts ->
+                          async {                            
+                            let projectName = System.IO.Path.GetFileNameWithoutExtension(opts.ProjectFileName)
+                            report (sprintf "Finding usages in %s" projectName, Some(index, dependentProjects.Length))
                             let! projectResults = checker.ParseAndCheckProject opts
                             let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
                             debug "--> GetUsesOfSymbol: Project = %s, Opts = %A, Results = %A" opts.ProjectFileName opts refs
