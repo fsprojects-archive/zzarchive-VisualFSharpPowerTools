@@ -5,20 +5,15 @@
     >
     <fsxaml:ValidationErrorsToStringConverter x:Key="validationConverter"/>
     <Style TargetType="{x:Type TextBox}" x:Key="ValidatingTextBox">
-        <Style.Resources>
-            <Style x:Key="{x:Type ToolTip}" TargetType="{x:Type ToolTip}">
-                <Setter Property="Foreground" Value="Red"/>
-            </Style>
-        </Style.Resources>
         <Style.Triggers>
             <Trigger Property="Validation.HasError" Value="true">
                 <Setter Property="ToolTipService.ToolTip">
                     <Setter.Value>
                         <MultiBinding Converter="{StaticResource validationConverter}">
-                            <Binding RelativeSource="{x:Static RelativeSource.Self}" Path="(Validation.Errors)" />
-                            <Binding RelativeSource="{x:Static RelativeSource.Self}" Path="(Validation.Errors).Count" />
+                            <Binding RelativeSource="{RelativeSource Self}" Path="(Validation.Errors)" />
+                            <Binding RelativeSource="{RelativeSource Self}" Path="(Validation.Errors).Count" />
                         </MultiBinding>
-                    </Setter.Value>
+                    </Setter.Value>                        
                 </Setter>
             </Trigger>
         </Style.Triggers>
@@ -40,6 +35,15 @@
                             </Ellipse>
                         </Border>
                     </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type Button}" x:Key="ButtonNoValidationHighlight">
+        <Setter Property="Validation.ErrorTemplate">
+            <Setter.Value>
+                <ControlTemplate>
+                    <AdornedElementPlaceholder Name="customAdorner" VerticalAlignment="Center" />                        
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

@@ -81,7 +81,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="FSharp.ViewModule.Core.Wpf">
-      <HintPath>..\..\packages\FSharp.ViewModule.Core.0.9.4\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.ViewModule.Core.0.9.5\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Build" />

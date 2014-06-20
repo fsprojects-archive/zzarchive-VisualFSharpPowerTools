@@ -77,7 +77,10 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
+        
         let cts = new System.Threading.CancellationTokenSource()
+        let hostWnd = Window.GetWindow(view.VisualElement)
+        
         match word with
         | Some (state, cw, symbol) ->
             let wf = async {
@@ -86,13 +89,14 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     // in order to by able to make accurate symbol comparisons during renaming.
                     vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
                 match results with
+                | None ->
+                    return ()
                 | Some(fsSymbolUse, fileScopedCheckResults) ->
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let symbolDeclarationLocation = projectFactory.GetSymbolUsageScope state.Project.IsForStandaloneScript fsSymbolUse.Symbol dte state.File
 
                     match symbolDeclarationLocation with
                     | Some scope ->
-                        let hostWnd = Window.GetWindow(view.VisualElement)
                         let renameWorkflow _ name = 
                             async {
                                 let! results =
@@ -119,12 +123,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
                         let model = RenameDialogModel (cw.GetText(), symbol, fsSymbolUse.Symbol, cts, renameWorkflow)
                         let wnd = UI.loadRenameDialog model hostWnd                        
-                        x.ShowDialog wnd |> ignore
-                        return ()
-                        | _ -> return ()
+                            
+                        x.ShowDialog wnd |> ignore                                        
                     | _ -> return messageBoxError Resource.renameErrorMessage
-                | _ ->
-                    return ()
             } 
             Async.StartImmediateSafe(wf, cts.Token)
         | _ -> ()

@@ -6,17 +6,17 @@
              xmlns:local="clr-namespace:FSharpVSPowerTools.Refactoring;assembly=FSharpVSPowerTools.Logic" 
              mc:Ignorable="d" 
         WindowStyle="ToolWindow"
-        MinHeight="250"
+        MinHeight="240"
         MinWidth="450"
-        MaxHeight="250"
+        MaxHeight="240"
         Width="450" 
-        Height="Auto"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" 
         FocusManager.FocusedElement="{Binding ElementName=txtName}" 
         ResizeMode="CanResizeWithGrip" 
         Title="F# Power Tools - Rename" 
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        fsxaml:WindowLifetime.Close="{Binding Completed}">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -27,9 +27,6 @@
             <Style TargetType="HeaderedContentControl">
                 <Setter Property="Focusable" Value="False"/>
                 <Setter Property="Margin" Value="3" />
-            </Style>
-            <Style TargetType="Label">
-                <Setter Property="Padding" Value="0,5,0,0"/>
             </Style>
             <Style TargetType="Button">
                 <Setter Property="VerticalAlignment" Value="Bottom"/>
@@ -47,7 +44,7 @@
         </Grid.RowDefinitions>
         <HeaderedContentControl Grid.Row="0">
             <HeaderedContentControl.Header>
-                <Label Content="_New name:" Target="{Binding ElementName=txtName}" Margin="0,0,0,3"/>
+                <Label Content="_New name:" Target="{Binding ElementName=txtName}" />
             </HeaderedContentControl.Header>
             <TextBox 
                 x:Name="txtName" 
@@ -58,25 +55,31 @@
         </HeaderedContentControl>
         <HeaderedContentControl Grid.Row="1">
             <HeaderedContentControl.Header>
-                <Label Content="Location:" Margin="0,0,0,3" />
+                <Label Content="Location:"  />
             </HeaderedContentControl.Header>
             <TextBox IsEnabled="True" IsReadOnly="True" Text="{Binding Location, Mode=OneWay}" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
 
         </HeaderedContentControl>
 
-        <HeaderedContentControl Grid.Row="2" Visibility="{Binding OperationExecuting, Converter={StaticResource BoolToVis}}">
+        <HeaderedContentControl Grid.Row="2">
             <HeaderedContentControl.Header >
-                <Label Content="Status:" Margin="0,0,0,3" />
+                <Label >
+                    <Label.Content>
+                        <TextBlock Text="{Binding Path=Status, Mode=OneWay, StringFormat=Status: {0}}" IsEnabled="{Binding OperationExecuting}" Margin="0"/>
+                    </Label.Content>
+                </Label>
             </HeaderedContentControl.Header>
-            <ProgressBar Height="20" IsIndeterminate="True" />
+            <ProgressBar Height="{Binding ActualHeight, ElementName=txtName}" IsEnabled="{Binding OperationExecuting}" IsIndeterminate="{Binding OperationExecuting}" />
 
         </HeaderedContentControl>
         <StackPanel Margin="0,10" Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">
             <Button 
-                IsDefault="True" Height="25" Width="90" 
-                fsxaml:DefaultButton.DialogResultOnClick="True"                
-                Command="{Binding ExecuteCommand}" CommandParameter="{Binding Name}">OK</Button>
-            <Button Command="{Binding CancelCommand}" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
+                IsDefault="True" Height="25" Width="90"                 
+                Command="{Binding ExecuteCommand}" 
+                CommandParameter="{Binding Name}"
+                Style="{StaticResource ButtonNoValidationHighlight}" >OK</Button>
+            <Button Command="{Binding CancelCommand}"                     
+                    IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
         </StackPanel>
     </Grid>
 </Window>

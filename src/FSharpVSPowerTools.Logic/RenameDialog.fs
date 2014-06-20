@@ -49,22 +49,39 @@ type RenameDialogModel(originalName: string, symbol: Symbol, fSharpSymbol: FShar
         >> result
 
     let name = self.Factory.Backing(<@@ self.Name @@>, originalName, validateName)
-    
-    let location = 
-        let fullName = fSharpSymbol.FullName
-        let displayName = fSharpSymbol.DisplayName
-        if fullName.EndsWith displayName then
-            let locationLength = max 0 (fullName.Length - (displayName.Length + 1))
-            fullName.Remove locationLength
-        else fullName
+    let location = self.Factory.Backing(<@@ self.Location @@>, String.Empty)
+    let status = self.Factory.Backing(<@@ self.Status @@>, String.Empty)
+    let completed = self.Factory.Backing(<@@ self.Completed @@>, false)
 
-    let execute = self.Factory.CommandAsyncParamChecked(workflow, (fun _ -> self.IsValid), [ <@@ self.IsValid @@> ], cts.Token)
-    let cancel = self.Factory.CommandSync((fun _ -> cts.Cancel()))
+    let wrappedWorkflow ctx str =
+        async {
+            self.Status <- "Performing Rename..."
+            do! workflow ctx str
+            self.Completed <- true
+        }
+    let execute = self.Factory.CommandAsyncParamChecked(wrappedWorkflow, (fun _ -> self.IsValid), [ <@@ self.IsValid @@> ], cts.Token)
+    
+    let cancel _ = 
+        cts.Cancel()
+        self.Completed <- true
+    let cancelCommand = self.Factory.CommandSync(cancel)
+
+    do
+        self.Location <- 
+            let fullName = fSharpSymbol.FullName
+            let displayName = fSharpSymbol.DisplayName
+            if fullName.EndsWith displayName then
+                let locationLength = max 0 (fullName.Length - (displayName.Length + 1))
+                fullName.Remove locationLength
+            else fullName
+
 
     member x.Name with get() = name.Value and set(v) = name.Value <- v
-    member x.Location with get() = location
+    member x.Status with get() = status.Value and set(v) = status.Value <- v
+    member x.Location with get() = location.Value and set(v) = location.Value <- v
+    member x.Completed with get() = completed.Value and set(v) = completed.Value <- v
 
-    member x.CancelCommand with get() = cancel
+    member x.CancelCommand with get() = cancelCommand
     member x.ExecuteCommand with get() = execute
     
 [<RequireQualifiedAccess>]
