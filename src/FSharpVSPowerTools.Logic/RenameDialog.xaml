@@ -17,7 +17,7 @@
         ResizeMode="CanResizeWithGrip" 
         Title="F# Power Tools - Rename" 
         ShowInTaskbar="False"
-        fsxaml:WindowLifetime.Close="{Binding Completed}">
+        fsxaml:WindowLifetime.Close="{Binding RenameComplete}">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -64,21 +64,21 @@
 
         </HeaderedContentControl>
 
-        <HeaderedContentControl Grid.Row="2" Visibility="{Binding Executing, Converter={StaticResource BoolToVisOrHide}}">
+        <HeaderedContentControl Grid.Row="2" Visibility="{Binding Progress.IsOperating, Converter={StaticResource BoolToVisOrHide}}">
             <HeaderedContentControl.Header >
                 <Label >
                     <Label.Content>
                         <TextBlock 
-                            Text="{Binding Path=Status, Mode=OneWay, StringFormat=Status: {0}, FallbackValue=Status:}"                             
+                            Text="{Binding Path=Progress.Status, Mode=OneWay, StringFormat=Status: {0}, FallbackValue=Status:}"                             
                             Margin="0"/>
                     </Label.Content>
                 </Label>
             </HeaderedContentControl.Header>
             
             <ProgressBar Height="{Binding ActualHeight, ElementName=txtName}"
-                         IsIndeterminate="{Binding HasProgress, Converter={StaticResource TrueToFalse}}" 
-                         Value="{Binding ProgressCurrent}"
-                         Maximum="{Binding ProgressMax}" />
+                         IsIndeterminate="{Binding Progress.Indeterminate, Mode=OneWay}" 
+                         Value="{Binding Progress.Current, Mode=OneWay}"
+                         Maximum="{Binding Progress.Max, Mode=OneWay}" />
 
         </HeaderedContentControl>
         <StackPanel Margin="0,10" Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">

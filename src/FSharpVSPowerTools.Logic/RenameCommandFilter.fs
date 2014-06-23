@@ -11,8 +11,11 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
+
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+
+open FSharp.ViewModule.Progress
 
 module PkgCmdConst =
     let cmdidStandardRenameCommand = uint32 VSConstants.VSStd2KCmdID.RENAME // ECMD_RENAME
@@ -107,18 +110,20 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                             return None
                 } 
             
-            let renameWorkflow parseAndCheckResults symbolLocation name (progress : IProgress<(string * (int*int) option)>) = 
+            // This is the actual async workflow used to rename.  It should report progress as possible
+            let renameWorkflow parseAndCheckResults symbolLocation name (prg : OperationState -> unit) = 
+                let progress = Some(prg)
                 async {
                     let! results =
                         match symbolLocation with
                         | SymbolDeclarationLocation.File -> 
-                            progress.Report("Renaming symbols in file...",None)
+                            reportProgress progress (Reporting("Renaming symbols in file..."))
                             vsLanguageService.FindUsagesInFile (cw, symbol, parseAndCheckResults)
                         | SymbolDeclarationLocation.Projects declarationProjects -> 
-                            progress.Report("Performing Rename in projects...", None)
+                            reportProgress progress (Reporting("Performing Rename in projects..."))
                             let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
-                            progress.Report (sprintf "Performing Rename in %d projects..." dependentProjects.Length, None)
-                            vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, progress)
+                            reportProgress progress (Reporting(sprintf "Performing Rename in %d projects..." dependentProjects.Length))
+                            vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, prg)
                     let usages =
                         results
                         |> Option.map (fun (symbol, lastIdent, refs) -> 
@@ -130,15 +135,15 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                                 |> Seq.toList)
                     match usages with
                     | Some (_, currentName, references) ->
-                        progress.Report ("Performing Rename ...", None)
+                        reportProgress progress (Reporting("Performing Rename ..."))
                         return rename currentName name references
                     | None -> 
                         return ()
                 }
 
             let hostWnd = Window.GetWindow(view.VisualElement)
-            let model = RenameDialogModel (cw.GetText(), symbol, initializationWorkflow, renameWorkflow, cts)
-            let wnd = UI.loadRenameDialog model hostWnd                        
+            let viewmodel = RenameDialogViewModel (cw.GetText(), symbol, initializationWorkflow, renameWorkflow, cts)
+            let wnd = UI.loadRenameDialog viewmodel hostWnd                        
             x.ShowDialog wnd |> ignore
         | _ -> ()
 
