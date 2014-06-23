@@ -84,7 +84,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         match word with
         | Some (state, cw, symbol) ->
             // cancellation token source used to cancel all async operations throughout the rename process
-            let cts = new System.Threading.CancellationTokenSource()
+            use cts = new System.Threading.CancellationTokenSource()
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
 
             // This is the workflow used to initialize the rename operation.  It should return the appropriate scope and symbols on success, and cancel on failure
