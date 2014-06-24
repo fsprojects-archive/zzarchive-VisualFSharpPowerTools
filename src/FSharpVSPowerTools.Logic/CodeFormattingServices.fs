@@ -27,9 +27,9 @@ module internal Disposable =
 
 module internal Cursor =
     let wait() =
-        let currentCursor = System.Windows.Forms.Cursor.Current
-        System.Windows.Forms.Cursor.Current <- System.Windows.Forms.Cursors.WaitCursor
-        Disposable.create(fun () -> System.Windows.Forms.Cursor.Current <- currentCursor)
+        let currentCursor = System.Windows.Input.Mouse.OverrideCursor
+        System.Windows.Input.Mouse.OverrideCursor <- System.Windows.Input.Cursors.Wait
+        Disposable.create(fun () -> System.Windows.Input.Mouse.OverrideCursor  <- currentCursor)
 
 module internal TextUtils =
     let getFSharpPos (point: VirtualSnapshotPoint) =
