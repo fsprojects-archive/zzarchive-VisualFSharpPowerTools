@@ -2,78 +2,93 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:fsxaml="http://github.com/fsprojects/FsXaml"
              xmlns:local="clr-namespace:FSharpVSPowerTools.Refactoring;assembly=FSharpVSPowerTools.Logic" 
+             fsxaml:ViewController.Custom="{x:Type local:RenameDialogViewController}"
              mc:Ignorable="d" 
         WindowStyle="ToolWindow"
-        MinHeight="220"
+        MinHeight="240"
         MinWidth="450"
-        MaxHeight="220"
+        MaxHeight="240"
         Width="450" 
-        Height="220"
+        WindowStartupLocation="CenterOwner"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" 
         FocusManager.FocusedElement="{Binding ElementName=txtName}" 
         ResizeMode="CanResizeWithGrip" 
         Title="F# Power Tools - Rename" 
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        fsxaml:WindowLifetime.Close="{Binding RenameComplete}">
     <Window.Resources>
-        <Style TargetType="HeaderedContentControl">
-            <Setter Property="Focusable" Value="False"/>
-        </Style>
-        <Style TargetType="Label">
-            <Setter Property="Padding" Value="0,5,0,0"/>
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Width" Value="100"/>
-            <Setter Property="Height" Value="30"/>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/FSharpVSPowerTools.Logic;component/CommonResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <fsxaml:BooleanToVisibilityConverter x:Key="BoolToVis" />
+            <fsxaml:BooleanToVisibilityOrHiddenConverter x:Key="BoolToVisOrHide" />
+            <fsxaml:BooleanToInverseConverter x:Key="TrueToFalse" />
+            <Style TargetType="HeaderedContentControl">
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Margin" Value="3" />
+            </Style>
+            <Style TargetType="Button">
+                <Setter Property="VerticalAlignment" Value="Bottom"/>
+                <Setter Property="Width" Value="100"/>
+                <Setter Property="Height" Value="30"/>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
-    <DockPanel Margin="20">
-        <HeaderedContentControl DockPanel.Dock="Top">
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <HeaderedContentControl Grid.Row="0">
             <HeaderedContentControl.Header>
-                <Label Content="_New name:" Target="{Binding ElementName=txtName}" Margin="0,0,0,3"/>
+                <Label Content="_New name:" Target="{Binding ElementName=txtName}" />
             </HeaderedContentControl.Header>
-            <TextBox x:Name="txtName" Text="{Binding Name, NotifyOnValidationError=True, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, ValidatesOnExceptions=True}">
-                <TextBox.Resources>
-                    <ControlTemplate x:Key="InputErrorTemplate">
-                        <DockPanel>
-                            <Ellipse DockPanel.Dock="Right" Margin="2,0" ToolTip="Contains invalid data" Width="10" Height="10">
-                                <Ellipse.Fill>
-                                    <LinearGradientBrush>
-                                        <GradientStop Color="#11FF1111" Offset="0" />
-                                        <GradientStop Color="#FFFF0000" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                            <AdornedElementPlaceholder />
-                        </DockPanel>
-                    </ControlTemplate>
-                </TextBox.Resources>
-                <TextBox.Style>
-                    <Style TargetType="TextBox">
-                        <Setter Property="Validation.ErrorTemplate" Value="{StaticResource InputErrorTemplate}" />
-                        <Style.Triggers>
-                            <Trigger Property="Validation.HasError" Value="True">
-                                <Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBox.Style>
-            </TextBox>
+            <TextBox 
+                x:Name="txtName" 
+                IsEnabled="False"
+                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"                 
+                Style="{StaticResource ValidatingTextBox}"/>
+
         </HeaderedContentControl>
-        <HeaderedContentControl DockPanel.Dock="Top">
+        <HeaderedContentControl Grid.Row="1">
             <HeaderedContentControl.Header>
-                <Label Content="Location:" Margin="0,0,0,3" />
+                <Label Content="Location:"  />
             </HeaderedContentControl.Header>
-            <TextBox IsEnabled="True" IsReadOnly="True" Text="{Binding Location, Mode=OneWay, ValidatesOnDataErrors=False, ValidatesOnExceptions=False, ValidatesOnNotifyDataErrors=False}" >
-                <TextBox.Background>
-                    <SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
-                </TextBox.Background>
-            </TextBox>
+            <TextBox IsEnabled="True" IsReadOnly="True" Text="{Binding Location, Mode=OneWay}" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
+
         </HeaderedContentControl>
-        <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button Name="btnOk" IsDefault="True" Height="25" Width="90">OK</Button>
-            <Button Name="btnCancel" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
+
+        <HeaderedContentControl Grid.Row="2" Visibility="{Binding Progress.IsOperating, Converter={StaticResource BoolToVisOrHide}}">
+            <HeaderedContentControl.Header >
+                <Label >
+                    <Label.Content>
+                        <TextBlock 
+                            Text="{Binding Path=Progress.Status, Mode=OneWay, StringFormat=Status: {0}, FallbackValue=Status:}"                             
+                            Margin="0"/>
+                    </Label.Content>
+                </Label>
+            </HeaderedContentControl.Header>
+            
+            <ProgressBar Height="{Binding ActualHeight, ElementName=txtName}"
+                         IsIndeterminate="{Binding Progress.Indeterminate, Mode=OneWay}" 
+                         Value="{Binding Progress.Current, Mode=OneWay}"
+                         Maximum="{Binding Progress.Max, Mode=OneWay}" />
+
+        </HeaderedContentControl>
+        <StackPanel Margin="0,10" Grid.Row="3" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button 
+                IsDefault="True" Height="25" Width="90"                 
+                Command="{Binding ExecuteCommand}" 
+                CommandParameter="{Binding Name}"
+                Style="{StaticResource ButtonNoValidationHighlight}" >OK</Button>
+            <Button Command="{Binding CancelCommand}"                     
+                    IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
         </StackPanel>
-    </DockPanel>
+    </Grid>
 </Window>
