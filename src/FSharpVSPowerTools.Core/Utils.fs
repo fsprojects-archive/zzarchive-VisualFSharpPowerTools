@@ -72,6 +72,21 @@ module Async =
                 return result
             }
 
+        /// Async implementation of Array.mapi.
+        let mapi (mapping : int -> 'T -> Async<'U>) (array : 'T[]) : Async<'U[]> =
+            let len = Array.length array
+            let result = Array.zeroCreate len
+
+            async {
+                // Apply the mapping function to each array element.
+                for i in 0 .. len - 1 do
+                    let! mappedValue = mapping i array.[i]
+                    result.[i] <- mappedValue
+
+                // Return the completed results.
+                return result
+            }
+
     [<RequireQualifiedAccess>]
     module List =
         let rec private mapImpl (mapping, mapped : 'U list, pending : 'T list) =

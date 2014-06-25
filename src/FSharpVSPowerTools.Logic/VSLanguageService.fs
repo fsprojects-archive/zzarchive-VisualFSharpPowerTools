@@ -9,7 +9,10 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Editor
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.VisualStudio.TextManager.Interop
+
 open FSharpVSPowerTools
+
+open FSharp.ViewModule.Progress
 
 type FilePath = string
 
@@ -110,9 +113,9 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member x.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list) =
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress : OperationState -> unit) =
         async {
-            try 
+            try                 
                 let (_, _, endLine, endCol) = word.ToRange()
                 let source = word.Snapshot.GetText()
                 let currentLine = word.Start.GetContainingLine().GetText()
@@ -122,16 +125,19 @@ type VSLanguageService
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
+                reportProgress progress (Reporting("Finding symbols in current project..."))
                 let! currentProjectOptions = getProjectOptions currentProject
+                reportProgress progress (Reporting("Finding symbols in other projects..."))
                 let! projectsToCheckOptions = 
                     projectsToCheck 
                     |> List.toArray
                     |> Async.Array.map getProjectOptions
 
+                reportProgress progress (Reporting("Finding symbol usages in all projects..."))
                 let! res =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
                         (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 
-                         currentLine, args, buildQueryLexState word.Snapshot.TextBuffer)
+                         currentLine, args, buildQueryLexState word.Snapshot.TextBuffer, progress)
                 return 
                     res 
                     |> Option.map (fun (symbol, lastIdent, refs) -> 

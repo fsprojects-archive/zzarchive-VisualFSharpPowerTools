@@ -79,6 +79,8 @@
     <Compile Include="DepthAdornmentManager.fs" />
     <Compile Include="SyntaxConstructClassifier.fs" />
     <Compile Include="HighlightUsageTagger.fs" />
+    <Resource Include="CommonResources.xaml" />
+    <Compile Include="CommonResources.xaml.fs" />
     <Resource Include="RenameDialog.xaml" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
@@ -112,12 +114,16 @@
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
+    <Reference Include="FSharp.ViewModule.Core.Wpf">
+      <HintPath>..\..\packages\FSharp.ViewModule.Core.0.9.6\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="FsXaml.Wpf">
-      <HintPath>..\..\packages\FsXaml.Wpf.0.9.4\lib\net45\FsXaml.Wpf.dll</HintPath>
+      <HintPath>..\..\packages\FsXaml.Wpf.0.9.7\lib\net45\FsXaml.Wpf.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FsXaml.Wpf.TypeProvider">
-      <HintPath>..\..\packages\FsXaml.Wpf.0.9.4\lib\net45\FsXaml.Wpf.TypeProvider.dll</HintPath>
+      <HintPath>..\..\packages\FsXaml.Wpf.0.9.7\lib\net45\FsXaml.Wpf.TypeProvider.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
