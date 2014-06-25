@@ -29,7 +29,7 @@ type StatusIcon =
 /// Handler for reporting status information to the Visual Studio status bar area
 type StatusHandler(serviceProvider: IServiceProvider, statusIcon: StatusIcon, overrideCursor) =
     // Get our status bar service up front
-    let statusBar = serviceProvider.GetService(typeof<SVsStatusbar>) :?> IVsStatusbar
+    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
     // This tracks the last known state, so we can handle tracking identifiers correctly
     let mutable lastState = OperationState.Idle
