@@ -76,7 +76,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                     match entityKind with
                                     | Ast.Attribute ->
                                         entities 
-                                        |> List.filter (fun e -> e.IsAttribute = true)
+                                        |> List.filter (fun e -> e.IsAttribute)
                                     | Ast.Type -> entities
                                     |> List.map (fun e -> 
                                          [ yield e.FullName
@@ -85,7 +85,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
-                                let createEntity = Ast.findNearestOpenStatementBlock pos.Line parseTree sym.Text
+                                let createEntity = Ast.tryFindNearestOpenStatementBlock pos.Line parseTree sym.Text
                                 return entities |> List.choose createEntity
                     }
                     |> Async.map (fun result -> 
@@ -118,7 +118,7 @@ type ResolveUnopenedNamespaceSmartTagger
                 snapshot.TextBuffer.Insert(prevLine.End.Position, Environment.NewLine) |> ignore
         transaction.Complete()
 
-    let fullyQualifySymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 
+    let replaceFullyQualifiedSymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
         transaction.Complete()
@@ -132,13 +132,13 @@ type ResolveUnopenedNamespaceSmartTagger
             member x.Invoke() = openNamespace snapshot entity.Namespace pos
         }
 
-    let qualifySymbolAction snapshotSpan fullSymbolName =
+    let qualifiedSymbolAction snapshotSpan fullSymbolName =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = fullSymbolName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = fullyQualifySymbol snapshotSpan fullSymbolName
+            member x.Invoke() = replaceFullyQualifiedSymbol snapshotSpan fullSymbolName
         }
 
     let getSmartTagActions snapshotSpan candidates =
@@ -149,7 +149,7 @@ type ResolveUnopenedNamespaceSmartTagger
         let qualifySymbolActions =
             candidates
             |> List.map (fun (e, _) -> e.Namespace + "." + e.Name)
-            |> List.map (qualifySymbolAction snapshotSpan)
+            |> List.map (qualifiedSymbolAction snapshotSpan)
             
         let actions = openNamespaceActions @ qualifySymbolActions |> Seq.toReadOnlyCollection
 

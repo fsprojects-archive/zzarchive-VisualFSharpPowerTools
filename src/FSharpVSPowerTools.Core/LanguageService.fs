@@ -387,7 +387,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 try 
                     entity.BaseType 
                     |> Option.bind (fun bt ->
-                         try Some bt.TypeDefinition with _ -> None)
+                         if bt.HasTypeDefinition then Some bt.TypeDefinition 
+                         else None)
                 with _ -> None
 
             let rec isAttributeType (ty: FSharpEntity option) =
@@ -397,8 +398,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     match getFullName ty with
                     | None -> false
                     | Some fullName ->
-                        if fullName = "System.Attribute" then true
-                        else isAttributeType (getBaseType ty)
+                        fullName = "System.Attribute" || isAttributeType (getBaseType ty)
             isAttributeType (Some entity)
 
         let createEntity (entity: FSharpEntity) =
@@ -422,15 +422,15 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
                 Some (seq { match checkResults.GetPartialAssemblySignature() with
-                            | Some sign -> yield sign
+                            | Some signature -> yield signature
                             | None -> ()
                             match checkResults.ProjectContext with
                             | Some ctx ->
                                 yield! ctx.GetReferencedAssemblies() |> List.map (fun asm -> asm.Contents)
                             | None -> ()
                             }
-                        |> Seq.map (fun sign -> 
-                            seq { for e in (try sign.Entities :> _ seq with _ -> Seq.empty) do
+                        |> Seq.map (fun signature -> 
+                            seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
                                     yield! traverseEntity e }) 
                         |> Seq.concat
                         |> Seq.distinct

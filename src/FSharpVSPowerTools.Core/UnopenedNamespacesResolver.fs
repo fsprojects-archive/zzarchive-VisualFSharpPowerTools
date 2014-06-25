@@ -13,6 +13,10 @@ type Entity =
        
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Entity =
+    /// If fullName started with given namespace, it returns the fullName with the namespace removed.
+    /// For example:
+    /// fullName = System.Threading.Task.Task, ns = System.Threading -> Task.Task, 
+    /// fullName = System.Threading.Task.Task, ns = Microsoft.FSharp.Compiler -> System.Threading.Task.Task
     let rec private getRelativeName (ns: Namespace) (fullName: string[]) =
         match ns, fullName with
         | [||], _ 
@@ -25,11 +29,11 @@ module Entity =
         fullName
         |> Option.ofNull
         |> Option.bind (fun fullName ->
-            let fullName = fullName.Split '.'
-            if fullName.Length = 0 then None
-            elif fullName.[fullName.Length - 1] <> ident then None
+            let idents = fullName.Split '.'
+            if idents.Length = 0 then None
+            elif idents.[idents.Length - 1] <> ident then None
             else
-                match getRelativeName ns fullName with
+                match getRelativeName ns idents with
                 | [||] | [|_|] -> None
                 | relativeName ->
                     Some { Namespace = String.Join (".", relativeName.[0..relativeName.Length - 2])
@@ -53,14 +57,11 @@ module Ast =
             | Pats ps -> ps
             | NamePatPairs(xs, _) -> List.map snd xs
 
-        let ifPosInRange range f =
-            if Range.rangeContainsPos range pos then f()
-            else None
+        let isPosInRange range = Range.rangeContainsPos range pos
 
-        let isPosInRange range = 
-            match ifPosInRange range (fun _ -> Some()) with
-            | Some _ -> true
-            | None -> false
+        let ifPosInRange range f =
+            if isPosInRange range then f()
+            else None
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
@@ -264,7 +265,7 @@ module Ast =
 
     type Col = int
 
-    let findNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
+    let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result = ref None
         let modules = ResizeArray<LongIdent * EndLine * Col>()  
          

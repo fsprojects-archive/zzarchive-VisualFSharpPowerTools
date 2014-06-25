@@ -210,7 +210,7 @@ let forIdent ident (source, line) = ident, source, line
 
 let forEntity (entity: FullEntityName) (ident, source: Source, line) =
     let tree = parseSource source
-    match Ast.findNearestOpenStatementBlock line tree ident entity with
+    match Ast.tryFindNearestOpenStatementBlock line tree ident entity with
     | None -> failwith "Cannot find nearest open statement block"
     | Some (e, pos) -> source, e, pos
 
