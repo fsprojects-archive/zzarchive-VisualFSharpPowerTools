@@ -142,8 +142,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 }
 
             let hostWnd = Window.GetWindow(view.VisualElement)
-            use status = new StatusHandler(serviceProvider, StatusIcon.General, true)
-            let viewmodel = RenameDialogViewModel (cw.GetText(), symbol, status, initializationWorkflow, renameWorkflow, cts)
+            let viewmodel = RenameDialogViewModel (cw.GetText(), symbol, initializationWorkflow, renameWorkflow, cts)
             let wnd = UI.loadRenameDialog viewmodel hostWnd                        
             x.ShowDialog wnd |> ignore
         | _ -> ()

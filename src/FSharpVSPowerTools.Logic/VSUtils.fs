@@ -325,3 +325,14 @@ type Async with
             }
         Async.Start(comp, ?cancellationToken = cancellationToken)
        
+module internal Disposable =
+    let create (onDispose: unit -> unit) =
+        { new IDisposable with
+            member x.Dispose() =
+                onDispose() }
+
+module internal Cursor =
+    let wait() =
+        let currentCursor = System.Windows.Input.Mouse.OverrideCursor
+        System.Windows.Input.Mouse.OverrideCursor <- System.Windows.Input.Cursors.Wait
+        Disposable.create(fun () -> System.Windows.Input.Mouse.OverrideCursor  <- currentCursor)

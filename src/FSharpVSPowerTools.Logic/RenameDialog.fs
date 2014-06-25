@@ -16,7 +16,7 @@ open FSharp.ViewModule.Validation
 type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 
 // The ViewModel for our dialog
-type RenameDialogViewModel(originalName: string, symbol: Symbol, status : StatusHandler, initializationWorkflow : Async<(ParseAndCheckResults * SymbolDeclarationLocation * FSharpSymbol) option>, renameWorkflow : (ParseAndCheckResults -> SymbolDeclarationLocation -> string-> (OperationState -> unit) -> Async<unit>), cts : System.Threading.CancellationTokenSource) as self =
+type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationWorkflow : Async<(ParseAndCheckResults * SymbolDeclarationLocation * FSharpSymbol) option>, renameWorkflow : (ParseAndCheckResults -> SymbolDeclarationLocation -> string-> (OperationState -> unit) -> Async<unit>), cts : System.Threading.CancellationTokenSource) as self =
     inherit ViewModelBase()
 
     // This will hold the actual rename workflow arguments after the initialization async workflow completes    
@@ -69,7 +69,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, status : Status
     let progress = ProgressManager()    
 
     // This provides us a simple way to report progress to both the status bar and our dialog
-    let report = Status.getCompositeReporter status progress
+    let report = Some(updateProgress(progress))
 
     // We wrap up the actual async workflow in order to close us when renameComplete as well as mark us executing while we run
     let wrappedWorkflow _ newName =
