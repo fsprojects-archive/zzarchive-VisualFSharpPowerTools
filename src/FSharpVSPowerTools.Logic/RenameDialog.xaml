@@ -45,7 +45,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <HeaderedContentControl Grid.Row="0">
+        <HeaderedContentControl Grid.Row="0" Visibility="{Binding Path=Initialized, Converter={StaticResource BoolToVisOrHide}}">
             <HeaderedContentControl.Header>
                 <Label Content="_New name:" Target="{Binding ElementName=txtName}" />
             </HeaderedContentControl.Header>
@@ -56,7 +56,7 @@
                 Style="{StaticResource ValidatingTextBox}"/>
 
         </HeaderedContentControl>
-        <HeaderedContentControl Grid.Row="1">
+        <HeaderedContentControl Grid.Row="1" Visibility="{Binding Path=Initialized, Converter={StaticResource BoolToVisOrHide}}">
             <HeaderedContentControl.Header>
                 <Label Content="Location:"  />
             </HeaderedContentControl.Header>

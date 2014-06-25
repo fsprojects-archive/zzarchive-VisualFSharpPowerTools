@@ -74,6 +74,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
     // We wrap up the actual async workflow in order to close us when renameComplete as well as mark us executing while we run
     let wrappedWorkflow _ newName =
         async {            
+            use waitCursor = Cursor.wait()  
             reportProgress report (Reporting("Performing Rename..."))
             // If the user just accepts with the original name, just make this a no-op instead of an error
             if not(newName = originalName) then
@@ -82,6 +83,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
                     do! renameWorkflow results location newName report.Value
                 | _ -> ()
             renameComplete.Value <- true
+            waitCursor.Restore()
         }
 
     // The async command which is executed when the user clicks OK
@@ -99,7 +101,8 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
         
         // Perform our initialization routine while reporting progress/etc as necessary
         Async.StartImmediateSafe(
-            async {                 
+            async {              
+                use waitCursor = Cursor.wait()   
                 reportProgress report (Reporting("Initializing..."))
                 let! b = initializationWorkflow 
                 match b with
@@ -117,6 +120,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
                     initialized.Value <- true                    
                 | None -> 
                     cts.Cancel()                    
+                waitCursor.Restore()
             }, cts.Token)
 
     // Our bound properties

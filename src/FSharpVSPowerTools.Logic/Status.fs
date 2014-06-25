@@ -86,7 +86,7 @@ type StatusHandler(serviceProvider: IServiceProvider, statusIcon: StatusIcon, ov
     let report (operationState: OperationState) =        
         updateFrozen()
 
-        if lastState = OperationState.Idle && frozen = 0 then
+        if frozen = 0 then
             match lastState, operationState with
             // Handle idle calls
             | OperationState.Idle, OperationState.Idle -> () // Do nothing if we're changing from idle to idle
