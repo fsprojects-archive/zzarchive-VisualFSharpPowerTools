@@ -407,8 +407,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                  { FullName = fullName; IsAttribute = isAttribute entity }
             )
 
-        let rec traverseEntity (entity: FSharpEntity) = 
-            seq { if not entity.IsProvided then
+        let rec traverseEntity getInternals (entity: FSharpEntity) = 
+            seq { if not entity.IsProvided && (getInternals || entity.Accessibility.IsPublic) then
                     match createEntity entity with
                     | Some x -> yield x
                     | None -> ()
@@ -416,23 +416,26 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     //for f in entity.MembersFunctionsAndValues do
                     //    yield! getFullName f
                     for e in entity.NestedEntities do
-                        yield! traverseEntity e }
+                        yield! traverseEntity getInternals e }
 
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
-                Some (seq { match checkResults.GetPartialAssemblySignature() with
-                            | Some signature -> yield signature
-                            | None -> ()
-                            match checkResults.ProjectContext with
-                            | Some ctx ->
-                                yield! ctx.GetReferencedAssemblies() |> List.map (fun asm -> asm.Contents)
-                            | None -> ()
-                            }
-                        |> Seq.map (fun signature -> 
-                            seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                                    yield! traverseEntity e }) 
-                        |> Seq.concat
-                        |> Seq.distinct
-                        |> Seq.toList)
+                Some (seq { 
+                        match checkResults.GetPartialAssemblySignature() with
+                        | Some signature -> yield true, signature
+                        | None -> ()
+                        match checkResults.ProjectContext with
+                        | Some ctx ->
+                            yield! ctx.GetReferencedAssemblies() |> List.map (fun asm -> 
+                                debug "Ref ASM: %A" asm.FileName
+                                false, asm.Contents)
+                        | None -> () 
+                      }
+                      |> Seq.map (fun (getInternals, signature) -> 
+                          seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
+                                  yield! traverseEntity getInternals e }) 
+                      |> Seq.concat
+                      |> Seq.distinct
+                      |> Seq.toList)
          }    
