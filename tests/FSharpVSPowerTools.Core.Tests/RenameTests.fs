@@ -4,7 +4,9 @@ open FSharpVSPowerTools
 open NUnit.Framework
 
 let encapsulate oldName = 
-    if List.exists ((=) oldName) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames then "``" + oldName + "``"
+    let isKeyWord = List.exists ((=) oldName) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
+
+    if isKeyWord || oldName.Contains " " then "``" + oldName + "``"
     else oldName
 
 let staysAsIs name = encapsulate name |> assertEqual name
@@ -21,3 +23,8 @@ let ``should encapsulate keywords``() =
     wasEncapsulated "namespace"
     wasEncapsulated "module"
     wasEncapsulated "let"
+
+[<Test>]
+let ``should encapsulate blanks``() = 
+    wasEncapsulated "this is a valid identifierer"
+    wasEncapsulated "look mum no hands!"
