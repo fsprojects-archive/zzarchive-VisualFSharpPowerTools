@@ -325,3 +325,29 @@ type Async with
             }
         Async.Start(comp, ?cancellationToken = cancellationToken)
        
+module internal Disposable =
+    let create (onDispose: unit -> unit) =
+        { new IDisposable with
+            member x.Dispose() =
+                onDispose() }
+
+/// Provides an IDisposable handle which allows us to override the cursor cleanly as well as restore whenever needed
+type CursorOverrideHandle(newCursor) =
+    let mutable disposed = false
+
+    let originalCursor = System.Windows.Input.Mouse.OverrideCursor
+    let restore () = 
+        if not disposed then
+            System.Windows.Input.Mouse.OverrideCursor <- originalCursor
+            disposed <- true
+
+    do 
+        System.Windows.Input.Mouse.OverrideCursor <- newCursor
+
+    member x.Restore() = restore()
+
+    interface IDisposable with 
+        member x.Dispose() = restore()
+
+module internal Cursor =
+    let wait() = new CursorOverrideHandle(System.Windows.Input.Cursors.Wait)

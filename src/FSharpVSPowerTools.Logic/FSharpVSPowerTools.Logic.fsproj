@@ -71,6 +71,7 @@
     <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="NavigateToItem.fs" />
     <Compile Include="CodeFormattingServices.fs" />
+    <Compile Include="Status.fs" />
     <Compile Include="CodeFormattingCommands.fs" />
     <Compile Include="FormatDocumentCommand.fs" />
     <Compile Include="FormatSelectionCommand.fs" />

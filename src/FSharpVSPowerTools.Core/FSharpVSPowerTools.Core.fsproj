@@ -65,12 +65,12 @@
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
     <Compile Include="NavigableItemsCollector.fs" />
+    <Compile Include="NavigateToIndex.fs" />
     <Compile Include="SourceCodeClassifier.fs" />
     <Compile Include="CodeGeneration.fs" />
     <Compile Include="InterfaceStubGenerator.fs" />
     <Compile Include="RecordStubGenerator.fs" />
     <Compile Include="UnionPatternMatchCaseGenerator.fs" />
-    <Compile Include="NavigateToIndex.fs" />
     <Compile Include="UnopenedNamespacesResolver.fs" />
     <Content Include="packages.config" />
   </ItemGroup>

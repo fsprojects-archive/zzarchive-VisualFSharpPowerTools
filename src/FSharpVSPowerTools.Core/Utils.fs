@@ -328,8 +328,8 @@ module Pervasive =
                 Thread.SpinWait 20
                 swap f
         
-        member self.Value with get () = !refCell
-        member self.Swap(f: 'T -> 'T) = swap f
+        member x.Value = !refCell
+        member x.Swap(f: 'T -> 'T) = swap f
 
     open System.IO
 

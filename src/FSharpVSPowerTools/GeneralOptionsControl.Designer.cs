@@ -173,9 +173,9 @@ namespace FSharpVSPowerTools
             this.chbDepthColorizer.AutoSize = true;
             this.chbDepthColorizer.Location = new System.Drawing.Point(16, 148);
             this.chbDepthColorizer.Name = "chbDepthColorizer";
-            this.chbDepthColorizer.Size = new System.Drawing.Size(97, 17);
+            this.chbDepthColorizer.Size = new System.Drawing.Size(166, 17);
             this.chbDepthColorizer.TabIndex = 9;
-            this.chbDepthColorizer.Text = "Depth colorizer";
+            this.chbDepthColorizer.Text = "Indent guides/Depth colorizer";
             this.chbDepthColorizer.UseVisualStyleBackColor = true;
             // 
             // chbRenameRefactoring
