@@ -68,6 +68,7 @@
     <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="NavigateToIndex.fs" />
     <Compile Include="SourceCodeClassifier.fs" />
+    <Compile Include="Rename.fs" />
     <Compile Include="CodeGeneration.fs" />
     <Compile Include="InterfaceStubGenerator.fs" />
     <Compile Include="RecordStubGenerator.fs" />
