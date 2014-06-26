@@ -65,17 +65,21 @@
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
     <Compile Include="NavigableItemsCollector.fs" />
+    <Compile Include="NavigateToIndex.fs" />
     <Compile Include="SourceCodeClassifier.fs" />
     <Compile Include="CodeGeneration.fs" />
     <Compile Include="InterfaceStubGenerator.fs" />
     <Compile Include="RecordStubGenerator.fs" />
     <Compile Include="UnionPatternMatchCaseGenerator.fs" />
-    <Compile Include="NavigateToIndex.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">
       <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.54\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FSharp.ViewModule.Core.Wpf">
+      <HintPath>..\..\packages\FSharp.ViewModule.Core.0.9.6\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />
