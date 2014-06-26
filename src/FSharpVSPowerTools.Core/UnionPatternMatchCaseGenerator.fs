@@ -33,7 +33,7 @@ type private Context = {
     /// A single-line skeleton for each case
     CaseDefaultValue: string
     UnionTypeName: string
-    RequireQualifiedAccess: bool
+    Qualifier: string option
 }
 
 let private clauseIsCandidateForCodeGen (clause: SynMatchClause) =
@@ -391,7 +391,12 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
                            constructorArgs, _, _)
           when unionCaseLongIdent.Length > 0 ->
             getIfArgsAreFree constructorArgs (fun () ->
-                [ (unionCaseLongIdent.Item (unionCaseLongIdent.Length - 1)).idText ]
+                // Get list of qualifiers, this can be checked for length later. 
+                let unionCaseNames = 
+                    unionCaseLongIdent
+                    |> List.map (fun i -> i.idText)
+                    |> List.rev
+                [ (unionCaseNames.Head, unionCaseNames.Tail |> List.rev) ]
             )
             |> Option.getOrElse []
 
@@ -582,11 +587,11 @@ let private UnnamedFieldRegex = Regex("^Item[\d+]?$", RegexOptions.Compiled)
 
 let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
     let writer = ctxt.Writer
-    let name = 
-        if ctxt.RequireQualifiedAccess then
-            sprintf "%s.%s" ctxt.UnionTypeName case.Name
-        else 
-            case.Name
+    let name =
+        match ctxt.Qualifier with
+        | None -> case.Name
+        | Some qual -> sprintf "%s.%s" qual case.Name
+
 
     let paramsPattern =
         let unionCaseFieldsCount = case.UnionCaseFields.Count
@@ -610,16 +615,26 @@ let formatMatchExpr insertionParams (caseDefaultValue: string)
                     (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
     assert entity.IsFSharpUnion
     use writer = new ColumnIndentedTextWriter()
-    let ctxt =
-        { UnionTypeName = entity.DisplayName
-          RequireQualifiedAccess = hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes 
-          Writer = writer
-          CaseDefaultValue = caseDefaultValue}
 
     let casesWritten = getWrittenCases patMatchExpr
     let casesToWrite =
         entity.UnionCases
-        |> Seq.filter (fun case -> not <| casesWritten.Contains case.Name)
+        |> Seq.filter (fun case -> not (casesWritten |> Set.exists (fun (name, _) -> name = case.Name)))
+    
+    // Use the shortest qualified style for further cases
+    let shortestQualifier =
+        casesWritten
+        |> Seq.minBy (fun (_, lst) -> lst.Length)
+        |> snd
+        |> function
+           | [] -> None
+           | lst -> Some (String.concat "." lst)
+
+    let ctxt =
+        { UnionTypeName = entity.DisplayName
+          Writer = writer
+          CaseDefaultValue = caseDefaultValue
+          Qualifier = shortestQualifier }
 
     writer.Indent insertionParams.IndentColumn
 
