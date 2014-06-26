@@ -72,6 +72,10 @@ type ResolveUnopenedNamespaceSmartTagger
                                 
                                 let! entityKind = Ast.getEntityKind parseTree pos |> liftMaybe
                                 let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
+//                                entities
+//                                |> Seq.map (fun e -> e.FullName)
+//                                |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
+
                                 let entities = 
                                     match entityKind with
                                     | Ast.Attribute ->

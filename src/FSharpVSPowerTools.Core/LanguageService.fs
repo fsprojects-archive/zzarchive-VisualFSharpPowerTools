@@ -392,6 +392,15 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         with e -> 
                             fail "Should add this type to the black list: %O" e
                             None)
+                |> Option.map (fun fullName ->
+                    // remove number of arguments from generic types
+                    // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
+                    if Char.IsDigit fullName.[fullName.Length - 1] then
+                        match fullName.LastIndexOf '`' with
+                        | -1 -> fullName
+                        | lastBacktickIndex -> 
+                            fullName.Substring(0, lastBacktickIndex)
+                    else fullName)
             
         let isAttribute (entity: FSharpEntity) =
             let getBaseType (entity: FSharpEntity) =
