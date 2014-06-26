@@ -13,6 +13,8 @@ open Microsoft.VisualStudio.Text.Formatting
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 
+open FSharpVSPowerTools.ProjectSystem
+
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
 

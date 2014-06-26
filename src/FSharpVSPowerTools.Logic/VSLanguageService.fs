@@ -125,15 +125,15 @@ type VSLanguageService
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                reportProgress progress (Reporting("Finding symbols in current project..."))
+                reportProgress progress (Reporting(Resource.findSymbolUseCurrentProject))
                 let! currentProjectOptions = getProjectOptions currentProject
-                reportProgress progress (Reporting("Finding symbols in other projects..."))
+                reportProgress progress (Reporting(Resource.findSymbolUseOtherProjects))
                 let! projectsToCheckOptions = 
                     projectsToCheck 
                     |> List.toArray
                     |> Async.Array.map getProjectOptions
 
-                reportProgress progress (Reporting("Finding symbol usages in all projects..."))
+                reportProgress progress (Reporting(Resource.findSymbolUseAllProjects))
                 let! res =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
                         (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 

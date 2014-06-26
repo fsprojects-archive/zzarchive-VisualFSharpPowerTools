@@ -31,7 +31,14 @@ module Resource =
     let [<Literal>] interfaceEmptyStatusMessage = "This interface has no member."
     let [<Literal>] interfaceFilledStatusMessage = "All members of this interface have been implemented."
 
-    let [<Literal>] findAllReferencesStatusMessage = "The caret must be on a valid expression to find all references."
+    let [<Literal>] findSymbolUseCurrentProject = "Finding symbols in current project..."
+    let [<Literal>] findSymbolUseOtherProjects = "Finding symbols in other projects..."
+    let [<Literal>] findSymbolUseAllProjects = "Finding symbol usages in all projects..."
+
+    let [<Literal>] findAllReferencesInitializingMessage = "Initializing Find All References..."
+    let [<Literal>] findAllReferencesFindInFileMessage = "Finding symbol usages in file..."
+    let [<Literal>] findAllReferencesFindInProjectsMessage = "Finding symbol usages in projects..."
+    let [<Literal>] findAllReferencesInvalidExpressionMessage = "The caret must be on a valid expression to find all references."
 
     let [<Literal>] implementInterfaceCommandName = "Explicitly implement interface"
     let [<Literal>] recordGenerationCommandName = "Generate record stubs"
