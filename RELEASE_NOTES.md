@@ -69,11 +69,16 @@
 * Fix the issue where VFPT is active during CPU idles
 * Return correct symbol information on dirty files and dirty projects
 
-#### 1.2.0 - Unreleased
+#### 1.2.0 - June 17 2014
 * Implement Union type pattern generation
 * Fix various bugs on syntax coloring
 * Improve responsiveness on big solutions
 * Improve memory usage
 * Protect against intermittent crashes
+
+#### 1.3.0 - Unreleased
+* Add report progress and cancellation to Rename Refactoring
+* Add report progress to Find All References
+* Enhance Xaml support
 
 

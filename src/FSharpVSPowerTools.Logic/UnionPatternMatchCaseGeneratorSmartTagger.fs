@@ -36,8 +36,6 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
     let mutable currentWord: SnapshotSpan option = None
     let mutable unionDefinition = None
 
-    let [<Literal>] CommandName = "Generate union pattern match cases"
-
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     let updateAtCaretPosition() =
@@ -90,7 +88,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
     let handleGenerateUnionPatternMatchCases
         (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr)
         (insertionParams: _) entity = 
-        use transaction = textUndoHistory.CreateTransaction(CommandName)
+        use transaction = textUndoHistory.CreateTransaction(Resource.unionPatternMatchCaseCommandName)
 
         let stub = UnionPatternMatchCaseGenerator.formatMatchExpr
                        insertionParams
@@ -107,7 +105,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
     let generateUnionPatternMatchCase snapshot patMatchExpr insertionPos entity =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = CommandName
+            member x.DisplayText = Resource.unionPatternMatchCaseCommandName
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
