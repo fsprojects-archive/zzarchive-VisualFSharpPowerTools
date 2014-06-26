@@ -380,17 +380,18 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         let unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
         
         let rec getFullName (symbol: FSharpEntity) =
-            if symbol.IsFSharpAbbreviation then
+            if symbol.IsFSharpAbbreviation && symbol.AbbreviatedType.HasTypeDefinition then
                 getFullName symbol.AbbreviatedType.TypeDefinition
-            elif symbol.IsArrayType || symbol.IsByRef then
-                None            
-            elif List.exists ((=) symbol.DisplayName) unrepresentedTypes then 
-                None
+            elif symbol.IsArrayType || symbol.IsByRef then None
             else
-                try Some symbol.FullName
-                with e -> 
-                    fail "Should add this type to the black list: %O" e
-                    None
+                Option.attempt (fun _ -> symbol.DisplayName)
+                |> Option.bind (fun displayName ->
+                    if List.exists ((=) displayName) unrepresentedTypes then None
+                    else 
+                        try Some symbol.FullName
+                        with e -> 
+                            fail "Should add this type to the black list: %O" e
+                            None)
             
         let isAttribute (entity: FSharpEntity) =
             let getBaseType (entity: FSharpEntity) =
