@@ -42,3 +42,4 @@ module Resource =
 
     let [<Literal>] implementInterfaceCommandName = "Explicitly implement interface"
     let [<Literal>] recordGenerationCommandName = "Generate record stubs"
+    let [<Literal>] unionPatternMatchCaseCommandName = "Generate union pattern match cases"

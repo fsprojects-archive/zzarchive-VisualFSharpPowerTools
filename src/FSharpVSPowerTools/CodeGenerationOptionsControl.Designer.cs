@@ -28,12 +28,14 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.grbBodyStyle = new System.Windows.Forms.GroupBox();
             this.tbxSourceCode = new System.Windows.Forms.TextBox();
             this.rdbUncompilable = new System.Windows.Forms.RadioButton();
             this.rdbDefaultValue = new System.Windows.Forms.RadioButton();
             this.rdbNotImplementedYet = new System.Windows.Forms.RadioButton();
             this.rdbFailwith = new System.Windows.Forms.RadioButton();
+            this.ttpMain = new System.Windows.Forms.ToolTip(this.components);
             this.grbBodyStyle.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -67,6 +69,7 @@
             this.rdbUncompilable.Size = new System.Drawing.Size(119, 17);
             this.rdbUncompilable.TabIndex = 3;
             this.rdbUncompilable.Text = "Uncompilable code:";
+            this.ttpMain.SetToolTip(this.rdbUncompilable, "Use (possibly) uncompilable value as default body");
             this.rdbUncompilable.UseVisualStyleBackColor = true;
             // 
             // rdbDefaultValue
@@ -77,6 +80,7 @@
             this.rdbDefaultValue.Size = new System.Drawing.Size(121, 17);
             this.rdbDefaultValue.TabIndex = 2;
             this.rdbDefaultValue.Text = "Return default value";
+            this.ttpMain.SetToolTip(this.rdbDefaultValue, "Use \'Unchecked.defaultof<_>\' as default body");
             this.rdbDefaultValue.UseVisualStyleBackColor = true;
             // 
             // rdbNotImplementedYet
@@ -87,6 +91,7 @@
             this.rdbNotImplementedYet.Size = new System.Drawing.Size(174, 17);
             this.rdbNotImplementedYet.TabIndex = 1;
             this.rdbNotImplementedYet.Text = "raise NotImplementedException";
+            this.ttpMain.SetToolTip(this.rdbNotImplementedYet, "Use \'raise (System.NotImplementedException())\' as default body");
             this.rdbNotImplementedYet.UseVisualStyleBackColor = true;
             // 
             // rdbFailwith
@@ -99,6 +104,7 @@
             this.rdbFailwith.TabIndex = 0;
             this.rdbFailwith.TabStop = true;
             this.rdbFailwith.Text = "failwith \"Not implemented yet\"";
+            this.ttpMain.SetToolTip(this.rdbFailwith, "Use \'failwith \"Not implemented yet\"\' as default body");
             this.rdbFailwith.UseVisualStyleBackColor = true;
             // 
             // CodeGenerationOptionsControl
@@ -123,5 +129,6 @@
         private System.Windows.Forms.RadioButton rdbDefaultValue;
         private System.Windows.Forms.RadioButton rdbNotImplementedYet;
         private System.Windows.Forms.RadioButton rdbFailwith;
+        private System.Windows.Forms.ToolTip ttpMain;
     }
 }
