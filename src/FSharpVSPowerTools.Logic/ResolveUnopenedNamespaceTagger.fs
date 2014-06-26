@@ -79,9 +79,9 @@ type ResolveUnopenedNamespaceSmartTagger
                                         |> List.filter (fun e -> e.IsAttribute)
                                     | Ast.Type -> entities
                                     |> List.map (fun e -> 
-                                         [ yield e.FullName
+                                         [ yield e.TopRequireQualifiedAccessParent, e.FullName
                                            if e.IsAttribute && e.FullName.EndsWith "Attribute" then  
-                                              yield e.FullName.Substring(0, e.FullName.Length - 9) ])
+                                              yield e.TopRequireQualifiedAccessParent, e.FullName.Substring(0, e.FullName.Length - 9) ])
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
@@ -100,11 +100,13 @@ type ResolveUnopenedNamespaceSmartTagger
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
 
-    let openNamespace (snapshotSpan: SnapshotSpan) ns pos = 
+    let openNamespace (snapshotSpan: SnapshotSpan) ns name pos = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
-        let line = snapshotSpan.Snapshot.GetLineFromLineNumber(pos.Line - 1).Start.Position
+        // first, replace the symbol with (potentially) partially qualified name
+        let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
+        let line = snapshot.GetLineFromLineNumber(pos.Line - 1).Start.Position
         let lineStr = (String.replicate pos.Col " ") + "open " + ns + Environment.NewLine
-        let snapshot = snapshotSpan.Snapshot.TextBuffer.Insert (line, lineStr)
+        let snapshot = snapshot.TextBuffer.Insert (line, lineStr)
         let nextLine = snapshot.GetLineFromLineNumber pos.Line
         // if there's not blank line between open declaration block and the rest of the code, we add one
         let snapshot = 
@@ -123,32 +125,36 @@ type ResolveUnopenedNamespaceSmartTagger
         snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
         transaction.Complete()
 
-    let openNamespaceAction snapshot (entity, pos) =
+    let openNamespaceAction snapshot pos name ns =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = "open " + entity.Namespace
+            member x.DisplayText = "open " + ns
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = openNamespace snapshot entity.Namespace pos
+            member x.Invoke() = openNamespace snapshot ns name pos
         }
 
-    let qualifiedSymbolAction snapshotSpan fullSymbolName =
+    let qualifiedSymbolAction snapshotSpan fullName =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = fullSymbolName
+            member x.DisplayText = fullName
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = replaceFullyQualifiedSymbol snapshotSpan fullSymbolName
+            member x.Invoke() = replaceFullyQualifiedSymbol snapshotSpan fullName
         }
 
     let getSmartTagActions snapshotSpan candidates =
         let openNamespaceActions = 
             candidates
-            |> List.map (openNamespaceAction snapshotSpan)
+            |> List.choose (fun (entity, pos) -> 
+                entity.Namespace |> Option.map (openNamespaceAction snapshotSpan pos entity.Name))
             
         let qualifySymbolActions =
             candidates
-            |> List.map (fun (e, _) -> e.Namespace + "." + e.Name)
+            |> List.map (fun (entity, _) -> 
+                match entity.Namespace with
+                | Some ns -> ns + "." + entity.Name
+                | None -> entity.Name)
             |> List.map (qualifiedSymbolAction snapshotSpan)
             
         let actions = openNamespaceActions @ qualifySymbolActions |> Seq.toReadOnlyCollection

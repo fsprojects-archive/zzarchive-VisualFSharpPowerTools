@@ -1,53 +1,60 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
-open Microsoft.FSharp.Compiler
-open Microsoft.FSharp.Compiler.Ast
 
-type Namespace = string[]
+type ShortIdent = string
+type LongIdent = string
+type Namespace = ShortIdent[]
 
-type Entity = 
-    { Namespace: string
-      Name: string } 
+type Entity =
+    { Namespace: LongIdent option
+      Name: LongIdent }
     override x.ToString() = sprintf "%A" x
-       
+
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Entity =
-    /// If fullName started with given namespace, it returns the fullName with the namespace removed.
-    /// For example:
-    /// fullName = System.Threading.Task.Task, ns = System.Threading -> Task.Task, 
-    /// fullName = System.Threading.Task.Task, ns = Microsoft.FSharp.Compiler -> System.Threading.Task.Task
-    let rec private getRelativeName (ns: Namespace) (fullName: string[]) =
-        match ns, fullName with
+    let rec private getRelativeNamespace (targetNamespace: Namespace) (ns: Namespace) =
+        match targetNamespace, ns with
         | [||], _ 
-        | _, [||] -> fullName
-        | _ when ns.[0] = fullName.[0] ->
-            getRelativeName ns.[1..] fullName.[1..]
-        | _ -> fullName
+        | _, [||] -> ns
+        | _ when targetNamespace.[0] = ns.[0] ->
+            getRelativeNamespace targetNamespace.[1..] ns.[1..]
+        | _ -> ns
 
-    let tryCreate (ns: Namespace) (ident: string) (fullName: string) =
-        fullName
+    let tryCreate (targetNamespace: Namespace) (ident: ShortIdent) (requiresQualifiedAccessParent: LongIdent option) 
+                  (candidateFullName: LongIdent) =
+        candidateFullName
         |> Option.ofNull
-        |> Option.bind (fun fullName ->
-            let idents = fullName.Split '.'
-            if idents.Length = 0 then None
-            elif idents.[idents.Length - 1] <> ident then None
-            else
-                match getRelativeName ns idents with
-                | [||] | [|_|] -> None
-                | relativeName ->
-                    Some { Namespace = String.Join (".", relativeName.[0..relativeName.Length - 2])
-                           Name = relativeName.[relativeName.Length - 1] })
+        |> Option.bind (fun candidateFullName ->
+            let candidateIdents = candidateFullName.Split '.'
+            if candidateIdents.Length = 0 || candidateIdents.[candidateIdents.Length - 1] <> ident then None
+            else Some candidateIdents)
+        |> Option.bind (fun candidateIdents ->
+            let openableNs, restIdents =
+                let openableNsCount =
+                    match requiresQualifiedAccessParent with
+                    | Some parent -> min ((parent.Split '.').Length) candidateIdents.Length
+                    | None -> candidateIdents.Length
+                candidateIdents.[0..openableNsCount - 2], candidateIdents.[openableNsCount - 1..]
+            let relativeNs = getRelativeNamespace targetNamespace openableNs
+            match relativeNs, restIdents with
+            | [||], [||] -> None
+            | [||], [|_|] -> None
+            | _ ->
+                Some { Namespace = match relativeNs with [||] -> None | _ -> Some (String.Join (".", relativeNs))
+                       Name = String.Join (".", restIdents) })
 
 type Pos = 
     { Line: int
       Col: int }
        
 module Ast =
+    open Microsoft.FSharp.Compiler
+    open Microsoft.FSharp.Compiler.Ast
+
     type EndLine = int
-    type EntityFullName = string
-    type Ident = string
-    
+    type EntityName = string
+        
     type EntityKind = 
         | Attribute
         | Type
@@ -304,7 +311,7 @@ module Ast =
             | _ -> ()
 
         match ast with 
-        | ParsedInput.SigFile _input -> ()
+        | ParsedInput.SigFile _ -> ()
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
         let res = !result |> Option.map (fun (ns, pos) -> 
@@ -317,9 +324,11 @@ module Ast =
             |> Seq.map (fun (m, endLine, startCol) -> String.Join (".", m |> Seq.map string), endLine, startCol) 
             |> Seq.sortBy (fun (m, _, _) -> -m.Length)
             |> Seq.toList
-        fun (ident: Ident) (entityFullName: EntityFullName) ->
+        fun (ident: ShortIdent) (requiresQualifiedAccessParent: EntityName option, entityFullName: EntityName) ->
             res 
-            |> Option.bind (fun (ns, pos) -> Entity.tryCreate ns ident entityFullName |> Option.map (fun e -> e, pos))
+            |> Option.bind (fun (ns, pos) -> 
+                Entity.tryCreate ns ident requiresQualifiedAccessParent entityFullName 
+                |> Option.map (fun e -> e, pos))
             |> Option.map (fun (entity, pos) ->
                 entity,
                 match modules 

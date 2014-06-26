@@ -116,10 +116,11 @@ type ILexer =
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
-type RawEntity =
+type RawEntity = 
     { FullName: string
+      TopRequireQualifiedAccessParent: string option
       IsAttribute: bool }
-  
+    override x.ToString() = sprintf "%A" x  
 // --------------------------------------------------------------------------------------
 // Language service 
 
@@ -376,11 +377,20 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
-        let getFullName (symbol: FSharpEntity) =
-            try Some symbol.FullName
-            with _ ->
-                try Some symbol.DisplayName
-                with _ -> None
+        let unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
+        
+        let rec getFullName (symbol: FSharpEntity) =
+            if symbol.IsFSharpAbbreviation then
+                getFullName symbol.AbbreviatedType.TypeDefinition
+            elif symbol.IsArrayType || symbol.IsByRef then
+                None            
+            elif List.exists ((=) symbol.DisplayName) unrepresentedTypes then 
+                None
+            else
+                try Some symbol.FullName
+                with e -> 
+                    fail "Should add this type to the black list: %O" e
+                    None
             
         let isAttribute (entity: FSharpEntity) =
             let getBaseType (entity: FSharpEntity) =
@@ -401,22 +411,31 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         fullName = "System.Attribute" || isAttributeType (getBaseType ty)
             isAttributeType (Some entity)
 
-        let createEntity (entity: FSharpEntity) =
+        let createEntity (topRequiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) =
             getFullName entity
             |> Option.map (fun fullName ->
-                 { FullName = fullName; IsAttribute = isAttribute entity }
-            )
+                 { FullName = fullName
+                   TopRequireQualifiedAccessParent = 
+                       topRequiresQualifiedAccessParent |> Option.bind (fun parent -> getFullName parent)
+                   IsAttribute = isAttribute entity })
 
-        let rec traverseEntity getInternals (entity: FSharpEntity) = 
+        let rec traverseEntity getInternals (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
             seq { if not entity.IsProvided && (getInternals || entity.Accessibility.IsPublic) then
-                    match createEntity entity with
+                    match createEntity requiresQualifiedAccessParent entity with
                     | Some x -> yield x
                     | None -> ()
                     // do not return functions, members and values for now
                     //for f in entity.MembersFunctionsAndValues do
                     //    yield! getFullName f
+                    
+                    let requiresQualifiedAccessParent =
+                        requiresQualifiedAccessParent
+                        |> Option.orElse (
+                            if hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes then Some entity
+                            else None)
+
                     for e in entity.NestedEntities do
-                        yield! traverseEntity getInternals e }
+                        yield! traverseEntity getInternals requiresQualifiedAccessParent e }
 
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
@@ -427,15 +446,14 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         | None -> ()
                         match checkResults.ProjectContext with
                         | Some ctx ->
-                            yield! ctx.GetReferencedAssemblies() |> List.map (fun asm -> 
-                                debug "Ref ASM: %A" asm.FileName
-                                false, asm.Contents)
+                            yield! ctx.GetReferencedAssemblies() 
+                                   |> List.map (fun asm -> false, asm.Contents)
                         | None -> () 
                       }
                       |> Seq.map (fun (getInternals, signature) -> 
                           seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                                  yield! traverseEntity getInternals e }) 
+                                  yield! traverseEntity getInternals None e }) 
                       |> Seq.concat
                       |> Seq.distinct
                       |> Seq.toList)
-         }    
+        }    

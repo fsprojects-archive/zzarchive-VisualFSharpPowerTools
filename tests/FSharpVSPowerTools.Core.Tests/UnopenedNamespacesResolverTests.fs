@@ -3,28 +3,37 @@
 open NUnit.Framework
 open FSharpVSPowerTools
 
-let (=>) (ns, ident, fullName) res = 
-    Entity.tryCreate (Array.ofList ns) ident fullName 
+let (=>) (ns, ident, parent, fullName) res = 
+    Entity.tryCreate (Array.ofList ns) ident parent fullName 
     |> assertEqual (res |> Option.map (fun (ns, name) -> { Namespace = ns; Name = name }))
 
 [<Test>] 
 let ``fully qualified external entities``() =
-    ([], "Now", "System.DateTime.Now") => Some ("System.DateTime", "Now")
-    ([], "Now", "System.Now") => Some ("System", "Now")
-    (["Myns"], "Now", "System.Now") => Some ("System", "Now")
-    (["Myns.Nested"], "Now", "System.Now") => Some ("System", "Now")
+    ([], "Now", None, "System.DateTime.Now") => Some (Some "System.DateTime", "Now")
+    ([], "Now", None, "System.Now") => Some (Some "System", "Now")
+    (["Myns"], "Now", None, "System.Now") => Some (Some "System", "Now")
+    (["Myns.Nested"], "Now", None, "System.Now") => Some (Some "System", "Now")
+
+[<Test>] 
+let ``fully qualified external entities with require qualified access module``() =
+    ([], "Now", Some "System", "System.DateTime.Now") => Some (None, "System.DateTime.Now")
+    ([], "Now", Some "System.DateTime", "System.DateTime.Now") => Some (Some "System", "DateTime.Now")
 
 [<Test>]
 let ``simple entities``() =
-    ([], "Now", "Now") => None  
-    (["Myns"], "Now", "Now") => None
+    ([], "Now", None, "Now") => None  
+    (["Myns"], "Now", None, "Now") => None
 
 [<Test>]
 let ``internal entities``() =
-    (["Myns"], "Now", "Myns.Nested.Now") => Some ("Nested", "Now")   
-    (["Myns"; "Nested"], "Now", "Myns.Nested.Nested2.Now") => Some ("Nested2", "Now")
-    (["Myns"; "Nested"], "Now", "Myns.Nested.Now") => None
-    (["Myns"; "Nested"], "Now", "Myns.Nested2.Now") => Some ("Nested2", "Now")
+    (["Myns"], "Now", None, "Myns.Nested.Now") => Some (Some "Nested", "Now")   
+    (["Myns"; "Nested"], "Now", None, "Myns.Nested.Nested2.Now") => Some (Some "Nested2", "Now")
+    (["Myns"; "Nested"], "Now", None, "Myns.Nested.Now") => None
+    (["Myns"; "Nested"], "Now", None, "Myns.Nested2.Now") => Some (Some "Nested2", "Now")
+
+[<Test>] 
+let ``internal entities with require qualified access module``() =
+    (["Myns"], "Now", Some "Myns.Nested", "Myns.Nested.Now") => Some (None, "Nested.Now")   
 
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
 
@@ -200,17 +209,12 @@ type Class() =
 """ 
     !=> [2, 12; 4, 18; 5, 25]
 
-
-
-
-type FullEntityName = string
-
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
-let forEntity (entity: FullEntityName) (ident, source: Source, line) =
+let forEntity (entity: LongIdent) (ident, source: Source, line) =
     let tree = parseSource source
-    match Ast.tryFindNearestOpenStatementBlock line tree ident entity with
+    match Ast.tryFindNearestOpenStatementBlock line tree ident (None, entity) with
     | None -> failwith "Cannot find nearest open statement block"
     | Some (e, pos) -> source, e, pos
 
@@ -223,7 +227,7 @@ let result (expected: Source) (source: Source, entity, pos) =
         Array.append (
             Array.append 
                 lines.[0..line - 1] 
-                [| (String.replicate pos.Col " ") + "open " + entity.Namespace|]) 
+                [| (String.replicate pos.Col " ") + "open " + entity.Namespace.Value|]) 
             lines.[line..]
     try result |> Collection.assertEqual (srcToLineArray expected)
     with _ ->
