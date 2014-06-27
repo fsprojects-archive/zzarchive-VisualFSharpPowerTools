@@ -8,7 +8,6 @@ let inline hasAttribute< ^entity, 'attribute when ^entity: (member Attributes: I
     let attrs = (^entity: (member Attributes: IList<FSharpAttribute>) entity)
     attrs |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
 
-
 let (|AbbreviatedType|_|) (entity: FSharpEntity) =
     if entity.IsFSharpAbbreviation then Some entity.AbbreviatedType
     else None

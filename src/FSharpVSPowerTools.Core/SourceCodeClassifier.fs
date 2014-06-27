@@ -24,11 +24,10 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         else false
 
     let rec getEntityAbbreviatedType (entity: FSharpEntity) =
-        if entity.IsFSharpAbbreviation then
-            let typ = entity.AbbreviatedType
-            if typ.HasTypeDefinition then getEntityAbbreviatedType typ.TypeDefinition
-            else entity, Some typ
-        else entity, None
+        match entity with
+        | AbbreviatedType (TypeWithDefinition def) -> getEntityAbbreviatedType def
+        | AbbreviatedType typ -> entity, Some typ
+        | _ -> entity, None
 
     let rec getAbbreviatedType (fsharpType: FSharpType) =
         if fsharpType.IsAbbreviation then
