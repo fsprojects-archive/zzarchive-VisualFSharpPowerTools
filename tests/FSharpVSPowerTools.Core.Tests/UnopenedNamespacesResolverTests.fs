@@ -160,6 +160,22 @@ let _ =
     ==> [4, 17]
 
 [<Test>]
+let ``generic type is an entity``() =
+    """
+module TopLevel
+let _ = Class<DateTime>()
+""" 
+    ==> [2, 9]
+
+[<Test>]
+let ``generic type argument is an entity``() =
+    """
+module TopLevel
+let _ = Class<DateTime>()
+""" 
+    ==> [2, 15]
+
+[<Test>]
 let ``open declaration is not an entity``() =
     """
 module TopLevel
@@ -208,6 +224,14 @@ type Class() =
     member x.Method (arg: int) = ()
 """ 
     !=> [2, 12; 4, 18; 5, 25]
+
+[<Test>]
+let ``wildcard generic type argument is not an entity``() =
+    """
+module TopLevel
+let _ = Class<_>()
+""" 
+    !=> [2, 15]
 
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line

@@ -163,7 +163,8 @@ module Ast =
             | SynExpr.Do(e, _) -> walkExpr e
             | SynExpr.Assert(e, _) -> walkExpr e
             | SynExpr.App(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.TypeApp(e, _, _, _, _, _, _) -> walkExpr e
+            | SynExpr.TypeApp(e, _, tys, _, _, tysRange, _) -> 
+                walkExpr e |> Option.orElse (List.tryPick (walkType tysRange) tys)
             | SynExpr.LetOrUse(_, _, bindings, _, _) -> List.tryPick walkBinding bindings
             | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
             | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick walkExpr [e1; e2]
@@ -171,7 +172,7 @@ module Ast =
             | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
                 List.tryPick walkExpr [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExpr e)
-            | SynExpr.Ident _ -> Some Type
+            | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some Type)
             | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
             | SynExpr.DotGet(e, _, _, _) -> walkExpr e
             | SynExpr.DotSet(e, _, _, _) -> walkExpr e
