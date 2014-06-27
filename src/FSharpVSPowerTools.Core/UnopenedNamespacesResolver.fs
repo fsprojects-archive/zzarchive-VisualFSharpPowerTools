@@ -284,6 +284,22 @@ module Ast =
                     result := Some ((match ns with [] -> oldNs | _ -> ns), { Line = line; Col = col }) 
                 | _ -> ()
 
+        let getMinColumn (decls: SynModuleDecls) =
+            match decls with
+            | [] -> None
+            | firstDecl :: _ -> 
+                match firstDecl with
+                | SynModuleDecl.NestedModule(_, _, _, r) -> Some r
+                | SynModuleDecl.Let(_, _, r) -> Some r
+                | SynModuleDecl.DoExpr(_, _, r) -> Some r
+                | SynModuleDecl.Types(_, r) -> Some r
+                | SynModuleDecl.Exception(_, r) -> Some r
+                | SynModuleDecl.Open(_, r) -> Some r
+                | SynModuleDecl.HashDirective(_, r) -> Some r
+                | _ -> None
+                |> Option.map (fun r -> r.StartColumn)
+
+
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.iter (walkSynModuleOrNamespace []) moduleOrNamespaceList
 
@@ -301,12 +317,13 @@ module Ast =
         and walkSynModuleDecl (parent: LongIdent) (decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace parent fragment
-            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), modules', _, range) ->
+            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), decls, _, range) ->
                 let fullIdent = parent @ ident
                 modules.Add (fullIdent, range.EndLine, range.StartColumn) 
                 if range.EndLine >= currentLine then
-                    doRange fullIdent range.StartLine (range.StartColumn + 4)
-                    List.iter (walkSynModuleDecl fullIdent) modules'
+                    let moduleBodyIdentation = getMinColumn decls |> Option.getOrElse (range.StartColumn + 4)
+                    doRange fullIdent range.StartLine moduleBodyIdentation
+                    List.iter (walkSynModuleDecl fullIdent) decls
             | SynModuleDecl.Open (_, range) -> doRange [] range.EndLine (range.StartColumn - 5)
             | _ -> ()
 

@@ -543,3 +543,67 @@ type Record =
     { F: DateTime }
 """
 
+[<Test>]
+let ``respects existing open statements identation``() =
+    """
+namespace TopNs
+
+  open Another
+
+  type Record = 
+      { F: DateTime }
+"""
+    |> forLine 6
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
+namespace TopNs
+
+  open Another
+  open System
+
+  type Record = 
+      { F: DateTime }
+"""
+
+
+[<Test>]
+let ``respects top level block identation in case where are no other open statements``() =
+    """
+namespace TopNs
+
+ type Record = 
+   { F: DateTime }
+"""
+    |> forLine 6
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
+namespace TopNs
+
+ open System
+ type Record = 
+   { F: DateTime }
+"""
+
+[<Test>]
+let ``respects block identation in case where are no other open statements``() =
+    """
+namespace TopNs
+
+module M =
+ type Record = 
+   { F: DateTime }
+"""
+    |> forLine 6
+    |> forIdent "DateTime"
+    |> forEntity "System.DateTime"
+    |> result """
+namespace TopNs
+
+module M =
+ open System
+ type Record = 
+   { F: DateTime }
+"""
+
