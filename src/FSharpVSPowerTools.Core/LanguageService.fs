@@ -379,16 +379,16 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
         let unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
         
-        let rec getFullName (symbol: FSharpEntity) =
-            if symbol.IsFSharpAbbreviation && symbol.AbbreviatedType.HasTypeDefinition then
-                getFullName symbol.AbbreviatedType.TypeDefinition
-            elif symbol.IsArrayType || symbol.IsByRef then None
-            else
-                Option.attempt (fun _ -> symbol.DisplayName)
+        let rec getFullName (entity: FSharpEntity) =
+            match entity with
+            | AbbreviatedType (TypeWithDefinition def) -> getFullName def
+            | x when x.IsArrayType || x.IsByRef -> None
+            | _ ->
+                Option.attempt (fun _ -> entity.DisplayName)
                 |> Option.bind (fun displayName ->
                     if List.exists ((=) displayName) unrepresentedTypes then None
                     else 
-                        try Some symbol.FullName
+                        try Some entity.FullName
                         with e -> 
                             fail "Should add this type to the black list: %O" e
                             None)
@@ -400,15 +400,14 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         | -1 -> fullName
                         | lastBacktickIndex -> 
                             fullName.Substring(0, lastBacktickIndex)
-                    else fullName)
+                    else fullName) 
             
         let isAttribute (entity: FSharpEntity) =
             let getBaseType (entity: FSharpEntity) =
                 try 
-                    entity.BaseType 
-                    |> Option.bind (fun bt ->
-                         if bt.HasTypeDefinition then Some bt.TypeDefinition 
-                         else None)
+                    match entity.BaseType with
+                    | Some (TypeWithDefinition def) -> Some def
+                    | _ -> None
                 with _ -> None
 
             let rec isAttributeType (ty: FSharpEntity option) =
@@ -441,7 +440,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     let requiresQualifiedAccessParent =
                         requiresQualifiedAccessParent
                         |> Option.orElse (
-                            if hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes then Some entity
+                            if hasAttribute<_, RequireQualifiedAccessAttribute> entity then Some entity
                             else None)
 
                     for e in entity.NestedEntities do

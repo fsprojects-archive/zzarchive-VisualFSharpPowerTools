@@ -57,7 +57,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
         //debug "%A (type: %s)" e (e.GetType().Name)
         let e, ty = getEntityAbbreviatedType entity
         if e.IsEnum || e.IsValueType 
-           || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then ValueType
+           || hasAttribute<_, MeasureAnnotatedAbbreviationAttribute> e then ValueType
         elif 
             
            (e.IsClass && (not e.IsStaticInstantiation 
