@@ -23,13 +23,13 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     
     let getClassficationType cat =
         match cat with
-        | ReferenceType -> Some "FSharp.ReferenceType"
-        | ValueType -> Some "FSharp.ValueType"
-        | PatternCase -> Some "FSharp.PatternCase"
-        | Function -> Some "FSharp.Function"
-        | MutableVar -> Some "FSharp.MutableVar"
-        | Quotation -> Some "FSharp.Quotation"
-        | Module -> Some "FSharp.Module"
+        | Category.ReferenceType -> Some "FSharp.ReferenceType"
+        | Category.ValueType -> Some "FSharp.ValueType"
+        | Category.PatternCase -> Some "FSharp.PatternCase"
+        | Category.Function -> Some "FSharp.Function"
+        | Category.MutableVar -> Some "FSharp.MutableVar"
+        | Category.Quotation -> Some "FSharp.Quotation"
+        | Category.Module -> Some "FSharp.Module"
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
