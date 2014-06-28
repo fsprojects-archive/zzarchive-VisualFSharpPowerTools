@@ -142,6 +142,7 @@
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="GoToDefinitionFilterProvider.cs" />
     <Compile Include="FSharpVSPowerTools.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

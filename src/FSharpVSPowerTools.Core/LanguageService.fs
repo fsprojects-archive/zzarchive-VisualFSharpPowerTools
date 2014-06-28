@@ -70,6 +70,26 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     member __.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
+
+    member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
+        async {
+            let! result = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
+            match result with
+            | Some symbolUse ->
+                let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol)
+                return Some(symbolUse.Symbol, ident, refs)
+            | None -> 
+                return None
+        }
+
+    member __.GetDeclarationLocation(line, col, lineStr, ident, preferSignature) =
+        async {
+            match infoOpt with 
+            | None -> 
+                return FindDeclResult.DeclNotFound FindDeclFailureReason.Unknown
+            | Some (checkResults, _parseResults) -> 
+                return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)       
+        }
             
     member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
         Debug.Assert(not (List.isEmpty names), "The names should not be empty (for which GetToolTip raises exceptions).")
@@ -94,18 +114,6 @@ type AllowStaleResults =
     /// Don't allow stale results. This waits for all background changes relevant to the file to propagate, and forces a recheck of the file text
     /// regardless of whether if has been recently checked or not.
     | No
-
-type ParseAndCheckResults with
-    member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
-        async {
-            let! result = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
-            match result with
-            | Some symbolUse ->
-                let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol)
-                return Some(symbolUse.Symbol, ident, refs)
-            | None -> 
-                return None
-        }
 
 type WordSpan = 
     { Line: int
