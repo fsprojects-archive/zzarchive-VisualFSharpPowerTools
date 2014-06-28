@@ -3,8 +3,8 @@
 open NUnit.Framework
 open FSharpVSPowerTools
 
-let (=>) (ns, ident, parent, fullName) res = 
-    Entity.tryCreate (Array.ofList ns) ident parent fullName 
+let (=>) (currentNs, currentIdent, requireQualifiedAccessParent, fullName) res = 
+    Entity.tryCreate (Array.ofList currentNs) currentIdent requireQualifiedAccessParent fullName 
     |> assertEqual (res |> Option.map (fun (ns, name) -> { Namespace = ns; Name = name }))
 
 [<Test>] 
@@ -30,6 +30,10 @@ let ``internal entities``() =
     (["Myns"; "Nested"], "Now", None, "Myns.Nested.Nested2.Now") => Some (Some "Nested2", "Now")
     (["Myns"; "Nested"], "Now", None, "Myns.Nested.Now") => None
     (["Myns"; "Nested"], "Now", None, "Myns.Nested2.Now") => Some (Some "Nested2", "Now")
+
+[<Test>]
+let ``internal entities in different sub namespace``() =
+    (["Myns;Nested1"], "Now", None, "Myns.Nested2.Now") => Some (Some "Myns.Nested2", "Now")   
 
 [<Test>] 
 let ``internal entities with require qualified access module``() =
@@ -150,6 +154,14 @@ let _ = func1 1 (2, DateTime.Add 1)
     ==> [2, 16; 3, 22]
 
 [<Test>]
+let ``constructor as argument``() =
+    """
+module TopLevel
+let _ = x.func (DateTime())
+""" 
+    ==> [2, 17]
+
+[<Test>]
 let ``type in match``() =
     """
 module TopLevel
@@ -174,6 +186,16 @@ module TopLevel
 let _ = Class<DateTime>()
 """ 
     ==> [2, 15]
+
+[<Test>]
+let ``upcast type is an entity``() =
+    """
+module TopLevel
+let x: IMy<_, _, _> = upcast My(arg)
+type T() =
+    let x: IMy<_, _, _> = upcast My(arg)
+""" 
+    ==> [2, 30; 4, 34]
 
 [<Test>]
 let ``open declaration is not an entity``() =

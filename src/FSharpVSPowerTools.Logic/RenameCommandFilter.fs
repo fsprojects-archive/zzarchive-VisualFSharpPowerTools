@@ -11,10 +11,8 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
-
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-
 open FSharp.ViewModule.Progress
 
 module PkgCmdConst =

@@ -21,7 +21,6 @@ type ResolveUnopenedNamespaceSmartTagger
           projectFactory: ProjectFactory) as self =
     
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
-          
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable state: (Entity * Pos) list option = None 
@@ -73,9 +72,10 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let! entityKind = Ast.getEntityKind parseTree pos |> liftMaybe
                                 let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
 
-//                                entities
-//                                |> Seq.map (fun e -> e.FullName)
-//                                |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
+                                //entities
+                                //|> Seq.map (fun e -> e.FullName)
+                                //|> Seq.map string
+                                //|> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
 
                                 let entities = 
                                     match entityKind with

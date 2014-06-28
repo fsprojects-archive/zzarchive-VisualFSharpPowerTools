@@ -398,7 +398,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     else 
                         try Some entity.FullName
                         with e -> 
-                            fail "Should add this type to the black list: %O" e
+                            //fail "Should add this type to the black list: %O" e
                             None)
                 |> Option.map (fun fullName ->
                     // remove number of arguments from generic types

@@ -13,13 +13,15 @@ type Entity =
 
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Entity =
-    let rec private getRelativeNamespace (targetNamespace: Namespace) (ns: Namespace) =
-        match targetNamespace, ns with
-        | [||], _ 
-        | _, [||] -> ns
-        | _ when targetNamespace.[0] = ns.[0] ->
-            getRelativeNamespace targetNamespace.[1..] ns.[1..]
-        | _ -> ns
+    let getRelativeNamespace (targetNs: Namespace) (sourceNs: Namespace) =
+        let rec loop target source =
+            match target, source with
+            | [||], _ -> source
+            | _, [||] -> sourceNs // target namespace is not a full parent of source namespace, keep the source ns as is
+            | _ when target.[0] = source.[0] ->
+                loop target.[1..] source.[1..]
+            | _ -> source
+        loop targetNs sourceNs
 
     let tryCreate (targetNamespace: Namespace) (ident: ShortIdent) (requiresQualifiedAccessParent: LongIdent option) 
                   (candidateFullName: LongIdent) =
