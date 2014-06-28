@@ -246,12 +246,13 @@ module ViewChange =
 
 open System.Windows.Threading
 
-type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
+type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
     // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
     let events = events |> List.reduce Event.merge
-    let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle,      
-                                    Interval = TimeSpan.FromMilliseconds (float delayMillis))
+    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
+                                Interval = TimeSpan.FromMilliseconds (float delayMillis))
+    let tokenSource = new CancellationTokenSource()
 
     let startNewTimer() = 
         timer.Stop()
@@ -267,16 +268,24 @@ type DocumentEventsListener (events: IEvent<unit> list, delayMillis: uint16, upd
             | _ -> ()
         }
         
-    do async { 
-        while true do
-            do! Async.AwaitEvent events
-            startNewTimer()
-            do! awaitPauseAfterChange()
-            update() }
-       |> Async.StartImmediate
+    do 
+       let computation =
+           async { 
+            while true do
+                do! Async.AwaitEvent events
+                startNewTimer()
+                do! awaitPauseAfterChange()
+                update() }
+       Async.StartImmediate(computation, tokenSource.Token)
        // Go ahead and synchronously get the first bit of info for the original rendering
        update()
 
+    interface IDisposable with
+        member x.Dispose() =
+            tokenSource.Cancel()
+            tokenSource.Dispose()
+            timer.Stop()
+         
 type Async with
     /// An equivalence of Async.StartImmediate which catches and logs raised exceptions
     static member StartImmediateSafe(computation, ?cancellationToken) =
@@ -301,4 +310,30 @@ type Async with
                     Logging.logException e
             }
         Async.Start(comp, ?cancellationToken = cancellationToken)
-        
+       
+module internal Disposable =
+    let create (onDispose: unit -> unit) =
+        { new IDisposable with
+            member x.Dispose() =
+                onDispose() }
+
+/// Provides an IDisposable handle which allows us to override the cursor cleanly as well as restore whenever needed
+type CursorOverrideHandle(newCursor) =
+    let mutable disposed = false
+
+    let originalCursor = System.Windows.Input.Mouse.OverrideCursor
+    let restore () = 
+        if not disposed then
+            System.Windows.Input.Mouse.OverrideCursor <- originalCursor
+            disposed <- true
+
+    do 
+        System.Windows.Input.Mouse.OverrideCursor <- newCursor
+
+    member x.Restore() = restore()
+
+    interface IDisposable with 
+        member x.Dispose() = restore()
+
+module internal Cursor =
+    let wait() = new CursorOverrideHandle(System.Windows.Input.Cursors.Wait)

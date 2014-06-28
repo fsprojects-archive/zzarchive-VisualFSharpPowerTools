@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open System.Threading
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -19,7 +20,7 @@ type private ClassifierState =
 
 type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
-                                projectFactory: ProjectFactory) as self = 
+                                projectFactory: ProjectFactory) as self =
     
     let getClassficationType cat =
         match cat with
@@ -36,8 +37,8 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
     let classificationChanged = Event<_,_>()
     let state = Atom None
-    let mutable isWorking = false
-
+    let cancellationToken = Atom None
+    
     let getProject() =
         maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -55,25 +56,29 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | _ -> false
 
     let updateSyntaxConstructClassifiers force =
+        let cancelToken = new CancellationTokenSource() 
+        cancellationToken.Swap (fun _ -> Some (cancelToken))
+        |> Option.iter (fun oldToken -> 
+            oldToken.Cancel()
+            oldToken.Dispose())
+
         let snapshot = doc.TextBuffer.CurrentSnapshot
         let currentState = state.Value
-        if not isWorking then
-            let needUpdate =
-                match force, currentState with
-                | true, _ -> true
-                | _, None -> true
-                | _, Some state -> state.SnapshotSpan.Snapshot <> snapshot
-
-            if needUpdate then
-                isWorking <- true
-                match getProject() with
-                | Some project ->
-                    debug "[SyntaxConstructClassifier] - Effective update"
+        let needUpdate =
+            match force, currentState with
+            | true, _ -> true
+            | _, None -> true
+            | _, Some state -> state.SnapshotSpan.Snapshot <> snapshot
+                 
+        if needUpdate then
+            match getProject() with
+            | Some project ->
+                debug "[SyntaxConstructClassifier] - Effective update"
+                let worker = 
                     async {
                         try
-                            let stale = if force then AllowStaleResults.No else AllowStaleResults.MatchingSource
                             let! allSymbolsUses, lexer =
-                                vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, stale)
+                                vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No)
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
                             let singleDefs = 
@@ -121,10 +126,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 let currentSnapshot = doc.TextBuffer.CurrentSnapshot
                                 let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
                                 classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-                        finally 
-                            isWorking <- false
-                    } |> Async.StartInThreadPoolSafe
-                | None -> ()
+                        with e -> Logging.logException e
+                    } 
+                Async.Start (worker, cancelToken.Token) 
+            | None -> ()
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events = dte.Events :?> EnvDTE80.Events2 
@@ -141,7 +146,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
     do events.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler
     
-    let _ = DocumentEventsListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
@@ -181,4 +186,5 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     interface IDisposable with
         member x.Dispose() = 
             events.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler
+            (docEventListener :> IDisposable).Dispose()
          

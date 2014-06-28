@@ -84,7 +84,7 @@ namespace FSharpVSPowerTools
             this.chbUnionPatternMatchCaseGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(181, 124);
             this.chbUnionPatternMatchCaseGeneration.Name = "chbUnionPatternMatchCaseGeneration";
-            this.chbUnionPatternMatchCaseGeneration.Size = new System.Drawing.Size(269, 17);
+            this.chbUnionPatternMatchCaseGeneration.Size = new System.Drawing.Size(201, 17);
             this.chbUnionPatternMatchCaseGeneration.TabIndex = 16;
             this.chbUnionPatternMatchCaseGeneration.Text = "Union pattern match case generation";
             this.chbUnionPatternMatchCaseGeneration.UseVisualStyleBackColor = true;
@@ -96,7 +96,7 @@ namespace FSharpVSPowerTools
             this.chbRecordStubGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbRecordStubGeneration.Location = new System.Drawing.Point(181, 101);
             this.chbRecordStubGeneration.Name = "chbRecordStubGeneration";
-            this.chbRecordStubGeneration.Size = new System.Drawing.Size(205, 17);
+            this.chbRecordStubGeneration.Size = new System.Drawing.Size(137, 17);
             this.chbRecordStubGeneration.TabIndex = 15;
             this.chbRecordStubGeneration.Text = "Record stub generation";
             this.chbRecordStubGeneration.UseVisualStyleBackColor = true;
@@ -171,9 +171,9 @@ namespace FSharpVSPowerTools
             this.chbDepthColorizer.AutoSize = true;
             this.chbDepthColorizer.Location = new System.Drawing.Point(16, 148);
             this.chbDepthColorizer.Name = "chbDepthColorizer";
-            this.chbDepthColorizer.Size = new System.Drawing.Size(97, 17);
+            this.chbDepthColorizer.Size = new System.Drawing.Size(166, 17);
             this.chbDepthColorizer.TabIndex = 9;
-            this.chbDepthColorizer.Text = "Depth colorizer";
+            this.chbDepthColorizer.Text = "Indent guides/Depth colorizer";
             this.chbDepthColorizer.UseVisualStyleBackColor = true;
             // 
             // chbRenameRefactoring

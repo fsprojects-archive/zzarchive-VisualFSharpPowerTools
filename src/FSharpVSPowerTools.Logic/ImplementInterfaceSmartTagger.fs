@@ -30,9 +30,12 @@ type InterfaceState =
       Tokens: TokenInformation list }
 
 type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer, 
-                                   editorOptionsFactory: IEditorOptionsFactoryService, textUndoHistory: ITextUndoHistory,
-                                   vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
-                                   projectFactory: ProjectFactory) as self =
+                                   editorOptionsFactory: IEditorOptionsFactoryService, 
+                                   textUndoHistory: ITextUndoHistory,
+                                   vsLanguageService: VSLanguageService, 
+                                   serviceProvider: IServiceProvider,
+                                   projectFactory: ProjectFactory,
+                                   defaultBody: string) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable state = None
@@ -110,7 +113,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     currentWord <- Some newWord
             | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)
 
     let getLineIdent (lineStr: string) =
@@ -146,7 +149,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
         let startColumn = inferStartColumn indentSize state
         let typeParams = state.InterfaceData.TypeParameters
         let stub = InterfaceStubGenerator.formatInterface startColumn indentSize typeParams 
-                    "x" "raise (System.NotImplementedException())" displayContext implementedMemberSignatures entity
+                    "x" defaultBody displayContext implementedMemberSignatures entity
         if String.IsNullOrEmpty stub then
             let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore
@@ -210,3 +213,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
 
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
+
+    interface IDisposable with
+        member x.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()

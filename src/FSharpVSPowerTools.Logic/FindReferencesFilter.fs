@@ -15,6 +15,8 @@ open Microsoft.FSharp.Compiler
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
+open FSharp.ViewModule.Progress
+
 [<RequireQualifiedAccess>]
 module PkgCmdConst =
     let cmdidFindReferences = uint32 VSConstants.VSStd97CmdID.FindReferences
@@ -23,10 +25,11 @@ module PkgCmdConst =
 
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory) =
-    let getDocumentState() =
+    let getDocumentState (progress : OperationState -> unit) =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItems = maybe {
+                progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetActiveDocument()
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
@@ -41,6 +44,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     let! results = 
                         match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript fsSymbolUse.Symbol dte file with
                         | Some SymbolDeclarationLocation.File ->
+                            progress(OperationState.Reporting(Resource.findAllReferencesFindInFileMessage))
                             vsLanguageService.FindUsagesInFile (span, symbol, fileScopedCheckResults)
                         | scope ->
                             let projectsToCheck =
@@ -57,8 +61,8 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                                     if allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName) 
                                     then allProjects 
                                     else project :: allProjects
-    
-                            vsLanguageService.FindUsages (span, file, project, projectsToCheck) 
+                            progress(OperationState.Reporting(Resource.findAllReferencesFindInProjectsMessage))
+                            vsLanguageService.FindUsages (span, file, project, projectsToCheck, progress) 
                     return results |> Option.map (fun (_, _, references) -> references, symbol)
                 | _ -> return None
             | _ -> return None
@@ -66,7 +70,9 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
     let findReferences() = 
         async {
-            let! references = getDocumentState()
+            use status = new StatusHandler(serviceProvider, StatusIcon.Find, true)
+
+            let! references = getDocumentState status.Report
             match references with
             | Some (references, symbol) ->
                 let references = 
@@ -96,8 +102,9 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let guid = ref PkgCmdConst.guidSymbolLibrary
                 ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
             | _ -> 
+                status.Report(OperationState.Idle)
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                statusBar.SetText(Resource.findAllReferencesStatusMessage) |> ignore 
+                statusBar.SetText(Resource.findAllReferencesInvalidExpressionMessage) |> ignore 
         } |> Async.StartImmediateSafe
 
     member val IsAdded = false with get, set

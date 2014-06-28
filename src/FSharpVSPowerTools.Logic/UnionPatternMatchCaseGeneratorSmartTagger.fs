@@ -30,12 +30,11 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                                                textUndoHistory: ITextUndoHistory,
                                                vsLanguageService: VSLanguageService,
                                                serviceProvider: IServiceProvider,
-                                               projectFactory: ProjectFactory) as self =
+                                               projectFactory: ProjectFactory,
+                                               defaultBody: string) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable unionDefinition = None
-
-    let [<Literal>] CommandName = "Generate union pattern match cases"
 
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
@@ -83,17 +82,17 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                     currentWord <- Some newWord
             | _ -> ()
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)
 
     let handleGenerateUnionPatternMatchCases
         (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr)
         (insertionParams: _) entity = 
-        use transaction = textUndoHistory.CreateTransaction(CommandName)
+        use transaction = textUndoHistory.CreateTransaction(Resource.unionPatternMatchCaseCommandName)
 
         let stub = UnionPatternMatchCaseGenerator.formatMatchExpr
                        insertionParams
-                       "failwith \"Unhandled case\""
+                       defaultBody
                        patMatchExpr
                        entity
         let insertionPos = insertionParams.InsertionPos
@@ -106,7 +105,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
     let generateUnionPatternMatchCase snapshot patMatchExpr insertionPos entity =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = CommandName
+            member x.DisplayText = Resource.unionPatternMatchCaseCommandName
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
@@ -138,3 +137,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
 
         [<CLIEvent>]
         member x.TagsChanged = tagsChanged.Publish
+
+    interface IDisposable with
+        member x.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()
