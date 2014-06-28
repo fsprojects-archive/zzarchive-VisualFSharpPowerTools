@@ -115,12 +115,18 @@ type ILexer =
     abstract TokenizeLine: line: int -> TokenInformation list
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
+open System.Collections.Generic
 
 type RawEntity = 
     { FullName: string
+      IsPublic: bool
       TopRequireQualifiedAccessParent: string option
       IsAttribute: bool }
     override x.ToString() = sprintf "%A" x  
+
+type AssemblyPath = string
+type AssemblyContentType = Public | Full
+
 // --------------------------------------------------------------------------------------
 // Language service 
 
@@ -188,6 +194,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       ParseAndCheckResults.Empty  
               reply.Reply results
       })
+
+  let entityCache = Dictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, targetFramework) =
@@ -424,45 +432,74 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             getFullName entity
             |> Option.map (fun fullName ->
                  { FullName = fullName
+                   IsPublic = entity.Accessibility.IsPublic
                    TopRequireQualifiedAccessParent = 
                        topRequiresQualifiedAccessParent |> Option.bind (fun parent -> getFullName parent)
                    IsAttribute = isAttribute entity })
 
-        let rec traverseEntity getInternals (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
-            seq { if not entity.IsProvided && (getInternals || entity.Accessibility.IsPublic) then
-                    match createEntity requiresQualifiedAccessParent entity with
-                    | Some x -> yield x
-                    | None -> ()
-                    // do not return functions, members and values for now
-                    //for f in entity.MembersFunctionsAndValues do
-                    //    yield! getFullName f
-                    
-                    let requiresQualifiedAccessParent =
-                        requiresQualifiedAccessParent
-                        |> Option.orElse (
-                            if hasAttribute<_, RequireQualifiedAccessAttribute> entity then Some entity
-                            else None)
+        let rec traverseEntity contentType (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
+            seq { if not entity.IsProvided then
+                    match contentType, entity.Accessibility.IsPublic with
+                    | Full, _ | Public, true ->
+                        match createEntity requiresQualifiedAccessParent entity with
+                        | Some x -> yield x
+                        | None -> ()
+                                            
+                        let requiresQualifiedAccessParent =
+                            requiresQualifiedAccessParent
+                            |> Option.orElse (
+                                if hasAttribute<_, RequireQualifiedAccessAttribute> entity then Some entity
+                                else None)
 
-                    for e in entity.NestedEntities do
-                        yield! traverseEntity getInternals requiresQualifiedAccessParent e }
+                        if entity.IsFSharpModule then
+                            for func in entity.MembersFunctionsAndValues do
+                                yield { FullName = func.FullName
+                                        IsPublic = func.Accessibility.IsPublic
+                                        TopRequireQualifiedAccessParent = 
+                                            requiresQualifiedAccessParent |> Option.bind (fun parent -> getFullName parent)
+                                        IsAttribute = false }
+
+                        for e in entity.NestedEntities do
+                            yield! traverseEntity contentType requiresQualifiedAccessParent e 
+                    | _ -> () }
+
+        let traverseAssemblySignature (signature: FSharpAssemblySignature) contentType =
+             seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
+                     yield! traverseEntity contentType None e }
+             |> Seq.distinct
+             |> Seq.toList
 
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
-                Some (seq { 
-                        match checkResults.GetPartialAssemblySignature() with
-                        | Some signature -> yield true, signature
-                        | None -> ()
-                        match checkResults.ProjectContext with
-                        | Some ctx ->
-                            yield! ctx.GetReferencedAssemblies() 
-                                   |> List.map (fun asm -> false, asm.Contents)
-                        | None -> () 
-                      }
-                      |> Seq.map (fun (getInternals, signature) -> 
-                          seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                                  yield! traverseEntity getInternals None e }) 
-                      |> Seq.concat
-                      |> Seq.distinct
-                      |> Seq.toList)
-        }    
+                Some [ match checkResults.GetPartialAssemblySignature() with
+                       | Some signature -> yield! traverseAssemblySignature signature Full
+                       | None -> ()
+
+                       match checkResults.ProjectContext with
+                       | Some ctx ->
+                           for asm in ctx.GetReferencedAssemblies() do
+                               let neededContentType = Public // it's always Public since we don't support InternalsVisibleTo attribute yet
+                               yield! 
+                                   match asm.FileName with
+                                   | Some fileName ->
+                                       let assemblyWriteTime = FileInfo(fileName).LastWriteTime
+                                       match neededContentType, entityCache.TryGetValue fileName with
+                                       | _, (true, (cacheWriteTime, Full, entities))
+                                       | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
+                                            debug "[LanguageService] Return entities from %s from cache." fileName
+                                            entities
+                                       | _ ->
+                                           debug "[LanguageService] Getting entities from %s." fileName
+                                           let entities = traverseAssemblySignature asm.Contents neededContentType
+                                           entityCache.[fileName] <- (assemblyWriteTime, neededContentType, entities)
+                                           entities
+                                   | None -> 
+                                       debug "[LanguageService] Getting entities from %s." fileName
+                                       traverseAssemblySignature asm.Contents neededContentType
+                                   |> List.filter (fun entity -> 
+                                        match neededContentType, entity.IsPublic with
+                                        | Full, _ | Public, true -> true
+                                        | _ -> false)
+                       | None -> () ]
+        }
