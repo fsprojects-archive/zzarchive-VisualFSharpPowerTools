@@ -97,41 +97,41 @@ module ClausesAnalysisTests =
         |> Option.map (getWrittenCases)
         |> Option.getOrElse Set.empty
 
-//    [<Test>]
-//    let ``OR patterns with constants and identifiers`` () =
-//        """type Union = Case1 | Case2 | Case3 of bool | Case4 of int * int
-//let f union = match union with
-//    | Case3 true
-//    | Case3(i)
-//    | Case4(3, _) -> ()"""
-//        |> tryGetWrittenCases (Pos.fromZ 2 6)
-//        |> assertEqual (set ["Case3"])
-//
-//    [<Test>]
-//    let ``OR patterns with wildcards and qualified identifiers`` () =
-//        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
-//let f union = match union with
-//    | Case2 | Union.Case2 | Case4(_,_)
-//    | Case3 _
-//    | Union.Case4 _ -> ()"""
-//        |> tryGetWrittenCases (Pos.fromZ 2 6)
-//        |> assertEqual (set ["Case2"; "Case3"; "Case4"])
-//
-//    [<Test>]
-//    let ``redundant simple AND pattern`` () =
-//        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
-//let f union = match union with
-//    | Case2 & Case2 -> ()"""
-//        |> tryGetWrittenCases (Pos.fromZ 2 6)
-//        |> assertEqual (set ["Case2"])
-//
-//    [<Test>]
-//    let ``AND pattern with wildcards`` () =
-//        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
-//let f union = match union with
-//    | Case2 & Case4(_,_) -> ()"""
-//        |> tryGetWrittenCases (Pos.fromZ 2 6)
-//        |> assertEqual (set [])
+    [<Test>]
+    let ``OR patterns with constants and identifiers`` () =
+        """type Union = Case1 | Case2 | Case3 of bool | Case4 of int * int
+let f union = match union with
+    | Case3 true
+    | Case3(i)
+    | Case4(3, _) -> ()"""
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set ["Case3", []])
+
+    [<Test>]
+    let ``OR patterns with wildcards and qualified identifiers`` () =
+        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case2 | Union.Case2 | Case4(_,_)
+    | Case3 _
+    | Union.Case4 _ -> ()"""
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set ["Case2", []; "Case3", []; "Case4", ["Union"]])
+
+    [<Test>]
+    let ``redundant simple AND pattern`` () =
+        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case2 & Case2 -> ()"""
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set ["Case2", []])
+
+    [<Test>]
+    let ``AND pattern with wildcards`` () =
+        """type Union = Case1 | Case2 | Case3 of int | Case4 of int * int
+let f union = match union with
+    | Case2 & Case4(_,_) -> ()"""
+        |> tryGetWrittenCases (Pos.fromZ 2 6)
+        |> assertEqual (set [])
 
 
 [<Test>]

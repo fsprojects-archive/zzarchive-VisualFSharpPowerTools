@@ -388,17 +388,15 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
     let rec getCasesInPattern (pat: SynPat) =
         match pat with
         | SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _,
-                           constructorArgs, _, _)
-          when unionCaseLongIdent.Length > 0 ->
-            getIfArgsAreFree constructorArgs (fun () ->
-                // Get list of qualifiers, this can be checked for length later. 
-                let unionCaseNames = 
-                    unionCaseLongIdent
-                    |> List.map (fun i -> i.idText)
-                    |> List.rev
-                [ (unionCaseNames.Head, unionCaseNames.Tail |> List.rev) ]
-            )
-            |> Option.getOrElse []
+                           constructorArgs, _, _) ->
+          // Get list of qualifiers, this can be checked for length later. 
+          match (unionCaseLongIdent |> List.map (fun i -> i.idText) |> List.rev) with
+          | [] -> []
+          | name::quals ->
+                getIfArgsAreFree constructorArgs (fun () ->
+                    [ (name, quals |> List.rev) ]
+                )
+                |> Option.getOrElse []
 
         | SynPat.Or(left, right, _) ->
             (getCasesInPattern left) @ (getCasesInPattern right)
