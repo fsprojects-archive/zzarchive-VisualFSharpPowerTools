@@ -11,6 +11,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open FSharpVSPowerTools.CodeGeneration
 
 type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory) =
@@ -32,7 +33,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     let fsSymbol = fsSymbolUse.Symbol
                     let lineStr = span.Start.GetContainingLine().GetText()
                     let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, false)
-                    return Some (fsSymbol, findDeclResult) 
+                    return Some (fsSymbol, fsSymbolUse.DisplayContext, findDeclResult) 
                 | _ -> return None
             | _ -> return None
         }
@@ -40,10 +41,10 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     // Now the input is an entity or a member/value.
     // If it is an entity, write the whole corresponding module and type
     // otherwise, write containing module or type and go to the exact location of the member in that entity
-    let navigateToMetadata (fsSymbol: FSharpSymbol) = 
+    let navigateToMetadata displayContext (fsSymbol: FSharpSymbol) = 
         let fileName = fsSymbol.FullName + ".fsi"
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
-        File.WriteAllText(filePath, "open " + fsSymbol.FullName)
+        File.WriteAllText(filePath, SignatureGenerator.formatSymbol displayContext fsSymbol)
         
         let mutable hierarchy = Unchecked.defaultof<_>
         let mutable itemId = Unchecked.defaultof<_>
@@ -90,13 +91,13 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                 let symbolResult = getDocumentState () |> Async.RunSynchronously
                 match symbolResult with
-                | Some (_, FindDeclResult.DeclFound _) 
+                | Some (_, _, FindDeclResult.DeclFound _) 
                 | None ->
                     statusBar.SetText("Delegate go to definition to Visual F# Tools") |> ignore       
                     // Declaration location might exist so let's Visual F# Tools handle it  
                     x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-                | Some (fsSymbol, FindDeclResult.DeclNotFound _) ->    
-                    navigateToMetadata fsSymbol
+                | Some (fsSymbol, displayContext, FindDeclResult.DeclNotFound _) ->    
+                    navigateToMetadata displayContext fsSymbol
                     statusBar.SetText("Try to go to definition by ourselves") |> ignore  
                     VSConstants.S_OK
             else
