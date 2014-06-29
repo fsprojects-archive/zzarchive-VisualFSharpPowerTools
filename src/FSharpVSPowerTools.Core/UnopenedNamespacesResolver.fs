@@ -142,7 +142,7 @@ module Ast =
             | SynExpr.Record(_, _, fields, r) -> 
                 ifPosInRange r (fun _ ->
                     fields |> List.tryPick (fun (_, e, _) -> e |> Option.bind walkExpr))
-            | SynExpr.New(_, _, e, _) -> walkExpr e
+            | SynExpr.New(_, t, e, _) -> walkExpr e |> Option.orElse (walkType t)
             | SynExpr.ObjExpr(_, _, bindings, ifaces, _, _) -> 
                 List.tryPick walkBinding bindings |> Option.orElse (List.tryPick walkInterfaceImpl ifaces)
             | SynExpr.While(_, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
@@ -160,7 +160,7 @@ module Ast =
             | SynExpr.App(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.TypeApp(e, _, tys, _, _, _, _) -> 
                 walkExpr e |> Option.orElse (List.tryPick walkType tys)
-            | SynExpr.LetOrUse(_, _, bindings, _, _) -> List.tryPick walkBinding bindings
+            | SynExpr.LetOrUse(_, _, bindings, e, _) -> List.tryPick walkBinding bindings |> Option.orElse (walkExpr e)
             | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
             | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.Lazy(e, _) -> walkExpr e

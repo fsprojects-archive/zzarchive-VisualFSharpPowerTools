@@ -97,12 +97,16 @@ let ``type name in expression is an entity``() =
     """
 module TopLevel
 let x = DateTime.Now
+let x = new Task()
 type T() =
     let field = DateTime.Now
     member x.Prop = DateTime.Now
     member x.Method() = DateTime.Now
+    static member StaticMethod (arg: int) =
+        let a = 1
+        { Field = new Task<_>() }
 """ 
-    ==> [2, 10; 4, 18; 5, 22; 6, 26]
+    ==> [2, 10; 3, 13; 5, 18; 6, 22; 7, 26; 10, 23]
 
 [<Test>]
 let ``argument type annotation is an entity``() =
@@ -185,8 +189,10 @@ let _ = Class<DateTime>()
 type R = {
     Field: Task<_>
 }
+let _ = new Task<_>()
+let _ = { Field = new Task<_>() }
 """ 
-    ==> [2, 9; 4, 12]
+    ==> [2, 9; 4, 12; 6, 13; 7, 23]
 
 [<Test>]
 let ``generic type argument is an entity``() =
