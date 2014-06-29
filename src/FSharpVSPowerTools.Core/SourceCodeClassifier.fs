@@ -7,6 +7,7 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 
+[<RequireQualifiedAccess>]
 type Category =
     | ReferenceType
     | ValueType
@@ -20,80 +21,23 @@ type Category =
     override x.ToString() = sprintf "%A" x
 
 let internal getCategory (symbolUse: FSharpSymbolUse) =
-    let symbol = symbolUse.Symbol
-    
-    let isOperator (name: string) =
-        if name.StartsWith "( " && name.EndsWith " )" && name.Length > 4 then
-            name.Substring (2, name.Length - 4) |> String.forall (fun c -> c <> ' ')
-        else false
-
-    let rec getEntityAbbreviatedType (entity: FSharpEntity) =
-        if entity.IsFSharpAbbreviation then
-            let typ = entity.AbbreviatedType
-            if typ.HasTypeDefinition then getEntityAbbreviatedType typ.TypeDefinition
-            else entity, Some typ
-        else entity, None
-
-    let rec getAbbreviatedType (fsharpType: FSharpType) =
-        if fsharpType.IsAbbreviation then
-            let typ = fsharpType.AbbreviatedType
-            if typ.HasTypeDefinition then getAbbreviatedType typ
-            else fsharpType
-        else fsharpType
-
-    let isReferenceCell (fsharpType: FSharpType) = 
-        let ty = getAbbreviatedType fsharpType
-        ty.HasTypeDefinition 
-        && ty.TypeDefinition.IsFSharpRecord
-        && ty.TypeDefinition.FullName = "Microsoft.FSharp.Core.FSharpRef`1"
-
-    match symbol with
-    | :? FSharpGenericParameter
-    | :? FSharpUnionCase
-    | :? FSharpActivePatternCase -> 
-        PatternCase
-
-    | :? FSharpField as f ->
-        if f.IsMutable || isReferenceCell f.FieldType then MutableVar
-        else Other
-
-    | :? FSharpEntity as entity ->
-        //debug "%A (type: %s)" e (e.GetType().Name)
-        let e, ty = getEntityAbbreviatedType entity
-        if e.IsEnum || e.IsValueType 
-           || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then ValueType
-        elif 
-            
-           (e.IsClass && (not e.IsStaticInstantiation 
-                          // here we must use "entity", not "e" because "entity" could be an alias, but "e" is certainly cannot
-                          || entity.IsFSharpAbbreviation)) 
-           || e.IsDelegate || e.IsFSharpExceptionDeclaration
-           || e.IsFSharpRecord || e.IsFSharpUnion || e.IsInterface || e.IsMeasure 
-           || ((e.IsProvided || e.IsProvidedAndErased || e.IsProvidedAndGenerated) && e.CompiledName = e.DisplayName)
-           || (e.IsFSharp && e.IsOpaque && not e.IsFSharpModule && not e.IsNamespace)
-           || e.IsByRef || e.IsArrayType then
-            ReferenceType
-        elif e.IsFSharpModule then Module
-        else 
-            match ty with
-            | Some t when t.IsTupleType -> ReferenceType
-            | _ -> Other
-    
-    | :? FSharpMemberFunctionOrValue as func ->
-        //debug "%A (type: %s)" mfov (mfov.GetType().Name)
-        if func.CompiledName = ".ctor" then 
-            if func.EnclosingEntity.IsValueType || func.EnclosingEntity.IsEnum then ValueType
-            else ReferenceType
-        elif func.FullType.IsFunctionType && not func.IsPropertyGetterMethod && not func.IsPropertySetterMethod
-             && not symbolUse.IsFromComputationExpression then 
-            if isOperator func.DisplayName then Other
-            else Function
-        elif func.IsMutable || isReferenceCell func.FullType then MutableVar
-        else Other
-    
+    match symbolUse.Symbol with
+    | Field (MutableVar, _)
+    | Field (_, RefCell) -> Category.MutableVar
+    | Pattern -> Category.PatternCase
+    | Entity (_, ValueType, _) -> Category.ValueType
+    | Entity Class -> Category.ReferenceType
+    | Entity (_, Module, _) -> Category.Module
+    | Entity (_, _, Tuple) -> Category.ReferenceType
+    | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
+    | MemberFunctionOrValue (Constructor ValueType, _) -> Category.ValueType
+    | MemberFunctionOrValue (Constructor _, _) -> Category.ReferenceType
+    | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression, _) -> Category.Function
+    | MemberFunctionOrValue (MutableVar, _) -> Category.MutableVar
+    | MemberFunctionOrValue (_, RefCell) -> Category.MutableVar
     | _ ->
-        debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
-        Other
+        //debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
+        Category.Other
 
 type CategorizedColumnSpan =
     { Category: Category
@@ -167,7 +111,7 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
             let categorizedSpan =
                 if span'.EndCol <= span'.StartCol then None
                 else Some { Category = 
-                                if not used then Unused 
+                                if not used then Category.Unused 
                                 else getCategory symbolUse
                             WordSpan = span' }
         
@@ -180,8 +124,8 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
                     spans 
                     |> List.sortBy (fun span -> 
                         match span.Category with
-                        | Unused -> 0
-                        | Other -> 2
+                        | Category.Unused -> 0
+                        | Category.Other -> 2
                         | _ -> 1)
                     |> List.head)
         |> Seq.distinct
@@ -282,7 +226,7 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
         !quotationRanges 
         |> Seq.map (fun (r: Range.range) -> 
             if r.EndLine = r.StartLine then
-                seq [ { Category = Quotation
+                seq [ { Category = Category.Quotation
                         WordSpan = { Line = r.StartLine
                                      StartCol = r.StartColumn
                                      EndCol = r.EndColumn }} ]
@@ -315,7 +259,7 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
                             let tok = tokens |> List.maxBy (fun t -> t.RightColumn) 
                             tok.LeftColumn + tok.FullMatchedLength
 
-                        Some { Category = Quotation
+                        Some { Category = Category.Quotation
                                WordSpan = { Line = line
                                             StartCol = minCol
                                             EndCol = maxCol }}))

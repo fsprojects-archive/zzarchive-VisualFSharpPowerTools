@@ -123,7 +123,7 @@ namespace FSharpVSPowerTools
             {
                 if (commandGroup == _commandGroup)
                 {
-                    return Array.FindIndex(commands, cmd => cmd.cmdID == _commandId);
+                    return System.Array.FindIndex(commands, cmd => cmd.cmdID == _commandId);
                 }
                 return -1;
             }
