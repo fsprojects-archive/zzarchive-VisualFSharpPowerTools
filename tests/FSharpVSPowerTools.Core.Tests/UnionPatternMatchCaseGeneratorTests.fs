@@ -115,7 +115,7 @@ let f union = match union with
     | Case3 _
     | Union.Case4 _ -> ()"""
         |> tryGetWrittenCases (Pos.fromZ 2 6)
-        |> assertEqual (set ["Case2", []; "Case3", []; "Case4", ["Union"]])
+        |> assertEqual (set ["Case2", []; "Case2", ["Union"]; "Case4", []; "Case3", []; "Case4", ["Union"]])
 
     [<Test>]
     let ``redundant simple AND pattern`` () =
