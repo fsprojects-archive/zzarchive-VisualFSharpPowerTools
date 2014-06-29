@@ -197,12 +197,11 @@ module Ast =
         and walkField (SynField.Field(attrs, _, _, t, _, _, _, _)) =
             List.tryPick walkAttribute attrs |> Option.orElse (walkType t)
 
+        and walkValSig (SynValSig.ValSpfn(attrs, _, _, t, _, _, _, _, _, _, _)) =
+            List.tryPick walkAttribute attrs |> Option.orElse (walkType t)
+
         and walkMember = function
-            | SynMemberDefn.AbstractSlot (_, _, _) -> None
-//            | SynMemberDefn.Member(SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _) as binding, r) -> 
-//                match pat with
-//                | SynPat.LongIdent _ ->
-//                    walkBinding r binding
+            | SynMemberDefn.AbstractSlot (valSig, _, _) -> walkValSig valSig
             | SynMemberDefn.Member(binding, _) -> walkBinding binding
             | SynMemberDefn.ImplicitCtor(_, attrs, pats, _, _) -> 
                 List.tryPick walkAttribute attrs |> Option.orElse (List.tryPick walkSimplePat pats)

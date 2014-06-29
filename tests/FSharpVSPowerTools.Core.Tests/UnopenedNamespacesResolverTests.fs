@@ -109,6 +109,16 @@ type T() =
     ==> [2, 10; 3, 13; 5, 18; 6, 22; 7, 26; 10, 23]
 
 [<Test>]
+let ``type name in interface declaration``() =
+    """
+module TopLevel
+type T() =
+    abstract Prop: DateTime
+    abstract Method: Task<_> -> DateTime
+""" 
+    ==> [3, 20; 4, 22; 4, 33]
+
+[<Test>]
 let ``argument type annotation is an entity``() =
     """
 module TopLevel
@@ -130,8 +140,11 @@ type T() =
     [<Attribute>] static member StaticMember ([<Attribute>] arg) = ()
 [<Attribute>]
 type R = { [<Attribute>] F: int }
+type I =
+    [<Attribute>]
+    abstract Method: unit -> DateTime
 """ 
-    ==> [2, 11; 3, 4; 5, 8; 7, 8; 7, 51; 8, 4; 9, 15]
+    ==> [2, 11; 3, 4; 5, 8; 7, 8; 7, 51; 8, 4; 9, 15; 11, 7]
 
 [<Test>]
 let ``type in an object expression method body is an entity``() =

@@ -1,18 +1,13 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
-open System
-open System.IO
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Shell
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Editor
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.VisualStudio.TextManager.Interop
-
 open FSharpVSPowerTools
-
 open FSharp.ViewModule.Progress
+open Microsoft.VisualStudio.Editor
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.TextManager.Interop
+open System.IO
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type FilePath = string
 
