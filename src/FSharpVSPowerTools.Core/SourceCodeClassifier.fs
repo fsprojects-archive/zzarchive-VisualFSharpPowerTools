@@ -20,9 +20,7 @@ type Category =
     override x.ToString() = sprintf "%A" x
 
 let internal getCategory (symbolUse: FSharpSymbolUse) =
-    let symbol = symbolUse.Symbol
-    
-    match symbol with
+    match symbolUse.Symbol with
     | Field (MutableVar, _)
     | Field (_, RefCell) -> Category.MutableVar
     | Pattern -> Category.PatternCase
@@ -31,15 +29,13 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | Entity (_, Module, _) -> Category.Module
     | Entity (_, _, Tuple) -> Category.ReferenceType
     | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
-    | MemberFunctionOrValue (Constructor enclosingEntity, _) -> 
-        match enclosingEntity with
-        | ValueType -> Category.ValueType
-        | _ -> Category.ReferenceType
+    | MemberFunctionOrValue (Constructor ValueType, _) -> Category.ValueType
+    | MemberFunctionOrValue (Constructor _, _) -> Category.ReferenceType
     | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression, _) -> Category.Function
     | MemberFunctionOrValue (MutableVar, _) -> Category.MutableVar
     | MemberFunctionOrValue (_, RefCell) -> Category.MutableVar
     | _ ->
-        debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
+        //debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
         Category.Other
 
 type CategorizedColumnSpan =
