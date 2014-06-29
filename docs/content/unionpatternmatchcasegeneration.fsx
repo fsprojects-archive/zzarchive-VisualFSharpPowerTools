@@ -27,4 +27,7 @@ Handles union types with qualified access
 
 ![Union pattern match case generation (qualified access)](img/pattern_match_case_generation_qualified.gif)
 
+The default value of patterns' right-hand sides can be configured in 'F# Power Tools --> Code Generation' dialog.
+
+![Code generation](img/code_generation_options.png)
 *)
