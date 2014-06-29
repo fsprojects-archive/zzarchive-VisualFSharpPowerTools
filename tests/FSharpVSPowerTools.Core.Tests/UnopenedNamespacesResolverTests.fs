@@ -3,41 +3,47 @@
 open NUnit.Framework
 open FSharpVSPowerTools
 
-let (=>) (currentNs, currentIdent, requireQualifiedAccessParent, fullName) res = 
-    Entity.tryCreate (Array.ofList currentNs) currentIdent requireQualifiedAccessParent fullName 
+let (=>) (ns: string option, scope: string, currentIdent, requireQualifiedAccessParent: string option, entityNs: string option, 
+          entityFullName: string) res = 
+    Entity.tryCreate 
+            (ns |> Option.map (fun x -> x.Split '.'))
+            (scope.Split '.') 
+            currentIdent 
+            (requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.')) 
+            (entityNs |> Option.map (fun x -> x.Split '.'))
+            (entityFullName.Split '.')
     |> assertEqual (res |> Option.map (fun (ns, name) -> { Namespace = ns; Name = name }))
 
 [<Test>] 
 let ``fully qualified external entities``() =
-    ([], "Now", None, "System.DateTime.Now") => Some (Some "System.DateTime", "Now")
-    ([], "Now", None, "System.Now") => Some (Some "System", "Now")
-    (["Myns"], "Now", None, "System.Now") => Some (Some "System", "Now")
-    (["Myns.Nested"], "Now", None, "System.Now") => Some (Some "System", "Now")
+    (Some "TopNs", "", "Now", None, Some "System", "System.DateTime.Now") => Some (Some "System.DateTime", "Now")
+    (Some "TopNs", "", "Now", None, None, "System.Now") => Some (Some "System", "Now")
+    (Some "Myns", "Myns", "Now", None, None, "System.Now") => Some (Some "System", "Now")
+    (Some "Myns", "Myns.Nested", "Now", None, None, "System.Now") => Some (Some "System", "Now")
 
 [<Test>] 
 let ``fully qualified external entities with require qualified access module``() =
-    ([], "Now", Some "System", "System.DateTime.Now") => Some (None, "System.DateTime.Now")
-    ([], "Now", Some "System.DateTime", "System.DateTime.Now") => Some (Some "System", "DateTime.Now")
+    (Some "TopNs", "", "Now", Some "System", Some "System", "System.DateTime.Now") => Some (None, "System.DateTime.Now")
+    (Some "TopNs", "", "Now", Some "System.DateTime", Some "System",  "System.DateTime.Now") => Some (Some "System", "DateTime.Now")
 
 [<Test>]
 let ``simple entities``() =
-    ([], "Now", None, "Now") => None  
-    (["Myns"], "Now", None, "Now") => None
+    (Some "TopNs", "", "Now", None, None, "Now") => None
+    (Some "Myns", "Myns", "Now", None, None, "Now") => None
 
 [<Test>]
 let ``internal entities``() =
-    (["Myns"], "Now", None, "Myns.Nested.Now") => Some (Some "Nested", "Now")   
-    (["Myns"; "Nested"], "Now", None, "Myns.Nested.Nested2.Now") => Some (Some "Nested2", "Now")
-    (["Myns"; "Nested"], "Now", None, "Myns.Nested.Now") => None
-    (["Myns"; "Nested"], "Now", None, "Myns.Nested2.Now") => Some (Some "Nested2", "Now")
+    (Some "Myns", "Myns", "Now", None, Some "Myns", "Myns.Nested.Now") => Some (Some "Nested", "Now")   
+    (Some "Myns", "Myns.Nested", "Now", None, Some "Myns", "Myns.Nested.Nested2.Now") => Some (Some "Nested2", "Now")
+    (Some "Myns", "Myns.Nested", "Now", None, Some "Myns", "Myns.Nested.Now") => None
 
 [<Test>]
 let ``internal entities in different sub namespace``() =
-    (["Myns;Nested1"], "Now", None, "Myns.Nested2.Now") => Some (Some "Myns.Nested2", "Now")   
+    (Some "Myns.Nested1", "Myns.Nested1", "Now", None, Some "Myns.Nested2", "Myns.Nested2.Now") => Some (Some "Myns.Nested2", "Now")   
 
 [<Test>] 
 let ``internal entities with require qualified access module``() =
-    (["Myns"], "Now", Some "Myns.Nested", "Myns.Nested.Now") => Some (None, "Nested.Now")   
+    (Some "Myns", "Myns", "Now", Some "Myns.Nested", Some "Myns", "Myns.Nested.Now") => Some (None, "Nested.Now")   
 
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
 
@@ -176,8 +182,11 @@ let ``generic type is an entity``() =
     """
 module TopLevel
 let _ = Class<DateTime>()
+type R = {
+    Field: Task<_>
+}
 """ 
-    ==> [2, 9]
+    ==> [2, 9; 4, 12]
 
 [<Test>]
 let ``generic type argument is an entity``() =
@@ -258,9 +267,9 @@ let _ = Class<_>()
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
-let forEntity (entity: LongIdent) (ident, source: Source, line) =
+let forEntity (ns: LongIdent) (entity: LongIdent) (ident, source: Source, line) =
     let tree = parseSource source
-    match Ast.tryFindNearestOpenStatementBlock line tree ident (None, entity) with
+    match Ast.tryFindNearestOpenStatementBlock line tree ident (None, Some (ns.Split '.'), entity.Split '.') with
     | None -> failwith "Cannot find nearest open statement block"
     | Some (e, pos) -> source, e, pos
 
@@ -297,7 +306,7 @@ let _ = DateTime.Now
 """
     |> forLine 3
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 open System
@@ -316,7 +325,7 @@ let _ = DateTime.Now
 """
     |> forLine 5
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 
@@ -338,7 +347,7 @@ let _ = DateTime.Now
 """
     |> forLine 6
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 
@@ -359,7 +368,7 @@ module Nested =
 """
     |> forLine 4
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 
@@ -379,7 +388,7 @@ module Nested =
 """
     |> forLine 5
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 
@@ -402,7 +411,7 @@ module Nested =
 """
     |> forLine 7
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 
@@ -425,7 +434,7 @@ module Nested =
 """
     |> forLine 5
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 
@@ -452,7 +461,7 @@ module Nested =
 """
     |> forLine 11
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
 
@@ -481,7 +490,7 @@ let _ = DateTime.Now
 """
     |> forLine 6
     |> forIdent "DateTime"
-    |> forEntity "TopLevel.Nested.DateTime"
+    |> forEntity "" "TopLevel.Nested.DateTime"
     |> result """
 module TopLevel
 
@@ -508,7 +517,7 @@ module Below =
 """
     |> forLine 6
     |> forIdent "DateTime"
-    |> forEntity "TopLevel.Nested.DateTime"
+    |> forEntity "" "TopLevel.Nested.DateTime"
     |> result """
 module TopLevel
 
@@ -535,7 +544,7 @@ module Another =
 """
     |> forLine 7
     |> forIdent "DateTime"
-    |> forEntity "TopNs.Nested.DateTime"
+    |> forEntity "TopNs" "TopNs.Nested.DateTime"
     |> result """
 namespace TopNs
 
@@ -557,7 +566,7 @@ type Record =
 """
     |> forLine 4
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 namespace TopNs
 
@@ -578,7 +587,7 @@ type Record =
 """
     |> forLine 6
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 namespace TopNs
 
@@ -601,7 +610,7 @@ namespace TopNs
 """
     |> forLine 6
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 namespace TopNs
 
@@ -623,7 +632,7 @@ namespace TopNs
 """
     |> forLine 6
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 namespace TopNs
 
@@ -643,7 +652,7 @@ module M =
 """
     |> forLine 6
     |> forIdent "DateTime"
-    |> forEntity "System.DateTime"
+    |> forEntity "System" "System.DateTime"
     |> result """
 namespace TopNs
 

@@ -10,6 +10,19 @@ module Seq =
     let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
 
 [<RequireQualifiedAccess>]
+module Array =
+    /// Returns true if one array has another as its subset from index 0.
+    let startsWith other value =
+        let rec loop other value =
+            match other, value with
+            | [||], _ -> true
+            | _, [||] -> false
+            | _ when other.[0] = value.[0] ->
+                loop other.[1..] value.[1..]
+            | _ -> false
+        loop other value
+
+[<RequireQualifiedAccess>]
 module Option =
     let inline ofNull value =
         if obj.ReferenceEquals(value, null) then None else Some value

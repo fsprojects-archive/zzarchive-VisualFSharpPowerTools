@@ -74,8 +74,8 @@ type ResolveUnopenedNamespaceSmartTagger
 
                                 //entities
                                 //|> Seq.map (fun e -> e.FullName)
-                                //|> Seq.map string
-                                //|> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
+                              //  |> Seq.map string
+                              //  |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
 
                                 let entities = 
                                     match entityKind with
@@ -84,9 +84,15 @@ type ResolveUnopenedNamespaceSmartTagger
                                         |> List.filter (fun e -> e.IsAttribute)
                                     | Ast.Type -> entities
                                     |> List.map (fun e -> 
-                                         [ yield e.TopRequireQualifiedAccessParent, e.FullName
-                                           if e.IsAttribute && e.FullName.EndsWith "Attribute" then  
-                                              yield e.TopRequireQualifiedAccessParent, e.FullName.Substring(0, e.FullName.Length - 9) ])
+                                         [ yield e.TopRequireQualifiedAccessParent, e.Namespace, e.Idents
+                                           let lastIdent = e.Idents.[e.Idents.Length - 1]
+                                           if e.IsAttribute && lastIdent.EndsWith "Attribute" then
+                                              yield 
+                                                e.TopRequireQualifiedAccessParent, 
+                                                e.Namespace, 
+                                                Array.append 
+                                                    e.Idents.[..e.Idents.Length - 2] 
+                                                    [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)

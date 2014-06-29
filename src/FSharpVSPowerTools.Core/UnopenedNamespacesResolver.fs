@@ -2,9 +2,7 @@
 
 open System
 
-type ShortIdent = string
 type LongIdent = string
-type Namespace = ShortIdent[]
 
 type Entity =
     { Namespace: LongIdent option
@@ -13,7 +11,7 @@ type Entity =
 
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Entity =
-    let getRelativeNamespace (targetNs: Namespace) (sourceNs: Namespace) =
+    let getRelativeNamespace (targetNs: Idents) (sourceNs: Idents) =
         let rec loop target source =
             match target, source with
             | [||], _ -> source
@@ -23,22 +21,23 @@ module Entity =
             | _ -> source
         loop targetNs sourceNs
 
-    let tryCreate (targetNamespace: Namespace) (ident: ShortIdent) (requiresQualifiedAccessParent: LongIdent option) 
-                  (candidateFullName: LongIdent) =
-        candidateFullName
-        |> Option.ofNull
-        |> Option.bind (fun candidateFullName ->
-            let candidateIdents = candidateFullName.Split '.'
-            if candidateIdents.Length = 0 || candidateIdents.[candidateIdents.Length - 1] <> ident then None
-            else Some candidateIdents)
-        |> Option.bind (fun candidateIdents ->
+    let tryCreate (targetNamespace: Idents option) (targetScope: Idents) (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option) 
+                  (candidateNamespace: Idents option) (candidate: Idents) =
+        if candidate.Length = 0 || candidate.[candidate.Length - 1] <> ident then None
+        else Some candidate
+        |> Option.bind (fun candidate ->
             let openableNs, restIdents =
                 let openableNsCount =
                     match requiresQualifiedAccessParent with
-                    | Some parent -> min ((parent.Split '.').Length) candidateIdents.Length
-                    | None -> candidateIdents.Length
-                candidateIdents.[0..openableNsCount - 2], candidateIdents.[openableNsCount - 1..]
-            let relativeNs = getRelativeNamespace targetNamespace openableNs
+                    | Some parent -> min parent.Length candidate.Length
+                    | None -> candidate.Length
+                candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
+            let relativeNs =
+                match targetNamespace, candidateNamespace with
+                | Some targetNs, Some candidateNs when candidateNs = targetNs ->
+                    getRelativeNamespace targetScope openableNs
+                | None, Some _ -> getRelativeNamespace targetScope openableNs
+                | _ -> openableNs
             match relativeNs, restIdents with
             | [||], [||] -> None
             | [||], [|_|] -> None
@@ -55,7 +54,6 @@ module Ast =
     open Microsoft.FSharp.Compiler.Ast
 
     type EndLine = int
-    type EntityName = string
         
     type EntityKind = 
         | Attribute
@@ -117,7 +115,8 @@ module Ast =
 
         and walkType = function
             | SynType.LongIdent ident -> ifPosInRange ident.Range (fun _ -> Some Type)
-            | SynType.App(_, _, types, _, _, _, r) -> List.tryPick walkType types
+            | SynType.App(ty, _, types, _, _, _, r) -> 
+                walkType ty |> Option.orElse (List.tryPick walkType types)
             | SynType.LongIdentApp(_, _, _, types, _, _, _) -> List.tryPick walkType types
             | SynType.Tuple(ts, _) -> ts |> List.tryPick (fun (_, t) -> walkType t)
             | SynType.Array(_, t, _) -> walkType t
@@ -267,8 +266,12 @@ module Ast =
 
     let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result = ref None
-        let modules = ResizeArray<LongIdent * EndLine * Col>()  
-         
+        let ns = ref None
+        let modules = ResizeArray<Idents * EndLine * Col>()  
+        
+        let addModule (longIdent: LongIdent) endLine col =
+            modules.Add(longIdent |> List.map string |> List.toArray, endLine, col)
+
         let doRange (ns: LongIdent) line col = 
             if line <= currentLine then
                 match !result with
@@ -298,13 +301,15 @@ module Ast =
 
         and walkSynModuleOrNamespace (parent: LongIdent) (SynModuleOrNamespace(ident, isModule, decls, _, _, _, range)) =
             if range.EndLine >= currentLine then
+                if not isModule then ns := Some ident
                 let fullIdent = parent @ ident
+
                 let startLine =
                     if isModule then range.StartLine
                     else range.StartLine - 1
 
                 doRange fullIdent startLine range.StartColumn
-                modules.Add (fullIdent, range.EndLine, range.StartColumn)
+                addModule fullIdent range.EndLine range.StartColumn
                 List.iter (walkSynModuleDecl fullIdent) decls
 
         and walkSynModuleDecl (parent: LongIdent) (decl: SynModuleDecl) =
@@ -312,7 +317,7 @@ module Ast =
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace parent fragment
             | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), decls, _, range) ->
                 let fullIdent = parent @ ident
-                modules.Add (fullIdent, range.EndLine, range.StartColumn) 
+                addModule fullIdent range.EndLine range.StartColumn
                 if range.EndLine >= currentLine then
                     let moduleBodyIdentation = getMinColumn decls |> Option.getOrElse (range.StartColumn + 4)
                     doRange fullIdent range.StartLine moduleBodyIdentation
@@ -324,28 +329,33 @@ module Ast =
         | ParsedInput.SigFile _ -> ()
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
-        let res = !result |> Option.map (fun (ns, pos) -> 
-            ns |> List.map (fun x -> string x) |> List.toArray, { pos with Line = pos.Line + 1 }) 
+        let res =
+            let longIdentToIdents ident = ident |> List.map (fun x -> string x) |> List.toArray
+            maybe {
+                let! parent, pos = !result
+                let ns = !ns |> Option.map longIdentToIdents
+                let scope = longIdentToIdents parent
+                return ns, scope, { pos with Line = pos.Line + 1 } 
+            }
         //debug "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         //printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         let modules = 
             modules 
             |> Seq.filter (fun (_, endLine, _) -> endLine < currentLine)
-            |> Seq.map (fun (m, endLine, startCol) -> String.Join (".", m |> Seq.map string), endLine, startCol) 
             |> Seq.sortBy (fun (m, _, _) -> -m.Length)
             |> Seq.toList
-        fun (ident: ShortIdent) (requiresQualifiedAccessParent: EntityName option, entityFullName: EntityName) ->
+
+        fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, entityNamespace: Idents option, entityIdents: Idents) ->
             res 
-            |> Option.bind (fun (ns, pos) -> 
-                Entity.tryCreate ns ident requiresQualifiedAccessParent entityFullName 
-                |> Option.map (fun e -> e, pos))
+            |> Option.bind (fun (ns, scope, pos) -> 
+                //if entityIdents.[entityIdents.Length - 1] <> "IDictionary" then None
+                //else
+                    Entity.tryCreate ns scope ident requiresQualifiedAccessParent entityNamespace entityIdents 
+                    |> Option.map (fun e -> e, pos))
             |> Option.map (fun (entity, pos) ->
                 entity,
-                match modules 
-                      |> List.filter (fun (m, _, _) -> 
-                            entityFullName.StartsWith m 
-                            && entityFullName.Length > m.Length && entityFullName.[m.Length] = '.') with
+                match modules |> List.filter (fun (m, _, _) -> entityIdents |> Array.startsWith m ) with
                 | [] -> pos
-                | (_, endLine, startCol) as _m :: _ ->
+                | (_, endLine, startCol) :: _ ->
                     //printfn "All modules: %A, Win module: %A" modules m
                     { Line = endLine + 1; Col = startCol })

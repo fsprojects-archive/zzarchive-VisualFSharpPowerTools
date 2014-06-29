@@ -117,10 +117,14 @@ type ILexer =
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.Collections.Generic
 
+type ShortIdent = string
+type Idents = ShortIdent[]
+
 type RawEntity = 
-    { FullName: string
+    { Idents: Idents
+      Namespace: Idents option
       IsPublic: bool
-      TopRequireQualifiedAccessParent: string option
+      TopRequireQualifiedAccessParent: Idents option
       IsAttribute: bool }
     override x.ToString() = sprintf "%A" x  
 
@@ -431,10 +435,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         let createEntity (topRequiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) =
             getFullName entity
             |> Option.map (fun fullName ->
-                 { FullName = fullName
+                 { Idents = fullName.Split '.'
+                   Namespace = entity.Namespace |> Option.map (fun x -> x.Split '.')
                    IsPublic = entity.Accessibility.IsPublic
                    TopRequireQualifiedAccessParent = 
-                       topRequiresQualifiedAccessParent |> Option.bind (fun parent -> getFullName parent)
+                       topRequiresQualifiedAccessParent 
+                       |> Option.bind (fun parent -> getFullName parent)
+                       |> Option.map (fun fullName -> fullName.Split '.')
                    IsAttribute = isAttribute entity })
 
         let rec traverseEntity contentType (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
@@ -453,13 +460,16 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
                         if entity.IsFSharpModule then
                             for func in entity.MembersFunctionsAndValues do
-                                yield { FullName = func.FullName
+                                yield { Idents = func.FullName.Split '.'
+                                        Namespace = entity.Namespace |> Option.map (fun x -> x.Split '.')
                                         IsPublic = func.Accessibility.IsPublic
                                         TopRequireQualifiedAccessParent = 
-                                            requiresQualifiedAccessParent |> Option.bind (fun parent -> getFullName parent)
+                                            requiresQualifiedAccessParent 
+                                            |> Option.bind (fun parent -> getFullName parent)
+                                            |> Option.map (fun fullName -> fullName.Split '.')
                                         IsAttribute = false }
 
-                        for e in entity.NestedEntities do
+                        for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
                             yield! traverseEntity contentType requiresQualifiedAccessParent e 
                     | _ -> () }
 
