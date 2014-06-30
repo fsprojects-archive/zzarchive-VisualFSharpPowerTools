@@ -55,6 +55,7 @@ let ``should find identifiers``() =
 
     checkGetSymbol 773 17 "    refValue := !refValue + 1" (Some ("refValue", (773, 17), (773, 25), Ident))
     checkGetSymbol 773 25 "    refValue := !refValue + 1" (Some ("refValue", (773, 17), (773, 25), Ident))
+    checkGetSymbol 897 13 "    let _ = Type1<_,_>.Member1()" (Some ("Type1", (897, 12), (897, 17), Ident))
 
 [<Test>]
 let ``should find generic parameters``() =
