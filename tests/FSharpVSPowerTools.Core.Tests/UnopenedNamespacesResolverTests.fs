@@ -576,6 +576,31 @@ module Another =
 """
 
 [<Test>]
+let ``symbol declared in another module in the same namespace declared as top level module``() =
+    """
+module TopNs.TopM
+
+module Nested =
+    type DateTime() = class end
+
+module Another =
+    let _ = DateTime.Now
+"""
+    |> forLine 7
+    |> forIdent "DateTime"
+    |> forEntity "TopNs" "TopNs.TopM.Nested.DateTime"
+    |> result """
+module TopNs.TopM
+
+module Nested =
+    type DateTime() = class end
+open Nested
+
+module Another =
+    let _ = DateTime.Now
+"""
+
+[<Test>]
 let ``symbol declared in a top level record in a namespace, no other open statements``() =
     """
 namespace TopNs

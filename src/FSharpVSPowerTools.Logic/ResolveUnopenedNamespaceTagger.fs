@@ -72,25 +72,25 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let! entityKind = Ast.getEntityKind parseTree pos |> liftMaybe
                                 let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
 
-                                //entities
-                                //|> Seq.map (fun e -> e.FullName)
-                              //  |> Seq.map string
-                              //  |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
+                                //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
+
+                                let isAttribute = 
+                                    match entityKind with
+                                    | Ast.Attribute -> true
+                                    | Ast.Type -> false
 
                                 let entities = 
-                                    match entityKind with
-                                    | Ast.Attribute ->
-                                        entities 
-                                        |> List.filter (fun e -> e.IsAttribute)
-                                    | Ast.Type -> entities
+                                    if isAttribute then entities |> List.filter (fun e -> e.IsAttribute)
+                                    else entities
                                     |> List.map (fun e -> 
                                          [ yield e.TopRequireQualifiedAccessParent, e.Namespace, e.Idents
-                                           let lastIdent = e.Idents.[e.Idents.Length - 1]
-                                           if e.IsAttribute && lastIdent.EndsWith "Attribute" then
-                                              yield 
-                                                e.TopRequireQualifiedAccessParent, 
-                                                e.Namespace, 
-                                                Array.append 
+                                           if isAttribute then
+                                             let lastIdent = e.Idents.[e.Idents.Length - 1]
+                                             if e.IsAttribute && lastIdent.EndsWith "Attribute" then
+                                               yield 
+                                                 e.TopRequireQualifiedAccessParent, 
+                                                 e.Namespace, 
+                                                 Array.append 
                                                     e.Idents.[..e.Idents.Length - 2] 
                                                     [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
                                     |> List.concat

@@ -263,6 +263,8 @@ module Ast =
 
     type Col = int
 
+    let inline private longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
+
     let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result = ref None
         let ns = ref None
@@ -300,7 +302,14 @@ module Ast =
 
         and walkSynModuleOrNamespace (parent: LongIdent) (SynModuleOrNamespace(ident, isModule, decls, _, _, _, range)) =
             if range.EndLine >= currentLine then
-                if not isModule then ns := Some ident
+                match isModule, parent, ident with
+                | false, _, _ -> ns := Some (longIdentToIdents ident)
+                // top level module with "inlined" namespace like Ns1.Ns2.TopModule
+                | true, [], _f :: _s :: _ -> 
+                    let ident = longIdentToIdents ident
+                    ns := Some (ident.[0..ident.Length - 2])
+                | _ -> ()
+                
                 let fullIdent = parent @ ident
 
                 let startLine =
@@ -329,7 +338,6 @@ module Ast =
         | ParsedInput.ImplFile input -> walkImplFileInput input
 
         let res =
-            let longIdentToIdents ident = ident |> List.map (fun x -> string x) |> List.toArray
             maybe {
                 let! parent, pos = !result
                 let ns = !ns |> Option.map longIdentToIdents
