@@ -76,7 +76,27 @@ module Ast =
             if isPosInRange attr.Range then Some EntityKind.Attribute 
             else None
 
-        and walkPat = function
+        and walkTypar (Typar (ident, _, _)) = ifPosInRange ident.idRange (fun _ -> Some EntityKind.Type)
+
+        and walkTyparDecl (SynTyparDecl.TyparDecl (attrs, typar)) = 
+            List.tryPick walkAttribute attrs
+            |> Option.orElse (walkTypar typar)
+            
+        and walkTypeConstraint = function
+            | SynTypeConstraint.WhereTyparDefaultsToType (t1, t2, _) -> walkTypar t1 |> Option.orElse (walkType t2)
+            | SynTypeConstraint.WhereTyparIsValueType(t, _) -> walkTypar t
+            | SynTypeConstraint.WhereTyparIsReferenceType(t, _) -> walkTypar t
+            | SynTypeConstraint.WhereTyparIsUnmanaged(t, _) -> walkTypar t
+            | SynTypeConstraint.WhereTyparSupportsNull (t, _) -> walkTypar t
+            | SynTypeConstraint.WhereTyparIsComparable(t, _) -> walkTypar t
+            | SynTypeConstraint.WhereTyparIsEquatable(t, _) -> walkTypar t
+            | SynTypeConstraint.WhereTyparSubtypeOfType(t, ty, _) -> walkTypar t |> Option.orElse (walkType ty)
+            | SynTypeConstraint.WhereTyparSupportsMember(ts, sign, _) -> 
+                List.tryPick walkTypar ts |> Option.orElse (walkMemberSig sign)
+            | SynTypeConstraint.WhereTyparIsEnum(t, ts, _) -> walkTypar t |> Option.orElse (List.tryPick walkType ts)
+            | SynTypeConstraint.WhereTyparIsDelegate(t, ts, _) -> walkTypar t |> Option.orElse (List.tryPick walkType ts)
+
+        and walkPatWithKind (kind: EntityKind option) = function
             | SynPat.Ands (pats, _) -> List.tryPick walkPat pats
             | SynPat.Named(SynPat.Wild nameRange as pat, _, _, _, _) -> 
                 if isPosInRange nameRange then None
@@ -84,14 +104,22 @@ module Ast =
             | SynPat.Typed(pat, t, _) -> walkPat pat |> Option.orElse (walkType t)
             | SynPat.Attrib(pat, attrs, _) -> walkPat pat |> Option.orElse (List.tryPick walkAttribute attrs)
             | SynPat.Or(pat1, pat2, _) -> List.tryPick walkPat [pat1; pat2]
-            | SynPat.LongIdent(_, _, _, ConstructorPats pats, _, _) -> 
-                List.tryPick walkPat pats
+            | SynPat.LongIdent(_, _, typars, ConstructorPats pats, _, r) -> 
+                ifPosInRange r (fun _ -> kind)
+                |> Option.orElse (
+                    typars 
+                    |> Option.bind (fun (SynValTyparDecls (typars, _, constraints)) -> 
+                        List.tryPick walkTyparDecl typars
+                        |> Option.orElse (List.tryPick walkTypeConstraint constraints)))
+                |> Option.orElse (List.tryPick walkPat pats)
             | SynPat.Tuple(pats, _) -> List.tryPick walkPat pats
             | SynPat.Paren(pat, _) -> walkPat pat
             | SynPat.ArrayOrList(_, pats, _) -> List.tryPick walkPat pats
             | SynPat.IsInst(t, _) -> walkType t
             | SynPat.QuoteExpr(e, _) -> walkExpr e
             | _ -> None
+
+        and walkPat = walkPatWithKind None
 
         and walkBinding (SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _)) =
             List.tryPick walkAttribute attrs
@@ -124,7 +152,7 @@ module Ast =
             | _ -> None
 
         and walkClause (Clause(pat, e1, e2, _, _)) =
-            walkPat pat 
+            walkPatWithKind (Some EntityKind.Type) pat 
             |> Option.orElse (walkExpr e2)
             |> Option.orElse (Option.bind walkExpr e1)
 
@@ -184,6 +212,10 @@ module Ast =
             | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
             | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.DoBang(e, _) -> walkExpr e
+            | SynExpr.TraitCall (ts, sign, e, _) ->
+                List.tryPick walkTypar ts 
+                |> Option.orElse (walkMemberSig sign)
+                |> Option.orElse (walkExpr e)
             | _ -> None
 
         and walkExpr = walkExprWithKind None
@@ -199,6 +231,16 @@ module Ast =
 
         and walkValSig (SynValSig.ValSpfn(attrs, _, _, t, _, _, _, _, _, _, _)) =
             List.tryPick walkAttribute attrs |> Option.orElse (walkType t)
+
+        and walkMemberSig = function
+            | SynMemberSig.Inherit (t, _) -> walkType t
+            | SynMemberSig.Member(vs, _, _) -> walkValSig vs
+            | SynMemberSig.Interface(t, _) -> walkType t
+            | SynMemberSig.ValField(f, _) -> walkField f
+            | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) -> 
+                walkComponentInfo info
+                |> Option.orElse (walkTypeDefnSigRepr repr)
+                |> Option.orElse (List.tryPick walkMemberSig memberSigs)
 
         and walkMember = function
             | SynMemberDefn.AbstractSlot (valSig, _, _) -> walkValSig valSig
@@ -235,12 +277,22 @@ module Ast =
             | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType t
             | _ -> None
 
-        and walkTypeDefn (TypeDefn(ComponentInfo(attrs, _, _, _, _, _, _, _), repr, members, _)) =
+        and walkComponentInfo (ComponentInfo(attrs, typars, constraints, _, _, _, _, _)) =
             List.tryPick walkAttribute attrs
-            |> Option.orElse (
-                match repr with
-                | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.tryPick walkMember defns
-                | SynTypeDefnRepr.Simple(defn, _) -> walkTypeDefnSimple defn)
+            |> Option.orElse (List.tryPick walkTyparDecl typars)
+            |> Option.orElse (List.tryPick walkTypeConstraint constraints)
+
+        and walkTypeDefnRepr = function
+            | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.tryPick walkMember defns
+            | SynTypeDefnRepr.Simple(defn, _) -> walkTypeDefnSimple defn
+
+        and walkTypeDefnSigRepr = function
+            | SynTypeDefnSigRepr.ObjectModel (_, defns, _) -> List.tryPick walkMemberSig defns
+            | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
+
+        and walkTypeDefn (TypeDefn (info, repr, members, _)) =
+            walkComponentInfo info
+            |> Option.orElse (walkTypeDefnRepr repr)
             |> Option.orElse (List.tryPick walkMember members)
 
         and walkSynModuleDecl (decl: SynModuleDecl) =

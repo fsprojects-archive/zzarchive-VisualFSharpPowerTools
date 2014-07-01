@@ -151,6 +151,24 @@ type T() =
          4, 45, Some Type]
 
 [<Test>]
+let ``type annotation in statically resolved type parameters is a Type``() =
+    """
+module TopLevel
+let inline func< ^a, 'b when ^a: (member Prop: IList<Task>)> x =
+    (^a: (member Prop: IList<Task>) x)
+"""
+    ==> [2, 54, Some Type
+         3, 30, Some Type]
+
+[<Test>]
+let ``type annotation in type constrain is a Type``() =
+    """
+module TopLevel
+type T<'a when 'a :> Task>() = class end
+"""
+    ==> [2, 22, Some Type]
+
+[<Test>]
 let ``attribute is an Attribute``() =
     """
 module TopLevel
@@ -223,6 +241,16 @@ let _ =
     | Case1 -> DateTime.Now
 """ 
     ==> [4, 17, Some FunctionOrValue]
+
+[<Test>]
+let ``DU type in match is a Type``() =
+    """
+module TopLevel
+let _ = 
+    match 1 with
+    | Du.Case1 -> ()
+""" 
+    ==> [4, 7, Some Type]
 
 [<Test>]
 let ``generic type is a Type``() =
