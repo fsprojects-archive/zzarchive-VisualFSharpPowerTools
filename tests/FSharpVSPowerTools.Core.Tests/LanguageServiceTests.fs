@@ -285,6 +285,12 @@ let ``should find usages of fully qualified record fields``() =
         [ (770, 9, 15)
           (771, 14, 20) ]
 
+[<Test; Ignore "Bug in FCS 0.0.54">] 
+let ``should find usages of generic types``() =
+    checkSymbolUsage 895 9 "    type Type1<'a, 'b>() ="
+        [ (895, 9, 14)
+          (897, 12, 17) ]
+
 let getFirstSymbol line col lineStr symbolText =
     async {
         let! results = languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No)
