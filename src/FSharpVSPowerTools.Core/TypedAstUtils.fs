@@ -4,9 +4,8 @@ module FSharpVSPowerTools.TypedAstUtils
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Collections.Generic
 
-let inline hasAttribute< ^entity, 'attribute when ^entity: (member Attributes: IList<FSharpAttribute>)> entity =
-    let attrs = (^entity: (member Attributes: IList<FSharpAttribute>) entity)
-    attrs |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
+let hasAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
+    attributes |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
 
 let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
@@ -68,7 +67,7 @@ let (|Entity|_|) (symbol: FSharpSymbol) =
     | _ -> None
 
 let (|ValueType|_|) (e: FSharpEntity) =
-    if e.IsEnum || e.IsValueType || hasAttribute<_, MeasureAnnotatedAbbreviationAttribute> e then Some()
+    if e.IsEnum || e.IsValueType || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then Some()
     else None
 
 let (|Class|_|) (original: FSharpEntity, abbreviated: FSharpEntity, _) = 

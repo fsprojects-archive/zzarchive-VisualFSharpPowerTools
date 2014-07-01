@@ -457,7 +457,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         let requiresQualifiedAccessParent =
                             requiresQualifiedAccessParent
                             |> Option.orElse (
-                                if hasAttribute<_, RequireQualifiedAccessAttribute> entity then Some entity
+                                if hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes then Some entity
                                 else None)
 
                         if entity.IsFSharpModule then
