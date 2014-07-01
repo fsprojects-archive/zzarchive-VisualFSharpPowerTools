@@ -2,13 +2,18 @@
 module FSharpVSPowerTools.TypedAstUtils
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.Collections.Generic
 
-let hasAttribute<'T> (attrs: seq<FSharpAttribute>) =
-    attrs |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'T>.Name)
+let hasAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
+    attributes |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
 
 let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
         && name.Substring (2, name.Length - 4) |> String.forall ((<>) ' ')
+        
+let (|AbbreviatedType|_|) (entity: FSharpEntity) =
+    if entity.IsFSharpAbbreviation then Some entity.AbbreviatedType
+    else None
 
 let (|TypeWithDefinition|_|) (ty: FSharpType) =
     if ty.HasTypeDefinition then Some ty.TypeDefinition

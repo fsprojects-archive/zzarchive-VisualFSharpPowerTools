@@ -89,6 +89,12 @@ namespace FSharpVSPowerTools
             set { chbUnionPatternMatchCaseGeneration.Checked = value; }
         }
 
+        public bool ResolveUnopenedNamespacesEnabled
+        {
+            get { return chbResolveUnopenedNamespaces.Checked; }
+            set { chbResolveUnopenedNamespaces.Checked = value;  }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -104,6 +110,7 @@ namespace FSharpVSPowerTools
             FindAllReferencesEnabled = _optionsPage.FindAllReferencesEnabled;
             GenerateRecordStubEnabled = _optionsPage.GenerateRecordStubEnabled;
             UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
+            ResolveUnopenedNamespacesEnabled = _optionsPage.ResolveUnopenedNamespacesEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

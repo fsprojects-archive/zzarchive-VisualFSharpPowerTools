@@ -71,6 +71,7 @@
     <Compile Include="InterfaceStubGenerator.fs" />
     <Compile Include="RecordStubGenerator.fs" />
     <Compile Include="UnionPatternMatchCaseGenerator.fs" />
+    <Compile Include="UnopenedNamespacesResolver.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

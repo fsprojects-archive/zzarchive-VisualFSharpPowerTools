@@ -79,3 +79,27 @@ module Collection =
     /// Asserts that two collections are not exactly equal.
     let inline assertNotEquiv<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =
         CollectionAssert.AreNotEquivalent (expected, actual)
+
+module LanguageServiceTestHelper =
+    open Microsoft.FSharp.Compiler.SourceCodeServices
+
+    let args =
+        [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
+          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
+          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
+          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
+          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
+          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
+          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
+          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
+
+    let projectOptions fileName =
+        let projFileName = @"C:\Project.fsproj"
+        { ProjectFileName = projFileName
+          ProjectFileNames = [| fileName |]
+          ProjectOptions = args
+          ReferencedProjects = Array.empty
+          IsIncompleteTypeCheckEnvironment = false
+          UseScriptResolutionRules = false
+          LoadTime = DateTime.UtcNow
+          UnresolvedReferences = None }

@@ -7,6 +7,19 @@ module Seq =
     let tryHead s =
         if Seq.isEmpty s then None else Some (Seq.head s)
 
+    let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
+
+[<RequireQualifiedAccess>]
+module Array =
+    /// Returns true if one array has another as its subset from index 0.
+    let startsWith (other: _ array) (value: _ array) =
+        let rec loop index =
+            if index > other.Length - 1 then true
+            elif index > value.Length - 1 then false
+            elif other.[index] = value.[index] then loop (index + 1)
+            else false
+        other.Length = 0 || loop 0
+
 [<RequireQualifiedAccess>]
 module Option =
     let inline ofNull value =

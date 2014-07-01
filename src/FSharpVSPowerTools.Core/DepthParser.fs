@@ -7,26 +7,8 @@ module internal DepthParsing =
     //  - second, the essence of the extension for getting range information out of the AST
     // There's a comment about halfway down that delineates the break.
 
-    open System
-    open System.Text
-    open System.IO
-    open Internal.Utilities
-    open Internal.Utilities.Text
-    open Microsoft.FSharp.Compiler.Ast
-    open Microsoft.FSharp.Compiler.AbstractIL.IL 
-    open Microsoft.FSharp.Compiler.AbstractIL.Internal 
-    open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library 
-    open Microsoft.FSharp.Compiler.AbstractIL.Extensions.ILX
-    open Microsoft.FSharp.Compiler.Range
-    open Microsoft.FSharp.Compiler 
-
-    open Microsoft.FSharp.Compiler.AbstractIL.IL
     open Microsoft.FSharp.Compiler.Range
     open Microsoft.FSharp.Compiler.Ast
-    open Microsoft.FSharp.Compiler.Lexhelp
-    open Microsoft.FSharp.Compiler.PrettyNaming
-    open Internal.Utilities.FileSystem
-    open Internal.Utilities.Collections
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // The code above this point is nearly verbatim code from the F# compiler with only a few minor edits.

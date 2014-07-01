@@ -1,18 +1,13 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
-open System
-open System.IO
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Shell
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Editor
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.VisualStudio.TextManager.Interop
-
 open FSharpVSPowerTools
-
 open FSharp.ViewModule.Progress
+open Microsoft.VisualStudio.Editor
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.TextManager.Interop
+open System.IO
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type FilePath = string
 
@@ -210,6 +205,16 @@ type VSLanguageService
             let! opts = projectProvider.GetProjectCheckerOptions instance
             let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale)
             return symbolUses, lexer
+        }
+
+     member x.GetAllEntities (fileName, source, project: IProjectProvider) =
+        async { 
+            let! opts = project.GetProjectCheckerOptions(instance)
+            try 
+                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
+            with e ->
+                debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
+                return None
         }
 
     member x.InvalidateProject (projectProvider: IProjectProvider) = 

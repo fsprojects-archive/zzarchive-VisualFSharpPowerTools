@@ -37,6 +37,7 @@ namespace FSharpVSPowerTools
             FindAllReferencesEnabled = true;
             GenerateRecordStubEnabled = true;
             UnionPatternMatchCaseGenerationEnabled = true;
+            ResolveUnopenedNamespacesEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -142,6 +143,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool UnionPatternMatchCaseGenerationEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool ResolveUnopenedNamespacesEnabled { get; set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -177,6 +181,7 @@ namespace FSharpVSPowerTools
                 FindAllReferencesEnabled = _optionsControl.FindAllReferencesEnabled;
                 GenerateRecordStubEnabled = _optionsControl.GenerateRecordStubEnabled;
                 UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
+                ResolveUnopenedNamespacesEnabled = _optionsControl.ResolveUnopenedNamespacesEnabled;
             }
 
             base.OnApply(e);

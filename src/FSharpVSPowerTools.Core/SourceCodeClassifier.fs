@@ -1,7 +1,5 @@
 ﻿module FSharpVSPowerTools.SourceCodeClassifier
 
-open System
-open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -36,7 +34,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | MemberFunctionOrValue (_, RefCell) -> Category.MutableVar
     | _ ->
         //debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
-        Category.Other
+        Category.Other 
 
 type CategorizedColumnSpan =
     { Category: Category
