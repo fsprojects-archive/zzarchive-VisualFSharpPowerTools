@@ -180,7 +180,7 @@ let inline func< ^a, 'b when ^a: (member Prop: IList<Task>)> x =
          3, 30, Some Type]
 
 [<Test>]
-let ``type annotation in type constrain is a Type``() =
+let ``type annotation in type constraint is a Type``() =
     """
 module TopLevel
 type T<'a when 'a :> Task>() = class end
