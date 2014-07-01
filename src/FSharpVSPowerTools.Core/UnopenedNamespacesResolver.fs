@@ -12,14 +12,14 @@ type Entity =
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Entity =
     let getRelativeNamespace (targetNs: Idents) (sourceNs: Idents) =
-        let rec loop target source =
-            match target, source with
-            | [||], _ -> source
-            | _, [||] -> sourceNs // target namespace is not a full parent of source namespace, keep the source ns as is
-            | _ when target.[0] = source.[0] ->
-                loop target.[1..] source.[1..]
-            | _ -> source
-        loop targetNs sourceNs
+        let rec loop index =
+            if index > targetNs.Length - 1 then sourceNs.[index..]
+            // target namespace is not a full parent of source namespace, keep the source ns as is
+            elif index > sourceNs.Length - 1 then sourceNs
+            elif targetNs.[index] = sourceNs.[index] then loop (index + 1)
+            else sourceNs.[index..]
+        if sourceNs.Length = 0 || targetNs.Length = 0 then sourceNs
+        else loop 0
 
     let tryCreate (targetNamespace: Idents option) (targetScope: Idents) (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option) 
                   (candidateNamespace: Idents option) (candidate: Idents) =

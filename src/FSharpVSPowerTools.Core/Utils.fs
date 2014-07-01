@@ -12,15 +12,13 @@ module Seq =
 [<RequireQualifiedAccess>]
 module Array =
     /// Returns true if one array has another as its subset from index 0.
-    let startsWith other value =
-        let rec loop other value =
-            match other, value with
-            | [||], _ -> true
-            | _, [||] -> false
-            | _ when other.[0] = value.[0] ->
-                loop other.[1..] value.[1..]
-            | _ -> false
-        loop other value
+    let startsWith (other: _ array) (value: _ array) =
+        let rec loop index =
+            if index > other.Length - 1 then true
+            elif index > value.Length - 1 then false
+            elif other.[index] = value.[index] then loop (index + 1)
+            else false
+        other.Length = 0 || loop 0
 
 [<RequireQualifiedAccess>]
 module Option =

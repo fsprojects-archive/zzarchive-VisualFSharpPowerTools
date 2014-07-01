@@ -74,10 +74,7 @@ type ResolveUnopenedNamespaceSmartTagger
 
                                 //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
 
-                                let isAttribute = 
-                                    match entityKind with
-                                    | Ast.Attribute -> true
-                                    | Ast.Type -> false
+                                let isAttribute = entityKind = Ast.Attribute
 
                                 let entities = 
                                     if isAttribute then entities |> List.filter (fun e -> e.IsAttribute)
@@ -119,7 +116,7 @@ type ResolveUnopenedNamespaceSmartTagger
         let lineStr = (String.replicate pos.Col " ") + "open " + ns + Environment.NewLine
         let snapshot = snapshot.TextBuffer.Insert (line, lineStr)
         let nextLine = snapshot.GetLineFromLineNumber pos.Line
-        // if there's not blank line between open declaration block and the rest of the code, we add one
+        // if there's no a blank line between open declaration block and the rest of the code, we add one
         let snapshot = 
             if nextLine.GetText().Trim() <> "" then 
                 snapshot.TextBuffer.Insert (nextLine.Start.Position, Environment.NewLine)
@@ -168,9 +165,9 @@ type ResolveUnopenedNamespaceSmartTagger
                 | None -> entity.Name)
             |> List.map (qualifiedSymbolAction snapshotSpan)
             
-        let actions = openNamespaceActions @ qualifySymbolActions |> Seq.toReadOnlyCollection
-
-        [ SmartTagActionSet(actions) ] |> Seq.toReadOnlyCollection
+        [ SmartTagActionSet (Seq.toReadOnlyCollection openNamespaceActions)
+          SmartTagActionSet (Seq.toReadOnlyCollection qualifySymbolActions) ] 
+        |> Seq.toReadOnlyCollection
 
     interface ITagger<ResolveUnopenedNamespaceSmartTag> with
         member x.GetTags _spans =

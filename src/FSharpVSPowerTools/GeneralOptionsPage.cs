@@ -37,6 +37,7 @@ namespace FSharpVSPowerTools
             FindAllReferencesEnabled = true;
             GenerateRecordStubEnabled = true;
             UnionPatternMatchCaseGenerationEnabled = true;
+            ResolveUnopenedNamespacesEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
