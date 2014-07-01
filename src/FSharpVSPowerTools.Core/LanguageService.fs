@@ -120,12 +120,18 @@ open System.Collections.Generic
 type ShortIdent = string
 type Idents = ShortIdent[]
 
+type EntityKind =
+    | Attribute
+    | Type
+    | FunctionOrValue
+    override x.ToString() = sprintf "%A" x
+
 type RawEntity = 
     { Idents: Idents
       Namespace: Idents option
       IsPublic: bool
       TopRequireQualifiedAccessParent: Idents option
-      IsAttribute: bool }
+      Kind: EntityKind }
     override x.ToString() = sprintf "%A" x  
 
 type AssemblyPath = string
@@ -443,7 +449,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                    TopRequireQualifiedAccessParent = 
                        topRequiresQualifiedAccessParent 
                        |> Option.bind getFullNameAsIdents
-                   IsAttribute = isAttribute entity })
+                   Kind = if isAttribute entity then EntityKind.Attribute else EntityKind.Type })
 
         let rec traverseEntity contentType (parentNamespace: Idents option) (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
             seq { if not entity.IsProvided then
@@ -468,7 +474,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                         TopRequireQualifiedAccessParent = 
                                             requiresQualifiedAccessParent 
                                             |> Option.bind getFullNameAsIdents
-                                        IsAttribute = false }
+                                        Kind = EntityKind.FunctionOrValue }
 
                         for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
                             yield! traverseEntity contentType ns requiresQualifiedAccessParent e 

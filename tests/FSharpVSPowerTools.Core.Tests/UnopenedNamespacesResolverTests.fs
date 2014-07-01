@@ -62,26 +62,36 @@ let parseSource (source: Source) =
     | Some tree -> tree
 
 open Microsoft.FSharp.Compiler.Range
+open Ast
 
 type Line = int
 type Col = int
 
-let checkEntity assertion source (points: (Line * Col) list) =
-    for line, col in points do
+let checkEntity source (points: (Line * Col * EntityKind option) list) =
+    for line, col, kind in points do
         let tree = parseSource source
         try
-            assertion (
-                Ast.getEntityKind tree (Pos.fromZ line col), 
-                sprintf "Line = %d, Col = %d" line col)
+            Assert.That(Ast.getEntityKind tree (Pos.fromZ line col), Is.EqualTo kind, sprintf "Line = %d, Col = %d" line col)
         with _ ->
             printfn "Ast: %A" tree
             reraise()
 
-let (==>) = checkEntity (fun (kind, _) -> Assert.IsTrue kind.IsSome)
-let (!=>) = checkEntity (fun (kind, _) -> Assert.IsTrue kind.IsNone)
+let (==>) = checkEntity
 
 [<Test>]
-let ``return type annotation is an entity``() =
+let ``symbol at function position in binding is FuncOrConstructor``() =
+    """
+module TopLevel
+module Nested =
+    type range() = class end
+module Nested1 =
+    let range x = x
+let _ = range()
+""" 
+    ==> [6, 9, Some FunctionOrValue ]
+
+[<Test>]
+let ``return type annotation is a Type``() =
     """
 module TopLevel
 let x: DateTime = ()
@@ -90,10 +100,13 @@ type T() =
     member x.Prop: DateTime option = None
     member x.Method(): DateTime option = None
 """ 
-    ==> [2, 9; 4, 17; 5, 21; 6, 25]
+    ==> [2, 8, Some Type
+         4, 17, Some Type
+         5, 21, Some Type
+         6, 25, Some Type]
 
 [<Test>]
-let ``type name in expression is an entity``() =
+let ``type name in expression is a Type``() =
     """
 module TopLevel
 let x = DateTime.Now
@@ -106,7 +119,12 @@ type T() =
         let a = 1
         { Field = new Task<_>() }
 """ 
-    ==> [2, 10; 3, 13; 5, 18; 6, 22; 7, 26; 10, 23]
+    ==> [2, 10, Some FunctionOrValue
+         3, 13, Some Type
+         5, 18, Some FunctionOrValue
+         6, 22, Some FunctionOrValue
+         7, 26, Some FunctionOrValue
+         10, 23, Some Type]
 
 [<Test>]
 let ``type name in interface declaration``() =
@@ -116,20 +134,24 @@ type T() =
     abstract Prop: DateTime
     abstract Method: Task<_> -> DateTime
 """ 
-    ==> [3, 20; 4, 22; 4, 33]
+    ==> [3, 20, Some Type
+         4, 22, Some Type
+         4, 33, Some Type]
 
 [<Test>]
-let ``argument type annotation is an entity``() =
+let ``argument type annotation is a Type``() =
     """
 module TopLevel
 let f (arg: DateTime) = ()
 type T() =
     member x.Method (arg1: DateTime, arg2: TimeSpan) = ()
 """ 
-    ==> [2, 15; 4, 29; 4, 45]
+    ==> [2, 15, Some Type
+         4, 29, Some Type
+         4, 45, Some Type]
 
 [<Test>]
-let ``attribute is an entity``() =
+let ``attribute is an Attribute``() =
     """
 module TopLevel
 let f ([<Attribute>] arg: DateTime) = ()
@@ -144,19 +166,26 @@ type I =
     [<Attribute>]
     abstract Method: unit -> DateTime
 """ 
-    ==> [2, 11; 3, 4; 5, 8; 7, 8; 7, 51; 8, 4; 9, 15; 11, 7]
+    ==> [2, 11, Some Attribute
+         3, 4, Some Attribute
+         5, 8, Some Attribute
+         7, 8, Some Attribute
+         7, 51, Some Attribute
+         8, 4, Some Attribute
+         9, 15, Some Attribute
+         11, 7, Some Attribute]
 
 [<Test>]
-let ``type in an object expression method body is an entity``() =
+let ``type in an object expression method body is a FuncOrConstructor``() =
     """
 module TopLevel
 let _ = { new IMy with 
             method x.Method x = DateTime.Now }
 """ 
-    ==> [3, 34]
+    ==> [3, 34, Some FunctionOrValue]
 
 [<Test>]
-let ``type in a let binging inside CE``() =
+let ``type in a let binging inside CE is a FuncOrConstructor``() =
     """
 module TopLevel
 let _ = 
@@ -165,37 +194,38 @@ let _ =
         return () 
     }
 """ 
-    ==> [4, 18]
+    ==> [4, 18, Some FunctionOrValue]
 
 [<Test>]
-let ``type as a qualifier in a function application in argument position``() =
+let ``type as a qualifier in a function application in argument position is FuncOrConstructor``() =
     """
 module TopLevel
 let _ = func (DateTime.Add 1)
 let _ = func1 1 (2, DateTime.Add 1)
 """ 
-    ==> [2, 16; 3, 22]
+    ==> [2, 16, Some FunctionOrValue
+         3, 22, Some FunctionOrValue]
 
 [<Test>]
-let ``constructor as argument``() =
+let ``constructor as argument is a FuncOrConstructor``() =
     """
 module TopLevel
 let _ = x.func (DateTime())
 """ 
-    ==> [2, 17]
+    ==> [2, 17, Some FunctionOrValue]
 
 [<Test>]
-let ``type in match``() =
+let ``type in match is a FunctionOrConstructor``() =
     """
 module TopLevel
 let _ = 
     match 1 with
     | Case1 -> DateTime.Now
 """ 
-    ==> [4, 17]
+    ==> [4, 17, Some FunctionOrValue]
 
 [<Test>]
-let ``generic type is an entity``() =
+let ``generic type is a Type``() =
     """
 module TopLevel
 let _ = Class<DateTime>()
@@ -205,25 +235,29 @@ type R = {
 let _ = new Task<_>()
 let _ = { Field = new Task<_>() }
 """ 
-    ==> [2, 9; 4, 12; 6, 13; 7, 23]
+    ==> [2, 9, Some FunctionOrValue
+         4, 12, Some Type
+         6, 13, Some Type
+         7, 23, Some Type]
 
 [<Test>]
-let ``generic type argument is an entity``() =
+let ``generic type argument is a Type``() =
     """
 module TopLevel
 let _ = Class<DateTime>()
 """ 
-    ==> [2, 15]
+    ==> [2, 15, Some Type]
 
 [<Test>]
-let ``upcast type is an entity``() =
+let ``upcast type is a FunctionOrValue``() =
     """
 module TopLevel
 let x: IMy<_, _, _> = upcast My(arg)
 type T() =
     let x: IMy<_, _, _> = upcast My(arg)
 """ 
-    ==> [2, 30; 4, 34]
+    ==> [2, 30, Some FunctionOrValue
+         4, 34, Some FunctionOrValue]
 
 [<Test>]
 let ``open declaration is not an entity``() =
@@ -234,7 +268,7 @@ module M =
     open System
     let () = ()
 """ 
-    !=> [2, 5; 2, 13; 2, 24; 4, 11]
+    ==> [2, 5, None; 2, 13, None; 2, 24, None; 4, 11, None]
     
 [<Test>]
 let ``module value is not an entity``() =
@@ -242,7 +276,7 @@ let ``module value is not an entity``() =
 module TopLevel
 let value = ()
 """ 
-    !=> [2, 6]
+    ==> [2, 6, None]
 
 [<Test>]
 let ``class member is not an entity``() =
@@ -252,7 +286,7 @@ type C() =
     member x.Member x = ()
     member x.Prop = ()
 """ 
-    !=> [3, 15; 4, 15]
+    ==> [3, 15, None; 4, 15, None]
 
 [<Test>]
 let ``type or module name is not an entity``() =
@@ -262,7 +296,7 @@ type Class() = class end
 module Nested =
     type Record = { F: int }
 """ 
-    !=> [1, 9; 2, 7; 3, 9; 4, 11]
+    ==> [1, 9, None; 2, 7, None; 3, 9, None; 4, 11, None]
 
 [<Test; Ignore "Cannot extract arg name from Named">]
 let ``argument name is not an entity``() =
@@ -273,7 +307,7 @@ type Class() =
     let func (arg: int) = ()
     member x.Method (arg: int) = ()
 """ 
-    !=> [2, 12; 4, 18; 5, 25]
+    ==> [2, 12, None; 4, 18, None; 5, 25, None]
 
 [<Test>]
 let ``wildcard generic type argument is not an entity``() =
@@ -281,7 +315,7 @@ let ``wildcard generic type argument is not an entity``() =
 module TopLevel
 let _ = Class<_>()
 """ 
-    !=> [2, 15]
+    ==> [2, 15, None]
 
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line

@@ -74,16 +74,23 @@ type ResolveUnopenedNamespaceSmartTagger
 
                                 //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
 
-                                let isAttribute = entityKind = Ast.Attribute
+                                let isAttribute = entityKind = EntityKind.Attribute
+                                let entities =
+                                    entities |> List.filter (fun e ->
+                                        match entityKind, e.Kind with
+                                        | Attribute, Attribute -> true 
+                                        | Attribute, _ -> false
+                                        | Type, Type -> true
+                                        | Type, _ -> false
+                                        | FunctionOrValue, _ -> true)
 
                                 let entities = 
-                                    if isAttribute then entities |> List.filter (fun e -> e.IsAttribute)
-                                    else entities
+                                    entities
                                     |> List.map (fun e -> 
                                          [ yield e.TopRequireQualifiedAccessParent, e.Namespace, e.Idents
                                            if isAttribute then
                                              let lastIdent = e.Idents.[e.Idents.Length - 1]
-                                             if e.IsAttribute && lastIdent.EndsWith "Attribute" then
+                                             if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
                                                yield 
                                                  e.TopRequireQualifiedAccessParent, 
                                                  e.Namespace, 

@@ -55,10 +55,6 @@ module Ast =
 
     type EndLine = int
         
-    type EntityKind = 
-        | Attribute
-        | Type
-
     let getEntityKind (ast: ParsedInput) (pos: Range.pos) : EntityKind option =
         let (|ConstructorPats|) = function
             | Pats ps -> ps
@@ -77,7 +73,7 @@ module Ast =
             ifPosInRange r (fun _ -> List.tryPick walkSynModuleDecl decls)
 
         and walkAttribute (attr: SynAttribute) = 
-            if isPosInRange attr.Range then Some Attribute 
+            if isPosInRange attr.Range then Some EntityKind.Attribute 
             else None
 
         and walkPat = function
@@ -114,7 +110,7 @@ module Ast =
             | SynIndexerArg.Two(e1, e2) -> List.tryPick walkExpr [e1; e2]
 
         and walkType = function
-            | SynType.LongIdent ident -> ifPosInRange ident.Range (fun _ -> Some Type)
+            | SynType.LongIdent ident -> ifPosInRange ident.Range (fun _ -> Some EntityKind.Type)
             | SynType.App(ty, _, types, _, _, _, r) -> 
                 walkType ty |> Option.orElse (List.tryPick walkType types)
             | SynType.LongIdentApp(_, _, _, types, _, _, _) -> List.tryPick walkType types
@@ -132,8 +128,10 @@ module Ast =
             |> Option.orElse (walkExpr e2)
             |> Option.orElse (Option.bind walkExpr e1)
 
-        and walkExpr = function
-            | SynExpr.LongIdent (_, _, _, r) -> if isPosInRange r then Some Type else None
+        and walkExprWithKind (parentKind: EntityKind option) = function
+            | SynExpr.LongIdent (_, _, _, r) -> 
+                if isPosInRange r then parentKind |> Option.orElse (Some FunctionOrValue) 
+                else None
             | SynExpr.Paren (e, _, _, _) -> walkExpr e
             | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
             | SynExpr.Typed(e, _, _) -> walkExpr e
@@ -159,7 +157,7 @@ module Ast =
             | SynExpr.Assert(e, _) -> walkExpr e
             | SynExpr.App(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.TypeApp(e, _, tys, _, _, _, _) -> 
-                walkExpr e |> Option.orElse (List.tryPick walkType tys)
+                walkExprWithKind (Some EntityKind.Type) e |> Option.orElse (List.tryPick walkType tys)
             | SynExpr.LetOrUse(_, _, bindings, e, _) -> List.tryPick walkBinding bindings |> Option.orElse (walkExpr e)
             | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
             | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick walkExpr [e1; e2]
@@ -167,7 +165,7 @@ module Ast =
             | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
                 List.tryPick walkExpr [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExpr e)
-            | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some Type)
+            | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some EntityKind.FunctionOrValue)
             | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
             | SynExpr.DotGet(e, _, _, _) -> walkExpr e
             | SynExpr.DotSet(e, _, _, _) -> walkExpr e
@@ -187,6 +185,8 @@ module Ast =
             | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
             | SynExpr.DoBang(e, _) -> walkExpr e
             | _ -> None
+
+        and walkExpr = walkExprWithKind None
 
         and walkSimplePat = function
             | SynSimplePat.Attrib (pat, attrs, _) ->
