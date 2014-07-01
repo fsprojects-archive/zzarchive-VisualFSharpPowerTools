@@ -3,47 +3,66 @@
 open NUnit.Framework
 open FSharpVSPowerTools
 
-let (=>) (ns: string option, scope: string, currentIdent, requireQualifiedAccessParent: string option, entityNs: string option, 
+let (=>) (ns: string option, 
+          scope: string, 
+          currentIdent, 
+          requireQualifiedAccessParent: string option, 
+          autoOpenParent: string option,
+          entityNs: string option, 
           entityFullName: string) res = 
+
     Entity.tryCreate 
             (ns |> Option.map (fun x -> x.Split '.'))
             (scope.Split '.') 
             currentIdent 
             (requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.')) 
+            (autoOpenParent |> Option.map (fun x -> x.Split '.'))
             (entityNs |> Option.map (fun x -> x.Split '.'))
             (entityFullName.Split '.')
-    |> assertEqual (res |> Option.map (fun (ns, name) -> { Namespace = ns; Name = name }))
+    |> assertEqual (res |> Option.map (fun (fullRelativeName, ns, name) -> 
+        { FullRelativeName = fullRelativeName; Namespace = ns; Name = name }))
 
 [<Test>] 
 let ``fully qualified external entities``() =
-    (Some "TopNs", "", "Now", None, Some "System", "System.DateTime.Now") => Some (Some "System.DateTime", "Now")
-    (Some "TopNs", "", "Now", None, None, "System.Now") => Some (Some "System", "Now")
-    (Some "Myns", "Myns", "Now", None, None, "System.Now") => Some (Some "System", "Now")
-    (Some "Myns", "Myns.Nested", "Now", None, None, "System.Now") => Some (Some "System", "Now")
+    (Some "TopNs", "", "Now", None, None, Some "System", "System.DateTime.Now") => Some ("System.DateTime.Now", Some "System.DateTime", "Now")
+    (Some "TopNs", "", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
+    (Some "Myns", "Myns", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
+    (Some "Myns", "Myns.Nested", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
 
 [<Test>] 
 let ``fully qualified external entities with require qualified access module``() =
-    (Some "TopNs", "", "Now", Some "System", Some "System", "System.DateTime.Now") => Some (None, "System.DateTime.Now")
-    (Some "TopNs", "", "Now", Some "System.DateTime", Some "System",  "System.DateTime.Now") => Some (Some "System", "DateTime.Now")
+    (Some "TopNs", "", "Now", Some "System", None, Some "System", "System.DateTime.Now") => 
+        Some ("System.DateTime.Now",  None, "System.DateTime.Now")
+
+    (Some "TopNs", "", "Now", Some "System.DateTime", None, Some "System",  "System.DateTime.Now") => 
+        Some ("System.DateTime.Now", Some "System", "DateTime.Now")
 
 [<Test>]
 let ``simple entities``() =
-    (Some "TopNs", "", "Now", None, None, "Now") => None
-    (Some "Myns", "Myns", "Now", None, None, "Now") => None
+    (Some "TopNs", "", "Now", None, None, None, "Now") => None
+    (Some "Myns", "Myns", "Now", None, None, None, "Now") => None
 
 [<Test>]
 let ``internal entities``() =
-    (Some "Myns", "Myns", "Now", None, Some "Myns", "Myns.Nested.Now") => Some (Some "Nested", "Now")   
-    (Some "Myns", "Myns.Nested", "Now", None, Some "Myns", "Myns.Nested.Nested2.Now") => Some (Some "Nested2", "Now")
-    (Some "Myns", "Myns.Nested", "Now", None, Some "Myns", "Myns.Nested.Now") => None
+    (Some "Myns", "Myns", "Now", None, None, Some "Myns", "Myns.Nested.Now") => Some ("Nested.Now", Some "Nested", "Now")   
+    (Some "Myns", "Myns.Nested", "Now", None, None, Some "Myns", "Myns.Nested.Nested2.Now") => Some ("Nested2.Now", Some "Nested2", "Now")
+    (Some "Myns", "Myns.Nested", "Now", None, None, Some "Myns", "") => None
 
 [<Test>]
 let ``internal entities in different sub namespace``() =
-    (Some "Myns.Nested1", "Myns.Nested1", "Now", None, Some "Myns.Nested2", "Myns.Nested2.Now") => Some (Some "Myns.Nested2", "Now")   
+    (Some "Myns.Nested1", "Myns.Nested1", "Now", None, None, Some "Myns.Nested2", "Myns.Nested2.Now") => 
+        Some ("Myns.Nested2.Now", Some "Myns.Nested2", "Now")   
 
 [<Test>] 
 let ``internal entities with require qualified access module``() =
-    (Some "Myns", "Myns", "Now", Some "Myns.Nested", Some "Myns", "Myns.Nested.Now") => Some (None, "Nested.Now")   
+    (Some "Myns", "Myns", "Now", Some "Myns.Nested", None, Some "Myns", "Myns.Nested.Now") => Some ("Nested.Now", None, "Nested.Now")   
+
+[<Test>]
+let ``entities in auto open module``() =
+    (Some "Myns", "Myns", "Now", None, Some "Myns.Nested", Some "Myns", "Myns.Nested.Now") => None
+    (Some "Myns", "Myns", "Now", None, Some "Myns.Nested.AutoOpenNested", Some "Myns", "Myns.Nested.AutoOpenNested.Now") => 
+        Some ("Nested.AutoOpenNested.Now", Some "Nested", "Now")
+
 
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
 
@@ -350,7 +369,7 @@ let forIdent ident (source, line) = ident, source, line
 
 let forEntity (ns: LongIdent) (entity: LongIdent) (ident, source: Source, line) =
     let tree = parseSource source
-    match Ast.tryFindNearestOpenStatementBlock line tree ident (None, Some (ns.Split '.'), entity.Split '.') with
+    match Ast.tryFindNearestOpenStatementBlock line tree ident (None, None, Some (ns.Split '.'), entity.Split '.') with
     | None -> failwith "Cannot find nearest open statement block"
     | Some (e, pos) -> source, e, pos
 

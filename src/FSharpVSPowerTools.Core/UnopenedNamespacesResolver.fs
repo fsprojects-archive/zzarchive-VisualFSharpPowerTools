@@ -5,7 +5,8 @@ open System
 type LongIdent = string
 
 type Entity =
-    { Namespace: LongIdent option
+    { FullRelativeName: LongIdent
+      Namespace: LongIdent option
       Name: LongIdent }
     override x.ToString() = sprintf "%A" x
 
@@ -21,28 +22,43 @@ module Entity =
         if sourceNs.Length = 0 || targetNs.Length = 0 then sourceNs
         else loop 0
 
+    let cutAutoOpenModules (autoOpenParent: Idents option) (candidateNs: Idents) =
+        let nsCount = 
+            match autoOpenParent with
+            | Some parent when parent.Length > 0 -> 
+                min (parent.Length - 1) candidateNs.Length
+            | _ -> candidateNs.Length
+        candidateNs.[0..nsCount - 1]
+
     let tryCreate (targetNamespace: Idents option) (targetScope: Idents) (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option) 
-                  (candidateNamespace: Idents option) (candidate: Idents) =
+                  (autoOpenParent: Idents option) (candidateNamespace: Idents option) (candidate: Idents) =
         if candidate.Length = 0 || candidate.[candidate.Length - 1] <> ident then None
         else Some candidate
         |> Option.bind (fun candidate ->
-            let openableNs, restIdents =
+            let fullOpenableNs, restIdents =
                 let openableNsCount =
                     match requiresQualifiedAccessParent with
                     | Some parent -> min parent.Length candidate.Length
                     | None -> candidate.Length
                 candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
-            let relativeNs =
+
+            let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
+
+            let getRelativeNs ns =
                 match targetNamespace, candidateNamespace with
                 | Some targetNs, Some candidateNs when candidateNs = targetNs ->
-                    getRelativeNamespace targetScope openableNs
-                | None, _ -> getRelativeNamespace targetScope openableNs
-                | _ -> openableNs
+                    getRelativeNamespace targetScope ns
+                | None, _ -> getRelativeNamespace targetScope ns
+                | _ -> ns
+
+            let relativeNs = getRelativeNs openableNs
+
             match relativeNs, restIdents with
             | [||], [||] -> None
             | [||], [|_|] -> None
             | _ ->
-                Some { Namespace = match relativeNs with [||] -> None | _ -> Some (String.Join (".", relativeNs))
+                Some { FullRelativeName = String.Join (".", Array.append (getRelativeNs fullOpenableNs) restIdents)
+                       Namespace = match relativeNs with [||] -> None | _ -> Some (String.Join (".", relativeNs))
                        Name = String.Join (".", restIdents) })
 
 type Pos = 
@@ -404,10 +420,11 @@ module Ast =
             |> Seq.sortBy (fun (m, _, _) -> -m.Length)
             |> Seq.toList
 
-        fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, entityNamespace: Idents option, entityIdents: Idents) ->
+        fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
+                                 entityNamespace: Idents option, entityIdents: Idents) ->
             res 
             |> Option.bind (fun (ns, scope, pos) -> 
-                Entity.tryCreate ns scope ident requiresQualifiedAccessParent entityNamespace entityIdents 
+                Entity.tryCreate ns scope ident requiresQualifiedAccessParent autoOpenParent entityNamespace entityIdents 
                 |> Option.map (fun e -> e, pos))
             |> Option.map (fun (entity, pos) ->
                 entity,
