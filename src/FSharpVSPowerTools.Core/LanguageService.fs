@@ -414,6 +414,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             fullName.Substring(0, lastBacktickIndex)
                     else fullName) 
             
+        let getFullNameAsIdents entity = entity |> getFullName |> Option.map (fun x -> x.Split '.')
+
         let isAttribute (entity: FSharpEntity) =
             let getBaseType (entity: FSharpEntity) =
                 try 
@@ -432,23 +434,23 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         fullName = "System.Attribute" || isAttributeType (getBaseType ty)
             isAttributeType (Some entity)
 
-        let createEntity (topRequiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) =
-            getFullName entity
+        let createEntity ns (topRequiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) =
+            getFullNameAsIdents entity
             |> Option.map (fun fullName ->
-                 { Idents = fullName.Split '.'
-                   Namespace = entity.Namespace |> Option.map (fun x -> x.Split '.')
+                 { Idents = fullName
+                   Namespace = ns
                    IsPublic = entity.Accessibility.IsPublic
                    TopRequireQualifiedAccessParent = 
                        topRequiresQualifiedAccessParent 
-                       |> Option.bind (fun parent -> getFullName parent)
-                       |> Option.map (fun fullName -> fullName.Split '.')
+                       |> Option.bind getFullNameAsIdents
                    IsAttribute = isAttribute entity })
 
-        let rec traverseEntity contentType (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
+        let rec traverseEntity contentType (parentNamespace: Idents option) (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
             seq { if not entity.IsProvided then
                     match contentType, entity.Accessibility.IsPublic with
                     | Full, _ | Public, true ->
-                        match createEntity requiresQualifiedAccessParent entity with
+                        let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parentNamespace
+                        match createEntity ns requiresQualifiedAccessParent entity with
                         | Some x -> yield x
                         | None -> ()
                                             
@@ -461,21 +463,20 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         if entity.IsFSharpModule then
                             for func in entity.MembersFunctionsAndValues do
                                 yield { Idents = func.FullName.Split '.'
-                                        Namespace = entity.Namespace |> Option.map (fun x -> x.Split '.')
+                                        Namespace = ns
                                         IsPublic = func.Accessibility.IsPublic
                                         TopRequireQualifiedAccessParent = 
                                             requiresQualifiedAccessParent 
-                                            |> Option.bind (fun parent -> getFullName parent)
-                                            |> Option.map (fun fullName -> fullName.Split '.')
+                                            |> Option.bind getFullNameAsIdents
                                         IsAttribute = false }
 
                         for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
-                            yield! traverseEntity contentType requiresQualifiedAccessParent e 
+                            yield! traverseEntity contentType ns requiresQualifiedAccessParent e 
                     | _ -> () }
 
         let traverseAssemblySignature (signature: FSharpAssemblySignature) contentType =
              seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                     yield! traverseEntity contentType None e }
+                     yield! traverseEntity contentType None None e }
              |> Seq.distinct
              |> Seq.toList
 

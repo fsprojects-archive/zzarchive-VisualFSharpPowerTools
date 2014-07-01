@@ -36,7 +36,7 @@ module Entity =
                 match targetNamespace, candidateNamespace with
                 | Some targetNs, Some candidateNs when candidateNs = targetNs ->
                     getRelativeNamespace targetScope openableNs
-                | None, Some _ -> getRelativeNamespace targetScope openableNs
+                | None, _ -> getRelativeNamespace targetScope openableNs
                 | _ -> openableNs
             match relativeNs, restIdents with
             | [||], [||] -> None
@@ -355,10 +355,8 @@ module Ast =
         fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, entityNamespace: Idents option, entityIdents: Idents) ->
             res 
             |> Option.bind (fun (ns, scope, pos) -> 
-                //if entityIdents.[entityIdents.Length - 1] <> "IDictionary" then None
-                //else
-                    Entity.tryCreate ns scope ident requiresQualifiedAccessParent entityNamespace entityIdents 
-                    |> Option.map (fun e -> e, pos))
+                Entity.tryCreate ns scope ident requiresQualifiedAccessParent entityNamespace entityIdents 
+                |> Option.map (fun e -> e, pos))
             |> Option.map (fun (entity, pos) ->
                 entity,
                 match modules |> List.filter (fun (m, _, _) -> entityIdents |> Array.startsWith m ) with
