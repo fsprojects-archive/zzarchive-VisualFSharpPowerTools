@@ -617,7 +617,7 @@ let formatMatchExpr insertionParams (caseDefaultValue: string)
     let casesWritten = getWrittenCases patMatchExpr
     let casesToWrite =
         entity.UnionCases
-        |> Seq.filter (fun case -> not (casesWritten |> Set.exists (fun (name, _) -> name = case.Name)))
+        |> Seq.filter (fun case -> casesWritten |> Set.forall (fun (name, _) -> name <> case.Name))
     
     // Use the shortest qualified style for further cases
     let shortestQualifier =
