@@ -93,7 +93,9 @@ type MockDocument(src: string) =
 
 [<AutoOpen>]
 module Helpers =
-    let srcToLineArray (src: string) = src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
+    let srcToLineArray (src: string) = 
+        src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
+        |> Array.map (fun line -> if line.Trim() = "" then "" else line)
 
     let assertSrcAreEqual expectedSrc actualSrc =
         Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)

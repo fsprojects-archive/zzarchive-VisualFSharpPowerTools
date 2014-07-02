@@ -48,11 +48,13 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
+            this.chbResolveUnopenedNamespaces = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbResolveUnopenedNamespaces);
             this.grbOptions.Controls.Add(this.chbUnionPatternMatchCaseGeneration);
             this.grbOptions.Controls.Add(this.chbRecordStubGeneration);
             this.grbOptions.Controls.Add(this.chbFindAllReferences);
@@ -265,6 +267,18 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
+            // chbResolveUnopenedNamespaces
+            // 
+            this.chbResolveUnopenedNamespaces.AutoSize = true;
+            this.chbResolveUnopenedNamespaces.Checked = true;
+            this.chbResolveUnopenedNamespaces.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbResolveUnopenedNamespaces.Location = new System.Drawing.Point(181, 148);
+            this.chbResolveUnopenedNamespaces.Name = "chbResolveUnopenedNamespaces";
+            this.chbResolveUnopenedNamespaces.Size = new System.Drawing.Size(179, 17);
+            this.chbResolveUnopenedNamespaces.TabIndex = 16;
+            this.chbResolveUnopenedNamespaces.Text = "Resolve unopened namespaces";
+            this.chbResolveUnopenedNamespaces.UseVisualStyleBackColor = true;
+            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -299,5 +313,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbFindAllReferences;
         private System.Windows.Forms.CheckBox chbRecordStubGeneration;
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;
+        private System.Windows.Forms.CheckBox chbResolveUnopenedNamespaces;
     }
 }

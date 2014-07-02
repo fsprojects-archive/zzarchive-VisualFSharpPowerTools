@@ -238,7 +238,7 @@ module InterfaceStubGenerator =
                 // Ordinary instance members
                 | _, true, _, name -> name + parArgs
                 // Ordinary functions or values
-                | false, _, _, name when 
+                | false, _, _, name when
                     not (hasAttribute<RequireQualifiedAccessAttribute> v.LogicalEnclosingEntity.Attributes) -> 
                     name + " " + parArgs
                 // Ordinary static members or things (?) that require fully qualified access

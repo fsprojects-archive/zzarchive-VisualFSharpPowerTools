@@ -891,3 +891,8 @@ module InterfaceTests =
     let _ = 1 @@ 2
     let (@.@) x y = ()
     let _ = 1 @.@ 2
+
+module GenericClass =
+    type Type1<'a, 'b>() =
+        static member Member1() = ()
+    let _ = Type1<_,_>.Member1()
