@@ -180,3 +180,6 @@ let _ =
     }
 let (|ActivePattern|_|) x = Some x
 let _ = (|ActivePattern|_|) 1
+let _ = printfn ""
+let _ = printfn "%s %s"
+do printfn "%6d %%  % 06d" 1 2

@@ -14,6 +14,7 @@ type Category =
     | MutableVar
     | Quotation
     | Module
+    | Printf
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -48,8 +49,12 @@ let excludeWordSpan from what =
     if what.EndCol < from.EndCol && what.EndCol > from.StartCol then
         { from with StartCol = what.EndCol + 1 } // the dot between parts
     else from
+
+let printfFunctions = ["printf";"printfn";"sprintf";"failwithf";"eprintf";"eprintfn"] |> set
+let printfTerminators = ['b';'c';'s';'d';'i';'u';'x';'X';'o';'e';'E';'f';'g';'G';'M';'O';'A';'a';'t'] |> set
+let printfModifiers   = ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9';'-';'+';' '] |> set
  
-let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, lexer: ILexer) =
+let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: ParsedInput option, lexer: ILexer, getTextLine: int -> string) =
     let allSymbolsUses' =
         allSymbolsUses
         |> Array.choose (fun su ->
@@ -108,7 +113,8 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         |> Seq.toArray
 
     let quotationRanges = ref (ResizeArray<_>())
-
+    let printfRanges = ref (ResizeArray<_>())
+    
     let rec visitExpr = function
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
             visitExpr cond
@@ -151,6 +157,7 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         | SynExpr.Tuple (exprs, _, _) -> 
             for expr in exprs do 
                 visitExpr expr
+        | SynExpr.Ident (ident) -> if printfFunctions.Contains ident.idText then (!printfRanges).Add ident.idRange
         | _ -> () 
 
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
@@ -242,7 +249,59 @@ let getCategoriesAndLocations (allSymbolsUses: FSharpSymbolUse[], untypedAst: Pa
         |> Seq.concat
         |> Seq.toArray
 
-    let allSpans = spansBasedOnSymbolsUses |> Array.append quotations
+    let printformatters =
+        !printfRanges 
+        |> Seq.map (fun (r: Range.range) -> seq {
+
+            // TODO: Multi-line printf formats
+            let line = getTextLine (r.EndLine - 1)
+
+            let lit = lexer.TokenizeLine (r.EndLine-1)
+                      |> Seq.skipWhile (fun t -> t.LeftColumn < r.EndColumn || t.TokenName <> "STRING_TEXT")
+                      |> Seq.takeWhile (fun t -> t.TokenName = "STRING_TEXT")
+                      |> Seq.fold (fun (left,right) (tok) ->
+                        min left tok.LeftColumn, 
+                        max right tok.RightColumn
+                      ) (9999,0)
+
+            match lit with 
+            | (9999,_) -> ()
+            | (left, right) ->
+               let formatter = line.Substring(left+1, right-left)
+               let findLengthAndSkip i = 
+                   let rec findTerminator i = 
+                      if formatter.Length <= i then 0 else
+                      let c = formatter.[i]
+                      if printfTerminators.Contains c then i + 1
+                      elif printfModifiers.Contains c then findTerminator (i + 1)
+                      else 0
+                   if formatter.[i] = '%' then 2, None else
+                   match findTerminator i with
+                   | 0  -> 1, None
+                   | i' -> (i' + 1 - i), Some (i' + 1 - i)
+
+               let rec parseFmt acc i =
+                   if i >= (formatter.Length - 1) then acc else
+                   match formatter.[i] with
+                   | '%' -> 
+                       let skip, len = findLengthAndSkip (i + 1) 
+                       match len with 
+                       | Some l -> 
+                           let hit = { Category = Category.Printf
+                                       WordSpan = { Line = r.EndLine
+                                                    StartCol = left + i + 1
+                                                    EndCol = left + i + l + 1 }} 
+
+                           parseFmt (hit::acc) (i + skip)
+                       | _ -> parseFmt acc (i + skip)
+                   | _ -> parseFmt acc (i + 1)
+               yield! (parseFmt [] 0)
+            | _ -> ()
+           })
+        |> Seq.concat
+        |> Seq.toArray
+
+    let allSpans = spansBasedOnSymbolsUses |> Array.append quotations |> Array.append printformatters
     
     //for span in allSpans do
        //debug "-=O=- %A" span

@@ -44,7 +44,9 @@ let checkCategories line (expected: (Category * int * int) list)  =
     let parseResults = 
         languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
-    SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
+    let getTextLine i = sourceLines.[i]
+
+    SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLine)
     |> Array.choose (fun loc -> 
         match loc.Category with 
         | Category.Other -> None
@@ -352,3 +354,9 @@ let ``array alias``() =
 let ``active pattern``() =
     checkCategories 181 [ Category.PatternCase, 6, 19; Category.PatternCase, 28, 32 ]
     checkCategories 182 [ Category.Function, 8, 27 ]
+
+[<Test>]
+let ``printfn formatters``() =
+    checkCategories 183 [ Category.Function, 8, 15 ]
+    checkCategories 184 [ Category.Function, 8, 15; Category.Printf, 17, 19; Category.Printf, 20, 22 ]
+    checkCategories 185 [ Category.Function, 3, 10; Category.Printf, 12, 15; Category.Printf, 20, 25 ]

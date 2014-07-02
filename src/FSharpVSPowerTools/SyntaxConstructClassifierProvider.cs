@@ -25,6 +25,7 @@ namespace FSharpVSPowerTools
         public const string FSharpMutableVar = "FSharp.MutableVar";
         public const string FSharpQuotation = "FSharp.Quotation";
         public const string FSharpModule = "FSharp.Module";
+        public const string FSharpPrintf = "FSharp.Printf";
 
         [Export]
         [Name(FSharpReferenceType)]
@@ -60,6 +61,11 @@ namespace FSharpVSPowerTools
         [Name(FSharpModule)]
         [BaseDefinition("identifier")]
         internal static ClassificationTypeDefinition FSharpModuleClassificationType = null;
+
+        [Export]
+        [Name(FSharpPrintf)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpPrintfClassificationType = null;
     }
 
     public class FontColor
@@ -93,7 +99,8 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpFunction, new FontColor(Colors.Black) },
                 { ClassificationTypes.FSharpMutableVar, new FontColor(Colors.Black) },
                 { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(255, 242, 223)) },
-                { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(43, 145, 175)) }
+                { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(43, 145, 175)) },
+                { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(43, 145, 175)) },
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -110,6 +117,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpMutableVar, new FontColor(Color.FromRgb(220, 220, 220)) },
                 { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(98, 58, 0)) },
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(78, 201, 176)) },
+                { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(78, 220, 176)) },
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
@@ -308,6 +316,22 @@ namespace FSharpVSPowerTools
                 this.ForegroundColor = colors.Foreground;
                 this.BackgroundColor = colors.Background;
             }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpPrintf)]
+        [Name(ClassificationTypes.FSharpPrintf)]
+        [UserVisible(true)]
+        internal sealed class FSharpPrintfFormat : ClassificationFormatDefinition
+        {
+             [ImportingConstructor]
+             public FSharpPrintfFormat(ClassificationColorManager colorManager)
+             {
+                 this.DisplayName = "F# Printf format";
+                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpPrintf);
+                 this.ForegroundColor = colors.Foreground;
+                 this.BackgroundColor = colors.Background;
+             }
         }
     }
 

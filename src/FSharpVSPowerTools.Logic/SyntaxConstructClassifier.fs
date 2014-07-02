@@ -30,6 +30,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | Category.MutableVar -> Some "FSharp.MutableVar"
         | Category.Quotation -> Some "FSharp.Quotation"
         | Category.Module -> Some "FSharp.Module"
+        | Category.Printf -> Some "FSharp.Printf"
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
@@ -68,9 +69,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             let! allSymbolsUses, lexer =
                                 vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No)
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
-
+                            let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
                             let spans = 
-                                getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
+                                getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLine)
                                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                             state.Swap (fun _ -> 
