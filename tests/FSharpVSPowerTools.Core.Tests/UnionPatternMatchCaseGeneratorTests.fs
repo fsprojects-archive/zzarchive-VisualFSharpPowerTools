@@ -105,7 +105,7 @@ let f union = match union with
     | Case3(i)
     | Case4(3, _) -> ()"""
         |> tryGetWrittenCases (Pos.fromZ 2 6)
-        |> assertEqual (set ["Case3"])
+        |> assertEqual (set ["Case3", []])
 
     [<Test>]
     let ``OR patterns with wildcards and qualified identifiers`` () =
@@ -115,7 +115,7 @@ let f union = match union with
     | Case3 _
     | Union.Case4 _ -> ()"""
         |> tryGetWrittenCases (Pos.fromZ 2 6)
-        |> assertEqual (set ["Case2"; "Case3"; "Case4"])
+        |> assertEqual (set ["Case2", []; "Case2", ["Union"]; "Case4", []; "Case3", []; "Case4", ["Union"]])
 
     [<Test>]
     let ``redundant simple AND pattern`` () =
@@ -123,7 +123,7 @@ let f union = match union with
 let f union = match union with
     | Case2 & Case2 -> ()"""
         |> tryGetWrittenCases (Pos.fromZ 2 6)
-        |> assertEqual (set ["Case2"])
+        |> assertEqual (set ["Case2", []])
 
     [<Test>]
     let ``AND pattern with wildcards`` () =
@@ -133,6 +133,42 @@ let f union = match union with
         |> tryGetWrittenCases (Pos.fromZ 2 6)
         |> assertEqual (set [])
 
+    [<Test>]
+    let ``union cases in different modules and namespaces are respected`` () =
+        """
+namespace TestNamespace
+
+module M =
+    type DU = | C1 of string | C2 of int | C3 of double
+
+namespace TestNamespace2
+
+module M =
+    let f x =
+        match x with
+        | TestNamespace.M.DU.C1 s -> ()
+"""
+        |> tryGetWrittenCases (Pos.fromZ 11 12)
+        |> assertEqual (set ["C1", ["TestNamespace"; "M"; "DU"]])
+
+    [<Test>]
+    let ``union cases specified in different styles are correctly captured`` () =
+        """
+namespace TestNamespace
+
+module M =
+    type DU = | C1 of string | C2 of int | C3 of double
+
+namespace TestNamespace2
+open TestNamespace.M
+module M =
+    let f x =
+        match x with
+        | TestNamespace.M.DU.C1 s -> ()
+        | C2 -> ()
+"""
+        |> tryGetWrittenCases (Pos.fromZ 11 12)
+        |> assertEqual (set ["C1", ["TestNamespace"; "M"; "DU"]; "C2", []])
 
 [<Test>]
 let ``single union match case generation when the unique case is written`` () =
