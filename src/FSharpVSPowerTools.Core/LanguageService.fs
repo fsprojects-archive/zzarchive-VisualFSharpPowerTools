@@ -131,6 +131,7 @@ type RawEntity =
       Namespace: Idents option
       IsPublic: bool
       TopRequireQualifiedAccessParent: Idents option
+      AutoOpenParent: Idents option
       Kind: EntityKind }
     override x.ToString() = sprintf "%A" x  
 
@@ -440,23 +441,24 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         fullName = "System.Attribute" || isAttributeType (getBaseType ty)
             isAttributeType (Some entity)
 
-        let createEntity ns (topRequiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) =
+        let createEntity ns (topRequiresQualifiedAccessParent: FSharpEntity option) autoOpenParent (entity: FSharpEntity) =
             getFullNameAsIdents entity
             |> Option.map (fun fullName ->
                  { Idents = fullName
                    Namespace = ns
                    IsPublic = entity.Accessibility.IsPublic
-                   TopRequireQualifiedAccessParent = 
-                       topRequiresQualifiedAccessParent 
-                       |> Option.bind getFullNameAsIdents
+                   TopRequireQualifiedAccessParent = topRequiresQualifiedAccessParent |> Option.bind getFullNameAsIdents
+                   AutoOpenParent = autoOpenParent |> Option.bind getFullNameAsIdents
                    Kind = if isAttribute entity then EntityKind.Attribute else EntityKind.Type })
 
-        let rec traverseEntity contentType (parentNamespace: Idents option) (requiresQualifiedAccessParent: FSharpEntity option) (entity: FSharpEntity) = 
+        let rec traverseEntity contentType (parentNamespace: Idents option) (requiresQualifiedAccessParent: FSharpEntity option) 
+                               (autoOpenParent: FSharpEntity option) (entity: FSharpEntity) = 
+
             seq { if not entity.IsProvided then
                     match contentType, entity.Accessibility.IsPublic with
                     | Full, _ | Public, true ->
                         let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parentNamespace
-                        match createEntity ns requiresQualifiedAccessParent entity with
+                        match createEntity ns requiresQualifiedAccessParent autoOpenParent entity with
                         | Some x -> yield x
                         | None -> ()
                                             
@@ -466,23 +468,30 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                 if hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes then Some entity
                                 else None)
 
+                        let autoOpenParent =
+                            let isAutoOpen = entity.IsFSharpModule && hasAttribute<AutoOpenAttribute> entity.Attributes
+
+                            match isAutoOpen, autoOpenParent with
+                            | true, Some parent -> Some parent // if parent is also AutoOpen, then keep the parent
+                            | true, None -> Some entity // if parent is not AutoOpen, but current entity is, peek the latter as a new AutoOpen module
+                            | false, _ -> None // if current entity is not AutoOpen, we discard whatever parent was
+
                         if entity.IsFSharpModule then
                             for func in entity.MembersFunctionsAndValues do
                                 yield { Idents = func.FullName.Split '.'
                                         Namespace = ns
                                         IsPublic = func.Accessibility.IsPublic
-                                        TopRequireQualifiedAccessParent = 
-                                            requiresQualifiedAccessParent 
-                                            |> Option.bind getFullNameAsIdents
+                                        TopRequireQualifiedAccessParent = requiresQualifiedAccessParent |> Option.bind getFullNameAsIdents
+                                        AutoOpenParent = autoOpenParent |> Option.bind getFullNameAsIdents
                                         Kind = EntityKind.FunctionOrValue }
 
                         for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
-                            yield! traverseEntity contentType ns requiresQualifiedAccessParent e 
+                            yield! traverseEntity contentType ns requiresQualifiedAccessParent autoOpenParent e 
                     | _ -> () }
 
         let traverseAssemblySignature (signature: FSharpAssemblySignature) contentType =
              seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                     yield! traverseEntity contentType None None e }
+                     yield! traverseEntity contentType None None None e }
              |> Seq.distinct
              |> Seq.toList
 
