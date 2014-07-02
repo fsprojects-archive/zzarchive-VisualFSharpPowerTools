@@ -110,15 +110,12 @@ type WordSpan =
           EndCol = r.EndColumn }
     member x.ToRange() = x.Line, x.StartCol, x.Line, x.EndCol
 
-type ILexer = 
+[<AbstractClass>]
+type LexerBase() = 
     abstract GetSymbolFromTokensAtLocation: TokenInformation list * line: int * col: int -> Symbol option
     abstract TokenizeLine: line: int -> TokenInformation list
-
-[<AutoOpen>]
-module LexerExtensions =
-    type ILexer with
-        member x.GetSymbolAtLocation (line: int, col: int) =
-            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
+    member x.GetSymbolAtLocation (line: int, col: int) =
+           x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.Collections.Generic

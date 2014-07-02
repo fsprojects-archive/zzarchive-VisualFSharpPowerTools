@@ -50,7 +50,7 @@ let excludeWordSpan from what =
         { from with StartCol = what.EndCol + 1 } // the dot between parts
     else from
  
-let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untypedAst: ParsedInput option, lexer: ILexer) =
+let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untypedAst: ParsedInput option, lexer: LexerBase) =
     let allSymbolsUses' =
         allSymbolsUses
         |> Seq.groupBy (fun (su, _) -> su.RangeAlternate.EndLine)

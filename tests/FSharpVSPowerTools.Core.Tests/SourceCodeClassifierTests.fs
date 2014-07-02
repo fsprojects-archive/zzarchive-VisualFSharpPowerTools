@@ -34,7 +34,7 @@ let checkCategories line (expected: (Category * int * int) list)  =
         |> Array.map (fun su -> su, true)
 
     let lexer = 
-        { new ILexer with
+        { new LexerBase() with
             member x.GetSymbolFromTokensAtLocation (_tokens, line, col) =
                 let lineStr = sourceLines.[line]
                 Lexer.getSymbol source line col lineStr args Lexer.queryLexState

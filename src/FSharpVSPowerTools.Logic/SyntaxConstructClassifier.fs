@@ -12,6 +12,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpVSPowerTools.AsyncMaybe
 
 [<NoComparison>]
 type private ClassifierState =
@@ -93,17 +94,18 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
                             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                                     
-                            let notUsedSymbols =
+                            let! notUsedSymbols =
                                 singleDefs 
-                                |> List.choose (fun sym ->
-                                    match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
-                                    | Some SymbolDeclarationLocation.File -> Some sym
-                                    | Some (SymbolDeclarationLocation.Projects declProjects) ->
-                                        //let projectsToCheck = projectFactory.GetDependentProjects dte declProjects
-                                        if vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
-                                            |> Async.RunSynchronously then None
-                                        else Some sym
-                                    | _ -> None)
+                                |> Async.List.map (fun sym ->
+                                    async {
+                                        match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
+                                        | Some SymbolDeclarationLocation.File -> return Some sym
+                                        | Some (SymbolDeclarationLocation.Projects declProjects) ->
+                                            let! isSymbolUsed = vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
+                                            if isSymbolUsed then return None
+                                            else return Some sym
+                                        | _ -> return None })
+                                |> Async.map (List.choose id)
                                     
                             let usedSymbolUses =
                                 match notUsedSymbols with

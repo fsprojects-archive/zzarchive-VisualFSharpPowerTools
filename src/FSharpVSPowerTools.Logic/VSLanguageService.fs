@@ -196,7 +196,7 @@ type VSLanguageService
                     let lineNumber = line - lineStart
                     snapshot.GetLineFromLineNumber(lineNumber).GetText() 
 
-                { new ILexer with
+                { new LexerBase() with
                     member x.GetSymbolFromTokensAtLocation (tokens, line, col) =
                         Lexer.getSymbolFromTokens tokens line col (getLineStr line)
                     member x.TokenizeLine line =
