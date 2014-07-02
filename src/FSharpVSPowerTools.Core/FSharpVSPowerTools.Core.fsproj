@@ -61,6 +61,7 @@
     <Compile Include="CompilerLocationUtils.fs" />
     <Compile Include="TypedAstUtils.fs" />
     <Compile Include="Lexer.fs" />
+    <Compile Include="AssemblyContentProvider.fs" />
     <Compile Include="LanguageService.fs" />
     <Compile Include="XmlDocParser.fs" />
     <Compile Include="DepthParser.fs" />
