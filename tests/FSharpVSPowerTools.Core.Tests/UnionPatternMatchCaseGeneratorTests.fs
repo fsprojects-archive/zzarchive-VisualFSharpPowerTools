@@ -133,6 +133,42 @@ let f union = match union with
         |> tryGetWrittenCases (Pos.fromZ 2 6)
         |> assertEqual (set [])
 
+    [<Test>]
+    let ``union cases in different modules and namespaces are respected`` () =
+        """
+namespace TestNamespace
+
+module M =
+    type DU = | C1 of string | C2 of int | C3 of double
+
+namespace TestNamespace2
+
+module M =
+    let f x =
+        match x with
+        | TestNamespace.M.DU.C1 s -> ()
+"""
+        |> tryGetWrittenCases (Pos.fromZ 11 12)
+        |> assertEqual (set ["C1", ["TestNamespace"; "M"; "DU"]])
+
+    [<Test>]
+    let ``union cases specified in different styles are correctly captured`` () =
+        """
+namespace TestNamespace
+
+module M =
+    type DU = | C1 of string | C2 of int | C3 of double
+
+namespace TestNamespace2
+open TestNamespace.M
+module M =
+    let f x =
+        match x with
+        | TestNamespace.M.DU.C1 s -> ()
+        | C2 -> ()
+"""
+        |> tryGetWrittenCases (Pos.fromZ 11 12)
+        |> assertEqual (set ["C1", ["TestNamespace"; "M"; "DU"]; "C2", []])
 
 [<Test>]
 let ``single union match case generation when the unique case is written`` () =
