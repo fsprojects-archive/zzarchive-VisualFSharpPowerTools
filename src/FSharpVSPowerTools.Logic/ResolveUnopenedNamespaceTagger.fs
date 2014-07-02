@@ -89,15 +89,15 @@ type ResolveUnopenedNamespaceSmartTagger
                                     |> List.map (fun e -> 
                                          [ yield e.TopRequireQualifiedAccessParent, e.AutoOpenParent, e.Namespace, e.Idents
                                            if isAttribute then
-                                             let lastIdent = e.Idents.[e.Idents.Length - 1]
-                                             if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
-                                               yield 
-                                                 e.TopRequireQualifiedAccessParent, 
-                                                 e.AutoOpenParent,
-                                                 e.Namespace,
-                                                 Array.append 
-                                                    e.Idents.[..e.Idents.Length - 2] 
-                                                    [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
+                                               let lastIdent = e.Idents.[e.Idents.Length - 1]
+                                               if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
+                                                   yield 
+                                                       e.TopRequireQualifiedAccessParent, 
+                                                       e.AutoOpenParent,
+                                                       e.Namespace,
+                                                       Array.append 
+                                                          e.Idents.[..e.Idents.Length - 2] 
+                                                          [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
@@ -162,13 +162,15 @@ type ResolveUnopenedNamespaceSmartTagger
     let getSmartTagActions snapshotSpan candidates =
         let openNamespaceActions = 
             candidates
-            |> List.choose (fun (entity, pos) -> 
+            |> Seq.distinctBy (fun (entity, _) -> entity.Namespace, entity.Name)
+            |> Seq.choose (fun (entity, pos) -> 
                 entity.Namespace |> Option.map (openNamespaceAction snapshotSpan pos entity.Name))
             
         let qualifySymbolActions =
             candidates
-            |> List.map (fun (entity, _) -> entity.FullRelativeName)
-            |> List.map (qualifiedSymbolAction snapshotSpan)
+            |> Seq.map (fun (entity, _) -> entity.FullRelativeName)
+            |> Seq.distinct
+            |> Seq.map (qualifiedSymbolAction snapshotSpan)
             
         [ SmartTagActionSet (Seq.toReadOnlyCollection openNamespaceActions)
           SmartTagActionSet (Seq.toReadOnlyCollection qualifySymbolActions) ] 

@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools
 
+open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type ShortIdent = string
@@ -23,7 +24,35 @@ type RawEntity =
 type AssemblyPath = string
 type AssemblyContentType = Public | Full
 
-type Perent = 
+[<AutoOpen>]
+module Extensions =
+    let private unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
+    
+    type FSharpEntity with
+        member x.GetFullName() =
+            match x with
+            | AbbreviatedType (TypeWithDefinition def) -> def.GetFullName()
+            | x when x.IsArrayType || x.IsByRef -> None
+            | _ ->
+                Option.attempt (fun _ -> x.DisplayName)
+                |> Option.bind (fun displayName ->
+                    if List.exists ((=) displayName) unrepresentedTypes then None
+                    else 
+                        try Some x.FullName
+                        with e -> 
+                            //fail "Should add this type to the black list: %O" e
+                            None)
+                |> Option.map (fun fullName ->
+                    // remove number of arguments from generic types
+                    // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
+                    if Char.IsDigit fullName.[fullName.Length - 1] then
+                        match fullName.LastIndexOf '`' with
+                        | -1 -> fullName
+                        | lastBacktickIndex -> 
+                            fullName.Substring(0, lastBacktickIndex)
+                    else fullName) 
+
+type Parent = 
     { Namespace: Idents option
       RequiresQualifiedAccess: Idents option
       AutoOpen: Idents option
@@ -33,36 +62,24 @@ type Perent =
           RequiresQualifiedAccess = None
           AutoOpen = None
           WithModuleSuffix = None }
-           
+    static member RewriteParentIdents (parentIdents: Idents option) (idents: Idents) =
+        match parentIdents with
+        | Some p when p.Length <= idents.Length -> 
+            for i in 0..p.Length - 1 do
+                idents.[i] <- p.[i]
+        | _ -> ()
+        idents
+    member private x.FixParentModuleSuffix (idents: Idents) =
+        Parent.RewriteParentIdents x.WithModuleSuffix idents
+    member x.FormatIdents (idents: Idents) = x.FixParentModuleSuffix idents
+    member x.FormatEntityFullName (entity: FSharpEntity) =
+        entity.GetFullName()
+        |> Option.map (fun x -> x.Split '.')
+        |> Option.map x.FixParentModuleSuffix
+
 module AssemblyContentProvider =
-    open System
     open System.IO
     open System.Collections.Generic
-
-    let unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
-        
-    let rec getFullName (entity: FSharpEntity) =
-        match entity with
-        | AbbreviatedType (TypeWithDefinition def) -> getFullName def
-        | x when x.IsArrayType || x.IsByRef -> None
-        | _ ->
-            Option.attempt (fun _ -> entity.DisplayName)
-            |> Option.bind (fun displayName ->
-                if List.exists ((=) displayName) unrepresentedTypes then None
-                else 
-                    try Some entity.FullName
-                    with e -> 
-                        //fail "Should add this type to the black list: %O" e
-                        None)
-            |> Option.map (fun fullName ->
-                // remove number of arguments from generic types
-                // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
-                if Char.IsDigit fullName.[fullName.Length - 1] then
-                    match fullName.LastIndexOf '`' with
-                    | -1 -> fullName
-                    | lastBacktickIndex -> 
-                        fullName.Substring(0, lastBacktickIndex)
-                else fullName) 
             
     let fixParentModuleSuffix (parent: Idents option) (idents: Idents) =
         match parent with
@@ -71,10 +88,6 @@ module AssemblyContentProvider =
                 idents.[i] <- p.[i]
         | _ -> ()
         idents
-
-    let getFullNameAsIdents (parentWithModuleSuffix: Idents option) entity = 
-        entity |> getFullName |> Option.map (fun x -> x.Split '.')
-        |> Option.map (fixParentModuleSuffix parentWithModuleSuffix)
 
     let isAttribute (entity: FSharpEntity) =
         let getBaseType (entity: FSharpEntity) =
@@ -88,79 +101,85 @@ module AssemblyContentProvider =
             match ty with
             | None -> false
             | Some ty ->
-                match getFullName ty with
+                match ty.GetFullName() with
                 | None -> false
                 | Some fullName ->
                     fullName = "System.Attribute" || isAttributeType (getBaseType ty)
         isAttributeType (Some entity)
 
-    let createEntity (ns, topRequiresQualifiedAccessParent, autoOpenParent, parentWithModuleSuffix, entity: FSharpEntity) =
-        getFullNameAsIdents parentWithModuleSuffix entity
+    let createEntity ns (parent: Parent) (entity: FSharpEntity) =
+        parent.FormatEntityFullName entity
         |> Option.map (fun fullName ->
-                { Idents = fullName
-                  Namespace = ns
-                  IsPublic = entity.Accessibility.IsPublic
-                  TopRequireQualifiedAccessParent = 
-                      topRequiresQualifiedAccessParent |> Option.bind (getFullNameAsIdents parentWithModuleSuffix)
-                  AutoOpenParent = autoOpenParent |> Option.bind (getFullNameAsIdents parentWithModuleSuffix)
-                  Kind = if isAttribute entity then EntityKind.Attribute else EntityKind.Type })
+            { Idents = fullName
+              Namespace = ns
+              IsPublic = entity.Accessibility.IsPublic
+              TopRequireQualifiedAccessParent = parent.RequiresQualifiedAccess |> Option.map parent.FormatIdents
+              AutoOpenParent = parent.AutoOpen |> Option.map parent.FormatIdents
+              Kind = if isAttribute entity then EntityKind.Attribute else EntityKind.Type })
 
-    let rec traverseEntity contentType (parentNamespace: Idents option) (requiresQualifiedAccessParent: FSharpEntity option) 
-                            (autoOpenParent: FSharpEntity option) (parentWithModuleSuffix: Idents option) (entity: FSharpEntity) = 
+    let rec traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 
 
         seq { if not entity.IsProvided then
                 match contentType, entity.Accessibility.IsPublic with
                 | Full, _ | Public, true ->
-                    let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parentNamespace
-                    match createEntity (ns, requiresQualifiedAccessParent, autoOpenParent, 
-                                        parentWithModuleSuffix, entity) with
+                    let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parent.Namespace
+                    match createEntity ns parent entity with
                     | Some x -> yield x
                     | None -> ()
-                                            
-                    let requiresQualifiedAccessParent =
-                        requiresQualifiedAccessParent
-                        |> Option.orElse (
-                            if hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes then Some entity
-                            else None)
 
-                    let autoOpenParent =
-                        let isAutoOpen = entity.IsFSharpModule && hasAttribute<AutoOpenAttribute> entity.Attributes
-
-                        match isAutoOpen, autoOpenParent with
-                        | true, Some parent -> Some parent // if parent is also AutoOpen, then keep the parent
-                        | true, None -> Some entity // if parent is not AutoOpen, but current entity is, peek the latter as a new AutoOpen module
-                        | false, _ -> None // if current entity is not AutoOpen, we discard whatever parent was
-
-                    let currentParentWithModuleSuffix =
+                    let parentWithModuleSuffix =
                         if entity.IsFSharpModule && hasModuleSuffixAttribute entity then 
                             Some entity
                         else None
-                        |> Option.bind (getFullNameAsIdents parentWithModuleSuffix)
+                        |> Option.bind parent.FormatEntityFullName
                         |> Option.map (fun idents -> 
                              if idents.Length > 0 then
-                                let lastIdent = idents.[idents.Length - 1]
-                                idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
+                                 let lastIdent = idents.[idents.Length - 1]
+                                 idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
                              idents)
+
+                    let fixModuleSuffix = Parent.RewriteParentIdents parentWithModuleSuffix
+                    
+                    let currentParent =
+                        { RequiresQualifiedAccess =
+                            parent.RequiresQualifiedAccess
+                            |> Option.orElse (
+                                if hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes then 
+                                    parent.FormatEntityFullName entity |> Option.map fixModuleSuffix
+                                else None)
+                          AutoOpen =
+                            let isAutoOpen = entity.IsFSharpModule && hasAttribute<AutoOpenAttribute> entity.Attributes
+                            match isAutoOpen, parent.AutoOpen with
+                            // if parent is also AutoOpen, then keep the parent
+                            | true, Some parent -> Some parent 
+                            // if parent is not AutoOpen, but current entity is, peek the latter as a new AutoOpen module
+                            | true, None -> 
+                                parent.FormatEntityFullName entity |> Option.map fixModuleSuffix 
+                            // if current entity is not AutoOpen, we discard whatever parent was
+                            | false, _ -> None 
+
+                          WithModuleSuffix = parentWithModuleSuffix |> Option.orElse parent.WithModuleSuffix
+                          Namespace = ns }
 
                     if entity.IsFSharpModule then
                         for func in entity.MembersFunctionsAndValues do
                             let e =
-                                    { Idents = func.FullName.Split '.' |> fixParentModuleSuffix currentParentWithModuleSuffix
+                                    { Idents = func.FullName.Split '.' |> currentParent.FormatIdents
                                       Namespace = ns
                                       IsPublic = func.Accessibility.IsPublic
                                       TopRequireQualifiedAccessParent = 
-                                          requiresQualifiedAccessParent |> Option.bind (getFullNameAsIdents currentParentWithModuleSuffix)
-                                      AutoOpenParent = autoOpenParent |> Option.bind (getFullNameAsIdents currentParentWithModuleSuffix)
+                                          currentParent.RequiresQualifiedAccess |> Option.map currentParent.FormatIdents
+                                      AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FormatIdents
                                       Kind = EntityKind.FunctionOrValue }
                             yield e
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
-                        yield! traverseEntity contentType ns requiresQualifiedAccessParent autoOpenParent currentParentWithModuleSuffix e 
+                        yield! traverseEntity contentType currentParent e 
                 | _ -> () }
 
     let getAssemblySignatureContent contentType (signature: FSharpAssemblySignature) =
             seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                    yield! traverseEntity contentType None None None None e }
+                    yield! traverseEntity contentType Parent.Empty e }
             |> Seq.distinct
             |> Seq.toList
 
@@ -173,15 +192,15 @@ module AssemblyContentProvider =
             match contentType, entityCache.TryGetValue fileName with
             | _, (true, (cacheWriteTime, Full, entities))
             | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
-                debug "[LanguageService] Return entities from %s from cache." fileName
+                debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
                 entities
             | _ ->
-                debug "[LanguageService] Getting entities from %s." fileName
+                debug "[AssemblyContentProvider] Getting entities from %s." fileName
                 let entities = getAssemblySignatureContent contentType asm.Contents
                 entityCache.[fileName] <- (assemblyWriteTime, contentType, entities)
                 entities
         | None -> 
-            debug "[LanguageService] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
+            debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
             getAssemblySignatureContent contentType asm.Contents
         |> List.filter (fun entity -> 
             match contentType, entity.IsPublic with
