@@ -337,3 +337,4 @@ type CursorOverrideHandle(newCursor) =
 
 module internal Cursor =
     let wait() = new CursorOverrideHandle(System.Windows.Input.Cursors.Wait)
+

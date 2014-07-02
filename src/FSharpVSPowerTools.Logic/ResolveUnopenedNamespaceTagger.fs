@@ -11,9 +11,26 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
+open System.Drawing
+open System.Windows.Media
+open System.Windows.Interop
+open System.Windows
+open System.Windows.Media.Imaging
 
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
+
+type RefactoringIconKind =
+    | ExtractMethod = 0
+    | EncapsulateField = 1
+    | ExtractInterface = 2
+    | Rename = 3
+    | ReorderParameters = 4
+    | RemoveParameters = 5
+    | AddUsing = 6
+    | GenerateMethod = 7
+    | PromoteLocal = 8
+    | Snippet = 9
 
 type ResolveUnopenedNamespaceSmartTagger
          (view: ITextView, buffer: ITextBuffer, textUndoHistory: ITextUndoHistory,
@@ -155,11 +172,28 @@ type ResolveUnopenedNamespaceSmartTagger
         snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
         transaction.Complete()
 
+    let icon =
+        let manager = serviceProvider.GetService<IVsResourceManager, SVsResourceManager>()
+        let hbmpValue: IntPtr ref = ref IntPtr.Zero
+        let cmdDefUiPackageGuid = Guid "{44E07B02-29A5-11D3-B882-00C04F79F802}"
+        let IDBMP_REFACTOR_IMAGES = "#2029"
+        if manager.LoadResourceBitmap(ref cmdDefUiPackageGuid, 0, IDBMP_REFACTOR_IMAGES, hbmpValue) = 0 then
+            let iconSize = 16
+            use bitmap = Bitmap.FromHbitmap(!hbmpValue)
+            // Get rid of the backdrop behind the refactoring icons.
+            bitmap.MakeTransparent(System.Drawing.Color.Black)
+            Imaging.CreateBitmapSourceFromHBitmap(
+                       bitmap.GetHbitmap(), 
+                       IntPtr.Zero,
+                       Int32Rect(int RefactoringIconKind.AddUsing * iconSize, 0, iconSize, iconSize),
+                       BitmapSizeOptions.FromEmptyOptions()) :> ImageSource
+         else null
+
     let openNamespaceAction snapshot ctx name ns =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = "open " + ns
-            member x.Icon = null
+            member x.Icon = icon
             member x.IsEnabled = true
             member x.Invoke() = openNamespace snapshot ctx ns name
         }
