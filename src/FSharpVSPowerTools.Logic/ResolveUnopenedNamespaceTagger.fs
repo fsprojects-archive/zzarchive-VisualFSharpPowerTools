@@ -23,7 +23,7 @@ type ResolveUnopenedNamespaceSmartTagger
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Entity * Pos) list option = None 
+    let mutable state: (Entity * Ast.InsertContext) list option = None 
 
     let triggerTagsChanged() =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
@@ -116,11 +116,25 @@ type ResolveUnopenedNamespaceSmartTagger
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
 
-    let openNamespace (snapshotSpan: SnapshotSpan) ns name pos = 
+    let openNamespace (snapshotSpan: SnapshotSpan) (ctx: Ast.InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
         let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
-        let line = snapshot.GetLineFromLineNumber(pos.Line - 1).Start.Position
+        let pos: Pos = 
+            { ctx.Pos with Line =
+                        // it's an implicit module with no open declarations. Start line of it is a start line of the first 
+                        // declaration, which is not what we want here. So, shift the line up by one. 
+                              if not ctx.IsOpenDecl && ctx.IsTopLevel then
+                                  if ctx.Pos.Line > 1 then
+                                      let lineStr = snapshot.GetLineFromLineNumber(ctx.Pos.Line - 2).GetText().Trim()
+                                      if not (lineStr.StartsWith "module" || lineStr.StartsWith "namespace") then 
+                                          1
+                                      else ctx.Pos.Line
+                                  else 1
+                              else ctx.Pos.Line }
+
+        let line = snapshot.GetLineFromLineNumber (pos.Line - 1)
+        let line = line.Start.Position
         let lineStr = (String.replicate pos.Col " ") + "open " + ns + Environment.NewLine
         let snapshot = snapshot.TextBuffer.Insert (line, lineStr)
         let nextLine = snapshot.GetLineFromLineNumber pos.Line
@@ -130,7 +144,7 @@ type ResolveUnopenedNamespaceSmartTagger
                 snapshot.TextBuffer.Insert (nextLine.Start.Position, Environment.NewLine)
             else snapshot
         // for top level module we add a blank line between the module declaration and first open statement
-        if pos.Col = 0 then
+        if pos.Col = 0 && pos.Line > 1 then
             let prevLine = snapshot.GetLineFromLineNumber (pos.Line - 2)
             if not (prevLine.GetText().Trim().StartsWith "open") then
                 snapshot.TextBuffer.Insert(prevLine.End.Position, Environment.NewLine) |> ignore
@@ -141,13 +155,13 @@ type ResolveUnopenedNamespaceSmartTagger
         snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
         transaction.Complete()
 
-    let openNamespaceAction snapshot pos name ns =
+    let openNamespaceAction snapshot ctx name ns =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = "open " + ns
             member x.Icon = null
             member x.IsEnabled = true
-            member x.Invoke() = openNamespace snapshot ns name pos
+            member x.Invoke() = openNamespace snapshot ctx ns name
         }
 
     let qualifiedSymbolAction snapshotSpan fullName =
@@ -163,8 +177,8 @@ type ResolveUnopenedNamespaceSmartTagger
         let openNamespaceActions = 
             candidates
             |> Seq.distinctBy (fun (entity, _) -> entity.Namespace, entity.Name)
-            |> Seq.choose (fun (entity, pos) -> 
-                entity.Namespace |> Option.map (openNamespaceAction snapshotSpan pos entity.Name))
+            |> Seq.choose (fun (entity, ctx) -> 
+                entity.Namespace |> Option.map (openNamespaceAction snapshotSpan ctx entity.Name))
             
         let qualifySymbolActions =
             candidates
