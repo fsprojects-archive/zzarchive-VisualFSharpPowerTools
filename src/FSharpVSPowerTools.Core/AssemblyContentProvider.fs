@@ -42,15 +42,6 @@ module Extensions =
                         with e -> 
                             //fail "Should add this type to the black list: %O" e
                             None)
-                |> Option.map (fun fullName ->
-                    // remove number of arguments from generic types
-                    // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
-                    if Char.IsDigit fullName.[fullName.Length - 1] then
-                        match fullName.LastIndexOf '`' with
-                        | -1 -> fullName
-                        | lastBacktickIndex -> 
-                            fullName.Substring(0, lastBacktickIndex)
-                    else fullName) 
 
 type Parent = 
     { Namespace: Idents option
@@ -73,8 +64,20 @@ type Parent =
         Parent.RewriteParentIdents x.WithModuleSuffix idents
     member x.FormatIdents (idents: Idents) = x.FixParentModuleSuffix idents
     member x.FormatEntityFullName (entity: FSharpEntity) =
+        // remove number of arguments from generic types
+        // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
+        // and System.Data.Listeners`1.Func -> System.Data.Listeners.Func
+        let removeGenericParamsCount (idents: Idents) =
+            for i in 0..idents.Length - 1 do
+                let ident = idents.[i]
+                if ident.Length > 0 && Char.IsDigit ident.[ident.Length - 1] then
+                    let lastBacktickIndex = ident.LastIndexOf '`' 
+                    if lastBacktickIndex <> -1 then
+                        idents.[i] <- ident.Substring(0, lastBacktickIndex)
+            idents
+
         entity.GetFullName()
-        |> Option.map (fun x -> x.Split '.')
+        |> Option.map (fun x -> removeGenericParamsCount (x.Split '.'))
         |> Option.map x.FixParentModuleSuffix
 
 module AssemblyContentProvider =
@@ -123,9 +126,11 @@ module AssemblyContentProvider =
                 match contentType, entity.Accessibility.IsPublic with
                 | Full, _ | Public, true ->
                     let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parent.Namespace
-                    match createEntity ns parent entity with
-                    | Some x -> yield x
-                    | None -> ()
+
+                    if not entity.IsFSharpModule then
+                        match createEntity ns parent entity with
+                        | Some x -> yield x
+                        | None -> ()
 
                     let parentWithModuleSuffix =
                         if entity.IsFSharpModule && hasModuleSuffixAttribute entity then 
