@@ -30,6 +30,7 @@ Here are currently supported features:
  * [Implement interface](implementinterface.html)
  * [Record stub generation](recordstubgeneration.html)
  * [Union pattern match case generation](unionpatternmatchcasegeneration.html)
+ * [Resolve unopened namespaces or modules](resolveunopenednamespaces.html)
   
 Contributing and copyright
 --------------------------
