@@ -89,7 +89,7 @@ and
     let projectIndexes = 
         lazy
             let listFSharpProjectsInSolution() = 
-                serviceProvider.GetService<DTE, SDTE>().ListFSharpProjectsInSolution() 
+                projectFactory.ListFSharpProjectsInSolution(serviceProvider.GetService<DTE, SDTE>()) 
                 |> List.map projectFactory.CreateForProject
 
             let openedDocuments = 
