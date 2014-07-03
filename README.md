@@ -26,6 +26,8 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Implement interface
  - Record stub generation
  - Union type pattern generation
+ - Resolve unopened namespaces
+ - Gray out unused declarations
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 

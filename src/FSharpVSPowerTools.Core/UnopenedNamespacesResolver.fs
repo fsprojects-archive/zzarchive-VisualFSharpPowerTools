@@ -155,7 +155,7 @@ module Ast =
 
         and walkType = function
             | SynType.LongIdent ident -> ifPosInRange ident.Range (fun _ -> Some EntityKind.Type)
-            | SynType.App(ty, _, types, _, _, _, r) -> 
+            | SynType.App(ty, _, types, _, _, _, _) -> 
                 walkType ty |> Option.orElse (List.tryPick walkType types)
             | SynType.LongIdentApp(_, _, _, types, _, _, _) -> List.tryPick walkType types
             | SynType.Tuple(ts, _) -> ts |> List.tryPick (fun (_, t) -> walkType t)

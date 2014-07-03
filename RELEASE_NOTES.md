@@ -80,5 +80,7 @@
 * Add report progress and cancellation to Rename Refactoring
 * Add report progress to Find All References
 * Enhance Xaml support
+* Implement Resolve unopened namespaces
+* Implement Gray out unused declarations
 
 
