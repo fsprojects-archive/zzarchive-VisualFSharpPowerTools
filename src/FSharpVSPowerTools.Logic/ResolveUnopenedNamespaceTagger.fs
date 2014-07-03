@@ -50,6 +50,8 @@ type ResolveUnopenedNamespaceSmartTagger
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    currentWord <- Some newWord
+                    state <- None
                     //let ctx = System.Threading.SynchronizationContext.Current
                     asyncMaybe {
                         let! newWord, sym = vsLanguageService.GetSymbol (point, project) |> liftMaybe
@@ -109,7 +111,7 @@ type ResolveUnopenedNamespaceSmartTagger
                          state <- result
                          triggerTagsChanged() )
                     |> Async.StartImmediateSafe
-                    currentWord <- Some newWord
+                    
             | _ -> 
                 currentWord <- None 
                 triggerTagsChanged()
