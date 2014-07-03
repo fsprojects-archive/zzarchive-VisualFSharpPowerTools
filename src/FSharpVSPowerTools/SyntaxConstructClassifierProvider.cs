@@ -124,7 +124,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpMutableVar, new FontColor(Color.FromRgb(220, 220, 220)) },
                 { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(98, 58, 0)) },
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(78, 201, 176)) },
-                { ClassificationTypes.FSharpUnused, new FontColor(Colors.LightGray) },
+                { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(155, 155, 155)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(78, 220, 176)) },
             };
 
