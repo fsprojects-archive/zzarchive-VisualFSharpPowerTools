@@ -42,7 +42,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let! results = 
-                        match projectFactory.GetSymbolUsageScope project.IsForStandaloneScript fsSymbolUse.Symbol dte file with
+                        match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript fsSymbolUse.Symbol dte file with
                         | Some SymbolDeclarationLocation.File ->
                             progress(OperationState.Reporting(Resource.findAllReferencesFindInFileMessage))
                             vsLanguageService.FindUsagesInFile (span, symbol, fileScopedCheckResults)
@@ -54,7 +54,10 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                                 // The symbol is declared in .NET framework, an external assembly or in a C# project within the solution.
                                 // In order to find all its usages we have to check all F# projects.
                                 | _ -> 
-                                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map projectFactory.CreateForProject
+                                    let allProjects = 
+                                        projectFactory.ListFSharpProjectsInSolution dte  
+                                        |> List.map projectFactory.CreateForProject
+                                    
                                     if allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName) 
                                     then allProjects 
                                     else project :: allProjects

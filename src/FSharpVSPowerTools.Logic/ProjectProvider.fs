@@ -241,6 +241,8 @@ type ProjectFactory
 
     let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
+        // we have to save the project otherwise SourceFiles would miss added / removed file
+        project.Save()
         cache.Remove project.UniqueName
 
     let onProjectItemChanged (projectItem: ProjectItem) =
@@ -249,6 +251,8 @@ type ProjectFactory
             |> Option.iter (vsLanguageService.InvalidateProject >> Async.RunSynchronously) 
             onProjectChanged item.Project)
 
+    let fsharpProjectsCache = ref None
+ 
     do match events with
         | Some events ->
             events.SolutionEvents.add_AfterClosing (fun _ -> 
@@ -259,8 +263,13 @@ type ProjectFactory
             events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)
             events.ProjectsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
             events.ProjectsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-            events.SolutionEvents.add_ProjectRemoved (fun p -> onProjectChanged p)
-            events.SolutionEvents.add_ProjectRenamed (fun p _ -> onProjectChanged p) 
+            events.SolutionEvents.add_ProjectAdded (fun p -> fsharpProjectsCache := None)
+            events.SolutionEvents.add_ProjectRemoved (fun p -> 
+                fsharpProjectsCache := None
+                onProjectChanged p)
+            events.SolutionEvents.add_ProjectRenamed (fun p _ -> 
+                fsharpProjectsCache := None
+                onProjectChanged p) 
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
@@ -291,7 +300,26 @@ type ProjectFactory
     member x.CreateForDocument buffer (doc: Document) =
         x.CreateForFileInProject buffer doc.FullName doc.ProjectItem.ContainingProject
 
-    member x.GetSymbolUsageScope isStandalone (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath): SymbolDeclarationLocation option =
+    member x.ListFSharpProjectsInSolution (dte: DTE) =
+        let rec handleProject (p: Project) = 
+            if p === null then []
+            elif isFSharpProject p then [ p ]
+            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
+            else []
+        
+        and handleProjectItems (items: ProjectItems) = 
+            [ for pi in items do
+                    yield! handleProject pi.SubProject ]
+
+        match !fsharpProjectsCache with
+        | Some x -> x
+        | None ->
+            let res = [ for p in dte.Solution.Projects do
+                            yield! handleProject p ]
+            fsharpProjectsCache := Some res
+            res
+
+    member x.GetSymbolDeclarationLocation isStandalone (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
         let isPrivateToFile = 
             match symbol with 
             | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
@@ -311,7 +339,7 @@ type ProjectFactory
                 elif isStandalone then
                     None
                 else
-                    let allProjects = dte.ListFSharpProjectsInSolution() |> List.map x.CreateForProject
+                    let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
                     | projects -> Some (SymbolDeclarationLocation.Projects projects)
@@ -319,7 +347,7 @@ type ProjectFactory
 
     member x.GetDependentProjects (dte: DTE) (projects: IProjectProvider list) =
         let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLower()) |> set
-        dte.ListFSharpProjectsInSolution()
+        x.ListFSharpProjectsInSolution dte
         |> Seq.map x.CreateForProject
         |> Seq.filter (fun p -> 
             p.GetReferencedProjects() 
