@@ -68,13 +68,14 @@ type Parent =
         // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
         // and System.Data.Listeners`1.Func -> System.Data.Listeners.Func
         let removeGenericParamsCount (idents: Idents) =
-            for i in 0..idents.Length - 1 do
-                let ident = idents.[i]
+            idents 
+            |> Array.map (fun ident ->
                 if ident.Length > 0 && Char.IsDigit ident.[ident.Length - 1] then
                     let lastBacktickIndex = ident.LastIndexOf '`' 
                     if lastBacktickIndex <> -1 then
-                        idents.[i] <- ident.Substring(0, lastBacktickIndex)
-            idents
+                        ident.Substring(0, lastBacktickIndex)
+                    else ident
+                else ident)
 
         entity.GetFullName()
         |> Option.map (fun x -> removeGenericParamsCount (x.Split '.'))
@@ -87,10 +88,10 @@ module AssemblyContentProvider =
     let fixParentModuleSuffix (parent: Idents option) (idents: Idents) =
         match parent with
         | Some p when p.Length <= idents.Length -> 
-            for i in 0..p.Length - 1 do
-                idents.[i] <- p.[i]
-        | _ -> ()
-        idents
+            idents 
+            |> Array.mapi (fun i ident -> 
+                if i < p.Length then p.[i] else ident)
+        | _ -> idents
 
     let isAttribute (entity: FSharpEntity) =
         let getBaseType (entity: FSharpEntity) =
