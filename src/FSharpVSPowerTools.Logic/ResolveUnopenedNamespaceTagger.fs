@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Ast
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
@@ -137,18 +138,30 @@ type ResolveUnopenedNamespaceSmartTagger
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
         let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
+        let getLineStr line = snapshot.GetLineFromLineNumber(line).GetText().Trim()
         let pos: Pos = 
             { ctx.Pos with Line =
-                        // it's an implicit module with no open declarations. Start line of it is a start line of the first 
-                        // declaration, which is not what we want here. So, shift the line up by one. 
-                              if not ctx.IsOpenDecl && ctx.IsTopLevel then
-                                  if ctx.Pos.Line > 1 then
-                                      let lineStr = snapshot.GetLineFromLineNumber(ctx.Pos.Line - 2).GetText().Trim()
-                                      if not (lineStr.StartsWith "module" || lineStr.StartsWith "namespace") then 
-                                          1
-                                      else ctx.Pos.Line
-                                  else 1
-                              else ctx.Pos.Line }
+                              match ctx.ScopeKind with
+                              | TopModule ->
+                                    if ctx.Pos.Line > 1 then
+                                        // it's an implicite module without any open declarations    
+                                        if not ((getLineStr (ctx.Pos.Line - 2)).StartsWith "module") then 1
+                                        else ctx.Pos.Line
+                                    else 1
+                              | Namespace ->
+                                    // for namespaces the start line is start line of the first nested entity
+                                    if ctx.Pos.Line > 1 then
+                                        [0..ctx.Pos.Line - 1]
+                                        |> List.mapi (fun i line -> i, getLineStr line)
+                                        |> List.tryPick (fun (i, lineStr) -> 
+                                            if lineStr.StartsWith "namespace" then Some i
+                                            else None)
+                                        |> function
+                                           // move to the next line below "namespace" and convert it to F# 1-based line number
+                                           | Some line -> line + 2 
+                                           | None -> ctx.Pos.Line
+                                    else 1  
+                              | _ -> ctx.Pos.Line }
 
         let line = snapshot.GetLineFromLineNumber (pos.Line - 1)
         let line = line.Start.Position

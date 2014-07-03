@@ -333,41 +333,47 @@ module Ast =
 
     let inline private longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
 
-    [<NoComparison; NoEquality>]
-    type private State =
-        { IsOpenDecl: bool
-          IsTopLevel: bool
-          Scope: LongIdent
-          Pos: Pos }
+    type ScopeKind =
+        | Namespace
+        | TopModule
+        | NestedModule
+        | OpenDeclaration
+        override x.ToString() = sprintf "%A" x
+
+    type Scope =
+        { Idents: Idents
+          Kind: ScopeKind }
 
     type InsertContext =
-        { IsOpenDecl: bool
-          IsTopLevel: bool
+        { ScopeKind: ScopeKind
           Pos: Pos }
 
     let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
-        let result: State option ref = ref None
-        let ns = ref None
+        let result: (Scope * Pos) option ref = ref None
+        let ns: string[] option ref = ref None
         let modules = ResizeArray<Idents * EndLine * Col>()  
         
         let addModule (longIdent: LongIdent) endLine col =
             modules.Add(longIdent |> List.map string |> List.toArray, endLine, col)
 
-        let doRange isOpenDecl (ns: LongIdent) line col = 
+        let doRange kind (scope: LongIdent) line col =
             if line <= currentLine then
                 match !result with
                 | None -> 
-                    result := Some { IsOpenDecl = isOpenDecl
-                                     IsTopLevel = true
-                                     Scope = ns
-                                     Pos = { Line = line; Col = col } }
-                | Some ({ IsOpenDecl = oldOpenDecl; Scope = oldNs; Pos = { Line = oldLine}} as oldRes)
-                    when oldLine < line || (not oldOpenDecl && isOpenDecl) -> 
-                    result := Some { oldRes with IsOpenDecl = isOpenDecl
-                                                 Scope = match ns with [] -> oldNs | _ -> ns
-                                                 Pos = { Line = line; Col = col }
-                                                 IsTopLevel = false }
-                | _ -> ()
+                    result := Some ({ Idents = longIdentToIdents scope; Kind = kind },
+                                    { Line = line; Col = col })
+                | Some (oldScope, oldPos) ->
+                    match kind, oldScope.Kind with
+                    | (Namespace | NestedModule | TopModule), OpenDeclaration
+                    | _ when oldPos.Line <= line ->
+                        result := 
+                            Some ({ Idents = 
+                                        match scope with 
+                                        | [] -> oldScope.Idents 
+                                        | _ -> longIdentToIdents scope
+                                    Kind = kind },
+                                  { Line = line; Col = col })
+                    | _ -> ()
 
         let getMinColumn (decls: SynModuleDecls) =
             match decls with
@@ -404,7 +410,13 @@ module Ast =
                     if isModule then range.StartLine
                     else range.StartLine - 1
 
-                doRange false fullIdent startLine range.StartColumn
+                let scopeKind =
+                    match isModule, parent with
+                    | true, [] -> TopModule
+                    | true, _ -> NestedModule
+                    | _ -> Namespace
+
+                doRange scopeKind fullIdent startLine range.StartColumn
                 addModule fullIdent range.EndLine range.StartColumn
                 List.iter (walkSynModuleDecl fullIdent) decls
 
@@ -416,9 +428,9 @@ module Ast =
                 addModule fullIdent range.EndLine range.StartColumn
                 if range.EndLine >= currentLine then
                     let moduleBodyIdentation = getMinColumn decls |> Option.getOrElse (range.StartColumn + 4)
-                    doRange false fullIdent range.StartLine moduleBodyIdentation
+                    doRange NestedModule fullIdent range.StartLine moduleBodyIdentation
                     List.iter (walkSynModuleDecl fullIdent) decls
-            | SynModuleDecl.Open (_, range) -> doRange true [] range.EndLine (range.StartColumn - 5)
+            | SynModuleDecl.Open (_, range) -> doRange OpenDeclaration [] range.EndLine (range.StartColumn - 5)
             | _ -> ()
 
         match ast with 
@@ -427,10 +439,9 @@ module Ast =
 
         let res =
             maybe {
-                let! result = !result
+                let! scope, pos = !result
                 let ns = !ns |> Option.map longIdentToIdents
-                let scope = longIdentToIdents result.Scope
-                return result.IsOpenDecl, result.IsTopLevel, ns, scope, { result.Pos with Line = result.Pos.Line + 1 } 
+                return scope, ns, { pos with Line = pos.Line + 1 } 
             }
         //debug "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         //printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
@@ -441,15 +452,19 @@ module Ast =
             |> Seq.toList
 
         fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
-                                 entityNamespace: Idents option, entityIdents: Idents) ->
+                                 entityNamespace: Idents option, entity: Idents) ->
             res 
-            |> Option.bind (fun (isOpenDecl, isTopLevel, ns, scope, pos) -> 
-                Entity.tryCreate ns scope ident requiresQualifiedAccessParent autoOpenParent entityNamespace entityIdents 
-                |> Option.map (fun e -> e, isOpenDecl, isTopLevel, pos))
-            |> Option.map (fun (entity, isOpenDecl, isTopLevel, pos) ->
-                entity,
-                match modules |> List.filter (fun (m, _, _) -> entityIdents |> Array.startsWith m ) with
-                | [] -> { IsOpenDecl = isOpenDecl; IsTopLevel = isTopLevel; Pos = pos }
+            |> Option.bind (fun (scope, ns, pos) -> 
+                Entity.tryCreate ns scope.Idents ident requiresQualifiedAccessParent autoOpenParent entityNamespace entity 
+                |> Option.map (fun entity -> entity, scope, pos))
+            |> Option.map (fun (e, scope, pos) ->
+                e,
+                match modules |> List.filter (fun (m, _, _) -> entity |> Array.startsWith m ) with
+                | [] -> { ScopeKind = scope.Kind; Pos = pos }
                 | (_, endLine, startCol) :: _ ->
                     //printfn "All modules: %A, Win module: %A" modules m
-                    { IsOpenDecl = isOpenDecl; IsTopLevel = false; Pos = { Line = endLine + 1; Col = startCol } })
+                    let scopeKind =
+                        match scope.Kind with
+                        | TopModule -> NestedModule
+                        | x -> x
+                    { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })

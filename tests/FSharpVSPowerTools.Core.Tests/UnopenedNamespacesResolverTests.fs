@@ -367,7 +367,12 @@ let _ = Class<_>()
 //[<Test>]
 //let ``for interactive only``() =
 //    """
-//module NormalModule
+//module M
+//
+//
+//
+//
+//
 //let main () = 
 //    let _ = DateTime.Now
 //    0
@@ -381,10 +386,10 @@ let forEntity (ns: LongIdent) (entity: LongIdent) (ident, source: Source, line) 
     let tree = parseSource source
     match Ast.tryFindNearestOpenStatementBlock line tree ident (None, None, Some (ns.Split '.'), entity.Split '.') with
     | None -> failwith "Cannot find nearest open statement block"
-    | Some (e, ctx) -> source, e, ctx.IsOpenDecl, ctx.Pos
+    | Some (e, ctx) -> source, e, ctx.ScopeKind, ctx.Pos
 
-let result (expectedIsOpenDecl: bool) (expected: Source) (source: Source, entity, isOpenDecl, pos) = 
-    Assert.AreEqual (expectedIsOpenDecl, isOpenDecl, "IsOpenDecl")
+let result (expectedScopeKind: ScopeKind) (expected: Source) (source: Source, entity, scopeKind: ScopeKind, pos) = 
+    Assert.AreEqual (expectedScopeKind, scopeKind, "Scope Kind")
     let lines = srcToLineArray source
     let line = pos.Line - 1
     if lines.Length < line + 1 then 
@@ -408,6 +413,8 @@ let result (expectedIsOpenDecl: bool) (expected: Source) (source: Source, entity
             (result |> Array.toList |> withLineNumbers)
         reraise()
 
+open FSharpVSPowerTools.Ast
+
 [<Test>]
 let ``external top level symbol, no other open declarations``() =
     """
@@ -418,7 +425,7 @@ let _ = DateTime.Now
     |> forLine 3
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result false """
+    |> result TopModule """
 module TopLevel
 open System
 
@@ -437,7 +444,7 @@ let _ = DateTime.Now
     |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 module TopLevel
 
 open Another
@@ -459,7 +466,7 @@ let _ = DateTime.Now
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 module TopLevel
 
 open Another
@@ -480,7 +487,7 @@ module Nested =
     |> forLine 4
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result false """
+    |> result NestedModule """
 module TopLevel
 
 module Nested =
@@ -500,7 +507,7 @@ module Nested =
     |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 module TopLevel
 
 module Nested =
@@ -523,7 +530,7 @@ module Nested =
     |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 module TopLevel
 
 module Nested =
@@ -546,7 +553,7 @@ module Nested =
     |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result false """
+    |> result NestedModule """
 module TopLevel
 
 module Nested =
@@ -573,7 +580,7 @@ module Nested =
     |> forLine 11
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 module TopLevel
 
 open Another
@@ -602,7 +609,7 @@ let _ = DateTime.Now
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "" "TopLevel.Nested.DateTime"
-    |> result false """
+    |> result NestedModule """
 module TopLevel
 
 module Nested =
@@ -629,7 +636,7 @@ module Below =
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "" "TopLevel.Nested.DateTime"
-    |> result false """
+    |> result NestedModule """
 module TopLevel
 
 module Nested =
@@ -656,7 +663,7 @@ module Another =
     |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "TopNs" "TopNs.Nested.DateTime"
-    |> result false """
+    |> result NestedModule """
 namespace TopNs
 
 module Nested =
@@ -681,7 +688,7 @@ module Another =
     |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "TopNs" "TopNs.TopM.Nested.DateTime"
-    |> result false """
+    |> result NestedModule """
 module TopNs.TopM
 
 module Nested =
@@ -703,7 +710,7 @@ type Record =
     |> forLine 4
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result false """
+    |> result Namespace """
 namespace TopNs
 
 open System
@@ -724,7 +731,7 @@ type Record =
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 namespace TopNs
 
 open Another
@@ -747,7 +754,7 @@ namespace TopNs
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 namespace TopNs
 
   open Another
@@ -766,10 +773,10 @@ namespace TopNs
  type Record = 
    { F: DateTime }
 """
-    |> forLine 6
+    |> forLine 4
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result false """
+    |> result Namespace """
 namespace TopNs
 
  open System
@@ -786,10 +793,10 @@ module M =
  type Record = 
    { F: DateTime }
 """
-    |> forLine 6
+    |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result false """
+    |> result NestedModule """
 namespace TopNs
 
 module M =
@@ -802,16 +809,14 @@ module M =
 let ``anonymous module with other open statements``() =
     """
 open Another
-type T = { F: unit }
-let _ = DateTime.Now
+type T = { F: DateTime }
 """
-    |> forLine 3
+    |> forLine 2
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result true """
+    |> result OpenDeclaration """
 open Another
 open System
-type T = { F: unit }
-let _ = DateTime.Now
+type T = { F: DateTime }
 """
 
