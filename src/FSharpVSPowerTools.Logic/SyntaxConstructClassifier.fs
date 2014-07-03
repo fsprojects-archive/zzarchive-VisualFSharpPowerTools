@@ -21,7 +21,7 @@ type private ClassifierState =
 
 type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
-                                projectFactory: ProjectFactory) as self =
+                                projectFactory: ProjectFactory, includeUnuseds: bool) as self =
     
     let getClassficationType cat =
         match cat with
@@ -83,14 +83,17 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
                             let singleDefs = 
-                                allSymbolsUses
-                                |> Seq.groupBy (fun su -> su.Symbol)
-                                |> Seq.choose (fun (sym, uses) -> 
-                                    if Seq.length uses = 1 
-                                        && (Seq.head uses).IsFromDefinition 
-                                        && isSymbolLocalForProject sym then Some sym 
-                                    else None)
-                                |> Seq.toList
+                                if includeUnuseds then
+                                    allSymbolsUses
+                                    |> Seq.groupBy (fun su -> su.Symbol)
+                                    |> Seq.choose (fun (sym, uses) -> 
+                                        if Seq.length uses = 1 
+                                            && (Seq.head uses).IsFromDefinition 
+                                            && isSymbolLocalForProject sym then Some sym 
+                                        else None)
+                                    |> Seq.toList
+                                else
+                                    []
 
                             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                                     

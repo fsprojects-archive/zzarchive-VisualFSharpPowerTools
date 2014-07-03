@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbResolveUnopenedNamespaces = new System.Windows.Forms.CheckBox();
             this.chbUnionPatternMatchCaseGeneration = new System.Windows.Forms.CheckBox();
             this.chbRecordStubGeneration = new System.Windows.Forms.CheckBox();
             this.chbFindAllReferences = new System.Windows.Forms.CheckBox();
@@ -48,12 +49,13 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbResolveUnopenedNamespaces = new System.Windows.Forms.CheckBox();
+            this.chbUnusedDeclarations = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbUnusedDeclarations);
             this.grbOptions.Controls.Add(this.chbResolveUnopenedNamespaces);
             this.grbOptions.Controls.Add(this.chbUnionPatternMatchCaseGeneration);
             this.grbOptions.Controls.Add(this.chbRecordStubGeneration);
@@ -78,6 +80,18 @@ namespace FSharpVSPowerTools
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbResolveUnopenedNamespaces
+            // 
+            this.chbResolveUnopenedNamespaces.AutoSize = true;
+            this.chbResolveUnopenedNamespaces.Checked = true;
+            this.chbResolveUnopenedNamespaces.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbResolveUnopenedNamespaces.Location = new System.Drawing.Point(181, 148);
+            this.chbResolveUnopenedNamespaces.Name = "chbResolveUnopenedNamespaces";
+            this.chbResolveUnopenedNamespaces.Size = new System.Drawing.Size(179, 17);
+            this.chbResolveUnopenedNamespaces.TabIndex = 16;
+            this.chbResolveUnopenedNamespaces.Text = "Resolve unopened namespaces";
+            this.chbResolveUnopenedNamespaces.UseVisualStyleBackColor = true;
             // 
             // chbUnionPatternMatchCaseGeneration
             // 
@@ -267,17 +281,17 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
-            // chbResolveUnopenedNamespaces
+            // chbUnusedDeclarations
             // 
-            this.chbResolveUnopenedNamespaces.AutoSize = true;
-            this.chbResolveUnopenedNamespaces.Checked = true;
-            this.chbResolveUnopenedNamespaces.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbResolveUnopenedNamespaces.Location = new System.Drawing.Point(181, 148);
-            this.chbResolveUnopenedNamespaces.Name = "chbResolveUnopenedNamespaces";
-            this.chbResolveUnopenedNamespaces.Size = new System.Drawing.Size(179, 17);
-            this.chbResolveUnopenedNamespaces.TabIndex = 16;
-            this.chbResolveUnopenedNamespaces.Text = "Resolve unopened namespaces";
-            this.chbResolveUnopenedNamespaces.UseVisualStyleBackColor = true;
+            this.chbUnusedDeclarations.AutoSize = true;
+            this.chbUnusedDeclarations.Checked = true;
+            this.chbUnusedDeclarations.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbUnusedDeclarations.Location = new System.Drawing.Point(181, 171);
+            this.chbUnusedDeclarations.Name = "chbUnusedDeclarations";
+            this.chbUnusedDeclarations.Size = new System.Drawing.Size(164, 17);
+            this.chbUnusedDeclarations.TabIndex = 17;
+            this.chbUnusedDeclarations.Text = "Gray out unused declarations";
+            this.chbUnusedDeclarations.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -314,5 +328,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbRecordStubGeneration;
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;
         private System.Windows.Forms.CheckBox chbResolveUnopenedNamespaces;
+        private System.Windows.Forms.CheckBox chbUnusedDeclarations;
     }
 }
