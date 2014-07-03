@@ -333,21 +333,47 @@ module Ast =
 
     let inline private longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
 
+    type ScopeKind =
+        | Namespace
+        | TopModule
+        | NestedModule
+        | OpenDeclaration
+        override x.ToString() = sprintf "%A" x
+
+    type Scope =
+        { Idents: Idents
+          Kind: ScopeKind }
+
+    type InsertContext =
+        { ScopeKind: ScopeKind
+          Pos: Pos }
+
     let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
-        let result = ref None
-        let ns = ref None
+        let result: (Scope * Pos) option ref = ref None
+        let ns: string[] option ref = ref None
         let modules = ResizeArray<Idents * EndLine * Col>()  
         
         let addModule (longIdent: LongIdent) endLine col =
             modules.Add(longIdent |> List.map string |> List.toArray, endLine, col)
 
-        let doRange (ns: LongIdent) line col = 
+        let doRange kind (scope: LongIdent) line col =
             if line <= currentLine then
                 match !result with
-                | None -> result := Some (ns, { Line = line; Col = col})
-                | Some (oldNs, { Line = oldLine}) when oldLine < line -> 
-                    result := Some ((match ns with [] -> oldNs | _ -> ns), { Line = line; Col = col }) 
-                | _ -> ()
+                | None -> 
+                    result := Some ({ Idents = longIdentToIdents scope; Kind = kind },
+                                    { Line = line; Col = col })
+                | Some (oldScope, oldPos) ->
+                    match kind, oldScope.Kind with
+                    | (Namespace | NestedModule | TopModule), OpenDeclaration
+                    | _ when oldPos.Line <= line ->
+                        result := 
+                            Some ({ Idents = 
+                                        match scope with 
+                                        | [] -> oldScope.Idents 
+                                        | _ -> longIdentToIdents scope
+                                    Kind = kind },
+                                  { Line = line; Col = col })
+                    | _ -> ()
 
         let getMinColumn (decls: SynModuleDecls) =
             match decls with
@@ -384,7 +410,13 @@ module Ast =
                     if isModule then range.StartLine
                     else range.StartLine - 1
 
-                doRange fullIdent startLine range.StartColumn
+                let scopeKind =
+                    match isModule, parent with
+                    | true, [] -> TopModule
+                    | true, _ -> NestedModule
+                    | _ -> Namespace
+
+                doRange scopeKind fullIdent startLine range.StartColumn
                 addModule fullIdent range.EndLine range.StartColumn
                 List.iter (walkSynModuleDecl fullIdent) decls
 
@@ -396,9 +428,9 @@ module Ast =
                 addModule fullIdent range.EndLine range.StartColumn
                 if range.EndLine >= currentLine then
                     let moduleBodyIdentation = getMinColumn decls |> Option.getOrElse (range.StartColumn + 4)
-                    doRange fullIdent range.StartLine moduleBodyIdentation
+                    doRange NestedModule fullIdent range.StartLine moduleBodyIdentation
                     List.iter (walkSynModuleDecl fullIdent) decls
-            | SynModuleDecl.Open (_, range) -> doRange [] range.EndLine (range.StartColumn - 5)
+            | SynModuleDecl.Open (_, range) -> doRange OpenDeclaration [] range.EndLine (range.StartColumn - 5)
             | _ -> ()
 
         match ast with 
@@ -407,10 +439,9 @@ module Ast =
 
         let res =
             maybe {
-                let! parent, pos = !result
+                let! scope, pos = !result
                 let ns = !ns |> Option.map longIdentToIdents
-                let scope = longIdentToIdents parent
-                return ns, scope, { pos with Line = pos.Line + 1 } 
+                return scope, ns, { pos with Line = pos.Line + 1 } 
             }
         //debug "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         //printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
@@ -421,15 +452,19 @@ module Ast =
             |> Seq.toList
 
         fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
-                                 entityNamespace: Idents option, entityIdents: Idents) ->
+                                 entityNamespace: Idents option, entity: Idents) ->
             res 
-            |> Option.bind (fun (ns, scope, pos) -> 
-                Entity.tryCreate ns scope ident requiresQualifiedAccessParent autoOpenParent entityNamespace entityIdents 
-                |> Option.map (fun e -> e, pos))
-            |> Option.map (fun (entity, pos) ->
-                entity,
-                match modules |> List.filter (fun (m, _, _) -> entityIdents |> Array.startsWith m ) with
-                | [] -> pos
+            |> Option.bind (fun (scope, ns, pos) -> 
+                Entity.tryCreate ns scope.Idents ident requiresQualifiedAccessParent autoOpenParent entityNamespace entity 
+                |> Option.map (fun entity -> entity, scope, pos))
+            |> Option.map (fun (e, scope, pos) ->
+                e,
+                match modules |> List.filter (fun (m, _, _) -> entity |> Array.startsWith m ) with
+                | [] -> { ScopeKind = scope.Kind; Pos = pos }
                 | (_, endLine, startCol) :: _ ->
                     //printfn "All modules: %A, Win module: %A" modules m
-                    { Line = endLine + 1; Col = startCol })
+                    let scopeKind =
+                        match scope.Kind with
+                        | TopModule -> NestedModule
+                        | x -> x
+                    { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })

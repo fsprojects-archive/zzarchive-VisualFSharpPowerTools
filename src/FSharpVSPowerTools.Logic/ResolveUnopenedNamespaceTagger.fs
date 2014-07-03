@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Ast
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
@@ -23,7 +24,7 @@ type ResolveUnopenedNamespaceSmartTagger
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Entity * Pos) list option = None 
+    let mutable state: (Entity * Ast.InsertContext) list option = None 
 
     let triggerTagsChanged() =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
@@ -49,6 +50,8 @@ type ResolveUnopenedNamespaceSmartTagger
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    currentWord <- Some newWord
+                    state <- None
                     //let ctx = System.Threading.SynchronizationContext.Current
                     asyncMaybe {
                         let! newWord, sym = vsLanguageService.GetSymbol (point, project) |> liftMaybe
@@ -89,15 +92,15 @@ type ResolveUnopenedNamespaceSmartTagger
                                     |> List.map (fun e -> 
                                          [ yield e.TopRequireQualifiedAccessParent, e.AutoOpenParent, e.Namespace, e.Idents
                                            if isAttribute then
-                                             let lastIdent = e.Idents.[e.Idents.Length - 1]
-                                             if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
-                                               yield 
-                                                 e.TopRequireQualifiedAccessParent, 
-                                                 e.AutoOpenParent,
-                                                 e.Namespace,
-                                                 Array.append 
-                                                    e.Idents.[..e.Idents.Length - 2] 
-                                                    [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
+                                               let lastIdent = e.Idents.[e.Idents.Length - 1]
+                                               if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
+                                                   yield 
+                                                       e.TopRequireQualifiedAccessParent, 
+                                                       e.AutoOpenParent,
+                                                       e.Namespace,
+                                                       Array.append 
+                                                          e.Idents.[..e.Idents.Length - 2] 
+                                                          [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
@@ -108,7 +111,7 @@ type ResolveUnopenedNamespaceSmartTagger
                          state <- result
                          triggerTagsChanged() )
                     |> Async.StartImmediateSafe
-                    currentWord <- Some newWord
+                    
             | _ -> 
                 currentWord <- None 
                 triggerTagsChanged()
@@ -116,11 +119,37 @@ type ResolveUnopenedNamespaceSmartTagger
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
 
-    let openNamespace (snapshotSpan: SnapshotSpan) ns name pos = 
+    let openNamespace (snapshotSpan: SnapshotSpan) (ctx: Ast.InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
         let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
-        let line = snapshot.GetLineFromLineNumber(pos.Line - 1).Start.Position
+        let getLineStr line = snapshot.GetLineFromLineNumber(line).GetText().Trim()
+        let pos: Pos = 
+            { ctx.Pos with Line =
+                              match ctx.ScopeKind with
+                              | TopModule ->
+                                    if ctx.Pos.Line > 1 then
+                                        // it's an implicite module without any open declarations    
+                                        if not ((getLineStr (ctx.Pos.Line - 2)).StartsWith "module") then 1
+                                        else ctx.Pos.Line
+                                    else 1
+                              | Namespace ->
+                                    // for namespaces the start line is start line of the first nested entity
+                                    if ctx.Pos.Line > 1 then
+                                        [0..ctx.Pos.Line - 1]
+                                        |> List.mapi (fun i line -> i, getLineStr line)
+                                        |> List.tryPick (fun (i, lineStr) -> 
+                                            if lineStr.StartsWith "namespace" then Some i
+                                            else None)
+                                        |> function
+                                           // move to the next line below "namespace" and convert it to F# 1-based line number
+                                           | Some line -> line + 2 
+                                           | None -> ctx.Pos.Line
+                                    else 1  
+                              | _ -> ctx.Pos.Line }
+
+        let line = snapshot.GetLineFromLineNumber (pos.Line - 1)
+        let line = line.Start.Position
         let lineStr = (String.replicate pos.Col " ") + "open " + ns + Environment.NewLine
         let snapshot = snapshot.TextBuffer.Insert (line, lineStr)
         let nextLine = snapshot.GetLineFromLineNumber pos.Line
@@ -130,7 +159,7 @@ type ResolveUnopenedNamespaceSmartTagger
                 snapshot.TextBuffer.Insert (nextLine.Start.Position, Environment.NewLine)
             else snapshot
         // for top level module we add a blank line between the module declaration and first open statement
-        if pos.Col = 0 then
+        if pos.Col = 0 && pos.Line > 1 then
             let prevLine = snapshot.GetLineFromLineNumber (pos.Line - 2)
             if not (prevLine.GetText().Trim().StartsWith "open") then
                 snapshot.TextBuffer.Insert(prevLine.End.Position, Environment.NewLine) |> ignore
@@ -141,13 +170,15 @@ type ResolveUnopenedNamespaceSmartTagger
         snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
         transaction.Complete()
 
-    let openNamespaceAction snapshot pos name ns =
+    let openNamespaceIcon = ResourceProvider.getRefactoringIcon serviceProvider RefactoringIconKind.AddUsing
+
+    let openNamespaceAction snapshot ctx name ns =
         { new ISmartTagAction with
             member x.ActionSets = null
             member x.DisplayText = "open " + ns
-            member x.Icon = null
+            member x.Icon = openNamespaceIcon
             member x.IsEnabled = true
-            member x.Invoke() = openNamespace snapshot ns name pos
+            member x.Invoke() = openNamespace snapshot ctx ns name
         }
 
     let qualifiedSymbolAction snapshotSpan fullName =
@@ -162,13 +193,15 @@ type ResolveUnopenedNamespaceSmartTagger
     let getSmartTagActions snapshotSpan candidates =
         let openNamespaceActions = 
             candidates
-            |> List.choose (fun (entity, pos) -> 
-                entity.Namespace |> Option.map (openNamespaceAction snapshotSpan pos entity.Name))
+            |> Seq.distinctBy (fun (entity, _) -> entity.Namespace, entity.Name)
+            |> Seq.choose (fun (entity, ctx) -> 
+                entity.Namespace |> Option.map (openNamespaceAction snapshotSpan ctx entity.Name))
             
         let qualifySymbolActions =
             candidates
-            |> List.map (fun (entity, _) -> entity.FullRelativeName)
-            |> List.map (qualifiedSymbolAction snapshotSpan)
+            |> Seq.map (fun (entity, _) -> entity.FullRelativeName)
+            |> Seq.distinct
+            |> Seq.map (qualifiedSymbolAction snapshotSpan)
             
         [ SmartTagActionSet (Seq.toReadOnlyCollection openNamespaceActions)
           SmartTagActionSet (Seq.toReadOnlyCollection qualifySymbolActions) ] 
