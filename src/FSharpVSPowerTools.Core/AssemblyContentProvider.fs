@@ -3,8 +3,8 @@
 open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type ShortIdent = string
-type Idents = ShortIdent[]
+type internal ShortIdent = string
+type internal Idents = ShortIdent[]
 
 type EntityKind =
     | Attribute
@@ -135,7 +135,8 @@ module AssemblyContentProvider =
                         |> Option.map (fun idents -> 
                              if idents.Length > 0 then
                                  let lastIdent = idents.[idents.Length - 1]
-                                 idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
+                                 if lastIdent.EndsWith "Module" then
+                                    idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
                              idents)
 
                     let fixModuleSuffix = Parent.RewriteParentIdents parentWithModuleSuffix
