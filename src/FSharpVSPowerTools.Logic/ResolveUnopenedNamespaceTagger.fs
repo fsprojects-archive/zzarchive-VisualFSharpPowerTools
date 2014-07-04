@@ -8,7 +8,6 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Ast
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
@@ -72,7 +71,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let pos = codeGenService.ExtractFSharpPos point
                                 let! parseTree = liftMaybe checkResults.ParseTree
                                 
-                                let! entityKind = Ast.getEntityKind parseTree pos |> liftMaybe
+                                let! entityKind = ParsedInput.getEntityKind parseTree pos |> liftMaybe
                                 let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
 
                                 //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
@@ -104,7 +103,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
-                                let createEntity = Ast.tryFindNearestOpenStatementBlock pos.Line parseTree sym.Text
+                                let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree sym.Text
                                 return entities |> List.choose createEntity
                     }
                     |> Async.map (fun result -> 
@@ -123,23 +122,15 @@ type ResolveUnopenedNamespaceSmartTagger
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
         let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
-        let getLineStr line = snapshot.GetLineFromLineNumber(line).GetText().Trim()
-        let pos = InsertContext.adjustInsertPoint getLineStr ctx
-        let line = snapshot.GetLineFromLineNumber (pos.Line - 1)
-        let line = line.Start.Position
-        let lineStr = (String.replicate pos.Col " ") + "open " + ns + Environment.NewLine
-        let snapshot = snapshot.TextBuffer.Insert (line, lineStr)
-        let nextLine = snapshot.GetLineFromLineNumber pos.Line
-        // if there's no a blank line between open declaration block and the rest of the code, we add one
-        let snapshot = 
-            if nextLine.GetText().Trim() <> "" then 
-                snapshot.TextBuffer.Insert (nextLine.Start.Position, Environment.NewLine)
-            else snapshot
-        // for top level module we add a blank line between the module declaration and first open statement
-        if pos.Col = 0 && pos.Line > 1 then
-            let prevLine = snapshot.GetLineFromLineNumber (pos.Line - 2)
-            if not (prevLine.GetText().Trim().StartsWith "open") then
-                snapshot.TextBuffer.Insert(prevLine.End.Position, Environment.NewLine) |> ignore
+        
+        let doc =
+            { new IInsertContextDocument<ITextSnapshot> with
+                  member x.Insert (snapshot, line, lineStr) = 
+                    let pos = snapshot.GetLineFromLineNumber(line).Start.Position
+                    snapshot.TextBuffer.Insert (pos, lineStr + Environment.NewLine)
+                  member x.GetLineStr (snapshot, line) = snapshot.GetLineFromLineNumber(line).GetText() }
+        
+        InsertContext.insertOpenDeclaration snapshot doc ctx ns |> ignore
         transaction.Complete()
 
     let replaceFullyQualifiedSymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 

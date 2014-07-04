@@ -73,16 +73,16 @@ type ScopeKind =
     override x.ToString() = sprintf "%A" x
 
 type InsertContext =
-        { ScopeKind: ScopeKind
-          Pos: Pos }
+    { ScopeKind: ScopeKind
+      Pos: Pos }
 
-module Ast =
+module ParsedInput =
     open Microsoft.FSharp.Compiler
     open Microsoft.FSharp.Compiler.Ast
 
-    type EndLine = int
+    type private EndLine = int
         
-    let getEntityKind (ast: ParsedInput) (pos: Range.pos) : EntityKind option =
+    let getEntityKind (input: ParsedInput) (pos: Range.pos) : EntityKind option =
         let (|ConstructorPats|) = function
             | Pats ps -> ps
             | NamePatPairs(xs, _) -> List.map snd xs
@@ -336,7 +336,7 @@ module Ast =
             | _ -> None
 
         let res = 
-            match ast with 
+            match input with 
             | ParsedInput.SigFile _ -> None
             | ParsedInput.ImplFile input -> walkImplFileInput input
         //debug "%A" ast
@@ -344,16 +344,16 @@ module Ast =
 
     type Col = int
 
-    let inline private longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
-
     type Scope =
         { Idents: Idents
           Kind: ScopeKind }
 
-    let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
+    let tryFindInsertionContext (currentLine: int) (ast: ParsedInput) = 
         let result: (Scope * Pos) option ref = ref None
         let ns: string[] option ref = ref None
         let modules = ResizeArray<Idents * EndLine * Col>()  
+
+        let inline longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
         
         let addModule (longIdent: LongIdent) endLine col =
             modules.Add(longIdent |> List.map string |> List.toArray, endLine, col)
@@ -443,7 +443,7 @@ module Ast =
             maybe {
                 let! scope, pos = !result
                 let ns = !ns |> Option.map longIdentToIdents
-                return scope, ns, { pos with Line = pos.Line + 1 } 
+                return scope, ns, { pos with Line = pos.Line + 1 }
             }
         //debug "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         //printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
@@ -471,12 +471,15 @@ module Ast =
                         | x -> x
                     { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
 
+type IInsertContextDocument<'a> =
+    abstract GetLineStr: 'a * line:int -> string
+    abstract Insert: 'a * line:int * lineStr:string -> 'a
+
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module InsertContext =
-    /// Corrents insertion line number based on pure text.
-    // (because we cannot do it based on the untyped AST)
-    let adjustInsertPoint (getLineStr: int -> string) ctx  =
-        let getLineStr line = (getLineStr line).Trim()
+    /// Corrents insertion line number based on kind of scope and text surrounding the instertion point.
+    let adjustInsertionPoint state (doc: IInsertContextDocument<_>) ctx  =
+        let getLineStr line = (doc.GetLineStr (state, line)).Trim()
         let line =
             match ctx.ScopeKind with
             | ScopeKind.TopModule ->
@@ -501,3 +504,27 @@ module InsertContext =
             | _ -> ctx.Pos.Line
 
         { ctx.Pos with Line = line }
+
+    /// <summary>
+    /// Inserts open declaration into abstract document. 
+    /// </summary>
+    /// <param name="state">Abstract state which is changed after a line is inserted into the document. 
+    /// This is ITestSnapshot for VS, for example.</param>
+    /// <param name="doc">Document.</param>
+    /// <param name="ctx">Insertion context. Typically returned from tryGetInsertionContext</param>
+    /// <param name="ns">Namespace to open.</param>
+    let insertOpenDeclaration<'a> state (doc: IInsertContextDocument<'a>) (ctx: InsertContext) (ns: string) =
+        let pos = adjustInsertionPoint state doc ctx
+        let docLine = pos.Line - 1
+        let lineStr = (String.replicate pos.Col " ") + "open " + ns
+        let state1 = doc.Insert (state, docLine, lineStr)
+        // if there's no a blank line between open declaration block and the rest of the code, we add one
+        let state2 = 
+            if doc.GetLineStr(state1, docLine + 1).Trim() <> "" then 
+                doc.Insert (state1, docLine + 1, "")
+            else state1
+        // for top level module we add a blank line between the module declaration and first open statement
+        if (pos.Col = 0 || ctx.ScopeKind = ScopeKind.Namespace) && docLine > 0
+            && not (doc.GetLineStr(state2, docLine - 1).Trim().StartsWith "open") then
+                doc.Insert (state2, docLine, "")
+        else state2

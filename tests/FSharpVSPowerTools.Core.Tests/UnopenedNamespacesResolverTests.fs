@@ -81,18 +81,17 @@ let parseSource (source: Source) =
     | Some tree -> tree
 
 open Microsoft.FSharp.Compiler.Range
-open Ast
 
 type Line = int
 type Col = int
 
 let checkEntity source (points: (Line * Col * EntityKind option) list) =
     for line, col, kind in points do
-        let tree = parseSource source
+        let input = parseSource source
         try
-            Assert.That(Ast.getEntityKind tree (Pos.fromZ line col), Is.EqualTo kind, sprintf "Line = %d, Col = %d" line col)
+            Assert.That(ParsedInput.getEntityKind input (Pos.fromZ line col), Is.EqualTo kind, sprintf "Line = %d, Col = %d" line col)
         with _ ->
-            printfn "Ast: %A" tree
+            printfn "Ast: %A" input
             reraise()
 
 let (==>) = checkEntity
@@ -391,24 +390,25 @@ let _ = Class<_>()
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
-let forEntity (ns: LongIdent) (entity: LongIdent) (ident, source: Source, line) =
+let forEntity (ns: LongIdent) (fullName: LongIdent) (ident, source: Source, line) =
     let tree = parseSource source
-    match Ast.tryFindNearestOpenStatementBlock line tree ident (None, None, Some (ns.Split '.'), entity.Split '.') with
+    match ParsedInput.tryFindInsertionContext line tree ident (None, None, Some (ns.Split '.'), fullName.Split '.') with
     | None -> failwith "Cannot find nearest open statement block"
-    | Some (e, ctx) -> source, e, ctx.ScopeKind, ctx.Pos
+    | Some (e, ctx) -> source, e, ctx
 
-let result (expectedScopeKind: ScopeKind) (expected: Source) (source: Source, entity, scopeKind: ScopeKind, pos) = 
-    Assert.AreEqual (expectedScopeKind, scopeKind, "Scope Kind")
+let result (expected: Source) (source: Source, entity, ctx: InsertContext) = 
     let lines = srcToLineArray source
-    let line = pos.Line - 1
-    if lines.Length < line + 1 then 
-        failwithf "Pos.Line = %d is out of bound (source contain %d lines)" pos.Line lines.Length
-    let result = 
-        Array.append (
-            Array.append 
-                lines.[0..line - 1] 
-                [| (String.replicate pos.Col " ") + "open " + entity.Namespace.Value|]) 
-            lines.[line..]
+
+    let doc =
+        { new IInsertContextDocument<string[]> with
+              member x.GetLineStr (lines, line) = lines.[line]
+              member x.Insert (lines, line, lineStr) =  
+                Array.append (
+                    Array.append lines.[0..line - 1] [| lineStr |]) 
+                    lines.[line..] }
+
+    let result = InsertContext.insertOpenDeclaration lines doc ctx entity.Namespace.Value
+
     try result |> Collection.assertEqual (srcToLineArray expected)
     with _ ->
         let withLineNumbers xs = 
@@ -422,8 +422,6 @@ let result (expectedScopeKind: ScopeKind) (expected: Source) (source: Source, en
             (result |> Array.toList |> withLineNumbers)
         reraise()
 
-open FSharpVSPowerTools.Ast
-
 [<Test>]
 let ``external top level symbol, no other open declarations``() =
     """
@@ -434,8 +432,9 @@ let _ = DateTime.Now
     |> forLine 3
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result TopModule """
+    |> result """
 module TopLevel
+
 open System
 
 let _ = DateTime.Now
@@ -453,7 +452,7 @@ let _ = DateTime.Now
     |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 module TopLevel
 
 open Another
@@ -475,7 +474,7 @@ let _ = DateTime.Now
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 module TopLevel
 
 open Another
@@ -496,11 +495,12 @@ module Nested =
     |> forLine 4
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result NestedModule """
+    |> result """
 module TopLevel
 
 module Nested =
     open System
+
     let _ = DateTime.Now
 """
 
@@ -516,12 +516,13 @@ module Nested =
     |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 module TopLevel
 
 module Nested =
     open Another
     open System
+
     let _ = DateTime.Now
 """
 
@@ -539,7 +540,7 @@ module Nested =
     |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 module TopLevel
 
 module Nested =
@@ -562,12 +563,13 @@ module Nested =
     |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result NestedModule """
+    |> result """
 module TopLevel
 
 module Nested =
     module DoubleNested =
         open System
+
         let _ = DateTime.Now
 """
 
@@ -589,7 +591,7 @@ module Nested =
     |> forLine 11
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 module TopLevel
 
 open Another
@@ -615,14 +617,15 @@ module Nested =
 let marker = ()
 let _ = DateTime.Now
 """
-    |> forLine 6
+    |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "" "TopLevel.Nested.DateTime"
-    |> result NestedModule """
+    |> result """
 module TopLevel
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 let marker = ()
@@ -645,11 +648,12 @@ module Below =
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "" "TopLevel.Nested.DateTime"
-    |> result NestedModule """
+    |> result """
 module TopLevel
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 let _ = DateTime.Now
@@ -672,11 +676,12 @@ module Another =
     |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "TopNs" "TopNs.Nested.DateTime"
-    |> result NestedModule """
+    |> result """
 namespace TopNs
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 module Another =
@@ -697,11 +702,12 @@ module Another =
     |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "TopNs" "TopNs.TopM.Nested.DateTime"
-    |> result NestedModule """
+    |> result """
 module TopNs.TopM
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 module Another =
@@ -719,10 +725,11 @@ type Record =
     |> forLine 4
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result Namespace """
+    |> result """
 namespace TopNs
 
 open System
+
 type Record = 
     { F: DateTime }
 """
@@ -740,7 +747,7 @@ type Record =
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 namespace TopNs
 
 open Another
@@ -763,7 +770,7 @@ namespace TopNs
     |> forLine 6
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 namespace TopNs
 
   open Another
@@ -772,7 +779,6 @@ namespace TopNs
   type Record = 
       { F: DateTime }
 """
-
 
 [<Test>]
 let ``respects top level block identation in case where are no other open statements``() =
@@ -785,10 +791,11 @@ namespace TopNs
     |> forLine 4
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result Namespace """
+    |> result """
 namespace TopNs
 
  open System
+
  type Record = 
    { F: DateTime }
 """
@@ -805,17 +812,31 @@ module M =
     |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result NestedModule """
+    |> result """
 namespace TopNs
 
 module M =
  open System
+
  type Record = 
    { F: DateTime }
 """
 
 [<Test>]
-let ``anonymous module with other open statements``() =
+let ``implicit module, no other open statements exist``() =
+    """
+type T = { F: DateTime }
+"""
+    |> forLine 2
+    |> forIdent "DateTime"
+    |> forEntity "System" "System.DateTime"
+    |> result """open System
+
+type T = { F: DateTime }
+"""
+
+[<Test>]
+let ``implicit module with other open statements``() =
     """
 open Another
 type T = { F: DateTime }
@@ -823,9 +844,10 @@ type T = { F: DateTime }
     |> forLine 2
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
-    |> result OpenDeclaration """
+    |> result """
 open Another
 open System
+
 type T = { F: DateTime }
 """
 
