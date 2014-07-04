@@ -187,7 +187,7 @@ type T<'a when 'a :> Task>() = class end
     ==> [2, 22, Some Type]
 
 [<Test>]
-let ``type name in type extention is a Type``() =
+let ``type name in type extension is a Type``() =
     """
 module TopLevel
 type DateTime with
