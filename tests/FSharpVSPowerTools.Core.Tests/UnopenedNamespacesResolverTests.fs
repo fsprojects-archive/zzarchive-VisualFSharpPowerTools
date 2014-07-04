@@ -188,6 +188,15 @@ type T<'a when 'a :> Task>() = class end
     ==> [2, 22, Some Type]
 
 [<Test>]
+let ``type name in type extention is a Type``() =
+    """
+module TopLevel
+type DateTime with
+    member x.Foo = ()
+"""
+    ==> [2, 6, Some Type]
+
+[<Test>]
 let ``attribute is an Attribute``() =
     """
 module TopLevel
@@ -336,14 +345,14 @@ type C() =
     ==> [3, 15, None; 4, 15, None]
 
 [<Test>]
-let ``type or module name is not an entity``() =
+let ``module name is not an entity``() =
     """
 module TopLevel
 type Class() = class end
 module Nested =
     type Record = { F: int }
 """ 
-    ==> [1, 9, None; 2, 7, None; 3, 9, None; 4, 11, None]
+    ==> [1, 9, None; 2, 7, Some EntityKind.Type; 3, 9, None; 4, 11, Some EntityKind.Type]
 
 [<Test; Ignore "Cannot extract arg name from Named">]
 let ``argument name is not an entity``() =

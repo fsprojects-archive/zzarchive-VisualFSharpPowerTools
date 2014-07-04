@@ -293,10 +293,12 @@ module Ast =
             | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType t
             | _ -> None
 
-        and walkComponentInfo (ComponentInfo(attrs, typars, constraints, _, _, _, _, _)) =
-            List.tryPick walkAttribute attrs
-            |> Option.orElse (List.tryPick walkTyparDecl typars)
-            |> Option.orElse (List.tryPick walkTypeConstraint constraints)
+        and walkComponentInfo (ComponentInfo(attrs, typars, constraints, _, _, _, _, r)) =
+            ifPosInRange r (fun _ -> Some EntityKind.Type)
+            |> Option.orElse (
+                List.tryPick walkAttribute attrs
+                |> Option.orElse (List.tryPick walkTyparDecl typars)
+                |> Option.orElse (List.tryPick walkTypeConstraint constraints))
 
         and walkTypeDefnRepr = function
             | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.tryPick walkMember defns
