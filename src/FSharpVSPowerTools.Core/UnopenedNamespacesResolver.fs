@@ -65,6 +65,17 @@ type Pos =
     { Line: int
       Col: int }
        
+type ScopeKind =
+    | Namespace
+    | TopModule
+    | NestedModule
+    | OpenDeclaration
+    override x.ToString() = sprintf "%A" x
+
+type InsertContext =
+        { ScopeKind: ScopeKind
+          Pos: Pos }
+
 module Ast =
     open Microsoft.FSharp.Compiler
     open Microsoft.FSharp.Compiler.Ast
@@ -335,20 +346,9 @@ module Ast =
 
     let inline private longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
 
-    type ScopeKind =
-        | Namespace
-        | TopModule
-        | NestedModule
-        | OpenDeclaration
-        override x.ToString() = sprintf "%A" x
-
     type Scope =
         { Idents: Idents
           Kind: ScopeKind }
-
-    type InsertContext =
-        { ScopeKind: ScopeKind
-          Pos: Pos }
 
     let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
         let result: (Scope * Pos) option ref = ref None
@@ -470,3 +470,34 @@ module Ast =
                         | TopModule -> NestedModule
                         | x -> x
                     { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
+
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module InsertContext =
+    /// Corrents insertion line number based on pure text.
+    // (because we cannot do it based on the untyped AST)
+    let adjustInsertPoint (getLineStr: int -> string) ctx  =
+        let getLineStr line = (getLineStr line).Trim()
+        let line =
+            match ctx.ScopeKind with
+            | ScopeKind.TopModule ->
+                if ctx.Pos.Line > 1 then
+                    // it's an implicite module without any open declarations    
+                    if not ((getLineStr (ctx.Pos.Line - 2)).StartsWith "module") then 1
+                    else ctx.Pos.Line
+                else 1
+            | ScopeKind.Namespace ->
+                // for namespaces the start line is start line of the first nested entity
+                if ctx.Pos.Line > 1 then
+                    [0..ctx.Pos.Line - 1]
+                    |> List.mapi (fun i line -> i, getLineStr line)
+                    |> List.tryPick (fun (i, lineStr) -> 
+                        if lineStr.StartsWith "namespace" then Some i
+                        else None)
+                    |> function
+                        // move to the next line below "namespace" and convert it to F# 1-based line number
+                        | Some line -> line + 2 
+                        | None -> ctx.Pos.Line
+                else 1  
+            | _ -> ctx.Pos.Line
+
+        { ctx.Pos with Line = line }

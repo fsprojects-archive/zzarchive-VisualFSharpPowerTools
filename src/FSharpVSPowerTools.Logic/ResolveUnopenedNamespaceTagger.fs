@@ -24,7 +24,7 @@ type ResolveUnopenedNamespaceSmartTagger
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Entity * Ast.InsertContext) list option = None 
+    let mutable state: (Entity * InsertContext) list option = None 
 
     let triggerTagsChanged() =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
@@ -81,11 +81,11 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let entities =
                                     entities |> List.filter (fun e ->
                                         match entityKind, e.Kind with
-                                        | Attribute, Attribute -> true 
-                                        | Attribute, _ -> false
-                                        | Type, Type -> true
-                                        | Type, _ -> false
-                                        | FunctionOrValue, _ -> true)
+                                        | Attribute, Attribute 
+                                        | Type, Type
+                                        | FunctionOrValue, _ -> true 
+                                        | Attribute, _
+                                        | Type, _ -> false)
 
                                 let entities = 
                                     entities
@@ -119,35 +119,12 @@ type ResolveUnopenedNamespaceSmartTagger
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
 
-    let openNamespace (snapshotSpan: SnapshotSpan) (ctx: Ast.InsertContext) ns name = 
+    let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
         let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
         let getLineStr line = snapshot.GetLineFromLineNumber(line).GetText().Trim()
-        let pos: Pos = 
-            { ctx.Pos with Line =
-                              match ctx.ScopeKind with
-                              | TopModule ->
-                                    if ctx.Pos.Line > 1 then
-                                        // it's an implicite module without any open declarations    
-                                        if not ((getLineStr (ctx.Pos.Line - 2)).StartsWith "module") then 1
-                                        else ctx.Pos.Line
-                                    else 1
-                              | Namespace ->
-                                    // for namespaces the start line is start line of the first nested entity
-                                    if ctx.Pos.Line > 1 then
-                                        [0..ctx.Pos.Line - 1]
-                                        |> List.mapi (fun i line -> i, getLineStr line)
-                                        |> List.tryPick (fun (i, lineStr) -> 
-                                            if lineStr.StartsWith "namespace" then Some i
-                                            else None)
-                                        |> function
-                                           // move to the next line below "namespace" and convert it to F# 1-based line number
-                                           | Some line -> line + 2 
-                                           | None -> ctx.Pos.Line
-                                    else 1  
-                              | _ -> ctx.Pos.Line }
-
+        let pos = InsertContext.adjustInsertPoint getLineStr ctx
         let line = snapshot.GetLineFromLineNumber (pos.Line - 1)
         let line = line.Start.Position
         let lineStr = (String.replicate pos.Col " ") + "open " + ns + Environment.NewLine
