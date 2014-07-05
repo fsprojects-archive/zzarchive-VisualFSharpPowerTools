@@ -107,11 +107,12 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     } 
                     |> Async.map (fun result -> 
                         state <- result
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                        buffer.TriggerTagsChanged self tagsChanged)
                     |> Async.StartImmediateSafe
                     currentWord <- Some newWord
-            | _ -> ()
+            | _ -> 
+                currentWord <- None 
+                buffer.TriggerTagsChanged self tagsChanged
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)

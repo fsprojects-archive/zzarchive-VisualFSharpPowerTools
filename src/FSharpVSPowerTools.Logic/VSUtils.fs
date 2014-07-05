@@ -61,8 +61,7 @@ let private isDoubleBacktickIdent (s: string) =
     if s.StartsWith("``") && s.EndsWith("``") && s.Length > 4 then
         let inner = s.Substring("``".Length, s.Length - "````".Length)
         not (inner.Contains("``"))
-    else
-        false
+    else false
 
 let isIdentifier (s: string) =
     if isDoubleBacktickIdent s then
@@ -105,7 +104,11 @@ type SnapshotSpan with
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
         Option.ofNullable <| position.Point.GetPoint(x, position.Affinity)
-
+    
+    member x.TriggerTagsChanged (sender: obj) (event: Event<_,_>) =
+        let span = SnapshotSpan(x.CurrentSnapshot, 0, x.CurrentSnapshot.Length)
+        event.Trigger(sender, SnapshotSpanEventArgs(span))
+        
 type IServiceProvider with
     member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
     member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
@@ -337,4 +340,3 @@ type CursorOverrideHandle(newCursor) =
 
 module internal Cursor =
     let wait() = new CursorOverrideHandle(System.Windows.Input.Cursors.Wait)
-
