@@ -95,6 +95,12 @@ namespace FSharpVSPowerTools
             set { chbResolveUnopenedNamespaces.Checked = value;  }
         }
 
+        public bool UnusedDeclarationsEnabled
+        {
+            get { return chbUnusedDeclarations.Checked; }
+            set { chbUnusedDeclarations.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -111,6 +117,7 @@ namespace FSharpVSPowerTools
             GenerateRecordStubEnabled = _optionsPage.GenerateRecordStubEnabled;
             UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
             ResolveUnopenedNamespacesEnabled = _optionsPage.ResolveUnopenedNamespacesEnabled;
+            UnusedDeclarationsEnabled = _optionsPage.UnusedDeclarationsEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

@@ -61,8 +61,7 @@ let private isDoubleBacktickIdent (s: string) =
     if s.StartsWith("``") && s.EndsWith("``") && s.Length > 4 then
         let inner = s.Substring("``".Length, s.Length - "````".Length)
         not (inner.Contains("``"))
-    else
-        false
+    else false
 
 let isIdentifier (s: string) =
     if isDoubleBacktickIdent s then
@@ -105,7 +104,11 @@ type SnapshotSpan with
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
         Option.ofNullable <| position.Point.GetPoint(x, position.Affinity)
-
+    
+    member x.TriggerTagsChanged (sender: obj) (event: Event<_,_>) =
+        let span = SnapshotSpan(x.CurrentSnapshot, 0, x.CurrentSnapshot.Length)
+        event.Trigger(sender, SnapshotSpanEventArgs(span))
+        
 type IServiceProvider with
     member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
     member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
@@ -165,20 +168,6 @@ type DTE with
         | _ -> ()
         doc
 
-    member x.ListFSharpProjectsInSolution() = 
-        let rec handleProject (p: Project) = 
-            if p === null then []
-            elif isFSharpProject p then [ p ]
-            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-            else []
-        
-        and handleProjectItems (items: ProjectItems) = 
-            [ for pi in items do
-                  yield! handleProject pi.SubProject ]
-        
-        [ for p in x.Solution.Projects do
-              yield! handleProject p ]
-    
 type ProjectItem with
     member x.VSProject =
         Option.ofNull x

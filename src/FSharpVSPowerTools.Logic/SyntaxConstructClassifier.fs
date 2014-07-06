@@ -11,6 +11,8 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpVSPowerTools.AsyncMaybe
 
 [<NoComparison>]
 type private ClassifierState =
@@ -19,7 +21,7 @@ type private ClassifierState =
 
 type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
-                                projectFactory: ProjectFactory) as self =
+                                projectFactory: ProjectFactory, includeUnusedDeclarations: bool) as self =
     
     let getClassficationType cat =
         match cat with
@@ -30,6 +32,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | Category.MutableVar -> Some "FSharp.MutableVar"
         | Category.Quotation -> Some "FSharp.Quotation"
         | Category.Module -> Some "FSharp.Module"
+        | Category.Unused -> Some "FSharp.Unused"
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
@@ -42,6 +45,16 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
             return! projectFactory.CreateForFileInProject doc.TextBuffer doc.FilePath projectItem.ContainingProject }
+
+    let isSymbolLocalForProject (symbol: FSharpSymbol) = 
+        match symbol with 
+        | :? FSharpParameter -> true
+        | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || not m.Accessibility.IsPublic
+        | :? FSharpEntity as m -> not m.Accessibility.IsPublic
+        | :? FSharpGenericParameter -> true
+        | :? FSharpUnionCase as m -> not m.Accessibility.IsPublic
+        | :? FSharpField as m -> not m.Accessibility.IsPublic
+        | _ -> false
 
     let updateSyntaxConstructClassifiers force =
         let cancelToken = new CancellationTokenSource() 
@@ -69,13 +82,51 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No)
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
+                            let singleDefs = 
+                                if includeUnusedDeclarations then
+                                    allSymbolsUses
+                                    |> Seq.groupBy (fun su -> su.Symbol)
+                                    |> Seq.choose (fun (symbol, uses) -> 
+                                        match Seq.toList uses with
+                                        | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
+                                            Some symbol 
+                                        | _ ->
+                                            None)
+                                    |> Seq.toList
+                                else
+                                    []
+
+                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                                    
+                            let! notUsedSymbols =
+                                singleDefs 
+                                |> Async.List.map (fun sym ->
+                                    async {
+                                        match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
+                                        | Some SymbolDeclarationLocation.File -> return Some sym
+                                        | Some (SymbolDeclarationLocation.Projects declProjects) ->
+                                            let! isSymbolUsed = vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
+                                            if isSymbolUsed then return None
+                                            else return Some sym
+                                        | _ -> return None })
+                                |> Async.map (List.choose id)
+                                    
+                            let usedSymbolUses =
+                                match notUsedSymbols with
+                                | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
+                                | _ ->
+                                    allSymbolsUses 
+                                    |> Array.map (fun su -> 
+                                        su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
+
                             let spans = 
-                                getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer)
+                                getCategoriesAndLocations (usedSymbolUses, parseResults.ParseTree, lexer)
                                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                             state.Swap (fun _ -> 
                                 Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
                                        Spans = spans }) |> ignore
+
                             // TextBuffer is null if a solution is closed at this moment
                             if doc.TextBuffer <> null then
                                 let currentSnapshot = doc.TextBuffer.CurrentSnapshot

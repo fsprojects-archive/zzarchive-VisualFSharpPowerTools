@@ -7,6 +7,19 @@ open System.Collections.Generic
 let hasAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
     attributes |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
 
+let tryGetAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
+    attributes 
+    |> Seq.tryFind (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
+    
+let hasModuleSuffixAttribute (entity: FSharpEntity) = 
+    (entity.Attributes
+     |> tryGetAttribute<CompilationRepresentationAttribute>
+     |> Option.bind (fun a -> 
+          a.ConstructorArguments 
+          |> Seq.tryPick (function 
+               | :? CompilationRepresentationFlags as arg when arg = CompilationRepresentationFlags.ModuleSuffix -> Some() 
+               | _ -> None))) = Some()
+
 let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
         && name.Substring (2, name.Length - 4) |> String.forall ((<>) ' ')

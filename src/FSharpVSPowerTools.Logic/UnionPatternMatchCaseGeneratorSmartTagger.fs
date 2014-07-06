@@ -35,7 +35,6 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable unionDefinition = None
-
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     let updateAtCaretPosition() =
@@ -75,12 +74,13 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                     }
                     |> Async.map (fun result -> 
                         unionDefinition <- result
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                        buffer.TriggerTagsChanged self tagsChanged)
                     |> Async.StartImmediateSafe
 
                     currentWord <- Some newWord
-            | _ -> ()
+            | _ -> 
+                currentWord <- None
+                buffer.TriggerTagsChanged self tagsChanged
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)
