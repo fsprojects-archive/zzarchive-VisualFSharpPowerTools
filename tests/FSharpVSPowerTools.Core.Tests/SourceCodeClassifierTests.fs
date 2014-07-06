@@ -29,9 +29,9 @@ let opts =
 
 let checkCategories line (expected: (Category * int * int) list)  = 
     let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource) 
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource, true,
+                                                      (fun _ -> async { return Some [opts] }))
         |> Async.RunSynchronously
-        |> Array.map (fun su -> su, true)
 
     let lexer = 
         { new LexerBase() with

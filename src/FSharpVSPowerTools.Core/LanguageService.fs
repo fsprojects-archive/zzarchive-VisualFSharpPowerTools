@@ -382,10 +382,52 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           }
       loop 0 None
 
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, src, stale) =
+    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, src, stale, checkForUnusedDeclarations, 
+                                           getSymbolDeclProjects) =
         async {
             let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, src, stale)
-            return! results.GetAllUsesOfAllSymbolsInFile()
+            let! allSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
+            let singleDefs = 
+                if checkForUnusedDeclarations then
+                    allSymbolsUses
+                    |> Seq.groupBy (fun su -> su.Symbol)
+                    |> Seq.choose (fun (symbol, uses) ->
+                        match symbol with
+                        | UnionCase when isSymbolLocalForProject symbol -> Some symbol
+                        // determining that a record, DU or module is used anywhere requires
+                        // inspecting all their inclosed entities (fields, cases and func / vals)
+                        // for useness, which is too expensive to do. Hence we never gray them out.
+                        | Entity ((Record | UnionType | Interface | Module), _, _) -> None
+                        | _ ->
+                            match Seq.toList uses with
+                            | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
+                                Some symbol 
+                            | _ -> None)
+                    |> Seq.toList
+                else
+                    []
+
+            let! notUsedSymbols =
+                singleDefs 
+                |> Async.List.map (fun sym ->
+                    async {
+                        let! opts = getSymbolDeclProjects sym
+                        match opts with
+                        | Some projects ->
+                            let! isSymbolUsed = x.IsSymbolUsedInProjects (sym, projectOptions.ProjectFileName, projects) 
+                            if isSymbolUsed then return None
+                            else return Some sym
+                        | None -> return None 
+                    })
+                |> Async.map (List.choose id)
+                                    
+            return
+                match notUsedSymbols with
+                | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
+                | _ ->
+                    allSymbolsUses 
+                    |> Array.map (fun su -> 
+                        su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =

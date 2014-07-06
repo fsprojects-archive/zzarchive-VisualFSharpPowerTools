@@ -4,6 +4,16 @@ module FSharpVSPowerTools.TypedAstUtils
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Collections.Generic
 
+let isSymbolLocalForProject (symbol: FSharpSymbol) = 
+    match symbol with 
+    | :? FSharpParameter -> true
+    | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || not m.Accessibility.IsPublic
+    | :? FSharpEntity as m -> not m.Accessibility.IsPublic
+    | :? FSharpGenericParameter -> true
+    | :? FSharpUnionCase as m -> not m.Accessibility.IsPublic
+    | :? FSharpField as m -> not m.Accessibility.IsPublic
+    | _ -> false
+
 let hasAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
     attributes |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
 
