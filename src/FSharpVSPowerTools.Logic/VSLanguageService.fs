@@ -129,10 +129,14 @@ type VSLanguageService
                     |> Async.Array.map getProjectOptions
 
                 reportProgress progress (Reporting(Resource.findSymbolUseAllProjects))
+
+                let newReportProgress projectName index length = 
+                    reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) length, index, length))
+                
                 let! res =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
                         (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 
-                         currentLine, args, buildQueryLexState word.Snapshot.TextBuffer, progress)
+                         currentLine, args, buildQueryLexState word.Snapshot.TextBuffer, Some newReportProgress)
                 return 
                     res 
                     |> Option.map (fun (symbol, lastIdent, refs) -> 

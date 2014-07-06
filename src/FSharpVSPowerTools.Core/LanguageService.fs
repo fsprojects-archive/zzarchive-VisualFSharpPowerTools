@@ -8,7 +8,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools
-open FSharp.ViewModule.Progress
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -304,7 +303,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions seq, 
-                                                    fileName, source, line:int, col, lineStr, args, queryLexState, progress : (OperationState -> unit) option) =     
+                                                    fileName, source, line:int, col, lineStr, args, queryLexState, reportProgress : (string -> int -> int -> unit) option) =     
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
          | Some symbol ->
@@ -318,11 +317,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     dependentProjects |> Async.Array.mapi (fun index opts ->
                           async {                            
                             let projectName = System.IO.Path.GetFileNameWithoutExtension(opts.ProjectFileName)
-                            reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) dependentProjects.Length, index * 2, dependentProjects.Length * 2))
+                            reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
                             let! projectResults = checker.ParseAndCheckProject opts
-                            reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) dependentProjects.Length, index * 2 + 1, dependentProjects.Length * 2))
                             let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
-                            debug "--> GetUsesOfSymbol: Project = %s, Opts = %A, Results = %A" opts.ProjectFileName opts refs
                             return refs })
                  let refs = Array.concat refs
                  return Some(fsSymbolUse.Symbol, symbol.Text, refs)
