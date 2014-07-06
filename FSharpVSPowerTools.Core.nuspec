@@ -11,7 +11,7 @@
     <licenseUrl>https://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt</licenseUrl>
     <iconUrl>https://raw2.github.com/fsprojects/VisualFSharpPowerTools/blob/master/docs/files/img/logo.png</iconUrl>
     <releaseNotes>@releaseNotes@</releaseNotes>
-    <tags>@tags</tags>
+    <tags>@tags@</tags>
     @dependencies@
   </metadata>
   <files>
