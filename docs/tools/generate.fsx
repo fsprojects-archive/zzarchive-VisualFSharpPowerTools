@@ -4,7 +4,7 @@
 // --------------------------------------------------------------------------------------
 
 // Binaries that have XML documentation (in a corresponding generated XML file)
-let referenceBinaries = []
+let referenceBinaries = [] // [ "FSharpVSPowerTools.Core.dll" ]
 // Web site location for the generated documentation
 let website = "."
 
@@ -13,7 +13,7 @@ let githubLink = "http://github.com/fsprojects/VisualFSharpPowerTools"
 // Specify more information about your project
 let info =
   [ "project-name", "Visual F# Power Tools"
-    "project-author", "Anh-Dung Phan, Vasily Kirichenko"
+    "project-author", "Anh-Dung Phan, Vasily Kirichenko, Denis Ok"
     "project-summary", "Visual F# Power Tools (by F# Community) "
     "project-github", githubLink
     "project-nuget", "http://nuget.com/packages/VisualFSharpPowerTools" ]
@@ -22,9 +22,9 @@ let info =
 // For typical project, no changes are needed below
 // --------------------------------------------------------------------------------------
 
-#I "../../packages/FSharp.Formatting.2.4.0/lib/net40"
+#I "../../packages/FSharp.Formatting.2.4.11/lib/net40"
 #I "../../packages/RazorEngine.3.3.0/lib/net40"
-#I "../../packages/FSharp.Compiler.Service.0.0.26/lib/net40"
+#I "../../packages/FSharp.Compiler.Service.0.0.58/lib/net45"
 #r "../../packages/Microsoft.AspNet.Razor.2.0.30506.0/lib/net40/System.Web.Razor.dll"
 #r "../../packages/FAKE/tools/FakeLib.dll"
 #r "RazorEngine.dll"
@@ -88,31 +88,7 @@ let buildDocumentation () =
         lineNumbers = false,
         layoutRoots = layoutRoots )
 
-// Remove `FSharp.Core` from `bin` directory.
-// Otherwise, version conflict can break code tips.
-let execute pipeline =
-    // Cache `FSharp.Core.*` files
-    let files = 
-        !! (bin @@ "FSharp.Core.*")
-        |> Seq.toArray
-        |> Array.map (fun file ->
-            (file, File.ReadAllBytes file))
-    if (files.Length > 0) then
-        TraceHelper.traceError "Consider setting CopyLocal to False for FSharp.Core in all *.fsproj files"
-    // Remove `FSharp.Core.*` files
-    files |> Seq.iter (fun (file,_) ->
-        TraceHelper.traceImportant <| sprintf  "Removing '%s'" file
-        File.Delete file)
-    // Execute document generation pipeline
-    pipeline()
-    // Restore `FSharp.Core.*` files
-    files |> Seq.iter (fun (file, bytes) ->
-        TraceHelper.traceImportant <| sprintf "Restoring '%s'" file
-        File.WriteAllBytes(file, bytes))
-
-
 // Generate
-execute(
-  copyFiles 
-  >> buildDocumentation
-  >> buildReference)
+copyFiles()
+buildDocumentation()
+buildReference()

@@ -23,14 +23,13 @@ let project = "FSharpVSPowerTools"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "Visual F# Power Tools (by F# Community)"
+let summary = "A collection of additional commands for F# in Visual Studio"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
-let description = """
-  Visual F# Power Tools (by F# Community)"""
+let description = """Visual F# Power Tools"""
 // List of author names (for NuGet package)
-let authors = [ "Anh-Dung Phan", "Vasily Kirichenko" ]
+let authors = [ "Anh-Dung Phan"; "Vasily Kirichenko"; "Denis Ok" ]
 // Tags for your project (for NuGet package)
 let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 
@@ -85,7 +84,7 @@ Target "AssemblyInfo" (fun _ ->
 Target "RestorePackages" RestorePackages
 
 Target "Clean" (fun _ ->
-    CleanDirs ["bin"; "bin/vsix"; "temp"]
+    CleanDirs ["bin"; "bin/vsix"; "temp"; "nuget"]
 )
 
 Target "CleanDocs" (fun _ ->
@@ -151,6 +150,27 @@ Target "ExtraIntegrationTests" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
+// Build a NuGet package
+
+Target "NuGet" (fun _ ->
+    NuGet (fun p -> 
+        { p with   
+            Authors = authors
+            Project = project + ".Core"
+            Summary = summary
+            Description = description
+            Version = release.NugetVersion
+            ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
+            Tags = tags
+            OutputPath = "bin"
+            ToolPath = ".nuget/nuget.exe"
+            AccessKey = getBuildParamOrDefault "nugetkey" ""
+            Publish = true
+            Dependencies = ["FSharp.Compiler.Service", "0.0.57"] })
+        (project + ".Core.nuspec")
+)
+
+// --------------------------------------------------------------------------------------
 // Generate the documentation
 
 Target "GenerateDocs" (fun _ ->
@@ -199,6 +219,9 @@ Target "All" DoNothing
 
 "Build"
   ==> "CleanVSIX"
+
+"Clean"
+  ==> "NuGet"
 
 "Main"
   =?> ("ExtraIntegrationTests", isLocalBuild)
