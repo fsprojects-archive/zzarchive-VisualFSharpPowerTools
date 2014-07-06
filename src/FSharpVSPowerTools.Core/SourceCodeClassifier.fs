@@ -122,9 +122,9 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
                     spans 
                     |> List.sortBy (fun span -> 
                         match span.Category with
-                        | Category.Unused -> 0
+                        | Category.Unused -> 1
                         | Category.Other -> 2
-                        | _ -> 1)
+                        | _ -> 0)
                     |> List.head)
         |> Seq.distinct
         |> Seq.toArray
