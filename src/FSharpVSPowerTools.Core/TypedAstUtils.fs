@@ -87,6 +87,16 @@ let (|Class|_|) (original: FSharpEntity, abbreviated: FSharpEntity, _) =
     if (abbreviated.IsClass 
         && (not abbreviated.IsStaticInstantiation || original.IsFSharpAbbreviation)) then Some()
     else None 
+
+let (|Record|_|) (e: FSharpEntity) = if e.IsFSharpRecord then Some() else None
+let (|UnionType|_|) (e: FSharpEntity) = if e.IsFSharpUnion then Some() else None
+
+let (|UnionCase|_|) (e: FSharpSymbol) = 
+    match e with
+    | :? FSharpUnionCase -> Some()
+    | _ -> None
+
+let (|Interface|_|) (e: FSharpEntity) = if e.IsInterface then Some() else None
         
 let (|FSharpType|_|) (e: FSharpEntity) = 
     if e.IsDelegate || e.IsFSharpExceptionDeclaration || e.IsFSharpRecord || e.IsFSharpUnion 

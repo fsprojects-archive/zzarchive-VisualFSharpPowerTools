@@ -86,12 +86,18 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 if includeUnusedDeclarations then
                                     allSymbolsUses
                                     |> Seq.groupBy (fun su -> su.Symbol)
-                                    |> Seq.choose (fun (symbol, uses) -> 
-                                        match Seq.toList uses with
-                                        | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
-                                            Some symbol 
+                                    |> Seq.choose (fun (symbol, uses) ->
+                                        match symbol with
+                                        | UnionCase when isSymbolLocalForProject symbol -> Some symbol
+                                        // determining that a record, DU or module is used anywhere requires
+                                        // inspecting all their inclosed entities (fields, cases and func / vals)
+                                        // for useness, which is too expensive to do. Hence we never gray them out.
+                                        | Entity ((Record | UnionType | Interface | Module), _, _) -> None
                                         | _ ->
-                                            None)
+                                            match Seq.toList uses with
+                                            | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
+                                                Some symbol 
+                                            | _ -> None)
                                     |> Seq.toList
                                 else
                                     []
@@ -102,13 +108,19 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 singleDefs 
                                 |> Async.List.map (fun sym ->
                                     async {
-                                        match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
-                                        | Some SymbolDeclarationLocation.File -> return Some sym
-                                        | Some (SymbolDeclarationLocation.Projects declProjects) ->
-                                            let! isSymbolUsed = vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
+                                        let projects =
+                                            match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
+                                            | Some SymbolDeclarationLocation.File -> Some [project] 
+                                            | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
+                                            | None -> None
+
+                                        match projects with
+                                        | Some projects ->
+                                            let! isSymbolUsed = vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, projects) 
                                             if isSymbolUsed then return None
                                             else return Some sym
-                                        | _ -> return None })
+                                        | None -> return None 
+                                    })
                                 |> Async.map (List.choose id)
                                     
                             let usedSymbolUses =
