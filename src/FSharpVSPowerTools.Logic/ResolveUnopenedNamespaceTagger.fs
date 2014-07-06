@@ -8,7 +8,6 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Ast
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
@@ -24,7 +23,7 @@ type ResolveUnopenedNamespaceSmartTagger
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Entity * Ast.InsertContext) list option = None 
+    let mutable state: (Entity * InsertContext) list option = None 
 
     let triggerTagsChanged() =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
@@ -72,7 +71,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let pos = codeGenService.ExtractFSharpPos point
                                 let! parseTree = liftMaybe checkResults.ParseTree
                                 
-                                let! entityKind = Ast.getEntityKind parseTree pos |> liftMaybe
+                                let! entityKind = ParsedInput.getEntityKind parseTree pos |> liftMaybe
                                 let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
 
                                 //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
@@ -81,11 +80,11 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let entities =
                                     entities |> List.filter (fun e ->
                                         match entityKind, e.Kind with
-                                        | Attribute, Attribute -> true 
-                                        | Attribute, _ -> false
-                                        | Type, Type -> true
-                                        | Type, _ -> false
-                                        | FunctionOrValue, _ -> true)
+                                        | Attribute, Attribute 
+                                        | Type, Type
+                                        | FunctionOrValue, _ -> true 
+                                        | Attribute, _
+                                        | Type, _ -> false)
 
                                 let entities = 
                                     entities
@@ -104,7 +103,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
-                                let createEntity = Ast.tryFindNearestOpenStatementBlock pos.Line parseTree sym.Text
+                                let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree sym.Text
                                 return entities |> List.choose createEntity
                     }
                     |> Async.map (fun result -> 
@@ -119,50 +118,19 @@ type ResolveUnopenedNamespaceSmartTagger
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
 
-    let openNamespace (snapshotSpan: SnapshotSpan) (ctx: Ast.InsertContext) ns name = 
+    let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
         let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
-        let getLineStr line = snapshot.GetLineFromLineNumber(line).GetText().Trim()
-        let pos: Pos = 
-            { ctx.Pos with Line =
-                              match ctx.ScopeKind with
-                              | TopModule ->
-                                    if ctx.Pos.Line > 1 then
-                                        // it's an implicite module without any open declarations    
-                                        if not ((getLineStr (ctx.Pos.Line - 2)).StartsWith "module") then 1
-                                        else ctx.Pos.Line
-                                    else 1
-                              | Namespace ->
-                                    // for namespaces the start line is start line of the first nested entity
-                                    if ctx.Pos.Line > 1 then
-                                        [0..ctx.Pos.Line - 1]
-                                        |> List.mapi (fun i line -> i, getLineStr line)
-                                        |> List.tryPick (fun (i, lineStr) -> 
-                                            if lineStr.StartsWith "namespace" then Some i
-                                            else None)
-                                        |> function
-                                           // move to the next line below "namespace" and convert it to F# 1-based line number
-                                           | Some line -> line + 2 
-                                           | None -> ctx.Pos.Line
-                                    else 1  
-                              | _ -> ctx.Pos.Line }
-
-        let line = snapshot.GetLineFromLineNumber (pos.Line - 1)
-        let line = line.Start.Position
-        let lineStr = (String.replicate pos.Col " ") + "open " + ns + Environment.NewLine
-        let snapshot = snapshot.TextBuffer.Insert (line, lineStr)
-        let nextLine = snapshot.GetLineFromLineNumber pos.Line
-        // if there's no a blank line between open declaration block and the rest of the code, we add one
-        let snapshot = 
-            if nextLine.GetText().Trim() <> "" then 
-                snapshot.TextBuffer.Insert (nextLine.Start.Position, Environment.NewLine)
-            else snapshot
-        // for top level module we add a blank line between the module declaration and first open statement
-        if pos.Col = 0 && pos.Line > 1 then
-            let prevLine = snapshot.GetLineFromLineNumber (pos.Line - 2)
-            if not (prevLine.GetText().Trim().StartsWith "open") then
-                snapshot.TextBuffer.Insert(prevLine.End.Position, Environment.NewLine) |> ignore
+        
+        let doc =
+            { new IInsertContextDocument<ITextSnapshot> with
+                  member x.Insert (snapshot, line, lineStr) = 
+                    let pos = snapshot.GetLineFromLineNumber(line).Start.Position
+                    snapshot.TextBuffer.Insert (pos, lineStr + Environment.NewLine)
+                  member x.GetLineStr (snapshot, line) = snapshot.GetLineFromLineNumber(line).GetText() }
+        
+        InsertContext.insertOpenDeclaration snapshot doc ctx ns |> ignore
         transaction.Complete()
 
     let replaceFullyQualifiedSymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 
