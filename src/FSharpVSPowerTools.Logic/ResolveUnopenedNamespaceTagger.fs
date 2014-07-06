@@ -25,10 +25,6 @@ type ResolveUnopenedNamespaceSmartTagger
     let mutable currentWord: SnapshotSpan option = None
     let mutable state: (Entity * InsertContext) list option = None 
 
-    let triggerTagsChanged() =
-        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
         | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
@@ -108,12 +104,12 @@ type ResolveUnopenedNamespaceSmartTagger
                     }
                     |> Async.map (fun result -> 
                          state <- result
-                         triggerTagsChanged() )
+                         buffer.TriggerTagsChanged self tagsChanged)
                     |> Async.StartImmediateSafe
                     
             | _ -> 
                 currentWord <- None 
-                triggerTagsChanged()
+                buffer.TriggerTagsChanged self tagsChanged
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)
