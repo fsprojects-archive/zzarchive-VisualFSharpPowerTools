@@ -582,7 +582,7 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
             return! None |> liftMaybe
     }
 
-let private UnnamedFieldRegex = Regex("^Item[\d+]?$", RegexOptions.Compiled)
+let private UnnamedFieldRegex = Regex("^Item(\d+)?$", RegexOptions.Compiled)
 
 let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
     let writer = ctxt.Writer
