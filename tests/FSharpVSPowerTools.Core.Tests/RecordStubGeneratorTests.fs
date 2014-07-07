@@ -464,26 +464,30 @@ let x = { Field1 = 0; Field2 = 0;
     ]
 
 [<Test>]
-let ``doesn't trigger code gen when caret is on a field name, in a field assignment expr`` () =
-    """
+let ``doesn't trigger code gen when caret is on a field name in a field assignment expr`` () =
+    [
+        """
 type Pos = { Line: int; Col: int }
 let pos = { Line = 0; Col = 0 }
 
 let pos2: Pos =
     { pos with Line = pos.Line }"""
-    |> getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 5 26))
-    |> assertSrcWasNotChangedAfterCodeGen
 
-[<Test>]
-let ``doesn't trigger code gen when caret is on a field name, deep in a field assignment expr`` () =
-    """
+        """
 type Pos = { Line: int; Col: int }
 let pos = { Line = 0; Col = 0 }
 
 let pos2: Pos =
     { pos with Line = match true with _ -> pos.Line }"""
-    |> getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 5 47))
-    |> assertSrcWasNotChangedAfterCodeGen
+    ]
+    |> List.zip [
+        Pos.fromZ 5 26
+        Pos.fromZ 5 47
+    ]
+    |> List.map (fun (pos, src) ->
+        getSrcBeforeAndAfterCodeGen (insertStubFromPos pos) src
+    )
+    |> List.iter assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``doesn't trigger code gen when record expr doesn't end by }`` () =
