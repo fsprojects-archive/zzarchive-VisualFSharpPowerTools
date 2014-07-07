@@ -184,3 +184,17 @@ module private PrivateModule =
     let func _ = ()
     let value = ()
 type private PrivateClass() = class end
+type PublicClass() =
+    let letValue = 1
+    let letFunc _ = ()
+    member private __.Prop = ()
+    member private __.Method _ = ()
+    member this.PublicMethod _ = ()
+    member __.Method1 (arg1, arg2) =
+        let local = 1
+        arg2
+    member this.Method2 _ = this
+module TestUnused =
+    let func arg1 arg2 = 
+        let local = 1
+        arg2

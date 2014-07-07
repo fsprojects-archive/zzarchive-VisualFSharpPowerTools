@@ -355,14 +355,43 @@ let ``active pattern``() =
     checkLine 182 [ Category.Function, 8, 27 ]
 
 [<Test>]
-let ``non public module is not Unused``() =
+let ``non public module``() =
     checkLine 183 [ Category.Module, 15, 28 ]
 
 [<Test>]
-let ``unused non public module function and value is Unused``() =
+let ``unused non public module function and value``() =
     checkLine 184 [ Category.Unused, 8, 12 ]  
     checkLine 185 [ Category.Unused, 8, 13 ]
 
 [<Test>]
-let ``unused default constructor of non public class is Unused``() =
+let ``unused default constructor of non public class``() =
     checkLine 186 [ Category.Unused, 13, 25 ]
+
+[<Test>]
+let ``unused non public class let binding``() =
+    checkLine 188 [ Category.Unused, 8, 16] 
+    checkLine 189 [ Category.Unused, 8, 15]
+
+[<Test>]
+let ``unused non public class member``() =
+    checkLine 190 [ Category.Unused, 22, 26] 
+    checkLine 191 [ Category.Unused, 22, 28]
+
+[<Test>]
+let ``unused self binding``() =
+    checkLine 192 [ Category.Unused, 11, 15; Category.Function, 16, 28 ]
+
+[<Test>]
+let ``used self binding``() =
+    checkLine 196 [ Category.Function, 16, 23 ]
+
+[<Test>]
+let ``unused function / member argument``() =
+    checkLine 193 [ Category.Function, 14, 21; Category.Unused, 23, 27 ]
+    checkLine 198 [ Category.Function, 8, 12; Category.Unused, 13, 17 ]
+
+[<Test>]
+let ``unused function / member local binging``() =
+    checkLine 194 [ Category.Unused, 12, 17 ]
+    checkLine 199 [ Category.Unused, 12, 17 ]
+
