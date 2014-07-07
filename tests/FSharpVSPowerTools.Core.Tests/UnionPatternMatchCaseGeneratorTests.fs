@@ -4,6 +4,7 @@
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
@@ -453,6 +454,21 @@ let f x =
     | Case0 -> ()
     | Case1(_, _, _, _, _, _, _, _, _, _, _) -> failwith ""
 """
+
+[<Test>]
+let ``doesn't trigger code generation for cases with argument count >= 10`` () =
+    """
+type Union =
+    | Case0
+    | Case1 of int * int * int * int * int * int * int * int * int * int * int
+
+let f x =
+    match x with
+    | Case0 -> ()
+    | Case1(_, _, _, _, _, _, _, _, _, _, _) -> failwith ""
+"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 8 6))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``union match lambda case generation when first clause starts with '|'`` () =
