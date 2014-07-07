@@ -73,7 +73,7 @@ module Index =
                             // in case if there are multiple matching items binary search might return not the first one.
                             // in this case we'll walk backwards searching for the applicable answers
                             let mutable pos = initial
-                            while pos >= 0  && entries.[pos].StartsWith searchValue do
+                            while pos >= 0 && pos < entries.Count && entries.[pos].StartsWith searchValue do
                                 handle pos
                                 pos <- pos - 1
 
