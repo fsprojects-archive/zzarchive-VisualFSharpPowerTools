@@ -75,23 +75,34 @@ let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument)
     |> Async.RunSynchronously
 
 type CodeGenDiagnostic = {
-    Range: Range
-    RecordExpr: RecordExpr
-    Entity: FSharpEntity
-    InsertionParams: RecordStubsInsertionParams
+    mutable Range: range option
+    mutable RecordExpr: RecordExpr option
+    mutable InsertionParams: RecordStubsInsertionParams option
 }
 
 let diagnoseCodeGenParams (pos: pos) src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
-    match tryFindRecordDefinitionFromPos codeGenService pos document with
-    | None -> None
-    | Some(range, expr, entity, insertParams) ->
-        { Range = range
-          RecordExpr = expr
-          Entity = entity
-          InsertionParams = insertParams }
-        |> Some
+    let project = project()
+
+    let diagnostic = {
+        Range = None
+        RecordExpr = None
+        InsertionParams = None
+    }
+
+    asyncMaybe {
+        let! recordExpr = tryFindRecordExprInBufferAtPos codeGenService project pos document
+        diagnostic.Range <- Some recordExpr.Expr.Range
+        diagnostic.RecordExpr <- Some recordExpr
+
+        let! _, insertionParams = tryFindStubInsertionParamsAtPos codeGenService project pos document
+        diagnostic.InsertionParams <- Some insertionParams
+    }
+    |> Async.Ignore
+    |> Async.RunSynchronously
+
+    diagnostic
 
 let insertStubFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
@@ -453,7 +464,7 @@ let x = { Field1 = 0; Field2 = 0;
     ]
 
 [<Test>]
-let ``doesn't trigger code gen when caret is in a field assignment expression`` () =
+let ``doesn't trigger code gen when caret is on a field name, in a field assignment expr`` () =
     """
 type Pos = { Line: int; Col: int }
 let pos = { Line = 0; Col = 0 }
@@ -461,6 +472,17 @@ let pos = { Line = 0; Col = 0 }
 let pos2: Pos =
     { pos with Line = pos.Line }"""
     |> getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 5 26))
+    |> assertSrcWasNotChangedAfterCodeGen
+
+[<Test>]
+let ``doesn't trigger code gen when caret is on a field name, deep in a field assignment expr`` () =
+    """
+type Pos = { Line: int; Col: int }
+let pos = { Line = 0; Col = 0 }
+
+let pos2: Pos =
+    { pos with Line = match true with _ -> pos.Line }"""
+    |> getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 5 47))
     |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
