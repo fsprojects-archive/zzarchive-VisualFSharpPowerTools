@@ -3,7 +3,9 @@
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
@@ -71,6 +73,25 @@ let project() =
 let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument) =
     tryFindRecordDefinitionFromPos codeGenInfra (project()) pos document
     |> Async.RunSynchronously
+
+type CodeGenDiagnostic = {
+    Range: Range
+    RecordExpr: RecordExpr
+    Entity: FSharpEntity
+    InsertionParams: RecordStubsInsertionParams
+}
+
+let diagnoseCodeGenParams (pos: pos) src =
+    let document: IDocument = upcast MockDocument(src)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+    match tryFindRecordDefinitionFromPos codeGenService pos document with
+    | None -> None
+    | Some(range, expr, entity, insertParams) ->
+        { Range = range
+          RecordExpr = expr
+          Entity = entity
+          InsertionParams = insertParams }
+        |> Some
 
 let insertStubFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
@@ -431,6 +452,16 @@ let x = { Field1 = 0; Field2 = 0;
           Field3 = failwith "" }"""
     ]
 
+[<Test>]
+let ``doesn't trigger code gen when caret is in a field assignment expression`` () =
+    """
+type Pos = { Line: int; Col: int }
+let pos = { Line = 0; Col = 0 }
+
+let pos2: Pos =
+    { pos with Line = pos.Line }"""
+    |> getSrcBeforeAndAfterCodeGen (insertStubFromPos (Pos.fromZ 5 26))
+    |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``doesn't trigger code gen when record expr doesn't end by }`` () =

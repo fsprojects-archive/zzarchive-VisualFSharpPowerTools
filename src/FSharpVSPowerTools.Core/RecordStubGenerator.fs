@@ -285,10 +285,20 @@ let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInp
                 // Ex: let x: MyRecord = { f1 = e1; f2 = e2; ... }
                 | SynExpr.Typed(SynExpr.Record(_inheritOpt, copyOpt, fields, _range0), _, _range1) ->
                     fields 
-                    |> List.tryPick walkRecordField
-                    |> Option.orElse (Some { Expr = expr
-                                             CopyExprOption = copyOpt
-                                             FieldExprList = fields })
+                    |> List.tryPick (function
+                        | (recordFieldIdent, _), None, _
+                            when rangeContainsPos (recordFieldIdent.Range) pos ->
+                            Some { Expr = expr
+                                   CopyExprOption = copyOpt
+                                   FieldExprList = fields }
+                        | _, None, _ -> None
+                        | (_recordFieldName, Some _synExpr, _) as field ->
+                            walkRecordField field
+                    )
+//                    |> List.tryPick walkRecordField
+//                    |> Option.orElse (Some { Expr = expr
+//                                             CopyExprOption = copyOpt
+//                                             FieldExprList = fields })
                 | _ -> walkExpr expr
             | None ->
                 walkExpr expr
@@ -309,10 +319,20 @@ let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInp
                 // { f1 = e1; f2 = e2; ... } : MyRecord
                 | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                     fields 
-                    |> List.tryPick walkRecordField
-                    |> Option.orElse (Some { Expr = expr
-                                             CopyExprOption = copyOpt
-                                             FieldExprList = fields })
+//                    |> List.tryPick walkRecordField
+                    |> List.tryPick (function
+                        | (recordFieldIdent, _), None, _
+                            when rangeContainsPos (recordFieldIdent.Range) pos ->
+                            Some { Expr = expr
+                                   CopyExprOption = copyOpt
+                                   FieldExprList = fields }
+                        | _, None, _ -> None
+                        | (_recordFieldName, Some _synExpr, _) as field ->
+                            walkRecordField field
+                    )
+//                    |> Option.orElse (Some { Expr = expr
+//                                             CopyExprOption = copyOpt
+//                                             FieldExprList = fields })
                 | _ -> walkExpr synExpr
 
             | SynExpr.Paren(synExpr, _, _, _)
@@ -331,14 +351,24 @@ let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInp
 
             | SynExpr.Record(_inheritOpt, copyOpt, fields, _range) ->
                 fields 
-                |> List.tryPick walkRecordField
-                |> Option.orElse (
-                    match fields with
-                    | [] -> None
-                    | _ ->
+                |> List.tryPick (function
+                    | (recordFieldIdent, _), None, _
+                        when rangeContainsPos (recordFieldIdent.Range) pos ->
                         Some { Expr = expr
                                CopyExprOption = copyOpt
-                               FieldExprList = fields })
+                               FieldExprList = fields }
+                    | _, None, _ -> None
+                    | (_recordFieldName, Some _synExpr, _) as field ->
+                        walkRecordField field
+                )
+//                |> List.tryPick walkRecordField
+//                |> Option.orElse (
+//                    match fields with
+//                    | [] -> None
+//                    | _ ->
+//                        Some { Expr = expr
+//                               CopyExprOption = copyOpt
+//                               FieldExprList = fields })
 
             | SynExpr.ObjExpr(_ty, _baseCallOpt, binds, ifaces, _range1, _range2) -> 
                 List.tryPick walkBinding binds
@@ -450,11 +480,14 @@ let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInp
                 walkExpr synExpr
         )
 
-    and walkRecordField ((longIdents, _): RecordFieldName, synExprOpt, _) = 
-        if rangeContainsPos longIdents.Range pos then
-            None
-        else
-            Option.bind walkExpr synExprOpt
+    and walkRecordField (_recordFieldName, synExprOpt, _) = 
+        match synExprOpt with
+        | Some synExpr when rangeContainsPos synExpr.Range pos -> walkExpr synExpr
+        | _ -> None
+//        if rangeContainsPos longIdents.Range pos then
+//            None
+//        else
+//            Option.bind walkExpr synExprOpt
     
     and walkSynInterfaceImpl (InterfaceImpl(_synType, synBindings, _range)) =
         List.tryPick walkBinding synBindings
