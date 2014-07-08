@@ -4,9 +4,10 @@ open Microsoft.FSharp.Compiler.PrettyNaming
 
 let private delimiter = "``"
 
-let private isDoubleBacktickIdent (s: string) =
-    if s.StartsWith(delimiter) && s.EndsWith(delimiter) && s.Length > 4 then
-        let inner = s.Substring(delimiter.Length, s.Length - (2 * delimiter.Length))
+let isDoubleBacktickIdent (s: string) =
+    let doubledDelimiter = 2 * delimiter.Length
+    if s.StartsWith(delimiter) && s.EndsWith(delimiter) && s.Length > doubledDelimiter then
+        let inner = s.Substring(delimiter.Length, s.Length - doubledDelimiter)
         not (inner.Contains(delimiter))
     else false
 

@@ -24,6 +24,14 @@ let ``should encapsulate special chars``() =
     shouldBeEncapsulated "look!" // reserved for future F#
 
 [<Test>]
+let ``should be able to detect backticked identifiers``() = 
+    isDoubleBacktickIdent "``this is already encapsulated``" |> assertTrue
+    isDoubleBacktickIdent "``this``" |> assertTrue
+    isDoubleBacktickIdent "this" |> assertFalse
+    isDoubleBacktickIdent "myVariable" |> assertFalse
+
+
+[<Test>]
 let ``should not encapsulate already encapsulated identifiers``() = 
     shouldStaysAsIs "``this is already encapsulated``"
     shouldStaysAsIs "``this``"
