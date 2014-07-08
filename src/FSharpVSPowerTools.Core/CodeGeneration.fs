@@ -35,8 +35,8 @@ type ICodeGenerationService<'Project, 'Pos, 'Range> =
 
 
 [<AutoOpen>]
-module Utils =
-    type internal ColumnIndentedTextWriter() =
+module internal Utils =
+    type ColumnIndentedTextWriter() =
         let stringWriter = new StringWriter()
         let indentWriter = new IndentedTextWriter(stringWriter, " ")
 

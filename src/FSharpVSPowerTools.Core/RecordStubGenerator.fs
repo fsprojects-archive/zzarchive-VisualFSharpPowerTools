@@ -45,12 +45,12 @@ type PositionKind =
     | AfterLastField
 
 [<NoComparison>]
-type RecordStubsInsertionParams = {
-    Kind: PositionKind
-    InsertionPos: pos
-    IndentColumn: int
-}
-with
+type RecordStubsInsertionParams = 
+    {
+        Kind: PositionKind
+        InsertionPos: pos
+        IndentColumn: int
+    }
     static member TryCreateFromRecordExpression (expr: RecordExpr) =
         match expr.FieldExprList with
         | [] ->

@@ -1,5 +1,5 @@
 ﻿[<AutoOpen>]
-module FSharpVSPowerTools.TypedAstUtils
+module internal FSharpVSPowerTools.TypedAstUtils
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Collections.Generic
