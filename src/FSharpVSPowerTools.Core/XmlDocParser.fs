@@ -1,6 +1,6 @@
 ﻿namespace FSharpVSPowerTools
 
-/// Represent a block Xml documentation in source code
+/// Represent an Xml documentation block in source code
 type XmlDocable =
     | XmlDocable of int * int * string list
 

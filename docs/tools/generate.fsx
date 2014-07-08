@@ -6,7 +6,7 @@
 // Binaries that have XML documentation (in a corresponding generated XML file)
 let referenceBinaries = [ "FSharpVSPowerTools.Core.dll" ]
 // Web site location for the generated documentation
-let website = "/VisualFSharpPowerTools"
+let website = "."
 
 let githubLink = "http://github.com/fsprojects/VisualFSharpPowerTools"
 
@@ -41,7 +41,7 @@ open FSharp.MetadataFormat
 // When called from 'build.fsx', use the public project URL as <root>
 // otherwise, use the current 'output' directory.
 #if RELEASE
-let root = website
+let root = website + "/.."
 #else
 let root = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
 #endif
@@ -78,13 +78,19 @@ let buildReference () =
         sourceFolder = __SOURCE_DIRECTORY__ @@ ".." @@ "..",
         publicOnly = true )
 
+#if RELEASE
+let docRoot = website
+#else
+let docRoot = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
+#endif
+
 // Build documentation from `fsx` and `md` files in `docs/content`
 let buildDocumentation () =
   let subdirs = Directory.EnumerateDirectories(content, "*", SearchOption.AllDirectories)
   for dir in Seq.append [content] subdirs do
     let sub = if dir.Length > content.Length then dir.Substring(content.Length + 1) else "."
     Literate.ProcessDirectory
-      ( dir, docTemplate, output @@ sub, replacements = ("root", root)::info,
+      ( dir, docTemplate, output @@ sub, replacements = ("root", docRoot)::info,
         lineNumbers = false,
         layoutRoots = layoutRoots )
 
