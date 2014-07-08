@@ -82,5 +82,6 @@
 * Enhance Xaml support
 * Implement Resolve unopened namespaces
 * Implement Gray out unused declarations
+* Add a NuGet package for the core project
 
 

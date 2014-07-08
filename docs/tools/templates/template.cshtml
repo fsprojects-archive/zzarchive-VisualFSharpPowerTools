@@ -34,38 +34,39 @@
           @RenderBody()
         </div>
         <div class="span3">
-          <img src="img/logo.png" alt="F# Project" style="width:150px;margin:10px" />  
-          <ul class="nav nav-list" id="menu">
-            <li class="nav-header">@Properties["project-name"]</li>
-            <li><a href="@Root/index.html">Home page</a></li>
-              <li><a href="http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff">Download</a></li>
-            <li class="divider"></li>
-            <!-- <li><a href="@Properties["project-nuget"]">Get Library via NuGet</a></li> -->
-            <li><a href="@Properties["project-github"]">Source Code on GitHub</a></li>
-            <li><a href="@Properties["project-github"]/blob/master/LICENSE.txt">License</a></li>
-            <li><a href="@Properties["project-github"]/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
-            <li><a href="@Properties["project-github"]/blob/master/CONTRIBUTING.md">How to contribute</a></li>
-            
-            <li class="nav-header">Supported Features</li>
-            <li><a href="@Root/xmldoc.html">Auto-generating XmlDoc</a></li>
-            <li><a href="@Root/codeformatting.html">Source code formatting</a></li>
-            <li><a href="@Root/navbar.html">Navigation bar</a></li>
-            <li><a href="@Root/highlightusage.html">Highlight references</a></li>
-            <li><a href="@Root/rename.html">Rename refactoring</a></li>
-            <li><a href="@Root/depthcolorizer.html">Depth colorizer</a></li>
-            <li><a href="@Root/navigateto.html">NavigateTo</a></li>
-            <li><a href="@Root/syntaxcoloring.html">Syntax coloring</a></li>
-            <li><a href="@Root/folderorganization.html">Folder organization</a></li>
-            <li><a href="@Root/findallreferences.html">Find all references</a></li>
-            <li><a href="@Root/implementinterface.html">Implement interface</a></li>
-            <li><a href="@Root/recordstubgeneration.html">Record stub generation</a></li>
-            <li><a href="@Root/unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
-            <li><a href="@Root/resolveunopenednamespaces.html">Resolve onopened namespaces and modules</a></li>
-            <!--
-            <li class="nav-header">Documentation</li>
-            <li><a href="@Root/reference/index.html">API Reference</a></li>
-            -->
-          </ul>
+            <a href="@Root/index.html">
+                <img src="@Root/img/logo.png" alt="F# Project" style="width:150px;margin:10px" />
+            </a>
+            <ul class="nav nav-list" id="menu" style="margin-top: 20px;">
+                <li class="nav-header">@Properties["project-name"]</li>
+                <li><a href="@Root/index.html">Home page</a></li>
+                <li><a href="http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff">Download</a></li>
+                <li class="divider"></li>
+                <!-- <li><a href="@Properties["project-nuget"]">Get Library via NuGet</a></li> -->
+                <li><a href="@Properties["project-github"]">Source Code on GitHub</a></li>
+                <li><a href="@Properties["project-github"]/blob/master/LICENSE.txt">License</a></li>
+                <li><a href="@Properties["project-github"]/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
+                <li><a href="@Properties["project-github"]/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+
+                <li class="nav-header">Supported Features</li>
+                <li><a href="@Root/xmldoc.html">Auto-generating XmlDoc</a></li>
+                <li><a href="@Root/codeformatting.html">Source code formatting</a></li>
+                <li><a href="@Root/navbar.html">Navigation bar</a></li>
+                <li><a href="@Root/highlightusage.html">Highlight references</a></li>
+                <li><a href="@Root/rename.html">Rename refactoring</a></li>
+                <li><a href="@Root/depthcolorizer.html">Depth colorizer</a></li>
+                <li><a href="@Root/navigateto.html">NavigateTo</a></li>
+                <li><a href="@Root/syntaxcoloring.html">Syntax coloring</a></li>
+                <li><a href="@Root/folderorganization.html">Folder organization</a></li>
+                <li><a href="@Root/findallreferences.html">Find all references</a></li>
+                <li><a href="@Root/implementinterface.html">Implement interface</a></li>
+                <li><a href="@Root/recordstubgeneration.html">Record stub generation</a></li>
+                <li><a href="@Root/unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
+                <li><a href="@Root/resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
+
+                <li class="nav-header">API Documentation</li>
+                <li><a href="@Root/reference/index.html">API Reference</a></li>
+            </ul>
         </div>
       </div>
     </div>
