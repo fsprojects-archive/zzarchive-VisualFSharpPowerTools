@@ -23,7 +23,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
                                 projectFactory: ProjectFactory, includeUnusedDeclarations: bool) as self =
     
-    let getClassficationType cat =
+    let getClassificationType cat =
         match cat with
         | Category.ReferenceType -> Some "FSharp.ReferenceType"
         | Category.ValueType -> Some "FSharp.ValueType"
@@ -75,7 +75,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
                             let! symbolsUses, lexer =
                                 vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
-                                                                                true, getSymbolDeclLocation)
+                                                                                includeUnusedDeclarations, getSymbolDeclLocation)
 
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
@@ -128,7 +128,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
                 |> Seq.choose (fun loc -> 
                     maybe {
-                        let! clType = getClassficationType loc.Category
+                        let! clType = getClassificationType loc.Category
                         let! span = fromRange state.SnapshotSpan.Snapshot (loc.WordSpan.ToRange())
                         return clType, span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
                     })
