@@ -198,7 +198,9 @@ type DateTime with
 [<Test>]
 let ``attribute is an Attribute``() =
     """
+[<Attribute>]
 module TopLevel
+[<Attribute>]
 let f ([<Attribute>] arg: DateTime) = ()
 [<Attribute>]
 type T() =
@@ -210,15 +212,21 @@ type R = { [<Attribute>] F: int }
 type I =
     [<Attribute>]
     abstract Method: unit -> DateTime
+[<Attribute>]
+module M = 
+    let x = ()
 """ 
-    ==> [2, 11, Some Attribute
+    ==> [1, 4, None
          3, 4, Some Attribute
-         5, 8, Some Attribute
+         4, 11, Some Attribute
+         5, 4, Some Attribute
          7, 8, Some Attribute
-         7, 51, Some Attribute
-         8, 4, Some Attribute
-         9, 15, Some Attribute
-         11, 7, Some Attribute]
+         9, 8, Some Attribute
+         9, 51, Some Attribute
+         10, 4, Some Attribute
+         11, 15, Some Attribute
+         13, 7, Some Attribute
+         15, 4, Some Attribute]
 
 [<Test>]
 let ``type in an object expression method body is a FuncOrConstructor``() =
