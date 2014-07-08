@@ -101,8 +101,8 @@ module ParsedInput =
             |> Option.orElse (ifPosInRange r (fun _ -> List.tryPick (walkSynModuleDecl isTopLevel) decls))
 
         and walkAttribute (attr: SynAttribute) = 
-            if isPosInRange attr.Range then Some EntityKind.Attribute 
-            else None
+            if isPosInRange attr.Range then Some EntityKind.Attribute else None
+            |> Option.orElse (walkExprWithKind (Some EntityKind.Type) attr.ArgExpr)
 
         and walkTypar (Typar (ident, _, _)) = ifPosInRange ident.idRange (fun _ -> Some EntityKind.Type)
 
@@ -188,62 +188,62 @@ module ParsedInput =
             | SynExpr.LongIdent (_, _, _, r) -> 
                 if isPosInRange r then parentKind |> Option.orElse (Some FunctionOrValue) 
                 else None
-            | SynExpr.Paren (e, _, _, _) -> walkExpr e
-            | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
-            | SynExpr.Typed(e, _, _) -> walkExpr e
-            | SynExpr.Tuple(es, _, _) -> List.tryPick walkExpr es
-            | SynExpr.ArrayOrList(_, es, _) -> List.tryPick walkExpr es
+            | SynExpr.Paren (e, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.Quote(_, _, e, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.Typed(e, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.Tuple(es, _, _) -> List.tryPick (walkExprWithKind parentKind) es
+            | SynExpr.ArrayOrList(_, es, _) -> List.tryPick (walkExprWithKind parentKind) es
             | SynExpr.Record(_, _, fields, r) -> 
                 ifPosInRange r (fun _ ->
-                    fields |> List.tryPick (fun (_, e, _) -> e |> Option.bind walkExpr))
-            | SynExpr.New(_, t, e, _) -> walkExpr e |> Option.orElse (walkType t)
+                    fields |> List.tryPick (fun (_, e, _) -> e |> Option.bind (walkExprWithKind parentKind)))
+            | SynExpr.New(_, t, e, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
             | SynExpr.ObjExpr(_, _, bindings, ifaces, _, _) -> 
                 List.tryPick walkBinding bindings |> Option.orElse (List.tryPick walkInterfaceImpl ifaces)
-            | SynExpr.While(_, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.tryPick walkExpr [e1; e2; e3]
-            | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExpr e
-            | SynExpr.CompExpr(_, _, e, _) -> walkExpr e
-            | SynExpr.Lambda(_, _, _, e, _) -> walkExpr e
+            | SynExpr.While(_, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2; e3]
+            | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.CompExpr(_, _, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.Lambda(_, _, _, e, _) -> walkExprWithKind parentKind e
             | SynExpr.MatchLambda(_, _, synMatchClauseList, _, _) -> 
                 List.tryPick walkClause synMatchClauseList
             | SynExpr.Match(_, e, synMatchClauseList, _, _) -> 
-                walkExpr e |> Option.orElse (List.tryPick walkClause synMatchClauseList)
-            | SynExpr.Do(e, _) -> walkExpr e
-            | SynExpr.Assert(e, _) -> walkExpr e
-            | SynExpr.App(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
+                walkExprWithKind parentKind e |> Option.orElse (List.tryPick walkClause synMatchClauseList)
+            | SynExpr.Do(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.Assert(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.App(_, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
             | SynExpr.TypeApp(e, _, tys, _, _, _, _) -> 
                 walkExprWithKind (Some EntityKind.Type) e |> Option.orElse (List.tryPick walkType tys)
-            | SynExpr.LetOrUse(_, _, bindings, e, _) -> List.tryPick walkBinding bindings |> Option.orElse (walkExpr e)
-            | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
-            | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.Lazy(e, _) -> walkExpr e
-            | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
+            | SynExpr.LetOrUse(_, _, bindings, e, _) -> List.tryPick walkBinding bindings |> Option.orElse (walkExprWithKind parentKind e)
+            | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.Lazy(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
             | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
-                List.tryPick walkExpr [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExpr e)
+                List.tryPick (walkExprWithKind parentKind) [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExprWithKind parentKind e)
             | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some EntityKind.FunctionOrValue)
-            | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
-            | SynExpr.DotGet(e, _, _, _) -> walkExpr e
-            | SynExpr.DotSet(e, _, _, _) -> walkExpr e
-            | SynExpr.DotIndexedGet(e, args, _, _) -> walkExpr e |> Option.orElse (List.tryPick walkIndexerArg args)
-            | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExpr e |> Option.orElse (List.tryPick walkIndexerArg args)
-            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.tryPick walkExpr [e1; e2; e3]
-            | SynExpr.TypeTest(e, t, _) -> walkExpr e |> Option.orElse (walkType t)
-            | SynExpr.Upcast(e, t, _) -> walkExpr e |> Option.orElse (walkType t)
-            | SynExpr.Downcast(e, t, _) -> walkExpr e |> Option.orElse (walkType t)
-            | SynExpr.InferredUpcast(e, _) -> walkExpr e
-            | SynExpr.InferredDowncast(e, _) -> walkExpr e
-            | SynExpr.AddressOf(_, e, _, _) -> walkExpr e
-            | SynExpr.JoinIn(e1, _, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.YieldOrReturn(_, e, _) -> walkExpr e
-            | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
-            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.DoBang(e, _) -> walkExpr e
+            | SynExpr.LongIdentSet(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.DotGet(e, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.DotSet(e, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.DotIndexedGet(e, args, _, _) -> walkExprWithKind parentKind e |> Option.orElse (List.tryPick walkIndexerArg args)
+            | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExprWithKind parentKind e |> Option.orElse (List.tryPick walkIndexerArg args)
+            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2; e3]
+            | SynExpr.TypeTest(e, t, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
+            | SynExpr.Upcast(e, t, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
+            | SynExpr.Downcast(e, t, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
+            | SynExpr.InferredUpcast(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.InferredDowncast(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.AddressOf(_, e, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.JoinIn(e1, _, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.YieldOrReturn(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.DoBang(e, _) -> walkExprWithKind parentKind e
             | SynExpr.TraitCall (ts, sign, e, _) ->
                 List.tryPick walkTypar ts 
                 |> Option.orElse (walkMemberSig sign)
-                |> Option.orElse (walkExpr e)
+                |> Option.orElse (walkExprWithKind parentKind e)
             | _ -> None
 
         and walkExpr = walkExprWithKind None

@@ -145,7 +145,7 @@ type T() =
          10, 23, Some Type]
 
 [<Test>]
-let ``type name in interface declaration``() =
+let ``type name in interface declaration is a Type``() =
     """
 module TopLevel
 type T() =
@@ -155,6 +155,15 @@ type T() =
     ==> [3, 20, Some Type
          4, 22, Some Type
          4, 33, Some Type]
+
+[<Test>]
+let ``type name in attribute argument is a Type``() =
+    """
+module TopLevel
+[<Attribute (Type.Literal)>]
+let x = 1
+""" 
+    ==> [2, 15, Some Type]
 
 [<Test>]
 let ``argument type annotation is a Type``() =
