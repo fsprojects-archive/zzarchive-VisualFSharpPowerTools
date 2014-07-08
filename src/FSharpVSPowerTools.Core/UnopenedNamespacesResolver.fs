@@ -94,10 +94,11 @@ module ParsedInput =
             else None
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
-            List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
+            List.tryPick (walkSynModuleOrNamespace true) moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, _, _, r)) =
-            ifPosInRange r (fun _ -> List.tryPick walkSynModuleDecl decls)
+        and walkSynModuleOrNamespace isTopLevel (SynModuleOrNamespace(_, isModule, decls, _, attrs, _, r)) =
+            if isModule && isTopLevel then None else List.tryPick walkAttribute attrs
+            |> Option.orElse (ifPosInRange r (fun _ -> List.tryPick (walkSynModuleDecl isTopLevel) decls))
 
         and walkAttribute (attr: SynAttribute) = 
             if isPosInRange attr.Range then Some EntityKind.Attribute 
@@ -265,7 +266,7 @@ module ParsedInput =
             | SynMemberSig.Interface(t, _) -> walkType t
             | SynMemberSig.ValField(f, _) -> walkField f
             | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) -> 
-                walkComponentInfo info
+                walkComponentInfo false info
                 |> Option.orElse (walkTypeDefnSigRepr repr)
                 |> Option.orElse (List.tryPick walkMemberSig memberSigs)
 
@@ -304,8 +305,8 @@ module ParsedInput =
             | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType t
             | _ -> None
 
-        and walkComponentInfo (ComponentInfo(attrs, typars, constraints, _, _, _, _, r)) =
-            ifPosInRange r (fun _ -> Some EntityKind.Type)
+        and walkComponentInfo isModule (ComponentInfo(attrs, typars, constraints, _, _, _, _, r)) =
+            if isModule then None else ifPosInRange r (fun _ -> Some EntityKind.Type)
             |> Option.orElse (
                 List.tryPick walkAttribute attrs
                 |> Option.orElse (List.tryPick walkTyparDecl typars)
@@ -320,18 +321,18 @@ module ParsedInput =
             | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
 
         and walkTypeDefn (TypeDefn (info, repr, members, _)) =
-            walkComponentInfo info
+            walkComponentInfo false info
             |> Option.orElse (walkTypeDefnRepr repr)
             |> Option.orElse (List.tryPick walkMember members)
 
-        and walkSynModuleDecl (decl: SynModuleDecl) =
+        and walkSynModuleDecl isTopLevel (decl: SynModuleDecl) =
             match decl with
-            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(_, modules, _, range) ->
-                ifPosInRange range (fun _ -> List.tryPick walkSynModuleDecl modules)
+            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace isTopLevel fragment
+            | SynModuleDecl.NestedModule(info, modules, _, range) ->
+                walkComponentInfo true info
+                |> Option.orElse (ifPosInRange range (fun _ -> List.tryPick (walkSynModuleDecl false) modules))
             | SynModuleDecl.Open _ -> None
-            | SynModuleDecl.Let (_, bindings, r) ->
-                ifPosInRange r (fun _ -> List.tryPick walkBinding bindings)
+            | SynModuleDecl.Let (_, bindings, _) -> List.tryPick walkBinding bindings
             | SynModuleDecl.Types (types, _) -> List.tryPick walkTypeDefn types
             | _ -> None
 
