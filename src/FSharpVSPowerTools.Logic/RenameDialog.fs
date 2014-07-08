@@ -30,17 +30,16 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
         let check validationCheck error = if validationCheck then None else Some error
 
         debug "[Rename Refactoring] Check the following name: %s" name
-        let name = name.Trim()
         match workflowArguments with
         | None -> Some Resource.renameErrorMessage
         | Some(fssym, _, _) ->
             match symbol.Kind, fssym with
             | _, :? FSharpUnionCase ->
                 // Union cases shouldn't be lowercase
-                check (isIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0]))) Resource.validatingUnionCase 
+                check (isFixableIdentifier name && not (String.IsNullOrEmpty(name) || Char.IsLower(name.[0]) || name.[0] = ' ')) Resource.validatingUnionCase 
             | _, :? FSharpActivePatternCase ->
                     // Different from union cases, active patterns don't accept double-backtick identifiers
-                    check (isIdentifier name && not (String.IsNullOrEmpty name) && Char.IsUpper(name.[0])) Resource.validatingActivePattern
+                    check (isFixableIdentifier name && not (String.IsNullOrEmpty name) && Char.IsUpper(name.[0])) Resource.validatingActivePattern
             | Operator, _ -> 
                 check (isOperator name) Resource.validatingOperator
             | GenericTypeParameter, _ -> 
@@ -48,7 +47,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
             | StaticallyResolvedTypeParameter, _ ->
                 check (isStaticallyResolvedTypeParameter name) Resource.validatingStaticallyResolvedTypeParameter
             | (Ident | Other), _ ->
-                check (isIdentifier name) Resource.validatingIdentifier
+                check (isFixableIdentifier name) Resource.validatingIdentifier
 
     // Complete validation chain for the name property
     let validateName = 
