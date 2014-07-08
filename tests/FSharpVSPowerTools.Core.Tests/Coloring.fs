@@ -10,19 +10,19 @@ type Class() =
     static let staticEvent = Event<_>()
     let classLetValue = 1
     let classLetFunction x = x
-    member x.Method y = y
-    member x.Property = 1
+    member __.Method y = y
+    member __.Property = 1
     static member StaticMethod x = x
     static member StaticProperty = 1
-    member x.Event = event.Publish
+    member __.Event = event.Publish
     static member StaticEvent = staticEvent.Publish
-    new (x: int) = new Class()
+    new (_: int) = new Class()
     interface System.IDisposable with
-        member x.Dispose() = ()
-    member x.PropWithGetterAndSetter 
+        member __.Dispose() = ()
+    member __.PropWithGetterAndSetter 
                 with get() = 1 
-                and set(value: int) = ()
-
+                and set(_: int) = ()
+    member __.Foo() = classLetFunction 1 + classLetValue
 let dateTime = new System.Net.WebClient()
 
 module M1 =
@@ -60,9 +60,9 @@ seq {
 } |> ignore
 
 type CustomBuilder() =
-    member x.Yield (()) = ()
+    member __.Yield (()) = ()
     [<CustomOperation ("add", MaintainsVariableSpace = true)>]
-    member x.Add (_, pattern: string) = pattern
+    member __.Add (_, pattern: string) = pattern
 let customComputationExpression = CustomBuilder()
 
 let _ = customComputationExpression { add "str" }
@@ -71,7 +71,7 @@ let _ = System.Guid.NewGuid().ToString("N").Substring(1)
 let _ = list<_>.Empty
 let _ = Microsoft.FSharp.Collections.List<int>.Empty
 type System.String with
-    member x.``Long func``() = "x"
+    member __.``Long func``() = "x"
 let _ = "x".``Long func``().Substring(3)
 let arr = [|1|]
 let _ = arr.[0]
@@ -80,9 +80,9 @@ type MutableRecord =
     { mutable MutableField: int }
 type MutableClass() = 
     let mutable mutableField = 0
+    let _ = mutableField
 let func() =
-    let mutable mutableLocalVar = 1
-    ()
+    let mutable mutableLocalVar = 1 in mutableLocalVar
 let refValue = ref 1
 refValue := !refValue + 1
 type ClassWithRefValue() =
@@ -97,9 +97,9 @@ let _ = id <@ 1 = 1 @>
 let f x y = ()
 let _ = f <@ 1 = 1 @> <@ 2 = 2 @>
 type TypeWithQuotations() =
-    let x = <@ 1 = 1 @>
-    member x.F() = <@ 1 = 1 @>
-    member x.P = <@ 1 + 1 @>
+    let _ = <@ 1 = 1 @>
+    member __.F() = <@ 1 = 1 @>
+    member __.P = <@ 1 + 1 @>
 let _ = <@@ 1 @@>
 let _  = f <@ 1  
               + 2 
@@ -140,7 +140,7 @@ module Module2 =
         let x = ()
 let _ = System.Linq.Enumerable.Range(0, 1)
 let _ = [1] |> Seq.sort |> Seq.toList |> List.rev
-let ``func with byref arg`` (p: byref<int>) = ()
+let ``func with byref arg`` (_: byref<int>) = ()
 [<Measure>] type ms
 let _: int<ms> = 
     1<ms>
@@ -180,3 +180,21 @@ let _ =
     }
 let (|ActivePattern|_|) x = Some x
 let _ = (|ActivePattern|_|) 1
+module private PrivateModule =
+    let func _ = ()
+    let value = ()
+type private PrivateClass() = class end
+type PublicClass() =
+    let letValue = 1
+    let letFunc _ = ()
+    member private __.Prop = ()
+    member private __.Method _ = ()
+    member this.PublicMethod _ = ()
+    member __.Method1 (arg1, arg2) =
+        let local = 1
+        arg2
+    member this.Method2 _ = this
+module TestUnused =
+    let func arg1 arg2 = 
+        let local = 1
+        arg2

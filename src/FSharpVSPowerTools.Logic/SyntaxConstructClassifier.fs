@@ -46,16 +46,6 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
             return! projectFactory.CreateForFileInProject doc.TextBuffer doc.FilePath projectItem.ContainingProject }
 
-    let isSymbolLocalForProject (symbol: FSharpSymbol) = 
-        match symbol with 
-        | :? FSharpParameter -> true
-        | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || not m.Accessibility.IsPublic
-        | :? FSharpEntity as m -> not m.Accessibility.IsPublic
-        | :? FSharpGenericParameter -> true
-        | :? FSharpUnionCase as m -> not m.Accessibility.IsPublic
-        | :? FSharpField as m -> not m.Accessibility.IsPublic
-        | _ -> false
-
     let updateSyntaxConstructClassifiers force =
         let cancelToken = new CancellationTokenSource() 
         cancellationToken.Swap (fun _ -> Some (cancelToken))
@@ -78,49 +68,19 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 let worker = 
                     async {
                         try
-                            let! allSymbolsUses, lexer =
-                                vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No)
+                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
+                            let getSymbolDeclLocation sym =
+                                projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath                                    
+
+                            let! symbolsUses, lexer =
+                                vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
+                                                                                true, getSymbolDeclLocation)
+
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
 
-                            let singleDefs = 
-                                if includeUnusedDeclarations then
-                                    allSymbolsUses
-                                    |> Seq.groupBy (fun su -> su.Symbol)
-                                    |> Seq.choose (fun (symbol, uses) -> 
-                                        match Seq.toList uses with
-                                        | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
-                                            Some symbol 
-                                        | _ ->
-                                            None)
-                                    |> Seq.toList
-                                else
-                                    []
-
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                                    
-                            let! notUsedSymbols =
-                                singleDefs 
-                                |> Async.List.map (fun sym ->
-                                    async {
-                                        match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
-                                        | Some SymbolDeclarationLocation.File -> return Some sym
-                                        | Some (SymbolDeclarationLocation.Projects declProjects) ->
-                                            let! isSymbolUsed = vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
-                                            if isSymbolUsed then return None
-                                            else return Some sym
-                                        | _ -> return None })
-                                |> Async.map (List.choose id)
-                                    
-                            let usedSymbolUses =
-                                match notUsedSymbols with
-                                | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
-                                | _ ->
-                                    allSymbolsUses 
-                                    |> Array.map (fun su -> 
-                                        su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
-
                             let spans = 
-                                getCategoriesAndLocations (usedSymbolUses, parseResults.ParseTree, lexer)
+                                getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
                                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                             state.Swap (fun _ -> 

@@ -27,11 +27,11 @@ let opts =
     languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, args, [||], framework)
     |> Async.RunSynchronously
 
-let checkCategories line (expected: (Category * int * int) list)  = 
+let checkLine line (expected: (Category * int * int) list)  = 
     let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource) 
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource, true,
+                                                      (fun _ -> async { return Some [opts] }))
         |> Async.RunSynchronously
-        |> Array.map (fun su -> su, true)
 
     let lexer = 
         { new LexerBase() with
@@ -59,81 +59,81 @@ let checkCategories line (expected: (Category * int * int) list)  =
 
 [<Test>]
 let ``module value``() = 
-    checkCategories 3 []
-    checkCategories 6 []
+    checkLine 3 []
+    checkLine 6 []
 
 [<Test>]
-let ``module function``() = checkCategories 4 [ Category.Function, 4, 18 ]
+let ``module function``() = checkLine 4 [ Category.Function, 4, 18 ]
 
 [<Test>]
 let ``module higher order function``() = 
-    checkCategories 5 [ Category.Function, 24, 28; Category.Function, 34, 38; Category.Function, 4, 23 ]
+    checkLine 5 [ Category.Function, 24, 28; Category.Function, 34, 38; Category.Function, 4, 23 ]
 
 [<Test>]
-let ``class let value``() = checkCategories 11 []
+let ``class let value``() = checkLine 11 []
 
 [<Test>]
-let ``class let function``() = checkCategories 12 [ Category.Function, 8, 24 ]
+let ``class let function``() = checkLine 12 [ Category.Function, 8, 24 ]
 
 [<Test>]
-let ``class method``() = checkCategories 13 [ Category.Function, 13, 19 ]
+let ``class method``() = checkLine 13 [ Category.Function, 14, 20 ]
 
 [<Test>]
-let ``class property``() = checkCategories 14 []
+let ``class property``() = checkLine 14 []
 
 [<Test>]
-let ``static method``() = checkCategories 15 [ Category.Function, 18, 30 ]
+let ``static method``() = checkLine 15 [ Category.Function, 18, 30 ]
 
 [<Test>]
-let ``static property``() = checkCategories 16 []
+let ``static property``() = checkLine 16 []
 
 [<Test>]
 let ``event``() = 
-    checkCategories 9 [ Category.ReferenceType, 16, 21 ]
-    checkCategories 17 []
+    checkLine 9 [ Category.ReferenceType, 16, 21 ]
+    checkLine 17 []
 
 [<Test>]
 let ``static event``() = 
-    checkCategories 10 [ Category.ReferenceType, 29, 34 ]
-    checkCategories 18 []
+    checkLine 10 [ Category.ReferenceType, 29, 34 ]
+    checkLine 18 []
 
 [<Test>]
 let ``constructors``() = 
-    checkCategories 8 [ Category.ReferenceType, 5, 10 ]
-    checkCategories 19 [ Category.ValueType, 12, 15; Category.ReferenceType, 23, 28 ]
+    checkLine 8 [ Category.ReferenceType, 5, 10 ]
+    checkLine 19 [ Category.ValueType, 12, 15; Category.ReferenceType, 23, 28 ]
 
 [<Test>]
 let ``interface implemented in a class``() = 
-    checkCategories 20 [ Category.ReferenceType, 21, 32 ]
-    checkCategories 21 [ Category.Function, 17, 24 ]
+    checkLine 20 [ Category.ReferenceType, 21, 32 ]
+    checkLine 21 [ Category.Function, 18, 25 ]
 
 [<Test>]
 let ``property with explicit accessors``() = 
-    checkCategories 22 [] 
-    checkCategories 23 []
-    checkCategories 24 [ Category.ValueType, 31, 34 ]
+    checkLine 22 [] 
+    checkLine 23 []
+    checkLine 24 [ Category.ValueType, 27, 30 ]
 
 [<Test>]
 let ``fully qualified CLI type constructor``() = 
-    checkCategories 26 [ Category.ReferenceType, 30, 39 ]
+    checkLine 26 [ Category.ReferenceType, 30, 39 ]
 
 [<Test>]
 let ``fully qualified F# type constructor``() = 
-    checkCategories 32 [ Category.Module, 18, 20; Category.Module, 15, 17; Category.ReferenceType, 21, 25 ]
+    checkLine 32 [ Category.Module, 18, 20; Category.Module, 15, 17; Category.ReferenceType, 21, 25 ]
 
 [<Test>]
 let ``generic class declaration``() = 
-    checkCategories 34 [ Category.ReferenceType, 5, 17 ]
+    checkLine 34 [ Category.ReferenceType, 5, 17 ]
 
 [<Test>]
 let ``generic class instantiation``() = 
-    checkCategories 35 [ Category.ReferenceType, 24, 36; Category.ValueType, 37, 40 ]
-    checkCategories 36 [ Category.ReferenceType, 35, 47; Category.Module, 51, 53; Category.Module, 48, 50; Category.ReferenceType, 54, 58 ]
-    checkCategories 37 [ Category.ReferenceType, 28, 40; Category.ValueType, 48, 56 ]
+    checkLine 35 [ Category.ReferenceType, 24, 36; Category.ValueType, 37, 40 ]
+    checkLine 36 [ Category.ReferenceType, 35, 47; Category.Module, 51, 53; Category.Module, 48, 50; Category.ReferenceType, 54, 58 ]
+    checkLine 37 [ Category.ReferenceType, 28, 40; Category.ValueType, 48, 56 ]
 
 [<Test>]
 let ``record``() = 
-    checkCategories 39 
+    checkLine 39 
         [ 
             Category.ReferenceType, 5, 11
             Category.ValueType, 26, 29
@@ -142,175 +142,175 @@ let ``record``() =
 
 [<Test>]
 let ``value type``() = 
-    checkCategories 41 [ Category.ValueType, 27, 30 ]
-    checkCategories 42 [ Category.ValueType, 22, 27 ]
-    checkCategories 43 [ Category.ValueType, 34, 42 ]
-    checkCategories 44 [ Category.ValueType, 5, 18 ]
-    checkCategories 45 [ Category.ValueType, 5, 30; Category.ValueType, 33, 46 ]
-    checkCategories 46 [ Category.ValueType, 20, 33 ] 
-    checkCategories 47 [ Category.ValueType, 31, 56; Category.ValueType, 59, 84 ]
+    checkLine 41 [ Category.ValueType, 27, 30 ]
+    checkLine 42 [ Category.ValueType, 22, 27 ]
+    checkLine 43 [ Category.ValueType, 34, 42 ]
+    checkLine 44 [ Category.ValueType, 5, 18 ]
+    checkLine 45 [ Category.ValueType, 5, 30; Category.ValueType, 33, 46 ]
+    checkLine 46 [ Category.ValueType, 20, 33 ] 
+    checkLine 47 [ Category.ValueType, 31, 56; Category.ValueType, 59, 84 ]
 
 [<Test>]
 let ``DU case of function``() =
-    checkCategories 49 [ Category.ReferenceType, 5, 19; Category.PatternCase, 22, 30; Category.ReferenceType, 35, 39; Category.ReferenceType, 43, 47 ]
-    checkCategories 50 [ Category.PatternCase, 5, 13; Category.Function, 14, 22; Category.PatternCase, 26, 34 ]
-    checkCategories 51 [ Category.PatternCase, 6, 14; Category.PatternCase, 34, 42; Category.Function, 43, 47; Category.Function, 51, 55 ]
+    checkLine 49 [ Category.ReferenceType, 5, 19; Category.PatternCase, 22, 30; Category.ReferenceType, 35, 39; Category.ReferenceType, 43, 47 ]
+    checkLine 50 [ Category.PatternCase, 5, 13; Category.Function, 14, 22; Category.PatternCase, 26, 34 ]
+    checkLine 51 [ Category.PatternCase, 6, 14; Category.PatternCase, 34, 42; Category.Function, 43, 47; Category.Function, 51, 55 ]
 
 [<Test>]
-let ``double quoted function without spaces``() = checkCategories 52 [ Category.Function, 4, 45 ]
+let ``double quoted function without spaces``() = checkLine 52 [ Category.Function, 4, 45 ]
 
 [<Test>]
-let ``double quoted function with spaces``() = checkCategories 53 [ Category.Function, 4, 42 ]
+let ``double quoted function with spaces``() = checkLine 53 [ Category.Function, 4, 42 ]
 
 [<Test>]
-let ``fully qualified attribute``() = checkCategories 54 [ Category.ReferenceType, 21, 36 ]
+let ``fully qualified attribute``() = checkLine 54 [ Category.ReferenceType, 21, 36 ]
 
 [<Test>]
-let ``async type``() = checkCategories 56 [ Category.Function, 4, 16; Category.ReferenceType, 19, 24; Category.Function, 25, 41 ]
+let ``async type``() = checkLine 56 [ Category.Function, 4, 16; Category.ReferenceType, 19, 24; Category.Function, 25, 41 ]
 
 [<Test>]
 let ``standard computation expression``() = 
-    checkCategories 57 []
-    checkCategories 58 [ Category.Function, 8, 12 ]
-    checkCategories 59 [ Category.Function, 10, 14 ]
+    checkLine 57 []
+    checkLine 58 [ Category.Function, 8, 12 ]
+    checkLine 59 [ Category.Function, 10, 14 ]
 
 [<Test>]
-let ``user defined computation expression``() = checkCategories 68 []
+let ``user defined computation expression``() = checkLine 68 []
 
 [<Test>]
 let ``method chain``() =
-    checkCategories 69 [ Category.ReferenceType, 15, 26; Category.Function, 39, 46 ]
+    checkLine 69 [ Category.ReferenceType, 15, 26; Category.Function, 39, 46 ]
     
 [<Test>]
 let ``complex method chain``() =
-    checkCategories 70 
+    checkLine 70 
         [ Category.ValueType, 15, 19; Category.Function, 20, 27; Category.Function, 30, 38; Category.Function, 44, 53 ]
 
 [<Test>]
-let ``generic type with ignored type parameter``() = checkCategories 71 [ Category.ReferenceType, 8, 12 ]
+let ``generic type with ignored type parameter``() = checkLine 71 [ Category.ReferenceType, 8, 12 ]
 
 [<Test>]
-let ``F# namespace``() = checkCategories 72 [ Category.ReferenceType, 37, 41; Category.ValueType, 42, 45 ]
+let ``F# namespace``() = checkLine 72 [ Category.ReferenceType, 37, 41; Category.ValueType, 42, 45 ]
        
 [<Test>]
-let ``double quoted member``() = checkCategories 75 [ Category.Function, 12, 25; Category.Function, 28, 37 ]
+let ``double quoted member``() = checkLine 75 [ Category.Function, 12, 25; Category.Function, 28, 37 ]
 
 [<Test>]
-let ``indexer``() = checkCategories 77 [ Category.Module, 11, 12 ] 
+let ``indexer``() = checkLine 77 [ Category.Module, 11, 12 ] 
 
 [<Test>]
-let ``mutable value``() = checkCategories 78 [ Category.MutableVar, 12, 24 ]
+let ``mutable value``() = checkLine 78 [ Category.MutableVar, 12, 24 ]
 
 [<Test>]
 let ``mutable field``() = 
-    checkCategories 80 [ Category.MutableVar, 14, 26; Category.ValueType, 28, 31 ]
-    checkCategories 82 [ Category.MutableVar, 16, 28 ]
-    checkCategories 84 [ Category.MutableVar, 16, 31 ]
+    checkLine 80 [ Category.MutableVar, 14, 26; Category.ValueType, 28, 31 ]
+    checkLine 82 [ Category.MutableVar, 16, 28 ]
+    checkLine 85 [ Category.MutableVar, 16, 31; Category.MutableVar, 39, 54 ]
 
 [<Test>]
 let ``reference value``() = 
-    checkCategories 86 [ Category.MutableVar, 4, 12; Category.Function, 15, 18 ]
-    checkCategories 87 [ Category.MutableVar, 0, 8; Category.MutableVar, 13, 21 ]
+    checkLine 86 [ Category.MutableVar, 4, 12; Category.Function, 15, 18 ]
+    checkLine 87 [ Category.MutableVar, 0, 8; Category.MutableVar, 13, 21 ]
 
 [<Test>]
 let ``reference field``() = 
-    checkCategories 89 [ Category.Function, 19, 22; Category.MutableVar, 8, 16 ]
-    checkCategories 90 [ Category.MutableVar, 13, 21 ]
-    checkCategories 92 [ Category.MutableVar, 6, 11; Category.ValueType, 13, 16; Category.ReferenceType, 17, 20 ]
+    checkLine 89 [ Category.Function, 19, 22; Category.MutableVar, 8, 16 ]
+    checkLine 90 [ Category.MutableVar, 13, 21 ]
+    checkLine 92 [ Category.MutableVar, 6, 11; Category.ValueType, 13, 16; Category.ReferenceType, 17, 20 ]
 
 [<Test>]
-let ``single line quotation``() = checkCategories 93 [ Category.Quotation, 8, 19 ]
+let ``single line quotation``() = checkLine 93 [ Category.Quotation, 8, 19 ]
 
 [<Test>]
 let ``multi line quotation``() = 
-    checkCategories 94 [ Category.Quotation, 8, 16 ]
-    checkCategories 95 [ Category.Quotation, 11, 22 ]
+    checkLine 94 [ Category.Quotation, 8, 16 ]
+    checkLine 95 [ Category.Quotation, 11, 22 ]
 
 [<Test>]
 let ``quotation as function argument``() = 
-    checkCategories 96 [ Category.Function, 8, 10; Category.Quotation, 11, 22 ]
-    checkCategories 98 [ Category.Function, 8, 9; Category.Quotation, 10, 21; Category.Quotation, 22, 33 ]
-    checkCategories 123 [ Category.Quotation, 6, 16 ]
-    checkCategories 129 [ Category.Function, 8, 11; Category.Quotation, 16, 23 ]
+    checkLine 96 [ Category.Function, 8, 10; Category.Quotation, 11, 22 ]
+    checkLine 98 [ Category.Function, 8, 9; Category.Quotation, 10, 21; Category.Quotation, 22, 33 ]
+    checkLine 123 [ Category.Quotation, 6, 16 ]
+    checkLine 129 [ Category.Function, 8, 11; Category.Quotation, 16, 23 ]
 
 [<Test>]
 let ``quotation in type``() = 
-    checkCategories 100 [ Category.Quotation, 12, 23 ]
-    checkCategories 101 [ Category.Function, 13, 14; Category.Quotation, 19, 30 ]
-    checkCategories 102 [ Category.Quotation, 17, 28 ]
+    checkLine 100 [ Category.Quotation, 12, 23 ]
+    checkLine 101 [ Category.Function, 14, 15; Category.Quotation, 20, 31 ]
+    checkLine 102 [ Category.Quotation, 18, 29 ]
 
 [<Test>]
-let ``untyped quotation``() = checkCategories 103 [ Category.Quotation, 8, 17 ]
+let ``untyped quotation``() = checkLine 103 [ Category.Quotation, 8, 17 ]
 
 [<Test>]
 let ``complicated quotation layout``() = 
-    checkCategories 104 [ Category.Function, 9, 10; Category.Quotation, 11, 15 ]
-    checkCategories 105 [ Category.Quotation, 14, 17 ]
-    checkCategories 106 [ Category.Quotation, 14, 20; Category.Quotation, 21, 30 ]
+    checkLine 104 [ Category.Function, 9, 10; Category.Quotation, 11, 15 ]
+    checkLine 105 [ Category.Quotation, 14, 17 ]
+    checkLine 106 [ Category.Quotation, 14, 20; Category.Quotation, 21, 30 ]
 
 [<Test>]
-let ``quotation in lambda``() = checkCategories 107 [ Category.Quotation, 17, 24 ]
+let ``quotation in lambda``() = checkLine 107 [ Category.Quotation, 17, 24 ]
 
 [<Test>]
-let ``quotation in record``() = checkCategories 109 [ Category.Quotation, 18, 25 ]
+let ``quotation in record``() = checkLine 109 [ Category.Quotation, 18, 25 ]
 
 [<Test>]
-let ``quotation in list expression``() = checkCategories 110 [ Category.Quotation, 10, 17 ]
+let ``quotation in list expression``() = checkLine 110 [ Category.Quotation, 10, 17 ]
 
 [<Test>]
-let ``quotation in seq for expression``() = checkCategories 111 [ Category.Quotation, 34, 41 ]
+let ``quotation in seq for expression``() = checkLine 111 [ Category.Quotation, 34, 41 ]
 
 [<Test>]
-let ``quotation as a result of function``() = checkCategories 116 [ Category.Quotation, 4, 11 ]
+let ``quotation as a result of function``() = checkLine 116 [ Category.Quotation, 4, 11 ]
 
 [<Test>]
 let ``quotation as default constructor arguments``() = 
-    checkCategories 118 [ Category.ReferenceType, 8, 39; Category.Quotation, 40, 47 ]
+    checkLine 118 [ Category.ReferenceType, 8, 39; Category.Quotation, 40, 47 ]
 
 [<Test>]
 let ``quotation as initialization of auto property``() = 
-    checkCategories 125 [ Category.MutableVar, 15, 19; Category.Quotation, 22, 31 ]
+    checkLine 125 [ Category.MutableVar, 15, 19; Category.Quotation, 22, 31 ]
 
 [<Test>]
-let ``quotation in property setter``() = checkCategories 127 [ Category.Quotation, 31, 40 ]
+let ``quotation in property setter``() = checkLine 127 [ Category.Quotation, 31, 40 ]
 
 [<Test>]
-let ``quotation in nested module``() = checkCategories 131 [ Category.Quotation, 12, 19 ]
+let ``quotation in nested module``() = checkLine 131 [ Category.Quotation, 12, 19 ]
 
 [<Test>]
 let ``quotation inside computation expression``() =
-    checkCategories 166 [ Category.Quotation, 16, 23 ]
-    checkCategories 167 [ Category.Function, 11, 17; Category.Quotation, 18, 25 ]
-    checkCategories 168 [ Category.Function, 17, 20; Category.Quotation, 21, 28 ]
-    checkCategories 170 [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
-    checkCategories 172 [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
-    checkCategories 173 [ Category.Function, 12, 19; Category.Quotation, 20, 28 ]
-    checkCategories 174 [ Category.Quotation, 14, 21 ]
-    checkCategories 177 [ Category.Quotation, 19, 26 ]
-    checkCategories 179 [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
+    checkLine 166 [ Category.Quotation, 16, 23 ]
+    checkLine 167 [ Category.Function, 11, 17; Category.Quotation, 18, 25 ]
+    checkLine 168 [ Category.Function, 17, 20; Category.Quotation, 21, 28 ]
+    checkLine 170 [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
+    checkLine 172 [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
+    checkLine 173 [ Category.Function, 12, 19; Category.Quotation, 20, 28 ]
+    checkLine 174 [ Category.Quotation, 14, 21 ]
+    checkLine 177 [ Category.Quotation, 19, 26 ]
+    checkLine 179 [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
 
 [<Test>]
 let ``tuple alias``() = 
-    checkCategories 132 [ Category.ReferenceType, 5, 10; Category.ValueType, 13, 16; Category.ReferenceType, 19, 25 ]    
-    checkCategories 133 [ Category.Function, 4, 13; Category.ReferenceType, 18, 23; Category.ReferenceType, 27, 32 ]
+    checkLine 132 [ Category.ReferenceType, 5, 10; Category.ValueType, 13, 16; Category.ReferenceType, 19, 25 ]    
+    checkLine 133 [ Category.Function, 4, 13; Category.ReferenceType, 18, 23; Category.ReferenceType, 27, 32 ]
 
 [<Test>]
 let ``multiline method chain``() = 
-    checkCategories 136 [ Category.Function, 9, 18 ]
-    checkCategories 137 [ Category.Function, 9, 13; Category.Function, 16, 22 ]
+    checkLine 136 [ Category.Function, 9, 18 ]
+    checkLine 137 [ Category.Function, 9, 13; Category.Function, 16, 22 ]
 
 [<Test>]
 let ``module``() = 
-    checkCategories 1 [ Category.Module, 7, 14 ]
-    checkCategories 138 [ Category.Module, 7, 14 ]
-    checkCategories 139 [ Category.Module, 11, 18 ]
+    checkLine 1 [ Category.Module, 7, 14 ]
+    checkLine 138 [ Category.Module, 7, 14 ]
+    checkLine 139 [ Category.Module, 11, 18 ]
 
 [<Test>]
-let ``static CLR class``() = checkCategories 141 [ Category.ReferenceType, 20, 30; Category.Function, 31, 36 ]
+let ``static CLR class``() = checkLine 141 [ Category.ReferenceType, 20, 30; Category.Function, 31, 36 ]
 
 [<Test>]
 let ``F# external modules``() = 
-    checkCategories 142 
+    checkLine 142 
         [
             Category.Module, 15, 18; Category.Function, 19, 23
             Category.Module, 27, 30; Category.Function, 31, 37
@@ -319,37 +319,79 @@ let ``F# external modules``() =
 
 [<Test>]
 let ``byref argument``() = 
-    checkCategories 143 
+    checkLine 143 
         [ Category.Function, 4, 27
           Category.ReferenceType, 32, 37
           Category.ValueType, 38, 41 ]
 
 [<Test>]
 let ``unit of measure``() =
-    checkCategories 145 [ Category.ValueType, 7, 10; Category.ReferenceType, 11, 13 ]
-    checkCategories 146 [ Category.ReferenceType, 6, 8 ]
-    checkCategories 148 [ Category.ValueType, 14, 17; Category.ReferenceType, 18, 20 ]
+    checkLine 145 [ Category.ValueType, 7, 10; Category.ReferenceType, 11, 13 ]
+    checkLine 146 [ Category.ReferenceType, 6, 8 ]
+    checkLine 148 [ Category.ValueType, 14, 17; Category.ReferenceType, 18, 20 ]
 
 [<Test>]
 let ``custom numeric literal``() = 
-    checkCategories 149 []    
-    checkCategories 152 []
+    checkLine 149 []    
+    checkLine 152 []
 
 [<Test>]
 let ``anonymous generic parameters``() =
-    checkCategories 154 [ Category.Function, 8, 10; Category.ReferenceType, 16, 19; Category.ReferenceType, 34, 37 ]
-    checkCategories 155 [ Category.Function, 8, 11; Category.ReferenceType, 16, 19; Category.ReferenceType, 34, 37 ] 
-    checkCategories 156 [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
-    checkCategories 157 [ Category.Function, 8, 10; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ] 
-    checkCategories 158 [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
-    checkCategories 159 [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
-    checkCategories 160 [ Category.Function, 8, 9; Category.ReferenceType, 42, 46; Category.ReferenceType, 83, 87 ]
+    checkLine 154 [ Category.Function, 8, 10; Category.ReferenceType, 16, 19; Category.ReferenceType, 34, 37 ]
+    checkLine 155 [ Category.Function, 8, 11; Category.ReferenceType, 16, 19; Category.ReferenceType, 34, 37 ] 
+    checkLine 156 [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
+    checkLine 157 [ Category.Function, 8, 10; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ] 
+    checkLine 158 [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
+    checkLine 159 [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
+    checkLine 160 [ Category.Function, 8, 9; Category.ReferenceType, 42, 46; Category.ReferenceType, 83, 87 ]
 
 [<Test>]
 let ``array alias``() =
-    checkCategories 161 [ Category.ReferenceType, 5, 15; Category.ValueType, 18, 22 ]
+    checkLine 161 [ Category.ReferenceType, 5, 15; Category.ValueType, 18, 22 ]
 
 [<Test; Ignore "Lexer cannot recognize (|P|_|) as an Ident at position of the last bar">]
 let ``active pattern``() =
-    checkCategories 181 [ Category.PatternCase, 6, 19; Category.PatternCase, 28, 32 ]
-    checkCategories 182 [ Category.Function, 8, 27 ]
+    checkLine 181 [ Category.PatternCase, 6, 19; Category.PatternCase, 28, 32 ]
+    checkLine 182 [ Category.Function, 8, 27 ]
+
+[<Test>]
+let ``non public module``() =
+    checkLine 183 [ Category.Module, 15, 28 ]
+
+[<Test>]
+let ``unused non public module function and value``() =
+    checkLine 184 [ Category.Unused, 8, 12 ]  
+    checkLine 185 [ Category.Unused, 8, 13 ]
+
+[<Test>]
+let ``unused default constructor of non public class``() =
+    checkLine 186 [ Category.Unused, 13, 25 ]
+
+[<Test>]
+let ``unused non public class let binding``() =
+    checkLine 188 [ Category.Unused, 8, 16] 
+    checkLine 189 [ Category.Unused, 8, 15]
+
+[<Test>]
+let ``unused non public class member``() =
+    checkLine 190 [ Category.Unused, 22, 26] 
+    checkLine 191 [ Category.Unused, 22, 28]
+
+[<Test>]
+let ``unused self binding``() =
+    checkLine 192 [ Category.Unused, 11, 15; Category.Function, 16, 28 ]
+
+[<Test>]
+let ``used self binding``() =
+    checkLine 196 [ Category.Function, 16, 23 ]
+
+[<Test>]
+let ``unused function / member argument``() =
+    checkLine 193 [ Category.Function, 14, 21; Category.Unused, 23, 27 ]
+    checkLine 198 [ Category.Function, 8, 12; Category.Unused, 13, 17 ]
+
+[<Test>]
+let ``unused function / member local binging``() =
+    checkLine 194 [ Category.Unused, 12, 17 ]
+    checkLine 199 [ Category.Unused, 12, 17 ]
+

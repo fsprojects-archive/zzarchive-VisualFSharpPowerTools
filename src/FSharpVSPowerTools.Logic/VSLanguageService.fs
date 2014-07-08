@@ -190,10 +190,12 @@ type VSLanguageService
             return symbol |> Option.map (fun s -> s, results)
         }
 
-    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider, stale) = 
+    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
+                                           checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
+
         async {
-            let source = snapshot.GetText()
-            let args = projectProvider.CompilerOptions
+            let source = snapshot.GetText() 
+            let args = project.CompilerOptions
             let lexer = 
                 let getLineStr line =
                     let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
@@ -206,9 +208,29 @@ type VSLanguageService
                     member x.TokenizeLine line =
                         Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
-            let! opts = projectProvider.GetProjectCheckerOptions instance
-            let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale)
-            return symbolUses, lexer
+            let! opts = project.GetProjectCheckerOptions instance
+            
+            let getSymbolDeclProjects sym =
+                async {
+                    let projects =
+                        match getSymbolDeclLocation sym with
+                        | Some SymbolDeclarationLocation.File -> Some [project]
+                        | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
+                        | None -> None
+
+                    match projects with
+                    | Some projects ->
+                        return! 
+                            projects
+                            |> List.toArray
+                            |> Async.Array.map getProjectOptions 
+                            |> Async.map Some
+                    | None -> return None
+                }
+
+            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedDeclarations,
+                                                                        getSymbolDeclProjects)
+            return allSymbolsUses, lexer
         }
 
      member x.GetAllEntities (fileName, source, project: IProjectProvider) =
@@ -220,15 +242,6 @@ type VSLanguageService
                 debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
                 return None
         }
-
-    /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-    member x.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: FilePath, projects: IProjectProvider list) =
-        async {
-            let! projectOptions = 
-                projects 
-                |> List.toArray
-                |> Async.Array.map getProjectOptions
-            return! instance.IsSymbolUsedInProjects (symbol, currentProjectName, projectOptions) }
 
     member x.InvalidateProject (projectProvider: IProjectProvider) = 
         async {
