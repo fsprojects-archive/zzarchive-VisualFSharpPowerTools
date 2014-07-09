@@ -55,6 +55,16 @@ type CategorizedColumnSpan =
     { Category: Category
       WordSpan: WordSpan }
 
+type private Scope =
+    { StartLine: int
+      EndLine: int }
+
+[<NoComparison>]
+type private OpenDeclaration =
+    { Ident: string 
+      Range: Range.range
+      Scope: Scope }
+
 // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
 // Example: for ReferenceType symbol "System.Diagnostics.DebuggerDisplay" there are "System", "Diagnostics" and "DebuggerDisplay"
 // plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
@@ -221,14 +231,56 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
             let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
             visitDeclarations decls
 
-    untypedAst |> Option.iter (fun ast ->
-        match ast with
-        | ParsedInput.ImplFile(implFile) ->
+    untypedAst |> Option.iter (function
+        | ParsedInput.ImplFile implFile ->
             let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
             visitModulesAndNamespaces modules
-        | _ -> ()
-    )
+        | _ -> ())
 
+    let openDeclarations =
+        match untypedAst with
+        | Some ast ->
+            match ast with
+            | ParsedInput.ImplFile implFile ->
+                let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
+                modules
+                |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
+                    let openStatements =
+                        decls
+                        |> List.fold (fun acc -> 
+                            function
+                            | SynModuleDecl.Open (LongIdentWithDots(ident, _), range) -> 
+                                { Ident = System.String.Join (".", ident)
+                                  Range = range
+                                  Scope = 
+                                    { StartLine = range.StartLine
+                                      EndLine = moduleRange.EndLine }} :: acc
+                            | _ -> acc) [] 
+                    openStatements @ acc) []
+            | _ -> []
+        | None -> []
+
+    let unusedOpenDeclarations: OpenDeclaration list =
+        Array.foldBack (fun (symbolUse: FSharpSymbolUse, _, _) openDecls ->
+            match openDecls with
+            | [] -> []
+            | _ ->
+                openDecls |> List.filter (fun decl -> 
+                    let matched =
+                        symbolUse.RangeAlternate.StartLine >= decl.Scope.StartLine
+                        && symbolUse.RangeAlternate.EndLine <= decl.Scope.EndLine
+                        && symbolUse.Symbol.FullName.StartsWith decl.Ident
+                    not matched)
+        ) allSymbolsUses' openDeclarations
+
+    let unusedOpenDeclarationSpans =
+        unusedOpenDeclarations
+        |> List.map (fun decl -> { Category = Category.Unused
+                                   WordSpan = { Line = decl.Range.StartLine 
+                                                StartCol = decl.Range.StartColumn
+                                                EndCol = decl.Range.EndColumn }})
+        |> List.toArray
+    
     //printfn "AST: %A" untypedAst
     
     let trimWhitespaces = 
@@ -278,7 +330,7 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
         |> Seq.concat
         |> Seq.toArray
 
-    let allSpans = spansBasedOnSymbolsUses |> Array.append quotations
+    let allSpans = spansBasedOnSymbolsUses |> Array.append quotations |> Array.append unusedOpenDeclarationSpans
     
 //    for span in allSpans do
 //       debug "-=O=- %A" span
