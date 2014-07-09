@@ -197,8 +197,10 @@ module ParsedInput =
                 ifPosInRange r (fun _ ->
                     fields |> List.tryPick (fun (_, e, _) -> e |> Option.bind (walkExprWithKind parentKind)))
             | SynExpr.New(_, t, e, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
-            | SynExpr.ObjExpr(_, _, bindings, ifaces, _, _) -> 
-                List.tryPick walkBinding bindings |> Option.orElse (List.tryPick walkInterfaceImpl ifaces)
+            | SynExpr.ObjExpr(ty, _, bindings, ifaces, _, _) -> 
+                walkType ty
+                |> Option.orElse (List.tryPick walkBinding bindings)
+                |> Option.orElse (List.tryPick walkInterfaceImpl ifaces)
             | SynExpr.While(_, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
             | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2; e3]
             | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]

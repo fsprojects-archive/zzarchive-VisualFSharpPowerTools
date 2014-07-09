@@ -321,6 +321,15 @@ let _ = Class<DateTime>()
     ==> [2, 15, Some Type]
 
 [<Test>]
+let ``type name in object expression is a Type``() =
+    """
+module TopLevel
+let _ = { new IMy with 
+    member __.Member _ = () }
+""" 
+    ==> [2, 15, Some Type]
+
+[<Test>]
 let ``upcast type is a FunctionOrValue``() =
     """
 module TopLevel
