@@ -34,3 +34,9 @@ let ``should be able to detect backticked identifiers``() =
 let ``should not encapsulate already encapsulated identifiers``() = 
     shouldStaysAsIs "``this is already encapsulated``"
     shouldStaysAsIs "``this``"
+
+
+[<Test>]
+let ``should not encapsulate operators``() = 
+    shouldStaysAsIs "</>"
+    shouldStaysAsIs "*"
