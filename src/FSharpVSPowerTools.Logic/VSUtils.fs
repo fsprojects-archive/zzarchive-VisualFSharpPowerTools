@@ -55,21 +55,11 @@ let isPhysicalFile (item: EnvDTE.ProjectItem) =
 let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
     item <> null && isPhysicalFileOrFolderKind item.Kind
 
+let isIdentifier (s: string) = Rename.Checks.isIdentifier s
+
+let isFixableIdentifier (s: string) = s |> Rename.Checks.encapsulateIdentifier |> isIdentifier 
+
 open Microsoft.FSharp.Compiler.PrettyNaming
-
-let private isDoubleBacktickIdent (s: string) =
-    if s.StartsWith("``") && s.EndsWith("``") && s.Length > 4 then
-        let inner = s.Substring("``".Length, s.Length - "````".Length)
-        not (inner.Contains("``"))
-    else false
-
-let isIdentifier (s: string) =
-    if isDoubleBacktickIdent s then
-        true
-    else
-        s |> Seq.mapi (fun i c -> i, c)
-          |> Seq.forall (fun (i, c) -> 
-                if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
 
 let isOperator (s: string) = 
     let allowedChars = Set.ofList ['!'; '%'; '&'; '*'; '+'; '-'; '.'; '/'; '<'; '='; '>'; '?'; '@'; '^'; '|'; '~']

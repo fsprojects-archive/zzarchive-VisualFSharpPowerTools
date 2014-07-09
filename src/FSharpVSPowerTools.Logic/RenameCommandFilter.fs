@@ -44,6 +44,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
     let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
         try
+            let newText = Rename.Checks.encapsulateIdentifier newText
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()

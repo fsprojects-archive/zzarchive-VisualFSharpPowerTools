@@ -59,6 +59,7 @@
     <Compile Include="LexerTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
+    <Compile Include="RenameTests.fs" />
     <Compile Include="XmlDocTests.fs" />
     <Compile Include="NavigateToIndexTests.fs" />
     <Compile Include="SourceCodeClassifierTests.fs" />
