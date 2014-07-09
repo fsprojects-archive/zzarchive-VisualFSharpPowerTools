@@ -76,7 +76,7 @@
 * Improve memory usage
 * Protect against intermittent crashes
 
-#### 1.3.0 - Unreleased
+#### 1.3.0 - July 9 2014
 * Add report progress and cancellation to Rename Refactoring
 * Add report progress to Find All References
 * Enhance Xaml support
