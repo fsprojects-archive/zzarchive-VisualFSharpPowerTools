@@ -129,7 +129,10 @@ let (|Tuple|_|) (ty: FSharpType option) =
 /// Func (memberFunctionOrValue, fullType)
 let (|MemberFunctionOrValue|_|) (symbol: FSharpSymbol) =
     match symbol with
-    | :? FSharpMemberFunctionOrValue as func -> Some (func, func.FullType)
+    | :? FSharpMemberFunctionOrValue as func -> 
+        // FullType may fail with exception. 
+        // However it does not mean we should not match the symbol as MemberFucntionOrValue.
+        Some (func, Option.attempt (fun _ -> func.FullType))
     | _ -> None
 
 /// Constructor (enclosingEntity)

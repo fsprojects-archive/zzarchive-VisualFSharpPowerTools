@@ -32,7 +32,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | MemberFunctionOrValue (Constructor _, _) -> Category.ReferenceType
     | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression, _) -> Category.Function
     | MemberFunctionOrValue (MutableVar, _) -> Category.MutableVar
-    | MemberFunctionOrValue (_, RefCell) -> Category.MutableVar
+    | MemberFunctionOrValue (_, Some RefCell) -> Category.MutableVar
     | _ ->
         //debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
         Category.Other 
