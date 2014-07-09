@@ -11,6 +11,11 @@ let isDoubleBacktickIdent (s: string) =
         not (inner.Contains(DoubleBackTickDelimiter))
     else false
 
+let isOperator (s: string) = 
+    let allowedChars = Set.ofList ['!'; '%'; '&'; '*'; '+'; '-'; '.'; '/'; '<'; '='; '>'; '?'; '@'; '^'; '|'; '~']
+    (IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s)
+    && (s.ToCharArray() |> Array.forall (fun c -> Set.contains c allowedChars))
+
 let isIdentifier (s: string) =
     if isDoubleBacktickIdent s then
         true
@@ -22,7 +27,9 @@ let isIdentifier (s: string) =
 /// Encapsulates identifiers for rename operations if needed
 let encapsulateIdentifier name =
     let isKeyWord = List.exists ((=) name) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames    
+    let isAlreadyEncapsulated = name.StartsWith DoubleBackTickDelimiter && name.EndsWith DoubleBackTickDelimiter
 
-    if name.StartsWith DoubleBackTickDelimiter && name.EndsWith DoubleBackTickDelimiter then name // already encapsulated
+    if isAlreadyEncapsulated then name
+    elif isOperator name then name
     elif isKeyWord || not (isIdentifier name) then DoubleBackTickDelimiter + name + DoubleBackTickDelimiter
     else name
