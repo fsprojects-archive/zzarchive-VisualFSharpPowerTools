@@ -430,12 +430,12 @@ module InterfaceStubGenerator =
             Some typ.GenericArguments.[1]
         else None
 
-    let internal (|TypeOfMember|) (m: FSharpMemberFunctionOrValue) =
-        let typ = m.FullType
-        match typ with
-        | MemberFunctionType typ when m.IsProperty && m.EnclosingEntity.IsFSharp ->
-            typ
-        | _ -> typ
+    let internal (|TypeOfMember|_|) (m: FSharpMemberFunctionOrValue) =
+        match m.FullTypeSafe with
+        | Some (MemberFunctionType typ) when m.IsProperty && m.EnclosingEntity.IsFSharp ->
+            Some typ
+        | Some typ -> Some typ
+        | None -> None
 
     let internal (|EventFunctionType|_|) (typ: FSharpType) =
         match typ with
@@ -465,19 +465,21 @@ module InterfaceStubGenerator =
     ///  (2) Check symbols of those members based on ranges
     ///  (3) If any symbol found, capture its member signature 
     let getImplementedMemberSignatures (getMemberByLocation: string * range -> Async<FSharpSymbolUse option>) displayContext interfaceData = 
-        let formatMemberSignature (symbolUse: FSharpSymbolUse) =
-            Debug.Assert(symbolUse.Symbol :? FSharpMemberFunctionOrValue, "Only accept symbol uses of members.")
-            try
-                let m = symbolUse.Symbol :?> FSharpMemberFunctionOrValue
-                match m.FullType with
-                | _ when isEventMember m ->
+        let formatMemberSignature (symbolUse: FSharpSymbolUse) =            
+            match symbolUse.Symbol with
+            | :? FSharpMemberFunctionOrValue as m ->
+                match m.FullTypeSafe with
+                | Some _ when isEventMember m ->
                     // Events don't have overloads so we use only display names for comparison
                     let signature = normalizeEventName m
                     Some [signature]
-                | typ ->
+                | Some typ ->
                     let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (typ.Format(displayContext)))
                     Some [signature]
-            with _ ->
+                | None ->
+                    None
+            | _ ->
+                fail "Should only accept symbol uses of members."
                 None
         async {
             let! symbolUses = 
@@ -518,17 +520,17 @@ module InterfaceStubGenerator =
                     Indentation = indentation; ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
         let missingMembers =
             getInterfaceMembers e
-            |> Seq.filter (fun (m, insts) -> 
-                // FullType might throw exceptions due to bugs in FCS
-                try
-                    let signature =  
-                        if isEventMember m then
-                            normalizeEventName m
-                        else
-                            let (TypeOfMember typ) = m 
-                            removeWhitespace (sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts } typ))
+            |> Seq.filter (fun (m, insts) ->               
+                match m with
+                | _ when isEventMember m  ->
+                    let signature = normalizeEventName m
+                    not (Set.contains signature excludedMemberSignatures)
+                | TypeOfMember typ ->
+                    let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts } typ))
                     not (Set.contains signature excludedMemberSignatures) 
-                with _ -> true)
+                | _ -> 
+                    debug "FullType throws exceptions due to bugs in FCS."
+                    true)
         // All members have already been implemented
         if Seq.isEmpty missingMembers then
             String.Empty

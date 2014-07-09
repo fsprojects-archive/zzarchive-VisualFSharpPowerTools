@@ -33,7 +33,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression) -> Category.Function
     | MemberFunctionOrValue MutableVar -> Category.MutableVar
     | MemberFunctionOrValue func ->
-        match func.SafeFullType with
+        match func.FullTypeSafe with
         | Some RefCell -> Category.MutableVar
         | _ -> Category.Other
     | _ ->

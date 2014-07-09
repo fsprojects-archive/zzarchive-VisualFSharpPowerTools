@@ -35,8 +35,8 @@ let isOperator (name: string) =
         && name.Substring (2, name.Length - 4) |> String.forall ((<>) ' ')
         
 type FSharpMemberFunctionOrValue with
-    // FullType may fail with exception. 
-    member x.SafeFullType = Option.attempt (fun _ -> x.FullType)
+    // FullType may fail with exception (see https://github.com/fsharp/fsharp/issues/307). 
+    member x.FullTypeSafe = Option.attempt (fun _ -> x.FullType)
 
 let (|AbbreviatedType|_|) (entity: FSharpEntity) =
     if entity.IsFSharpAbbreviation then Some entity.AbbreviatedType
@@ -142,9 +142,10 @@ let (|Constructor|_|) (func: FSharpMemberFunctionOrValue) =
     else None
 
 let (|Function|_|) excluded (func: FSharpMemberFunctionOrValue) =
-    if func.FullType.IsFunctionType 
-       && not func.IsPropertyGetterMethod 
-       && not func.IsPropertySetterMethod
-       && not excluded
-       && not (isOperator func.DisplayName) then Some()
-    else None
+    match func.FullTypeSafe with
+    | Some typ when typ.IsFunctionType
+                   && not func.IsPropertyGetterMethod 
+                   && not func.IsPropertySetterMethod
+                   && not excluded
+                   && not (isOperator func.DisplayName) -> Some()
+    | _ -> None
