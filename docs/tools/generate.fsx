@@ -14,7 +14,7 @@ let githubLink = "http://github.com/fsprojects/VisualFSharpPowerTools"
 let info =
   [ "project-name", "Visual F# Power Tools"
     "project-author", "Anh-Dung Phan, Vasily Kirichenko, Denis Ok"
-    "project-summary", "Visual F# Power Tools"
+    "project-summary", "A collection of additional commands for F# in Visual Studio"
     "project-github", githubLink
     "project-nuget", "http://nuget.com/packages/VisualFSharpPowerTools.Core" ]
 
@@ -38,14 +38,6 @@ open Fake.FileHelper
 open FSharp.Literate
 open FSharp.MetadataFormat
 
-// When called from 'build.fsx', use the public project URL as <root>
-// otherwise, use the current 'output' directory.
-#if RELEASE
-let root = website + "/.."
-#else
-let root = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
-#endif
-
 // Paths with template/source/output locations
 let bin        = __SOURCE_DIRECTORY__ @@ "../../bin"
 let content    = __SOURCE_DIRECTORY__ @@ "../content"
@@ -67,16 +59,24 @@ let copyFiles () =
   CopyRecursive (formatting @@ "styles") (output @@ "content") true 
     |> Log "Copying styles and scripts: "
 
+// When called from 'build.fsx', use the public project URL as <root>
+// otherwise, use the current 'output' directory.
+#if RELEASE
+let refRoot = website + "/.."
+#else
+let refRoot = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
+#endif
+
 // Build API reference from XML comments
 let buildReference () =
   CleanDir (output @@ "reference")
   for lib in referenceBinaries do
     MetadataFormat.Generate
       ( bin @@ lib, output @@ "reference", layoutRoots, 
-        parameters = ("root", root)::info,
+        parameters = ("root", refRoot)::info,
         sourceRepo = githubLink @@ "tree/master",
         sourceFolder = __SOURCE_DIRECTORY__ @@ ".." @@ "..",
-        publicOnly = true )
+        libDirs = [ bin ] )
 
 #if RELEASE
 let docRoot = website
