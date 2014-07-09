@@ -27,7 +27,7 @@ let summary = "A collection of additional commands for F# in Visual Studio"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
-let description = """The core project for Visual F# Power Tools including IDE-agnostic features are intended to be used in different F# IDEs and editors."""
+let description = """The core project of Visual F# Power Tools includes IDE-agnostic features intended to be used in different F# IDEs and editors."""
 // List of author names (for NuGet package)
 let authors = [ "Anh-Dung Phan"; "Vasily Kirichenko"; "Denis Ok" ]
 // Tags for your project (for NuGet package)

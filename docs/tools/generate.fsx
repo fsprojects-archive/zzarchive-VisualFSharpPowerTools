@@ -4,7 +4,7 @@
 // --------------------------------------------------------------------------------------
 
 // Binaries that have XML documentation (in a corresponding generated XML file)
-let referenceBinaries = [] // [ "FSharpVSPowerTools.Core.dll" ]
+let referenceBinaries = [ "FSharpVSPowerTools.Core.dll" ]
 // Web site location for the generated documentation
 let website = "."
 
@@ -14,15 +14,15 @@ let githubLink = "http://github.com/fsprojects/VisualFSharpPowerTools"
 let info =
   [ "project-name", "Visual F# Power Tools"
     "project-author", "Anh-Dung Phan, Vasily Kirichenko, Denis Ok"
-    "project-summary", "Visual F# Power Tools (by F# Community) "
+    "project-summary", "Visual F# Power Tools"
     "project-github", githubLink
-    "project-nuget", "http://nuget.com/packages/VisualFSharpPowerTools" ]
+    "project-nuget", "http://nuget.com/packages/VisualFSharpPowerTools.Core" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below
 // --------------------------------------------------------------------------------------
 
-#I "../../packages/FSharp.Formatting.2.4.11/lib/net40"
+#I "../../packages/FSharp.Formatting.2.4.12/lib/net40"
 #I "../../packages/RazorEngine.3.3.0/lib/net40"
 #I "../../packages/FSharp.Compiler.Service.0.0.58/lib/net45"
 #r "../../packages/Microsoft.AspNet.Razor.2.0.30506.0/lib/net40/System.Web.Razor.dll"
@@ -41,7 +41,7 @@ open FSharp.MetadataFormat
 // When called from 'build.fsx', use the public project URL as <root>
 // otherwise, use the current 'output' directory.
 #if RELEASE
-let root = website
+let root = website + "/.."
 #else
 let root = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
 #endif
@@ -52,7 +52,7 @@ let content    = __SOURCE_DIRECTORY__ @@ "../content"
 let output     = __SOURCE_DIRECTORY__ @@ "../output"
 let files      = __SOURCE_DIRECTORY__ @@ "../files"
 let templates  = __SOURCE_DIRECTORY__ @@ "templates"
-let formatting = __SOURCE_DIRECTORY__ @@ "../../packages/FSharp.Formatting.2.4.0/"
+let formatting = __SOURCE_DIRECTORY__ @@ "../../packages/FSharp.Formatting.2.4.12/"
 let docTemplate = formatting @@ "templates/docpage.cshtml"
 
 // Where to look for *.csproj templates (in this order)
@@ -78,13 +78,19 @@ let buildReference () =
         sourceFolder = __SOURCE_DIRECTORY__ @@ ".." @@ "..",
         publicOnly = true )
 
+#if RELEASE
+let docRoot = website
+#else
+let docRoot = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
+#endif
+
 // Build documentation from `fsx` and `md` files in `docs/content`
 let buildDocumentation () =
   let subdirs = Directory.EnumerateDirectories(content, "*", SearchOption.AllDirectories)
   for dir in Seq.append [content] subdirs do
     let sub = if dir.Length > content.Length then dir.Substring(content.Length + 1) else "."
     Literate.ProcessDirectory
-      ( dir, docTemplate, output @@ sub, replacements = ("root", root)::info,
+      ( dir, docTemplate, output @@ sub, replacements = ("root", docRoot)::info,
         lineNumbers = false,
         layoutRoots = layoutRoots )
 

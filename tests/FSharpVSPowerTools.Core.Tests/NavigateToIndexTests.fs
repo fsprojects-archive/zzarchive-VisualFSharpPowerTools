@@ -11,7 +11,7 @@ open NUnit.Framework
 open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
-open FSharpVSPowerTools.ProjectSystem.Navigation
+open FSharpVSPowerTools.Navigation
 
 [<Test>]
 let ``Index should return all matching entries``() =

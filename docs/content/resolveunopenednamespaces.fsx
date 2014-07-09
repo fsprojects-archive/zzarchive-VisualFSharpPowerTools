@@ -8,8 +8,8 @@ Resolve unopened namespaces and modules
 -----------------------
 
 If a type / function / value is declared in one of the current project's referenced assemblies, 
-but it lays in a namespace or module that is not yet opened, a smart tag appears which allows to open 
-the namespace / module or makes to use the fully qualified name.
+but its corresponding namespace or module is not yet opened, a smart tag appears which allows to open 
+the namespace / module or suggests to use the fully qualified name.
 
 Here is a demo screencast.
 

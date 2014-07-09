@@ -10,6 +10,7 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
+/// Capture information about an interface in ASTs
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type InterfaceData =
     | Interface of SynType * SynMemberDefns option
@@ -111,8 +112,10 @@ module InterfaceStubGenerator =
 
     let internal keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
 
+    /// Represent environment where a captured identifier should be renamed
     type NamesWithIndices = Map<string, Set<int>>
 
+    /// Rename a given argument if the identifier has been used
     let normalizeArgName (namesWithIndices: NamesWithIndices) nm =
         match nm with
         | "()" -> nm, namesWithIndices
@@ -184,7 +187,7 @@ module InterfaceStubGenerator =
         , namesWithIndices
 
     [<RequireQualifiedAccess; NoComparison>]
-    type MemberInfo =
+    type internal MemberInfo =
         | PropertyGetSet of FSharpMemberFunctionOrValue * FSharpMemberFunctionOrValue
         | Member of FSharpMemberFunctionOrValue
 
@@ -202,7 +205,8 @@ module InterfaceStubGenerator =
         let retType = defaultArg (retType |> Option.map (formatType ctx)) "unit"      
         argInfos, retType
 
-    let normalizePropertyName (v: FSharpMemberFunctionOrValue) =
+    /// Convert a getter/setter to its canonical form
+    let internal normalizePropertyName (v: FSharpMemberFunctionOrValue) =
         let displayName = v.DisplayName
         if (v.IsPropertyGetterMethod && displayName.StartsWith("get_")) || 
             (v.IsPropertySetterMethod && displayName.StartsWith("set_")) then
@@ -378,6 +382,7 @@ module InterfaceStubGenerator =
                            else Some (m, instantiations))
          }
 
+    /// Check whether an interface is empty
     let hasNoInterfaceMember e =
         getInterfaceMembers e |> Seq.isEmpty
 
@@ -454,7 +459,7 @@ module InterfaceStubGenerator =
         elif name.StartsWith("remove_")  then name.[7..]
         else name
 
-    /// Ideally this info should be returned in error symbols from FCS
+    /// Ideally this info should be returned in error symbols from FCS. 
     /// Because it isn't, we implement a crude way of getting member signatures:
     ///  (1) Crack ASTs to get member names and their associated ranges
     ///  (2) Check symbols of those members based on ranges
@@ -558,6 +563,7 @@ module InterfaceStubGenerator =
             |> loop
             writer.Dump()
 
+    /// Find corresponding interface declaration at a given position
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =
         let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
             List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
