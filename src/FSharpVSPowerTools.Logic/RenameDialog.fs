@@ -61,7 +61,9 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
 
     // Backing fields for all view-bound values
     let name = self.Factory.Backing(<@@ self.Name @@>, originalName, validateName)
-    let location = self.Factory.Backing(<@@ self.Location @@>, String.Empty)
+    let mutable symbolLocation = ""
+    let fullName = self.Factory.Backing(<@@ self.FullName @@>, String.Empty)
+
     // RenameComplete is used to close our dialog from the View automatically - should be set when we want to "complete" this operation
     let renameComplete = self.Factory.Backing(<@@ self.RenameComplete @@>, false)
     // Initialized allows us to track when the initialization async workflow completes
@@ -93,6 +95,13 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
     // Cancelling the operation should cancel all async workflows and close us    
     let cancelCommand = self.Factory.CommandSync(fun _ -> cts.Cancel())
 
+    // Generate the new name and show it on the textbox
+    let updateFullName name = 
+        let encapsulated = Rename.Checks.encapsulateIdentifier name
+        if String.IsNullOrEmpty symbolLocation then self.FullName <- encapsulated
+        elif String.IsNullOrEmpty encapsulated then self.FullName <- symbolLocation
+        else self.FullName <- symbolLocation + "." + encapsulated
+
     do  
         // Make us close if we're canceled
         cts.Token.Register(fun _ -> renameComplete.Value <- true) |> ignore
@@ -111,22 +120,23 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
                     do! Async.SwitchToContext syncCtx
                     workflowArguments <- Some(symbol, location, results)                    
                     reportProgress report Idle
-                    self.Location <- 
+                    symbolLocation <- 
                         let fullName = symbol.FullName
                         let displayName = symbol.DisplayName
                         if fullName.EndsWith displayName then
                             let locationLength = max 0 (fullName.Length - (displayName.Length + 1))
                             fullName.Remove locationLength
                         else fullName
+                    updateFullName originalName
                     initialized.Value <- true                    
                 | None -> 
-                    cts.Cancel()                    
+                    cts.Cancel()
                 waitCursor.Restore()
             }, cts.Token)
 
     // Our bound properties
-    member x.Name with get() = name.Value and set(v) = name.Value <- v
-    member x.Location with get() = location.Value and set(v) = location.Value <- v
+    member x.Name with get() = name.Value and set(v) = name.Value <- v; updateFullName v
+    member x.FullName with get() = fullName.Value and set(v) = fullName.Value <- v
 
     // Related to progress / status reporting
     member x.Progress = progress

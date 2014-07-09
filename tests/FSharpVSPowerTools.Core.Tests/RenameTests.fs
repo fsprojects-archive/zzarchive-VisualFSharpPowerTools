@@ -30,7 +30,6 @@ let ``should be able to detect backticked identifiers``() =
     isDoubleBacktickIdent "this" |> assertFalse
     isDoubleBacktickIdent "myVariable" |> assertFalse
 
-
 [<Test>]
 let ``should not encapsulate already encapsulated identifiers``() = 
     shouldStaysAsIs "``this is already encapsulated``"
