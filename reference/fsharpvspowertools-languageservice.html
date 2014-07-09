@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>LanguageService - Visual F# Power Tools</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko, Denis Ok">
+
+    <script src="https://code.jquery.com/jquery-1.8.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.8.23/jquery-ui.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
+    <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
+
+    <link type="text/css" rel="stylesheet" href="./../content/style.css" />
+    <script type="text/javascript" src="./../content/tips.js"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="container">
+      <div class="masthead">
+        <ul class="nav nav-pills pull-right">
+          <li><a href="http://fsharp.org">fsharp.org</a></li>
+          <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">github page</a></li>
+        </ul>
+        <h3 class="muted"><a href="./../index.html">Visual F# Power Tools</a></h3>
+      </div>
+      <hr />
+      <div class="row">
+        <div class="span9" id="main">
+          
+
+
+
+<h1>LanguageService</h1>
+<div class="xmldoc">
+<p>Provides functionality for working with the F# interactive checker running in background</p>
+</div>
+  <h3>Constructors</h3>
+  <table class="table table-bordered member-list">
+    <thead>
+      <tr><td>Constructor</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '119', 119)" onmouseover="showTip(event, '119', 119)">
+            new(dirtyNotify, fileSystem)
+          </code>
+          <div class="tip" id="119">
+            <strong>Signature:</strong> (dirtyNotify:(string -&gt; unit) * fileSystem:IFileSystem option) -&gt; LanguageService<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L126-126" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>Instance members</h3>
+  <table class="table table-bordered member-list">
+    <thead>
+      <tr><td>Instance member</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '141', 141)" onmouseover="showTip(event, '141', 141)">
+            Checker
+          </code>
+          <div class="tip" id="141">
+            <strong>Signature:</strong> InteractiveChecker<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L350-350" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '144', 144)" onmouseover="showTip(event, '144', 144)">
+            Checker
+          </code>
+          <div class="tip" id="144">
+            <strong>Signature:</strong> InteractiveChecker<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L350-350" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '145', 145)" onmouseover="showTip(event, '145', 145)">
+            GetAllEntitiesInProjectAndReferencedAssemblies(...)
+          </code>
+          <div class="tip" id="145">
+            <strong>Signature:</strong> (projectOptions:ProjectOptions * fileName:string * source:string) -&gt; Async&lt;RawEntity list option&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L433-433" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '146', 146)" onmouseover="showTip(event, '146', 146)">
+            GetAllUsesOfAllSymbolsInFile(...)
+          </code>
+          <div class="tip" id="146">
+            <strong>Signature:</strong> (projectOptions:ProjectOptions * fileName:string * src:string * stale:AllowStaleResults * checkForUnusedDeclarations:bool * getSymbolDeclProjects:(FSharpSymbol -&gt; Async&lt;&#39;?18956 option&gt;)) -&gt; Async&lt;(FSharpSymbolUse * bool) []&gt;<br />
+                          <strong>Type parameters:</strong> '?18956          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L385-385" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '147', 147)" onmouseover="showTip(event, '147', 147)">
+            GetCheckerOptions(...)
+          </code>
+          <div class="tip" id="147">
+            <strong>Signature:</strong> (fileName:string * projFilename:string * source:string * files:string [] * args:string [] * referencedProjects:(string * ProjectOptions) [] * targetFramework:FSharpTargetFramework) -&gt; Async&lt;ProjectOptions&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L191-191" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Constructs options for the interactive checker for the given file in the project under the given configuration.</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '148', 148)" onmouseover="showTip(event, '148', 148)">
+            GetProjectCheckerOptions(...)
+          </code>
+          <div class="tip" id="148">
+            <strong>Signature:</strong> (projFilename:string * files:string [] * args:string [] * referencedProjects:(string * ProjectOptions) []) -&gt; ProjectOptions<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L236-236" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Constructs options for the interactive checker for a project under the given configuration.</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '149', 149)" onmouseover="showTip(event, '149', 149)">
+            GetScriptCheckerOptions(...)
+          </code>
+          <div class="tip" id="149">
+            <strong>Signature:</strong> (fileName:string * projFilename:string * source:string * targetFramework:FSharpTargetFramework) -&gt; Async&lt;ProjectOptions&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L203-203" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Constructs options for the interactive checker for the given script file in the project under the given configuration.</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '150', 150)" onmouseover="showTip(event, '150', 150)">
+            GetUsesOfSymbolAtLocationInFile(...)
+          </code>
+          <div class="tip" id="150">
+            <strong>Signature:</strong> (projectOptions:ProjectOptions * fileName:string * source:string * line:int * col:int * lineStr:string * args:string [] * stale:AllowStaleResults * queryLexState:(string -&gt; string list -&gt; int -&gt; LexState)) -&gt; Async&lt;(FSharpSymbol * string * FSharpSymbolUse []) option&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L295-295" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Get all the uses of a symbol in the given file (using 'source' as the source for the file)</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '151', 151)" onmouseover="showTip(event, '151', 151)">
+            GetUsesOfSymbolInProjectAtLocationInFile(...)
+          </code>
+          <div class="tip" id="151">
+            <strong>Signature:</strong> (currentProjectOptions:ProjectOptions * dependentProjectsOptions:seq&lt;ProjectOptions&gt; * fileName:string * source:string * line:int * col:int * lineStr:string * args:string [] * queryLexState:(string -&gt; string list -&gt; int -&gt; LexState) * reportProgress:(string -&gt; int -&gt; int -&gt; unit) option) -&gt; Async&lt;(FSharpSymbol * string * FSharpSymbolUse []) option&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L305-305" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '152', 152)" onmouseover="showTip(event, '152', 152)">
+            InvalidateConfiguration(options)
+          </code>
+          <div class="tip" id="152">
+            <strong>Signature:</strong> options:ProjectOptions -&gt; unit<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L346-346" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '153', 153)" onmouseover="showTip(event, '153', 153)">
+            IsSymbolUsedInProjects(...)
+          </code>
+          <div class="tip" id="153">
+            <strong>Signature:</strong> (symbol:FSharpSymbol * currentProjectName:string * projectsOptions:seq&lt;ProjectOptions&gt;) -&gt; Async&lt;bool&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L331-331" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '154', 154)" onmouseover="showTip(event, '154', 154)">
+            ParseAndCheckFileInProject(...)
+          </code>
+          <div class="tip" id="154">
+            <strong>Signature:</strong> (opts:ProjectOptions * fileName:string * src:string * stale:AllowStaleResults) -&gt; Async&lt;ParseAndCheckResults&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L282-282" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Parses and checks the given file in the given project under the given configuration. Asynchronously
+returns the results of checking the file.</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '155', 155)" onmouseover="showTip(event, '155', 155)">
+            ParseFileInProject(...)
+          </code>
+          <div class="tip" id="155">
+            <strong>Signature:</strong> (projectOptions:ProjectOptions * fileName:string * src:string) -&gt; Async&lt;ParseFileResults&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L246-246" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '156', 156)" onmouseover="showTip(event, '156', 156)">
+            ProcessParseTrees(...)
+          </code>
+          <div class="tip" id="156">
+            <strong>Signature:</strong> (projectFilename:string * openDocuments:Map&lt;string,string&gt; * files:string [] * args:string [] * targetFramework:FSharpTargetFramework * parseTreeHandler:(ParsedInput -&gt; unit) * ct:CancellationToken) -&gt; Async&lt;unit&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/LanguageService.fs#L352-352" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+        </div>
+        <div class="span3">
+            <a href="./../index.html">
+                <img src="./../img/logo.png" alt="F# Project" style="width:150px;margin:10px" />
+            </a>
+            <ul class="nav nav-list" id="menu" style="margin-top: 20px;">
+                <li class="nav-header">Visual F# Power Tools</li>
+                <li><a href="./../index.html">Home page</a></li>
+                <li><a href="http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff">Download</a></li>
+                <li class="divider"></li>
+                <!-- <li><a href="http://nuget.com/packages/VisualFSharpPowerTools.Core">Get Library via NuGet</a></li> -->
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">Source Code on GitHub</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+
+                <li class="nav-header">Supported Features</li>
+                <li><a href="./../xmldoc.html">Auto-generating XmlDoc</a></li>
+                <li><a href="./../codeformatting.html">Source code formatting</a></li>
+                <li><a href="./../navbar.html">Navigation bar</a></li>
+                <li><a href="./../highlightusage.html">Highlight references</a></li>
+                <li><a href="./../rename.html">Rename refactoring</a></li>
+                <li><a href="./../depthcolorizer.html">Depth colorizer</a></li>
+                <li><a href="./../navigateto.html">NavigateTo</a></li>
+                <li><a href="./../syntaxcoloring.html">Syntax coloring</a></li>
+                <li><a href="./../folderorganization.html">Folder organization</a></li>
+                <li><a href="./../findallreferences.html">Find all references</a></li>
+                <li><a href="./../implementinterface.html">Implement interface</a></li>
+                <li><a href="./../recordstubgeneration.html">Record stub generation</a></li>
+                <li><a href="./../unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
+                <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
+
+                <li class="nav-header">API Documentation</li>
+                <li><a href="./../reference/index.html">API Reference</a></li>
+            </ul>
+        </div>
+      </div>
+    </div>
+    <a href="http://github.com/fsprojects/VisualFSharpPowerTools"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+  </body>
+  </html>
