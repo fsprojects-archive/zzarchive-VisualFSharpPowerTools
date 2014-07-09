@@ -19,7 +19,7 @@ type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationWorkflow : Async<(ParseAndCheckResults * SymbolDeclarationLocation * FSharpSymbol) option>, renameWorkflow : (ParseAndCheckResults -> SymbolDeclarationLocation -> string-> (OperationState -> unit) -> Async<unit>), cts : System.Threading.CancellationTokenSource) as self =
     inherit ViewModelBase()
 
-    let originalName = originalName.Replace("``","")
+    let originalName = originalName.Replace(Rename.Checks.DoubleBackTickDelimiter,"")
 
     // This will hold the actual rename workflow arguments after the initialization async workflow completes    
     let mutable workflowArguments : (FSharpSymbol * SymbolDeclarationLocation * ParseAndCheckResults) option = None

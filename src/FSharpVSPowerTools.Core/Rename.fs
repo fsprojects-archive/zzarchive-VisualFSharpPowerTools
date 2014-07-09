@@ -2,13 +2,13 @@
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 
-let private delimiter = "``"
+let DoubleBackTickDelimiter = "``"
 
 let isDoubleBacktickIdent (s: string) =
-    let doubledDelimiter = 2 * delimiter.Length
-    if s.StartsWith(delimiter) && s.EndsWith(delimiter) && s.Length > doubledDelimiter then
-        let inner = s.Substring(delimiter.Length, s.Length - doubledDelimiter)
-        not (inner.Contains(delimiter))
+    let doubledDelimiter = 2 * DoubleBackTickDelimiter.Length
+    if s.StartsWith(DoubleBackTickDelimiter) && s.EndsWith(DoubleBackTickDelimiter) && s.Length > doubledDelimiter then
+        let inner = s.Substring(DoubleBackTickDelimiter.Length, s.Length - doubledDelimiter)
+        not (inner.Contains(DoubleBackTickDelimiter))
     else false
 
 let isIdentifier (s: string) =
@@ -23,6 +23,6 @@ let isIdentifier (s: string) =
 let encapsulateIdentifier name =
     let isKeyWord = List.exists ((=) name) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames    
 
-    if name.StartsWith delimiter && name.EndsWith delimiter then name // already encapsulated
-    elif isKeyWord || not (isIdentifier name) then delimiter + name + delimiter
+    if name.StartsWith DoubleBackTickDelimiter && name.EndsWith DoubleBackTickDelimiter then name // already encapsulated
+    elif isKeyWord || not (isIdentifier name) then DoubleBackTickDelimiter + name + DoubleBackTickDelimiter
     else name
