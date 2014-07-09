@@ -34,6 +34,10 @@ let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
         && name.Substring (2, name.Length - 4) |> String.forall ((<>) ' ')
         
+type FSharpMemberFunctionOrValue with
+    // FullType may fail with exception. 
+    member x.SafeFullType = Option.attempt (fun _ -> x.FullType)
+
 let (|AbbreviatedType|_|) (entity: FSharpEntity) =
     if entity.IsFSharpAbbreviation then Some entity.AbbreviatedType
     else None
@@ -129,7 +133,7 @@ let (|Tuple|_|) (ty: FSharpType option) =
 /// Func (memberFunctionOrValue, fullType)
 let (|MemberFunctionOrValue|_|) (symbol: FSharpSymbol) =
     match symbol with
-    | :? FSharpMemberFunctionOrValue as func -> Some (func, func.FullType)
+    | :? FSharpMemberFunctionOrValue as func -> Some func
     | _ -> None
 
 /// Constructor (enclosingEntity)

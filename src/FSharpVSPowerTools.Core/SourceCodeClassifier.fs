@@ -28,11 +28,14 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | Entity (_, Module, _) -> Category.Module
     | Entity (_, _, Tuple) -> Category.ReferenceType
     | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
-    | MemberFunctionOrValue (Constructor ValueType, _) -> Category.ValueType
-    | MemberFunctionOrValue (Constructor _, _) -> Category.ReferenceType
-    | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression, _) -> Category.Function
-    | MemberFunctionOrValue (MutableVar, _) -> Category.MutableVar
-    | MemberFunctionOrValue (_, RefCell) -> Category.MutableVar
+    | MemberFunctionOrValue (Constructor ValueType) -> Category.ValueType
+    | MemberFunctionOrValue (Constructor _) -> Category.ReferenceType
+    | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression) -> Category.Function
+    | MemberFunctionOrValue MutableVar -> Category.MutableVar
+    | MemberFunctionOrValue func ->
+        match func.SafeFullType with
+        | Some RefCell -> Category.MutableVar
+        | _ -> Category.Other
     | _ ->
         //debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
         Category.Other 
