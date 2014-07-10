@@ -333,7 +333,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 async {
                     let! projectResults = checker.ParseAndCheckProject opts
                     let! refs = projectResults.GetUsesOfSymbol symbol
-                    return 
+                    return
                         if opts.ProjectFileName = currentProjectName then
                             refs.Length > 1
                         else refs.Length > 0 }

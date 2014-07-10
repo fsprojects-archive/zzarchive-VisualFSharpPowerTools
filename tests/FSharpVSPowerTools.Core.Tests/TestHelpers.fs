@@ -74,7 +74,8 @@ module Collection =
     /// Asserts that two collections are exactly equal.
     /// The collections must have the same count, and contain the exact same objects but the match may be in any order.
     let inline assertEquiv<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =
-        CollectionAssert.AreEquivalent (expected, actual)
+        try CollectionAssert.AreEquivalent (expected, actual) 
+        with _ -> System.Diagnostics.Debug.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
 
     /// Asserts that two collections are not exactly equal.
     let inline assertNotEquiv<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =
