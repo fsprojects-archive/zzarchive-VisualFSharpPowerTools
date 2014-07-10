@@ -42,7 +42,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         state <- s
         state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
-    let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
+    let rename (oldText: string) (symbolKind:SymbolKind) (newText: string) (foundUsages: (string * range list) list) =
         try
             let newText = Rename.Checks.encapsulateIdentifier newText
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
@@ -136,7 +136,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     match usages with
                     | Some (_, currentName, references) ->
                         reportProgress progress (Reporting("Performing Rename ..."))
-                        return rename currentName name references
+                        return rename currentName symbol.Kind name references
                     | None -> 
                         return ()
                 }
