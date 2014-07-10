@@ -57,7 +57,7 @@ let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
 
 let isIdentifier (s: string) = Rename.Checks.isIdentifier s
 
-let isFixableIdentifier symbolKind (s: string) = Rename.Checks.encapsulateIdentifier symbolKind s |> isIdentifier 
+let isFixableIdentifier (s: string) = Rename.Checks.encapsulateIdentifier SymbolKind.Ident s |> isIdentifier
 
 open Microsoft.FSharp.Compiler.PrettyNaming
 

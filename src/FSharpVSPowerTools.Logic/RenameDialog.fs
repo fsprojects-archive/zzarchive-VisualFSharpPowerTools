@@ -38,10 +38,10 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
             match symbol.Kind, fssym with
             | _, :? FSharpUnionCase ->
                 // Union cases shouldn't be lowercase
-                check (isFixableIdentifier symbol.Kind newName && not (String.IsNullOrEmpty newName) && Char.IsUpper(newName.[0])) Resource.validatingUnionCase 
+                check (isFixableIdentifier newName && not (String.IsNullOrEmpty newName) && Char.IsUpper(newName.[0])) Resource.validatingUnionCase 
             | _, :? FSharpActivePatternCase ->
                     // Different from union cases, active patterns don't accept double-backtick identifiers
-                    check (isFixableIdentifier symbol.Kind newName && not (String.IsNullOrEmpty newName) && Char.IsUpper(newName.[0])) Resource.validatingActivePattern
+                    check (isFixableIdentifier newName && not (String.IsNullOrEmpty newName) && Char.IsUpper(newName.[0])) Resource.validatingActivePattern
             | Operator, _ -> 
                 check (isOperator newName) Resource.validatingOperator
             | GenericTypeParameter, _ -> 
@@ -49,7 +49,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
             | StaticallyResolvedTypeParameter, _ ->
                 check (isStaticallyResolvedTypeParameter newName) Resource.validatingStaticallyResolvedTypeParameter
             | (Ident | Other), _ ->
-                check (isFixableIdentifier symbol.Kind newName) Resource.validatingIdentifier
+                check (isFixableIdentifier newName) Resource.validatingIdentifier
 
     // Complete validation chain for the name property
     let validateName = 
