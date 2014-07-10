@@ -8,6 +8,7 @@ open System.ComponentModel
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
+open FSharpVSPowerTools.IdentifierUtils
 
 open FSharp.ViewModule
 open FSharp.ViewModule.Progress
@@ -19,7 +20,7 @@ type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationWorkflow : Async<(ParseAndCheckResults * SymbolDeclarationLocation * FSharpSymbol) option>, renameWorkflow : (ParseAndCheckResults -> SymbolDeclarationLocation -> string-> (OperationState -> unit) -> Async<unit>), cts : System.Threading.CancellationTokenSource) as self =
     inherit ViewModelBase()
 
-    let originalName = originalName.Replace(Rename.Checks.DoubleBackTickDelimiter,"")
+    let originalName = originalName.Replace(DoubleBackTickDelimiter,"")
 
     // This will hold the actual rename workflow arguments after the initialization async workflow completes    
     let mutable workflowArguments : (FSharpSymbol * SymbolDeclarationLocation * ParseAndCheckResults) option = None
@@ -97,7 +98,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
 
     // Generate the new name and show it on the textbox
     let updateFullName newName = 
-        let encapsulated = Rename.Checks.encapsulateIdentifier symbol.Kind newName
+        let encapsulated = encapsulateIdentifier symbol.Kind newName
         if String.IsNullOrEmpty symbolLocation then self.FullName <- encapsulated
         elif String.IsNullOrEmpty encapsulated then self.FullName <- symbolLocation
         else self.FullName <- symbolLocation + "." + encapsulated

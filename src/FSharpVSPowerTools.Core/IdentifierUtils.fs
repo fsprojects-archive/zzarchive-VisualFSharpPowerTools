@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Rename.Checks
+﻿module FSharpVSPowerTools.IdentifierUtils
 
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.PrettyNaming
@@ -20,6 +20,11 @@ let isIdentifier (s: string) =
           |> Seq.forall (fun (i, c) -> 
                 if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
 
+let isOperator (s: string) = 
+    let allowedChars = Set.ofList ['!'; '%'; '&'; '*'; '+'; '-'; '.'; '/'; '<'; '='; '>'; '?'; '@'; '^'; '|'; '~']
+    (IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s)
+    && (s.ToCharArray() |> Array.forall (fun c -> Set.contains c allowedChars))
+
 /// Encapsulates identifiers for rename operations if needed
 let encapsulateIdentifier symbolKind newName =
     let isKeyWord = List.exists ((=) newName) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames    
@@ -29,3 +34,5 @@ let encapsulateIdentifier symbolKind newName =
     elif symbolKind = SymbolKind.Operator then newName
     elif isKeyWord || not (isIdentifier newName) then DoubleBackTickDelimiter + newName + DoubleBackTickDelimiter
     else newName
+
+let isFixableIdentifier (s: string) = encapsulateIdentifier SymbolKind.Ident s |> isIdentifier

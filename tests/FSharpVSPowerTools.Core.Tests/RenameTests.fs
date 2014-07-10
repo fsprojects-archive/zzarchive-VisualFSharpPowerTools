@@ -1,7 +1,7 @@
 ﻿module FSharpVSPowerTools.Core.Tests.RenameTests
 
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Rename.Checks
+open FSharpVSPowerTools.IdentifierUtils
 open NUnit.Framework
 
 let shouldStaysAsIs symbolKind name = encapsulateIdentifier symbolKind name |> assertEqual name
