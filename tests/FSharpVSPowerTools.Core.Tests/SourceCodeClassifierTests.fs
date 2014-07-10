@@ -23,11 +23,10 @@ let args =
 
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = LanguageService(fun _ -> ())
-let opts = 
-    languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, args, [||], framework)
-    |> Async.RunSynchronously
+let opts() = LanguageServiceTestHelper.projectOptions fileName
 
-let checkLine line (expected: (Category * int * int) list)  = 
+let checkLineInSource line (expected: (Category * int * int) list) source = 
+    let opts = opts()
     let symbolsUses =
         languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource, true,
                                                       (fun _ -> async { return Some [opts] }))
@@ -45,17 +44,21 @@ let checkLine line (expected: (Category * int * int) list)  =
     let parseResults = 
         languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
-    SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
-    |> Array.choose (fun loc -> 
-        match loc.Category with 
-        | Category.Other -> None
-        | _ when loc.WordSpan.Line = line ->
-            let span = loc.WordSpan
-            Some (loc.Category, span.StartCol, span.EndCol)
-        | _ -> None)
-    |> Array.toList
-    |> List.sortBy (fun (_, line, col) -> line, col)
-    |> Collection.assertEquiv expected
+    let actualCategories =
+        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
+        |> Array.choose (fun loc -> 
+            match loc.Category with 
+            | Category.Other -> None
+            | _ when loc.WordSpan.Line = line ->
+                let span = loc.WordSpan
+                Some (loc.Category, span.StartCol, span.EndCol)
+            | _ -> None)
+        |> Array.toList
+        |> List.sortBy (fun (_, line, col) -> line, col)
+    try actualCategories |> Collection.assertEquiv expected
+    with _ -> debug "AST: %A" parseResults.ParseTree; reraise()
+
+let checkLine line expected = checkLineInSource line expected source
 
 [<Test>]
 let ``module value``() = 
@@ -395,3 +398,42 @@ let ``unused function / member local binging``() =
     checkLine 194 [ Category.Unused, 12, 17 ]
     checkLine 199 [ Category.Unused, 12, 17 ]
 
+let (=>) source expected = 
+    expected
+    |> List.iter (fun (line, expected) ->
+        checkLineInSource line expected source)
+
+[<Test>]
+let ``unused open declaration in top level module``() =
+    """
+module TopModule
+open System
+open System.IO
+let _ = DateTime.Now
+"""
+    => [ 3, []
+         4, [ Category.Unused, 5, 14 ]]
+         
+[<Test>]
+let ``unused open declaration in namespace``() =
+    """
+namespace TopNamespace
+open System
+open System.IO
+module Nested =
+    let _ = DateTime.Now
+"""
+    => [ 3, []
+         4, [ Category.Unused, 5, 14 ]]
+         
+[<Test>]
+let ``unused open declaration in nested module``() =
+    """
+namespace TopNamespace
+module Nested =
+    open System
+    open System.IO
+    let _ = DateTime.Now
+"""
+    => [ 4, []
+         5, [ Category.Unused, 9, 18 ]]

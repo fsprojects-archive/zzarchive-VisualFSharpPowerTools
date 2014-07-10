@@ -242,21 +242,26 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
         | Some ast ->
             match ast with
             | ParsedInput.ImplFile implFile ->
-                let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
-                modules
-                |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
+                let rec walkModuleOrNamespace acc (decls, moduleRange) =
                     let openStatements =
                         decls
                         |> List.fold (fun acc -> 
                             function
-                            | SynModuleDecl.Open (LongIdentWithDots(ident, _), range) -> 
+                            | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
+                                walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
+                            | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) -> 
                                 { Ident = System.String.Join (".", ident)
-                                  Range = range
+                                  Range = openStatementRange
                                   Scope = 
-                                    { StartLine = range.StartLine
+                                    { StartLine = openStatementRange.StartLine
                                       EndLine = moduleRange.EndLine }} :: acc
                             | _ -> acc) [] 
-                    openStatements @ acc) []
+                    openStatements @ acc
+
+                let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
+                modules
+                |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
+                     walkModuleOrNamespace acc (decls, moduleRange) @ acc) []
             | _ -> []
         | None -> []
 
