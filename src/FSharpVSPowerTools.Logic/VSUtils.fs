@@ -55,16 +55,10 @@ let isPhysicalFile (item: EnvDTE.ProjectItem) =
 let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
     item <> null && isPhysicalFileOrFolderKind item.Kind
 
-let isIdentifier (s: string) = Rename.Checks.isIdentifier s
-
-let isFixableIdentifier (s: string) = s |> Rename.Checks.encapsulateIdentifier |> isIdentifier 
-
-let isOperator (s: string) = Rename.Checks.isOperator s
-
 let inline private isTypeParameter (prefix: char) (s: string) =
     match s.Length with
     | 0 | 1 -> false
-    | _ -> s.[0] = prefix && isIdentifier (s.Substring(1))
+    | _ -> s.[0] = prefix && IdentifierUtils.isIdentifier (s.Substring(1))
 
 let isGenericTypeParameter = isTypeParameter '''
 let isStaticallyResolvedTypeParameter = isTypeParameter '^'
