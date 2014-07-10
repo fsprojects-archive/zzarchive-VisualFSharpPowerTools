@@ -57,9 +57,14 @@ let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
 
 let isIdentifier (s: string) = Rename.Checks.isIdentifier s
 
-let isFixableIdentifier (s: string) = s |> Rename.Checks.encapsulateIdentifier |> isIdentifier 
+let isFixableIdentifier symbolKind (s: string) = Rename.Checks.encapsulateIdentifier symbolKind s |> isIdentifier 
 
-let isOperator (s: string) = Rename.Checks.isOperator s
+open Microsoft.FSharp.Compiler.PrettyNaming
+
+let isOperator (s: string) = 
+    let allowedChars = Set.ofList ['!'; '%'; '&'; '*'; '+'; '-'; '.'; '/'; '<'; '='; '>'; '?'; '@'; '^'; '|'; '~']
+    (IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s)
+    && (s.ToCharArray() |> Array.forall (fun c -> Set.contains c allowedChars))
 
 let inline private isTypeParameter (prefix: char) (s: string) =
     match s.Length with

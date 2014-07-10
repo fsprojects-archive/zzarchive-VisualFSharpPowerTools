@@ -1,5 +1,6 @@
 ﻿module FSharpVSPowerTools.Rename.Checks
 
+open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.PrettyNaming
 
 let DoubleBackTickDelimiter = "``"
@@ -11,11 +12,6 @@ let isDoubleBacktickIdent (s: string) =
         not (inner.Contains(DoubleBackTickDelimiter))
     else false
 
-let isOperator (s: string) = 
-    let allowedChars = Set.ofList ['!'; '%'; '&'; '*'; '+'; '-'; '.'; '/'; '<'; '='; '>'; '?'; '@'; '^'; '|'; '~']
-    (IsPrefixOperator s || IsInfixOperator s || IsTernaryOperator s)
-    && (s.ToCharArray() |> Array.forall (fun c -> Set.contains c allowedChars))
-
 let isIdentifier (s: string) =
     if isDoubleBacktickIdent s then
         true
@@ -25,11 +21,11 @@ let isIdentifier (s: string) =
                 if i = 0 then IsIdentifierFirstCharacter c else IsIdentifierPartCharacter c) 
 
 /// Encapsulates identifiers for rename operations if needed
-let encapsulateIdentifier name =
-    let isKeyWord = List.exists ((=) name) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames    
-    let isAlreadyEncapsulated = name.StartsWith DoubleBackTickDelimiter && name.EndsWith DoubleBackTickDelimiter
+let encapsulateIdentifier symbolKind newName =
+    let isKeyWord = List.exists ((=) newName) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames    
+    let isAlreadyEncapsulated = newName.StartsWith DoubleBackTickDelimiter && newName.EndsWith DoubleBackTickDelimiter
 
-    if isAlreadyEncapsulated then name
-    elif isOperator name then name
-    elif isKeyWord || not (isIdentifier name) then DoubleBackTickDelimiter + name + DoubleBackTickDelimiter
-    else name
+    if isAlreadyEncapsulated then newName
+    elif symbolKind = SymbolKind.Operator then newName
+    elif isKeyWord || not (isIdentifier newName) then DoubleBackTickDelimiter + newName + DoubleBackTickDelimiter
+    else newName
