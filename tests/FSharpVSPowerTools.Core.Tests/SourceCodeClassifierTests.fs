@@ -437,3 +437,14 @@ module Nested =
 """
     => [ 4, []
          5, [ Category.Unused, 9, 18 ]]
+
+[<Test>]
+let ``partially qualified symbol unused open declaration in nested module``() =
+    """
+module TopModule
+open System
+open System.IO
+let _ = IO.File.Create ""
+"""
+    => [ 3, []
+         4, [ Category.Unused, 5, 1 ]]
