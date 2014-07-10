@@ -100,6 +100,6 @@ module LanguageServiceTestHelper =
           ProjectOptions = args
           ReferencedProjects = Array.empty
           IsIncompleteTypeCheckEnvironment = false
-          UseScriptResolutionRules = false
+          UseScriptResolutionRules = true
           LoadTime = DateTime.UtcNow
           UnresolvedReferences = None }

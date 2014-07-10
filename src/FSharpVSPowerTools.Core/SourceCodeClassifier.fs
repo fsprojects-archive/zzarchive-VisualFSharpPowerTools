@@ -65,6 +65,12 @@ type private OpenDeclaration =
       Range: Range.range
       Scope: Scope }
 
+type private SymbolAccess =
+    | FullName
+    | OpenPrefix
+
+type private Line = int
+
 // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
 // Example: for ReferenceType symbol "System.Diagnostics.DebuggerDisplay" there are "System", "Diagnostics" and "DebuggerDisplay"
 // plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
@@ -519,18 +525,56 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
             | _ -> []
         | None -> []
 
+    let longIdentsByLine: Map<Line, (Range.range * string) seq> = 
+        match untypedAst with
+        | Some ast -> 
+            getLongIdents ast
+            |> Seq.map (fun ident -> ident.Range, System.String.Join ( ".", ident.Lid))
+            |> Seq.groupBy (fun (range, _) -> range.StartLine)
+            |> Map.ofSeq
+        | None -> Map.empty
+
+    let qualifiedSymbols: (Range.range * (SymbolAccess * string)) [] =
+        allSymbolsUses'
+        |> Array.map (fun (symbolUse, _, _) ->
+            let r = symbolUse.RangeAlternate
+            let fullName = symbolUse.Symbol.FullName
+            r,
+            match longIdentsByLine |> Map.tryFind r.StartLine with
+            | Some idents ->
+                match idents |> Seq.tryFind (fun (identRange, _) -> 
+                    identRange.StartColumn <= r.StartColumn && identRange.EndColumn >= r.EndColumn) with
+                | Some (identRange, _) ->
+                    let res = 
+                        match fullName.Length - (r.EndColumn - identRange.StartColumn) with
+                        // trailing dot
+                        | qualifiedLength when qualifiedLength > 1 ->
+                            SymbolAccess.OpenPrefix, fullName.Substring (0, qualifiedLength - 1)
+                        | qualifiedLength when qualifiedLength > 0 ->
+                            SymbolAccess.OpenPrefix, fullName.Substring (0, qualifiedLength)
+                        | _ -> SymbolAccess.FullName, fullName
+                    debug "[QS] FullName = %s, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
+                    res
+                | None -> 
+                    debug "[SQ] Symbol is out of any LongIdent: FullName = %s, Range = %A" fullName r
+                    SymbolAccess.FullName, fullName
+            | _ -> SymbolAccess.FullName, fullName)
+
+    debug "LongIdents by line: %A, Qualified symbols: %A" longIdentsByLine qualifiedSymbols
+        
     let unusedOpenDeclarations: OpenDeclaration list =
-        Array.foldBack (fun (symbolUse: FSharpSymbolUse, _, _) openDecls ->
+        Array.foldBack (fun (range: Range.range, (symbolAccess, name: string)) openDecls ->
             match openDecls with
             | [] -> []
             | _ ->
-                openDecls |> List.filter (fun decl -> 
+                openDecls |> List.filter (fun openDecl -> 
                     let matched =
-                        symbolUse.RangeAlternate.StartLine >= decl.Scope.StartLine
-                        && symbolUse.RangeAlternate.EndLine <= decl.Scope.EndLine
-                        && symbolUse.Symbol.FullName.StartsWith decl.Ident
-                    not matched)
-        ) allSymbolsUses' openDeclarations
+                        range.StartLine >= openDecl.Scope.StartLine
+                        && range.EndLine <= openDecl.Scope.EndLine
+                        && (match symbolAccess with FullName -> name.StartsWith openDecl.Ident | OpenPrefix -> name = openDecl.Ident)
+                    not matched
+                    )
+        ) qualifiedSymbols openDeclarations
 
     let unusedOpenDeclarationSpans =
         unusedOpenDeclarations
@@ -590,8 +634,8 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
         |> Seq.toArray
 
     let allSpans = spansBasedOnSymbolsUses |> Array.append quotations |> Array.append unusedOpenDeclarationSpans
-    
-//    for span in allSpans do
-//       debug "-=O=- %A" span
+
+    for span in allSpans do
+       debug "-=O=- %A" span
 
     allSpans

@@ -5,11 +5,8 @@ open NUnit.Framework
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 
-let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Coloring.fs")
-let source = File.ReadAllText(fileName)
-let sourceLines = source.Split([|"\n"|], System.StringSplitOptions.None)
+let fileName = "c:\\File.fs"
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
-
 let sourceFiles = [| fileName |]
 let args = 
   [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
@@ -25,12 +22,14 @@ let framework = FSharpTargetFramework.NET_4_5
 let languageService = LanguageService(fun _ -> ())
 let opts() = LanguageServiceTestHelper.projectOptions fileName
 
-let checkLineInSource line (expected: (Category * int * int) list) source = 
+let (=>) source (expected: (int * ((Category * int * int) list)) list) = 
     let opts = opts()
     let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.MatchingSource, true,
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true,
                                                       (fun _ -> async { return Some [opts] }))
         |> Async.RunSynchronously
+
+    let sourceLines = source.Split([|"\n"|], System.StringSplitOptions.None)
 
     let lexer = 
         { new LexerBase() with
@@ -46,34 +45,60 @@ let checkLineInSource line (expected: (Category * int * int) list) source =
 
     let actualCategories =
         SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
-        |> Array.choose (fun loc -> 
-            match loc.Category with 
-            | Category.Other -> None
-            | _ when loc.WordSpan.Line = line ->
-                let span = loc.WordSpan
-                Some (loc.Category, span.StartCol, span.EndCol)
-            | _ -> None)
-        |> Array.toList
-        |> List.sortBy (fun (_, line, col) -> line, col)
-    try actualCategories |> Collection.assertEquiv expected
+        |> Seq.groupBy (fun span -> span.WordSpan.Line)
+
+    let actual =
+        expected
+        |> List.map (fun (line, _) ->
+            match actualCategories |> Seq.tryFind (fun (actualLine, _) -> actualLine = line) with
+            | Some (_, spans) -> 
+                line,
+                spans
+                |> Seq.choose (fun span ->
+                    match span.Category with 
+                    | Category.Other -> None
+                    | _ -> Some (span.Category, span.WordSpan.StartCol, span.WordSpan.EndCol))
+                |> Seq.toList
+            | None -> line, [])
+        |> List.sortBy (fun (line, _) -> line)
+    try actual |> Collection.assertEquiv expected
     with _ -> debug "AST: %A" parseResults.ParseTree; reraise()
 
-let checkLine line expected = checkLineInSource line expected source
+let checkLine line expected = ()
 
 [<Test>]
 let ``module value``() = 
-    checkLine 3 []
-    checkLine 6 []
+    """
+module M
+let moduleValue = 1
+"""
+    => [3, []]
 
 [<Test>]
-let ``module function``() = checkLine 4 [ Category.Function, 4, 18 ]
+let ``module function``() = 
+    """
+module M
+let moduleFunction x = x + 1
+"""
+    => [ 3, [ Category.Function, 4, 18 ]]
 
 [<Test>]
 let ``module higher order function``() = 
-    checkLine 5 [ Category.Function, 24, 28; Category.Function, 34, 38; Category.Function, 4, 23 ]
+    """
+module M
+let higherOrderFunction func x = (func x) - 1
+"""
+   => [ 3, [ Category.Function, 24, 28; Category.Function, 34, 38; Category.Function, 4, 23 ]]
 
 [<Test>]
-let ``class let value``() = checkLine 11 []
+let ``class let value``() = 
+    """
+module M
+type Class() =
+    let value = 1
+    member x.M = value
+"""
+    => [ 4, []]
 
 [<Test>]
 let ``class let function``() = checkLine 12 [ Category.Function, 8, 24 ]
@@ -394,14 +419,19 @@ let ``unused function / member argument``() =
     checkLine 198 [ Category.Function, 8, 12; Category.Unused, 13, 17 ]
 
 [<Test>]
-let ``unused function / member local binging``() =
-    checkLine 194 [ Category.Unused, 12, 17 ]
-    checkLine 199 [ Category.Unused, 12, 17 ]
-
-let (=>) source expected = 
-    expected
-    |> List.iter (fun (line, expected) ->
-        checkLineInSource line expected source)
+let ``unused function / member local binding``() =
+    """
+module Top
+type PublicClass() =
+    let __.Method() =
+        let local = 1
+        ()
+let func x =
+    let local = 1
+    x
+"""
+    => [ 4, [ Category.Unused, 12, 17 ]
+         7, [ Category.Unused, 8, 13 ]]
 
 [<Test>]
 let ``unused open declaration in top level module``() =
@@ -438,8 +468,8 @@ module Nested =
     => [ 4, []
          5, [ Category.Unused, 9, 18 ]]
 
-[<Test>]
-let ``partially qualified symbol unused open declaration in nested module``() =
+[<Test>] 
+let ``unused open declaration due to partially qualified symbol``() =
     """
 module TopModule
 open System
@@ -447,4 +477,15 @@ open System.IO
 let _ = IO.File.Create ""
 """
     => [ 3, []
-         4, [ Category.Unused, 5, 1 ]]
+         4, [ Category.Unused, 5, 14 ]]
+
+[<Test>]
+let ``unused parent open declaration due to partially qualified symbol``() =
+    """
+module TopModule
+open System
+open System.IO
+let _ = File.Create ""
+"""
+    => [ 3, [ Category.Unused, 5, 11 ]
+         4, []]
