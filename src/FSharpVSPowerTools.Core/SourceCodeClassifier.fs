@@ -524,11 +524,22 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
                                 walkModuleOrNamespace (parent @ ident) acc (nestedModuleDecls, nestedModuleRange)
                             | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) -> 
                                 let relativeIdents = ident |> List.map string |> List.toArray
-                                let fullIdents = parent @ ident |> List.map string |> List.toArray
+                                let grandParents = 
+                                    parent 
+                                    |> List.map string 
+                                    |> List.toArray
+                                    |> fun p ->
+                                        [0..p.Length - 1] 
+                                        |> List.map (fun index -> p.[0..index])
+                                
+                                let fullIdentsList = 
+                                    grandParents 
+                                    |> List.map (fun grandParent -> 
+                                        Array.append grandParent relativeIdents)
                                 
                                 let rec loop acc maxLength =
                                     let newModules =
-                                        autoOpenModules 
+                                        autoOpenModules
                                         |> List.filter (fun autoOpenModule -> 
                                             autoOpenModule.Length = maxLength + 1
                                             && acc |> List.exists (fun collectedAutoOpenModule ->
@@ -537,7 +548,11 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
                                     | [] -> acc
                                     | _ -> loop (acc @ newModules) (maxLength + 1)
                                 
-                                let identsAndAutoOpens = relativeIdents :: loop [fullIdents] relativeIdents.Length
+                                let identsAndAutoOpens = 
+                                    fullIdentsList
+                                    |> List.map (fun fullIdents ->
+                                        relativeIdents :: loop [fullIdents] relativeIdents.Length)
+                                    |> List.concat
 
                                 { Idents = identsAndAutoOpens 
                                            |> List.map (fun idents -> System.String.Join (".", idents))
@@ -590,14 +605,14 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
                         | qualifiedLength when qualifiedLength > 0 ->
                             SymbolAccess.OpenPrefix, fullName.Substring (0, qualifiedLength)
                         | _ -> SymbolAccess.FullName, fullName
-                    debug "[QS] FullName = %s, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
+                    //debug "[QS] FullName = %s, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
                     res
                 | None -> 
-                    debug "[SQ] Symbol is out of any LongIdent: FullName = %s, Range = %A" fullName r
+                    //debug "[SQ] Symbol is out of any LongIdent: FullName = %s, Range = %A" fullName r
                     SymbolAccess.FullName, fullName
             | _ -> SymbolAccess.FullName, fullName)
 
-    debug "LongIdents by line: %A, Qualified symbols: %A" longIdentsByLine qualifiedSymbols
+    //debug "LongIdents by line: %A, Qualified symbols: %A" longIdentsByLine qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
         Array.foldBack (fun (symbolRange: Range, (symbolAccess, name: string)) openDecls ->

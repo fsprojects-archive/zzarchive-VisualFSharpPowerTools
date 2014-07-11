@@ -881,7 +881,7 @@ open System.IO; let _ = File.Create "";; open System.IO
 """
     => [ 2, [ Category.ReferenceType, 24, 28; Category.Function, 29, 35; Category.Unused, 46, 55 ]]
 
-[<Test; Ignore "WIP">]
+[<Test>]
 let ``open a nested module inside another one is not unused``() =
     """
 module Top
@@ -892,6 +892,36 @@ module M2 =
     let y = x
 """
     => [ 6, []]
+
+[<Test>]
+let ``open a nested module inside another one is not unused, complex hierarchy``() =
+    """
+module Top =
+    module M1 =
+        module M11 =
+            let x = ()
+    module M2 =
+        module M22 =
+            open M1.M11
+            let y = x
+"""
+    => [ 8, []]
+
+[<Test>]
+let ``open a nested module inside another one is not unused, even more complex hierarchy``() =
+    """
+module Top =
+    module M1 =
+        module M11 =
+            module M111 =
+                module M1111 =
+                    let x = ()
+    module M2 =
+        module M22 =
+            open M1.M11.M111.M1111
+                let y = x
+"""
+    => [ 10, []]
 
 [<Test>]
 let ``module or namespace is not marked as unused if it actually used by symbols from its child modules with AutoOpen attribute``() =
