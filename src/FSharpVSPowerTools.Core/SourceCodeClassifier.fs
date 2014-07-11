@@ -635,7 +635,7 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
 
     let allSpans = spansBasedOnSymbolsUses |> Array.append quotations |> Array.append unusedOpenDeclarationSpans
 
-    for span in allSpans do
-       debug "-=O=- %A" span
+//    for span in allSpans do
+//       debug "-=O=- %A" span
 
     allSpans
