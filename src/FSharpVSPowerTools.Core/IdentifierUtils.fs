@@ -38,9 +38,13 @@ let encapsulateIdentifier symbolKind newName =
 
 let isFixableIdentifier (s: string) = encapsulateIdentifier SymbolKind.Ident s |> isIdentifier
 
-let isUnionCaseIdent (s: string) =
-    let forbiddenChars = ["."; "+"; "$"; "&"; "["; "]"; "/"; "\\"; "*"; "\""]
+let private forbiddenChars = ["."; "+"; "$"; "&"; "["; "]"; "/"; "\\"; "*"; "\""]
+
+let isTypeNameIdent (s: string) =
     not (String.IsNullOrEmpty s) &&
     forbiddenChars |> Seq.forall (fun c -> not (s.Contains c)) &&
-    isFixableIdentifier s &&    
+    isFixableIdentifier s 
+
+let isUnionCaseIdent (s: string) =
+    isTypeNameIdent s &&    
     Char.IsUpper(s.Replace(DoubleBackTickDelimiter,"").[0])

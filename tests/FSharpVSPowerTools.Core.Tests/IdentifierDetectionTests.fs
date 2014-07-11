@@ -19,3 +19,12 @@ let ``should be able to detect unioncase identifiers``() =
     isUnionCaseIdent "case1" |> assertFalse
     isUnionCaseIdent "``X.Y``" |> assertFalse
     isUnionCaseIdent "``Case2[x]``" |> assertFalse
+
+[<Test>]
+let ``should be able to detect type names``() = 
+    isTypeNameIdent "Type1" |> assertTrue
+    isTypeNameIdent "``Type 1``" |> assertTrue
+    isTypeNameIdent "type1" |> assertTrue
+    isTypeNameIdent "``type 1``" |> assertTrue
+    isTypeNameIdent "``X.Y``" |> assertFalse
+    isTypeNameIdent "``Case2[x]``" |> assertFalse
