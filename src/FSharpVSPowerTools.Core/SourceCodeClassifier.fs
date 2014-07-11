@@ -55,15 +55,19 @@ type CategorizedColumnSpan =
     { Category: Category
       WordSpan: WordSpan }
 
-type private Scope =
-    { StartLine: int
-      EndLine: int }
+type private Point =
+    { Line: int 
+      Col: int }
+
+type private Range =
+    { Start: Point
+      End: Point }
 
 [<NoComparison>]
 type private OpenDeclaration =
     { Ident: string 
-      Range: Range.range
-      Scope: Scope }
+      DeclRange: Range.range
+      Range: Range }
 
 type private SymbolAccess =
     | FullName
@@ -511,10 +515,10 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
                                 walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
                             | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) -> 
                                 { Ident = System.String.Join (".", ident)
-                                  Range = openStatementRange
-                                  Scope = 
-                                    { StartLine = openStatementRange.StartLine
-                                      EndLine = moduleRange.EndLine }} :: acc
+                                  DeclRange = openStatementRange
+                                  Range = 
+                                    { Start = { Line = openStatementRange.StartLine; Col = openStatementRange.StartColumn }
+                                      End = { Line = moduleRange.EndLine; Col = moduleRange.EndColumn }}} :: acc
                             | _ -> acc) [] 
                     openStatements @ acc
 
@@ -534,12 +538,18 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
             |> Map.ofSeq
         | None -> Map.empty
 
-    let qualifiedSymbols: (Range.range * (SymbolAccess * string)) [] =
+    let qualifiedSymbols: (Range * (SymbolAccess * string)) [] =
+//        let getPossibleFullNames (symbol: FSharpSymbol) =
+//            match symbol with
+//            | Entity (entity, _, _) -> entity.
+//            | _ -> symbol.FullName
+
         allSymbolsUses'
         |> Array.map (fun (symbolUse, _, _) ->
             let r = symbolUse.RangeAlternate
             let fullName = symbolUse.Symbol.FullName
-            r,
+            { Start = { Line = r.StartLine; Col = r.StartColumn }   
+              End = { Line = r.EndLine; Col = r.EndColumn }},
             match longIdentsByLine |> Map.tryFind r.StartLine with
             | Some idents ->
                 match idents |> Seq.tryFind (fun (identRange, _) -> 
@@ -563,14 +573,14 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
     debug "LongIdents by line: %A, Qualified symbols: %A" longIdentsByLine qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
-        Array.foldBack (fun (range: Range.range, (symbolAccess, name: string)) openDecls ->
+        Array.foldBack (fun (symbolRange: Range, (symbolAccess, name: string)) openDecls ->
             openDecls |> List.fold (fun (acc, found) (openDecl, used) -> 
                 if found then
                     (openDecl, used) :: acc, found
                 else
                     let usedByCurrentSymbol =
-                        range.StartLine >= openDecl.Scope.StartLine
-                        && range.EndLine <= openDecl.Scope.EndLine
+                        symbolRange.Start >= openDecl.Range.Start
+                        && symbolRange.End <= openDecl.Range.End
                         && (match symbolAccess with 
                             | FullName -> name.StartsWith openDecl.Ident 
                             | OpenPrefix -> name = openDecl.Ident)
@@ -584,9 +594,9 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
     let unusedOpenDeclarationSpans =
         unusedOpenDeclarations
         |> List.map (fun decl -> { Category = Category.Unused
-                                   WordSpan = { Line = decl.Range.StartLine 
-                                                StartCol = decl.Range.StartColumn
-                                                EndCol = decl.Range.EndColumn }})
+                                   WordSpan = { Line = decl.DeclRange.StartLine 
+                                                StartCol = decl.DeclRange.StartColumn
+                                                EndCol = decl.DeclRange.EndColumn }})
         |> List.toArray
     
     //printfn "AST: %A" untypedAst

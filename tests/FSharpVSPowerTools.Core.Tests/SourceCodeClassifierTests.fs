@@ -859,6 +859,26 @@ module Nested =
          5, []]
 
 [<Test>]
+let ``open statement duplication in parent module is not unused while it's actually used in its scope``() =
+    """
+module TopModule
+open System.IO
+module Nested =
+    open System.IO
+    let _ = File.Create ""
+let _ = File.Create ""
+"""
+    => [ 3, []
+         5, []]
+
+[<Test>]
+let ``multiple open declaration in the same line``() =
+    """
+open System.IO; let _ = File.Create "";; open System.IO
+"""
+    => [ 2, [ Category.ReferenceType, 24, 28; Category.Function, 29, 35; Category.Unused, 46, 55 ]]
+
+[<Test; Ignore "WIP">]
 let ``open a nested module inside another one is not unused``() =
     """
 module Top
@@ -870,7 +890,7 @@ module M2 =
 """
     => [ 6, []]
 
-[<Test>]
+[<Test; Ignore "WIP">]
 let ``module or namespace is not marked as unused if it actually used by symbols from its child modules with AutoOpen attribute``() =
     """
 module NormalModule =
@@ -881,9 +901,10 @@ module NormalModule =
             module AutoOpenModule2 =
                 [<AutoOpen>]
                 module AutoOpenModule3 =
-                    let func x = ()
+                    //let func x = ()
+                    type Class() = class end
 
 open NormalModule.AutoOpenModule1.NestedNormalModule
-let _ = func 1
+let _ = Class() //func 1
 """
-    => [ 12, []]
+    => [ 13, []]
