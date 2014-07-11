@@ -58,7 +58,7 @@
         </HeaderedContentControl>
         <HeaderedContentControl Grid.Row="1" Visibility="{Binding Path=Initialized, Converter={StaticResource BoolToVisOrHide}}">
             <HeaderedContentControl.Header>
-                <Label Content="FullName:"  />
+                <Label Content="Full name:"  />
             </HeaderedContentControl.Header>
             <TextBox IsEnabled="True" IsReadOnly="True" Text="{Binding FullName, Mode=OneWay}" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
 
