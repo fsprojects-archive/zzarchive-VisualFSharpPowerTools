@@ -5,11 +5,13 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type internal ShortIdent = string
 type internal Idents = ShortIdent[]
+type IsAutoOpen = bool
 
 type EntityKind =
     | Attribute
     | Type
     | FunctionOrValue
+    | Module of IsAutoOpen
     override x.ToString() = sprintf "%A" x
 
 type RawEntity = 
@@ -85,7 +87,7 @@ module AssemblyContentProvider =
     open System.IO
     open System.Collections.Generic
             
-    let fixParentModuleSuffix (parent: Idents option) (idents: Idents) =
+    let private fixParentModuleSuffix (parent: Idents option) (idents: Idents) =
         match parent with
         | Some p when p.Length <= idents.Length -> 
             idents 
@@ -93,7 +95,7 @@ module AssemblyContentProvider =
                 if i < p.Length then p.[i] else ident)
         | _ -> idents
 
-    let isAttribute (entity: FSharpEntity) =
+    let private isAttribute (entity: FSharpEntity) =
         let getBaseType (entity: FSharpEntity) =
             try 
                 match entity.BaseType with
@@ -111,7 +113,7 @@ module AssemblyContentProvider =
                     fullName = "System.Attribute" || isAttributeType (getBaseType ty)
         isAttributeType (Some entity)
 
-    let createEntity ns (parent: Parent) (entity: FSharpEntity) =
+    let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
         parent.FormatEntityFullName entity
         |> Option.map (fun fullName ->
             { Idents = fullName
@@ -119,19 +121,22 @@ module AssemblyContentProvider =
               IsPublic = entity.Accessibility.IsPublic
               TopRequireQualifiedAccessParent = parent.RequiresQualifiedAccess |> Option.map parent.FormatIdents
               AutoOpenParent = parent.AutoOpen |> Option.map parent.FormatIdents
-              Kind = if isAttribute entity then EntityKind.Attribute else EntityKind.Type })
+              Kind = 
+                if isAttribute entity then 
+                    EntityKind.Attribute 
+                elif entity.IsFSharpModule then EntityKind.Module (hasAttribute<AutoOpenAttribute> entity.Attributes)
+                else EntityKind.Type })
 
-    let rec traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 
+    let rec private traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 
 
         seq { if not entity.IsProvided then
                 match contentType, entity.Accessibility.IsPublic with
                 | Full, _ | Public, true ->
                     let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parent.Namespace
 
-                    if not entity.IsFSharpModule then
-                        match createEntity ns parent entity with
-                        | Some x -> yield x
-                        | None -> ()
+                    match createEntity ns parent entity with
+                    | Some x -> yield x
+                    | None -> ()
 
                     let parentWithModuleSuffix =
                         if entity.IsFSharpModule && hasModuleSuffixAttribute entity then 

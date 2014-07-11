@@ -394,7 +394,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         // determining that a record, DU or module is used anywhere requires
                         // inspecting all their inclosed entities (fields, cases and func / vals)
                         // for useness, which is too expensive to do. Hence we never gray them out.
-                        | Entity ((Record | UnionType | Interface | Module), _, _) -> None
+                        | Entity ((Record | UnionType | Interface | TypedAstUtils.Module), _, _) -> None
                         | _ ->
                             match Seq.toList uses with
                             | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->

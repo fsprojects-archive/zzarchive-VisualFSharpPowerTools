@@ -80,6 +80,8 @@ type ResolveUnopenedNamespaceSmartTagger
                                         | Type, Type
                                         | FunctionOrValue, _ -> true 
                                         | Attribute, _
+                                        | _, Module _
+                                        | Module _, _
                                         | Type, _ -> false)
 
                                 let entities = 

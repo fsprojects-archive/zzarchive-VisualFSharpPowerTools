@@ -74,9 +74,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                                                                 includeUnusedDeclarations, getSymbolDeclLocation)
 
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
+                            let! allEntities = vsLanguageService.GetAllEntities(doc.FilePath, snapshot.GetText(), project)
 
                             let spans = 
-                                getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
+                                getCategoriesAndLocations (symbolsUses, allEntities, parseResults.ParseTree, lexer)
                                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                             state.Swap (fun _ -> 

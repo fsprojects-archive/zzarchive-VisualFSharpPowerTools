@@ -48,7 +48,10 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
     let actualCategories =
-        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer)
+        let allEntities =
+            languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
+            |> Async.RunSynchronously
+        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, allEntities, parseResults.ParseTree, lexer)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
     let actual =
@@ -890,7 +893,7 @@ module M2 =
 """
     => [ 6, []]
 
-[<Test; Ignore "WIP">]
+[<Test>]
 let ``module or namespace is not marked as unused if it actually used by symbols from its child modules with AutoOpen attribute``() =
     """
 module NormalModule =

@@ -36,7 +36,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | Pattern -> Category.PatternCase
     | Entity (_, ValueType, _) -> Category.ValueType
     | Entity Class -> Category.ReferenceType
-    | Entity (_, Module, _) -> Category.Module
+    | Entity (_, TypedAstUtils.Module, _) -> Category.Module
     | Entity (_, _, Tuple) -> Category.ReferenceType
     | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
     | MemberFunctionOrValue (Constructor ValueType) -> Category.ValueType
@@ -65,7 +65,7 @@ type private Range =
 
 [<NoComparison>]
 type private OpenDeclaration =
-    { Ident: string 
+    { Idents: Set<string>
       DeclRange: Range.range
       Range: Range }
 
@@ -338,7 +338,10 @@ let getLongIdents (input: ParsedInput) : LongIdentWithDots[] =
     //debug "%A" idents
     Seq.toArray idents
  
-let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untypedAst: ParsedInput option, lexer: LexerBase) =
+type IsSymbolUsed = bool
+
+let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[], allEntities: RawEntity list option,
+                               untypedAst: ParsedInput option, lexer: LexerBase) =
     let allSymbolsUses' =
         allSymbolsUses
         |> Seq.groupBy (fun (su, _) -> su.RangeAlternate.EndLine)
@@ -506,15 +509,39 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
         | Some ast ->
             match ast with
             | ParsedInput.ImplFile implFile ->
-                let rec walkModuleOrNamespace acc (decls, moduleRange) =
+                let autoOpenModules =
+                    match allEntities with
+                    | Some entities ->
+                            entities |> List.filter (fun e -> e.Kind = EntityKind.Module true)
+                    | None -> []
+                    |> List.map (fun e -> e.Idents)
+                let rec walkModuleOrNamespace (parent: LongIdent) acc (decls, moduleRange) =
                     let openStatements =
                         decls
                         |> List.fold (fun acc -> 
                             function
-                            | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
-                                walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
+                            | SynModuleDecl.NestedModule (ComponentInfo(_, _, _, ident, _, _, _, _), nestedModuleDecls, _, nestedModuleRange) -> 
+                                walkModuleOrNamespace (parent @ ident) acc (nestedModuleDecls, nestedModuleRange)
                             | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) -> 
-                                { Ident = System.String.Join (".", ident)
+                                let relativeIdents = ident |> List.map string |> List.toArray
+                                let fullIdents = parent @ ident |> List.map string |> List.toArray
+                                
+                                let rec loop acc maxLength =
+                                    let newModules =
+                                        autoOpenModules 
+                                        |> List.filter (fun autoOpenModule -> 
+                                            autoOpenModule.Length = maxLength + 1
+                                            && acc |> List.exists (fun collectedAutoOpenModule ->
+                                                autoOpenModule |> Array.startsWith collectedAutoOpenModule))
+                                    match newModules with
+                                    | [] -> acc
+                                    | _ -> loop (acc @ newModules) (maxLength + 1)
+                                
+                                let identsAndAutoOpens = relativeIdents :: loop [fullIdents] relativeIdents.Length
+
+                                { Idents = identsAndAutoOpens 
+                                           |> List.map (fun idents -> System.String.Join (".", idents))
+                                           |> Set.ofList
                                   DeclRange = openStatementRange
                                   Range = 
                                     { Start = { Line = openStatementRange.StartLine; Col = openStatementRange.StartColumn }
@@ -524,8 +551,8 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
 
                 let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
                 modules
-                |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
-                     walkModuleOrNamespace acc (decls, moduleRange) @ acc) []
+                |> List.fold (fun acc (SynModuleOrNamespace(ident, _, decls, _, _, _, moduleRange)) ->
+                     walkModuleOrNamespace ident acc (decls, moduleRange) @ acc) []
             | _ -> []
         | None -> []
 
@@ -582,8 +609,8 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
                         symbolRange.Start >= openDecl.Range.Start
                         && symbolRange.End <= openDecl.Range.End
                         && (match symbolAccess with 
-                            | FullName -> name.StartsWith openDecl.Ident 
-                            | OpenPrefix -> name = openDecl.Ident)
+                            | FullName -> openDecl.Idents |> Set.exists name.StartsWith
+                            | OpenPrefix -> openDecl.Idents |> Set.contains name)
                     (openDecl, used || usedByCurrentSymbol) :: acc, usedByCurrentSymbol) ([], false)
             |> fst
             |> List.rev
