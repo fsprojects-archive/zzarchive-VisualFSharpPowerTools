@@ -49,7 +49,10 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
             | StaticallyResolvedTypeParameter, _ ->
                 check (isStaticallyResolvedTypeParameter newName) Resource.validatingStaticallyResolvedTypeParameter
             | (Ident | Other), _ ->
-                check (isFixableIdentifier newName) Resource.validatingIdentifier
+                if SourceCodeClassifier.getIdentifierCategory fssym <> SourceCodeClassifier.Category.Other then
+                    check (isTypeNameIdent newName) Resource.validatingTypeName
+                else
+                    check (isFixableIdentifier newName) Resource.validatingIdentifier
 
     // Complete validation chain for the name property
     let validateName = 

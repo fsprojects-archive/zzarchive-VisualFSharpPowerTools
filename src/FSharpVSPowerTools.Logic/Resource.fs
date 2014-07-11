@@ -13,6 +13,7 @@ module Resource =
     let [<Literal>] validatingUnionCase = "Invalid name for union cases."
     let [<Literal>] validatingActivePattern = "Invalid name for active patterns."
     let [<Literal>] validatingIdentifier = "Invalid name for identifiers."
+    let [<Literal>] validatingTypeName = "Invalid name for types."
     let [<Literal>] validatingGenericTypeParameter = "Invalid name for generic type parameters."
     let [<Literal>] validatingStaticallyResolvedTypeParameter = "Invalid name for statically resolved type parameters."
     let [<Literal>] validatingOperator ="Invalid name for operators."

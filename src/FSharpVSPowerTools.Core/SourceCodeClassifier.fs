@@ -18,6 +18,17 @@ type Category =
     | Other
     override x.ToString() = sprintf "%A" x
 
+let getIdentifierCategory (symbol: FSharpSymbol) =
+    match symbol with
+    | Entity (_, ValueType, _) -> Category.ValueType
+    | Entity Class -> Category.ReferenceType
+    | Entity (_, Module, _) -> Category.Module
+    | Entity (_, _, Tuple) -> Category.ReferenceType
+    | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
+    | _ ->
+        //debug "Unknown symbol: %A (type: %s)" symbol (symbol.GetType().Name)
+        Category.Other 
+
 let internal getCategory (symbolUse: FSharpSymbolUse) =
     match symbolUse.Symbol with
     | Field (MutableVar, _)
