@@ -100,7 +100,11 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
 
     // Generate the new name and show it on the textbox
     let updateFullName newName = 
-        let encapsulated = encapsulateIdentifier symbol.Kind newName
+        let encapsulated = 
+            if validateName newName = [] then
+                encapsulateIdentifier symbol.Kind newName
+            else 
+                newName
         if String.IsNullOrEmpty symbolLocation then self.FullName <- encapsulated
         elif String.IsNullOrEmpty encapsulated then self.FullName <- symbolLocation
         else self.FullName <- symbolLocation + "." + encapsulated
