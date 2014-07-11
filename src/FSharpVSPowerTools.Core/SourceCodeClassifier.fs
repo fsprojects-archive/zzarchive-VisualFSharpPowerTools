@@ -564,17 +564,22 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
         
     let unusedOpenDeclarations: OpenDeclaration list =
         Array.foldBack (fun (range: Range.range, (symbolAccess, name: string)) openDecls ->
-            match openDecls with
-            | [] -> []
-            | _ ->
-                openDecls |> List.filter (fun openDecl -> 
-                    let matched =
+            openDecls |> List.fold (fun (acc, found) (openDecl, used) -> 
+                if found then
+                    (openDecl, used) :: acc, found
+                else
+                    let usedByCurrentSymbol =
                         range.StartLine >= openDecl.Scope.StartLine
                         && range.EndLine <= openDecl.Scope.EndLine
-                        && (match symbolAccess with FullName -> name.StartsWith openDecl.Ident | OpenPrefix -> name = openDecl.Ident)
-                    not matched
-                    )
-        ) qualifiedSymbols openDeclarations
+                        && (match symbolAccess with 
+                            | FullName -> name.StartsWith openDecl.Ident 
+                            | OpenPrefix -> name = openDecl.Ident)
+                    (openDecl, used || usedByCurrentSymbol) :: acc, usedByCurrentSymbol) ([], false)
+            |> fst
+            |> List.rev
+        ) qualifiedSymbols (openDeclarations |> List.map (fun openDecl -> openDecl, false))
+        |> List.filter (fun (_, used) -> not used)
+        |> List.map fst
 
     let unusedOpenDeclarationSpans =
         unusedOpenDeclarations
@@ -605,9 +610,9 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * bool)[], untyp
                      let tokens =
                         match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
                         | Some rquote -> 
-                            tokens 
+                            tokens
                             |> List.rev
-                            |> Seq.skipWhile (fun t -> t <> rquote)
+                            |> Seq.skipWhile ((<>) rquote)
                             |> Seq.toList
                             |> List.rev
                         | _ -> 

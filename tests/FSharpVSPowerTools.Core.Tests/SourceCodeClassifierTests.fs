@@ -845,3 +845,45 @@ let _ = File.Create ""
 """
     => [ 3, [ Category.Unused, 5, 11 ]
          4, []]
+
+[<Test>]
+let ``open statement duplication in parent module is unused``() =
+    """
+module TopModule
+open System.IO
+module Nested =
+    open System.IO
+    let _ = File.Create ""
+"""
+    => [ 3, [ Category.Unused, 5, 14 ]
+         5, []]
+
+[<Test>]
+let ``open a nested module inside another one is not unused``() =
+    """
+module Top
+module M1 =
+    let x = ()
+module M2 =
+    open M1
+    let y = x
+"""
+    => [ 6, []]
+
+[<Test>]
+let ``module or namespace is not marked as unused if it actually used by symbols from its child modules with AutoOpen attribute``() =
+    """
+module NormalModule =
+    [<AutoOpen>]
+    module AutoOpenModule1 =
+        module NestedNormalModule =
+            [<AutoOpen>]
+            module AutoOpenModule2 =
+                [<AutoOpen>]
+                module AutoOpenModule3 =
+                    let func x = ()
+
+open NormalModule.AutoOpenModule1.NestedNormalModule
+let _ = func 1
+"""
+    => [ 12, []]
