@@ -6,6 +6,9 @@
 *.user
 *.sln.docstates
 
+# Roslyn cache directories
+*.ide
+
 # Build results
 
 [Dd]ebug/
