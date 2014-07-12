@@ -78,12 +78,12 @@ exception AssemblyMissingException of string
 type FSharpLanguageService [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) = 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-    let assemblyInfo =
-        match VisualStudioVersion.fromDTEVersion dte.Version with
-        | VisualStudioVersion.VS2012 ->
-            "FSharp.LanguageService, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
-        | _ ->
-            "FSharp.LanguageService, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"    
+
+    let assemblyInfo = 
+        let version = VisualStudioVersion.fromDTEVersion dte.Version
+        String.Format("FSharp.LanguageService, Version={0}.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", 
+                        VisualStudioVersion.toString version)
+                              
     let asm = lazy try Assembly.Load(assemblyInfo)
                    with _ ->
                        let ex = AssemblyMissingException "FSharp.LanguageService"
