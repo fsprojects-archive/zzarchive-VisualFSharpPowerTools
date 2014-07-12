@@ -575,19 +575,15 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
         match untypedAst with
         | Some ast -> 
             getLongIdents ast
+            |> Seq.filter (fun ident -> ident.Lid.Length > 1) // take idents with dots only
             |> Seq.map (fun ident -> ident.Range, System.String.Join ( ".", ident.Lid))
             |> Seq.groupBy (fun (range, _) -> range.StartLine)
             |> Map.ofSeq
         | None -> Map.empty
 
     let qualifiedSymbols: (Range * (SymbolAccess * string)) [] =
-//        let getPossibleFullNames (symbol: FSharpSymbol) =
-//            match symbol with
-//            | Entity (entity, _, _) -> entity.
-//            | _ -> symbol.FullName
-
-        allSymbolsUses'
-        |> Array.map (fun (symbolUse, _, _) ->
+        allSymbolsUses
+        |> Array.map (fun (symbolUse, _) ->
             let r = symbolUse.RangeAlternate
             let fullName = symbolUse.Symbol.FullName
             { Start = { Line = r.StartLine; Col = r.StartColumn }   

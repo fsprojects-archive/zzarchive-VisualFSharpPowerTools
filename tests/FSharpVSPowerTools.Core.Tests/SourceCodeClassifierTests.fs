@@ -941,3 +941,23 @@ open NormalModule.AutoOpenModule1.NestedNormalModule
 let _ = Class() //func 1
 """
     => [ 13, []]
+    
+[<Test>]
+let ``open declaration is not marked as unused if there is a shortened attribute symbol from it``() =
+    """
+open System
+[<Serializable>]
+type Class() = class end
+"""
+    => [ 2, []]
+    
+[<Test; Ignore "FCS 0.0.57 issue https://github.com/fsharp/FSharp.Compiler.Service/issues/178">]
+let ``open declaration is not marked as unused if an extension property symbol from it is used``() =
+    """
+module Module =
+    type System.String with
+        member __.ExtensionProperty = ()
+open Module
+let _ = "a long string".ExtensionProperty
+"""
+    => [ 5, []]
