@@ -20,6 +20,12 @@ module Array =
             else false
         other.Length = 0 || loop 0
 
+    /// Returns true if one array has trailing elements equal to another's.
+    let endsWith (other: _ array) (value: _ array) =
+        value 
+        |> Array.rev
+        |> startsWith (Array.rev other)
+
 [<RequireQualifiedAccess>]
 module Option =
     let inline ofNull value =

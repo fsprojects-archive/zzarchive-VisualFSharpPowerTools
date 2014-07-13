@@ -418,11 +418,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                 source.[line] <- origLineStr
                                 match res with
                                 | Some (symbol, _, symbolUses) -> 
-                                    debug "[LanguageService] Getting read FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
+                                    debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
                                     symbolUses
                                 | None -> [|symbolUse|]
                             | None -> [|symbolUse|]
-                        else [|symbolUse|]
+                        else
+                            debug "[LanguageService] Symbol is OK: %s" symbolUse.Symbol.FullName
+                            [|symbolUse|]
                     | _ -> [|symbolUse|])
                 |> Array.concat
 

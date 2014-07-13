@@ -72,7 +72,9 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         |> List.sortBy (fun (line, _) -> line)
     let expected = expected |> List.map (fun (line, spans) -> line, spans |> List.sortBy (fun (_, startCol, _) -> startCol))
     try actual |> Collection.assertEquiv (expected |> List.sortBy (fun (line, _) -> line))
-    with _ -> debug "AST: %A" parseResults.ParseTree; reraise()
+    with _ -> 
+        //debug "AST: %A" parseResults.ParseTree; 
+        reraise()
 
 [<Test>]
 let ``module value``() = 
@@ -952,8 +954,8 @@ type Class() = class end
 """
     => [ 2, []]
     
-[<Test>] //; Ignore "FCS 0.0.57 issue https://github.com/fsharp/FSharp.Compiler.Service/issues/178">]
-let ``open declaration is not marked as unused if an extension property symbol from it is used``() =
+[<Test>]
+let ``open declaration is not marked as unused if an extension property is used``() =
     """
 module Module =
     type System.String with
@@ -962,4 +964,17 @@ open Module
 let _ = "a long string".ExtensionProperty
 """
     => [ 5, []]
+
+[<Test>]
+let ``open declaration is not marked as unused if an extension method is used``() =
+    """
+type Class() = class end
+module Module =
+    type Class with
+        member __.ExtensionMethod() = ()
+open Module
+let x = Class()
+let _ = x.ExtensionMethod()
+"""
+    => [ 6, []]
 
