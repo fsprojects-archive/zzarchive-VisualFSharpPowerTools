@@ -29,7 +29,7 @@ let opts source =
 let (=>) source (expected: (int * ((Category * int * int) list)) list) = 
     let opts = opts source
     
-    let sourceLines = source.Split([|"\n"|], System.StringSplitOptions.None)
+    let sourceLines = source.Split([|"\r\n"|], System.StringSplitOptions.None)
 
     let lexer = 
         { new LexerBase() with
@@ -41,8 +41,8 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 Lexer.tokenizeLine source args line lineStr Lexer.queryLexState }
 
     let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true,
-                                                      (fun _ -> async { return Some [opts] }), lexer, fun line -> sourceLines.[line])
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, sourceLines, AllowStaleResults.No, true,
+                                                      (fun _ -> async { return Some [opts] }), lexer)
         |> Async.RunSynchronously
 
     let parseResults = 

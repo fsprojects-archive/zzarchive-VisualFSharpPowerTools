@@ -385,10 +385,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           }
       loop 0 None
 
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, src, stale, checkForUnusedDeclarations, 
-                                           getSymbolDeclProjects, lexer: LexerBase, getLineStr) =
+    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string[], stale, checkForUnusedDeclarations, 
+                                           getSymbolDeclProjects, lexer: LexerBase) =
+
+        let stringArrayToString (arr: string[]) = String.Join (Environment.NewLine, arr)
+
         async {
-            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, src, stale)
+            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, stringArrayToString source, stale)
             let! allSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
 
             let allSymbolsUses =
@@ -401,17 +404,21 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             let line = range.StartLine - 1
                             match lexer.GetSymbolAtLocation (line, range.EndColumn) with
                             | Some sym ->
-                                let lineStr: string = getLineStr line
-                                let lineStr = 
-                                    lineStr.Insert (sym.LeftColumn, 
+                                let origLineStr = source.[line]
+                                let adjustedLineStr = 
+                                    origLineStr.Insert (sym.LeftColumn, 
                                         // we use IsGetterMethod instead of IsPropertyGetterMethod because the latter 
                                         // returns False.
                                         (if func.IsGetterMethod then "get" else "set") + "_")
-                                let res = x.GetUsesOfSymbolAtLocationInFile (projectOptions, fileName, src, sym, line,
-                                                                             lineStr, AllowStaleResults.No) |> Async.RunSynchronously
+                                source.[line] <- adjustedLineStr
+                                let adjustedSym = { sym with RightColumn = sym.RightColumn + 4 }
+                                let res = x.GetUsesOfSymbolAtLocationInFile (
+                                                projectOptions, fileName, stringArrayToString source, adjustedSym, line,
+                                                adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
+                                source.[line] <- origLineStr
                                 match res with
                                 | Some (symbol, _, symbolUses) -> 
-                                    debug "[!!!] %s -> %s" symbolUse.Symbol.FullName symbol.FullName
+                                    debug "[LanguageService] Getting read FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
                                     symbolUses
                                 | None -> [|symbolUse|]
                             | None -> [|symbolUse|]
