@@ -608,7 +608,8 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
                     SymbolAccess.FullName, fullName
             | _ -> SymbolAccess.FullName, fullName)
 
-    //debug "LongIdents by line: %A, Qualified symbols: %A" longIdentsByLine qualifiedSymbols
+    //debug "LongIdents by line: %A" longIdentsByLine
+    debug "Qualified symbols: %A" qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
         Array.foldBack (fun (symbolRange: Range, (symbolAccess, name: string)) openDecls ->

@@ -28,11 +28,7 @@ let opts source =
 
 let (=>) source (expected: (int * ((Category * int * int) list)) list) = 
     let opts = opts source
-    let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true,
-                                                      (fun _ -> async { return Some [opts] }))
-        |> Async.RunSynchronously
-
+    
     let sourceLines = source.Split([|"\n"|], System.StringSplitOptions.None)
 
     let lexer = 
@@ -43,6 +39,11 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
             member x.TokenizeLine line =
                 let lineStr = sourceLines.[line]
                 Lexer.tokenizeLine source args line lineStr Lexer.queryLexState }
+
+    let symbolsUses =
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true,
+                                                      (fun _ -> async { return Some [opts] }), lexer, fun line -> sourceLines.[line])
+        |> Async.RunSynchronously
 
     let parseResults = 
         languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
@@ -951,7 +952,7 @@ type Class() = class end
 """
     => [ 2, []]
     
-[<Test; Ignore "FCS 0.0.57 issue https://github.com/fsharp/FSharp.Compiler.Service/issues/178">]
+[<Test>] //; Ignore "FCS 0.0.57 issue https://github.com/fsharp/FSharp.Compiler.Service/issues/178">]
 let ``open declaration is not marked as unused if an extension property symbol from it is used``() =
     """
 module Module =
@@ -961,3 +962,4 @@ open Module
 let _ = "a long string".ExtensionProperty
 """
     => [ 5, []]
+

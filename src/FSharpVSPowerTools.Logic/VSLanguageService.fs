@@ -196,12 +196,11 @@ type VSLanguageService
         async {
             let source = snapshot.GetText() 
             let args = project.CompilerOptions
+            let getLineStr line =
+                let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+                let lineNumber = line - lineStart
+                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
             let lexer = 
-                let getLineStr line =
-                    let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-                    let lineNumber = line - lineStart
-                    snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-
                 { new LexerBase() with
                     member x.GetSymbolFromTokensAtLocation (tokens, line, col) =
                         Lexer.getSymbolFromTokens tokens line col (getLineStr line)
@@ -229,7 +228,7 @@ type VSLanguageService
                 }
 
             let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedDeclarations,
-                                                                        getSymbolDeclProjects)
+                                                                        getSymbolDeclProjects, lexer, getLineStr)
             return allSymbolsUses, lexer
         }
 
