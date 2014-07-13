@@ -55,19 +55,11 @@ type CategorizedColumnSpan =
     { Category: Category
       WordSpan: WordSpan }
 
-type private Point =
-    { Line: int 
-      Col: int }
-
-type private Range =
-    { Start: Point
-      End: Point }
-
 [<NoComparison>]
 type private OpenDeclaration =
     { Idents: Set<string>
       DeclRange: Range.range
-      Range: Range }
+      Range: Range.range }
 
 type private SymbolAccess =
     | FullName
@@ -558,9 +550,7 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
                                            |> List.map (fun idents -> System.String.Join (".", idents))
                                            |> Set.ofList
                                   DeclRange = openStatementRange
-                                  Range = 
-                                    { Start = { Line = openStatementRange.StartLine; Col = openStatementRange.StartColumn }
-                                      End = { Line = moduleRange.EndLine; Col = moduleRange.EndColumn }}} :: acc
+                                  Range = (Range.mkRange openStatementRange.FileName openStatementRange.Start moduleRange.End) } :: acc 
                             | _ -> acc) [] 
                     openStatements @ acc
 
@@ -581,13 +571,12 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
             |> Map.ofSeq
         | None -> Map.empty
 
-    let qualifiedSymbols: (Range * (SymbolAccess * string)) [] =
+    let qualifiedSymbols: (Range.range * (SymbolAccess * string)) [] =
         allSymbolsUses
         |> Array.map (fun (symbolUse, _) ->
             let r = symbolUse.RangeAlternate
             let fullName = symbolUse.Symbol.FullName
-            { Start = { Line = r.StartLine; Col = r.StartColumn }   
-              End = { Line = r.EndLine; Col = r.EndColumn }},
+            r,
             match longIdentsByLine |> Map.tryFind r.StartLine with
             | Some idents ->
                 match idents |> Seq.tryFind (fun (identRange, _) -> 
@@ -612,14 +601,13 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
     debug "Qualified symbols: %A" qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
-        Array.foldBack (fun (symbolRange: Range, (symbolAccess, name: string)) openDecls ->
+        Array.foldBack (fun (symbolRange: Range.range, (symbolAccess, name: string)) openDecls ->
             openDecls |> List.fold (fun (acc, found) (openDecl, used) -> 
                 if found then
                     (openDecl, used) :: acc, found
                 else
                     let usedByCurrentSymbol =
-                        symbolRange.Start >= openDecl.Range.Start
-                        && symbolRange.End <= openDecl.Range.End
+                        Range.rangeContainsRange openDecl.Range symbolRange
                         && (match symbolAccess with 
                             | FullName -> openDecl.Idents |> Set.exists name.StartsWith
                             | OpenPrefix -> openDecl.Idents |> Set.contains name)
