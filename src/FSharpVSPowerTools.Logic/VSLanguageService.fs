@@ -222,7 +222,7 @@ type VSLanguageService
                         return! 
                             projects
                             |> List.toArray
-                            |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
+                            |> Async.Array.map getProjectOptions
                             |> Async.map Some
                     | None -> return None
                 }

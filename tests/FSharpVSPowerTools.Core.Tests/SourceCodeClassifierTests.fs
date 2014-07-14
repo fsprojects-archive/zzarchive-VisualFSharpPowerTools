@@ -927,7 +927,7 @@ module Top =
     => [ 10, []]
 
 [<Test>]
-let ``module or namespace is not marked as unused if it actually used by symbols from its child modules with AutoOpen attribute``() =
+let ``last of several equivalent open declarations is market as used, the rest of them are marked as unused``() =
     """
 module NormalModule =
     [<AutoOpen>]
@@ -937,13 +937,14 @@ module NormalModule =
             module AutoOpenModule2 =
                 [<AutoOpen>]
                 module AutoOpenModule3 =
-                    //let func x = ()
                     type Class() = class end
 
+open NormalModule.AutoOpenModule1.NestedNormalModule.AutoOpenModule2
 open NormalModule.AutoOpenModule1.NestedNormalModule
-let _ = Class() //func 1
+let _ = Class()
 """
-    => [ 13, []]
+    => [ 12, [ Category.Unused, 5, 68 ]
+         13, []]
     
 [<Test>]
 let ``open declaration is not marked as unused if there is a shortened attribute symbol from it``() =
@@ -966,6 +967,17 @@ let _ = "a long string".ExtensionProperty
     => [ 5, []]
 
 [<Test>]
+let ``open declaration is marked as unused if an extension property is not used``() =
+    """
+module Module =
+    type System.String with
+        member __.ExtensionProperty = ()
+open Module
+let _ = "a long string".Trim()
+"""
+    => [ 5, [ Category.Unused, 5, 11 ]]
+
+[<Test>]
 let ``open declaration is not marked as unused if an extension method is used``() =
     """
 type Class() = class end
@@ -977,4 +989,16 @@ let x = Class()
 let _ = x.ExtensionMethod()
 """
     => [ 6, []]
+
+[<Test>]
+let ``open declaration is marked as unused if an extension method is not used``() =
+    """
+type Class() = class end
+module Module =
+    type Class with
+        member __.ExtensionMethod() = ()
+open Module
+let x = Class()
+"""
+    => [ 6, [ Category.Unused, 5, 11 ]]
 
