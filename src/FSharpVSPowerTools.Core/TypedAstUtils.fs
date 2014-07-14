@@ -2,7 +2,6 @@
 module internal FSharpVSPowerTools.TypedAstUtils
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open System.Collections.Generic
 
 let isSymbolLocalForProject (symbol: FSharpSymbol) = 
     match symbol with 

@@ -118,7 +118,7 @@ type LexerBase() =
 type SymbolUse =
     { SymbolUse: FSharpSymbolUse 
       IsUsed: bool
-      FullName: string }
+      FullName: Idents }
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
@@ -428,7 +428,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                  symbol.FullName)
                         | _ -> None
                         |> Option.getOrElse symbolUse.Symbol.FullName
-                    { SymbolUse = symbolUse; IsUsed = true; FullName = fullName })
+                    { SymbolUse = symbolUse; IsUsed = true; FullName = fullName.Split '.' })
 
             let singleDefs = 
                 if checkForUnusedDeclarations then

@@ -57,7 +57,7 @@ type CategorizedColumnSpan =
 
 [<NoComparison>]
 type OpenDeclaration =
-    { Idents: Set<string>
+    { Idents: Set<Idents>
       DeclRange: Range.range
       Range: Range.range }
 
@@ -546,9 +546,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                         relativeIdents :: loop [fullIdents] relativeIdents.Length)
                                     |> List.concat
 
-                                { Idents = identsAndAutoOpens 
-                                           |> List.map (fun idents -> System.String.Join (".", idents))
-                                           |> Set.ofList
+                                { Idents = Set.ofList identsAndAutoOpens 
                                   DeclRange = openStatementRange
                                   Range = (Range.mkRange openStatementRange.FileName openStatementRange.Start moduleRange.End) } :: acc 
                             | _ -> acc) [] 
@@ -584,22 +582,23 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                 |> Seq.map (fun sUse -> 
                     sUse, longIdents |> Seq.tryFind (fun (r, _) -> Range.rangeContainsRange r sUse.SymbolUse.RangeAlternate))
                 |> Seq.groupBy (fun (_, longIdent) -> longIdent)
-                |> Seq.map (fun (longIdent, sUses) -> 
+                |> Seq.map (fun (longIdent, symbolUses) -> 
                     match longIdent with
                     | Some _ ->
-                        sUses
-                        |> Seq.sortBy (fun (sUse, _) -> 
-                            sUse.SymbolUse.RangeAlternate.StartColumn - sUse.SymbolUse.RangeAlternate.EndColumn)
-                        |> Seq.head
-                        |> Seq.singleton
-                    | None -> sUses)
+                        symbolUses
+                        |> Seq.filter (fun (nextSymbolUse, _) ->
+                            symbolUses 
+                            |> Seq.exists (fun (sUse, _) -> 
+                                nextSymbolUse <> sUse && sUse.FullName |> Array.startsWith nextSymbolUse.FullName)
+                            |> not)
+                    | None -> symbolUses)
                 |> Seq.map (Seq.map fst)
                 |> Seq.concat
             | None -> symbolUses)
         |> Seq.concat
         |> Seq.toArray
 
-    let qualifiedSymbols: (Range.range * (SymbolAccess * string)) [] =
+    let qualifiedSymbols: (Range.range * SymbolAccess * Idents) [] =
         symbolUsesWithoutNested
         |> Array.map (fun symbolUse ->
             let r = symbolUse.SymbolUse.RangeAlternate
@@ -609,27 +608,29 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
             | Some idents ->
                 match idents |> Seq.tryFind (fun (identRange, _) ->
                     identRange.StartColumn <= r.StartColumn && identRange.EndColumn >= r.EndColumn) with
-                | Some (identRange, longIdent) when (fullName.Split '.' |> Array.endsWith longIdent) ->
+                | Some (identRange, longIdent) when (fullName |> Array.endsWith longIdent) ->
                     let res = 
-                        match fullName.Length - (r.EndColumn - identRange.StartColumn) with
+                        let fullNameStr = System.String.Join (".", fullName)
+                        match fullNameStr.Length - (r.EndColumn - identRange.StartColumn) with
                         // trailing dot
                         | qualifiedLength when qualifiedLength > 1 ->
-                            SymbolAccess.OpenPrefix, fullName.Substring (0, qualifiedLength - 1)
+                            SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength - 1).Split '.'
                         | qualifiedLength when qualifiedLength > 0 ->
-                            SymbolAccess.OpenPrefix, fullName.Substring (0, qualifiedLength)
+                            SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength).Split '.'
                         | _ -> SymbolAccess.FullName, fullName
-                    debug "[QS] FullName = %s, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
+                    debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
                     res
                 | _ -> 
                     //debug "[SQ] Symbol is out of any LongIdent: FullName = %s, Range = %A" fullName r
                     SymbolAccess.FullName, fullName
             | _ -> SymbolAccess.FullName, fullName)
+        |> Array.map (fun (range, (access, fullName)) -> range, access, fullName)
 
     //debug "LongIdents by line: %A" longIdentsByLine
     debug "Qualified symbols: %A" qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
-        Array.foldBack (fun (symbolRange: Range.range, (symbolAccess, name: string)) openDecls ->
+        Array.foldBack (fun (symbolRange: Range.range, symbolAccess, fullName) openDecls ->
             openDecls |> List.fold (fun (acc, found) (openDecl, used) -> 
                 if found then
                     (openDecl, used) :: acc, found
@@ -638,12 +639,12 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                         Range.rangeContainsRange openDecl.Range symbolRange
                         && (match symbolAccess with 
                             | FullName ->
-                                let res = openDecl.Idents |> Set.exists name.StartsWith
-                                if res then debug "Open decl %A is used by %A (starts with)" openDecl name
+                                let res = openDecl.Idents |> Set.exists (fun openDecl -> fullName |> Array.startsWith openDecl)
+                                if res then debug "Open decl %A is used by %A (starts with)" openDecl fullName
                                 res
                             | OpenPrefix -> 
-                                let res = openDecl.Idents |> Set.contains name
-                                if res then debug "Open decl %A is used by %A (exact prefix)" openDecl name
+                                let res = openDecl.Idents |> Set.contains fullName
+                                if res then debug "Open decl %A is used by %A (exact prefix)" openDecl fullName
                                 res)
                     (openDecl, used || usedByCurrentSymbol) :: acc, usedByCurrentSymbol) ([], false)
             |> fst

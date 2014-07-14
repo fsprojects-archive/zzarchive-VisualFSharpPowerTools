@@ -1002,3 +1002,34 @@ let x = Class()
 """
     => [ 6, [ Category.Unused, 5, 11 ]]
 
+[<Test>]
+let ``open declaration is not marked as unused if a type from it used in a constructor signarute``() =
+    """
+module M =
+    type Class() = class end
+open M
+type Site (x: Class -> unit) = class end
+"""
+    => [ 4, []]   
+
+[<Test>]
+let ``open declaration is marked as unused if nothing from it is used``() =
+    """
+module M =
+    type Class() = class end
+open M
+type Site (x: int -> unit) = class end
+"""
+    => [ 4, [ Category.Unused, 5, 6 ] ]
+
+[<Test>]
+let ``static extension method applied to a type results that both namespaces /where the type is declared and where the extension is declared/ is not marked as unudes``() =
+    """
+module Extensions =
+    type System.DateTime with
+        static member ExtensionMethod() = ()
+open System
+open Extensions
+let _ = DateTime.ExtensionMethod
+"""
+    => [ 5, []; 6, []]
