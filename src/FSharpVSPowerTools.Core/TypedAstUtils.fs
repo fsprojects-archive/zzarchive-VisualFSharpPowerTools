@@ -148,3 +148,6 @@ let (|Function|_|) excluded (func: FSharpMemberFunctionOrValue) =
                    && not excluded
                    && not (isOperator func.DisplayName) -> Some()
     | _ -> None
+
+let (|ExtensionMember|_|) (func: FSharpMemberFunctionOrValue) =
+    if func.IsExtensionMember then Some() else None

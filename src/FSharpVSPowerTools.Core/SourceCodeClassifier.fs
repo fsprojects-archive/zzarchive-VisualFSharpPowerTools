@@ -571,8 +571,16 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
             |> Map.ofSeq
         | None -> Map.empty
 
-    let symbolUsesWithoutNested =
+    let symbolUsesPotentiallyRequireOpenDecls =
         allSymbolsUses'
+        |> Array.filter (fun (symbolUse, _) ->
+            match symbolUse.SymbolUse.Symbol with
+            | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
+            | MemberFunctionOrValue func -> not func.IsMember
+            | _ -> true)
+
+    let symbolUsesWithoutNested =
+        symbolUsesPotentiallyRequireOpenDecls
         |> Seq.map (fun (symbolUse, _) -> symbolUse)
         |> Seq.groupBy (fun symbolUse -> symbolUse.SymbolUse.RangeAlternate.StartLine)
         |> Seq.map (fun (line, symbolUses) ->
@@ -598,6 +606,8 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         |> Seq.concat
         |> Seq.toArray
 
+    debug "LongIdents by line: %A" longIdentsByLine
+
     let qualifiedSymbols: (Range.range * SymbolAccess * Idents) [] =
         symbolUsesWithoutNested
         |> Array.map (fun symbolUse ->
@@ -608,25 +618,29 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
             | Some idents ->
                 match idents |> Seq.tryFind (fun (identRange, _) ->
                     identRange.StartColumn <= r.StartColumn && identRange.EndColumn >= r.EndColumn) with
-                | Some (identRange, longIdent) when (fullName |> Array.endsWith longIdent) ->
-                    let res = 
-                        let fullNameStr = System.String.Join (".", fullName)
-                        match fullNameStr.Length - (r.EndColumn - identRange.StartColumn) with
-                        // trailing dot
-                        | qualifiedLength when qualifiedLength > 1 ->
-                            SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength - 1).Split '.'
-                        | qualifiedLength when qualifiedLength > 0 ->
-                            SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength).Split '.'
-                        | _ -> SymbolAccess.FullName, fullName
-                    debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
-                    res
+                | Some (identRange, longIdent) -> //when (fullName |> Array.endsWith longIdent) ->
+                    let lastSymIdent = fullName.[fullName.Length - 1]
+                    // remove trailing idents from long ident
+                    let longIdent = longIdent |> Array.rev |> Seq.skipWhile (fun ident -> ident <> lastSymIdent) |> Seq.toArray |> Array.rev
+                    if fullName |> Array.endsWith longIdent then
+                        let res = 
+                            let fullNameStr = System.String.Join (".", fullName)
+                            match fullNameStr.Length - (r.EndColumn - identRange.StartColumn) with
+                            // trailing dot
+                            | qualifiedLength when qualifiedLength > 1 ->
+                                SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength - 1).Split '.'
+                            | qualifiedLength when qualifiedLength > 0 ->
+                                SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength).Split '.'
+                            | _ -> SymbolAccess.FullName, fullName
+                        debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
+                        res
+                    else SymbolAccess.FullName, fullName
                 | _ -> 
-                    //debug "[SQ] Symbol is out of any LongIdent: FullName = %s, Range = %A" fullName r
+                    debug "[SQ] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName r
                     SymbolAccess.FullName, fullName
             | _ -> SymbolAccess.FullName, fullName)
         |> Array.map (fun (range, (access, fullName)) -> range, access, fullName)
 
-    //debug "LongIdents by line: %A" longIdentsByLine
     debug "Qualified symbols: %A" qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
