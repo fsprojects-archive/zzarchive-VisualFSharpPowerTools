@@ -1033,3 +1033,15 @@ open Extensions
 let _ = DateTime.ExtensionMethod
 """
     => [ 5, []; 6, []]
+    
+[<Test>]
+let ``static extension property applied to a type results that both namespaces /where the type is declared and where the extension is declared/ is not marked as unudes``() =
+    """
+module Extensions =
+    type System.DateTime with
+        static member ExtensionProperty = ()
+open System
+open Extensions
+let _ = DateTime.ExtensionProperty
+"""
+    => [ 5, []; 6, []]
