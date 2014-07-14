@@ -27,4 +27,6 @@ let ``should be able to detect type names``() =
     isTypeNameIdent "type1" |> assertTrue
     isTypeNameIdent "``type 1``" |> assertTrue
     isTypeNameIdent "``X.Y``" |> assertFalse
+    isTypeNameIdent "My.Foo" |> assertFalse
+    isTypeNameIdent "``My.Foo``" |> assertFalse
     isTypeNameIdent "``Case2[x]``" |> assertFalse
