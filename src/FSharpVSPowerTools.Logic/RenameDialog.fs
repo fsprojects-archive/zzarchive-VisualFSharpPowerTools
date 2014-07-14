@@ -37,9 +37,8 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
         | None -> Some Resource.renameErrorMessage
         | Some(fssym, _, _) ->
             match symbol.Kind, fssym with
-            | _, :? FSharpUnionCase ->
-                // Union cases shouldn't be lowercase
-                check (isFixableIdentifier newName && not (String.IsNullOrEmpty newName) && Char.IsUpper(newName.[0])) Resource.validatingUnionCase 
+            | _, :? FSharpUnionCase ->                
+                check (isUnionCaseIdent newName) Resource.validatingUnionCase 
             | _, :? FSharpActivePatternCase ->
                     // Different from union cases, active patterns don't accept double-backtick identifiers
                     check (isFixableIdentifier newName && not (String.IsNullOrEmpty newName) && Char.IsUpper(newName.[0])) Resource.validatingActivePattern
@@ -50,7 +49,10 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
             | StaticallyResolvedTypeParameter, _ ->
                 check (isStaticallyResolvedTypeParameter newName) Resource.validatingStaticallyResolvedTypeParameter
             | (Ident | Other), _ ->
-                check (isFixableIdentifier newName) Resource.validatingIdentifier
+                if SourceCodeClassifier.getIdentifierCategory fssym <> SourceCodeClassifier.Category.Other then
+                    check (isTypeNameIdent newName) Resource.validatingTypeName
+                else
+                    check (isFixableIdentifier newName) Resource.validatingIdentifier
 
     // Complete validation chain for the name property
     let validateName = 
@@ -98,7 +100,11 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
 
     // Generate the new name and show it on the textbox
     let updateFullName newName = 
-        let encapsulated = encapsulateIdentifier symbol.Kind newName
+        let encapsulated = 
+            if validateName newName = [] then
+                encapsulateIdentifier symbol.Kind newName
+            else 
+                newName
         if String.IsNullOrEmpty symbolLocation then self.FullName <- encapsulated
         elif String.IsNullOrEmpty encapsulated then self.FullName <- symbolLocation
         else self.FullName <- symbolLocation + "." + encapsulated

@@ -1,5 +1,6 @@
 ﻿module FSharpVSPowerTools.IdentifierUtils
 
+open System
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.PrettyNaming
 
@@ -36,3 +37,14 @@ let encapsulateIdentifier symbolKind newName =
     else newName
 
 let isFixableIdentifier (s: string) = encapsulateIdentifier SymbolKind.Ident s |> isIdentifier
+
+let private forbiddenChars = ["."; "+"; "$"; "&"; "["; "]"; "/"; "\\"; "*"; "\""]
+
+let isTypeNameIdent (s: string) =
+    not (String.IsNullOrEmpty s) &&
+    forbiddenChars |> Seq.forall (fun c -> not (s.Contains c)) &&
+    isFixableIdentifier s 
+
+let isUnionCaseIdent (s: string) =
+    isTypeNameIdent s &&    
+    Char.IsUpper(s.Replace(DoubleBackTickDelimiter,"").[0])
