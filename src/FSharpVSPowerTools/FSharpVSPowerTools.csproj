@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- This is needed to prevent forced migrations when opening the project in Vs2012 -->
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '11.0' ">
@@ -170,6 +170,21 @@
     <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\..\lib\SpellChecker\en_US.aff">
+      <Link>en_US.aff</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\..\lib\SpellChecker\en_US.dic">
+      <Link>en_US.dic</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\..\lib\SpellChecker\th_en_US_new.dat">
+      <Link>th_en_US_new.dat</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <None Include="paket.references">
       <SubType>Designer</SubType>
     </None>
@@ -184,6 +199,16 @@
     </Content>
     <Content Include="..\..\docs\files\img\logo.png">
       <Link>logo.png</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\..\packages\NHunspell\content\Hunspellx64.dll">
+      <Link>Hunspellx64.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\..\packages\NHunspell\content\Hunspellx86.dll">
+      <Link>Hunspellx86.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>

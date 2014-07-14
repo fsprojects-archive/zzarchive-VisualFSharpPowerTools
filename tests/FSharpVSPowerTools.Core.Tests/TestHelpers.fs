@@ -56,6 +56,14 @@ let inline assertTrue condition =
 let inline assertFalse condition =
     Assert.IsFalse (condition)
 
+/// Asserts that a value is contained in a collection
+let inline shouldContain<'T when 'T : equality> (expected : 'T) (actual : 'T seq) =
+    Assert.Contains(expected, actual |> Seq.toArray)
+
+/// Asserts that a value is not contained in a collection
+let inline shouldNotContain<'T when 'T : equality> (expected : 'T) (actual : 'T seq) =
+    if actual |> Seq.exists ((=) expected) then
+        Assert.Fail(sprintf "%A should not contain %A." actual expected)
 
 /// Assertion functions for collections.
 [<RequireQualifiedAccess>]
