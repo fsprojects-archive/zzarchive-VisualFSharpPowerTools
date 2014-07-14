@@ -1045,3 +1045,13 @@ open Extensions
 let _ = DateTime.ExtensionProperty
 """
     => [ 5, []; 6, []]
+
+[<Test>]
+let ``accessing property on a variable should not force the namespace in which the type is declared to be marked as used``() =
+    """
+let dt = System.DateTime.Now
+module M =
+    open System
+    let _ = dt.Hour
+"""
+    => [4, [ Category.Unused, 9, 15 ]]
