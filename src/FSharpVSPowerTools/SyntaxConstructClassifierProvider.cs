@@ -355,7 +355,7 @@ namespace FSharpVSPowerTools
 
         private readonly Type serviceType = typeof(SyntaxConstructClassifier);
 
-        private IServiceProvider serviceProvider = null;
+        private readonly IServiceProvider serviceProvider = null;
         private readonly ClassificationColorManager classificationColorManager = null;
         private readonly ShellEventListener shellEventListener = null;
 

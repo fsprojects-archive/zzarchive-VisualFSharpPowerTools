@@ -38,8 +38,6 @@ namespace FSharpVSPowerTools
         internal static Lazy<DTE2> DTE
             = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
 
-        private ClassificationColorManager classificationColorManager;
-
         protected override void Initialize()
         {
             base.Initialize();
