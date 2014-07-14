@@ -8,12 +8,11 @@
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '12.0' ">
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
   </PropertyGroup>
-<!-- This is needed to prevent forced migrations when opening the project in Vs14-->
+  <!-- This is needed to prevent forced migrations when opening the project in Vs14-->
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '14.0' ">
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
   </PropertyGroup>
-    
-<Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -161,6 +160,7 @@
     <Compile Include="ResolveUnopenedNamespaceSmartTaggerProvider.cs" />
     <Compile Include="RecordStubGeneratorSmartTaggerProvider.cs" />
     <Compile Include="RenameCommandFilterProvider.cs" />
+    <Compile Include="ShellEventListener.cs" />
     <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CodeFormattingHookHelper.cs" />

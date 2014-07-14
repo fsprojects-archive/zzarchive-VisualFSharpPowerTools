@@ -27,15 +27,11 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
-    public class PowerToolsCommandsPackage : Package, IVsBroadcastMessageEvents, IDisposable
+    public class PowerToolsCommandsPackage : Package, IDisposable
     {
-        private const uint WM_SYSCOLORCHANGE = 0x0015;
-
-        private IVsShell shellService;
         private FolderMenuCommands newFolderMenu;
         private FSharpLibrary library;
 
-        private uint broadcastEventCookie;
         private uint pctCookie;
         private uint objectManagerCookie;
         
@@ -48,11 +44,6 @@ namespace FSharpVSPowerTools
         {
             base.Initialize();
             VSUtils.ForegroundThreadGuard.BindThread();
-
-            var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
-            classificationColorManager = componentModel.DefaultExportProvider.GetExportedValue<ClassificationColorManager>();
-
-            AdviseBroadcastMessages();
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(GeneralOptionsPage),
@@ -71,23 +62,6 @@ namespace FSharpVSPowerTools
             library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
 
             RegisterLibrary();
-        }
-
-        private void AdviseBroadcastMessages()
-        {
-            shellService = GetService(typeof(SVsShell)) as IVsShell;
-
-            if (shellService != null)
-                ErrorHandler.ThrowOnFailure(shellService.AdviseBroadcastMessages(this, out broadcastEventCookie));
-        }
-
-        private void UnadviseBroadcastMessages()
-        {
-            if (shellService != null && broadcastEventCookie != 0)
-            {
-                shellService.UnadviseBroadcastMessages(broadcastEventCookie);
-                broadcastEventCookie = 0;
-            }
         }
 
         private void SetupMenu()
@@ -141,18 +115,8 @@ namespace FSharpVSPowerTools
             }
         }
 
-        public int OnBroadcastMessage(uint msg, IntPtr wParam, IntPtr lParam)
-        {
-            if (msg == WM_SYSCOLORCHANGE)
-            {
-                classificationColorManager.UpdateColors();
-            }
-            return VSConstants.S_OK;
-        }
-
         public void Dispose()
         {
-            UnadviseBroadcastMessages();
             UnregisterPriorityCommandTarget();
             UnregisterLibrary();
         }   

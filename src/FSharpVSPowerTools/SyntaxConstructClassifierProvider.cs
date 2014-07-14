@@ -339,13 +339,10 @@ namespace FSharpVSPowerTools
     [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Document)]
-    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener
+    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener, IDisposable
     { 
         [Import]
         private IClassificationTypeRegistryService classificationRegistry = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
 
         [Import]
         private VSLanguageService fsharpVsLanguageService = null;
@@ -353,10 +350,32 @@ namespace FSharpVSPowerTools
         [Import]
         private ITextDocumentFactoryService textDocumentFactoryService = null;
 
-        [Import(typeof(ProjectFactory))]
+        [Import]
         private ProjectFactory projectFactory = null;
 
         private readonly Type serviceType = typeof(SyntaxConstructClassifier);
+
+        private IServiceProvider serviceProvider = null;
+        private readonly ClassificationColorManager classificationColorManager = null;
+        private readonly ShellEventListener shellEventListener = null;
+
+        [ImportingConstructor]
+        public SyntaxConstructClassifierProvider([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+                ClassificationColorManager classificationColorManager)
+        {
+            this.serviceProvider = serviceProvider;
+            this.classificationColorManager = classificationColorManager;
+
+            // Receive notification for Visual Studio theme change
+            shellEventListener = new ShellEventListener(this.serviceProvider);
+            shellEventListener.Initialize();
+            shellEventListener.OnThemeChanged += UpdateTheme;
+        }
+
+        private void UpdateTheme(object sender, EventArgs e)
+        {
+            classificationColorManager.UpdateColors();
+        }
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
@@ -370,7 +389,6 @@ namespace FSharpVSPowerTools
                 return buffer.Properties.GetOrCreateSingletonProperty(serviceType, 
                     () => new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, 
                                     serviceProvider, projectFactory, includeUnusedDeclarations));
-
 
             return null;
         }
@@ -393,6 +411,12 @@ namespace FSharpVSPowerTools
                     classifier.Dispose();
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            shellEventListener.OnThemeChanged -= UpdateTheme;
+            shellEventListener.Dispose();
         }
     }
 }
