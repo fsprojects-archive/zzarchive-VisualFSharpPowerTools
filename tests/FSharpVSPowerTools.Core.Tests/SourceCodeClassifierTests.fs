@@ -29,7 +29,7 @@ let opts source =
 let (=>) source (expected: (int * ((Category * int * int) list)) list) = 
     let opts = opts source
     
-    let sourceLines = source.Split([|"\r\n"|], System.StringSplitOptions.None)
+    let sourceLines = source.Replace("\r\n", "\n").Split([|"\n"|], System.StringSplitOptions.None)
 
     let lexer = 
         { new LexerBase() with

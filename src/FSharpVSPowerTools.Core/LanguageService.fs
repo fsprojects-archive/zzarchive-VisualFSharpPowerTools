@@ -114,6 +114,12 @@ type LexerBase() =
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
 
+[<NoComparison>]
+type SymbolUse =
+    { SymbolUse: FSharpSymbolUse 
+      IsUsed: bool
+      FullName: string }
+
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 // --------------------------------------------------------------------------------------
@@ -386,7 +392,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       loop 0 None
 
     member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string[], stale, checkForUnusedDeclarations, 
-                                           getSymbolDeclProjects, lexer: LexerBase) =
+                                           getSymbolDeclProjects, lexer: LexerBase) : SymbolUse[] Async =
 
         let stringArrayToString (arr: string[]) = String.Join (Environment.NewLine, arr)
 
@@ -397,13 +403,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let allSymbolsUses =
                 allSymbolsUses
                 |> Array.map (fun symbolUse ->
-                    match symbolUse.Symbol with
-                    | MemberFunctionOrValue func -> 
-                        if func.IsExtensionMember && func.IsProperty then
+                    let fullName =
+                        match symbolUse.Symbol with
+                        | MemberFunctionOrValue func when func.IsExtensionMember && func.IsProperty ->
                             let range = symbolUse.RangeAlternate
                             let line = range.StartLine - 1
-                            match lexer.GetSymbolAtLocation (line, range.EndColumn) with
-                            | Some sym ->
+                            lexer.GetSymbolAtLocation (line, range.EndColumn) 
+                            |> Option.bind (fun sym ->
                                 let origLineStr = source.[line]
                                 let adjustedLineStr = 
                                     origLineStr.Insert (sym.LeftColumn, 
@@ -416,22 +422,18 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                                 projectOptions, fileName, stringArrayToString source, adjustedSym, line,
                                                 adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
                                 source.[line] <- origLineStr
-                                match res with
-                                | Some (symbol, _, symbolUses) -> 
-                                    debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
-                                    symbolUses
-                                | None -> [|symbolUse|]
-                            | None -> [|symbolUse|]
-                        else
-                            debug "[LanguageService] Symbol is OK: %s" symbolUse.Symbol.FullName
-                            [|symbolUse|]
-                    | _ -> [|symbolUse|])
-                |> Array.concat
+                                res)
+                            |> Option.map (fun (symbol, _, _) ->  
+                                 debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
+                                 symbol.FullName)
+                        | _ -> None
+                        |> Option.getOrElse symbolUse.Symbol.FullName
+                    { SymbolUse = symbolUse; IsUsed = true; FullName = fullName })
 
             let singleDefs = 
                 if checkForUnusedDeclarations then
                     allSymbolsUses
-                    |> Seq.groupBy (fun su -> su.Symbol)
+                    |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
                     |> Seq.choose (fun (symbol, uses) ->
                         match symbol with
                         | UnionCase when isSymbolLocalForProject symbol -> Some symbol
@@ -441,7 +443,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         | Entity ((Record | UnionType | Interface | TypedAstUtils.Module), _, _) -> None
                         | _ ->
                             match Seq.toList uses with
-                            | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
+                            | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
                                 Some symbol 
                             | _ -> None)
                     |> Seq.toList
@@ -464,11 +466,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                     
             return
                 match notUsedSymbols with
-                | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
+                | [] -> allSymbolsUses
                 | _ ->
-                    allSymbolsUses 
+                    allSymbolsUses
                     |> Array.map (fun su -> 
-                        su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
+                        { su with IsUsed = not (notUsedSymbols |> List.exists (fun s -> s = su.SymbolUse.Symbol)) })
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =

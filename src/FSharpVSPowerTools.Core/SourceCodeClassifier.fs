@@ -332,16 +332,16 @@ let getLongIdents (input: ParsedInput) : LongIdentWithDots[] =
  
 type IsSymbolUsed = bool
 
-let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[], allEntities: RawEntity list option,
+let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEntity list option,
                                untypedAst: ParsedInput option, lexer: LexerBase) =
     let allSymbolsUses' =
         allSymbolsUses
-        |> Seq.groupBy (fun (su, _) -> su.RangeAlternate.EndLine)
+        |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
         |> Seq.map (fun (line, sus) ->
             let tokens = lexer.TokenizeLine (line - 1)
             sus
-            |> Seq.choose (fun (su, used) ->
-                let r = su.RangeAlternate
+            |> Seq.choose (fun su ->
+                let r = su.SymbolUse.RangeAlternate
                 lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1)
                 |> Option.bind (fun sym -> 
                     match sym.Kind with
@@ -349,9 +349,9 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
                         // FCS returns inaccurate ranges for multiline method chains
                         // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
                         if r.StartLine < r.EndLine then
-                            Some (su, used, { Line = r.End.Line; StartCol = r.End.Column - sym.Text.Length; EndCol = r.End.Column })
+                            Some (su, { Line = r.End.Line; StartCol = r.End.Column - sym.Text.Length; EndCol = r.End.Column })
                         else 
-                            Some (su, used, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column })
+                            Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column })
                     | _ -> None)))
         |> Seq.concat
         |> Seq.toArray
@@ -359,21 +359,21 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
     // index all symbol usages by LineNumber 
     let wordSpans = 
         allSymbolsUses'
-        |> Seq.map (fun (_,_,span) -> span)
+        |> Seq.map (fun (_, span) -> span)
         |> Seq.groupBy (fun span -> span.Line)
         |> Seq.map (fun (line, ranges) -> line, ranges)
         |> Map.ofSeq
 
     let spansBasedOnSymbolsUses = 
         allSymbolsUses'
-        |> Seq.choose (fun (symbolUse, used, span) ->
+        |> Seq.choose (fun (symbolUse, span) ->
             let span = 
                 match wordSpans.TryFind span.Line with
                 | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
                 | _ -> span
 
             let span' = 
-                if (span.EndCol - span.StartCol) - symbolUse.Symbol.DisplayName.Length > 0 then
+                if (span.EndCol - span.StartCol) - symbolUse.SymbolUse.Symbol.DisplayName.Length > 0 then
                     // The span is wider that the simbol's display name.
                     // This means that we have not managed to extract last part of a long ident accurately.
                     // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
@@ -392,8 +392,8 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
             let categorizedSpan =
                 if span'.EndCol <= span'.StartCol then None
                 else Some { Category = 
-                                if not used then Category.Unused 
-                                else getCategory symbolUse
+                                if not symbolUse.IsUsed then Category.Unused 
+                                else getCategory symbolUse.SymbolUse
                             WordSpan = span' }
         
             categorizedSpan)
@@ -575,20 +575,21 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
 
     let symbolUsesWithoutNested =
         allSymbolsUses'
-        |> Seq.map (fun (sUse, _, _) -> sUse)
-        |> Seq.groupBy (fun sUse -> sUse.RangeAlternate.StartLine)
+        |> Seq.map (fun (symbolUse, _) -> symbolUse)
+        |> Seq.groupBy (fun symbolUse -> symbolUse.SymbolUse.RangeAlternate.StartLine)
         |> Seq.map (fun (line, symbolUses) ->
             match longIdentsByLine |> Map.tryFind line with
             | Some longIdents ->
                 symbolUses
                 |> Seq.map (fun sUse -> 
-                    sUse, longIdents |> Seq.tryFind (fun (r, _) -> Range.rangeContainsRange r sUse.RangeAlternate))
+                    sUse, longIdents |> Seq.tryFind (fun (r, _) -> Range.rangeContainsRange r sUse.SymbolUse.RangeAlternate))
                 |> Seq.groupBy (fun (_, longIdent) -> longIdent)
                 |> Seq.map (fun (longIdent, sUses) -> 
                     match longIdent with
                     | Some _ ->
                         sUses
-                        |> Seq.sortBy (fun (sUse, _) -> sUse.RangeAlternate.StartColumn - sUse.RangeAlternate.EndColumn)
+                        |> Seq.sortBy (fun (sUse, _) -> 
+                            sUse.SymbolUse.RangeAlternate.StartColumn - sUse.SymbolUse.RangeAlternate.EndColumn)
                         |> Seq.head
                         |> Seq.singleton
                     | None -> sUses)
@@ -601,8 +602,8 @@ let getCategoriesAndLocations (allSymbolsUses: (FSharpSymbolUse * IsSymbolUsed)[
     let qualifiedSymbols: (Range.range * (SymbolAccess * string)) [] =
         symbolUsesWithoutNested
         |> Array.map (fun symbolUse ->
-            let r = symbolUse.RangeAlternate
-            let fullName = symbolUse.Symbol.FullName
+            let r = symbolUse.SymbolUse.RangeAlternate
+            let fullName = symbolUse.FullName
             r,
             match longIdentsByLine |> Map.tryFind r.StartLine with
             | Some idents ->
