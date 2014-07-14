@@ -22,7 +22,7 @@ let getIdentifierCategory (symbol: FSharpSymbol) =
     match symbol with
     | Entity (_, ValueType, _) -> Category.ValueType
     | Entity Class -> Category.ReferenceType
-    | Entity (_, Module, _) -> Category.Module
+    | Entity (_, TypedAstUtils.Module, _) -> Category.Module
     | Entity (_, _, Tuple) -> Category.ReferenceType
     | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
     | _ ->
