@@ -11,4 +11,4 @@ type ActiveViewRegistratorListener() =
     [<Import; DefaultValue>]
     val mutable openDocumentsTracker: OpenDocumentsTracker
     interface IWpfTextViewCreationListener with
-        member this.TextViewCreated(view) = this.openDocumentsTracker.RegisterView(view)
+        member x.TextViewCreated(view) = x.openDocumentsTracker.RegisterView(view)

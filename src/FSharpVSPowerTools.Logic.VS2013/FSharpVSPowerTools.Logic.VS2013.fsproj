@@ -97,10 +97,12 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
-      <HintPath>..\..\..\PowerTools\lib\vs2013\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
+      <HintPath>..\..\lib\vs2013\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces">
-      <HintPath>..\..\..\PowerTools\lib\vs2013\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
+      <HintPath>..\..\lib\vs2013\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.11.0">
@@ -108,7 +110,8 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Shell.12.0">
-      <HintPath>..\..\..\PowerTools\lib\vs2013\Microsoft.VisualStudio.Shell.12.0.dll</HintPath>
+      <HintPath>..\..\lib\vs2013\Microsoft.VisualStudio.Shell.12.0.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Shell.Immutable.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
@@ -135,7 +138,8 @@
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Threading">
-      <HintPath>..\..\..\PowerTools\lib\vs2013\Microsoft.VisualStudio.Threading.dll</HintPath>
+      <HintPath>..\..\lib\vs2013\Microsoft.VisualStudio.Threading.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
