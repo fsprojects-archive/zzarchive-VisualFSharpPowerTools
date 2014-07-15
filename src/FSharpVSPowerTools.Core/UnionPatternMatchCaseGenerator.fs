@@ -1,6 +1,5 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 
-open System
 open System.Text.RegularExpressions
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe

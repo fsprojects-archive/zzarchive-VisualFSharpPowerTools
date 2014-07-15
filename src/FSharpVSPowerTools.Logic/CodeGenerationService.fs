@@ -63,10 +63,10 @@ module ResourceProvider =
     open System
     open Microsoft.VisualStudio.Shell.Interop
     open System.Drawing
-    open System.Windows.Media
     open System.Windows.Interop
     open System.Windows
     open System.Windows.Media.Imaging
+    open System.Windows.Media
 
     let getRefactoringIcon (serviceProvider: IServiceProvider) (kind: RefactoringIconKind) =
         let manager = serviceProvider.GetService<IVsResourceManager, SVsResourceManager>()

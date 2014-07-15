@@ -1,12 +1,8 @@
 ﻿namespace FSharpVSPowerTools.DepthColorizer
    
 open System
-open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Utilities
-open System.Windows.Threading
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 

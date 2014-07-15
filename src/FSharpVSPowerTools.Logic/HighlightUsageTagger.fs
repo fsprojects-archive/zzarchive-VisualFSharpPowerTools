@@ -2,13 +2,9 @@
 
 open System
 open System.IO
-open System.Diagnostics
-open System.Windows.Threading
-open System.Collections.Generic
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe

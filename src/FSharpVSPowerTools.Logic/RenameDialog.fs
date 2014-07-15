@@ -1,9 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
  
 open System
-open System.IO
-open System.Windows
-open System.Windows.Input
 open System.ComponentModel
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem

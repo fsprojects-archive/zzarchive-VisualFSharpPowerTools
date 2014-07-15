@@ -1,10 +1,6 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
-open System
-open System.Collections.Generic
 open System.ComponentModel.Composition
-
-open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Utilities
 

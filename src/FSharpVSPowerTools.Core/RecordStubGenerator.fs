@@ -1,9 +1,5 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 
-open System
-open System.IO
-open System.Diagnostics
-open System.Collections.Generic
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration

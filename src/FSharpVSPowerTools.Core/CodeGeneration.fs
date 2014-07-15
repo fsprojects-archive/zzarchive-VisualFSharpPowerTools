@@ -3,7 +3,6 @@
 open System
 open System.IO
 open System.CodeDom.Compiler
-open System.Collections.Generic
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
@@ -51,9 +50,6 @@ module internal Utils =
 
         member x.Unindent i = 
             indentWriter.Indent <- max 0 (indentWriter.Indent - i)
-
-        member x.Writer = 
-            indentWriter :> TextWriter
 
         member x.Dump() =
             indentWriter.InnerWriter.ToString()

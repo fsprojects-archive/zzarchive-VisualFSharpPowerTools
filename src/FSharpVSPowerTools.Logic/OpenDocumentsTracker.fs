@@ -2,7 +2,6 @@
 
 open System
 open System.Text
-open System.Collections.Generic
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor

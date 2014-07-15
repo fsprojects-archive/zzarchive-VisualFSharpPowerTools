@@ -1,10 +1,7 @@
 ﻿namespace FSharpVSPowerTools.CodeGeneration
 
 open System
-open System.IO
 open System.Diagnostics
-open System.Collections.Generic
-open System.CodeDom.Compiler
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
@@ -350,12 +347,6 @@ module InterfaceStubGenerator =
                 for line in ctx.MethodBody do
                     writer.WriteLine(line)
                 writer.Unindent ctx.Indentation
-
-    let internal getGenericParameters (e: FSharpEntity) =
-        if e.IsFSharpAbbreviation then
-            e.AbbreviatedType.TypeDefinition.GenericParameters
-        else
-            e.GenericParameters
 
     let rec internal getNonAbbreviatedType (typ: FSharpType) =
         if typ.HasTypeDefinition && typ.TypeDefinition.IsFSharpAbbreviation then

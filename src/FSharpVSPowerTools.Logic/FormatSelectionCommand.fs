@@ -1,15 +1,9 @@
 ﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
-open System.Collections.Generic
-open System.Linq
-open System.Text
-open System.Threading.Tasks
-open System.Windows
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Formatting
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 open FSharpVSPowerTools.ProjectSystem

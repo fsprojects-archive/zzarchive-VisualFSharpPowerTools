@@ -1,16 +1,10 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
 
-open System
-open System.Collections.Generic
-open System.Windows
-open System.Windows.Threading
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
-open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
@@ -18,8 +12,6 @@ open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.FSharp.Compiler.Ast
-open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type RecordStubGeneratorSmartTag(actionSets) =
