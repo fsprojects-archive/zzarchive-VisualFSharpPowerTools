@@ -57,7 +57,9 @@ When you consider to contribute, please follow the following coding conventions:
  - When you refer to class instances, use `x` in each  member. If you reference to the instances in constructors, we generally recommend to use `as self` pattern.
  - We turn on unused-variable warnings by default, please remove all unused identifiers before sending pull requests. 
 When suppressing unused variables, you could use `_` prefix to give them mnemonic names.
+ - Use uppercase identifiers for type parameters e.g. 'T, 'U, etc.
 
+If you're in doubt, please follow the common style that has been used in the code base. 
 We recommend these two sources for F# formatting conventions and coding styles:
  
  - [F# Formatting Conventions](https://github.com/dungpa/fantomas/blob/master/docs/FormattingConventions.md)

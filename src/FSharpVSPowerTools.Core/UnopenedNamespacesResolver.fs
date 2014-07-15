@@ -474,9 +474,9 @@ module ParsedInput =
                         | x -> x
                     { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
 
-type IInsertContextDocument<'a> =
-    abstract GetLineStr: 'a * line:int -> string
-    abstract Insert: 'a * line:int * lineStr:string -> 'a
+type IInsertContextDocument<'T> =
+    abstract GetLineStr: 'T * line:int -> string
+    abstract Insert: 'T * line:int * lineStr:string -> 'T
 
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module InsertContext =
@@ -516,7 +516,7 @@ module InsertContext =
     /// <param name="doc">Document.</param>
     /// <param name="ctx">Insertion context. Typically returned from tryGetInsertionContext</param>
     /// <param name="ns">Namespace to open.</param>
-    let insertOpenDeclaration<'a> state (doc: IInsertContextDocument<'a>) (ctx: InsertContext) (ns: string) =
+    let insertOpenDeclaration<'T> state (doc: IInsertContextDocument<'T>) (ctx: InsertContext) (ns: string) =
         let pos = adjustInsertionPoint state doc ctx
         let docLine = pos.Line - 1
         let lineStr = (String.replicate pos.Col " ") + "open " + ns
