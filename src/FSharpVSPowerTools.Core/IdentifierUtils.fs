@@ -32,7 +32,7 @@ let encapsulateIdentifier symbolKind newName =
     let isAlreadyEncapsulated = newName.StartsWith DoubleBackTickDelimiter && newName.EndsWith DoubleBackTickDelimiter
 
     if isAlreadyEncapsulated then newName
-    elif symbolKind = SymbolKind.Operator then newName
+    elif (symbolKind = SymbolKind.Operator) || (symbolKind = SymbolKind.GenericTypeParameter) || (symbolKind = SymbolKind.StaticallyResolvedTypeParameter) then newName
     elif isKeyWord || not (isIdentifier newName) then DoubleBackTickDelimiter + newName + DoubleBackTickDelimiter
     else newName
 
