@@ -172,13 +172,15 @@ type ResolveUnopenedNamespaceSmartTagger
         |> Seq.toReadOnlyCollection
 
     interface ITagger<ResolveUnopenedNamespaceSmartTag> with
-        member x.GetTags _spans =
+        member x.GetTags _ =
             seq {
                 match currentWord, state with
                 | Some word, Some candidates ->
-                    let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates))
-                          :> _
+                    let span =
+                        if buffer.CurrentSnapshot = word.Snapshot then word
+                        else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive)
+
+                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates)) :> _
                 | _ -> ()
             }
              
