@@ -33,3 +33,11 @@ let ``should not encapsulate already encapsulated identifiers``() =
 let ``should not encapsulate operators``() = 
     shouldStaysAsIs SymbolKind.Operator "</>"
     shouldStaysAsIs SymbolKind.Operator "*"
+
+[<Test>]
+let ``should not encapsulate generic type parameters``() = 
+    shouldStaysAsIs SymbolKind.GenericTypeParameter "'a"
+
+[<Test>]
+let ``should not encapsulate statically resolved type parameters``() = 
+    shouldStaysAsIs SymbolKind.StaticallyResolvedTypeParameter "'a"
