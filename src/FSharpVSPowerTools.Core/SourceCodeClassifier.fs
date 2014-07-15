@@ -22,7 +22,7 @@ let getIdentifierCategory (symbol: FSharpSymbol) =
     match symbol with
     | Entity (_, ValueType, _) -> Category.ValueType
     | Entity Class -> Category.ReferenceType
-    | Entity (_, TypedAstUtils.Module, _) -> Category.Module
+    | Entity (_, FSharpModule, _) -> Category.Module
     | Entity (_, _, Tuple) -> Category.ReferenceType
     | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
     | _ ->
@@ -36,7 +36,7 @@ let internal getCategory (symbolUse: FSharpSymbolUse) =
     | Pattern -> Category.PatternCase
     | Entity (_, ValueType, _) -> Category.ValueType
     | Entity Class -> Category.ReferenceType
-    | Entity (_, TypedAstUtils.Module, _) -> Category.Module
+    | Entity (_, FSharpModule, _) -> Category.Module
     | Entity (_, _, Tuple) -> Category.ReferenceType
     | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
     | MemberFunctionOrValue (Constructor ValueType) -> Category.ValueType
@@ -504,9 +504,10 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                 let autoOpenModules =
                     match allEntities with
                     | Some entities ->
-                            entities |> List.filter (fun e -> e.Kind = EntityKind.Module true)
+                        entities |> List.filter (fun e -> e.Kind = EntityKind.Module true)
                     | None -> []
                     |> List.map (fun e -> e.Idents)
+
                 let rec walkModuleOrNamespace (parent: LongIdent) acc (decls, moduleRange) =
                     let openStatements =
                         decls
@@ -514,8 +515,22 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                             function
                             | SynModuleDecl.NestedModule (ComponentInfo(_, _, _, ident, _, _, _, _), nestedModuleDecls, _, nestedModuleRange) -> 
                                 walkModuleOrNamespace (parent @ ident) acc (nestedModuleDecls, nestedModuleRange)
-                            | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) -> 
+                            | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) ->
+                                (* The idents are "relative" because an open declaration can be not a fully qualified namespace
+                                   or module, but a relatively qualified module:
+
+                                   module M1 = 
+                                       let x = ()
+                                   open M2 =
+                                       open M1
+                                       open System
+                                       let _ = x
+    
+                                   here "open M1" is relative, but "open System" is not.
+                                *)
                                 let relativeIdents = ident |> List.map string |> List.toArray
+                                // Construct all possible parents taking firts ident, then two first idents and so on.
+                                // It's not 100% accurate but it's the best we can with the current FCS.
                                 let grandParents = 
                                     parent 
                                     |> List.map string 
@@ -524,6 +539,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                         [0..p.Length - 1] 
                                         |> List.map (fun index -> p.[0..index])
                                 
+                                // All possible full entity idents. Again, it's not 100% accurate.
                                 let fullIdentsList = 
                                     grandParents 
                                     |> List.map (fun grandParent -> 
@@ -540,10 +556,26 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                     | [] -> acc
                                     | _ -> loop (acc @ newModules) (maxLength + 1)
                                 
+                                (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
+                                   children AutoOpen modules and so on until a non-AutoOpen module is met.
+                                   Example:
+                                   
+                                   module M =
+                                       [<AutoOpen>]                                  
+                                       module A1 =
+                                           [<AutoOpen>] 
+                                           module A2 =
+                                               module A3 = 
+                                                   [<AutoOpen>] 
+                                                   module A4 = ...
+                                         
+                                   // this declaration actually open M, M.A1, M.A1.A2, but NOT M.A1.A2.A3 or M.A1.A2.A3.A4
+                                   open M
+                                *)
                                 let identsAndAutoOpens = 
                                     fullIdentsList
                                     |> List.map (fun fullIdents ->
-                                        relativeIdents :: loop [fullIdents] relativeIdents.Length)
+                                         relativeIdents :: loop [fullIdents] relativeIdents.Length)
                                     |> List.concat
 
                                 { Idents = Set.ofList identsAndAutoOpens 
@@ -565,7 +597,10 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         match untypedAst with
         | Some ast -> 
             getLongIdents ast
-            |> Seq.filter (fun ident -> ident.Lid.Length > 1) // take idents with dots only
+            |> Seq.filter (fun ident -> 
+                match ident.Lid with
+                | [] | [_] -> false
+                | _ -> true) // take idents with dots only
             |> Seq.map (fun ident -> ident.Range, ident.Lid |> List.map string |> List.toArray)
             |> Seq.groupBy (fun (range, _) -> range.StartLine)
             |> Map.ofSeq
@@ -575,17 +610,26 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         allSymbolsUses'
         |> Array.filter (fun (symbolUse, _) ->
             match symbolUse.SymbolUse.Symbol with
+            | UnionCase _ 
+            | Entity (Class | (ValueType | Record | UnionType | Interface | FSharpModule), _, _) -> true
             | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
             | MemberFunctionOrValue func -> not func.IsMember
-            | _ -> true)
+            | _ -> false)
 
+    // Filter out symbols which ranges are fully included into a bigger symbols. 
+    // For example, for this code: Ns.Module.Module1.Type.NestedType.Method() FCS returns the followint symbols: 
+    // Ns, Module, Module1, Type, NestedType, Method.
+    // We want to filter all of them but the longest one (Method).
     let symbolUsesWithoutNested =
         symbolUsesPotentiallyRequireOpenDecls
         |> Seq.map (fun (symbolUse, _) -> symbolUse)
         |> Seq.groupBy (fun symbolUse -> symbolUse.SymbolUse.RangeAlternate.StartLine)
         |> Seq.map (fun (line, symbolUses) ->
+            // We use LongIdents collected from the untyped AST to determine that a bunch of entities
+            // actually represents a single entity. 
             match longIdentsByLine |> Map.tryFind line with
             | Some longIdents ->
+                // Group all SymbolUses by LongIdents in which they are belong (by ranges).
                 symbolUses
                 |> Seq.map (fun sUse -> 
                     sUse, longIdents |> Seq.tryFind (fun (r, _) -> Range.rangeContainsRange r sUse.SymbolUse.RangeAlternate))
@@ -593,6 +637,21 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                 |> Seq.map (fun (longIdent, symbolUses) -> 
                     match longIdent with
                     | Some _ ->
+                        (* Find all longest SymbolUses which has unique roots. For example:
+                           
+                           module Top
+                           module M =
+                               type System.IO.Path with
+                                   member static ExtensionMethod() = ()
+
+                           open M
+                           open System
+                           let _ = IO.Path.ExtensionMethod()
+
+                           The last line contains three SymbolUses: "System.IO", "System.IO.Path" and "Top.M.ExtensionMethod". 
+                           So, we filter out "System.IO" since it's a prefix of "System.IO.Path".
+
+                        *)
                         symbolUses
                         |> Seq.filter (fun (nextSymbolUse, _) ->
                             symbolUses 

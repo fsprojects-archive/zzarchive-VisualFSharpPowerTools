@@ -440,7 +440,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         // determining that a record, DU or module is used anywhere requires
                         // inspecting all their inclosed entities (fields, cases and func / vals)
                         // for useness, which is too expensive to do. Hence we never gray them out.
-                        | Entity ((Record | UnionType | Interface | TypedAstUtils.Module), _, _) -> None
+                        | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
                         | _ ->
                             match Seq.toList uses with
                             | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
@@ -470,7 +470,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 | _ ->
                     allSymbolsUses
                     |> Array.map (fun su -> 
-                        { su with IsUsed = not (notUsedSymbols |> List.exists (fun s -> s = su.SymbolUse.Symbol)) })
+                        { su with IsUsed = notUsedSymbols |> List.forall (fun s -> s <> su.SymbolUse.Symbol) })
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =

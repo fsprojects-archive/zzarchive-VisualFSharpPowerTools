@@ -124,7 +124,7 @@ let (|ProvidedType|_|) (e: FSharpEntity) =
 
 let (|ByRef|_|) (e: FSharpEntity) = if e.IsByRef then Some() else None
 let (|Array|_|) (e: FSharpEntity) = if e.IsArrayType then Some() else None
-let (|Module|_|) (entity: FSharpEntity) = if entity.IsFSharpModule then Some() else None
+let (|FSharpModule|_|) (entity: FSharpEntity) = if entity.IsFSharpModule then Some() else None
 
 let (|Tuple|_|) (ty: FSharpType option) = 
     ty |> Option.bind (fun ty -> if ty.IsTupleType then Some() else None)
