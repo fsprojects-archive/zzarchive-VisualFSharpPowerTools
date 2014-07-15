@@ -1067,3 +1067,19 @@ module M =
     let _ = dt.Hour
 """
     => [4, [ Category.Unused, 9, 15 ]]
+
+[<Test>]
+let ``either of two open declarations are not marked as unused if symbols from both of them are used``() =
+    """
+module M1 =
+    module M2 =
+        let func1 x = x
+        module M3 =
+            let func2 x = x
+open M1.M2.M3
+open M1.M2
+let _ = func1()
+let _ = func2()
+"""
+    => [ 7, []; 8, []]
+        
