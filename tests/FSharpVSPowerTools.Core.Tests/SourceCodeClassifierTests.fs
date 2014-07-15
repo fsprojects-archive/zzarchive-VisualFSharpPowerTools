@@ -310,7 +310,7 @@ let asyncRunSync = Async.RunSynchronously
     => [ 2, [ Category.Function, 4, 16; Category.ReferenceType, 19, 24; Category.Function, 25, 41 ]]
 
 [<Test>]
-let ``standard computation expression``() = 
+let ``standard computation expression name``() = 
     """
 seq {
     let func x = x
@@ -322,7 +322,19 @@ seq {
          4, [ Category.Function, 10, 14 ]]
 
 [<Test>]
-let ``user defined computation expression``() = 
+let ``used let bindings in computation expression should not be marked as unused``() = 
+    """
+seq {
+    let func x = x
+    yield func 1
+} |> ignore
+"""
+    => [ 2, []
+         3, [ Category.Function, 8, 12 ]
+         4, [ Category.Function, 10, 14 ]]
+
+[<Test>]
+let ``user defined computation expression name``() = 
     """
 type CustomBuilder() =
     member __.Yield (()) = ()
