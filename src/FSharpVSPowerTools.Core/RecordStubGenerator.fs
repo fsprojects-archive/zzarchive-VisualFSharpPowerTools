@@ -1,15 +1,12 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 
-open System
-open System.IO
-open System.Diagnostics
-open System.Collections.Generic
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.Diagnostics
 
 // Algorithm
 // [x] Make sure '}' is the last token of the expression
@@ -23,9 +20,9 @@ let debug x =
     Printf.ksprintf (printfn "[RecordStubGenerator] %s") x
 
 let mutable debugObject: obj = null
-let inline setDebugObject (o: 'a) = debugObject <- o
+let inline setDebugObject (o: 'T) = debugObject <- o
 #else
-let inline setDebugObject (_: 'a) = ()
+let inline setDebugObject (_: 'T) = ()
 #endif
 
 [<NoEquality; NoComparison>]
@@ -155,7 +152,7 @@ let private formatField (ctxt: Context) prependNewLine
 let formatRecord (insertionPos: RecordStubsInsertionParams) (fieldDefaultValue: string)
                  (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
-    assert entity.IsFSharpRecord
+    Debug.Assert(entity.IsFSharpRecord, "Entity has to ben an F# record.")
     use writer = new ColumnIndentedTextWriter()
     let ctxt =
         { RecordTypeName = entity.DisplayName

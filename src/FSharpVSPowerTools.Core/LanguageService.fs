@@ -5,8 +5,6 @@ open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.FSharp.Compiler.Ast
-open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools
 
 // --------------------------------------------------------------------------------------
@@ -117,7 +115,6 @@ type LexerBase() =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
-open System.Collections.Generic
 
 // --------------------------------------------------------------------------------------
 // Language service 

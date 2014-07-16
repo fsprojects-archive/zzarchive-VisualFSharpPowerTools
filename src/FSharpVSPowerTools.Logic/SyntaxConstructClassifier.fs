@@ -3,16 +3,12 @@
 open System
 open System.IO
 open System.Threading
-open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools.AsyncMaybe
 
 [<NoComparison>]
 type private ClassifierState =

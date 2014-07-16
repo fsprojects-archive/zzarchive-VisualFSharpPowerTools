@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Navigation
 
-open System
 open System.Collections.Generic
 open System.Globalization
 open Microsoft.FSharp.Compiler

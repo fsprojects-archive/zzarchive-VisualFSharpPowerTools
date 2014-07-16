@@ -3,7 +3,6 @@
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.IO
 open FSharpVSPowerTools.ProjectSystem
-open System.Threading
 
 type Version = int
 

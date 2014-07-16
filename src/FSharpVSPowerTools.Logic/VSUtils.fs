@@ -3,14 +3,8 @@ module FSharpVSPowerTools.ProjectSystem.VSUtils
 
 open System
 open System.Diagnostics
-open System.Text.RegularExpressions
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Text.Operations
-open Microsoft.VisualStudio.TextManager.Interop
-open Microsoft.VisualStudio.Utilities
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
@@ -129,10 +123,8 @@ type DocumentUpdater(serviceProvider: IServiceProvider) =
     member x.EndGlobalUndo(linkedUndo: IVsLinkedUndoTransactionManager) = 
         ErrorHandler.ThrowOnFailure(linkedUndo.CloseLinkedUndo()) |> ignore
 
-open Microsoft.VisualStudio.Shell
 open EnvDTE
 open VSLangProj
-open System.Diagnostics
 
 type DTE with
     member x.GetActiveDocument() =
@@ -202,7 +194,6 @@ let getSelectedItemsFromSolutionExplorer dte =
 let getSelectedProjectsFromSolutionExplorer dte =
     getSelectedFromSolutionExplorer<Project> dte
 
-open System.ComponentModel.Composition
 open System.Threading
 
 [<Literal>]

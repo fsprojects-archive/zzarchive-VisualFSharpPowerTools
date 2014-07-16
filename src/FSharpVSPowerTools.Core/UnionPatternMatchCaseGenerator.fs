@@ -1,6 +1,5 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 
-open System
 open System.Text.RegularExpressions
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
@@ -8,6 +7,7 @@ open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.Diagnostics
 
 [<NoEquality; NoComparison>]
 type PatternMatchExpr = {
@@ -612,7 +612,7 @@ let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
 
 let formatMatchExpr insertionParams (caseDefaultValue: string)
                     (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
-    assert entity.IsFSharpUnion
+    Debug.Assert(entity.IsFSharpUnion, "Entity has to be an F# union.")
     use writer = new ColumnIndentedTextWriter()
 
     let casesWritten = getWrittenCases patMatchExpr

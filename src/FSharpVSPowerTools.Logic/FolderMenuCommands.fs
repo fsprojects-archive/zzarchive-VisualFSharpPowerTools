@@ -6,7 +6,6 @@ open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.OLE.Interop
-open Microsoft.VisualStudio.Text
 open System
 open System.IO
 open System.ComponentModel.Composition

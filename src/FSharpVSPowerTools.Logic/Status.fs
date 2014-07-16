@@ -1,17 +1,7 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
-open System.Diagnostics
-open System.Text.RegularExpressions
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Text.Operations
-open Microsoft.VisualStudio.TextManager.Interop
-open Microsoft.VisualStudio.Utilities
-open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress

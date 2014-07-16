@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Folders
 
 open System
-open System.Windows
 open System.ComponentModel
 open FSharpVSPowerTools
 

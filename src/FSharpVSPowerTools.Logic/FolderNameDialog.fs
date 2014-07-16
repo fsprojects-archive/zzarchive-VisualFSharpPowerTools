@@ -1,12 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Folders
 
 open System
-open System.IO
-open System.Windows
-open System.Windows.Input
 open System.ComponentModel
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 
 type NewFolderNameDialog = FsXaml.XAML<"FolderNameDialog.xaml">

@@ -2,9 +2,6 @@
 
 open System
 open System.IO
-open System.Collections.Generic
-open System.ComponentModel.Design
-open System.Runtime.InteropServices
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop

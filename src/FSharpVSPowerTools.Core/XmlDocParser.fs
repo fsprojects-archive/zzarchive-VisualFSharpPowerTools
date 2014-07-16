@@ -175,7 +175,6 @@ module XmlDocComment =
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open XmlDocParsing
-open System
 
 type XmlDocParser private () =
     let checker = lazy (InteractiveChecker.Create())

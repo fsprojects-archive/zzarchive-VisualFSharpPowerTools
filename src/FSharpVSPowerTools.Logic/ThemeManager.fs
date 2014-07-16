@@ -1,14 +1,11 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
-open System.Diagnostics
 open System.ComponentModel.Composition
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.Win32
-open System.Windows.Media
 
 type VisualStudioTheme =
     | Unknown = 0

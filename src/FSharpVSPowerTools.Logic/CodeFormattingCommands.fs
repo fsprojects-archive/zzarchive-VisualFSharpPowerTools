@@ -2,12 +2,10 @@
 
 open System
 open System.IO
-open System.Windows
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
-open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter

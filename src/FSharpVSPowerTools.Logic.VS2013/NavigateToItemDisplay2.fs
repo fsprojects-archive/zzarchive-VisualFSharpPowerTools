@@ -1,21 +1,11 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem.VS2013
 
 open System
-open System.Collections.Generic
 open System.ComponentModel.Composition
-open System.Threading
-
 open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Language.NavigateTo.Interfaces
-open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell
-open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
-open EnvDTE
-
 open FSharpVSPowerTools.ProjectSystem
 
 type
