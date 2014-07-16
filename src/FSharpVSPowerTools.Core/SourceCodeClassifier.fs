@@ -76,8 +76,10 @@ let excludeWordSpan from what =
         { from with StartCol = what.EndCol + 1 } // the dot between parts
     else from
 
-let getLongIdents (input: ParsedInput) : LongIdentWithDots[] =
-    let idents = ResizeArray<_>()
+let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
+    let idents = ResizeArray<Range.range * Idents>()
+    let addLongIdentWithDots (value: LongIdentWithDots) = 
+        idents.Add (value.Range, value.Lid |> List.map string |> List.toArray)
 
     let (|ConstructorPats|) = function
         | Pats ps -> ps
@@ -91,7 +93,7 @@ let getLongIdents (input: ParsedInput) : LongIdentWithDots[] =
         List.iter walkSynModuleDecl decls
 
     and walkAttribute (attr: SynAttribute) = 
-        idents.Add attr.TypeName 
+        addLongIdentWithDots attr.TypeName 
         walkExpr attr.ArgExpr
 
     and walkTyparDecl (SynTyparDecl.TyparDecl (attrs, typar)) = 
@@ -120,7 +122,7 @@ let getLongIdents (input: ParsedInput) : LongIdentWithDots[] =
         | SynPat.Attrib(pat, attrs, _) -> walkPat pat; List.iter walkAttribute attrs
         | SynPat.Or(pat1, pat2, _) -> List.iter walkPat [pat1; pat2]
         | SynPat.LongIdent(ident, _, typars, ConstructorPats pats, _, _) -> 
-            idents.Add ident
+            addLongIdentWithDots ident
             typars
             |> Option.iter (fun (SynValTyparDecls (typars, _, constraints)) ->
                  List.iter walkTyparDecl typars
@@ -148,7 +150,7 @@ let getLongIdents (input: ParsedInput) : LongIdentWithDots[] =
         | SynIndexerArg.Two (e1, e2) -> List.iter walkExpr [e1; e2]
 
     and walkType = function
-        | SynType.LongIdent ident -> idents.Add ident
+        | SynType.LongIdent ident -> addLongIdentWithDots ident
         | SynType.App(ty, _, types, _, _, _, _) -> 
             walkType ty
             List.iter walkType types
@@ -168,7 +170,8 @@ let getLongIdents (input: ParsedInput) : LongIdentWithDots[] =
         e1 |> Option.iter walkExpr
 
     and walkExpr = function
-        | SynExpr.LongIdent (_, ident, _, _) -> idents.Add ident
+        | SynExpr.LongIdent (_, ident, _, _) -> addLongIdentWithDots ident
+        | SynExpr.Ident ident -> idents.Add (ident.idRange, [|ident.idText|])
         | SynExpr.Paren (e, _, _, _) -> walkExpr e
         | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
         | SynExpr.Typed(e, _, _) -> walkExpr e
@@ -530,7 +533,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                 *)
                                 let relativeIdents = ident |> List.map string |> List.toArray
                                 // Construct all possible parents taking firts ident, then two first idents and so on.
-                                // It's not 100% accurate but it's the best we can with the current FCS.
+                                // It's not 100% accurate but it's the best we can do with the current FCS.
                                 let grandParents = 
                                     parent 
                                     |> List.map string 
@@ -597,11 +600,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         match untypedAst with
         | Some ast -> 
             getLongIdents ast
-            |> Seq.filter (fun ident -> 
-                match ident.Lid with
-                | [] | [_] -> false
-                | _ -> true) // take idents with dots only
-            |> Seq.map (fun ident -> ident.Range, ident.Lid |> List.map string |> List.toArray)
+            |> Seq.filter (fun (_, idents) -> idents.Length > 0)
             |> Seq.groupBy (fun (range, _) -> range.StartLine)
             |> Map.ofSeq
         | None -> Map.empty
@@ -611,10 +610,11 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         |> Array.filter (fun (symbolUse, _) ->
             match symbolUse.SymbolUse.Symbol with
             | UnionCase _ 
-            | Entity (Class | (ValueType | Record | UnionType | Interface | FSharpModule), _, _) -> true
+            | Entity (Class | (ValueType | Record | UnionType | Interface | FSharpModule), _, _)
             | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
             | MemberFunctionOrValue func -> not func.IsMember
             | _ -> false)
+        |> Array.map (fun (symbolUse, _) -> symbolUse)
 
     // Filter out symbols which ranges are fully included into a bigger symbols. 
     // For example, for this code: Ns.Module.Module1.Type.NestedType.Method() FCS returns the followint symbols: 
@@ -622,7 +622,6 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
     // We want to filter all of them but the longest one (Method).
     let symbolUsesWithoutNested =
         symbolUsesPotentiallyRequireOpenDecls
-        |> Seq.map (fun (symbolUse, _) -> symbolUse)
         |> Seq.groupBy (fun symbolUse -> symbolUse.SymbolUse.RangeAlternate.StartLine)
         |> Seq.map (fun (line, symbolUses) ->
             // We use LongIdents collected from the untyped AST to determine that a bunch of entities
@@ -652,12 +651,22 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                            So, we filter out "System.IO" since it's a prefix of "System.IO.Path".
 
                         *)
-                        symbolUses
-                        |> Seq.filter (fun (nextSymbolUse, _) ->
-                            symbolUses 
-                            |> Seq.exists (fun (sUse, _) -> 
-                                nextSymbolUse <> sUse && sUse.FullName |> Array.startsWith nextSymbolUse.FullName)
-                            |> not)
+                        let res =
+                            symbolUses
+                            |> Seq.filter (fun (nextSymbolUse, _) ->
+                                let res = 
+                                    symbolUses
+                                    |> Seq.exists (fun (sUse, _) -> 
+                                        nextSymbolUse <> sUse
+                                        && (sUse.FullNames |> List.exists (fun fullName ->
+                                            nextSymbolUse.FullNames |> List.exists (fun nextSymbolFullName ->
+                                            fullName.Length > nextSymbolFullName.Length
+                                            && fullName |> Array.startsWith nextSymbolFullName))))
+                                    |> not
+                                res)
+                            |> Seq.toArray
+                            |> Array.toSeq
+                        res
                     | None -> symbolUses)
                 |> Seq.map (Seq.map fst)
                 |> Seq.concat
@@ -670,35 +679,45 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
     let qualifiedSymbols: (Range.range * SymbolAccess * Idents) [] =
         symbolUsesWithoutNested
         |> Array.map (fun symbolUse ->
-            let r = symbolUse.SymbolUse.RangeAlternate
-            let fullName = symbolUse.FullName
-            r,
-            match longIdentsByLine |> Map.tryFind r.StartLine with
-            | Some idents ->
-                match idents |> Seq.tryFind (fun (identRange, _) ->
-                    identRange.StartColumn <= r.StartColumn && identRange.EndColumn >= r.EndColumn) with
-                | Some (identRange, longIdent) -> //when (fullName |> Array.endsWith longIdent) ->
-                    let lastSymIdent = fullName.[fullName.Length - 1]
-                    // remove trailing idents from long ident
-                    let longIdent = longIdent |> Array.rev |> Seq.skipWhile (fun ident -> ident <> lastSymIdent) |> Seq.toArray |> Array.rev
-                    if fullName |> Array.endsWith longIdent then
-                        let res = 
-                            let fullNameStr = System.String.Join (".", fullName)
-                            match fullNameStr.Length - (r.EndColumn - identRange.StartColumn) with
-                            // trailing dot
-                            | qualifiedLength when qualifiedLength > 1 ->
-                                SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength - 1).Split '.'
-                            | qualifiedLength when qualifiedLength > 0 ->
-                                SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength).Split '.'
-                            | _ -> SymbolAccess.FullName, fullName
-                        debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName r identRange res
-                        res
-                    else SymbolAccess.FullName, fullName
+            let sUseRange = symbolUse.SymbolUse.RangeAlternate
+            symbolUse.FullNames 
+            |> List.map (fun fullName ->
+                sUseRange,
+                match longIdentsByLine |> Map.tryFind sUseRange.StartLine with
+                | Some idents ->
+                    match idents |> Seq.tryFind (fun (identRange, _) ->
+                        identRange.StartColumn <= sUseRange.StartColumn && identRange.EndColumn >= sUseRange.EndColumn) with
+                    | Some (identRange, longIdent) -> //when (fullName |> Array.endsWith longIdent) ->
+                        let lastSymIdent = fullName.[fullName.Length - 1]
+                        // remove trailing idents from long ident
+                        let longIdent = longIdent |> Array.rev |> Seq.skipWhile (fun ident -> ident <> lastSymIdent) |> Seq.toArray |> Array.rev
+                        if fullName |> Array.endsWith longIdent then
+                            let res = 
+                                let fullNameStr = System.String.Join (".", fullName)
+                                match fullNameStr.Length - (sUseRange.EndColumn - identRange.StartColumn) with
+                                // trailing dot
+                                | qualifiedLength when qualifiedLength > 1 ->
+                                    SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength - 1).Split '.'
+                                | qualifiedLength when qualifiedLength > 0 ->
+                                    SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength).Split '.'
+                                | qualifiedLength -> 
+                                    debug "[!QS] Qualified length is negative: %d (FullName = %s, sUseRange.EndCol = %d, identRange.StartCol = %d" 
+                                           qualifiedLength fullNameStr sUseRange.EndColumn identRange.StartColumn
+                                    SymbolAccess.FullName, fullName
+                            debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName sUseRange identRange res
+                            res
+                        else
+                            debug "[!QS] FullName %A does not ends with %A" fullName longIdent
+                            SymbolAccess.FullName, fullName
+                    | _ -> 
+                        debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName sUseRange
+                        SymbolAccess.FullName, fullName
                 | _ -> 
-                    debug "[SQ] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName r
-                    SymbolAccess.FullName, fullName
-            | _ -> SymbolAccess.FullName, fullName)
-        |> Array.map (fun (range, (access, fullName)) -> range, access, fullName)
+                    debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName sUseRange
+                    SymbolAccess.FullName, fullName))
+        |> List.concat
+        |> List.map (fun (range, (access, fullName)) -> range, access, fullName)
+        |> List.toArray
 
     debug "Qualified symbols: %A" qualifiedSymbols
         

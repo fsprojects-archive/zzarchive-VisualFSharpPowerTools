@@ -87,15 +87,7 @@ module AssemblyContentProvider =
     open System.IO
     open System.Collections.Generic
             
-    let private fixParentModuleSuffix (parent: Idents option) (idents: Idents) =
-        match parent with
-        | Some p when p.Length <= idents.Length -> 
-            idents 
-            |> Array.mapi (fun i ident -> 
-                if i < p.Length then p.[i] else ident)
-        | _ -> idents
-
-    let private isAttribute (entity: FSharpEntity) =
+    let isAttribute (entity: FSharpEntity) =
         let getBaseType (entity: FSharpEntity) =
             try 
                 match entity.BaseType with

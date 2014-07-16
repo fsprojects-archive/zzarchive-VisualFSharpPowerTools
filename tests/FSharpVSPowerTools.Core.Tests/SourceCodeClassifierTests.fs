@@ -73,7 +73,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
     let expected = expected |> List.map (fun (line, spans) -> line, spans |> List.sortBy (fun (_, startCol, _) -> startCol))
     try actual |> Collection.assertEquiv (expected |> List.sortBy (fun (line, _) -> line))
     with _ -> 
-        //debug "AST: %A" parseResults.ParseTree; 
+        debug "AST: %A" parseResults.ParseTree; 
         reraise()
 
 [<Test>]
@@ -955,8 +955,8 @@ open NormalModule.AutoOpenModule1.NestedNormalModule.AutoOpenModule2
 open NormalModule.AutoOpenModule1.NestedNormalModule
 let _ = Class()
 """
-    => [ 12, [ Category.Unused, 5, 68 ]
-         13, []]
+    => [ 12, []
+         13, [ Category.Unused, 5, 52 ]]
     
 [<Test>]
 let ``open declaration is not marked as unused if there is a shortened attribute symbol from it``() =
@@ -1073,9 +1073,9 @@ let ``either of two open declarations are not marked as unused if symbols from b
     """
 module M1 =
     module M2 =
-        let func1 x = x
+        let func1 _ = ()
         module M3 =
-            let func2 x = x
+            let func2 _ = ()
 open M1.M2.M3
 open M1.M2
 let _ = func1()
