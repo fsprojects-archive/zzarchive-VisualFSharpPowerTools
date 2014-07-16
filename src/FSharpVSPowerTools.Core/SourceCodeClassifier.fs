@@ -76,6 +76,7 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
     let idents = ResizeArray<Range.range * Idents>()
     let addLongIdentWithDots (value: LongIdentWithDots) = 
         idents.Add (value.Range, value.Lid |> List.map string |> List.toArray)
+    let addIdent (ident: Ident) = idents.Add (ident.idRange, [|ident.idText|])
 
     let (|ConstructorPats|) = function
         | Pats ps -> ps
@@ -181,7 +182,7 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
 
     and walkExpr = function
         | SynExpr.LongIdent (_, ident, _, _) -> addLongIdentWithDots ident
-        | SynExpr.Ident ident -> idents.Add (ident.idRange, [|ident.idText|])
+        | SynExpr.Ident ident -> addIdent ident
         | SynExpr.Paren (e, _, _, _) -> walkExpr e
         | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
         | SynExpr.Typed(e, _, _) -> walkExpr e
@@ -192,13 +193,20 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
         | SynExpr.New(_, t, e, _) -> 
             walkExpr e
             walkType t
-        | SynExpr.ObjExpr(ty, _, bindings, ifaces, _, _) -> 
+        | SynExpr.ObjExpr(ty, argOpt, bindings, ifaces, _, _) -> 
+            argOpt |> Option.iter (fun (e, ident) -> 
+                walkExpr e
+                ident |> Option.iter addIdent)
             walkType ty
             List.iter walkBinding bindings
             List.iter walkInterfaceImpl ifaces
         | SynExpr.While(_, e1, e2, _) -> List.iter walkExpr [e1; e2]
-        | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.iter walkExpr [e1; e2; e3]
-        | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.iter walkExpr [e1; e2]
+        | SynExpr.For(_, ident, e1, _, e2, e3, _) -> 
+            addIdent ident
+            List.iter walkExpr [e1; e2; e3]
+        | SynExpr.ForEach(_, _, _, pat, e1, e2, _) -> 
+            walkPat pat
+            List.iter walkExpr [e1; e2]
         | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExpr e
         | SynExpr.CompExpr(_, _, e, _) -> walkExpr e
         | SynExpr.Lambda(_, _, _, e, _) -> walkExpr e
@@ -216,14 +224,18 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
         | SynExpr.LetOrUse(_, _, bindings, e, _) -> 
             List.iter walkBinding bindings 
             walkExpr e
-        | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
+        | SynExpr.TryWith(e, _, clauses, _, _, _, _) -> 
+            List.iter walkClause clauses
+            walkExpr e
         | SynExpr.TryFinally(e1, e2, _, _, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.Lazy(e, _) -> walkExpr e
         | SynExpr.Sequential(_, _, e1, e2, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
             List.iter walkExpr [e1; e2]
             e3 |> Option.iter walkExpr
-        | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
+        | SynExpr.LongIdentSet(ident, e, _) -> 
+            addLongIdentWithDots ident
+            walkExpr e
         | SynExpr.DotGet(e, _, idents, _) -> 
             addLongIdentWithDots idents
             walkExpr e
@@ -238,8 +250,12 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
             walkExpr e1
             List.iter walkIndexerArg args
             walkExpr e2
-        | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.iter walkExpr [e1; e2]
-        | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.iter walkExpr [e1; e2; e3]
+        | SynExpr.NamedIndexedPropertySet(ident, e1, e2, _) -> 
+            addLongIdentWithDots ident
+            List.iter walkExpr [e1; e2]
+        | SynExpr.DotNamedIndexedPropertySet(e1, ident, e2, e3, _) -> 
+            addLongIdentWithDots ident
+            List.iter walkExpr [e1; e2; e3]
         | SynExpr.TypeTest(e, t, _) -> 
             walkExpr e
             walkType t
@@ -255,7 +271,9 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
         | SynExpr.JoinIn(e1, _, e2, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.YieldOrReturn(_, e, _) -> walkExpr e
         | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
-        | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.iter walkExpr [e1; e2]
+        | SynExpr.LetOrUseBang(_, _, _, pat, e1, e2, _) -> 
+            walkPat pat
+            List.iter walkExpr [e1; e2]
         | SynExpr.DoBang(e, _) -> walkExpr e
         | SynExpr.TraitCall (ts, sign, e, _) ->
             List.iter walkTypar ts 
