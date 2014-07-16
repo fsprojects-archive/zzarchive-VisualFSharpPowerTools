@@ -118,7 +118,7 @@ type LexerBase() =
 type SymbolUse =
     { SymbolUse: FSharpSymbolUse 
       IsUsed: bool
-      FullNames: Idents list }
+      FullNames: Idents[] }
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
@@ -434,9 +434,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         | _ -> false
                     { SymbolUse = symbolUse
                       IsUsed = true
-                      FullNames = [ yield fullName.Split '.'
-                                    if isAttribute then
-                                        yield fullName.Substring(0, fullName.Length - 9).Split '.' ] })
+                      FullNames = [| yield fullName.Split '.'
+                                     if isAttribute then
+                                         yield fullName.Substring(0, fullName.Length - 9).Split '.' |] })
 
             let singleDefs = 
                 if checkForUnusedDeclarations then
@@ -455,8 +455,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                 Some symbol 
                             | _ -> None)
                     |> Seq.toList
-                else
-                    []
+                else []
 
             let! notUsedSymbols =
                 singleDefs 

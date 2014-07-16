@@ -1083,3 +1083,23 @@ let _ = func2()
 """
     => [ 7, []; 8, []]
         
+[<Test>]
+let ``open module with ModuleSuffix attribute value applied is not marked as unused if a symbol declared in it is used``() =
+    """
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module M =
+    let func _ = ()
+open M
+let _ = func()
+"""
+    => [ 5, []]
+
+[<Test>]
+let ``open module all of which symbols are used by qualifier is marked as unused``() =
+    """
+module M =
+    let func _ = ()
+open M
+let _ = M.func 1
+"""
+    => [4, [Category.Unused, 5, 6 ]]

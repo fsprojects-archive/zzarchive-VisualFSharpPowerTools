@@ -6,12 +6,13 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type internal ShortIdent = string
 type internal Idents = ShortIdent[]
 type IsAutoOpen = bool
+type Module = { IsAutoOpen: bool; HasModuleSuffix: bool }
 
 type EntityKind =
     | Attribute
     | Type
     | FunctionOrValue
-    | Module of IsAutoOpen
+    | Module of Module
     override x.ToString() = sprintf "%A" x
 
 type RawEntity = 
@@ -116,7 +117,10 @@ module AssemblyContentProvider =
               Kind = 
                 if isAttribute entity then 
                     EntityKind.Attribute 
-                elif entity.IsFSharpModule then EntityKind.Module (hasAttribute<AutoOpenAttribute> entity.Attributes)
+                elif entity.IsFSharpModule then 
+                    EntityKind.Module 
+                        { IsAutoOpen = hasAttribute<AutoOpenAttribute> entity.Attributes
+                          HasModuleSuffix = hasModuleSuffixAttribute entity }
                 else EntityKind.Type })
 
     let rec private traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 

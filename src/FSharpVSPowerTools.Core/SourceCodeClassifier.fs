@@ -61,10 +61,6 @@ type OpenDeclaration =
       DeclRange: Range.range
       Range: Range.range }
 
-type SymbolAccess =
-    | FullName
-    | OpenPrefix
-
 type private Line = int
 
 // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
@@ -101,25 +97,35 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
         walkTypar typar
             
     and walkTypeConstraint = function
-        | SynTypeConstraint.WhereTyparDefaultsToType (t1, t2, _) -> walkTypar t1; walkType t2
+        | SynTypeConstraint.WhereTyparDefaultsToType (t1, t2, _) -> 
+            walkTypar t1
+            walkType t2
         | SynTypeConstraint.WhereTyparIsValueType(t, _) -> walkTypar t
         | SynTypeConstraint.WhereTyparIsReferenceType(t, _) -> walkTypar t
         | SynTypeConstraint.WhereTyparIsUnmanaged(t, _) -> walkTypar t
         | SynTypeConstraint.WhereTyparSupportsNull (t, _) -> walkTypar t
         | SynTypeConstraint.WhereTyparIsComparable(t, _) -> walkTypar t
         | SynTypeConstraint.WhereTyparIsEquatable(t, _) -> walkTypar t
-        | SynTypeConstraint.WhereTyparSubtypeOfType(t, ty, _) -> walkTypar t; walkType ty
+        | SynTypeConstraint.WhereTyparSubtypeOfType(t, ty, _) -> 
+            walkTypar t
+            walkType ty
         | SynTypeConstraint.WhereTyparSupportsMember(ts, sign, _) -> 
             List.iter walkTypar ts 
             walkMemberSig sign
-        | SynTypeConstraint.WhereTyparIsEnum(t, ts, _) -> walkTypar t; List.iter walkType ts
-        | SynTypeConstraint.WhereTyparIsDelegate(t, ts, _) -> walkTypar t; List.iter walkType ts
+        | SynTypeConstraint.WhereTyparIsEnum(t, ts, _) -> 
+            walkTypar t
+            List.iter walkType ts
+        | SynTypeConstraint.WhereTyparIsDelegate(t, ts, _) -> 
+            walkTypar t
+            List.iter walkType ts
 
     and walkPat = function
         | SynPat.Ands (pats, _) -> List.iter walkPat pats
         | SynPat.Named(SynPat.Wild _ as pat, _, _, _, _) -> walkPat pat
         | SynPat.Typed(pat, t, _) -> walkPat pat; walkType t
-        | SynPat.Attrib(pat, attrs, _) -> walkPat pat; List.iter walkAttribute attrs
+        | SynPat.Attrib(pat, attrs, _) -> 
+            walkPat pat
+            List.iter walkAttribute attrs
         | SynPat.Or(pat1, pat2, _) -> List.iter walkPat [pat1; pat2]
         | SynPat.LongIdent(ident, _, typars, ConstructorPats pats, _, _) -> 
             addLongIdentWithDots ident
@@ -157,10 +163,14 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
         | SynType.LongIdentApp(_, _, _, types, _, _, _) -> List.iter walkType types
         | SynType.Tuple(ts, _) -> ts |> List.iter (fun (_, t) -> walkType t)
         | SynType.Array(_, t, _) -> walkType t
-        | SynType.Fun(t1, t2, _) -> walkType t1; walkType t2
+        | SynType.Fun(t1, t2, _) -> 
+            walkType t1
+            walkType t2
         | SynType.WithGlobalConstraints(t, _, _) -> walkType t
         | SynType.HashConstraint(t, _) -> walkType t
-        | SynType.MeasureDivide(t1, t2, _) -> walkType t1; walkType t2
+        | SynType.MeasureDivide(t1, t2, _) -> 
+            walkType t1
+            walkType t2
         | SynType.MeasurePower(t, _, _) -> walkType t
         | _ -> ()
 
@@ -179,7 +189,9 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
         | SynExpr.ArrayOrList(_, es, _) -> List.iter walkExpr es
         | SynExpr.Record(_, _, fields, _) -> 
             fields |> List.iter (fun (_, e, _) -> e |> Option.iter walkExpr)
-        | SynExpr.New(_, t, e, _) -> walkExpr e; walkType t
+        | SynExpr.New(_, t, e, _) -> 
+            walkExpr e
+            walkType t
         | SynExpr.ObjExpr(ty, _, bindings, ifaces, _, _) -> 
             walkType ty
             List.iter walkBinding bindings
@@ -212,15 +224,31 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
             List.iter walkExpr [e1; e2]
             e3 |> Option.iter walkExpr
         | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
-        | SynExpr.DotGet(e, _, _, _) -> walkExpr e
-        | SynExpr.DotSet(e, _, _, _) -> walkExpr e
-        | SynExpr.DotIndexedGet(e, args, _, _) -> walkExpr e; List.iter walkIndexerArg args
-        | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExpr e; List.iter walkIndexerArg args
+        | SynExpr.DotGet(e, _, idents, _) -> 
+            addLongIdentWithDots idents
+            walkExpr e
+        | SynExpr.DotSet(e1, idents, e2, _) -> 
+            walkExpr e1
+            addLongIdentWithDots idents
+            walkExpr e2
+        | SynExpr.DotIndexedGet(e, args, _, _) -> 
+            walkExpr e
+            List.iter walkIndexerArg args
+        | SynExpr.DotIndexedSet(e1, args, e2, _, _, _) -> 
+            walkExpr e1
+            List.iter walkIndexerArg args
+            walkExpr e2
         | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.iter walkExpr [e1; e2; e3]
-        | SynExpr.TypeTest(e, t, _) -> walkExpr e; walkType t
-        | SynExpr.Upcast(e, t, _) -> walkExpr e; walkType t
-        | SynExpr.Downcast(e, t, _) -> walkExpr e; walkType t
+        | SynExpr.TypeTest(e, t, _) -> 
+            walkExpr e
+            walkType t
+        | SynExpr.Upcast(e, t, _) -> 
+            walkExpr e
+            walkType t
+        | SynExpr.Downcast(e, t, _) -> 
+            walkExpr e
+            walkType t
         | SynExpr.InferredUpcast(e, _) -> walkExpr e
         | SynExpr.InferredDowncast(e, _) -> walkExpr e
         | SynExpr.AddressOf(_, e, _, _) -> walkExpr e
@@ -507,9 +535,24 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                 let autoOpenModules =
                     match allEntities with
                     | Some entities ->
-                        entities |> List.filter (fun e -> e.Kind = EntityKind.Module true)
+                        entities |> List.filter (fun e -> 
+                            match e.Kind with
+                            | EntityKind.Module { IsAutoOpen = true } -> true
+                            | _ -> false)
                     | None -> []
                     |> List.map (fun e -> e.Idents)
+
+                let modulesWithModuleSuffix =
+                    match allEntities with
+                    | Some entities ->
+                        entities |> List.choose (fun e -> 
+                            match e.Kind with
+                            | EntityKind.Module { HasModuleSuffix = true } ->
+                                // remove Module suffix
+                                let lastIdent = e.Idents.[e.Idents.Length - 1]
+                                Some (Array.append e.Idents.[0..e.Idents.Length - 2] [|lastIdent.Substring (0, lastIdent.Length - 6)|])
+                            | _ -> None)
+                    | None -> []
 
                 let rec walkModuleOrNamespace (parent: LongIdent) acc (decls, moduleRange) =
                     let openStatements =
@@ -548,17 +591,6 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                     |> List.map (fun grandParent -> 
                                         Array.append grandParent relativeIdents)
                                 
-                                let rec loop acc maxLength =
-                                    let newModules =
-                                        autoOpenModules
-                                        |> List.filter (fun autoOpenModule -> 
-                                            autoOpenModule.Length = maxLength + 1
-                                            && acc |> List.exists (fun collectedAutoOpenModule ->
-                                                autoOpenModule |> Array.startsWith collectedAutoOpenModule))
-                                    match newModules with
-                                    | [] -> acc
-                                    | _ -> loop (acc @ newModules) (maxLength + 1)
-                                
                                 (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
                                    children AutoOpen modules and so on until a non-AutoOpen module is met.
                                    Example:
@@ -575,13 +607,46 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                    // this declaration actually open M, M.A1, M.A1.A2, but NOT M.A1.A2.A3 or M.A1.A2.A3.A4
                                    open M
                                 *)
+
+                                let rec loop acc maxLength =
+                                    let newModules =
+                                        autoOpenModules
+                                        |> List.filter (fun autoOpenModule -> 
+                                            autoOpenModule.Length = maxLength + 1
+                                            && acc |> List.exists (fun collectedAutoOpenModule ->
+                                                autoOpenModule |> Array.startsWith collectedAutoOpenModule))
+                                    match newModules with
+                                    | [] -> acc
+                                    | _ -> loop (acc @ newModules) (maxLength + 1)
+                                
                                 let identsAndAutoOpens = 
                                     fullIdentsList
                                     |> List.map (fun fullIdents ->
                                          relativeIdents :: loop [fullIdents] relativeIdents.Length)
                                     |> List.concat
 
-                                { Idents = Set.ofList identsAndAutoOpens 
+                                (* Replace all modules which have ModuleSuffix attribute value with <Name>Module. For example:
+                                   
+                                   module M =
+                                       [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+                                       module M1 =
+                                           module M2 =
+                                               let func _ = ()
+                                   open M.M1.M2
+                                   The last line will become "M.M1Module.M2".
+                                *)
+                                let idents = 
+                                    identsAndAutoOpens
+                                    |> List.map (fun idents ->
+                                        match modulesWithModuleSuffix |> List.tryFind (fun m -> idents |> Array.startsWith m) with
+                                        | Some m ->
+                                            let index = (Array.length m) - 1
+                                            let modifiedIdents = Array.copy idents
+                                            modifiedIdents.[index] <- idents.[index] + "Module"
+                                            modifiedIdents
+                                        | None -> idents)
+
+                                { Idents = Set.ofList idents
                                   DeclRange = openStatementRange
                                   Range = (Range.mkRange openStatementRange.FileName openStatementRange.Start moduleRange.End) } :: acc 
                             | _ -> acc) [] 
@@ -658,8 +723,8 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                     symbolUses
                                     |> Seq.exists (fun (sUse, _) -> 
                                         nextSymbolUse <> sUse
-                                        && (sUse.FullNames |> List.exists (fun fullName ->
-                                            nextSymbolUse.FullNames |> List.exists (fun nextSymbolFullName ->
+                                        && (sUse.FullNames |> Array.exists (fun fullName ->
+                                            nextSymbolUse.FullNames |> Array.exists (fun nextSymbolFullName ->
                                             fullName.Length > nextSymbolFullName.Length
                                             && fullName |> Array.startsWith nextSymbolFullName))))
                                     |> not
@@ -676,68 +741,54 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
 
     debug "LongIdents by line: %A" longIdentsByLine
 
-    let qualifiedSymbols: (Range.range * SymbolAccess * Idents) [] =
+    let qualifiedSymbols: (Range.range * Idents) [] =
         symbolUsesWithoutNested
         |> Array.map (fun symbolUse ->
             let sUseRange = symbolUse.SymbolUse.RangeAlternate
             symbolUse.FullNames 
-            |> List.map (fun fullName ->
+            |> Array.map (fun fullName ->
                 sUseRange,
                 match longIdentsByLine |> Map.tryFind sUseRange.StartLine with
                 | Some idents ->
-                    match idents |> Seq.tryFind (fun (identRange, _) ->
-                        identRange.StartColumn <= sUseRange.StartColumn && identRange.EndColumn >= sUseRange.EndColumn) with
-                    | Some (identRange, longIdent) -> //when (fullName |> Array.endsWith longIdent) ->
-                        let lastSymIdent = fullName.[fullName.Length - 1]
-                        // remove trailing idents from long ident
-                        let longIdent = longIdent |> Array.rev |> Seq.skipWhile (fun ident -> ident <> lastSymIdent) |> Seq.toArray |> Array.rev
-                        if fullName |> Array.endsWith longIdent then
-                            let res = 
-                                let fullNameStr = System.String.Join (".", fullName)
-                                match fullNameStr.Length - (sUseRange.EndColumn - identRange.StartColumn) with
-                                // trailing dot
-                                | qualifiedLength when qualifiedLength > 1 ->
-                                    SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength - 1).Split '.'
-                                | qualifiedLength when qualifiedLength > 0 ->
-                                    SymbolAccess.OpenPrefix, fullNameStr.Substring(0, qualifiedLength).Split '.'
-                                | qualifiedLength -> 
-                                    debug "[!QS] Qualified length is negative: %d (FullName = %s, sUseRange.EndCol = %d, identRange.StartCol = %d" 
-                                           qualifiedLength fullNameStr sUseRange.EndColumn identRange.StartColumn
-                                    SymbolAccess.FullName, fullName
-                            debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName sUseRange identRange res
-                            res
-                        else
-                            debug "[!QS] FullName %A does not ends with %A" fullName longIdent
-                            SymbolAccess.FullName, fullName
+                    match idents |> Seq.tryFind (fun (identRange, _) -> identRange.EndColumn >= sUseRange.EndColumn) with
+                    | Some (identRange, longIdent) ->
+                        let rec loop matchFound longIdents symbolIdents =
+                            match longIdents, symbolIdents with
+                            | [], _ -> symbolIdents
+                            | _, [] -> []
+                            | lh :: lt, sh :: st ->
+                                if lh <> sh then
+                                    if matchFound then symbolIdents else loop matchFound lt symbolIdents
+                                else loop true lt st
+                        
+                        let prefix = 
+                            loop false (longIdent |> Array.rev |> List.ofArray) (fullName |> Array.rev |> List.ofArray)
+                            |> List.rev
+                            |> List.toArray
+                            
+                        debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName sUseRange identRange prefix
+                        prefix
                     | _ -> 
                         debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName sUseRange
-                        SymbolAccess.FullName, fullName
+                        fullName
                 | _ -> 
                     debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName sUseRange
-                    SymbolAccess.FullName, fullName))
-        |> List.concat
-        |> List.map (fun (range, (access, fullName)) -> range, access, fullName)
-        |> List.toArray
+                    fullName))
+        |> Array.concat
 
     debug "Qualified symbols: %A" qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
-        Array.foldBack (fun (symbolRange: Range.range, symbolAccess, fullName) openDecls ->
+        Array.foldBack (fun (symbolRange: Range.range, fullName) openDecls ->
             openDecls |> List.fold (fun (acc, found) (openDecl, used) -> 
                 if found then
                     (openDecl, used) :: acc, found
                 else
                     let usedByCurrentSymbol =
                         Range.rangeContainsRange openDecl.Range symbolRange
-                        && (match symbolAccess with 
-                            | FullName ->
-                                let res = openDecl.Idents |> Set.exists (fun openDecl -> fullName |> Array.startsWith openDecl)
-                                if res then debug "Open decl %A is used by %A (starts with)" openDecl fullName
-                                res
-                            | OpenPrefix -> 
-                                let res = openDecl.Idents |> Set.contains fullName
-                                if res then debug "Open decl %A is used by %A (exact prefix)" openDecl fullName
-                                res)
+                        && (let res = openDecl.Idents |> Set.contains fullName
+                            if res then debug "Open decl %A is used by %A (exact prefix)" openDecl fullName
+                            res)
                     (openDecl, used || usedByCurrentSymbol) :: acc, usedByCurrentSymbol) ([], false)
             |> fst
             |> List.rev

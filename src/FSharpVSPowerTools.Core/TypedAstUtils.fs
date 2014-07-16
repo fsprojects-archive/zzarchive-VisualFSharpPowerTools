@@ -25,9 +25,13 @@ let hasModuleSuffixAttribute (entity: FSharpEntity) =
      |> tryGetAttribute<CompilationRepresentationAttribute>
      |> Option.bind (fun a -> 
           a.ConstructorArguments 
-          |> Seq.tryPick (function 
-               | :? CompilationRepresentationFlags as arg when arg = CompilationRepresentationFlags.ModuleSuffix -> Some() 
-               | _ -> None))) = Some()
+          |> Seq.tryPick (fun arg ->
+               let res =
+                   match arg with
+                   | :? int32 as arg when arg  = int CompilationRepresentationFlags.ModuleSuffix -> Some() 
+                   | :? CompilationRepresentationFlags as arg when arg  = CompilationRepresentationFlags.ModuleSuffix -> Some() 
+                   | _ -> None
+               res))) = Some()
 
 let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
