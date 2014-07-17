@@ -57,11 +57,14 @@ type CategorizedColumnSpan =
 
 [<NoComparison>]
 type OpenDeclaration =
-    { Idents: Set<Idents>
+    { Idents: Idents list
       DeclRange: Range.range
       Range: Range.range }
 
 type private Line = int
+
+let longIdentToArray (longIdent: LongIdent): Idents =
+    longIdent |> List.map string |> List.toArray
 
 // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
 // Example: for ReferenceType symbol "System.Diagnostics.DebuggerDisplay" there are "System", "Diagnostics" and "DebuggerDisplay"
@@ -75,7 +78,7 @@ let excludeWordSpan from what =
 let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
     let idents = ResizeArray<Range.range * Idents>()
     let addLongIdentWithDots (value: LongIdentWithDots) = 
-        idents.Add (value.Range, value.Lid |> List.map string |> List.toArray)
+        idents.Add (value.Range, longIdentToArray value.Lid)
     let addIdent (ident: Ident) = idents.Add (ident.idRange, [|ident.idText|])
 
     let (|ConstructorPats|) = function
@@ -568,7 +571,9 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                             | EntityKind.Module { HasModuleSuffix = true } ->
                                 // remove Module suffix
                                 let lastIdent = e.Idents.[e.Idents.Length - 1]
-                                Some (Array.append e.Idents.[0..e.Idents.Length - 2] [|lastIdent.Substring (0, lastIdent.Length - 6)|])
+                                let result = Array.copy e.Idents
+                                result.[result.Length - 1] <- lastIdent.Substring (0, lastIdent.Length - 6)
+                                Some result
                             | _ -> None)
                     | None -> []
 
@@ -585,23 +590,19 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
 
                                    module M1 = 
                                        let x = ()
-                                   open M2 =
+                                   module M2 =
                                        open M1
                                        open System
                                        let _ = x
     
                                    here "open M1" is relative, but "open System" is not.
                                 *)
-                                let relativeIdents = ident |> List.map string |> List.toArray
+                                let relativeIdents = longIdentToArray ident
                                 // Construct all possible parents taking firts ident, then two first idents and so on.
                                 // It's not 100% accurate but it's the best we can do with the current FCS.
                                 let grandParents = 
-                                    parent 
-                                    |> List.map string 
-                                    |> List.toArray
-                                    |> fun p ->
-                                        [0..p.Length - 1] 
-                                        |> List.map (fun index -> p.[0..index])
+                                    let parent = longIdentToArray parent
+                                    [ for i in 0..parent.Length - 1 -> parent.[0..i]]
                                 
                                 // All possible full entity idents. Again, it's not 100% accurate.
                                 let fullIdentsList = 
@@ -663,8 +664,10 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                             modifiedIdents.[index] <- idents.[index] + "Module"
                                             modifiedIdents
                                         | None -> idents)
+                                    |> Seq.distinct
+                                    |> Seq.toList
 
-                                { Idents = Set.ofList idents
+                                { Idents = idents
                                   DeclRange = openStatementRange
                                   Range = (Range.mkRange openStatementRange.FileName openStatementRange.Start moduleRange.End) } :: acc 
                             | _ -> acc) [] 
@@ -757,7 +760,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         |> Seq.concat
         |> Seq.toArray
 
-    debug "LongIdents by line: %A" longIdentsByLine
+    //debug "LongIdents by line: %A" longIdentsByLine
 
     let qualifiedSymbols: (Range.range * Idents) [] =
         symbolUsesWithoutNested
@@ -794,7 +797,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                     fullName))
         |> Array.concat
 
-    debug "Qualified symbols: %A" qualifiedSymbols
+    //debug "Qualified symbols: %A" qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
         Array.foldBack (fun (symbolRange: Range.range, fullName) openDecls ->
@@ -804,9 +807,9 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                 else
                     let usedByCurrentSymbol =
                         Range.rangeContainsRange openDecl.Range symbolRange
-                        && (let res = openDecl.Idents |> Set.contains fullName
-                            if res then debug "Open decl %A is used by %A (exact prefix)" openDecl fullName
-                            res)
+                        && (let isUsed = openDecl.Idents |> List.exists ((=) fullName)
+                            if isUsed then debug "Open decl %A is used by %A (exact prefix)" openDecl fullName
+                            isUsed)
                     (openDecl, used || usedByCurrentSymbol) :: acc, usedByCurrentSymbol) ([], false)
             |> fst
             |> List.rev
