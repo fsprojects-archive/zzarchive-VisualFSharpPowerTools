@@ -741,8 +741,8 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                     symbolUses
                                     |> Seq.exists (fun (sUse, _) -> 
                                         nextSymbolUse <> sUse
-                                        && (sUse.FullNames |> Array.exists (fun fullName ->
-                                            nextSymbolUse.FullNames |> Array.exists (fun nextSymbolFullName ->
+                                        && (sUse.FullNames.Value |> Array.exists (fun fullName ->
+                                            nextSymbolUse.FullNames.Value |> Array.exists (fun nextSymbolFullName ->
                                             fullName.Length > nextSymbolFullName.Length
                                             && fullName |> Array.startsWith nextSymbolFullName))))
                                     |> not
@@ -763,7 +763,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         symbolUsesWithoutNested
         |> Array.map (fun symbolUse ->
             let sUseRange = symbolUse.SymbolUse.RangeAlternate
-            symbolUse.FullNames 
+            symbolUse.FullNames.Value
             |> Array.map (fun fullName ->
                 sUseRange,
                 match longIdentsByLine |> Map.tryFind sUseRange.StartLine with

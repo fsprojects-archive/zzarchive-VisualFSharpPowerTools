@@ -6,13 +6,13 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type internal ShortIdent = string
 type internal Idents = ShortIdent[]
 type IsAutoOpen = bool
-type Module = { IsAutoOpen: bool; HasModuleSuffix: bool }
+type ModuleKind = { IsAutoOpen: bool; HasModuleSuffix: bool }
 
 type EntityKind =
     | Attribute
     | Type
     | FunctionOrValue
-    | Module of Module
+    | Module of ModuleKind
     override x.ToString() = sprintf "%A" x
 
 type RawEntity = 

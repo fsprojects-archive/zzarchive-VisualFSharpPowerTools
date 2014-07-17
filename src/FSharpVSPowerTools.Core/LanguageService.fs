@@ -118,7 +118,7 @@ type LexerBase() =
 type SymbolUse =
     { SymbolUse: FSharpSymbolUse 
       IsUsed: bool
-      FullNames: Idents[] }
+      FullNames: Idents[] Lazy }
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
@@ -403,40 +403,42 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let allSymbolsUses =
                 allSymbolsUses
                 |> Array.map (fun symbolUse ->
-                    let fullName =
-                        match symbolUse.Symbol with
-                        | MemberFunctionOrValue func when func.IsExtensionMember && func.IsProperty ->
-                            let range = symbolUse.RangeAlternate
-                            let line = range.StartLine - 1
-                            lexer.GetSymbolAtLocation (line, range.EndColumn) 
-                            |> Option.bind (fun sym ->
-                                let origLineStr = source.[line]
-                                let adjustedLineStr = 
-                                    origLineStr.Insert (sym.LeftColumn, 
-                                        // we use IsGetterMethod instead of IsPropertyGetterMethod because the latter 
-                                        // returns False.
-                                        (if func.IsGetterMethod then "get" else "set") + "_")
-                                source.[line] <- adjustedLineStr
-                                let adjustedSym = { sym with RightColumn = sym.RightColumn + 4 }
-                                let res = x.GetUsesOfSymbolAtLocationInFile (
-                                                projectOptions, fileName, stringArrayToString source, adjustedSym, line,
-                                                adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
-                                source.[line] <- origLineStr
-                                res)
-                            |> Option.map (fun (symbol, _, _) ->  
-                                 debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
-                                 symbol.FullName)
-                        | _ -> None
-                        |> Option.getOrElse symbolUse.Symbol.FullName
-                    let isAttribute = 
-                        match symbolUse.Symbol with 
-                        | Entity (_, entity, _) when AssemblyContentProvider.isAttribute entity -> true
-                        | _ -> false
+                    let fullNames = lazy (
+                        let fullName =
+                            match symbolUse.Symbol with
+                            | MemberFunctionOrValue func when func.IsExtensionMember && func.IsProperty ->
+                                let range = symbolUse.RangeAlternate
+                                let line = range.StartLine - 1
+                                lexer.GetSymbolAtLocation (line, range.EndColumn) 
+                                |> Option.bind (fun sym ->
+                                    let origLineStr = source.[line]
+                                    let adjustedLineStr = 
+                                        origLineStr.Insert (sym.LeftColumn, 
+                                            // we use IsGetterMethod instead of IsPropertyGetterMethod because the latter 
+                                            // returns False.
+                                            (if func.IsGetterMethod then "get" else "set") + "_")
+                                    source.[line] <- adjustedLineStr
+                                    let adjustedSym = { sym with RightColumn = sym.RightColumn + 4 }
+                                    let res = x.GetUsesOfSymbolAtLocationInFile (
+                                                    projectOptions, fileName, stringArrayToString source, adjustedSym, line,
+                                                    adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
+                                    source.[line] <- origLineStr
+                                    res)
+                                |> Option.map (fun (symbol, _, _) ->  
+                                     debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
+                                     symbol.FullName)
+                            | _ -> None
+                            |> Option.getOrElse symbolUse.Symbol.FullName
+                        let isAttribute = 
+                            match symbolUse.Symbol with 
+                            | Entity (_, entity, _) when AssemblyContentProvider.isAttribute entity -> true
+                            | _ -> false 
+                        [| yield fullName.Split '.'
+                           if isAttribute then
+                               yield fullName.Substring(0, fullName.Length - 9).Split '.' |])
                     { SymbolUse = symbolUse
                       IsUsed = true
-                      FullNames = [| yield fullName.Split '.'
-                                     if isAttribute then
-                                         yield fullName.Substring(0, fullName.Length - 9).Split '.' |] })
+                      FullNames = fullNames })
 
             let singleDefs = 
                 if checkForUnusedDeclarations then
