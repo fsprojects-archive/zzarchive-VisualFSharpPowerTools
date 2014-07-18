@@ -955,8 +955,8 @@ open NormalModule.AutoOpenModule1.NestedNormalModule.AutoOpenModule2
 open NormalModule.AutoOpenModule1.NestedNormalModule
 let _ = Class()
 """
-    => [ 12, []
-         13, [ Category.Unused, 5, 52 ]]
+    => [ 12, [ Category.Unused, 5, 68 ]
+         13, []]
     
 [<Test>]
 let ``open declaration is not marked as unused if there is a shortened attribute symbol from it``() =
@@ -1113,3 +1113,29 @@ open M
 let func (arg: Class list) = ()
 """
     => [ 4, []]
+
+[<Test>]
+let ``auto open module``() =
+    """
+module Top =
+    [<AutoOpen>]
+    module M =
+        let func _ = ()
+open Top
+let _ = func()
+"""
+    => [ 6, []]
+
+[<Test>]
+let ``auto open module in the middle of hierarchy``() =
+    """
+namespace Ns
+module M1 =
+    [<AutoOpen>]
+    module MA1 = 
+        let func _ = ()
+open M1
+module M2 =
+    let _ = func()
+"""
+    => [ 7, []]

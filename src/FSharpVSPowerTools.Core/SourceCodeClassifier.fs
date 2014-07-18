@@ -567,6 +567,8 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                     | None -> []
                     |> List.map (fun e -> e.Idents)
 
+                debug "All AutoOpen modules: %A" autoOpenModules
+
                 let modulesWithModuleSuffix =
                     match allEntities with
                     | Some entities ->
@@ -606,11 +608,11 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                 // It's not 100% accurate but it's the best we can do with the current FCS.
                                 let grandParents = 
                                     let parent = longIdentToArray parent
-                                    [ for i in 0..parent.Length - 1 -> parent.[0..i]]
+                                    [ for i in -1..parent.Length - 1 -> parent.[0..i]]
                                 
                                 // All possible full entity idents. Again, it's not 100% accurate.
                                 let fullIdentsList = 
-                                    grandParents 
+                                    grandParents
                                     |> List.map (fun grandParent -> 
                                         Array.append grandParent relativeIdents)
                                 
@@ -645,10 +647,13 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                 let identsAndAutoOpens = 
                                     fullIdentsList
                                     |> List.map (fun fullIdents ->
-                                         relativeIdents :: loop [fullIdents] relativeIdents.Length)
+                                         let res = relativeIdents :: loop [fullIdents] fullIdents.Length
+                                         debug "[SourceCodeClassifier] Open decl. Relative = %A, Full = %A, With AutoOpens = %A" 
+                                               relativeIdents fullIdents res
+                                         res)
                                     |> List.concat
 
-                                (* Replace all modules which have ModuleSuffix attribute value with <Name>Module. For example:
+                                (* For each module that has ModuleSuffix attribute value we add additional Idents "<Name>Module". For example:
                                    
                                    module M =
                                        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -656,18 +661,22 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                                            module M2 =
                                                let func _ = ()
                                    open M.M1.M2
-                                   The last line will become "M.M1Module.M2".
+                                   The last line will produce two Idents: "M.M1.M2" and "M.M1Module.M2".
+                                   The reason is that FCS return different FullName for entities declared in ModuleSuffix modules
+                                   depending on thether the module is in the current project or not. 
                                 *)
                                 let idents = 
                                     identsAndAutoOpens
                                     |> List.map (fun idents ->
-                                        match modulesWithModuleSuffix |> List.tryFind (fun m -> idents |> Array.startsWith m) with
-                                        | Some m ->
-                                            let index = (Array.length m) - 1
-                                            let modifiedIdents = Array.copy idents
-                                            modifiedIdents.[index] <- idents.[index] + "Module"
-                                            modifiedIdents
-                                        | None -> idents)
+                                        [ yield idents 
+                                          match modulesWithModuleSuffix |> List.tryFind (fun m -> idents |> Array.startsWith m) with
+                                          | Some m ->
+                                              let index = (Array.length m) - 1
+                                              let modifiedIdents = Array.copy idents
+                                              modifiedIdents.[index] <- idents.[index] + "Module"
+                                              yield modifiedIdents
+                                          | None -> ()])
+                                    |> List.concat
                                     |> Seq.distinct
                                     |> Seq.toList
 
