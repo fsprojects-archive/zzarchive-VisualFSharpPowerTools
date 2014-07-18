@@ -86,6 +86,7 @@ let getLongIdents (input: ParsedInput) : IDictionary<Range.pos, Idents> =
         | idents ->
             for dotRange in lids do 
                 identsByEndPos.[Range.mkPos dotRange.EndLine (dotRange.EndColumn - 1)] <- idents
+            identsByEndPos.[value.Range.End] <- idents
     
     let addIdent (ident: Ident) = 
         identsByEndPos.[ident.idRange.End] <- [|ident.idText|]
@@ -767,7 +768,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         |> Seq.concat
         |> Seq.toArray
 
-    //debug "LongIdents by line: %A" longIdentsByLine
+    debug "LongIdents by line: %A" (longIdentsByEndPos |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) |> Seq.toList)
 
     let qualifiedSymbols: (Range.range * Idents) [] =
         symbolUsesWithoutNested
@@ -799,7 +800,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                     fullName))
         |> Array.concat
 
-    //debug "Qualified symbols: %A" qualifiedSymbols
+    debug "Qualified symbols: %A" qualifiedSymbols
         
     let unusedOpenDeclarations: OpenDeclaration list =
         Array.foldBack (fun (symbolRange: Range.range, fullName) openDecls ->
