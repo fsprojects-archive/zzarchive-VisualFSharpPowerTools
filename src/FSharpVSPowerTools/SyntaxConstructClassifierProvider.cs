@@ -342,16 +342,16 @@ namespace FSharpVSPowerTools
     public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener, IDisposable
     { 
         [Import]
-        private IClassificationTypeRegistryService classificationRegistry = null;
+        internal IClassificationTypeRegistryService classificationRegistry = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import]
-        private ITextDocumentFactoryService textDocumentFactoryService = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
-        private ProjectFactory projectFactory = null;
+        internal ProjectFactory projectFactory = null;
 
         private readonly Type serviceType = typeof(SyntaxConstructClassifier);
 
@@ -379,15 +379,15 @@ namespace FSharpVSPowerTools
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
 
             bool includeUnusedDeclarations = generalOptions.UnusedDeclarationsEnabled;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return buffer.Properties.GetOrCreateSingletonProperty(serviceType, 
-                    () => new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, 
+                return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
+                    () => new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService,
                                     serviceProvider, projectFactory, includeUnusedDeclarations));
 
             return null;

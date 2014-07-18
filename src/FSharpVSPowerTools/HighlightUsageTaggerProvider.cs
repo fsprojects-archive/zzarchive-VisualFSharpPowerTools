@@ -32,7 +32,7 @@ namespace FSharpVSPowerTools
             // Only provide highlighting on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (!generalOptions.HighlightUsageEnabled) return null;
 
             return new HighlightUsageTagger(textView, buffer, fsharpVsLanguageService, 

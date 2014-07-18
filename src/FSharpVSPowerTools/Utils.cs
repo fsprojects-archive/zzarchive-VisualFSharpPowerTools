@@ -28,5 +28,10 @@ namespace FSharpVSPowerTools
                     return defaultBody;
             }
         }
+
+        public static IGeneralOptionsPage GetGeneralOptionsPage(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService(typeof(GeneralOptionsPage)) as IGeneralOptionsPage;
+        }
     }
 }

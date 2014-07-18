@@ -113,7 +113,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             | None -> ()
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-    let events = dte.Events :?> EnvDTE80.Events2 
+    let events: EnvDTE80.Events2 option = tryCast dte.Events
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
         maybe {
             let! selfProject = getProject()
@@ -125,7 +125,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 updateSyntaxConstructClassifiers true
         } |> ignore)
 
-    do events.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler
+    do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
     
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
@@ -166,6 +166,6 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
     interface IDisposable with
         member x.Dispose() = 
-            events.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler
+            events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
             (docEventListener :> IDisposable).Dispose()
          
