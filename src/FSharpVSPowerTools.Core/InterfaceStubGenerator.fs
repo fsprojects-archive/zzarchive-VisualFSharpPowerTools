@@ -199,7 +199,23 @@ module InterfaceStubGenerator =
             | [[]], true, _ -> [], Some retType
             | _, _, _ -> argInfos, Some retType
 
-        let retType = defaultArg (retType |> Option.map (formatType ctx)) "unit"      
+        let retType = 
+            match retType with
+            | Some typ ->
+                let coreType = formatType ctx typ
+                if v.IsEvent then
+                    let isEventHandler = 
+                        typ.BaseType 
+                        |> Option.bind (fun t -> 
+                            if t.HasTypeDefinition then
+                                t.TypeDefinition.GetFullName()
+                             else None)
+                        |> Option.exists ((=) "System.MulticastDelegate")
+                    if isEventHandler then sprintf "IEvent<%s, _>" coreType else coreType
+                else coreType
+            | None -> 
+                "unit"
+            
         argInfos, retType
 
     /// Convert a getter/setter to its canonical form
@@ -301,8 +317,7 @@ module InterfaceStubGenerator =
         
             if v.IsEvent then
                 writer.Write(usage)
-                // Yet another hack since FCS return type in the handler form.
-                writer.WriteLine(": {0} = ", if retType.StartsWith("IEvent") then retType else "IEvent<_, _>")
+                writer.WriteLine(": {0} = ", retType)
                 writer.Indent ctx.Indentation
                 for line in ctx.MethodBody do
                     writer.WriteLine(line)
