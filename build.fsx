@@ -66,7 +66,7 @@ Target "AssemblyInfo" (fun _ ->
         Attribute.FileVersion release.AssemblyVersion ] 
 
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
-      (Attribute.Title "FSharpVSPowerTools" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Core/AssemblyInfo.fs"
       (Attribute.Title "FSharpVSPowerTools.Core" :: shared)
