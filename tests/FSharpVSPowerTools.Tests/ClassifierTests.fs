@@ -2,31 +2,35 @@
 
 open TestUtilities
 open TestUtilities.Mocks
+open FSharpVSPowerTools.Tests
 open FSharpVSPowerTools
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-type ClassifierHelper(buffer: MockTextBuffer) =
+type ClassifierHelper(buffer: ITextBuffer) =
     let serviceProvider = MockServiceProvider()
     do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
     do serviceProvider.Services.["SVsShell"] <- MockVsShell()
+    do serviceProvider.Services.["GeneralOptionsPage"] <- MockGeneralOptionsPage()
+    do serviceProvider.Services.["DTE"] <- MockDTE()
+    do serviceProvider.Services.["SDTE"] <- MockDTE()
 
-    let provider = new SyntaxConstructClassifierProvider(serviceProvider, null)
+    let provider = new SyntaxConstructClassifierProvider(serviceProvider, null,
+                        textDocumentFactoryService = MockDocumentFactoryService())
 
-    member x.TextBuffer = buffer
-    member x.Classifier = provider.GetClassifier(buffer)
+    let classifier = provider.GetClassifier(buffer)
 
     member x.ClassifierSpans =
-        x.Classifier.GetClassificationSpans(SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length))
+        classifier.GetClassificationSpans(SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length))
         |> Seq.sortBy (fun span -> span.Span.Start.Position)
 
     interface IDisposable with
         member x.Dispose(): unit = 
             provider.Dispose()
 
-let createMockTextBuffer code = 
-    MockTextBuffer(code, filename = @"C:\Test.fs", contentType = "F#")
+let createMockTextBuffer content = 
+    MockTextBuffer(content, fileName = @"C:\Tests.fs", contentType = "F#")
 
 [<TestClass>]
 type ClassifierTests() =
@@ -38,4 +42,5 @@ type ClassifierTests() =
     [<TestMethod; Priority(0)>]
     member x.``should be able to get classifier spans``() =
         use classifier = new ClassifierHelper(createMockTextBuffer "let x = 0")
-        classifier.ClassifierSpans |> ignore
+        Assert.AreEqual(Seq.isEmpty classifier.ClassifierSpans, true)
+

@@ -48,11 +48,13 @@ namespace TestUtilities.Mocks {
 
 
         public int AdviseBroadcastMessages(IVsBroadcastMessageEvents pSink, out uint pdwCookie) {
-            throw new NotImplementedException();
+            pdwCookie = 0;
+            return VSConstants.S_OK;
         }
 
         public int AdviseShellPropertyChanges(IVsShellPropertyEvents pSink, out uint pdwCookie) {
-            throw new NotImplementedException();
+            pdwCookie = 0;
+            return VSConstants.S_OK;
         }
 
         public int GetPackageEnum(out IEnumPackages ppenum) {
@@ -80,11 +82,11 @@ namespace TestUtilities.Mocks {
         }
 
         public int UnadviseBroadcastMessages(uint dwCookie) {
-            throw new NotImplementedException();
+            return VSConstants.S_OK;
         }
 
         public int UnadviseShellPropertyChanges(uint dwCookie) {
-            throw new NotImplementedException();
+            return VSConstants.S_OK;
         }
     }
 }
