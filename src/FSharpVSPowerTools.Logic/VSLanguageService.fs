@@ -36,22 +36,6 @@ type VSLanguageService
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
     
-    let getProjectOptions (project: IProjectProvider) =
-        async {
-            let! opts = project.GetProjectCheckerOptions(instance)
-            let projectFiles = Set.ofArray project.SourceFiles 
-            let openDocumentsChangeTimes = 
-                    openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
-                    |> Seq.choose (fun (file, doc) -> 
-                        if doc.Document.IsDirty && projectFiles |> Set.contains file then Some doc.LastChangeTime else None)
-                    |> Seq.toList
-        
-            return 
-                match openDocumentsChangeTimes with
-                | [] -> opts
-                | changeTimes -> { opts with LoadTime = List.max (opts.LoadTime::changeTimes) }
-        }
-
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
             let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
@@ -120,15 +104,15 @@ type VSLanguageService
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                reportProgress progress (Reporting(Resource.findSymbolUseCurrentProject))
-                let! currentProjectOptions = getProjectOptions currentProject
-                reportProgress progress (Reporting(Resource.findSymbolUseOtherProjects))
+                reportProgress progress (Reporting Resource.findSymbolUseCurrentProject)
+                let! currentProjectOptions = currentProject.GetProjectCheckerOptions instance
+                reportProgress progress (Reporting Resource.findSymbolUseOtherProjects)
                 let! projectsToCheckOptions = 
                     projectsToCheck 
                     |> List.toArray
-                    |> Async.Array.map getProjectOptions
+                    |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
 
-                reportProgress progress (Reporting(Resource.findSymbolUseAllProjects))
+                reportProgress progress (Reporting Resource.findSymbolUseAllProjects)
 
                 let newReportProgress projectName index length = 
                     reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) length, index, length))
