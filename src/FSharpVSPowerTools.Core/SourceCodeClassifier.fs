@@ -709,10 +709,10 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
         |> Array.filter (fun (symbolUse, _) ->
             match symbolUse.SymbolUse.Symbol with
             | UnionCase _ 
-            | Entity (Class | (ValueType | Record | UnionType | Interface | FSharpModule), _, _)
+            | Entity (Class | (ValueType | Record | UnionType | Interface | FSharpModule | Delegate), _, _)
             | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
             | MemberFunctionOrValue func -> not func.IsMember
-            | _ -> false)
+            | _ -> false) 
         |> Array.map (fun (symbolUse, _) -> symbolUse)
 
     // Filter out symbols which ranges are fully included into a bigger symbols. 

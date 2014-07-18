@@ -1139,3 +1139,11 @@ module M2 =
     let _ = func()
 """
     => [ 7, []]
+
+[<Test>]
+let ``open declaration is not marked as unused if a delegate defined in it is used``() =
+    """
+open System
+let _ = Func<int, int>(fun _ -> 1)
+"""
+    => [ 2, []]
