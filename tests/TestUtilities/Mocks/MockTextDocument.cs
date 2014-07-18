@@ -19,8 +19,10 @@ using Microsoft.VisualStudio.Text;
 namespace TestUtilities.Mocks {
     public class MockTextDocument : ITextDocument {
         private readonly string _filePath;
-        public MockTextDocument(string filePath) {
+        private readonly ITextBuffer _buffer;
+        public MockTextDocument(string filePath, ITextBuffer buffer) {
             _filePath = filePath;
+            _buffer = buffer;
         }
 
 
@@ -115,7 +117,7 @@ namespace TestUtilities.Mocks {
         }
 
         public ITextBuffer TextBuffer {
-            get { throw new NotImplementedException(); }
+            get { return _buffer; }
         }
 
         public void UpdateDirtyState(bool isDirty, DateTime lastContentModifiedTime) {

@@ -2,7 +2,6 @@
 
 open TestUtilities
 open TestUtilities.Mocks
-open FSharpVSPowerTools.Tests
 open FSharpVSPowerTools
 open System
 open Microsoft.VisualStudio.Text
@@ -30,7 +29,7 @@ type ClassifierHelper(buffer: ITextBuffer) =
             provider.Dispose()
 
 let createMockTextBuffer content = 
-    MockTextBuffer(content, fileName = @"C:\Tests.fs", contentType = "F#")
+    MockTextBuffer(content, filename = @"C:\Tests.fs", contentType = "F#")
 
 [<TestClass>]
 type ClassifierTests() =

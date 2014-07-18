@@ -166,7 +166,7 @@ namespace TestUtilities.Mocks {
             get {
                 if (_properties == null) {
                     _properties = new PropertyCollection();
-                    _properties.AddProperty(typeof(ITextDocument), new MockTextDocument(_filename));
+                    _properties.AddProperty(typeof(ITextDocument), new MockTextDocument(_filename, this));
                 }
                 return _properties;
             }
