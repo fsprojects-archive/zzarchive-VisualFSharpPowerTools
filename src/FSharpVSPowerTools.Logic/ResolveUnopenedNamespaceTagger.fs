@@ -114,7 +114,7 @@ type ResolveUnopenedNamespaceSmartTagger
                 buffer.TriggerTagsChanged self tagsChanged
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                                      500us, updateAtCaretPosition)
+                                                      100us, updateAtCaretPosition)
 
     let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
