@@ -125,8 +125,12 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
 
     and walkPat = function
         | SynPat.Ands (pats, _) -> List.iter walkPat pats
-        | SynPat.Named(SynPat.Wild _ as pat, _, _, _, _) -> walkPat pat
-        | SynPat.Typed(pat, t, _) -> walkPat pat; walkType t
+        | SynPat.Named(SynPat.Wild _ as pat, ident, _, _, _) -> 
+            walkPat pat
+            addIdent ident
+        | SynPat.Typed(pat, t, _) -> 
+            walkPat pat
+            walkType t
         | SynPat.Attrib(pat, attrs, _) -> 
             walkPat pat
             List.iter walkAttribute attrs
@@ -771,7 +775,9 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
                 sUseRange,
                 match longIdentsByLine |> Map.tryFind sUseRange.StartLine with
                 | Some idents ->
-                    match idents |> Seq.tryFind (fun (identRange, _) -> identRange.EndColumn >= sUseRange.EndColumn) with
+                    match idents |> Seq.tryFind (fun (identRange, _) ->
+                        identRange.StartColumn < sUseRange.EndColumn
+                        && identRange.EndColumn >= sUseRange.EndColumn) with
                     | Some (identRange, longIdent) ->
                         let rec loop matchFound longIdents symbolIdents =
                             match longIdents, symbolIdents with

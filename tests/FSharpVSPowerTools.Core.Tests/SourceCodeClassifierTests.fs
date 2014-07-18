@@ -1103,3 +1103,13 @@ open M
 let _ = M.func 1
 """
     => [4, [Category.Unused, 5, 6 ]]
+
+[<Test>]
+let ``open module is not marked as unused if a symbol defined in it is used in OCaml-style type annotation``() =
+    """
+module M =
+    type Class() = class end
+open M
+let func (arg: Class list) = ()
+"""
+    => [ 4, []]
