@@ -4,6 +4,7 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open System.Collections.Generic
 
 [<RequireQualifiedAccess>]
 type Category =
@@ -75,11 +76,19 @@ let excludeWordSpan from what =
         { from with StartCol = what.EndCol + 1 } // the dot between parts
     else from
 
-let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
-    let idents = ResizeArray<Range.range * Idents>()
-    let addLongIdentWithDots (value: LongIdentWithDots) = 
-        idents.Add (value.Range, longIdentToArray value.Lid)
-    let addIdent (ident: Ident) = idents.Add (ident.idRange, [|ident.idText|])
+let getLongIdents (input: ParsedInput) : IDictionary<Range.pos, Idents> =
+    let identsByEndPos = Dictionary<Range.pos, Idents>()
+    
+    let addLongIdentWithDots (LongIdentWithDots (longIdent, lids) as value) = 
+        match longIdentToArray longIdent with
+        | [||] -> ()
+        | [|_|] as idents -> identsByEndPos.[value.Range.End] <- idents
+        | idents ->
+            for dotRange in lids do 
+                identsByEndPos.[Range.mkPos dotRange.EndLine (dotRange.EndColumn - 1)] <- idents
+    
+    let addIdent (ident: Ident) = 
+        identsByEndPos.[ident.idRange.End] <- [|ident.idText|]
 
     let (|ConstructorPats|) = function
         | Pats ps -> ps
@@ -384,7 +393,7 @@ let getLongIdents (input: ParsedInput) : (Range.range * Idents)[] =
     | ParsedInput.SigFile _ -> ()
     | ParsedInput.ImplFile input -> walkImplFileInput input
     //debug "%A" idents
-    Seq.toArray idents
+    upcast identsByEndPos
  
 type IsSymbolUsed = bool
 
@@ -695,14 +704,7 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
 
     debug "[LanguageService] Open declarations: %A" openDeclarations
 
-    let longIdentsByLine: Map<Line, (Range.range * Idents) seq> = 
-        match untypedAst with
-        | Some ast -> 
-            getLongIdents ast
-            |> Seq.filter (fun (_, idents) -> idents.Length > 0)
-            |> Seq.groupBy (fun (range, _) -> range.StartLine)
-            |> Map.ofSeq
-        | None -> Map.empty
+    let longIdentsByEndPos = untypedAst |> Option.map getLongIdents |> Option.getOrElse (Dictionary() :> _)
 
     let symbolUsesPotentiallyRequireOpenDecls =
         allSymbolsUses'
@@ -721,54 +723,46 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
     // We want to filter all of them but the longest one (Method).
     let symbolUsesWithoutNested =
         symbolUsesPotentiallyRequireOpenDecls
-        |> Seq.groupBy (fun symbolUse -> symbolUse.SymbolUse.RangeAlternate.StartLine)
-        |> Seq.map (fun (line, symbolUses) ->
-            // We use LongIdents collected from the untyped AST to determine that a bunch of entities
-            // actually represents a single entity. 
-            match longIdentsByLine |> Map.tryFind line with
-            | Some longIdents ->
-                // Group all SymbolUses by LongIdents in which they are belong (by ranges).
-                symbolUses
-                |> Seq.map (fun sUse -> 
-                    sUse, longIdents |> Seq.tryFind (fun (r, _) -> Range.rangeContainsRange r sUse.SymbolUse.RangeAlternate))
-                |> Seq.groupBy (fun (_, longIdent) -> longIdent)
-                |> Seq.map (fun (longIdent, symbolUses) -> 
-                    match longIdent with
-                    | Some _ ->
-                        (* Find all longest SymbolUses which has unique roots. For example:
+        |> Array.map (fun sUse ->
+            match longIdentsByEndPos.TryGetValue sUse.SymbolUse.RangeAlternate.End with
+            | true, longIdent -> sUse, Some longIdent
+            | _ -> sUse, None)
+        |> Seq.groupBy (fun (_, longIdent) -> longIdent)
+        |> Seq.map (fun (longIdent, sUses) -> longIdent, sUses |> Seq.map fst)
+        |> Seq.map (fun (longIdent, symbolUses) ->
+            match longIdent with
+            | Some _ ->
+                (* Find all longest SymbolUses which has unique roots. For example:
                            
-                           module Top
-                           module M =
-                               type System.IO.Path with
-                                   member static ExtensionMethod() = ()
+                    module Top
+                    module M =
+                        type System.IO.Path with
+                            member static ExtensionMethod() = ()
 
-                           open M
-                           open System
-                           let _ = IO.Path.ExtensionMethod()
+                    open M
+                    open System
+                    let _ = IO.Path.ExtensionMethod()
 
-                           The last line contains three SymbolUses: "System.IO", "System.IO.Path" and "Top.M.ExtensionMethod". 
-                           So, we filter out "System.IO" since it's a prefix of "System.IO.Path".
+                    The last line contains three SymbolUses: "System.IO", "System.IO.Path" and "Top.M.ExtensionMethod". 
+                    So, we filter out "System.IO" since it's a prefix of "System.IO.Path".
 
-                        *)
-                        let res =
+                *)
+                let res =
+                    symbolUses
+                    |> Seq.filter (fun nextSymbolUse ->
+                        let res = 
                             symbolUses
-                            |> Seq.filter (fun (nextSymbolUse, _) ->
-                                let res = 
-                                    symbolUses
-                                    |> Seq.exists (fun (sUse, _) -> 
-                                        nextSymbolUse <> sUse
-                                        && (sUse.FullNames.Value |> Array.exists (fun fullName ->
-                                            nextSymbolUse.FullNames.Value |> Array.exists (fun nextSymbolFullName ->
-                                            fullName.Length > nextSymbolFullName.Length
-                                            && fullName |> Array.startsWith nextSymbolFullName))))
-                                    |> not
-                                res)
-                            |> Seq.toArray
-                            |> Array.toSeq
-                        res
-                    | None -> symbolUses)
-                |> Seq.map (Seq.map fst)
-                |> Seq.concat
+                            |> Seq.exists (fun sUse -> 
+                                nextSymbolUse <> sUse
+                                && (sUse.FullNames.Value |> Array.exists (fun fullName ->
+                                    nextSymbolUse.FullNames.Value |> Array.exists (fun nextSymbolFullName ->
+                                    fullName.Length > nextSymbolFullName.Length
+                                    && fullName |> Array.startsWith nextSymbolFullName))))
+                            |> not
+                        res)
+                    |> Seq.toArray
+                    |> Array.toSeq
+                res
             | None -> symbolUses)
         |> Seq.concat
         |> Seq.toArray
@@ -782,31 +776,24 @@ let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], allEntities: RawEnti
             symbolUse.FullNames.Value
             |> Array.map (fun fullName ->
                 sUseRange,
-                match longIdentsByLine |> Map.tryFind sUseRange.StartLine with
-                | Some idents ->
-                    match idents |> Seq.tryFind (fun (identRange, _) ->
-                        identRange.StartColumn < sUseRange.EndColumn
-                        && identRange.EndColumn >= sUseRange.EndColumn) with
-                    | Some (identRange, longIdent) ->
-                        let rec loop matchFound longIdents symbolIdents =
-                            match longIdents, symbolIdents with
-                            | [], _ -> symbolIdents
-                            | _, [] -> []
-                            | lh :: lt, sh :: st ->
-                                if lh <> sh then
-                                    if matchFound then symbolIdents else loop matchFound lt symbolIdents
-                                else loop true lt st
+                match longIdentsByEndPos.TryGetValue sUseRange.End with
+                | true, longIdent ->
+                    let rec loop matchFound longIdents symbolIdents =
+                        match longIdents, symbolIdents with
+                        | [], _ -> symbolIdents
+                        | _, [] -> []
+                        | lh :: lt, sh :: st ->
+                            if lh <> sh then
+                                if matchFound then symbolIdents else loop matchFound lt symbolIdents
+                            else loop true lt st
                         
-                        let prefix = 
-                            loop false (longIdent |> Array.rev |> List.ofArray) (fullName |> Array.rev |> List.ofArray)
-                            |> List.rev
-                            |> List.toArray
+                    let prefix = 
+                        loop false (longIdent |> Array.rev |> List.ofArray) (fullName |> Array.rev |> List.ofArray)
+                        |> List.rev
+                        |> List.toArray
                             
-                        debug "[QS] FullName = %A, Symbol range = %A, Ident range = %A, Res = %A" fullName sUseRange identRange prefix
-                        prefix
-                    | _ -> 
-                        debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName sUseRange
-                        fullName
+                    debug "[QS] FullName = %A, Symbol range = %A, Res = %A" fullName sUseRange prefix
+                    prefix
                 | _ -> 
                     debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Range = %A" fullName sUseRange
                     fullName))
