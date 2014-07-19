@@ -49,10 +49,11 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
     let actualCategories =
-        let allEntities =
+        let entities =
             languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             |> Async.RunSynchronously
-        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, allEntities, parseResults.ParseTree, lexer)
+        let openDeclarations = OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities
+        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
     let actual =
