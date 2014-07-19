@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.TextManager.Interop
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler
 
 type FilePath = string
 
@@ -221,12 +222,18 @@ type VSLanguageService
 
      member x.GetAllEntities (fileName, source, project: IProjectProvider) =
         async { 
-            let! opts = project.GetProjectCheckerOptions(instance)
+            let! opts = project.GetProjectCheckerOptions instance
             try 
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             with e ->
                 debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
                 return None
+        }
+
+    member x.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =
+        async {
+            let! opts = project.GetProjectCheckerOptions instance
+            return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)
         }
 
     member x.InvalidateProject (projectProvider: IProjectProvider) = 

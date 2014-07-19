@@ -4,6 +4,7 @@ open System.IO
 open NUnit.Framework
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
+open Microsoft.FSharp.Compiler
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
@@ -52,7 +53,14 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         let entities =
             languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             |> Async.RunSynchronously
-        let openDeclarations = OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities
+        let qualifyOpenDeclarations line endColumn idents = 
+            let lineStr = sourceLines.[line - 1]
+            languageService.GetIdentTooltip (line, endColumn, lineStr, Array.toList idents, opts, fileName, source)
+            |> Async.RunSynchronously
+            |> function
+               | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+               | None -> []
+        let openDeclarations = OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
         SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
@@ -1148,3 +1156,15 @@ open System
 let _ = Func<int, int>(fun _ -> 1)
 """
     => [ 2, []]
+
+[<Test>]
+let ``relative module open declaration``() =
+    """
+module Top =
+    module Nested = 
+        let x = 1
+open Top
+open Nested
+let _ = x
+"""
+    => [ 5, []; 6, []]

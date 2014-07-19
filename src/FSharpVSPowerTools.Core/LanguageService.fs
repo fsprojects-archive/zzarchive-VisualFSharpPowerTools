@@ -71,10 +71,11 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
     member x.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
             
-    member x.GetTooltips (line, colAtEndOfNames, lineText, names, tokenTag) =
+    member x.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
         asyncMaybe {
             match infoOpt with
             | Some (checkResults, _) -> 
+                let tokenTag = Parser.tagOfToken (Parser.token.IDENT "")
                 return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
             | None -> return! (liftMaybe None)
         }
@@ -506,10 +507,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                        | None -> () ]
         }
 
-//    member x.GetNamespaceTooltip (project: ProjectOptions) file source () =
-//        async {
-//            let identToken = Parser.tagOfToken Parser.token.NAMESPACE
-//            let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
-//            let! tooltip = checkResults.GetTooltips ()
-//
-//        }
+    member x.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, project: ProjectOptions, file, source) =
+        async {
+            let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
+            return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)
+        }

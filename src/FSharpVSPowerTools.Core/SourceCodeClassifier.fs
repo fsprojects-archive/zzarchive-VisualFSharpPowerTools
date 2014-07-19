@@ -31,6 +31,7 @@ type OpenDeclaration =
 
 module OpenDeclarationGetter =
     open UntypedAstUtils
+    open System
 
     let getAutoOpenModules entities =
         entities 
@@ -52,7 +53,44 @@ module OpenDeclarationGetter =
                 Some result
             | _ -> None)
 
-    let getOpenDeclarations (ast: ParsedInput option) (entities: RawEntity list option) =
+    let parseTooltip (ToolTipText elems): Idents list =
+        elems
+        |> List.map (fun e -> 
+            let rawStrings =
+                match e with
+                | ToolTipElement.ToolTipElement (s, _) -> [s]
+                | ToolTipElement.ToolTipElementGroup elems -> 
+                    elems |> List.map (fun (s, _) -> s)
+                | _ -> []
+            
+            let removePrefix prefix (str: string) =
+                if str.StartsWith prefix then Some (str.Substring(prefix.Length).Trim()) else None
+
+            rawStrings
+            |> List.choose (fun (s: string) ->
+                 maybe {
+                    let! name, from = 
+                        match s.Split ([|'\n'|], StringSplitOptions.RemoveEmptyEntries) with
+                        | [|name; from|] -> Some (name, from)
+                        | [|name|] -> Some (name, "")
+                        | _ -> None
+
+                    let! name = 
+                        name 
+                        |> removePrefix "namespace"
+                        |> Option.orElse (name |> removePrefix "module")
+                     
+                    let from = from |> removePrefix "from" |> Option.map (fun s -> s + ".") |> Option.getOrElse ""
+                    return from + name
+                })
+            |> List.map (fun s -> s.Split '.'))
+        |> List.concat
+
+    type Line = int
+    type EndColumn = int
+
+    let getOpenDeclarations (ast: ParsedInput option) (entities: RawEntity list option) 
+                            (qualifyOpenDeclarations: Line -> EndColumn -> Idents -> Idents list) =
         match ast, entities with
         | Some (ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _))), Some entities ->
             let autoOpenModules = getAutoOpenModules entities
@@ -67,32 +105,10 @@ module OpenDeclarationGetter =
                         | SynModuleDecl.NestedModule (ComponentInfo(_, _, _, ident, _, _, _, _), nestedModuleDecls, _, nestedModuleRange) -> 
                             walkModuleOrNamespace (parent @ ident) acc (nestedModuleDecls, nestedModuleRange)
                         | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) ->
-                            (* The idents are "relative" because an open declaration can be not a fully qualified namespace
-                                or module, but a relatively qualified module:
-
-                                module M1 = 
-                                    let x = ()
-                                module M2 =
-                                    open M1
-                                    open System
-                                    let _ = x
-    
-                                here "open M1" is relative, but "open System" is not.
-                            *)
-                            let relativeIdents = longIdentToArray ident
-
-                            // Construct all possible parents taking firts ident, then two first idents and so on.
-                            // It's not 100% accurate but it's the best we can do with the current FCS.
-                            let grandParents = 
-                                let parent = longIdentToArray parent
-                                [ for i in -1..parent.Length - 1 -> parent.[0..i]]
-                                
-                            // All possible full entity idents. Again, it's not 100% accurate.
                             let fullIdentsList = 
-                                grandParents
-                                |> List.map (fun grandParent -> 
-                                    Array.append grandParent relativeIdents)
-                                
+                                longIdentToArray ident
+                                |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
+
                             (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
                                 children AutoOpen modules and so on until a non-AutoOpen module is met.
                                 Example:
@@ -123,7 +139,7 @@ module OpenDeclarationGetter =
                                 
                             let identsAndAutoOpens = 
                                 fullIdentsList
-                                |> List.map (fun fullIdents -> relativeIdents :: loop [fullIdents] fullIdents.Length)
+                                |> List.map (fun fullIdents -> fullIdents :: loop [fullIdents] fullIdents.Length)
                                 |> List.concat
 
                             (* For each module that has ModuleSuffix attribute value we add additional Idents "<Name>Module". For example:
