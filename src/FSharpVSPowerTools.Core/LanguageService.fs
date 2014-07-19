@@ -6,6 +6,7 @@ open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open AsyncMaybe
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -70,6 +71,13 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
     member x.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
             
+    member x.GetTooltips (line, colAtEndOfNames, lineText, names, tokenTag) =
+        asyncMaybe {
+            match infoOpt with
+            | Some (checkResults, _) -> 
+                return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
+            | None -> return! (liftMaybe None)
+        }
 
 [<RequireQualifiedAccess>]
 type AllowStaleResults = 
@@ -497,3 +505,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                yield! AssemblyContentProvider.getAssemblyContent contentType asm
                        | None -> () ]
         }
+
+//    member x.GetNamespaceTooltip (project: ProjectOptions) file source () =
+//        async {
+//            let identToken = Parser.tagOfToken Parser.token.NAMESPACE
+//            let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
+//            let! tooltip = checkResults.GetTooltips ()
+//
+//        }
