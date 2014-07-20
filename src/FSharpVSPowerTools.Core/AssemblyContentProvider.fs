@@ -200,15 +200,15 @@ module AssemblyContentProvider =
             match contentType, entityCache.TryGetValue fileName with
             | _, (true, (cacheWriteTime, Full, entities))
             | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
-                debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
+                //debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
                 entities
             | _ ->
-                debug "[AssemblyContentProvider] Getting entities from %s." fileName
+                //debug "[AssemblyContentProvider] Getting entities from %s." fileName
                 let entities = getAssemblySignatureContent contentType asm.Contents
                 entityCache.[fileName] <- (assemblyWriteTime, contentType, entities)
                 entities
         | None -> 
-            debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
+            //debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
             getAssemblySignatureContent contentType asm.Contents
         |> List.filter (fun entity -> 
             match contentType, entity.IsPublic with

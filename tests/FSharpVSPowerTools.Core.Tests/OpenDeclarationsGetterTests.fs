@@ -9,7 +9,7 @@ open Microsoft.FSharp.Compiler
 let openDeclWithAutoOpens decls =
     { Declarations = 
         decls |> List.map (fun (decl: string) -> decl.Split '.')
-      Parent = [||]
+      Parent = None
       IsUsed = false }
 
 (*** OpenDeclWithAutoOpens ***)
@@ -121,6 +121,42 @@ let ``matched decl become Used, there is another already matched one below it``(
 
     CollectionAssert.AreEqual ([true; true], updatedDecls |> List.map (fun decl -> decl.IsUsed))
 
+(*** setOpenDeclsIsUsedFlag ***)
+
+[<Test>]
+let ``set IsUsed flag to all declarations wich have a given parent``() =
+    let decls =
+        [ { openDecl [ { openDeclWithAutoOpens ["Top.Module.AlreadyUsed"] with IsUsed = true }] with IsUsed = true }
+          openDecl [ openDeclWithAutoOpens ["Top.Module.NotUsed"]]
+          openDecl [ openDeclWithAutoOpens ["System.IO"]]
+          openDecl [ openDeclWithAutoOpens ["System.IO.Module"]]
+        ]
+    let updatedDecls =  OpenDeclarationGetter.setOpenDeclsIsUsedFlag [|"System"; "IO"|] decls
+    CollectionAssert.AreEqual ([true; false; true; false], (updatedDecls |> List.map (fun d -> d.IsUsed)))
+
+(*** spreadIsUsedFlagToParents ***)
+
+[<Test>]
+let ``spread IsUsed flag up to parents``() =
+    let decls =
+        [ { openDecl [ { openDeclWithAutoOpens ["System.IO.Module"] with Parent = Some [|"System"; "IO"|]; IsUsed = true }]
+            with IsUsed = true }
+          openDecl [ openDeclWithAutoOpens ["System.IO"]]
+        ]
+    let updatedDecls =  OpenDeclarationGetter.spreadIsUsedFlagToParents decls
+    CollectionAssert.AreEqual ([true; true], (updatedDecls |> List.map (fun d -> d.IsUsed)))
+
+[<Test>]
+let ``spread IsUsed flag up to parents /two levels/``() =
+    let decls =
+        [ { openDecl [ { openDeclWithAutoOpens ["System.IO.Module"] with Parent = Some [|"System"; "IO"|]; IsUsed = true }]
+            with IsUsed = true }
+          openDecl [ { openDeclWithAutoOpens ["System.IO"] with Parent = Some [|"System"|] } ]
+          openDecl [ openDeclWithAutoOpens ["System.IO"]]
+        ]
+    let updatedDecls =  OpenDeclarationGetter.spreadIsUsedFlagToParents decls
+    CollectionAssert.AreEqual ([true; true; true], (updatedDecls |> List.map (fun d -> d.IsUsed)))
+
 (*** Integration tests ***)
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
@@ -135,7 +171,9 @@ let opts source =
     { opts with LoadTime = System.DateTime.UtcNow }
 
 type Line = int
-type OpenDecl = string
+type Parent = string
+type Decl = string
+type OpenDecl = Parent option * Decl list
 
 let (=>) source (expected: (Line * (OpenDecl list)) list) = 
     let opts = opts source
@@ -162,9 +200,10 @@ let (=>) source (expected: (Line * (OpenDecl list)) list) =
             | Some decl -> 
                 line,
                 decl.Declarations 
-                |> List.map (fun decl -> decl.Declarations)
-                |> List.concat
-                |> List.map (fun idents -> System.String.Join (".", idents))
+                |> List.map (fun decl -> 
+                    decl.Parent |> Option.map (fun x -> System.String.Join (".", x)), 
+                    decl.Declarations |> List.map (fun idents -> System.String.Join (".", idents)))
+                //|> List.concat
             | None -> line, [])
         |> List.sortBy (fun (line, _) -> line)
     try actual |> Collection.assertEquiv (expected |> List.sortBy (fun (line, _) -> line))
@@ -177,14 +216,14 @@ let ``single-ident namespace``() =
     """
 open System
 """
-    => [2, ["System"]]
-
+    => [2, [None, ["System"]]]
+    
 [<Test>]
 let ``two-idents namespace``() =
     """
 open System.IO
 """
-    => [2, ["System.IO"]]
+    => [2, [None, ["System.IO"]]]
 
 [<Test>]
 let ``module``() =
@@ -193,7 +232,7 @@ module Module =
     let x = ()
 open Module
 """
-    => [4, ["OpenDeclarationsGetterTests.Module"]]
+    => [4, [Some "OpenDeclarationsGetterTests", ["OpenDeclarationsGetterTests.Module"]]]
 
 [<Test>]
 let ``relative open decl opens two modules in different top modules``() =
@@ -208,5 +247,5 @@ open Top1
 open Top2
 open Nested
 """
-    => [10, ["OpenDeclarationsGetterTests.Top2.Nested"
-             "OpenDeclarationsGetterTests.Top1.Nested"]]
+    => [10, [Some "OpenDeclarationsGetterTests.Top2", ["OpenDeclarationsGetterTests.Top2.Nested"]
+             Some "OpenDeclarationsGetterTests.Top1", ["OpenDeclarationsGetterTests.Top1.Nested"]]]

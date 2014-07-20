@@ -172,7 +172,7 @@ module SourceCodeClassifier =
             { from with StartCol = what.EndCol + 1 } // the dot between parts
         else from
 
-    let getFullPrefix (longIdents: IDictionary<_,_>) fullName (endPos: Range.pos): Idents =
+    let getFullPrefix (longIdents: IDictionary<_,_>) fullName (endPos: Range.pos): Idents option =
         match longIdents.TryGetValue endPos with
         | true, longIdent ->
             let rec loop matchFound longIdents symbolIdents =
@@ -189,11 +189,12 @@ module SourceCodeClassifier =
                 |> List.rev
                 |> List.toArray
                             
-            debug "[QS] FullName = %A, Symbol end pos = (%d, %d), Res = %A" fullName endPos.Line endPos.Column prefix
-            prefix
+            //debug "[SourceCodeClassifier] QualifiedSymbol: FullName = %A, Symbol end pos = (%d, %d), Res = %A" 
+            //      fullName endPos.Line endPos.Column prefix
+            Some prefix
         | _ -> 
-            debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Symbol end pos = (%d, %d)" fullName endPos.Line endPos.Column
-            fullName
+            //debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Symbol end pos = (%d, %d)" fullName endPos.Line endPos.Column
+            None
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase,
                                    openDeclarations: OpenDeclaration list) =
@@ -276,7 +277,7 @@ module SourceCodeClassifier =
             |> Seq.toArray
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
-        debug "LongIdents by line: %A" (longIdentsByEndPos |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) |> Seq.toList)
+        //debug "LongIdents by line: %A" (longIdentsByEndPos |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) |> Seq.toList)
 
         let symbolPrefixes: (Range.range * Idents) [] =
             allSymbolsUses'
@@ -285,22 +286,23 @@ module SourceCodeClassifier =
             |> Array.map (fun symbolUse ->
                 let sUseRange = symbolUse.SymbolUse.RangeAlternate
                 symbolUse.FullNames.Value
-                |> Array.map (fun fullName ->
-                    sUseRange, getFullPrefix longIdentsByEndPos fullName sUseRange.End))
+                |> Array.choose (fun fullName ->
+                    getFullPrefix longIdentsByEndPos fullName sUseRange.End
+                    |> Option.map (fun prefix -> sUseRange, prefix)))
             |> Array.concat
 
-        debug "[SourceCodeClassifier] Symbols prefixes: %A, Open declarations: %A" symbolPrefixes openDeclarations
+        //debug "[SourceCodeClassifier] Symbols prefixes: %A, Open declarations: %A" symbolPrefixes openDeclarations
         
+        let openDeclarations = 
+            Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->
+                openDecls |> OpenDeclarationGetter.updateOpenDeclsWithSymbolPrefix symbolPrefix symbolRange
+            ) symbolPrefixes openDeclarations
+            |> OpenDeclarationGetter.spreadIsUsedFlagToParents
+
         let unusedOpenDeclarations: OpenDeclaration list =
-            let openDeclarations =
-                Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->
-                    openDecls |> OpenDeclarationGetter.updateOpenDeclsWithSymbolPrefix symbolPrefix symbolRange
-                ) symbolPrefixes openDeclarations
+            openDeclarations |> List.filter (fun decl -> not decl.IsUsed)
 
-            openDeclarations
-            |> List.filter (fun decl -> not decl.IsUsed)
-
-        debug "[SourceCodeClassifier] Unused open declarations: %A" unusedOpenDeclarations
+        //debug "[SourceCodeClassifier] Unused open declarations: %A" unusedOpenDeclarations
 
         let unusedOpenDeclarationSpans =
             unusedOpenDeclarations

@@ -6,11 +6,11 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type RawOpenDeclaration =
     { Idents: Idents
-      Parent: Idents }
+      Parent: Idents option }
 
 type OpenDeclWithAutoOpens =
     { Declarations: Idents list
-      Parent: Idents 
+      Parent: Idents option
       IsUsed: bool }
 
 [<NoComparison>]
@@ -80,8 +80,8 @@ module OpenDeclarationGetter =
                  maybe {
                     let! name, from = 
                         match s.Split ([|'\n'|], StringSplitOptions.RemoveEmptyEntries) with
-                        | [|name; from|] -> Some (name, from)
-                        | [|name|] -> Some (name, "")
+                        | [|name; from|] -> Some (name, Some from)
+                        | [|name|] -> Some (name, None)
                         | _ -> None
 
                     let! name = 
@@ -89,8 +89,10 @@ module OpenDeclarationGetter =
                         |> removePrefix "namespace"
                         |> Option.orElse (name |> removePrefix "module")
                      
-                    let from = from |> removePrefix "from" |> Option.map (fun s -> s + ".") |> Option.getOrElse ""
-                    return { RawOpenDeclaration.Idents = (from + name).Split '.'; Parent = from.Split '.' }
+                    let from = from |> Option.bind (removePrefix "from")
+                    let fullName = (from |> Option.map (fun from -> from + ".") |> Option.getOrElse "") + name
+                    return { RawOpenDeclaration.Idents = fullName.Split '.'
+                             Parent = from |> Option.map (fun from -> from.Split '.') }
                 }))
         |> List.concat
 
@@ -108,6 +110,31 @@ module OpenDeclarationGetter =
         |> fst
         |> List.rev
 
+    let setOpenDeclsIsUsedFlag idents (openDecls: OpenDeclaration list) =
+        openDecls
+        |> List.map (fun decl -> 
+            let declarations = 
+                decl.Declarations 
+                |> List.map (fun d -> 
+                    if d.IsUsed then d
+                    else { d with IsUsed = d.Declarations |> List.exists ((=) idents) })
+            let isUsed = declarations |> List.exists (fun d -> d.IsUsed)
+            { decl with Declarations = declarations; IsUsed = isUsed })
+
+    let spreadIsUsedFlagToParents (openDecls: OpenDeclaration list) =
+        let res = 
+            openDecls 
+            |> List.fold (fun res decl ->
+                if not decl.IsUsed then res
+                else
+                    let parents = decl.Declarations |> List.choose (fun decl -> decl.Parent)
+                    parents 
+                    |> List.fold (fun res parent -> res |> setOpenDeclsIsUsedFlag parent)
+                       res
+               ) openDecls
+        debug "[OpenDeclarationsGetter] spreadIsUsedFlagToParents: Before = %A, After = %A" openDecls res
+        res
+
     type Line = int
     type EndColumn = int
 
@@ -116,7 +143,7 @@ module OpenDeclarationGetter =
         match ast, entities with
         | Some (ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _))), Some entities ->
             let autoOpenModules = getAutoOpenModules entities
-            debug "All AutoOpen modules: %A" autoOpenModules
+            //debug "All AutoOpen modules: %A" autoOpenModules
             let modulesWithModuleSuffix = getModulesWithModuleSuffix entities
 
             let rec walkModuleOrNamespace acc (decls, moduleRange) =
@@ -207,5 +234,4 @@ module OpenDeclarationGetter =
             modules
             |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
                  walkModuleOrNamespace acc (decls, moduleRange) @ acc) []       
-        | _ -> [] 
-
+        | _ -> []
