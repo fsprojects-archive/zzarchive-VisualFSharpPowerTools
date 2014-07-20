@@ -352,6 +352,14 @@ member x.ReadonlyProp: int =
     raise (System.NotImplementedException())
 """
 
+[<Test>]
+let ``should ensure .NET event handlers are generated correctly``() =
+    checkInterfaceStub 397 37 "let _ = { new System.ComponentModel.INotifyPropertyChanged with" ["System"; "ComponentModel"; "INotifyPropertyChanged"] """
+[<CLIEvent>]
+member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler, _> = 
+    raise (System.NotImplementedException())
+"""
+
 open System
 open FsCheck
 

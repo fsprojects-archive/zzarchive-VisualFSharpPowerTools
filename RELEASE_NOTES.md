@@ -1,4 +1,6 @@
 #### 1.4.0 - Unreleased
+* Improve rename refactoring validation
+* Add support for VS 14
 
 #### 1.3.0 - July 10 2014
 * Add report progress and cancellation to Rename Refactoring

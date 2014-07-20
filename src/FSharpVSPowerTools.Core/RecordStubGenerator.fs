@@ -152,7 +152,7 @@ let private formatField (ctxt: Context) prependNewLine
 let formatRecord (insertionPos: RecordStubsInsertionParams) (fieldDefaultValue: string)
                  (entity: FSharpEntity)
                  (fieldsWritten: (RecordFieldName * _ * Option<_>) list) =
-    Debug.Assert(entity.IsFSharpRecord, "Entity has to ben an F# record.")
+    Debug.Assert(entity.IsFSharpRecord, "Entity has to be an F# record.")
     use writer = new ColumnIndentedTextWriter()
     let ctxt =
         { RecordTypeName = entity.DisplayName
