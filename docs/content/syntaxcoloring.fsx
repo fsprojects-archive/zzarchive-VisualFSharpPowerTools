@@ -12,10 +12,14 @@ We currently support coloring:
 - types
 - value types
 - modules
-- functions / methods
+- functions / methods (off by default)
 - quotations
 - patterns (off by default)
 - mutable variables / reference cells (off by default)
+- unused non public types, methods, functions and values declarations
+- unused open statements
+
+There is a special user setting for enabling graying out unused declarations and open statements.
 
 Here is how the editor looks like in blue & dark theme:
 
