@@ -76,17 +76,19 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
                             let! entities = vsLanguageService.GetAllEntities(doc.FilePath, snapshot.GetText(), project)
                             
-                            let qualifyOpenDeclarations line endCol idents = 
-                                let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
-                                vsLanguageService.GetOpenDeclarationTooltip(
-                                                    line, endCol, lineStr, Array.toList idents, project, doc.FilePath, snapshot.GetText())
-                                |> Async.RunSynchronously
-                                |> function
-                                   | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                                   | None -> []
-                                   
                             let openDeclarations = 
-                                OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
+                                if includeUnusedDeclarations then
+                                    let qualifyOpenDeclarations line endCol idents = 
+                                        let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
+                                        vsLanguageService.GetOpenDeclarationTooltip(
+                                                            line, endCol, lineStr, Array.toList idents, project, doc.FilePath, snapshot.GetText())
+                                        |> Async.RunSynchronously
+                                        |> function
+                                           | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                                           | None -> []
+
+                                    OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
+                                else []
 
                             let spans = 
                                 getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations)

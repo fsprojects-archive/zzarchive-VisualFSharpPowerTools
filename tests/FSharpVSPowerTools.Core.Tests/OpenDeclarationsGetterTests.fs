@@ -3,7 +3,6 @@
 open System.IO
 open NUnit.Framework
 open FSharpVSPowerTools
-open FSharpVSPowerTools.SourceCodeClassifier
 open Microsoft.FSharp.Compiler
 
 let openDeclWithAutoOpens decls =

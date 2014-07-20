@@ -3,8 +3,6 @@
 open System.IO
 open NUnit.Framework
 open FSharpVSPowerTools
-open FSharpVSPowerTools.SourceCodeClassifier
-open Microsoft.FSharp.Compiler
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
