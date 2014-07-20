@@ -9,21 +9,11 @@ open Microsoft.FSharp.Compiler
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
-let args = 
-  [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
-
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = LanguageService(fun _ -> ())
 let opts source = 
     let opts = 
-        languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, args, [||], framework) 
+        languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, LanguageServiceTestHelper.args, [||], framework) 
         |> Async.RunSynchronously
     { opts with LoadTime = System.DateTime.UtcNow }
 
@@ -36,10 +26,10 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         { new LexerBase() with
             member x.GetSymbolFromTokensAtLocation (_tokens, line, col) =
                 let lineStr = sourceLines.[line]
-                Lexer.getSymbol source line col lineStr args Lexer.queryLexState
+                Lexer.getSymbol source line col lineStr LanguageServiceTestHelper.args Lexer.queryLexState
             member x.TokenizeLine line =
                 let lineStr = sourceLines.[line]
-                Lexer.tokenizeLine source args line lineStr Lexer.queryLexState }
+                Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
 
     let symbolsUses =
         languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, sourceLines, AllowStaleResults.No, true,

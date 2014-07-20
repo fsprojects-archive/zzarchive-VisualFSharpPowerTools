@@ -23,163 +23,6 @@ type CategorizedColumnSpan =
     { Category: Category
       WordSpan: WordSpan }
 
-[<NoComparison>]
-type OpenDeclaration =
-    { Idents: Idents list
-      DeclarationRange: Range.range
-      ScopeRange: Range.range }
-
-module OpenDeclarationGetter =
-    open UntypedAstUtils
-    open System
-
-    let getAutoOpenModules entities =
-        entities 
-        |> List.filter (fun e -> 
-             match e.Kind with
-             | EntityKind.Module { IsAutoOpen = true } -> true
-             | _ -> false)
-        |> List.map (fun e -> e.Idents)
-
-    let getModulesWithModuleSuffix entities =
-        entities 
-        |> List.choose (fun e -> 
-            match e.Kind with
-            | EntityKind.Module { HasModuleSuffix = true } ->
-                // remove Module suffix
-                let lastIdent = e.Idents.[e.Idents.Length - 1]
-                let result = Array.copy e.Idents
-                result.[result.Length - 1] <- lastIdent.Substring (0, lastIdent.Length - 6)
-                Some result
-            | _ -> None)
-
-    let parseTooltip (ToolTipText elems): Idents list =
-        elems
-        |> List.map (fun e -> 
-            let rawStrings =
-                match e with
-                | ToolTipElement.ToolTipElement (s, _) -> [s]
-                | ToolTipElement.ToolTipElementGroup elems -> 
-                    elems |> List.map (fun (s, _) -> s)
-                | _ -> []
-            
-            let removePrefix prefix (str: string) =
-                if str.StartsWith prefix then Some (str.Substring(prefix.Length).Trim()) else None
-
-            rawStrings
-            |> List.choose (fun (s: string) ->
-                 maybe {
-                    let! name, from = 
-                        match s.Split ([|'\n'|], StringSplitOptions.RemoveEmptyEntries) with
-                        | [|name; from|] -> Some (name, from)
-                        | [|name|] -> Some (name, "")
-                        | _ -> None
-
-                    let! name = 
-                        name 
-                        |> removePrefix "namespace"
-                        |> Option.orElse (name |> removePrefix "module")
-                     
-                    let from = from |> removePrefix "from" |> Option.map (fun s -> s + ".") |> Option.getOrElse ""
-                    return from + name
-                })
-            |> List.map (fun s -> s.Split '.'))
-        |> List.concat
-
-    type Line = int
-    type EndColumn = int
-
-    let getOpenDeclarations (ast: ParsedInput option) (entities: RawEntity list option) 
-                            (qualifyOpenDeclarations: Line -> EndColumn -> Idents -> Idents list) =
-        match ast, entities with
-        | Some (ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _))), Some entities ->
-            let autoOpenModules = getAutoOpenModules entities
-            debug "All AutoOpen modules: %A" autoOpenModules
-            let modulesWithModuleSuffix = getModulesWithModuleSuffix entities
-
-            let rec walkModuleOrNamespace (parent: LongIdent) acc (decls, moduleRange) =
-                let openStatements =
-                    decls
-                    |> List.fold (fun acc -> 
-                        function
-                        | SynModuleDecl.NestedModule (ComponentInfo(_, _, _, ident, _, _, _, _), nestedModuleDecls, _, nestedModuleRange) -> 
-                            walkModuleOrNamespace (parent @ ident) acc (nestedModuleDecls, nestedModuleRange)
-                        | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) ->
-                            let fullIdentsList = 
-                                longIdentToArray ident
-                                |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
-
-                            (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
-                                children AutoOpen modules and so on until a non-AutoOpen module is met.
-                                Example:
-                                   
-                                module M =
-                                    [<AutoOpen>]                                  
-                                    module A1 =
-                                        [<AutoOpen>] 
-                                        module A2 =
-                                            module A3 = 
-                                                [<AutoOpen>] 
-                                                module A4 = ...
-                                         
-                                // this declaration actually open M, M.A1, M.A1.A2, but NOT M.A1.A2.A3 or M.A1.A2.A3.A4
-                                open M
-                            *)
-
-                            let rec loop acc maxLength =
-                                let newModules =
-                                    autoOpenModules
-                                    |> List.filter (fun autoOpenModule -> 
-                                        autoOpenModule.Length = maxLength + 1
-                                        && acc |> List.exists (fun collectedAutoOpenModule ->
-                                            autoOpenModule |> Array.startsWith collectedAutoOpenModule))
-                                match newModules with
-                                | [] -> acc
-                                | _ -> loop (acc @ newModules) (maxLength + 1)
-                                
-                            let identsAndAutoOpens = 
-                                fullIdentsList
-                                |> List.map (fun fullIdents -> fullIdents :: loop [fullIdents] fullIdents.Length)
-                                |> List.concat
-
-                            (* For each module that has ModuleSuffix attribute value we add additional Idents "<Name>Module". For example:
-                                   
-                                module M =
-                                    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-                                    module M1 =
-                                        module M2 =
-                                            let func _ = ()
-                                open M.M1.M2
-                                The last line will produce two Idents: "M.M1.M2" and "M.M1Module.M2".
-                                The reason is that FCS return different FullName for entities declared in ModuleSuffix modules
-                                depending on thether the module is in the current project or not. 
-                            *)
-                            let idents = 
-                                identsAndAutoOpens
-                                |> List.map (fun idents ->
-                                    [ yield idents 
-                                      match modulesWithModuleSuffix |> List.tryFind (fun m -> idents |> Array.startsWith m) with
-                                      | Some m ->
-                                          let index = (Array.length m) - 1
-                                          let modifiedIdents = Array.copy idents
-                                          modifiedIdents.[index] <- idents.[index] + "Module"
-                                          yield modifiedIdents
-                                      | None -> ()])
-                                |> List.concat
-                                |> Seq.distinct
-                                |> Seq.toList
-
-                            { Idents = idents
-                              DeclarationRange = openStatementRange
-                              ScopeRange = (Range.mkRange openStatementRange.FileName openStatementRange.Start moduleRange.End) } :: acc 
-                        | _ -> acc) [] 
-                openStatements @ acc
-
-            modules
-            |> List.fold (fun acc (SynModuleOrNamespace(ident, _, decls, _, _, _, moduleRange)) ->
-                 walkModuleOrNamespace ident acc (decls, moduleRange) @ acc) []       
-        | _ -> [] 
-
 module QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
         let trimWhitespaces = 
@@ -329,7 +172,7 @@ module SourceCodeClassifier =
             { from with StartCol = what.EndCol + 1 } // the dot between parts
         else from
 
-    let getFullPrefix (longIdents: IDictionary<_,_>) fullName endPos: Idents =
+    let getFullPrefix (longIdents: IDictionary<_,_>) fullName (endPos: Range.pos): Idents =
         match longIdents.TryGetValue endPos with
         | true, longIdent ->
             let rec loop matchFound longIdents symbolIdents =
@@ -346,10 +189,10 @@ module SourceCodeClassifier =
                 |> List.rev
                 |> List.toArray
                             
-            debug "[QS] FullName = %A, Symbol end pos = %A, Res = %A" fullName endPos prefix
+            debug "[QS] FullName = %A, Symbol end pos = (%d, %d), Res = %A" fullName endPos.Line endPos.Column prefix
             prefix
         | _ -> 
-            debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Symbol end pos = %A" fullName endPos
+            debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Symbol end pos = (%d, %d)" fullName endPos.Line endPos.Column
             fullName
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase,
@@ -449,22 +292,15 @@ module SourceCodeClassifier =
         debug "[SourceCodeClassifier] Symbols prefixes: %A, Open declarations: %A" symbolPrefixes openDeclarations
         
         let unusedOpenDeclarations: OpenDeclaration list =
-            Array.foldBack (fun (symbolRange: Range.range, symbolPrefix) openDecls ->
-                openDecls |> List.fold (fun (acc, found) (openDecl, used) -> 
-                    if found then
-                        (openDecl, used) :: acc, found
-                    else
-                        let usedByCurrentSymbol =
-                            Range.rangeContainsRange openDecl.ScopeRange symbolRange
-                            && (let isUsed = openDecl.Idents |> List.exists ((=) symbolPrefix)
-                                if isUsed then debug "Open decl %A is used by %A (exact prefix)" openDecl symbolPrefix
-                                isUsed)
-                        (openDecl, used || usedByCurrentSymbol) :: acc, usedByCurrentSymbol) ([], false)
-                |> fst
-                |> List.rev
-            ) symbolPrefixes (openDeclarations |> List.map (fun openDecl -> openDecl, false))
-            |> List.filter (fun (_, used) -> not used)
-            |> List.map fst
+            let openDeclarations =
+                Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->
+                    openDecls |> OpenDeclarationGetter.updateOpenDeclsWithSymbolPrefix symbolPrefix symbolRange
+                ) symbolPrefixes openDeclarations
+
+            openDeclarations
+            |> List.filter (fun decl -> not decl.IsUsed)
+
+        debug "[SourceCodeClassifier] Unused open declarations: %A" unusedOpenDeclarations
 
         let unusedOpenDeclarationSpans =
             unusedOpenDeclarations
