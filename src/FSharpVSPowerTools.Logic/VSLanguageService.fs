@@ -8,7 +8,6 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.TextManager.Interop
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.FSharp.Compiler
 
 type FilePath = string
 

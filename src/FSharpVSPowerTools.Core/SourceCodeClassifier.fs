@@ -83,7 +83,7 @@ module SourceCodeClassifier =
         | _ -> Category.Other 
 
     // Filter out symbols which ranges are fully included into a bigger symbols. 
-    // For example, for this code: Ns.Module.Module1.Type.NestedType.Method() FCS returns the followint symbols: 
+    // For example, for this code: Ns.Module.Module1.Type.NestedType.Method() FCS returns the following symbols: 
     // Ns, Module, Module1, Type, NestedType, Method.
     // We want to filter all of them but the longest one (Method).
     let filterNestedSymbolUses (longIdents: IDictionary<_,_>) symbolUses =
@@ -135,12 +135,15 @@ module SourceCodeClassifier =
     let getSymbolUsesPotentiallyRequireOpenDecls symbolsUses =
         symbolsUses
         |> Array.filter (fun (symbolUse, _) ->
-            match symbolUse.SymbolUse.Symbol with
-            | UnionCase _ 
-            | Entity (Class | (ValueType | Record | UnionType | Interface | FSharpModule | Delegate), _, _)
-            | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
-            | MemberFunctionOrValue func -> not func.IsMember
-            | _ -> false) 
+            let res = 
+                match symbolUse.SymbolUse.Symbol with
+                | UnionCase _ 
+                | Entity (Class | (FSharpType | ValueType | FSharpModule | Array), _, _)
+                | Entity (_, _, Tuple)
+                | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
+                | MemberFunctionOrValue func -> not func.IsMember
+                | _ -> false
+            res)
         |> Array.map (fun (symbolUse, _) -> symbolUse)
 
     let internal getCategory (symbolUse: FSharpSymbolUse) =
@@ -277,7 +280,11 @@ module SourceCodeClassifier =
             |> Seq.toArray
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
-        //debug "LongIdents by line: %A" (longIdentsByEndPos |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) |> Seq.toList)
+
+//        debug "LongIdents by line:" 
+//        longIdentsByEndPos 
+//        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
+//        |> Seq.iter (debug "%A")
 
         let symbolPrefixes: (Range.range * Idents) [] =
             allSymbolsUses'
@@ -288,7 +295,9 @@ module SourceCodeClassifier =
                 symbolUse.FullNames.Value
                 |> Array.choose (fun fullName ->
                     getFullPrefix longIdentsByEndPos fullName sUseRange.End
-                    |> Option.map (fun prefix -> sUseRange, prefix)))
+                    |> Option.bind (function
+                         | [||] -> None
+                         | prefix -> Some (sUseRange, prefix))))
             |> Array.concat
 
         //debug "[SourceCodeClassifier] Symbols prefixes: %A, Open declarations: %A" symbolPrefixes openDeclarations
@@ -298,6 +307,9 @@ module SourceCodeClassifier =
                 openDecls |> OpenDeclarationGetter.updateOpenDeclsWithSymbolPrefix symbolPrefix symbolRange
             ) symbolPrefixes openDeclarations
             |> OpenDeclarationGetter.spreadIsUsedFlagToParents
+
+        //debug "[SourceCodeClassifier] Fully processed open declarations:"
+        //for decl in openDeclarations do debug "%A" decl
 
         let unusedOpenDeclarations: OpenDeclaration list =
             openDeclarations |> List.filter (fun decl -> not decl.IsUsed)
@@ -313,7 +325,7 @@ module SourceCodeClassifier =
                                EndCol = decl.DeclarationRange.EndColumn }})
             |> List.toArray
     
-        //printfn "[SourceCodeClassifier] AST: %A" untypedAst
+        //debug "[SourceCodeClassifier] AST: %A" ast
 
         let allSpans = 
             spansBasedOnSymbolsUses 

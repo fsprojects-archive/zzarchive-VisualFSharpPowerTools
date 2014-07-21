@@ -41,6 +41,7 @@ module OpenDeclaration =
 module OpenDeclarationGetter =
     open UntypedAstUtils
     open System
+    open System.Diagnostics
 
     let getAutoOpenModules entities =
         entities 
@@ -69,12 +70,25 @@ module OpenDeclarationGetter =
                 match e with
                 | ToolTipElement.ToolTipElement (s, _) -> [s]
                 | ToolTipElement.ToolTipElementGroup elems -> 
-                    elems |> List.map (fun (s, _) -> s)
+                    elems |> List.map fst
                 | _ -> []
             
             let removePrefix prefix (str: string) =
                 if str.StartsWith prefix then Some (str.Substring(prefix.Length).Trim()) else None
 
+            (* Tooltip at this point is a bunch of lines. One or two lines corespond to each open statement.
+               If an open statement is fully qualified, then a single line corresponds to it:
+               "module My.Module" or "namespace My.Namespace" (for namespaces).
+               If it's a relative module open statement, then two lines correspond to it:
+               "module Module"
+               "from My".
+               If a relative module open statement is actually opens several modules (being a suffix of several parent 
+               modules / namespaces), then several "module/namespace + from" line pairs correspont to it:
+               "module Module"
+               "from My"
+               "module Module"
+               "from My2"
+            *)
             rawStrings
             |> List.choose (fun (s: string) ->
                  maybe {
@@ -154,9 +168,16 @@ module OpenDeclarationGetter =
                         | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
                             walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
                         | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) ->
+                            let identArray = longIdentToArray ident
                             let rawOpenDeclarations = 
-                                longIdentToArray ident
+                                identArray
                                 |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
+
+                            for openDecl in rawOpenDeclarations do
+                                Debug.Assert (openDecl.Idents |> Array.startsWith identArray, 
+                                                sprintf "%A must be suffix for %A" identArray openDecl.Idents)
+                                Debug.Assert (IdentifierUtils.isIdentifier (String.Join (".", openDecl.Idents)),
+                                                sprintf "%A must be an identifier" openDecl.Idents)
 
                             (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
                                 children AutoOpen modules and so on until a non-AutoOpen module is met.
@@ -189,9 +210,9 @@ module OpenDeclarationGetter =
                             let identsAndAutoOpens = 
                                 rawOpenDeclarations
                                 |> List.map (fun openDecl -> 
-                                     { Declarations = loop [openDecl.Idents] openDecl.Idents.Length 
-                                       Parent = openDecl.Parent
-                                       IsUsed = false })
+                                        { Declarations = loop [openDecl.Idents] openDecl.Idents.Length 
+                                          Parent = openDecl.Parent
+                                          IsUsed = false })
 
                             (* For each module that has ModuleSuffix attribute value we add additional Idents "<Name>Module". For example:
                                    
@@ -203,7 +224,7 @@ module OpenDeclarationGetter =
                                 open M.M1.M2
                                 The last line will produce two Idents: "M.M1.M2" and "M.M1Module.M2".
                                 The reason is that FCS return different FullName for entities declared in ModuleSuffix modules
-                                depending on thether the module is in the current project or not. 
+                                depending on whether the module is in the current project or not. 
                             *)
                             let finalOpenDecls = 
                                 identsAndAutoOpens
@@ -233,5 +254,5 @@ module OpenDeclarationGetter =
 
             modules
             |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
-                 walkModuleOrNamespace acc (decls, moduleRange) @ acc) []       
+                    walkModuleOrNamespace acc (decls, moduleRange) @ acc) []       
         | _ -> []

@@ -80,15 +80,16 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 if includeUnusedDeclarations then
                                     let qualifyOpenDeclarations line endCol idents = 
                                         let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
-                                        vsLanguageService.GetOpenDeclarationTooltip(
+                                        let tooltip =
+                                            vsLanguageService.GetOpenDeclarationTooltip(
                                                             line, endCol, lineStr, Array.toList idents, project, doc.FilePath, snapshot.GetText())
-                                        |> Async.RunSynchronously
-                                        |> function
-                                           | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                                           | None -> []
+                                            |> Async.RunSynchronously
+                                        match tooltip with
+                                        | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                                        | None -> []
 
                                     OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
-                                else []
+                                else [] 
 
                             let spans = 
                                 getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations)
