@@ -10,7 +10,7 @@ type internal Idents = ShortIdent[]
 let internal longIdentToArray (longIdent: LongIdent): Idents =
     longIdent |> List.map string |> List.toArray
 
-///
+/// Returns all Idents and LongIdents found in an untyped AST.
 let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, Idents> =
     let identsByEndPos = Dictionary<Range.pos, Idents>()
     
@@ -322,6 +322,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
             walkComponentInfo info
             List.iter walkSynModuleDecl modules
         | SynModuleDecl.Let (_, bindings, _) -> List.iter walkBinding bindings
+        | SynModuleDecl.DoExpr (_, expr, _) -> walkExpr expr
         | SynModuleDecl.Types (types, _) -> List.iter walkTypeDefn types
         | _ -> ()
 

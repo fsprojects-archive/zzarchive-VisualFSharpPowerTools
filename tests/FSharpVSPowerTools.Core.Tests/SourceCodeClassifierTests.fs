@@ -1156,3 +1156,15 @@ open Nested
 let _ = x
 """
     => [ 5, []; 6, []]
+
+[<Test>]
+let ``open declaration is used if a symbol defined in it is used in a module top-level do expression``() =
+    """
+module Top
+open System.IO
+File.ReadAllLines ""
+|> ignore
+"""
+    => [ 3, []]
+
+
