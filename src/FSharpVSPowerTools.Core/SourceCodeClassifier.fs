@@ -96,7 +96,7 @@ module SourceCodeClassifier =
         |> Seq.map (fun (longIdent, sUses) -> longIdent, sUses |> Seq.map fst)
         |> Seq.map (fun (longIdent, symbolUses) ->
             match longIdent with
-            | Some _ ->
+            | Some _ -> 
                 (* Find all longest SymbolUses which has unique roots. For example:
                            
                     module Top

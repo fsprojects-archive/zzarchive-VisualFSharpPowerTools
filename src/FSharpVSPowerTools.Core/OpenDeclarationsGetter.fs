@@ -40,7 +40,7 @@ module OpenDeclaration =
 
 module OpenDeclarationGetter =
     open UntypedAstUtils
-    open System
+    open System 
     open System.Diagnostics
 
     let getAutoOpenModules entities =
@@ -169,15 +169,16 @@ module OpenDeclarationGetter =
                             walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
                         | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) ->
                             let identArray = longIdentToArray ident
-                            let rawOpenDeclarations = 
+                            let rawOpenDeclarations =  
                                 identArray
                                 |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
 
                             for openDecl in rawOpenDeclarations do
-                                Debug.Assert (openDecl.Idents |> Array.startsWith identArray, 
+                                Debug.Assert (openDecl.Idents |> Array.endsWith identArray, 
                                                 sprintf "%A must be suffix for %A" identArray openDecl.Idents)
-                                Debug.Assert (IdentifierUtils.isIdentifier (String.Join (".", openDecl.Idents)),
-                                                sprintf "%A must be an identifier" openDecl.Idents)
+                                for ident in openDecl.Idents do
+                                    Debug.Assert (IdentifierUtils.isIdentifier ident,
+                                                  sprintf "%s as part of %A must be an identifier" ident openDecl.Idents)
 
                             (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
                                 children AutoOpen modules and so on until a non-AutoOpen module is met.
