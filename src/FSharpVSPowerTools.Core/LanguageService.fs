@@ -456,10 +456,12 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     |> Seq.choose (fun (symbol, uses) ->
                         match symbol with
                         | UnionCase when isSymbolLocalForProject symbol -> Some symbol
-                        // determining that a record, DU or module is used anywhere requires
+                        // Determining that a record, DU or module is used anywhere requires
                         // inspecting all their inclosed entities (fields, cases and func / vals)
                         // for useness, which is too expensive to do. Hence we never gray them out.
                         | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
+                        // Usage of DU case parameters does not give any meaningfull feedback, so never gray them out.
+                        | Parameter -> None
                         | _ ->
                             match Seq.toList uses with
                             | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->

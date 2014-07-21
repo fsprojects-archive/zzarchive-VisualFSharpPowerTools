@@ -784,10 +784,10 @@ type PublicClass() =
 let ``unused function / member argument``() =
     """
 type PublicClass() =
-    member __.Method1 (arg1, arg2) = arg2
+    member __.Method1 (arg1: int, arg2) = arg2
 let func arg1 arg2 = arg2
 """
-    => [ 3, [ Category.Function, 14, 21; Category.Unused, 23, 27 ]
+    => [ 3, [ Category.Function, 14, 21; Category.Unused, 23, 27; Category.ValueType, 29, 32 ]
          4, [ Category.Function, 4, 8; Category.Unused, 9, 13 ]]
 
 [<Test>]
@@ -803,6 +803,17 @@ let func x =
 """
     => [ 4, [ Category.Unused, 12, 17 ]
          7, [ Category.Unused, 8, 13 ]]
+
+[<Test>]
+let ``unused DU field names are not marked as unused even though they are not used anywhere``() =
+    """
+type DU = Case of field1: int * field2: string
+let _ = Case (1, "")
+"""
+    => [ 2, [ Category.ReferenceType, 5, 7
+              Category.PatternCase, 10, 14
+              Category.ValueType, 26, 29
+              Category.ReferenceType, 40, 46 ]]
 
 [<Test>]
 let ``unused open declaration in top level module``() =

@@ -108,6 +108,10 @@ let (|Class|_|) (original: FSharpEntity, abbreviated: FSharpEntity, _) =
 let (|Record|_|) (e: FSharpEntity) = if e.IsFSharpRecord then Some() else None
 let (|UnionType|_|) (e: FSharpEntity) = if e.IsFSharpUnion then Some() else None
 let (|Delegate|_|) (e: FSharpEntity) = if e.IsDelegate then Some() else None
+let (|Parameter|_|) (symbol: FSharpSymbol) = 
+    match symbol with
+    | :? FSharpParameter -> Some()
+    | _ -> None
 
 let (|UnionCase|_|) (e: FSharpSymbol) = 
     match e with
