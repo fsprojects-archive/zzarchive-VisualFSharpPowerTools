@@ -114,19 +114,23 @@ module SourceCodeClassifier =
                 *)
                 let res =
                     symbolUses
-                    |> Seq.filter (fun nextSymbolUse ->
-                        let res = 
-                            symbolUses
-                            |> Seq.exists (fun sUse -> 
-                                nextSymbolUse <> sUse
-                                && (sUse.FullNames.Value |> Array.exists (fun fullName ->
-                                    nextSymbolUse.FullNames.Value |> Array.exists (fun nextSymbolFullName ->
-                                    fullName.Length > nextSymbolFullName.Length
-                                    && fullName |> Array.startsWith nextSymbolFullName))))
-                            |> not
-                        res)
-                    |> Seq.toArray
-                    |> Array.toSeq
+                    |> Seq.sortBy (fun symbolUse -> -symbolUse.SymbolUse.RangeAlternate.EndColumn)
+                    |> Seq.fold (fun (prev, acc) next ->
+                         match prev with
+                         | Some prev -> 
+                            if prev.FullNames.Value 
+                               |> Array.exists (fun prevFullName ->
+                                    next.FullNames.Value 
+                                    |> Array.exists (fun nextFullName ->
+                                         nextFullName.Length < prevFullName.Length
+                                         && prevFullName |> Array.startsWith nextFullName)) then 
+                                Some prev, acc
+                            else Some next, next :: acc
+                         | None -> Some next, next :: acc)
+                       (None, [])
+                    |> snd
+                    |> List.rev
+                    |> List.toSeq
                 res
             | None -> symbolUses)
         |> Seq.concat
