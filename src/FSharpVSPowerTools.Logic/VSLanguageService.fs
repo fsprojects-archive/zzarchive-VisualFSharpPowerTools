@@ -36,22 +36,6 @@ type VSLanguageService
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
     
-    let getProjectOptions (project: IProjectProvider) =
-        async {
-            let! opts = project.GetProjectCheckerOptions(instance)
-            let projectFiles = Set.ofArray project.SourceFiles 
-            let openDocumentsChangeTimes = 
-                    openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
-                    |> Seq.choose (fun (file, doc) -> 
-                        if doc.Document.IsDirty && projectFiles |> Set.contains file then Some doc.LastChangeTime else None)
-                    |> Seq.toList
-        
-            return 
-                match openDocumentsChangeTimes with
-                | [] -> opts
-                | changeTimes -> { opts with LoadTime = List.max (opts.LoadTime::changeTimes) }
-        }
-
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
             let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
@@ -120,15 +104,15 @@ type VSLanguageService
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                reportProgress progress (Reporting(Resource.findSymbolUseCurrentProject))
-                let! currentProjectOptions = getProjectOptions currentProject
-                reportProgress progress (Reporting(Resource.findSymbolUseOtherProjects))
+                reportProgress progress (Reporting Resource.findSymbolUseCurrentProject)
+                let! currentProjectOptions = currentProject.GetProjectCheckerOptions instance
+                reportProgress progress (Reporting Resource.findSymbolUseOtherProjects)
                 let! projectsToCheckOptions = 
                     projectsToCheck 
                     |> List.toArray
-                    |> Async.Array.map getProjectOptions
+                    |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
 
-                reportProgress progress (Reporting(Resource.findSymbolUseAllProjects))
+                reportProgress progress (Reporting Resource.findSymbolUseAllProjects)
 
                 let newReportProgress projectName index length = 
                     reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) length, index, length))
@@ -196,12 +180,11 @@ type VSLanguageService
         async {
             let source = snapshot.GetText() 
             let args = project.CompilerOptions
+            let getLineStr line =
+                let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+                let lineNumber = line - lineStart
+                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
             let lexer = 
-                let getLineStr line =
-                    let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-                    let lineNumber = line - lineStart
-                    snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-
                 { new LexerBase() with
                     member x.GetSymbolFromTokensAtLocation (tokens, line, col) =
                         Lexer.getSymbolFromTokens tokens line col (getLineStr line)
@@ -223,24 +206,33 @@ type VSLanguageService
                         return! 
                             projects
                             |> List.toArray
-                            |> Async.Array.map getProjectOptions 
+                            |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
                             |> Async.map Some
                     | None -> return None
                 }
 
-            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedDeclarations,
-                                                                        getSymbolDeclProjects)
+            let sourceLines = snapshot.Lines |> Seq.map (fun line -> line.GetText()) |> Seq.toArray
+
+            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(
+                                                opts, currentFile, sourceLines, stale, checkForUnusedDeclarations,
+                                                getSymbolDeclProjects, lexer)
             return allSymbolsUses, lexer
         }
 
      member x.GetAllEntities (fileName, source, project: IProjectProvider) =
         async { 
-            let! opts = project.GetProjectCheckerOptions(instance)
+            let! opts = project.GetProjectCheckerOptions instance
             try 
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             with e ->
                 debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
                 return None
+        }
+
+    member x.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =
+        async {
+            let! opts = project.GetProjectCheckerOptions instance
+            return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)
         }
 
     member x.InvalidateProject (projectProvider: IProjectProvider) = 

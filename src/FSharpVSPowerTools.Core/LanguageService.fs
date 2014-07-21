@@ -6,6 +6,7 @@ open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open AsyncMaybe
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -70,6 +71,14 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
     member x.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
             
+    member x.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
+        asyncMaybe {
+            match infoOpt with
+            | Some (checkResults, _) -> 
+                let tokenTag = Parser.tagOfToken (Parser.token.IDENT "")
+                return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
+            | None -> return! (liftMaybe None)
+        }
 
 [<RequireQualifiedAccess>]
 type AllowStaleResults = 
@@ -113,6 +122,12 @@ type LexerBase() =
     abstract TokenizeLine: line: int -> TokenInformation list
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
+
+[<NoComparison>]
+type SymbolUse =
+    { SymbolUse: FSharpSymbolUse 
+      IsUsed: bool
+      FullNames: Idents[] Lazy }
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
@@ -298,6 +313,12 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           | _ -> return None
       }
 
+  member x.GetUsesOfSymbolAtLocationInFile(projectOptions, fileName, source, symbol: Symbol, line, lineStr, stale) = 
+      async { 
+          let! checkResults = x.ParseAndCheckFileInProject(projectOptions, fileName, source, stale)
+          return! checkResults.GetUsesOfSymbolInFileAtLocation(line, symbol.RightColumn, lineStr, symbol.Text)
+      }
+
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions seq, 
                                                     fileName, source, line:int, col, lineStr, args, queryLexState, reportProgress : (string -> int -> int -> unit) option) =     
@@ -333,7 +354,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 async {
                     let! projectResults = checker.ParseAndCheckProject opts
                     let! refs = projectResults.GetUsesOfSymbol symbol
-                    return 
+                    return
                         if opts.ProjectFileName = currentProjectName then
                             refs.Length > 1
                         else refs.Length > 0 }
@@ -379,30 +400,93 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           }
       loop 0 None
 
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, src, stale, checkForUnusedDeclarations, 
-                                           getSymbolDeclProjects) =
+    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string[], stale, checkForUnusedDeclarations, 
+                                           getSymbolDeclProjects, lexer: LexerBase) : SymbolUse[] Async =
+
+        let stringArrayToString (arr: string[]) = String.Join (Environment.NewLine, arr)
+
         async {
-            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, src, stale)
+            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, stringArrayToString source, stale)
             let! allSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
+
+            let allSymbolsUses =
+                allSymbolsUses
+                |> Array.map (fun symbolUse ->
+                    let fullNames = lazy (
+                        let fullName =
+                            match symbolUse.Symbol with
+                            | MemberFunctionOrValue func when func.IsExtensionMember ->
+                                if func.IsProperty then
+                                    let range = symbolUse.RangeAlternate
+                                    let line = range.StartLine - 1
+                                    lexer.GetSymbolAtLocation (line, range.EndColumn) 
+                                    |> Option.bind (fun sym ->
+                                        let origLineStr = source.[line]
+                                        let adjustedLineStr = 
+                                            origLineStr.Insert (sym.LeftColumn, 
+                                                // we use IsGetterMethod instead of IsPropertyGetterMethod because the latter 
+                                                // returns False.
+                                                (if func.IsGetterMethod then "get" else "set") + "_")
+                                        source.[line] <- adjustedLineStr
+                                        let adjustedSym = { sym with RightColumn = sym.RightColumn + 4 }
+                                        let res = x.GetUsesOfSymbolAtLocationInFile (
+                                                        projectOptions, fileName, stringArrayToString source, adjustedSym, line,
+                                                        adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
+                                        source.[line] <- origLineStr
+                                        res)
+                                    |> Option.map (fun (symbol, _, _) ->  
+                                         debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
+                                         symbol.FullName)
+                                else 
+                                    match func.EnclosingEntity with
+                                    // C# extension method
+                                    | Entity Class ->
+                                        let fullName = symbolUse.Symbol.FullName.Split '.'
+                                        if fullName.Length > 2 then
+                                            (* For C# extension methods FCS returns full name including the class name, like:
+                                               Namespace.StaticClass.ExtensionMethod
+                                               So, in order to properly detect that "open Namespace" actually opens ExtensionMethod,
+                                               we remove "StaticClass" part. This makes C# extension methods looks identically 
+                                               with F# extension members.
+                                            *)
+                                            let fullNameWithoutClassName =
+                                                Array.append fullName.[0..fullName.Length - 3] fullName.[fullName.Length - 1..]
+                                            Some (String.Join (".", fullNameWithoutClassName))
+                                        else None
+                                    | _ -> None
+                            | _ -> None
+                            |> Option.getOrElse symbolUse.Symbol.FullName
+                        let isAttribute = 
+                            match symbolUse.Symbol with 
+                            | Entity (_, entity, _) when AssemblyContentProvider.isAttribute entity -> true
+                            | _ -> false 
+                        [| yield fullName.Split '.'
+                           if isAttribute then
+                               yield fullName.Substring(0, fullName.Length - 9).Split '.' |])
+                    { SymbolUse = symbolUse
+                      IsUsed = true
+                      FullNames = fullNames })
+
             let singleDefs = 
                 if checkForUnusedDeclarations then
                     allSymbolsUses
-                    |> Seq.groupBy (fun su -> su.Symbol)
+                    |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
                     |> Seq.choose (fun (symbol, uses) ->
                         match symbol with
                         | UnionCase when isSymbolLocalForProject symbol -> Some symbol
-                        // determining that a record, DU or module is used anywhere requires
+                        // Determining that a record, DU or module is used anywhere requires
                         // inspecting all their inclosed entities (fields, cases and func / vals)
                         // for useness, which is too expensive to do. Hence we never gray them out.
-                        | Entity ((Record | UnionType | Interface | Module), _, _) -> None
+                        | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
+                        // Usage of DU case parameters does not give any meaningfull feedback, so never gray them out.
+                        | Parameter -> None
                         | _ ->
                             match Seq.toList uses with
-                            | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
+                            | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
                                 Some symbol 
                             | _ -> None)
                     |> Seq.toList
-                else
-                    []
+                else []
 
             let! notUsedSymbols =
                 singleDefs 
@@ -420,11 +504,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                     
             return
                 match notUsedSymbols with
-                | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
+                | [] -> allSymbolsUses
                 | _ ->
-                    allSymbolsUses 
+                    allSymbolsUses
                     |> Array.map (fun su -> 
-                        su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
+                        { su with IsUsed = notUsedSymbols |> List.forall (fun s -> s <> su.SymbolUse.Symbol) })
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
@@ -441,4 +525,10 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                let contentType = Public // it's always Public for now since we don't support InternalsVisibleTo attribute yet
                                yield! AssemblyContentProvider.getAssemblyContent contentType asm
                        | None -> () ]
+        }
+
+    member x.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, project: ProjectOptions, file, source) =
+        async {
+            let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
+            return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)
         }

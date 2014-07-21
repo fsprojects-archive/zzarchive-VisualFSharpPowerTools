@@ -63,6 +63,7 @@
     <Compile Include="RenameTests.fs" />
     <Compile Include="XmlDocTests.fs" />
     <Compile Include="NavigateToIndexTests.fs" />
+    <Compile Include="OpenDeclarationsGetterTests.fs" />
     <Compile Include="SourceCodeClassifierTests.fs" />
     <Compile Include="InterfaceStubGeneratorTests.fs" />
     <Compile Include="CodeGenerationTestInfrastructure.fs" />
@@ -77,9 +78,6 @@
     </None>
     <None Include="Tutorial.fs">
       <Link>Tutorial.fs</Link>
-    </None>
-    <None Include="Coloring.fs">
-      <Link>Coloring.fs</Link>
     </None>
     <None Include="SampleFile.fs">
       <Link>SampleFile.fs</Link>

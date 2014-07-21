@@ -46,7 +46,7 @@ type RenameDialogViewModel(originalName: string, symbol: Symbol, initializationW
             | StaticallyResolvedTypeParameter, _ ->
                 check (isStaticallyResolvedTypeParameter newName) Resource.validatingStaticallyResolvedTypeParameter
             | (Ident | Other), _ ->
-                if SourceCodeClassifier.getIdentifierCategory fssym <> SourceCodeClassifier.Category.Other then
+                if SourceCodeClassifier.getIdentifierCategory fssym <> Category.Other then
                     check (isTypeNameIdent newName) Resource.validatingTypeName
                 else
                     check (isFixableIdentifier newName) Resource.validatingIdentifier

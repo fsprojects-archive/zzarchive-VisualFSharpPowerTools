@@ -5,11 +5,14 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type internal ShortIdent = string
 type internal Idents = ShortIdent[]
+type IsAutoOpen = bool
+type ModuleKind = { IsAutoOpen: bool; HasModuleSuffix: bool }
 
 type EntityKind =
     | Attribute
     | Type
     | FunctionOrValue
+    | Module of ModuleKind
     override x.ToString() = sprintf "%A" x
 
 type RawEntity = 
@@ -85,14 +88,6 @@ module AssemblyContentProvider =
     open System.IO
     open System.Collections.Generic
             
-    let fixParentModuleSuffix (parent: Idents option) (idents: Idents) =
-        match parent with
-        | Some p when p.Length <= idents.Length -> 
-            idents 
-            |> Array.mapi (fun i ident -> 
-                if i < p.Length then p.[i] else ident)
-        | _ -> idents
-
     let isAttribute (entity: FSharpEntity) =
         let getBaseType (entity: FSharpEntity) =
             try 
@@ -111,7 +106,7 @@ module AssemblyContentProvider =
                     fullName = "System.Attribute" || isAttributeType (getBaseType ty)
         isAttributeType (Some entity)
 
-    let createEntity ns (parent: Parent) (entity: FSharpEntity) =
+    let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
         parent.FormatEntityFullName entity
         |> Option.map (fun fullName ->
             { Idents = fullName
@@ -119,19 +114,25 @@ module AssemblyContentProvider =
               IsPublic = entity.Accessibility.IsPublic
               TopRequireQualifiedAccessParent = parent.RequiresQualifiedAccess |> Option.map parent.FormatIdents
               AutoOpenParent = parent.AutoOpen |> Option.map parent.FormatIdents
-              Kind = if isAttribute entity then EntityKind.Attribute else EntityKind.Type })
+              Kind = 
+                if isAttribute entity then 
+                    EntityKind.Attribute 
+                elif entity.IsFSharpModule then 
+                    EntityKind.Module 
+                        { IsAutoOpen = hasAttribute<AutoOpenAttribute> entity.Attributes
+                          HasModuleSuffix = hasModuleSuffixAttribute entity }
+                else EntityKind.Type })
 
-    let rec traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 
+    let rec private traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 
 
         seq { if not entity.IsProvided then
                 match contentType, entity.Accessibility.IsPublic with
                 | Full, _ | Public, true ->
                     let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parent.Namespace
 
-                    if not entity.IsFSharpModule then
-                        match createEntity ns parent entity with
-                        | Some x -> yield x
-                        | None -> ()
+                    match createEntity ns parent entity with
+                    | Some x -> yield x
+                    | None -> ()
 
                     let parentWithModuleSuffix =
                         if entity.IsFSharpModule && hasModuleSuffixAttribute entity then 
@@ -199,15 +200,15 @@ module AssemblyContentProvider =
             match contentType, entityCache.TryGetValue fileName with
             | _, (true, (cacheWriteTime, Full, entities))
             | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
-                debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
+                //debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
                 entities
             | _ ->
-                debug "[AssemblyContentProvider] Getting entities from %s." fileName
+                //debug "[AssemblyContentProvider] Getting entities from %s." fileName
                 let entities = getAssemblySignatureContent contentType asm.Contents
                 entityCache.[fileName] <- (assemblyWriteTime, contentType, entities)
                 entities
         | None -> 
-            debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
+            //debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
             getAssemblySignatureContent contentType asm.Contents
         |> List.filter (fun entity -> 
             match contentType, entity.IsPublic with

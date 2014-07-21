@@ -80,6 +80,8 @@ type ResolveUnopenedNamespaceSmartTagger
                                         | Type, Type
                                         | FunctionOrValue, _ -> true 
                                         | Attribute, _
+                                        | _, Module _
+                                        | Module _, _
                                         | Type, _ -> false)
 
                                 let entities = 
@@ -112,7 +114,7 @@ type ResolveUnopenedNamespaceSmartTagger
                 buffer.TriggerTagsChanged self tagsChanged
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                                      500us, updateAtCaretPosition)
+                                                      100us, updateAtCaretPosition)
 
     let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)

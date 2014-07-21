@@ -2,7 +2,6 @@
 module internal FSharpVSPowerTools.TypedAstUtils
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open System.Collections.Generic
 
 let isSymbolLocalForProject (symbol: FSharpSymbol) = 
     match symbol with 
@@ -26,9 +25,13 @@ let hasModuleSuffixAttribute (entity: FSharpEntity) =
      |> tryGetAttribute<CompilationRepresentationAttribute>
      |> Option.bind (fun a -> 
           a.ConstructorArguments 
-          |> Seq.tryPick (function 
-               | :? CompilationRepresentationFlags as arg when arg = CompilationRepresentationFlags.ModuleSuffix -> Some() 
-               | _ -> None))) = Some()
+          |> Seq.tryPick (fun arg ->
+               let res =
+                   match arg with
+                   | :? int32 as arg when arg  = int CompilationRepresentationFlags.ModuleSuffix -> Some() 
+                   | :? CompilationRepresentationFlags as arg when arg  = CompilationRepresentationFlags.ModuleSuffix -> Some() 
+                   | _ -> None
+               res))) = Some()
 
 let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
@@ -104,6 +107,11 @@ let (|Class|_|) (original: FSharpEntity, abbreviated: FSharpEntity, _) =
 
 let (|Record|_|) (e: FSharpEntity) = if e.IsFSharpRecord then Some() else None
 let (|UnionType|_|) (e: FSharpEntity) = if e.IsFSharpUnion then Some() else None
+let (|Delegate|_|) (e: FSharpEntity) = if e.IsDelegate then Some() else None
+let (|Parameter|_|) (symbol: FSharpSymbol) = 
+    match symbol with
+    | :? FSharpParameter -> Some()
+    | _ -> None
 
 let (|UnionCase|_|) (e: FSharpSymbol) = 
     match e with
@@ -125,7 +133,7 @@ let (|ProvidedType|_|) (e: FSharpEntity) =
 
 let (|ByRef|_|) (e: FSharpEntity) = if e.IsByRef then Some() else None
 let (|Array|_|) (e: FSharpEntity) = if e.IsArrayType then Some() else None
-let (|Module|_|) (entity: FSharpEntity) = if entity.IsFSharpModule then Some() else None
+let (|FSharpModule|_|) (entity: FSharpEntity) = if entity.IsFSharpModule then Some() else None
 
 let (|Tuple|_|) (ty: FSharpType option) = 
     ty |> Option.bind (fun ty -> if ty.IsTupleType then Some() else None)
@@ -149,3 +157,6 @@ let (|Function|_|) excluded (func: FSharpMemberFunctionOrValue) =
                    && not excluded
                    && not (isOperator func.DisplayName) -> Some()
     | _ -> None
+
+let (|ExtensionMember|_|) (func: FSharpMemberFunctionOrValue) =
+    if func.IsExtensionMember then Some() else None
