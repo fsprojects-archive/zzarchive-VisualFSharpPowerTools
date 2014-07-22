@@ -28,6 +28,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Union type pattern generation
  - Resolve unopened namespaces
  - Gray out unused declarations
+ - Gray out unused open statements
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 

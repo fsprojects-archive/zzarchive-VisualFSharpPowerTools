@@ -218,7 +218,7 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
 
     interface IProjectProvider with
         member x.IsForStandaloneScript = true
-        member x.ProjectFileName = null
+        member x.ProjectFileName = Path.ChangeExtension(filePath, ".fsproj")
         member x.TargetFramework = targetFramework
         member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
         member x.SourceFiles = [| filePath |]
@@ -319,7 +319,7 @@ type ProjectFactory
             fsharpProjectsCache := Some res
             res
 
-    member x.GetSymbolDeclarationLocation isStandalone (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
+    member x.GetSymbolDeclarationLocation (symbol: FSharpSymbol) (currentFile: FilePath) (currentProject: IProjectProvider) : SymbolDeclarationLocation option =
         let isPrivateToFile = 
             match symbol with 
             | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
@@ -334,10 +334,13 @@ type ProjectFactory
             match symbol.TryGetLocation() with
             | Some loc ->
                 let filePath = Path.GetFullPath loc.FileName
-                if isStandalone && filePath = currentFile then 
+                if currentProject.IsForStandaloneScript && filePath = currentFile then 
                     Some SymbolDeclarationLocation.File
-                elif isStandalone then
-                    None
+                elif currentProject.IsForStandaloneScript then
+                    // The standalone script might include other files via '#load'
+                    // These files appear in project options and the standalone file 
+                    // should be treated as an individual project
+                    Some (SymbolDeclarationLocation.Projects [currentProject])
                 else
                     let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with

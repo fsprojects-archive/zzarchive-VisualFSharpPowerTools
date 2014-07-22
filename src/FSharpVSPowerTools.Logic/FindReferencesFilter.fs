@@ -36,7 +36,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let! results = 
-                        match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript fsSymbolUse.Symbol dte file with
+                        match projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol file project with
                         | Some SymbolDeclarationLocation.File ->
                             progress(OperationState.Reporting(Resource.findAllReferencesFindInFileMessage))
                             vsLanguageService.FindUsagesInFile (span, symbol, fileScopedCheckResults)

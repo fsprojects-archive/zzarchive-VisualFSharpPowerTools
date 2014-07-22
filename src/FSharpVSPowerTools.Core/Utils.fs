@@ -53,6 +53,12 @@ module Option =
         | Some x -> Some x
         | None -> v
 
+    /// Gets the value if Some x, otherwise try to get another value by calling a function
+    let inline getOrTry f =
+        function
+        | Some x -> x
+        | None -> f()
+
     /// Gets the option if Some x, otherwise try to get another value
     let inline orTry f =
         function

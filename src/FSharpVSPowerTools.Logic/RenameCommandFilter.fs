@@ -97,7 +97,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     | Some(fsSymbolUse, fileScopedCheckResults) ->
                     
                         let symbolDeclarationLocation = 
-                            projectFactory.GetSymbolDeclarationLocation state.Project.IsForStandaloneScript fsSymbolUse.Symbol dte state.File
+                            projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol state.File state.Project
 
                         match symbolDeclarationLocation with
                         | Some scope ->

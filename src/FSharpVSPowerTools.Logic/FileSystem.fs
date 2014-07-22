@@ -17,10 +17,11 @@ type FileSystem (openDocumentsTracker: OpenDocumentsTracker) =
         member x.FileStreamReadShim fileName = 
             getOpenDocContent fileName
             |> Option.map (fun bytes -> new MemoryStream (bytes) :> Stream)
-            |> Option.getOrElse (defaultFileSystem.FileStreamReadShim fileName)
+            |> Option.getOrTry (fun () -> defaultFileSystem.FileStreamReadShim fileName)
         
         member x.ReadAllBytesShim fileName =
-            getOpenDocContent fileName |> Option.getOrElse (defaultFileSystem.ReadAllBytesShim fileName)
+            getOpenDocContent fileName 
+            |> Option.getOrTry (fun () -> defaultFileSystem.ReadAllBytesShim fileName)
         
         member x.GetLastWriteTimeShim fileName =
             openDocumentsTracker.TryFindOpenDocument fileName
@@ -28,7 +29,7 @@ type FileSystem (openDocumentsTracker: OpenDocumentsTracker) =
                 if doc.Document.IsDirty then
                     Some doc.LastChangeTime
                 else None)
-            |> Option.getOrElse (defaultFileSystem.GetLastWriteTimeShim fileName)
+            |> Option.getOrTry (fun () -> defaultFileSystem.GetLastWriteTimeShim fileName)
         
         member x.GetTempPathShim() = defaultFileSystem.GetTempPathShim()
         member x.FileStreamCreateShim fileName = defaultFileSystem.FileStreamCreateShim fileName
@@ -39,4 +40,4 @@ type FileSystem (openDocumentsTracker: OpenDocumentsTracker) =
         member x.SafeExists fileName = defaultFileSystem.SafeExists fileName
         member x.FileDelete fileName = defaultFileSystem.FileDelete fileName
         member x.AssemblyLoadFrom fileName = defaultFileSystem.AssemblyLoadFrom fileName
-        member x.AssemblyLoad(assemblyName) = defaultFileSystem.AssemblyLoad assemblyName
+        member x.AssemblyLoad assemblyName = defaultFileSystem.AssemblyLoad assemblyName

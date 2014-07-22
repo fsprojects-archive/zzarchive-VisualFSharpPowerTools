@@ -193,8 +193,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       debug "[LanguageService] Update typed info - failed"
                       ParseAndCheckResults.Empty
                   | Choice2Of2 e -> 
-                      debug "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
-                      fail "ParseAndCheckFileInProject fails. There is probably a bug in the language service."
+                      fail "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
                       ParseAndCheckResults.Empty  
               reply.Reply results
       })
@@ -203,12 +202,12 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, targetFramework) =
     let ext = Path.GetExtension(fileName)
     let opts = 
-      if (ext = ".fsx" || ext = ".fsscript") then
-        // We are in a stand-alone file or we are in a project, but currently editing a script file
-        x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
+        if ext = ".fsx" || ext = ".fsscript" then
+           // We are in a stand-alone file or we are in a project, but currently editing a script file
+           x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
           
-      // We are in a project - construct options using current properties
-      else async { return x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) }
+        // We are in a project - construct options using current properties
+        else async { return x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
@@ -246,14 +245,18 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
   member x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
-    { ProjectFileName = projFilename
-      ProjectFileNames = files
-      ProjectOptions = args
-      IsIncompleteTypeCheckEnvironment = false
-      UseScriptResolutionRules = false
-      LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
-      UnresolvedReferences = None
-      ReferencedProjects = referencedProjects }
+    let opts =
+        { ProjectFileName = projFilename
+          ProjectFileNames = files
+          ProjectOptions = args
+          IsIncompleteTypeCheckEnvironment = false
+          UseScriptResolutionRules = false
+          LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
+          UnresolvedReferences = None
+          ReferencedProjects = referencedProjects }
+    Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
+                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
+    opts     
 
   member x.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
