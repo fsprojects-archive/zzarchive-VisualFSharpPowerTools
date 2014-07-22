@@ -66,11 +66,10 @@ type Parent =
                 else ident)
 
         let removeModuleSuffix (idents: Idents) =
-            if entity.IsFSharpModule && hasModuleSuffixAttribute entity then
-                if idents.Length > 0 then
-                    let lastIdent = idents.[idents.Length - 1]
-                    if lastIdent.EndsWith "Module" then
-                        idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
+            if entity.IsFSharpModule && idents.Length > 0 && hasModuleSuffixAttribute entity then
+                let lastIdent = idents.[idents.Length - 1]
+                if lastIdent.EndsWith "Module" then
+                    idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
             idents
 
         entity.GetFullName() 

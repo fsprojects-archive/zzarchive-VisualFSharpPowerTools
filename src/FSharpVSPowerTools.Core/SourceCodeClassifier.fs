@@ -199,9 +199,7 @@ module SourceCodeClassifier =
             //debug "[SourceCodeClassifier] QualifiedSymbol: FullName = %A, Symbol end pos = (%d, %d), Res = %A" 
             //      fullName endPos.Line endPos.Column prefix
             Some prefix
-        | _ -> 
-            //debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Symbol end pos = (%d, %d)" fullName endPos.Line endPos.Column
-            None
+        | _ -> None
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase,
                                    openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents> option) =
@@ -285,11 +283,6 @@ module SourceCodeClassifier =
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
 
-//        debug "LongIdents by line:" 
-//        longIdentsByEndPos 
-//        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
-//        |> Seq.iter (debug "%A")
-
         let removeModuleSuffixes (symbolUses: SymbolUse[]) =
             match allEntities with
             | Some entities ->
@@ -306,20 +299,11 @@ module SourceCodeClassifier =
                     { symbolUse with FullNames = lazy fullNames })
             | None -> symbolUses
 
-//        let printSymbolUses msg (symbolUses: SymbolUse[]) =
-//            debug "[SourceCodeClassifier] %s SymbolUses:" msg
-//            for sUse in symbolUses do
-//                let r = sUse.SymbolUse.RangeAlternate
-//                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames.Value r.StartLine r.StartColumn r.EndLine r.EndColumn
-//            symbolUses
-
         let symbolPrefixes: (Range.range * Idents) [] =
             allSymbolsUses'
             |> getSymbolUsesPotentiallyRequireOpenDecls
             |> removeModuleSuffixes
-            //|> printSymbolUses "SymbolUsesPotentiallyRequireOpenDecls"
             |> filterNestedSymbolUses longIdentsByEndPos
-            //|> printSymbolUses "SymbolUses without nested"
             |> Array.map (fun symbolUse ->
                 let sUseRange = symbolUse.SymbolUse.RangeAlternate
                 symbolUse.FullNames.Value
