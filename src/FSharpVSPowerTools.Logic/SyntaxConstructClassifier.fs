@@ -66,8 +66,8 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                         try
                             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
 
-                            let getSymbolDeclLocation sym =
-                                projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath                                    
+                            let getSymbolDeclLocation fsSymbol =
+                                projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
 
                             let! symbolsUses, lexer =
                                 vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,

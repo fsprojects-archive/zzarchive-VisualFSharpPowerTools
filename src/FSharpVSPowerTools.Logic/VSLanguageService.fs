@@ -129,26 +129,6 @@ type VSLanguageService
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
 
-    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) =
-        async {
-            try 
-                let (_, _, endLine, endCol) = word.ToRange()
-                let framework = projectProvider.TargetFramework
-                let args = projectProvider.CompilerOptions
-            
-                debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
-                      (word.GetText()) endLine endCol framework (String.concat " " args)
-            
-                let! res = x.GetFSharpSymbolUse (word, sym, currentFile, projectProvider, stale)
-                return 
-                    res 
-                    |> Option.map (fun (_, checkResults) -> 
-                        x.FindUsagesInFile (word, sym, checkResults)
-                        |> Async.map (Option.map (fun (symbol, ident, refs) -> symbol, ident, filterSymbolUsesDuplicates refs)))
-            with e ->
-                debug "[Language Service] %O exception occurs while updating." e
-                return None }
-
     member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
         async {
             try 
