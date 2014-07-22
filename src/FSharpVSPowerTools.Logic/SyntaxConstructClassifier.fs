@@ -64,8 +64,6 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 let worker = 
                     async {
                         try
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-
                             let getSymbolDeclLocation fsSymbol =
                                 projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
 
