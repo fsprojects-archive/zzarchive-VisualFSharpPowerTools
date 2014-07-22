@@ -12,7 +12,7 @@ open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 
-[<Name(Constants.unusedDeclarationMargin)>]
+[<Name(Constants.fsharpUnusedDeclarationMargin)>]
 type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextViewMargin,
                              tagAggregator: ITagAggregator<UnusedDeclarationTag>) =
     inherit Canvas()
@@ -30,10 +30,10 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
             tagAggregator.GetTags(span)
             |> Seq.map (fun span -> 
                 let pos = span.Tag.Range.Start.Position
-                textView.TextSnapshot.GetLineNumberFromPosition(pos))
-            |> Seq.distinct
-            |> Seq.iter (fun lineNo ->                
-                    let markerHeight = min 4.0 (lineHeight / 2.0)
+                textView.TextSnapshot.GetLineNumberFromPosition(pos), pos)
+            |> Seq.distinctBy fst
+            |> Seq.iter (fun (lineNo, pos) ->                
+                    let markerHeight = max 4.0 (lineHeight / 2.0)
                     let markerWidth = verticalScrollBar.MarginSize
                     let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 2.0, Stroke = Brushes.DarkOrange,
                                            Height = markerHeight, Width = markerWidth)
@@ -42,7 +42,8 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
                     Canvas.SetTop(marker, float lineNo * lineHeight)
                     marker.MouseDown.Add(fun _ -> 
                         let line = textView.TextSnapshot.GetLineFromLineNumber(lineNo)
-                        textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.AlwaysCenter))
+                        textView.Caret.MoveTo(VirtualSnapshotPoint(textView.TextSnapshot, pos)) |> ignore
+                        textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.ShowStart))
                     children.Add(marker) |> ignore)
 
     let docEventListener = new DocumentEventListener ([ViewChange.tagsChangedEvent tagAggregator], 200us, updateDisplay)
@@ -53,7 +54,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
         
         member x.GetTextViewMargin(marginName: string): ITextViewMargin = 
             match marginName with
-            | Constants.unusedDeclarationMargin -> 
+            | Constants.fsharpUnusedDeclarationMargin -> 
                 x :> _
              | _ -> 
                 null
@@ -67,21 +68,6 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
         member x.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
 
-[<Export(typeof<IWpfTextViewMarginProvider>)>]
-[<Name(Constants.unusedDeclarationMargin)>]
-[<ContentType("F#")>]
-[<Order(After = PredefinedMarginNames.VerticalScrollBar)>]
-[<MarginContainer(PredefinedMarginNames.VerticalScrollBarContainer)>]
-[<TextViewRole(PredefinedTextViewRoles.Document)>]
-type UnusedDeclarationMarginProvider() =
-    [<Import>]
-    member val TagAggregatorFactoryService: IViewTagAggregatorFactoryService = null with get, set
-    interface IWpfTextViewMarginProvider with
-        member x.CreateMargin(wpfTextViewHost: IWpfTextViewHost, marginContainer: IWpfTextViewMargin): IWpfTextViewMargin = 
-            let textView = wpfTextViewHost.TextView
-            new UnusedDeclarationMargin(textView, marginContainer,
-                    x.TagAggregatorFactoryService.CreateTagAggregator<UnusedDeclarationTag>(textView)) :> _
-        
         
 
         

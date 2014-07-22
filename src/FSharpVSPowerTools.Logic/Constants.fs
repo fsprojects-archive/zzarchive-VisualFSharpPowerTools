@@ -26,7 +26,7 @@ let guidStandardCmdSet = VSConstants.VSStd2K
 let cmdidFindReferences = uint32 VSConstants.VSStd97CmdID.FindReferences
 let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
 
-let [<Literal>] unusedDeclarationMargin = "FSharpUnusedDeclarationMargin"
+let [<Literal>] fsharpUnusedDeclarationMargin = "FSharpUnusedDeclarationMargin"
 
 let [<Literal>] fsharpReferenceType = "FSharp.ReferenceType"
 let [<Literal>] fsharpValueType = "FSharp.ValueType"
