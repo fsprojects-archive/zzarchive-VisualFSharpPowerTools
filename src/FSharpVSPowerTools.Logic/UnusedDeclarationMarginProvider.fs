@@ -18,10 +18,6 @@ type UnusedDeclarationMargin(textView: IWpfTextView, tagAggregator: ITagAggregat
 
     let updateDisplay () =
          if not textView.IsClosed then
-            let totalLines = textView.TextSnapshot.LineCount
-            let virtualAdditionalLines = (int)(textView.ViewportHeight / textView.LineHeight) - 1
-            let markerHeight = textView.ViewportHeight / float (totalLines + virtualAdditionalLines)
-
             self.Children.Clear()
             let span = SnapshotSpan(textView.TextBuffer.CurrentSnapshot, 0, textView.TextBuffer.CurrentSnapshot.Length)
             tagAggregator.GetTags(span)
@@ -29,8 +25,9 @@ type UnusedDeclarationMargin(textView: IWpfTextView, tagAggregator: ITagAggregat
                 let pos = span.Tag.Range.Start.Position
                 textView.TextSnapshot.GetLineNumberFromPosition(pos))
             |> Seq.distinct
-            |> Seq.iter (fun line ->                    
-                    let markerWidth = self.Width
+            |> Seq.iter (fun line ->                
+                    let markerHeight = textView.LineHeight
+                    let markerWidth = 20.0
                     let marker = Rectangle(Fill = Brushes.Yellow, StrokeThickness = 2.0, Stroke = Brushes.Yellow,
                                            Height = markerHeight, Width = markerWidth)
                     Canvas.SetLeft(marker, 0.0)

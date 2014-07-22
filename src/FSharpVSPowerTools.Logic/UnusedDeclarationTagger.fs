@@ -16,11 +16,8 @@ type UnusedDeclarationTagger(buffer: ITextBuffer, classifier: IClassifier) as se
     let tagsChanged = Event<_,_>()
 
     let update () =
-        async {
-            let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-            return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-        } 
-        |> Async.StartInThreadPoolSafe        
+        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
 
     let docEventListener = new DocumentEventListener ([ViewChange.bufferChangedEvent buffer], 200us, update)
 
