@@ -87,16 +87,16 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let entities = 
                                     entities
                                     |> List.map (fun e -> 
-                                         [ yield e.TopRequireQualifiedAccessParent, e.AutoOpenParent, e.Namespace, e.Idents
+                                         [ yield e.TopRequireQualifiedAccessParent, e.AutoOpenParent, e.Namespace, e.CleanIdents
                                            if isAttribute then
-                                               let lastIdent = e.Idents.[e.Idents.Length - 1]
+                                               let lastIdent = e.CleanIdents.[e.CleanIdents.Length - 1]
                                                if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
                                                    yield 
                                                        e.TopRequireQualifiedAccessParent, 
                                                        e.AutoOpenParent,
                                                        e.Namespace,
                                                        Array.append 
-                                                          e.Idents.[..e.Idents.Length - 2] 
+                                                          e.CleanIdents.[..e.CleanIdents.Length - 2] 
                                                           [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
                                     |> List.concat
 

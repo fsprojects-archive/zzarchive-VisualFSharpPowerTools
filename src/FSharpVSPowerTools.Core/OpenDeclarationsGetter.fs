@@ -49,19 +49,7 @@ module OpenDeclarationGetter =
              match e.Kind with
              | EntityKind.Module { IsAutoOpen = true } -> true
              | _ -> false)
-        |> List.map (fun e -> e.Idents)
-
-    let getModulesWithModuleSuffix entities =
-        entities 
-        |> List.choose (fun e -> 
-            match e.Kind with
-            | EntityKind.Module { HasModuleSuffix = true } ->
-                // remove Module suffix
-                let lastIdent = e.Idents.[e.Idents.Length - 1]
-                let result = Array.copy e.Idents
-                result.[result.Length - 1] <- lastIdent.Substring (0, lastIdent.Length - 6)
-                Some result
-            | _ -> None)
+        |> List.map (fun e -> e.CleanIdents)
 
     let parseTooltip (ToolTipText elems): RawOpenDeclaration list =
         elems
@@ -158,7 +146,6 @@ module OpenDeclarationGetter =
         | Some (ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _))), Some entities ->
             let autoOpenModules = getAutoOpenModules entities
             //debug "All AutoOpen modules: %A" autoOpenModules
-            let modulesWithModuleSuffix = getModulesWithModuleSuffix entities
 
             let rec walkModuleOrNamespace acc (decls, moduleRange) =
                 let openStatements =
@@ -229,20 +216,6 @@ module OpenDeclarationGetter =
                             *)
                             let finalOpenDecls = 
                                 identsAndAutoOpens
-                                |> List.map (fun openDecl ->
-                                    let idents =
-                                        openDecl.Declarations
-                                        |> List.map (fun idents ->
-                                            [ yield idents 
-                                              match modulesWithModuleSuffix |> List.tryFind (fun m -> idents |> Array.startsWith m) with
-                                              | Some m ->
-                                                  let index = (Array.length m) - 1
-                                                  let modifiedIdents = Array.copy idents
-                                                  modifiedIdents.[index] <- idents.[index] + "Module"
-                                                  yield modifiedIdents
-                                              | None -> ()])
-                                        |> List.concat
-                                    { openDecl with Declarations = idents })
                                 |> Seq.distinct
                                 |> Seq.toList
 

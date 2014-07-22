@@ -416,56 +416,55 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 allSymbolsUses
                 |> Array.map (fun symbolUse ->
                     let fullNames = lazy (
-                        let fullName =
-                            match symbolUse.Symbol with
-                            | MemberFunctionOrValue func when func.IsExtensionMember ->
-                                if func.IsProperty then
-                                    let range = symbolUse.RangeAlternate
-                                    let line = range.StartLine - 1
-                                    lexer.GetSymbolAtLocation (line, range.EndColumn) 
-                                    |> Option.bind (fun sym ->
-                                        let origLineStr = source.[line]
-                                        let adjustedLineStr = 
-                                            origLineStr.Insert (sym.LeftColumn, 
-                                                // we use IsGetterMethod instead of IsPropertyGetterMethod because the latter 
-                                                // returns False.
-                                                (if func.IsGetterMethod then "get" else "set") + "_")
-                                        source.[line] <- adjustedLineStr
-                                        let adjustedSym = { sym with RightColumn = sym.RightColumn + 4 }
-                                        let res = x.GetUsesOfSymbolAtLocationInFile (
-                                                        projectOptions, fileName, stringArrayToString source, adjustedSym, line,
-                                                        adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
-                                        source.[line] <- origLineStr
-                                        res)
-                                    |> Option.map (fun (symbol, _, _) ->  
-                                         debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
-                                         symbol.FullName)
-                                else 
-                                    match func.EnclosingEntity with
-                                    // C# extension method
-                                    | Entity Class ->
-                                        let fullName = symbolUse.Symbol.FullName.Split '.'
-                                        if fullName.Length > 2 then
-                                            (* For C# extension methods FCS returns full name including the class name, like:
-                                               Namespace.StaticClass.ExtensionMethod
-                                               So, in order to properly detect that "open Namespace" actually opens ExtensionMethod,
-                                               we remove "StaticClass" part. This makes C# extension methods looks identically 
-                                               with F# extension members.
-                                            *)
-                                            let fullNameWithoutClassName =
-                                                Array.append fullName.[0..fullName.Length - 3] fullName.[fullName.Length - 1..]
-                                            Some (String.Join (".", fullNameWithoutClassName))
-                                        else None
-                                    | _ -> None
-                            | _ -> None
-                            |> Option.getOrElse symbolUse.Symbol.FullName
-                        let isAttribute = 
-                            match symbolUse.Symbol with 
-                            | Entity (_, entity, _) when AssemblyContentProvider.isAttribute entity -> true
-                            | _ -> false 
-                        [| yield fullName.Split '.'
-                           if isAttribute then
-                               yield fullName.Substring(0, fullName.Length - 9).Split '.' |])
+                        match symbolUse.Symbol with
+                        | MemberFunctionOrValue func when func.IsExtensionMember ->
+                            if func.IsProperty then
+                                let range = symbolUse.RangeAlternate
+                                let line = range.StartLine - 1
+                                lexer.GetSymbolAtLocation (line, range.EndColumn) 
+                                |> Option.bind (fun sym ->
+                                    let origLineStr = source.[line]
+                                    let adjustedLineStr = 
+                                        origLineStr.Insert (sym.LeftColumn, 
+                                            // we use IsGetterMethod instead of IsPropertyGetterMethod because the latter 
+                                            // returns False.
+                                            (if func.IsGetterMethod then "get" else "set") + "_")
+                                    source.[line] <- adjustedLineStr
+                                    let adjustedSym = { sym with RightColumn = sym.RightColumn + 4 }
+                                    let res = x.GetUsesOfSymbolAtLocationInFile (
+                                                    projectOptions, fileName, stringArrayToString source, adjustedSym, line,
+                                                    adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
+                                    source.[line] <- origLineStr
+                                    res)
+                                |> Option.map (fun (symbol, _, _) ->  
+                                     debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
+                                     [|symbol.FullName|])
+                            else 
+                                match func.EnclosingEntity with
+                                // C# extension method
+                                | Entity Class ->
+                                    let fullName = symbolUse.Symbol.FullName.Split '.'
+                                    if fullName.Length > 2 then
+                                        (* For C# extension methods FCS returns full name including the class name, like:
+                                            Namespace.StaticClass.ExtensionMethod
+                                            So, in order to properly detect that "open Namespace" actually opens ExtensionMethod,
+                                            we remove "StaticClass" part. This makes C# extension methods looks identically 
+                                            with F# extension members.
+                                        *)
+                                        let fullNameWithoutClassName =
+                                            Array.append fullName.[0..fullName.Length - 3] fullName.[fullName.Length - 1..]
+                                        Some [|String.Join (".", fullNameWithoutClassName)|]
+                                    else None
+                                | _ -> None
+                        | Entity e ->
+                            match e with
+                            | e, TypedAstUtils.Attribute, _ ->
+                                Some [| e.FullName; e.FullName.Substring(0, e.FullName.Length - (String.length "Attribute")) |]
+                            | e, _, _ -> Option.attempt (fun _ -> [| e.FullName |])
+                        |  _ -> None
+                        |> Option.getOrElse [|symbolUse.Symbol.FullName|]
+                        |> Array.map (fun fullName -> fullName.Split '.'))
+                    
                     { SymbolUse = symbolUse
                       IsUsed = true
                       FullNames = fullNames })

@@ -96,6 +96,39 @@ let (|Entity|_|) (symbol: FSharpSymbol) =
         Some (entity, abbreviatedEntity, abbreviatedType)
     | _ -> None
 
+let private unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
+    
+type FSharpEntity with
+    member x.GetFullName() =
+        match x with
+        | AbbreviatedType (TypeWithDefinition def) -> def.GetFullName()
+        | x when x.IsArrayType || x.IsByRef -> None
+        | _ ->
+            Option.attempt (fun _ -> x.DisplayName)
+            |> Option.bind (fun displayName ->
+                if List.exists ((=) displayName) unrepresentedTypes then None
+                else try Some x.FullName with _ -> None)
+
+let (|Attribute|_|) (entity: FSharpEntity) =
+    let isAttribute (entity: FSharpEntity) =
+        let getBaseType (entity: FSharpEntity) =
+            try 
+                match entity.BaseType with
+                | Some (TypeWithDefinition def) -> Some def
+                | _ -> None
+            with _ -> None
+
+        let rec isAttributeType (ty: FSharpEntity option) =
+            match ty with
+            | None -> false
+            | Some ty ->
+                match ty.GetFullName() with
+                | None -> false
+                | Some fullName ->
+                    fullName = "System.Attribute" || isAttributeType (getBaseType ty)
+        isAttributeType (Some entity)
+    if isAttribute entity then Some() else None
+
 let (|ValueType|_|) (e: FSharpEntity) =
     if e.IsEnum || e.IsValueType || hasAttribute<MeasureAnnotatedAbbreviationAttribute> e.Attributes then Some()
     else None

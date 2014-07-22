@@ -204,7 +204,7 @@ module SourceCodeClassifier =
             None
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase,
-                                   openDeclarations: OpenDeclaration list) =
+                                   openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents> option) =
         let allSymbolsUses' =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
@@ -290,10 +290,36 @@ module SourceCodeClassifier =
 //        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
 //        |> Seq.iter (debug "%A")
 
+        let removeModuleSuffixes (symbolUses: SymbolUse[]) =
+            match allEntities with
+            | Some entities ->
+                symbolUses 
+                |> Array.map (fun symbolUse ->
+                    let fullNames =
+                        symbolUse.FullNames.Value
+                        |> Array.map (fun fullName ->
+                            match entities |> Map.tryFind (System.String.Join (".", fullName)) with
+                            | Some cleanIdents ->
+                                debug "[SourceCodeClassifier] Cleared FullName %A -> %A" fullName cleanIdents
+                                cleanIdents
+                            | None -> fullName)
+                    { symbolUse with FullNames = lazy fullNames })
+            | None -> symbolUses
+
+//        let printSymbolUses msg (symbolUses: SymbolUse[]) =
+//            debug "[SourceCodeClassifier] %s SymbolUses:" msg
+//            for sUse in symbolUses do
+//                let r = sUse.SymbolUse.RangeAlternate
+//                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames.Value r.StartLine r.StartColumn r.EndLine r.EndColumn
+//            symbolUses
+
         let symbolPrefixes: (Range.range * Idents) [] =
             allSymbolsUses'
             |> getSymbolUsesPotentiallyRequireOpenDecls
+            |> removeModuleSuffixes
+            //|> printSymbolUses "SymbolUsesPotentiallyRequireOpenDecls"
             |> filterNestedSymbolUses longIdentsByEndPos
+            //|> printSymbolUses "SymbolUses without nested"
             |> Array.map (fun symbolUse ->
                 let sUseRange = symbolUse.SymbolUse.RangeAlternate
                 symbolUse.FullNames.Value

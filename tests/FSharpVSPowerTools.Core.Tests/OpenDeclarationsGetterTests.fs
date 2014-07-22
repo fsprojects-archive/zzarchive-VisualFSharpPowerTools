@@ -248,3 +248,15 @@ open Nested
 """
     => [10, [Some "OpenDeclarationsGetterTests.Top2", ["OpenDeclarationsGetterTests.Top2.Nested"]
              Some "OpenDeclarationsGetterTests.Top1", ["OpenDeclarationsGetterTests.Top1.Nested"]]]
+
+[<Test>]
+let ``module with ModuleSuffix itself``() =
+    """
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module InternalModuleWithSuffix =
+    let x = 1
+module M =
+    open InternalModuleWithSuffix
+"""
+    => [ 6, [Some "OpenDeclarationsGetterTests", ["OpenDeclarationsGetterTests.InternalModuleWithSuffix"
+                                                  "OpenDeclarationsGetterTests.InternalModuleWithSuffixModule" ]]]
