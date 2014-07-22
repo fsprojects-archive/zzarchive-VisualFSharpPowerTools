@@ -1,17 +1,15 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
-open System.Collections.Generic
-open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Utilities
 open FSharpVSPowerTools.ProjectSystem
 
-type UnusedDeclarationTag() =
-    interface IGlyphTag
+type UnusedDeclarationTag(span: SnapshotSpan) =
+    interface ITag
+    member x.Range = span
 
 type UnusedDeclarationTagger(buffer: ITextBuffer, classifier: IClassifier) as self =     
     let unusedClassificationTag = "FSharp.Unused"
@@ -19,8 +17,6 @@ type UnusedDeclarationTagger(buffer: ITextBuffer, classifier: IClassifier) as se
 
     let update () =
         async {
-            // Wait for classification to finish
-            do! Async.Sleep(200)
             let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
             return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
         } 
@@ -34,7 +30,7 @@ type UnusedDeclarationTagger(buffer: ITextBuffer, classifier: IClassifier) as se
                 for span in spans do 
                     for classification in classifier.GetClassificationSpans(span) do
                         if classification.ClassificationType.Classification.Contains(unusedClassificationTag) then
-                            yield TagSpan<_>(span, UnusedDeclarationTag()) :> ITagSpan<_>
+                            yield TagSpan<_>(classification.Span, UnusedDeclarationTag(classification.Span)) :> ITagSpan<_>
             |] :> _
         
         [<CLIEvent>]

@@ -100,7 +100,7 @@
     <Compile Include="FindReferencesFilter.fs" />
     <Compile Include="ResolveUnopenedNamespaceTagger.fs" />
     <Compile Include="UnusedDeclarationTagger.fs" />
-    <Compile Include="UnusedDeclarationGlyphFactoryProvider.fs" />
+    <Compile Include="UnusedDeclarationMarginProvider.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

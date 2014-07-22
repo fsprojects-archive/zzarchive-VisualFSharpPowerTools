@@ -14,10 +14,10 @@ using Microsoft.VisualStudio.Text.Classification;
 
 namespace FSharpVSPowerTools
 {
-    [Export(typeof(IViewTaggerProvider))]
+    [Export(typeof(ITaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(UnusedDeclarationTag))]
-    public class UnusedDeclarationTaggerProvider : IViewTaggerProvider
+    public class UnusedDeclarationTaggerProvider : ITaggerProvider
     {
         [Import]
         internal IClassifierAggregatorService aggregatorService = null;
@@ -25,11 +25,8 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
 
-        public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
+        public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
-            // Only provide tagging on the top-level buffer
-            if (textView.TextBuffer != buffer) return null;
-
             var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
             if (!generalOptions.UnusedDeclarationsEnabled) return null;
 
