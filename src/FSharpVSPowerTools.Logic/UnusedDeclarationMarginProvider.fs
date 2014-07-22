@@ -13,26 +13,31 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 
 [<Name("UnusedDeclarationMargin")>]
-type UnusedDeclarationMargin(textView: IWpfTextView, tagAggregator: ITagAggregator<UnusedDeclarationTag>) as self =
+type UnusedDeclarationMargin(textView: IWpfTextView, tagAggregator: ITagAggregator<UnusedDeclarationTag>) =
     inherit Canvas()
+
+    let children = base.Children
 
     let updateDisplay () =
          if not textView.IsClosed then
-            self.Children.Clear()
+            children.Clear()
             let span = SnapshotSpan(textView.TextBuffer.CurrentSnapshot, 0, textView.TextBuffer.CurrentSnapshot.Length)
             tagAggregator.GetTags(span)
             |> Seq.map (fun span -> 
                 let pos = span.Tag.Range.Start.Position
                 textView.TextSnapshot.GetLineNumberFromPosition(pos))
             |> Seq.distinct
-            |> Seq.iter (fun line ->                
-                    let markerHeight = textView.LineHeight
+            |> Seq.iter (fun lineNo ->                
+                    let markerHeight = textView.LineHeight / 3.0
                     let markerWidth = 20.0
-                    let marker = Rectangle(Fill = Brushes.Yellow, StrokeThickness = 2.0, Stroke = Brushes.Yellow,
+                    let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 2.0, Stroke = Brushes.DarkOrange,
                                            Height = markerHeight, Width = markerWidth)
-                    Canvas.SetLeft(marker, 0.0)
-                    Canvas.SetTop(marker, float line * markerHeight)
-                    self.Children.Add(marker) |> ignore)
+                    Canvas.SetLeft(marker, -markerWidth)
+                    Canvas.SetTop(marker, float lineNo * textView.LineHeight)
+                    marker.MouseDown.Add(fun _ -> 
+                        let line = textView.TextSnapshot.GetLineFromLineNumber(lineNo)
+                        textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.AlwaysCenter))
+                    children.Add(marker) |> ignore)
 
     let docEventListener = new DocumentEventListener ([ViewChange.tagsChangedEvent tagAggregator], 200us, updateDisplay)
 
