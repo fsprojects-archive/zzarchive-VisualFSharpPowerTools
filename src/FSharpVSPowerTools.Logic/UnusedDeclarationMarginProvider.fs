@@ -12,7 +12,7 @@ open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 
-[<Name("UnusedDeclarationMargin")>]
+[<Name(Constants.unusedDeclarationMargin)>]
 type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextViewMargin,
                              tagAggregator: ITagAggregator<UnusedDeclarationTag>) =
     inherit Canvas()
@@ -37,6 +37,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
                     let markerWidth = verticalScrollBar.MarginSize
                     let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 2.0, Stroke = Brushes.DarkOrange,
                                            Height = markerHeight, Width = markerWidth)
+                    // Try to place the marker on top of vertical scroll bar
                     Canvas.SetLeft(marker, -markerWidth)
                     Canvas.SetTop(marker, float lineNo * lineHeight)
                     marker.MouseDown.Add(fun _ -> 
@@ -52,7 +53,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
         
         member x.GetTextViewMargin(marginName: string): ITextViewMargin = 
             match marginName with
-            | "UnusedDeclarationMargin" -> 
+            | Constants.unusedDeclarationMargin -> 
                 x :> _
              | _ -> 
                 null
@@ -67,7 +68,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
             (docEventListener :> IDisposable).Dispose()
 
 [<Export(typeof<IWpfTextViewMarginProvider>)>]
-[<Name("UnusedDeclarationMargin")>]
+[<Name(Constants.unusedDeclarationMargin)>]
 [<ContentType("F#")>]
 [<Order(After = PredefinedMarginNames.VerticalScrollBar)>]
 [<MarginContainer(PredefinedMarginNames.VerticalScrollBarContainer)>]

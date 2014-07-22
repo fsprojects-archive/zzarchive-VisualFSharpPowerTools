@@ -8,14 +8,8 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-
 open FSharp.ViewModule.Progress
 
-[<RequireQualifiedAccess>]
-module PkgCmdConst =
-    let cmdidFindReferences = uint32 VSConstants.VSStd97CmdID.FindReferences
-    let guidBuiltinCmdSet = VSConstants.GUID_VSStandardCommandSet97
-    let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
 
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory) =
@@ -93,7 +87,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         grfOptions = uint32 _VSOBSEARCHOPTIONS2.VSOBSO_LISTREFERENCES,
                         szName = symbol.Text)
 
-                let guid = ref PkgCmdConst.guidSymbolLibrary
+                let guid = ref Constants.guidSymbolLibrary
                 ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
             | _ -> 
                 status.Report(OperationState.Idle)
@@ -106,13 +100,13 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
-            if (pguidCmdGroup = PkgCmdConst.guidBuiltinCmdSet && nCmdId = PkgCmdConst.cmdidFindReferences) then
+            if (pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidFindReferences) then
                 findReferences()
             x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
-            if pguidCmdGroup = PkgCmdConst.guidBuiltinCmdSet && 
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdidFindReferences) then
+            if pguidCmdGroup = Constants.guidOldStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdidFindReferences) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else

@@ -16,24 +16,6 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Reflection
 
-[<RequireQualifiedAccess>]
-module PkgCmdConst = 
-    let guidNewFolderCmdSet = Guid "{9EDC1279-C317-43A6-B554-3A4D7853D55E}"
-    let cmdNewFolder = 0x1071
-    let cmdRenameFolder = 0x1072
-
-    let guidMoveCmdSet = Guid "{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}"
-    let cmdMoveFolderUp = 0x1073
-    let cmdMoveFolderDown = 0x1074
-    let cmdMoveToFolder = 0x1075
-
-    let guidSolutionExplorerCmdSet = Guid("{1D4A7B65-A22C-4405-837B-4214C0BED3C5}")
-    let fsPowerToolsSubMenuGroup = 0x1061u
-
-    let guidStandardCmdSet = VSConstants.GUID_VSStandardCommandSet97
-    let cmdStandardNewFolder = uint32 VSConstants.VSStd97CmdID.NewFolder
-    let cmdStandardRenameFolder = uint32 VSConstants.VSStd97CmdID.Rename
-
 type VerticalMoveAction = 
     | MoveUp
     | MoveDown
@@ -407,24 +389,24 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             (fun s e -> (s :?> OleMenuCommand).Enabled <- (isCommandEnabled (getActionInfo()) action))
         mcs.AddCommand(menuCommand)
     
-    let setupNewFolderCommand = setupCommand PkgCmdConst.guidNewFolderCmdSet
-    let setupMoveCommand = setupCommand PkgCmdConst.guidMoveCmdSet
+    let setupNewFolderCommand = setupCommand Constants.guidNewFolderCmdSet
+    let setupMoveCommand = setupCommand Constants.guidMoveCmdSet
 
     member x.SetupCommands() = 
-        setupNewFolderCommand PkgCmdConst.cmdNewFolder (NameAction NameAction.New)
-        setupNewFolderCommand PkgCmdConst.cmdRenameFolder (NameAction NameAction.Rename)
-        setupMoveCommand PkgCmdConst.cmdMoveFolderUp (VerticalMoveAction VerticalMoveAction.MoveUp)
-        setupMoveCommand PkgCmdConst.cmdMoveFolderDown (VerticalMoveAction VerticalMoveAction.MoveDown)
-        setupMoveCommand PkgCmdConst.cmdMoveToFolder Action.MoveToFolder
+        setupNewFolderCommand Constants.cmdNewFolder (NameAction NameAction.New)
+        setupNewFolderCommand Constants.cmdRenameFolder (NameAction NameAction.Rename)
+        setupMoveCommand Constants.cmdMoveFolderUp (VerticalMoveAction VerticalMoveAction.MoveUp)
+        setupMoveCommand Constants.cmdMoveFolderDown (VerticalMoveAction VerticalMoveAction.MoveDown)
+        setupMoveCommand Constants.cmdMoveToFolder Action.MoveToFolder
 
     interface IOleCommandTarget with
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
-            if pguidCmdGroup = PkgCmdConst.guidSolutionExplorerCmdSet &&
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.fsPowerToolsSubMenuGroup) then
+            if pguidCmdGroup = Constants.guidSolutionExplorerCmdSet &&
+                prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.fsPowerToolsSubMenuGroup) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
-            elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardNewFolder) then
+            elif pguidCmdGroup = Constants.guidOldStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdStandardNewFolder) then
                 match getActionInfo() with
                 | Some info ->
                     if isFSharpProject info.Project then
@@ -434,8 +416,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                         int Constants.OLECMDERR_E_UNKNOWNGROUP
                 | None ->
                     int Constants.OLECMDERR_E_UNKNOWNGROUP
-            elif pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdStandardRenameFolder) then
+            elif pguidCmdGroup = Constants.guidOldStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdStandardRenameFolder) then
                 match getActionInfo() with
                 | Some info ->
                     if isFSharpProject info.Project && List.exists isPhysicalFolder info.Items then

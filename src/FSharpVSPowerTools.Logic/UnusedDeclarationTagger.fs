@@ -12,7 +12,6 @@ type UnusedDeclarationTag(span: SnapshotSpan) =
     member x.Range = span
 
 type UnusedDeclarationTagger(buffer: ITextBuffer, classifier: IClassifier) as self =     
-    let unusedClassificationTag = "FSharp.Unused"
     let tagsChanged = Event<_,_>()
 
     let update () =
@@ -26,7 +25,7 @@ type UnusedDeclarationTagger(buffer: ITextBuffer, classifier: IClassifier) as se
             [|
                 for span in spans do 
                     for classification in classifier.GetClassificationSpans(span) do
-                        if classification.ClassificationType.Classification.Contains(unusedClassificationTag) then
+                        if classification.ClassificationType.Classification.Contains(Constants.fsharpUnused) then
                             yield TagSpan<_>(classification.Span, UnusedDeclarationTag(classification.Span)) :> ITagSpan<_>
             |] :> _
         

@@ -47,8 +47,8 @@ namespace FSharpVSPowerTools.Tests.MenuItemTests
             // Assert.AreEqual(0, package.SetSite(serviceProvider), "SetSite did not return S_OK");
 
             // Verify that the menu command can be found
-            var menuCommandID = new CommandID(FSharpVSPowerTools.Folders.PkgCmdConst.guidNewFolderCmdSet,
-                                              (int)FSharpVSPowerTools.Folders.PkgCmdConst.cmdNewFolder);
+            var menuCommandID = new CommandID(FSharpVSPowerTools.Constants.guidNewFolderCmdSet,
+                                              (int)FSharpVSPowerTools.Constants.cmdNewFolder);
             var info = typeof(Package).GetMethod("GetService", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(info);
             var mcs = info.Invoke(package, new object[] { (typeof(IMenuCommandService)) }) as OleMenuCommandService;

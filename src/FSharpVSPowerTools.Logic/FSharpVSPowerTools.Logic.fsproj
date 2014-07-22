@@ -59,6 +59,7 @@
     <None Include="packages.config" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Resource.fs" />
+    <Compile Include="Constants.fs" />
     <Compile Include="Logger.fs" />
     <Compile Include="VSUtils.fs" />
     <Compile Include="VisualStudioVersion.fs" />

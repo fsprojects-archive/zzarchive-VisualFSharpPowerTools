@@ -21,14 +21,14 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     
     let getClassificationType cat =
         match cat with
-        | Category.ReferenceType -> Some "FSharp.ReferenceType"
-        | Category.ValueType -> Some "FSharp.ValueType"
-        | Category.PatternCase -> Some "FSharp.PatternCase"
-        | Category.Function -> Some "FSharp.Function"
-        | Category.MutableVar -> Some "FSharp.MutableVar"
-        | Category.Quotation -> Some "FSharp.Quotation"
-        | Category.Module -> Some "FSharp.Module"
-        | Category.Unused -> Some "FSharp.Unused"
+        | Category.ReferenceType -> Some Constants.fsharpReferenceType
+        | Category.ValueType -> Some Constants.fsharpValueType
+        | Category.PatternCase -> Some Constants.fsharpPatternCase
+        | Category.Function -> Some Constants.fsharpFunction
+        | Category.MutableVar -> Some Constants.fsharpMutableVar
+        | Category.Quotation -> Some Constants.fsharpQuotation
+        | Category.Module -> Some Constants.fsharpModule
+        | Category.Unused -> Some Constants.fsharpUnused
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 

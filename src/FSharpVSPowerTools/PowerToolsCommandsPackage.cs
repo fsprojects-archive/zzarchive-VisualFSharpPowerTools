@@ -56,7 +56,7 @@ namespace FSharpVSPowerTools
                 RegisterPriorityCommandTarget();
             }
 
-            library = new FSharpLibrary(Navigation.PkgCmdConst.guidSymbolLibrary);
+            library = new FSharpLibrary(Constants.guidSymbolLibrary);
             library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
 
             RegisterLibrary();
