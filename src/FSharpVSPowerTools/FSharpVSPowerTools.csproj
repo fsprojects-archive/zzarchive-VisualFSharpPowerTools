@@ -154,7 +154,6 @@
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </Compile>
     <Compile Include="UnusedDeclarationMarginProvider.cs" />
-    <Compile Include="UnusedDeclarationTaggerProvider.cs" />
     <Compile Include="ImplementInterfaceSmartTaggerProvider.cs" />
     <Compile Include="HighlightUsageTaggerProvider.cs" />
     <Compile Include="PowerToolsCommandsPackage.cs" />

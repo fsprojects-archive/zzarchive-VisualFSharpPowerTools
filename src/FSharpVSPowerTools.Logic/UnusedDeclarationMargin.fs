@@ -11,32 +11,40 @@ open FSharpVSPowerTools.ProjectSystem
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
+open Microsoft.VisualStudio.Text.Classification
 
 [<Name(Constants.fsharpUnusedDeclarationMargin)>]
 type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextViewMargin,
-                             tagAggregator: ITagAggregator<UnusedDeclarationTag>) =
+                             classifier: IClassifier) =
     inherit Canvas()
 
     let children = base.Children
     let verticalScrollBar = marginContainer.GetTextViewMargin(PredefinedMarginNames.VerticalScrollBar)
+    let mutable markerData = Unchecked.defaultof<_>
 
     let updateDisplay () =
-         if not textView.IsClosed then
-            children.Clear()
-            let totalLines = textView.TextSnapshot.LineCount
-            let virtualAdditionalLines = int (textView.ViewportHeight / textView.LineHeight) - 1
-            let lineHeight = textView.ViewportHeight / float (totalLines + virtualAdditionalLines)
+        if not textView.IsClosed then
             let span = SnapshotSpan(textView.TextBuffer.CurrentSnapshot, 0, textView.TextBuffer.CurrentSnapshot.Length)
-            tagAggregator.GetTags(span)
-            |> Seq.map (fun span -> 
-                let pos = span.Tag.Range.Start.Position
-                textView.TextSnapshot.GetLineNumberFromPosition(pos), pos)
-            |> Seq.distinctBy fst
-            |> Seq.iter (fun (lineNo, pos) ->                
+            let data =
+                classifier.GetClassificationSpans(span)
+                |> Seq.choose (fun classification -> 
+                    if classification.ClassificationType.Classification.Contains(Constants.fsharpUnused) then
+                        let pos = classification.Span.Start.Position
+                        Some (textView.TextSnapshot.GetLineNumberFromPosition(pos), pos)
+                    else None)
+                |> Seq.distinctBy fst
+                |> Seq.toArray
+            if markerData <> data then
+                markerData <- data
+                children.Clear()
+                let totalLines = textView.TextSnapshot.LineCount
+                let virtualAdditionalLines = int (textView.ViewportHeight / textView.LineHeight) - 1
+                let lineHeight = textView.ViewportHeight / float (totalLines + virtualAdditionalLines)
+                for (lineNo, pos) in markerData do               
                     let markerHeight = max 4.0 (lineHeight / 2.0)
                     let markerWidth = verticalScrollBar.MarginSize
                     let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 2.0, Stroke = Brushes.DarkOrange,
-                                           Height = markerHeight, Width = markerWidth)
+                                            Height = markerHeight, Width = markerWidth)
                     // Try to place the marker on top of vertical scroll bar
                     Canvas.SetLeft(marker, -markerWidth)
                     Canvas.SetTop(marker, float lineNo * lineHeight)
@@ -44,9 +52,9 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
                         let line = textView.TextSnapshot.GetLineFromLineNumber(lineNo)
                         textView.Caret.MoveTo(VirtualSnapshotPoint(textView.TextSnapshot, pos)) |> ignore
                         textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.ShowStart))
-                    children.Add(marker) |> ignore)
+                    children.Add(marker) |> ignore
 
-    let docEventListener = new DocumentEventListener ([ViewChange.tagsChangedEvent tagAggregator], 200us, updateDisplay)
+    let docEventListener = new DocumentEventListener ([ViewChange.classificationChangedEvent classifier], 200us, updateDisplay)
 
     interface IWpfTextViewMargin with
         member x.Enabled = 

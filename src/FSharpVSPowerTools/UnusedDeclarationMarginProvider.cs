@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
@@ -20,7 +21,7 @@ namespace FSharpVSPowerTools
     public class UnusedDeclarationMarginProvider : IWpfTextViewMarginProvider
     {
         [Import]
-        internal IViewTagAggregatorFactoryService tagAggregatorFactoryService = null;
+        internal IClassifierAggregatorService classifierAggregatorService = null;
 
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
@@ -32,7 +33,7 @@ namespace FSharpVSPowerTools
 
  	        var textView = wpfTextViewHost.TextView;
             return new UnusedDeclarationMargin(textView, marginContainer,
-                           tagAggregatorFactoryService.CreateTagAggregator<UnusedDeclarationTag>(textView));
+                           classifierAggregatorService.GetClassifier(textView.TextBuffer));
         }
     }
 }

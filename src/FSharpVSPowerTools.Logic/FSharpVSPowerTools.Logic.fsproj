@@ -100,7 +100,6 @@
     <Compile Include="Library.fs" />
     <Compile Include="FindReferencesFilter.fs" />
     <Compile Include="ResolveUnopenedNamespaceTagger.fs" />
-    <Compile Include="UnusedDeclarationTagger.fs" />
     <Compile Include="UnusedDeclarationMargin.fs" />
   </ItemGroup>
   <ItemGroup>
