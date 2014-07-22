@@ -14,17 +14,19 @@ type UnusedDeclarationGlyphFactory() =
     interface IGlyphFactory with
         member x.GenerateGlyph(line: IWpfTextViewLine, tag: IGlyphTag): UIElement = 
             match tag with
-            | null | _ when not (tag :? UnusedDeclarationTag)  -> null
+            | null | _ when not (tag :? UnusedDeclarationTag) -> null
             | _ -> 
-                let height = if line = null then glyphSize else min glyphSize line.TextHeight
+                let height = if line = null then glyphSize else max glyphSize (line.TextHeight + 1.0)
                 let width = glyphSize
-                Rectangle(Fill = Brushes.Green, StrokeThickness = 1.0, Stroke = Brushes.Red,
+                Rectangle(Fill = Brushes.Yellow, StrokeThickness = 2.0, Stroke = Brushes.Yellow,
                           Height = height, Width = width) :> _
 
 [<Export(typeof<IGlyphFactoryProvider>)>]
 [<Name("UnusedDeclarationGlyph")>]
-[<Order(After = "VsTextMarker")>]
 [<ContentType("F#")>]
+[<Order(After = PredefinedMarginNames.VerticalScrollBar)>]
+[<MarginContainer(PredefinedMarginNames.VerticalScrollBarContainer)>]
+[<TextViewRole(PredefinedTextViewRoles.Document)>]
 [<TagType(typeof<UnusedDeclarationTag>)>]
 type UnusedDeclarationFactoryProvider() =
     interface IGlyphFactoryProvider with
