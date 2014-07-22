@@ -258,5 +258,4 @@ module InternalModuleWithSuffix =
 module M =
     open InternalModuleWithSuffix
 """
-    => [ 6, [Some "OpenDeclarationsGetterTests", ["OpenDeclarationsGetterTests.InternalModuleWithSuffix"
-                                                  "OpenDeclarationsGetterTests.InternalModuleWithSuffixModule" ]]]
+    => [ 6, [Some "OpenDeclarationsGetterTests", ["OpenDeclarationsGetterTests.InternalModuleWithSuffix"]]]
