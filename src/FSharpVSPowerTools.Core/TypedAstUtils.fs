@@ -148,7 +148,7 @@ let (|Parameter|_|) (symbol: FSharpSymbol) =
 
 let (|UnionCase|_|) (e: FSharpSymbol) = 
     match e with
-    | :? FSharpUnionCase -> Some()
+    | :? FSharpUnionCase as uc -> Some uc
     | _ -> None
 
 let (|Interface|_|) (e: FSharpEntity) = if e.IsInterface then Some() else None

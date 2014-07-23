@@ -461,6 +461,15 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             | e, TypedAstUtils.Attribute, _ ->
                                 Some [| e.FullName; e.FullName.Substring(0, e.FullName.Length - (String.length "Attribute")) |]
                             | e, _, _ -> Option.attempt (fun _ -> [| e.FullName |])
+                        | UnionCase uc ->
+                            Some [| let fullName = uc.FullName
+                                    yield fullName
+                                    let idents = fullName.Split '.'
+                                    // Union cases can be accessible without mention the DU type. 
+                                    // So, we add a FullName with the DU type part removed.
+                                    if idents.Length > 1 then
+                                        yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
+                                 |]   
                         |  _ -> None
                         |> Option.getOrElse [|symbolUse.Symbol.FullName|]
                         |> Array.map (fun fullName -> fullName.Split '.'))
@@ -475,7 +484,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
                     |> Seq.choose (fun (symbol, uses) ->
                         match symbol with
-                        | UnionCase when isSymbolLocalForProject symbol -> Some symbol
+                        | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
                         // Determining that a record, DU or module is used anywhere requires
                         // inspecting all their inclosed entities (fields, cases and func / vals)
                         // for useness, which is too expensive to do. Hence we never gray them out.

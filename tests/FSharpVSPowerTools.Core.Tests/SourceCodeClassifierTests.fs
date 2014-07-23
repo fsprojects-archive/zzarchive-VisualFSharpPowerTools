@@ -1206,3 +1206,24 @@ module M =
     let _ = InternalModuleWithSuffix.func1()
 """
     => [ 5, [Category.Unused, 9, 33 ]]
+
+[<Test>]
+let ``usage of an unqualified union case makes opening module in which it's defined not maked as unused``() =
+    """
+module M =
+    type DU = Case1
+open M
+let _ = Case1
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``usage of qualified union case makes opening module in which it's defined not maked as unused``() =
+    """
+module M =
+    type DU = Case1
+open M
+let _ = DU.Case1
+"""
+    => [ 4, []]
+
