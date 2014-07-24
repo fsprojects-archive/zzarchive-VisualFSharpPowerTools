@@ -173,10 +173,10 @@ type VSLanguageService
 
             let! opts = project.GetProjectCheckerOptions instance
             
-            let getSymbolDeclProjects sym =
+            let getSymbolDeclProjects symbol =
                 async {
                     let projects =
-                        match getSymbolDeclLocation sym with
+                        match getSymbolDeclLocation symbol with
                         | Some SymbolDeclarationLocation.File -> Some [project]
                         | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
                         | None -> None

@@ -124,7 +124,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                             symbol, lastIdent,
                                 refs 
                                 |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                |> Seq.groupBy (fst >> Path.GetFullPath)
+                                |> Seq.groupBy (fst >> Path.GetFullPathSafe)
                                 |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
                                 |> Seq.toList)
                     match usages with

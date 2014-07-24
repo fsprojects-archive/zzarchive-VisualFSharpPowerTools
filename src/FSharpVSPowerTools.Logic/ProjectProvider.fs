@@ -333,7 +333,7 @@ type ProjectFactory
         else 
             match symbol.TryGetLocation() with
             | Some loc ->
-                let filePath = Path.GetFullPath loc.FileName
+                let filePath = Path.GetFullPathSafe loc.FileName
                 if currentProject.IsForStandaloneScript && filePath = currentFile then 
                     Some SymbolDeclarationLocation.File
                 elif currentProject.IsForStandaloneScript then

@@ -66,7 +66,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let references = 
                     references
                     |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
-                    |> Seq.groupBy (fst >> Path.GetFullPath)
+                    |> Seq.groupBy (fst >> Path.GetFullPathSafe)
                     |> Seq.map (fun (_, symbolUses) -> 
                         // Sort symbols by positions
                         symbolUses 
