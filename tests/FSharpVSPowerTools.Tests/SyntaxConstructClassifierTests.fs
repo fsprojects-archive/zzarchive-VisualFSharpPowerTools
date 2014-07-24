@@ -5,8 +5,8 @@ open System
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.TestTools.UnitTesting
 open System.Threading
+open NUnit.Framework
 
 type SyntaxConstructClassifierHelper(buffer: ITextBuffer, fileName: string) =    
     inherit VsTestBase(VirtualProjectProvider(buffer, fileName))
@@ -29,15 +29,14 @@ type SyntaxConstructClassifierHelper(buffer: ITextBuffer, fileName: string) =
         member x.Dispose() = 
             classifierProvider.Dispose()
 
-[<TestClass>]
-type SyntaxConstructClassifierTests() =
-    [<ClassInitialize>]
-    static member Deploy(context: TestContext) =
+[<TestFixture>]
+module SyntaxConstructClassifierTests =
+    [<SetUp>]
+    let deploy() =
         AssertListener.Initialize()
-        //TestData.Deploy("", includeTestData = false)
 
-    [<TestMethod; Priority(0)>]
-    member x.``should be able to get classifier spans``() = 
+    [<Test>]
+    let ``should be able to get classifier spans``() = 
         let fileName = @"C:\Tests.fs"
         let content = "type T() = class end"
         let buffer = createMockTextBuffer content fileName
