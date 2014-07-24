@@ -113,7 +113,7 @@
     <Compile Include="AssemblyInfoCommon.cs" />
     <Compile Include="AssertListener.cs" />
     <Compile Include="AssertUtil.cs" />
-    <Compile Include="AzureUtility.cs" />
+    <None Include="AzureUtility.cs" />
     <Compile Include="Classification.cs" />
     <Compile Include="CommonUtils.cs" />
     <Compile Include="GlobalSuppressions.cs" />

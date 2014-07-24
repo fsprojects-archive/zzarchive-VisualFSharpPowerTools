@@ -5,6 +5,7 @@ open EnvDTE
 open EnvDTE80
 open System.Collections
 open FSharpVSPowerTools.ProjectSystem
+open FSharpVSPowerTools
 
 /// Create a simple mock DTE for an F# project
 type MockDTE(project: IProjectProvider) =
@@ -109,7 +110,8 @@ type MockDTE(project: IProjectProvider) =
             and set (v: bool): unit = 
                 notimpl        
         member x.Version: string = 
-            notimpl        
+            "12.0"
+                    
         member x.WindowConfigurations: WindowConfigurations = 
             notimpl        
         member x.Windows: Windows = 
@@ -188,7 +190,7 @@ and MockSolution(project: IProjectProvider, dte: DTE) =
             notimpl        
         member x.FindProjectItem(fileName: string): ProjectItem = 
             if Array.exists ((=) fileName) project.SourceFiles then
-                MockProjectItem(fileName, dte) :> ProjectItem
+                MockProjectItem(fileName, project, dte) :> ProjectItem
             else null
 
         member x.FullName: string = 
@@ -231,7 +233,85 @@ and MockSolution(project: IProjectProvider, dte: DTE) =
             with get (projectType: string): string = 
                 notimpl
 
-and MockProjectItem(fileName: string, dte: DTE) =
+and MockProject(project: IProjectProvider, dte: DTE) = 
+    interface Project with
+        member x.CodeModel: CodeModel = 
+            notimpl
+        
+        member x.Collection: Projects = 
+            notimpl
+        
+        member x.ConfigurationManager: ConfigurationManager = 
+            notimpl
+        
+        member x.DTE: DTE = 
+            notimpl
+        
+        member x.Delete(): unit = 
+            notimpl
+        
+        member x.Extender
+            with get (extenderName: string): obj = 
+                notimpl
+        
+        member x.ExtenderCATID: string = 
+            notimpl
+        
+        member x.ExtenderNames: obj = 
+            notimpl
+        
+        member x.FileName: string = 
+            notimpl
+        
+        member x.FullName: string = 
+            notimpl
+        
+        member x.Globals: Globals = 
+            notimpl
+        
+        member x.IsDirty
+            with get (): bool = 
+                notimpl
+            and set (v: bool): unit = 
+                notimpl
+        
+        member x.Kind: string = 
+            FSharpProjectKind
+        
+        member x.Name
+            with get (): string = 
+                notimpl
+            and set (v: string): unit = 
+                notimpl
+        
+        member x.Object: obj = 
+            notimpl
+        
+        member x.ParentProjectItem: ProjectItem = 
+            notimpl
+        
+        member x.ProjectItems: ProjectItems = 
+            notimpl
+        
+        member x.Properties: Properties = 
+            notimpl
+        
+        member x.Save(fileName: string): unit = 
+            debug "[MockProject] Suppose to save file into disk but do nothing here"
+        
+        member x.SaveAs(newFileName: string): unit = 
+            notimpl
+        
+        member x.Saved
+            with get (): bool = 
+                notimpl
+            and set (v: bool): unit = 
+                notimpl
+        
+        member x.UniqueName: string = 
+            project.ProjectFileName       
+
+and MockProjectItem(fileName: string, project: IProjectProvider, dte: DTE) =
     interface ProjectItem with
         member x.Collection: ProjectItems = 
             notimpl
@@ -240,7 +320,8 @@ and MockProjectItem(fileName: string, dte: DTE) =
             notimpl
         
         member x.ContainingProject: Project = 
-            notimpl
+            if project.IsForStandaloneScript then null
+            else MockProject(project, dte) :> Project
         
         member x.DTE: DTE = 
             notimpl

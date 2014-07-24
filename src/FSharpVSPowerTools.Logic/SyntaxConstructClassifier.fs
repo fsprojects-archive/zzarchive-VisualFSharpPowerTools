@@ -63,53 +63,51 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 debug "[SyntaxConstructClassifier] - Effective update"
                 let worker = 
                     async {
-                        try
-                            let getSymbolDeclLocation fsSymbol =
-                                projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
+                        let getSymbolDeclLocation fsSymbol =
+                            projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
 
-                            let! symbolsUses, lexer =
-                                vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
-                                                                                includeUnusedDeclarations, getSymbolDeclLocation)
+                        let! symbolsUses, lexer =
+                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
+                                                                            includeUnusedDeclarations, getSymbolDeclLocation)
 
-                            let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
-                            let! entities = vsLanguageService.GetAllEntities(doc.FilePath, snapshot.GetText(), project)
+                        let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
+                        let! entities = vsLanguageService.GetAllEntities(doc.FilePath, snapshot.GetText(), project)
                             
-                            let entitiesMap, openDeclarations = 
-                                if includeUnusedDeclarations then
-                                    let qualifyOpenDeclarations line endCol idents = 
-                                        let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
-                                        let tooltip =
-                                            vsLanguageService.GetOpenDeclarationTooltip(
-                                                            line, endCol, lineStr, Array.toList idents, project, doc.FilePath, snapshot.GetText())
-                                            |> Async.RunSynchronously
-                                        match tooltip with
-                                        | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                                        | None -> []
+                        let entitiesMap, openDeclarations = 
+                            if includeUnusedDeclarations then
+                                let qualifyOpenDeclarations line endCol idents = 
+                                    let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
+                                    let tooltip =
+                                        vsLanguageService.GetOpenDeclarationTooltip(
+                                                        line, endCol, lineStr, Array.toList idents, project, doc.FilePath, snapshot.GetText())
+                                        |> Async.RunSynchronously
+                                    match tooltip with
+                                    | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                                    | None -> []
 
+                                entities 
+                                |> Option.map (fun entities -> 
                                     entities 
-                                    |> Option.map (fun entities -> 
-                                        entities 
-                                        |> List.map (fun e -> e.FullName, e.CleanIdents)
-                                        |> Map.ofList),
-                                    OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
-                                else None, []
+                                    |> List.map (fun e -> e.FullName, e.CleanIdents)
+                                    |> Map.ofList),
+                                OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
+                            else None, []
 
-                            let spans = 
-                                getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, entitiesMap)
-                                |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                        let spans = 
+                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, entitiesMap)
+                            |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
-                            state.Swap (fun _ -> 
-                                Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
-                                       Spans = spans }) |> ignore
+                        state.Swap (fun _ -> 
+                            Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length);
+                                   Spans = spans }) |> ignore
 
-                            // TextBuffer is null if a solution is closed at this moment
-                            if doc.TextBuffer <> null then
-                                let currentSnapshot = doc.TextBuffer.CurrentSnapshot
-                                let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-                                classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-                        with e -> Logging.logException e
+                        // TextBuffer is null if a solution is closed at this moment
+                        if doc.TextBuffer <> null then
+                            let currentSnapshot = doc.TextBuffer.CurrentSnapshot
+                            let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+                            classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
                     } 
-                Async.Start (worker, cancelToken.Token) 
+                Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
             | None -> ()
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -139,7 +137,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
             let spans =
                 state.Spans
-                // locations are sorted, so we can safely filter them efficently
+                // locations are sorted, so we can safely filter them efficiently
                 |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
                 |> Seq.choose (fun loc -> 
                     maybe {

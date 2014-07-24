@@ -8,6 +8,9 @@ open Microsoft.VisualStudio.Text.Classification
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.VisualStudio.Editor
+open Microsoft.VisualStudio.OLE.Interop
+open Microsoft.VisualStudio.TextManager.Interop
 
 let createSingleFileProject(fileName: string) =
     {
@@ -86,4 +89,37 @@ let createClassificationTypeRegistryService() =
 
             member x.GetClassificationType(``type``: string): IClassificationType = 
                 createClassificationType ``type``
+    }
+
+let createVsEditorAdaptersFactoryService() =
+    {
+        new IVsEditorAdaptersFactoryService with
+            member x.CreateVsCodeWindowAdapter(serviceProvider: IServiceProvider): IVsCodeWindow = 
+                notimpl
+            member x.CreateVsTextBufferAdapter(serviceProvider: IServiceProvider): IVsTextBuffer = 
+                notimpl
+            member x.CreateVsTextBufferAdapter(serviceProvider: IServiceProvider, contentType: IContentType): IVsTextBuffer = 
+                notimpl
+            member x.CreateVsTextBufferAdapterForSecondaryBuffer(serviceProvider: IServiceProvider, secondaryBuffer: ITextBuffer): IVsTextBuffer = 
+                notimpl
+            member x.CreateVsTextBufferCoordinatorAdapter(): IVsTextBufferCoordinator = 
+                notimpl
+            member x.CreateVsTextViewAdapter(serviceProvider: IServiceProvider): IVsTextView = 
+                notimpl
+            member x.CreateVsTextViewAdapter(serviceProvider: IServiceProvider, roles: Editor.ITextViewRoleSet): IVsTextView = 
+                notimpl
+            member x.GetBufferAdapter(textBuffer: ITextBuffer): IVsTextBuffer = 
+                notimpl
+            member x.GetDataBuffer(bufferAdapter: IVsTextBuffer): ITextBuffer = 
+                notimpl
+            member x.GetDocumentBuffer(bufferAdapter: IVsTextBuffer): ITextBuffer = 
+                notimpl
+            member x.GetViewAdapter(textView: Editor.ITextView): IVsTextView = 
+                notimpl
+            member x.GetWpfTextView(viewAdapter: IVsTextView): Editor.IWpfTextView = 
+                notimpl
+            member x.GetWpfTextViewHost(viewAdapter: IVsTextView): Editor.IWpfTextViewHost = 
+                notimpl
+            member x.SetDataBuffer(bufferAdapter: IVsTextBuffer, dataBuffer: ITextBuffer): unit = 
+                notimpl
     }

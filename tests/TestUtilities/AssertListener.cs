@@ -32,7 +32,7 @@ namespace TestUtilities {
         }
 
         public override void Fail(string message) {
-            Fail(message, null);
+            //Fail(message, null);
         }
 
         public override void Fail(string message, string detailMessage) {
