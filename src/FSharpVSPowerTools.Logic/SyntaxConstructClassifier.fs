@@ -122,7 +122,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
     do events.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler
     
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
