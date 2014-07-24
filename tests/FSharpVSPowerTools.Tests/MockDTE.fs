@@ -3,214 +3,326 @@
 open System
 open EnvDTE
 open EnvDTE80
+open System.Collections
+open FSharpVSPowerTools.ProjectSystem
 
-type MockDTE() =
+/// Create a simple mock DTE for an F# project
+type MockDTE(project: IProjectProvider) =
     interface DTE with
         member x.ActiveDocument: Document = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.ActiveSolutionProjects: obj = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.ActiveWindow: Window = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.AddIns: AddIns = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Application: DTE = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.CommandBars: obj = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.CommandLineArguments: string = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Commands: Commands = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.ContextAttributes: ContextAttributes = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.DTE: DTE = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Debugger: Debugger = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.DisplayMode
             with get (): vsDisplay = 
-                failwith "Not implemented yet"
+                notimpl
             and set (v: vsDisplay): unit = 
-                failwith "Not implemented yet"
-        
+                notimpl
         member x.Documents: Documents = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Edition: string = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Events: Events = 
             MockEvents() :> Events
         
         member x.ExecuteCommand(commandName: string, commandArgs: string): unit = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.FileName: string = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Find: Find = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.FullName: string = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.GetObject(name: string): obj = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Globals: Globals = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.IsOpenFile
             with get (viewKind: string, fileName: string): bool = 
-                failwith "Not implemented yet"
-        
+                notimpl
         member x.ItemOperations: ItemOperations = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.LaunchWizard(vSZFile: string, contextParams: byref<obj []>): wizardResult = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.LocaleID: int = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Macros: Macros = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.MacrosIDE: DTE = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.MainWindow: Window = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Mode: vsIDEMode = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Name: string = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.ObjectExtenders: ObjectExtenders = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.OpenFile(viewKind: string, fileName: string): Window = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Properties
             with get (category: string, page: string): Properties = 
-                failwith "Not implemented yet"
-        
+                notimpl
         member x.Quit(): unit = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.RegistryRoot: string = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.SatelliteDllPath(path: string, name: string): string = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.SelectedItems: SelectedItems = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.Solution: Solution = 
-            failwith "Not implemented yet"
+            MockSolution(project, x) :> Solution
         
         member x.SourceControl: SourceControl = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.StatusBar: StatusBar = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.SuppressUI
             with get (): bool = 
-                failwith "Not implemented yet"
+                notimpl
             and set (v: bool): unit = 
-                failwith "Not implemented yet"
-        
+                notimpl
         member x.UndoContext: UndoContext = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.UserControl
             with get (): bool = 
-                failwith "Not implemented yet"
+                notimpl
             and set (v: bool): unit = 
-                failwith "Not implemented yet"
-        
+                notimpl        
         member x.Version: string = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.WindowConfigurations: WindowConfigurations = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.Windows: Windows = 
-            failwith "Not implemented yet"
+            notimpl
 
 and MockEvents() =
     interface Events with
         member x.BuildEvents: BuildEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl
         member x.CommandBarEvents
             with get (commandBarControl: obj): obj = 
-                failwith "Not implemented yet"
-        
+                notimpl        
         member x.CommandEvents
             with get (guid: string, iD: int): CommandEvents = 
-                failwith "Not implemented yet"
-        
+                notimpl        
         member x.DTEEvents: DTEEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.DebuggerEvents: DebuggerEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.DocumentEvents
             with get (document: Document): DocumentEvents = 
-                failwith "Not implemented yet"
-        
+                notimpl        
         member x.FindEvents: FindEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.GetObject(name: string): obj = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.MiscFilesEvents: ProjectItemsEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.OutputWindowEvents
             with get (pane: string): OutputWindowEvents = 
-                failwith "Not implemented yet"
-        
+                notimpl        
         member x.SelectionEvents: SelectionEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.SolutionEvents: SolutionEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.SolutionItemsEvents: ProjectItemsEvents = 
-            failwith "Not implemented yet"
-        
+            notimpl        
         member x.TaskListEvents
             with get (filter: string): TaskListEvents = 
-                failwith "Not implemented yet"
-        
+                notimpl        
         member x.TextEditorEvents
             with get (textDocumentFilter: TextDocument): TextEditorEvents = 
-                failwith "Not implemented yet"
-        
+                notimpl        
         member x.WindowEvents
             with get (windowFilter: Window): WindowEvents = 
-                failwith "Not implemented yet"
+                notimpl
+        
+and MockSolution(project: IProjectProvider, dte: DTE) =
+    interface IEnumerable with
+        member x.GetEnumerator(): IEnumerator = 
+            notimpl
+        
+    interface Solution with
+        member x.AddFromFile(fileName: string, exclusive: bool): Project = 
+            notimpl
+        member x.AddFromTemplate(fileName: string, destination: string, projectName: string, exclusive: bool): Project = 
+            notimpl        
+        member x.AddIns: AddIns = 
+            notimpl        
+        member x.Close(saveFirst: bool): unit = 
+            notimpl        
+        member x.Count: int = 
+            notimpl        
+        member x.Create(destination: string, name: string): unit = 
+            notimpl        
+        member x.DTE: DTE = 
+            notimpl        
+        member x.Extender
+            with get (extenderName: string): obj = 
+                notimpl        
+        member x.ExtenderCATID: string = 
+            notimpl        
+        member x.ExtenderNames: obj = 
+            notimpl        
+        member x.FileName: string = 
+            notimpl        
+        member x.FindProjectItem(fileName: string): ProjectItem = 
+            if Array.exists ((=) fileName) project.SourceFiles then
+                MockProjectItem(fileName, dte) :> ProjectItem
+            else null
+
+        member x.FullName: string = 
+            notimpl        
+        member x.GetEnumerator(): Collections.IEnumerator = 
+            notimpl        
+        member x.Globals: Globals = 
+            notimpl        
+        member x.IsDirty
+            with get (): bool = 
+                notimpl
+            and set (v: bool): unit = 
+                notimpl        
+        member x.IsOpen: bool = 
+            notimpl        
+        member x.Item(index: obj): Project = 
+            notimpl        
+        member x.Open(fileName: string): unit = 
+            notimpl        
+        member x.Parent: DTE = 
+            notimpl        
+        member x.ProjectItemsTemplatePath(projectKind: string): string = 
+            notimpl        
+        member x.Projects: Projects = 
+            notimpl        
+        member x.Properties: Properties = 
+            notimpl        
+        member x.Remove(proj: Project): unit = 
+            notimpl        
+        member x.SaveAs(fileName: string): unit = 
+            notimpl        
+        member x.Saved
+            with get (): bool = 
+                notimpl
+            and set (v: bool): unit = 
+                notimpl        
+        member x.SolutionBuild: SolutionBuild = 
+            notimpl        
+        member x.TemplatePath
+            with get (projectType: string): string = 
+                notimpl
+
+and MockProjectItem(fileName: string, dte: DTE) =
+    interface ProjectItem with
+        member x.Collection: ProjectItems = 
+            notimpl
+        
+        member x.ConfigurationManager: ConfigurationManager = 
+            notimpl
+        
+        member x.ContainingProject: Project = 
+            notimpl
+        
+        member x.DTE: DTE = 
+            notimpl
+        
+        member x.Delete(): unit = 
+            notimpl
+        
+        member x.Document: Document = 
+            notimpl
+        
+        member x.ExpandView(): unit = 
+            notimpl
+        
+        member x.Extender
+            with get (extenderName: string): obj = 
+                notimpl
+        
+        member x.ExtenderCATID: string = 
+            notimpl
+        
+        member x.ExtenderNames: obj = 
+            notimpl
+        
+        member x.FileCodeModel: FileCodeModel = 
+            notimpl
+        
+        member x.FileCount: int16 = 
+            notimpl
+        
+        member x.FileNames
+            with get (index: int16): string = 
+                notimpl
+        
+        member x.IsDirty
+            with get (): bool = 
+                notimpl
+            and set (v: bool): unit = 
+                notimpl
+        
+        member x.IsOpen
+            with get (viewKind: string): bool = 
+                notimpl
+        
+        member x.Kind: string = 
+            notimpl
+        
+        member x.Name
+            with get (): string = 
+                notimpl
+            and set (v: string): unit = 
+                notimpl
+        
+        member x.Object: obj = 
+            notimpl
+        
+        member x.Open(viewKind: string): Window = 
+            notimpl
+        
+        member x.ProjectItems: ProjectItems = 
+            notimpl
+        
+        member x.Properties: Properties = 
+            notimpl
+        
+        member x.Remove(): unit = 
+            notimpl
+        
+        member x.Save(fileName: string): unit = 
+            notimpl
+        
+        member x.SaveAs(newFileName: string): bool = 
+            notimpl
+        
+        member x.Saved
+            with get (): bool = 
+                notimpl
+            and set (v: bool): unit = 
+                notimpl
+        
+        member x.SubProject: Project = 
+            notimpl
+        
         
         
 

@@ -72,10 +72,10 @@ Target "AssemblyInfo" (fun _ ->
       (Attribute.Title "FSharpVSPowerTools.Core" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2013/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
 )
 
 // --------------------------------------------------------------------------------------

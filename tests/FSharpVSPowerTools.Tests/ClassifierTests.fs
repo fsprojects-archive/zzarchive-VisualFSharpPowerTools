@@ -2,21 +2,24 @@
 
 open TestUtilities
 open TestUtilities.Mocks
-open FSharpVSPowerTools
 open System
+open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
 type ClassifierHelper(buffer: ITextBuffer) =
     let serviceProvider = MockServiceProvider()
+    let projectProvider = VirtualProjectProvider(buffer, @"C:\Tests.fs")
     do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
     do serviceProvider.Services.["SVsShell"] <- MockVsShell()
     do serviceProvider.Services.["GeneralOptionsPage"] <- MockGeneralOptionsPage()
-    do serviceProvider.Services.["DTE"] <- MockDTE()
-    do serviceProvider.Services.["SDTE"] <- MockDTE()
+    do serviceProvider.Services.["DTE"] <- MockDTE(projectProvider)
+    do serviceProvider.Services.["SDTE"] <- MockDTE(projectProvider)
 
     let provider = new SyntaxConstructClassifierProvider(serviceProvider, null,
-                        textDocumentFactoryService = MockDocumentFactoryService())
+                        classificationRegistry = Mocks.createClassificationTypeRegistryService(),
+                        textDocumentFactoryService = Mocks.createDocumentFactoryService())
 
     let classifier = provider.GetClassifier(buffer)
 
