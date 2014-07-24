@@ -9,7 +9,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>FSharpVSPowerTools.Core.UnitTests</RootNamespace>
     <AssemblyName>FSharpVSPowerTools.Core.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
     <Name>FSharpVSPowerTools.Core.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
@@ -53,7 +53,6 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="LexerTests.fs" />

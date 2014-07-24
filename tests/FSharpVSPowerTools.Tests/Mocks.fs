@@ -11,37 +11,32 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.VisualStudio.Editor
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.TextManager.Interop
+open Microsoft.VisualStudio.Text.Editor
 
-let createSingleFileProject(fileName: string) =
+/// Create a mock project by reading from a *.fsproj file
+let createSingleFileProject(projectFileName: string) =
     {
         new IProjectProvider with
             member x.CompilerOptions: string [] = 
                 notimpl
-            
             member x.FullOutputFilePath: string = 
                 notimpl
-            
             member x.GetAllReferencedProjectFileNames(): string list = 
                 notimpl
-            
             member x.GetProjectCheckerOptions(arg1: LanguageService): Async<ProjectOptions> = 
                 notimpl
-            
             member x.GetReferencedProjects(): IProjectProvider list = 
                 notimpl
-            
-            member x.IsForStandaloneScript: bool = 
-                notimpl
+            member x.IsForStandaloneScript = 
+                false
             
             member x.ProjectFileName: string = 
-                notimpl
-            
+                projectFileName
+                            
             member x.SourceFiles: string [] = 
-                notimpl
-            
+                notimpl            
             member x.TargetFramework: FSharpTargetFramework = 
-                notimpl
-            
+                FSharpTargetFramework.NET_4_5            
     }
 
 let createDocumentFactoryService() =
@@ -106,7 +101,7 @@ let createVsEditorAdaptersFactoryService() =
                 notimpl
             member x.CreateVsTextViewAdapter(serviceProvider: IServiceProvider): IVsTextView = 
                 notimpl
-            member x.CreateVsTextViewAdapter(serviceProvider: IServiceProvider, roles: Editor.ITextViewRoleSet): IVsTextView = 
+            member x.CreateVsTextViewAdapter(serviceProvider: IServiceProvider, roles: ITextViewRoleSet): IVsTextView = 
                 notimpl
             member x.GetBufferAdapter(textBuffer: ITextBuffer): IVsTextBuffer = 
                 notimpl
@@ -114,11 +109,11 @@ let createVsEditorAdaptersFactoryService() =
                 notimpl
             member x.GetDocumentBuffer(bufferAdapter: IVsTextBuffer): ITextBuffer = 
                 notimpl
-            member x.GetViewAdapter(textView: Editor.ITextView): IVsTextView = 
+            member x.GetViewAdapter(textView: ITextView): IVsTextView = 
                 notimpl
-            member x.GetWpfTextView(viewAdapter: IVsTextView): Editor.IWpfTextView = 
+            member x.GetWpfTextView(viewAdapter: IVsTextView): IWpfTextView = 
                 notimpl
-            member x.GetWpfTextViewHost(viewAdapter: IVsTextView): Editor.IWpfTextViewHost = 
+            member x.GetWpfTextViewHost(viewAdapter: IVsTextView): IWpfTextViewHost = 
                 notimpl
             member x.SetDataBuffer(bufferAdapter: IVsTextBuffer, dataBuffer: ITextBuffer): unit = 
                 notimpl

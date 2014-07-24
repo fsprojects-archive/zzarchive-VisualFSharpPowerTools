@@ -237,77 +237,57 @@ and MockProject(project: IProjectProvider, dte: DTE) =
     interface Project with
         member x.CodeModel: CodeModel = 
             notimpl
-        
         member x.Collection: Projects = 
             notimpl
-        
         member x.ConfigurationManager: ConfigurationManager = 
             notimpl
-        
         member x.DTE: DTE = 
             notimpl
-        
         member x.Delete(): unit = 
             notimpl
-        
         member x.Extender
             with get (extenderName: string): obj = 
                 notimpl
-        
         member x.ExtenderCATID: string = 
             notimpl
-        
         member x.ExtenderNames: obj = 
             notimpl
-        
         member x.FileName: string = 
             notimpl
-        
         member x.FullName: string = 
             notimpl
-        
         member x.Globals: Globals = 
             notimpl
-        
         member x.IsDirty
             with get (): bool = 
                 notimpl
             and set (v: bool): unit = 
                 notimpl
-        
         member x.Kind: string = 
             FSharpProjectKind
-        
         member x.Name
             with get (): string = 
                 notimpl
             and set (v: string): unit = 
                 notimpl
-        
         member x.Object: obj = 
             notimpl
-        
         member x.ParentProjectItem: ProjectItem = 
             notimpl
-        
         member x.ProjectItems: ProjectItems = 
             notimpl
-        
         member x.Properties: Properties = 
             notimpl
-        
         member x.Save(fileName: string): unit = 
             debug "[MockProject] Suppose to save file into disk but do nothing here"
         
         member x.SaveAs(newFileName: string): unit = 
             notimpl
-        
         member x.Saved
             with get (): bool = 
                 notimpl
             and set (v: bool): unit = 
                 notimpl
-        
         member x.UniqueName: string = 
             project.ProjectFileName       
 
@@ -315,92 +295,68 @@ and MockProjectItem(fileName: string, project: IProjectProvider, dte: DTE) =
     interface ProjectItem with
         member x.Collection: ProjectItems = 
             notimpl
-        
         member x.ConfigurationManager: ConfigurationManager = 
             notimpl
-        
         member x.ContainingProject: Project = 
             if project.IsForStandaloneScript then null
             else MockProject(project, dte) :> Project
-        
+
         member x.DTE: DTE = 
             notimpl
-        
         member x.Delete(): unit = 
             notimpl
-        
         member x.Document: Document = 
             notimpl
-        
         member x.ExpandView(): unit = 
             notimpl
-        
         member x.Extender
             with get (extenderName: string): obj = 
                 notimpl
-        
         member x.ExtenderCATID: string = 
             notimpl
-        
         member x.ExtenderNames: obj = 
             notimpl
-        
         member x.FileCodeModel: FileCodeModel = 
             notimpl
-        
         member x.FileCount: int16 = 
             notimpl
-        
         member x.FileNames
             with get (index: int16): string = 
                 notimpl
-        
         member x.IsDirty
             with get (): bool = 
                 notimpl
             and set (v: bool): unit = 
                 notimpl
-        
         member x.IsOpen
             with get (viewKind: string): bool = 
                 notimpl
-        
         member x.Kind: string = 
             notimpl
-        
         member x.Name
             with get (): string = 
                 notimpl
             and set (v: string): unit = 
                 notimpl
-        
         member x.Object: obj = 
             notimpl
-        
         member x.Open(viewKind: string): Window = 
             notimpl
-        
         member x.ProjectItems: ProjectItems = 
             notimpl
-        
         member x.Properties: Properties = 
-            notimpl
-        
+            notimpl        
         member x.Remove(): unit = 
-            notimpl
-        
+            notimpl        
         member x.Save(fileName: string): unit = 
-            notimpl
-        
+            notimpl        
         member x.SaveAs(newFileName: string): bool = 
-            notimpl
-        
+            notimpl        
         member x.Saved
             with get (): bool = 
                 notimpl
             and set (v: bool): unit = 
-                notimpl
-        
+                notimpl        
         member x.SubProject: Project = 
             notimpl
         
