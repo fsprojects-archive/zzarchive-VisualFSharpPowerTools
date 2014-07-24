@@ -46,8 +46,9 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
                     let markerHeight = max 3.0 (lineHeight / 2.0)
                     let markerMargin = 2.0
                     let markerWidth = verticalScrollBar.MarginSize - markerMargin * 2.0
-                    let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 2.0, Stroke = markerBrush,
-                                           Height = markerHeight, Width = markerWidth)
+                    let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 1.0, Stroke = markerBrush,
+                                           Height = markerHeight, Width = markerWidth,
+                                           Cursor = Cursors.Hand, ToolTip = sprintf "Unused declaration(s) at line %i" (lineNo + 1))
                     // Try to place the marker on top of vertical scroll bar
                     Canvas.SetLeft(marker, - (markerWidth + markerMargin))
                     Canvas.SetTop(marker, float lineNo * lineHeight)
@@ -55,7 +56,6 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
                         let line = textView.TextSnapshot.GetLineFromLineNumber(lineNo)
                         textView.Caret.MoveTo(VirtualSnapshotPoint(textView.TextSnapshot, pos)) |> ignore
                         textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.ShowStart))
-                    marker.Cursor <- Cursors.Hand
                     children.Add(marker) |> ignore
 
     let docEventListener = new DocumentEventListener ([ViewChange.classificationChangedEvent classifier], 200us, updateDisplay)

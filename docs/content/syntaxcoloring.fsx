@@ -21,6 +21,10 @@ We currently support coloring:
 
 There is a special user setting for enabling graying out unused declarations and open statements.
 
+If unused declarations and open statements are found in current file, orange markers will appear on top of vertical scroll bar.
+You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).
+![Syntax coloring](img/syntax_coloring_unused_decl.png)
+
 Here is how the editor looks like in blue & dark theme:
 
 ![Syntax coloring](img/syntax_coloring_demo_blue.png)
@@ -40,6 +44,7 @@ Colors of syntax constructs can be customized in "Tools --> Options --> Environm
 - F# Quotations
 - F# Types
 - F# Value Types
+- F# Unused Items
 
 You can press Ctrl + F in 'Display items' to quickly navigate to these colors.
 
