@@ -59,6 +59,7 @@
     <None Include="packages.config" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Resource.fs" />
+    <Compile Include="Constants.fs" />
     <Compile Include="Logger.fs" />
     <Compile Include="VSUtils.fs" />
     <Compile Include="VisualStudioVersion.fs" />
@@ -99,6 +100,7 @@
     <Compile Include="Library.fs" />
     <Compile Include="FindReferencesFilter.fs" />
     <Compile Include="ResolveUnopenedNamespaceTagger.fs" />
+    <Compile Include="UnusedDeclarationMargin.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

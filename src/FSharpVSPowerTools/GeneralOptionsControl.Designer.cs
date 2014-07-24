@@ -88,9 +88,9 @@ namespace FSharpVSPowerTools
             this.chbUnusedDeclarations.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbUnusedDeclarations.Location = new System.Drawing.Point(203, 171);
             this.chbUnusedDeclarations.Name = "chbUnusedDeclarations";
-            this.chbUnusedDeclarations.Size = new System.Drawing.Size(266, 17);
+            this.chbUnusedDeclarations.Size = new System.Drawing.Size(217, 17);
             this.chbUnusedDeclarations.TabIndex = 17;
-            this.chbUnusedDeclarations.Text = "Gray out unused declarations and open statements";
+            this.chbUnusedDeclarations.Text = "Gray out unused declarations and opens";
             this.chbUnusedDeclarations.UseVisualStyleBackColor = true;
             // 
             // chbResolveUnopenedNamespaces
@@ -153,6 +153,8 @@ namespace FSharpVSPowerTools
             // chbInterfaceImplementation
             // 
             this.chbInterfaceImplementation.AutoSize = true;
+            this.chbInterfaceImplementation.Checked = true;
+            this.chbInterfaceImplementation.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chbInterfaceImplementation.Location = new System.Drawing.Point(203, 77);
             this.chbInterfaceImplementation.Name = "chbInterfaceImplementation";
             this.chbInterfaceImplementation.Size = new System.Drawing.Size(118, 17);

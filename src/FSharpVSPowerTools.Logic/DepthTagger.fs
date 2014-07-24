@@ -60,7 +60,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         } 
         |> Async.StartImmediateSafe
     
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferChangedEvent buffer], 500us, refreshFileImpl) 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, refreshFileImpl) 
     
     let getTags (spans: NormalizedSnapshotSpanCollection) = 
         match spans |> Seq.toList, state with

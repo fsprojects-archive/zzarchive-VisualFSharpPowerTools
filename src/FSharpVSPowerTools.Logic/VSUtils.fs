@@ -195,6 +195,8 @@ let getSelectedProjectsFromSolutionExplorer dte =
     getSelectedFromSolutionExplorer<Project> dte
 
 open System.Threading
+open System.Windows.Threading
+open Microsoft.VisualStudio.Text.Classification
 
 [<Literal>]
 let private UnassignedThreadId = -1
@@ -211,14 +213,23 @@ type ForegroundThreadGuard private() =
         if threadId <> Thread.CurrentThread.ManagedThreadId then
             fail "Accessed from the wrong thread"
 
-module ViewChange =
+[<RequireQualifiedAccess>]
+module ViewChange =    
     let layoutEvent (view: ITextView) = 
         view.LayoutChanged |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
-    let caretEvent (view: ITextView) = view.Caret.PositionChanged |> Event.map (fun _ -> ())
-    let bufferChangedEvent (buffer: ITextBuffer) = buffer.Changed |> Event.map (fun _ -> ())
+    
+    let viewportHeightEvent (view: ITextView) = 
+        view.ViewportHeightChanged |> Event.map (fun _ -> ())
 
-open System.Windows.Threading
+    let caretEvent (view: ITextView) = 
+        view.Caret.PositionChanged |> Event.map (fun _ -> ())
 
+    let bufferEvent (buffer: ITextBuffer) = 
+        buffer.Changed |> Event.map (fun _ -> ())
+
+    let classificationEvent (classifier: IClassifier) = 
+        classifier.ClassificationChanged |> Event.map (fun _ -> ())
+    
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
     // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"

@@ -18,14 +18,14 @@ namespace FSharpVSPowerTools
 {
     static class ClassificationTypes
     {
-        public const string FSharpReferenceType = "FSharp.ReferenceType";
-        public const string FSharpValueType = "FSharp.ValueType";
-        public const string FSharpPatternCase = "FSharp.PatternCase";
-        public const string FSharpFunction = "FSharp.Function";
-        public const string FSharpMutableVar = "FSharp.MutableVar";
-        public const string FSharpQuotation = "FSharp.Quotation";
-        public const string FSharpModule = "FSharp.Module";
-        public const string FSharpUnused = "FSharp.Unused";
+        public const string FSharpReferenceType = Constants.fsharpReferenceType;
+        public const string FSharpValueType = Constants.fsharpValueType;
+        public const string FSharpPatternCase = Constants.fsharpPatternCase;
+        public const string FSharpFunction = Constants.fsharpFunction;
+        public const string FSharpMutableVar = Constants.fsharpMutableVar;
+        public const string FSharpQuotation = Constants.fsharpQuotation;
+        public const string FSharpModule = Constants.fsharpModule;
+        public const string FSharpUnused = Constants.fsharpUnused;
 
         [Export]
         [Name(FSharpReferenceType)]
