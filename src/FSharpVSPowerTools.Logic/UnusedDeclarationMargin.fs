@@ -12,6 +12,7 @@ open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Classification
+open System.Windows.Input
 
 [<Name(Constants.fsharpUnusedDeclarationMargin)>]
 type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextViewMargin,
@@ -21,6 +22,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
     let children = base.Children
     let verticalScrollBar = marginContainer.GetTextViewMargin(PredefinedMarginNames.VerticalScrollBar)
     let mutable markerData = Unchecked.defaultof<_>
+    let markerBrush = SolidColorBrush(Color.FromRgb(255uy, 165uy, 0uy))
 
     let updateDisplay () =
         if not textView.IsClosed then
@@ -41,17 +43,19 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
                 let virtualAdditionalLines = int (textView.ViewportHeight / textView.LineHeight) - 1
                 let lineHeight = textView.ViewportHeight / float (totalLines + virtualAdditionalLines)
                 for (lineNo, pos) in markerData do               
-                    let markerHeight = max 4.0 (lineHeight / 2.0)
-                    let markerWidth = verticalScrollBar.MarginSize
-                    let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 2.0, Stroke = Brushes.DarkOrange,
-                                            Height = markerHeight, Width = markerWidth)
+                    let markerHeight = max 3.0 (lineHeight / 2.0)
+                    let markerMargin = 2.0
+                    let markerWidth = verticalScrollBar.MarginSize - markerMargin * 2.0
+                    let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 2.0, Stroke = markerBrush,
+                                           Height = markerHeight, Width = markerWidth)
                     // Try to place the marker on top of vertical scroll bar
-                    Canvas.SetLeft(marker, -markerWidth)
+                    Canvas.SetLeft(marker, - (markerWidth + markerMargin))
                     Canvas.SetTop(marker, float lineNo * lineHeight)
                     marker.MouseDown.Add(fun _ -> 
                         let line = textView.TextSnapshot.GetLineFromLineNumber(lineNo)
                         textView.Caret.MoveTo(VirtualSnapshotPoint(textView.TextSnapshot, pos)) |> ignore
                         textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.ShowStart))
+                    marker.Cursor <- Cursors.Hand
                     children.Add(marker) |> ignore
 
     let docEventListener = new DocumentEventListener ([ViewChange.classificationChangedEvent classifier], 200us, updateDisplay)
