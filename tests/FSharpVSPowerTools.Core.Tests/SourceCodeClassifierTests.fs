@@ -49,7 +49,13 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
                | None -> []
         let openDeclarations = OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
-        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations)
+        let allEntities =
+            entities
+            |> Option.map (fun entities -> 
+                entities 
+                |> List.map (fun e -> e.FullName, e.CleanIdents)
+                |> Map.ofList)
+        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, allEntities)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
     let actual =
@@ -1177,3 +1183,47 @@ File.ReadAllLines ""
 |> ignore
 """
     => [ 3, []]
+
+[<Test>]
+let ``redundant opening a module with ModuleSuffix attribute value is marks as unused``() =
+    """
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module InternalModuleWithSuffix =
+    let func1 _ = ()
+module M =
+    open InternalModuleWithSuffix
+    let _ = InternalModuleWithSuffix.func1()
+"""
+    => [ 6, [Category.Unused, 9, 33 ]]
+    
+[<Test>]
+let ``redundant opening a module is marks as unused``() =
+    """
+module InternalModuleWithSuffix =
+    let func1 _ = ()
+module M =
+    open InternalModuleWithSuffix
+    let _ = InternalModuleWithSuffix.func1()
+"""
+    => [ 5, [Category.Unused, 9, 33 ]]
+
+[<Test>]
+let ``usage of an unqualified union case makes opening module in which it's defined not maked as unused``() =
+    """
+module M =
+    type DU = Case1
+open M
+let _ = Case1
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``usage of qualified union case makes opening module in which it's defined not maked as unused``() =
+    """
+module M =
+    type DU = Case1
+open M
+let _ = DU.Case1
+"""
+    => [ 4, []]
+

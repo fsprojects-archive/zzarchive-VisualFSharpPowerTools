@@ -199,12 +199,10 @@ module SourceCodeClassifier =
             //debug "[SourceCodeClassifier] QualifiedSymbol: FullName = %A, Symbol end pos = (%d, %d), Res = %A" 
             //      fullName endPos.Line endPos.Column prefix
             Some prefix
-        | _ -> 
-            //debug "[!QS] Symbol is out of any LongIdent: FullName = %A, Symbol end pos = (%d, %d)" fullName endPos.Line endPos.Column
-            None
+        | _ -> None
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase,
-                                   openDeclarations: OpenDeclaration list) =
+                                   openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents> option) =
         let allSymbolsUses' =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
@@ -285,14 +283,26 @@ module SourceCodeClassifier =
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
 
-//        debug "LongIdents by line:" 
-//        longIdentsByEndPos 
-//        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
-//        |> Seq.iter (debug "%A")
+        let removeModuleSuffixes (symbolUses: SymbolUse[]) =
+            match allEntities with
+            | Some entities ->
+                symbolUses 
+                |> Array.map (fun symbolUse ->
+                    let fullNames =
+                        symbolUse.FullNames.Value
+                        |> Array.map (fun fullName ->
+                            match entities |> Map.tryFind (System.String.Join (".", fullName)) with
+                            | Some cleanIdents ->
+                                debug "[SourceCodeClassifier] Cleared FullName %A -> %A" fullName cleanIdents
+                                cleanIdents
+                            | None -> fullName)
+                    { symbolUse with FullNames = lazy fullNames })
+            | None -> symbolUses
 
         let symbolPrefixes: (Range.range * Idents) [] =
             allSymbolsUses'
             |> getSymbolUsesPotentiallyRequireOpenDecls
+            |> removeModuleSuffixes
             |> filterNestedSymbolUses longIdentsByEndPos
             |> Array.map (fun symbolUse ->
                 let sUseRange = symbolUse.SymbolUse.RangeAlternate

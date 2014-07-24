@@ -74,7 +74,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
                             let! entities = vsLanguageService.GetAllEntities(doc.FilePath, snapshot.GetText(), project)
                             
-                            let openDeclarations = 
+                            let entitiesMap, openDeclarations = 
                                 if includeUnusedDeclarations then
                                     let qualifyOpenDeclarations line endCol idents = 
                                         let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
@@ -86,11 +86,16 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                         | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
                                         | None -> []
 
+                                    entities 
+                                    |> Option.map (fun entities -> 
+                                        entities 
+                                        |> List.map (fun e -> e.FullName, e.CleanIdents)
+                                        |> Map.ofList),
                                     OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
-                                else [] 
+                                else None, []
 
                             let spans = 
-                                getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations)
+                                getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, entitiesMap)
                                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                             state.Swap (fun _ -> 
