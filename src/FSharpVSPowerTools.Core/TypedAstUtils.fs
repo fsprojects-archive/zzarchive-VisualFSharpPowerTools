@@ -193,3 +193,35 @@ let (|Function|_|) excluded (func: FSharpMemberFunctionOrValue) =
 
 let (|ExtensionMember|_|) (func: FSharpMemberFunctionOrValue) =
     if func.IsExtensionMember then Some() else None
+
+type FSharpEntity with
+    member x.GetFullDisplayName() =
+        let fullName = x.GetFullName() |> Option.map (fun fullName -> fullName.Split '.')
+        let res = 
+            match fullName with
+            | Some fullName ->
+                match Option.attempt (fun _ -> x.DisplayName) with
+                | Some shortDisplayName when shortDisplayName.IndexOf '.' = -1 ->
+                    let res = Array.copy fullName
+                    res.[res.Length - 1] <- shortDisplayName
+                    Some res
+                | _ -> Some fullName
+            | None -> None
+            |> Option.map (fun fullDisplayName -> System.String.Join (".", fullDisplayName))
+        debug "GetFullDisplayName: FullName = %s, Result = %A" x.FullName res
+        res
+
+type FSharpMemberFunctionOrValue with
+    member x.GetFullDisplayName() =
+        let fullName = Option.attempt (fun _ -> x.FullName.Split '.')
+        match fullName with
+        | Some fullName ->
+            match Option.attempt (fun _ -> x.DisplayName) with
+            | Some shortDisplayName when shortDisplayName.IndexOf '.' = -1 ->
+                let res = Array.copy fullName
+                res.[res.Length - 1] <- shortDisplayName
+                Some res
+            | _ -> Some fullName
+        | None -> None
+        |> Option.map (fun fullDisplayName -> System.String.Join (".", fullDisplayName))
+

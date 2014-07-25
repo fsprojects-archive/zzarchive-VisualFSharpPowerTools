@@ -17,7 +17,7 @@ type EntityKind =
 
 type RawEntity = 
     { /// Full entity name as it's seen in compiled code.
-      FullName: string
+      FullDisplayName: string
       /// Entity name idents with removed module suffixes (Ns.M1Module.M2Module.M3.entity -> Ns.M1.M2.M3.entity)
       CleanIdents: Idents
       Namespace: Idents option
@@ -51,7 +51,7 @@ type Parent =
     member x.FixParentModuleSuffix (idents: Idents) =
         Parent.RewriteParentIdents x.WithModuleSuffix idents
 
-    member x.FormatEntityFullName (entity: FSharpEntity) =
+    member __.FormatEntityFullName (entity: FSharpEntity) =
         // remove number of arguments from generic types
         // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
         // and System.Data.Listeners`1.Func -> System.Data.Listeners.Func
@@ -72,12 +72,14 @@ type Parent =
                     idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
             idents
 
-        entity.GetFullName() 
-        |> Option.map (fun fullName -> 
-            fullName,
-            fullName.Split '.' 
-            |> removeGenericParamsCount 
-            |> removeModuleSuffix)
+        entity.GetFullDisplayName()
+        |> Option.bind (fun fullDisplayName ->
+            entity.GetFullName() 
+            |> Option.map (fun fullName -> 
+                fullDisplayName,
+                fullName.Split '.' 
+                |> removeGenericParamsCount 
+                |> removeModuleSuffix))
 
 module AssemblyContentProvider =
     open System.IO
@@ -86,7 +88,7 @@ module AssemblyContentProvider =
     let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
         parent.FormatEntityFullName entity
         |> Option.map (fun (fullName, cleanIdents) ->
-            { FullName = fullName
+            { FullDisplayName = fullName
               CleanIdents = cleanIdents
               Namespace = ns
               IsPublic = entity.Accessibility.IsPublic
@@ -138,8 +140,10 @@ module AssemblyContentProvider =
 
                     if entity.IsFSharpModule then
                         for func in entity.MembersFunctionsAndValues do
-                            let e =
-                                    { FullName = func.FullName
+                            match func.GetFullDisplayName() with
+                            | Some displayName ->
+                                yield
+                                    { FullDisplayName = displayName
                                       CleanIdents = func.FullName.Split '.' |> currentParent.FixParentModuleSuffix
                                       Namespace = ns
                                       IsPublic = func.Accessibility.IsPublic
@@ -147,7 +151,7 @@ module AssemblyContentProvider =
                                           currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
                                       AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
                                       Kind = EntityKind.FunctionOrValue }
-                            yield e
+                            | None -> ()
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
                         yield! traverseEntity contentType currentParent e 

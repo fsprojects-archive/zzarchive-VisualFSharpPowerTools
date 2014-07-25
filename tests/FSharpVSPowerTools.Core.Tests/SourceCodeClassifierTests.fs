@@ -53,7 +53,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
             entities
             |> Option.map (fun entities -> 
                 entities 
-                |> List.map (fun e -> e.FullName, e.CleanIdents)
+                |> List.map (fun e -> e.FullDisplayName, e.CleanIdents)
                 |> Map.ofList)
         SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, allEntities)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
@@ -1227,3 +1227,14 @@ let _ = DU.Case1
 """
     => [ 4, []]
 
+[<Test>]
+let ``Microsoft FSharp Quotations Expr type``() =
+    """
+open Microsoft.FSharp.Quotations
+let _ = Expr.Coerce (<@@ 1 @@>, typeof<int>)
+"""
+    => [2, []]
+
+
+
+//let _: Expr = <@@ 1 @@>
