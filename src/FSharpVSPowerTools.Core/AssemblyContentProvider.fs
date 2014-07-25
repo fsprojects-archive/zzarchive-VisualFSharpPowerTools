@@ -16,9 +16,11 @@ type EntityKind =
     override x.ToString() = sprintf "%A" x
 
 type RawEntity = 
-    { /// Full entity name as it's seen in compiled code.
-      FullDisplayName: string
-      /// Entity name idents with removed module suffixes (Ns.M1Module.M2Module.M3.entity -> Ns.M1.M2.M3.entity)
+    { /// Full entity name as it's seen in compiled code (raw FSharpEntity.FullName, FSharpValueOrFunction.FullName). 
+      FullName: string
+      /// Entity name parts with removed module suffixes (Ns.M1Module.M2Module.M3.entity -> Ns.M1.M2.M3.entity)
+      /// and replaced compiled names with display names (FSharpEntity.DisplayName, FSharpValueOrFucntion.DisplayName).
+      /// Note: *all* parts are cleared, not the last one. 
       CleanIdents: Idents
       Namespace: Idents option
       IsPublic: bool
@@ -72,12 +74,12 @@ type Parent =
                     idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
             idents
 
-        entity.GetFullDisplayName()
-        |> Option.bind (fun fullDisplayName ->
-            entity.GetFullName() 
-            |> Option.map (fun fullName -> 
-                fullDisplayName,
-                fullName.Split '.' 
+        entity.GetFullName()
+        |> Option.bind (fun fullName -> 
+            entity.GetFullDisplayName()
+            |> Option.map (fun fullDisplayName ->
+                fullName,
+                fullDisplayName.Split '.' 
                 |> removeGenericParamsCount 
                 |> removeModuleSuffix))
 
@@ -88,7 +90,7 @@ module AssemblyContentProvider =
     let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
         parent.FormatEntityFullName entity
         |> Option.map (fun (fullName, cleanIdents) ->
-            { FullDisplayName = fullName
+            { FullName = fullName
               CleanIdents = cleanIdents
               Namespace = ns
               IsPublic = entity.Accessibility.IsPublic
@@ -143,8 +145,8 @@ module AssemblyContentProvider =
                             match func.GetFullDisplayName() with
                             | Some displayName ->
                                 yield
-                                    { FullDisplayName = displayName
-                                      CleanIdents = func.FullName.Split '.' |> currentParent.FixParentModuleSuffix
+                                    { FullName = func.FullName
+                                      CleanIdents = displayName.Split '.' |> currentParent.FixParentModuleSuffix
                                       Namespace = ns
                                       IsPublic = func.Accessibility.IsPublic
                                       TopRequireQualifiedAccessParent = 

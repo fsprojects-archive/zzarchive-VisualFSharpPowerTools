@@ -283,6 +283,11 @@ module SourceCodeClassifier =
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
 
+//        debug "LongIdents by line:" 
+//        longIdentsByEndPos 
+//        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
+//        |> Seq.iter (debug "%A")
+
         let removeModuleSuffixes (symbolUses: SymbolUse[]) =
             match allEntities with
             | Some entities ->
@@ -295,15 +300,26 @@ module SourceCodeClassifier =
                             | Some cleanIdents ->
                                 debug "[SourceCodeClassifier] Cleared FullName %A -> %A" fullName cleanIdents
                                 cleanIdents
-                            | None -> fullName)
+                            | None -> 
+                                debug "[SourceCodeClassifier] NOT Cleared FullName %A" fullName
+                                fullName)
                     { symbolUse with FullNames = lazy fullNames })
             | None -> symbolUses
+
+//        let printSymbolUses msg (symbolUses: SymbolUse[]) =
+//            debug "[SourceCodeClassifier] %s SymbolUses:" msg
+//            for sUse in symbolUses do
+//                let r = sUse.SymbolUse.RangeAlternate
+//                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames.Value r.StartLine r.StartColumn r.EndLine r.EndColumn
+//            symbolUses
 
         let symbolPrefixes: (Range.range * Idents) [] =
             allSymbolsUses'
             |> getSymbolUsesPotentiallyRequireOpenDecls
             |> removeModuleSuffixes
+            //|> printSymbolUses "SymbolUsesPotentiallyRequireOpenDecls"
             |> filterNestedSymbolUses longIdentsByEndPos
+            //|> printSymbolUses "SymbolUses without nested"
             |> Array.map (fun symbolUse ->
                 let sUseRange = symbolUse.SymbolUse.RangeAlternate
                 symbolUse.FullNames.Value
@@ -311,10 +327,10 @@ module SourceCodeClassifier =
                     getFullPrefix longIdentsByEndPos fullName sUseRange.End
                     |> Option.bind (function
                          | [||] -> None
-                         | prefix -> Some (sUseRange, prefix))))
+                         | prefix -> Some (sUseRange, prefix)))) 
             |> Array.concat
 
-        //debug "[SourceCodeClassifier] Symbols prefixes: %A, Open declarations: %A" symbolPrefixes openDeclarations
+        debug "[SourceCodeClassifier] Symbols prefixes: %A, Open declarations: %A" symbolPrefixes openDeclarations
         
         let openDeclarations = 
             Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->

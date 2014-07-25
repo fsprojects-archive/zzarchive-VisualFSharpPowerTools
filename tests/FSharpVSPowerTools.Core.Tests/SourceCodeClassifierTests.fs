@@ -53,7 +53,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
             entities
             |> Option.map (fun entities -> 
                 entities 
-                |> List.map (fun e -> e.FullDisplayName, e.CleanIdents)
+                |> List.map (fun e -> e.FullName, e.CleanIdents)
                 |> Map.ofList)
         SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, allEntities)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)

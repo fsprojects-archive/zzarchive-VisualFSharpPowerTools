@@ -208,7 +208,7 @@ type FSharpEntity with
                 | _ -> Some fullName
             | None -> None
             |> Option.map (fun fullDisplayName -> System.String.Join (".", fullDisplayName))
-        debug "GetFullDisplayName: FullName = %s, Result = %A" x.FullName res
+        //debug "GetFullDisplayName: FullName = %A, Result = %A" fullName res
         res
 
 type FSharpMemberFunctionOrValue with
