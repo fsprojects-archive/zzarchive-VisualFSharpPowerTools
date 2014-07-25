@@ -1234,7 +1234,3 @@ open Microsoft.FSharp.Quotations
 let _ = Expr.Coerce (<@@ 1 @@>, typeof<int>)
 """
     => [2, []]
-
-
-
-//let _: Expr = <@@ 1 @@>
