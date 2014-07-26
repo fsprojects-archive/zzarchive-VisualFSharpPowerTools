@@ -46,7 +46,6 @@ type SyntaxConstructClassifierHelper() =
 
 [<TestFixture>]
 module SyntaxConstructClassifierTests =
-    let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tests.fsx")
     type [<Measure>] ms
     let timeout = 30000<ms>
     

@@ -20,7 +20,7 @@ type VsTestBase() =
     let fsharpLanguageService = FSharpLanguageService(serviceProvider)
     let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
     let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
-                                                openDocumentsTracker, skipLexCache = true)
+                                                openDocumentsTracker, SkipLexCache = true)
     let projectFactory = ProjectFactory(serviceProvider, vsLanguageService)
     
     member x.ServiceProvider = serviceProvider

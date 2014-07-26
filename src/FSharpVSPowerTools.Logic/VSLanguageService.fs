@@ -32,10 +32,11 @@ type VSLanguageService
     [<ImportingConstructor>] 
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
-     openDocumentsTracker: OpenDocumentsTracker, ?skipLexCache) =
+     openDocumentsTracker: OpenDocumentsTracker) =
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
-    let skipLexCache = defaultArg skipLexCache false
+
+    let mutable skipLexCache = false
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
@@ -230,3 +231,8 @@ type VSLanguageService
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
     member x.Checker = instance.Checker
+
+    /// This value is used for testing when VS lex cache isn't available
+    member internal x.SkipLexCache 
+        with get () = skipLexCache
+        and set v = skipLexCache <- v
