@@ -2,6 +2,10 @@
 
 open TestUtilities.Mocks
 open FSharpVSPowerTools.ProjectSystem
+open Foq
+open Microsoft.VisualStudio.Editor
+open Microsoft.VisualStudio.Text.Classification
+open Microsoft.VisualStudio.Text
 
 /// A base class for initializing necessary VS services
 type VsTestBase() =
@@ -13,14 +17,19 @@ type VsTestBase() =
     do serviceProvider.Services.["DTE"] <- dte
     do serviceProvider.Services.["SDTE"] <- dte
 
-    let vsEditorAdaptersFactoryService = Mocks.createVsEditorAdaptersFactoryService()
-    let classificationRegistry = Mocks.createClassificationTypeRegistryService()
+    let vsEditorAdaptersFactoryService = Mock<IVsEditorAdaptersFactoryService>().Create()
+    
+    let classificationRegistry = 
+        Mock<IClassificationTypeRegistryService>()
+            .Setup(fun x -> <@ x.GetClassificationType (any()) @>)
+            .Calls<string>(fun t -> Mock<IClassificationType>.With(fun x -> <@ x.Classification --> t @>))
+            .Create()
+    
     let documentFactoryService = Mocks.createDocumentFactoryService()
-
     let fsharpLanguageService = FSharpLanguageService(serviceProvider)
     let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
     let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
-                                                openDocumentsTracker, SkipLexCache = true)
+                                              openDocumentsTracker, SkipLexCache = true)
     let projectFactory = ProjectFactory(serviceProvider, vsLanguageService)
     
     member x.ServiceProvider = serviceProvider

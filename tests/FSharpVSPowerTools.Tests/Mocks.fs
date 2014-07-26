@@ -4,11 +4,6 @@ module FSharpVSPowerTools.Tests.Mocks
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Utilities
-open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Editor
-open Microsoft.VisualStudio.OLE.Interop
-open Microsoft.VisualStudio.TextManager.Interop
-open Microsoft.VisualStudio.Text.Editor
 
 let createDocumentFactoryService() =
     { 
@@ -24,43 +19,4 @@ let createDocumentFactoryService() =
         
             member __.TryGetTextDocument(textBuffer: ITextBuffer, textDocument: byref<ITextDocument>): bool = 
                 textBuffer.Properties.TryGetProperty(typeof<ITextDocument>, &textDocument) 
-    }
-
-let createClassificationType classificationType =
-    {
-        new IClassificationType with
-            member __.BaseTypes: IClassificationType seq = notimpl
-            member __.IsOfType(_type: string): bool = notimpl
-                            
-            member __.Classification: string = classificationType            
-    }
-
-let createClassificationTypeRegistryService() =
-    { 
-        new IClassificationTypeRegistryService with
-            member __.CreateClassificationType(_type: string, _baseTypes: IClassificationType seq): IClassificationType = notimpl
-            member __.CreateTransientClassificationType(_baseTypes: IClassificationType seq): IClassificationType = notimpl
-            member __.CreateTransientClassificationType(_baseTypes: IClassificationType []): IClassificationType = notimpl
-
-            member __.GetClassificationType(``type``: string): IClassificationType = 
-                createClassificationType ``type``
-    }
-
-let createVsEditorAdaptersFactoryService() =
-    {
-        new IVsEditorAdaptersFactoryService with
-            member __.CreateVsCodeWindowAdapter(_serviceProvider: IServiceProvider): IVsCodeWindow = notimpl
-            member __.CreateVsTextBufferAdapter(_serviceProvider: IServiceProvider): IVsTextBuffer = notimpl
-            member __.CreateVsTextBufferAdapter(_serviceProvider: IServiceProvider, _contentType: IContentType): IVsTextBuffer = notimpl
-            member __.CreateVsTextBufferAdapterForSecondaryBuffer(_serviceProvider: IServiceProvider, _secondaryBuffer: ITextBuffer): IVsTextBuffer = notimpl
-            member __.CreateVsTextBufferCoordinatorAdapter(): IVsTextBufferCoordinator = notimpl
-            member __.CreateVsTextViewAdapter(_serviceProvider: IServiceProvider): IVsTextView = notimpl
-            member __.CreateVsTextViewAdapter(_serviceProvider: IServiceProvider, _roles: ITextViewRoleSet): IVsTextView = notimpl
-            member __.GetBufferAdapter(_textBuffer: ITextBuffer): IVsTextBuffer = notimpl
-            member __.GetDataBuffer(_bufferAdapter: IVsTextBuffer): ITextBuffer = notimpl
-            member __.GetDocumentBuffer(_bufferAdapter: IVsTextBuffer): ITextBuffer = notimpl
-            member __.GetViewAdapter(_textView: ITextView): IVsTextView = notimpl
-            member __.GetWpfTextView(_viewAdapter: IVsTextView): IWpfTextView = notimpl
-            member __.GetWpfTextViewHost(_viewAdapter: IVsTextView): IWpfTextViewHost = notimpl
-            member __.SetDataBuffer(_bufferAdapter: IVsTextBuffer, _dataBuffer: ITextBuffer): unit = notimpl
     }
