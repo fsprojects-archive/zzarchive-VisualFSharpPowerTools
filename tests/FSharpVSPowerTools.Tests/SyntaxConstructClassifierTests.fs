@@ -2,13 +2,15 @@
 
 open TestUtilities
 open System
+open System.IO
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
 
 type ClassificationSpan =
-    { Classification: string; Span: int * int * int * int }
+    { Classification: string
+      Span: int * int * int * int }
 
 type SyntaxConstructClassifierHelper(buffer: ITextBuffer, fileName: string) =    
     inherit VsTestBase(VirtualProjectProvider(buffer, fileName))
@@ -45,24 +47,32 @@ type SyntaxConstructClassifierHelper(buffer: ITextBuffer, fileName: string) =
 
 [<TestFixture>]
 module SyntaxConstructClassifierTests =
+    let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tests.fsx")
+    type [<Measure>] ms
+    let timeout = 20000<ms>
+
     [<SetUp>]
     let deploy() =
         AssertListener.Initialize()
+        // IsSymbolUsedForProject seems to require a file to exist on disks
+        // If not, type checking fails with some weird errors
+        File.WriteAllText(fileName, "")
 
-    let fileName = @"C:\Tests.fsx"
+    [<TearDown>]
+    let cleanup() =
+        File.Delete(fileName)
 
     let (=>) (startLine, startCol) (endLine, endCol) =
         (startLine, startCol, endLine, endCol)
         
-    let testEvent event errorMessage (timeout: int) predicate =
+    let testEvent event errorMessage (timeout: int<_>) predicate =
         let task =
             event
             |> Async.AwaitEvent
             |> Async.StartAsTask
-        task.Wait(timeout) |> ignore
-        if task.IsCompleted then
-            predicate()
-        else
+        match task.Wait(TimeSpan.FromMilliseconds(float timeout)) with
+        | true -> predicate()
+        | false ->
             Assert.Fail errorMessage
 
     [<Test>]
@@ -107,11 +117,11 @@ module Module1 =
                       { Classification = "FSharp.Module"
                         Span = (7, 8) => (7, 14) } ]) 
 
-    [<Test; Ignore>]
+    [<Test>]
     let ``should be able to get classification spans for unused items``() = 
         let content = """
 open System
-open System.Collections.Generics
+open System.Collections.Generic
 let internal f() = ()
 """
         let buffer = createMockTextBuffer content fileName
@@ -121,9 +131,9 @@ let internal f() = ()
                 Seq.toList helper.ClassificationSpans
                 |> assertEqual
                     [ { Classification = "FSharp.Unused"
-                        Span = (2, 6) => (2, 10) };
+                        Span = (2, 6) => (2, 11) };
                       { Classification = "FSharp.Unused"
-                        Span = (3, 6) => (3, 32) };
+                        Span = (3, 6) => (3, 31) };
                       { Classification = "FSharp.Unused"
                         Span = (4, 14) => (4, 14) } ]) 
         
