@@ -197,6 +197,7 @@ let getSelectedProjectsFromSolutionExplorer dte =
 open System.Threading
 open System.Windows.Threading
 open Microsoft.VisualStudio.Text.Classification
+open System.Windows.Input
 
 [<Literal>]
 let private UnassignedThreadId = -1
@@ -231,7 +232,7 @@ module ViewChange =
         classifier.ClassificationChanged |> Event.map (fun _ -> ())
     
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
-    // start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
+    // Start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
     let events = events |> List.reduce Event.merge
     let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
@@ -293,22 +294,16 @@ type Async with
                     fail "The following exception occurs inside async blocks: %O" e
                     Logging.logException e
             }
-        Async.Start(comp, ?cancellationToken = cancellationToken)
-       
-module internal Disposable =
-    let create (onDispose: unit -> unit) =
-        { new IDisposable with
-            member x.Dispose() =
-                onDispose() }
+        Async.Start(comp, ?cancellationToken = cancellationToken)       
 
 /// Provides an IDisposable handle which allows us to override the cursor cleanly as well as restore whenever needed
 type CursorOverrideHandle(newCursor) =
     let mutable disposed = false
 
-    let originalCursor = System.Windows.Input.Mouse.OverrideCursor
+    let originalCursor = Mouse.OverrideCursor
     let restore () = 
         if not disposed then
-            System.Windows.Input.Mouse.OverrideCursor <- originalCursor
+            Mouse.OverrideCursor <- originalCursor
             disposed <- true
 
     do 

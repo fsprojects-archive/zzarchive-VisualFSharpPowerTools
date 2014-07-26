@@ -62,7 +62,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
         match navigationData, symbolUse with
         | Some(_, _, vsTextBuffer), Some symbolUse ->
             let range = symbolUse.RangeAlternate
-            let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPath(symbolUse.FileName)) 
+            let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPathSafe(symbolUse.FileName)) 
                             range.StartLine range.StartColumn
             let line = range.StartLine-1
             let (_, lineLength) = vsTextBuffer.GetLengthOfLine(line)

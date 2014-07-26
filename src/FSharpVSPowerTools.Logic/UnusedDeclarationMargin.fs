@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools
 
-open System.ComponentModel.Composition
 open System.Windows
 open System.Windows.Shapes
 open System.Windows.Media
@@ -10,7 +9,6 @@ open System.Windows.Controls
 open FSharpVSPowerTools.ProjectSystem
 open System
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Classification
 open System.Windows.Input
 

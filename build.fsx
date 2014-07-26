@@ -66,16 +66,16 @@ Target "AssemblyInfo" (fun _ ->
         Attribute.FileVersion release.AssemblyVersion ] 
 
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
-      (Attribute.Title "FSharpVSPowerTools" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Core/AssemblyInfo.fs"
       (Attribute.Title "FSharpVSPowerTools.Core" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2013/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
 )
 
 // --------------------------------------------------------------------------------------
@@ -134,14 +134,6 @@ Target "UnitTests" (fun _ ->
 // Run the integration tests using test runner
 
 Target "IntegrationTests" (fun _ ->
-    !! "tests/**/bin/Release/FSharpVSPowerTools.Tests.dll"
-    |> MSTest.MSTest (fun p ->
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-        })
-)
-
-Target "ExtraIntegrationTests" (fun _ ->
     !! "tests/**/bin/Release/FSharpVSPowerTools.IntegrationTests.dll" 
     |> MSTest.MSTest (fun p ->
         { p with
@@ -214,7 +206,6 @@ Target "All" DoNothing
   ==> "AssemblyInfo"
   ==> "Build"
   ==> "UnitTests"
-  ==> "IntegrationTests"
   ==> "Main"
 
 "Build"
@@ -224,7 +215,7 @@ Target "All" DoNothing
   ==> "NuGet"
 
 "Main"
-  =?> ("ExtraIntegrationTests", isLocalBuild)
+  =?> ("IntegrationTests", isLocalBuild)
   ==> "All"
 
 "Main" 

@@ -501,14 +501,14 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
             let! notUsedSymbols =
                 singleDefs 
-                |> Async.List.map (fun sym ->
+                |> Async.List.map (fun fsSymbol ->
                     async {
-                        let! opts = getSymbolDeclProjects sym
+                        let! opts = getSymbolDeclProjects fsSymbol
                         match opts with
                         | Some projects ->
-                            let! isSymbolUsed = x.IsSymbolUsedInProjects (sym, projectOptions.ProjectFileName, projects) 
+                            let! isSymbolUsed = x.IsSymbolUsedInProjects (fsSymbol, projectOptions.ProjectFileName, projects) 
                             if isSymbolUsed then return None
-                            else return Some sym
+                            else return Some fsSymbol
                         | None -> return None 
                     })
                 |> Async.map (List.choose id)

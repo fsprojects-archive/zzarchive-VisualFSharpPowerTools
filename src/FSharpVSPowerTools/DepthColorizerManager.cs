@@ -66,7 +66,7 @@ namespace FSharpVSPowerTools
         {
             if (textView == null) return;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (!generalOptions.DepthColorizerEnabled) return;
 
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);

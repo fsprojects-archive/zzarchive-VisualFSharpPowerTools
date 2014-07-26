@@ -35,12 +35,17 @@ type VSLanguageService
      openDocumentsTracker: OpenDocumentsTracker) =
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
-    
+
+    let mutable skipLexCache = false
+
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
-            let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
-            let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
-            fsharpLanguageService.LexStateOfColorState(colorState)
+            if skipLexCache then
+                Lexer.queryLexState source defines line
+            else
+                let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
+                let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
+                fsharpLanguageService.LexStateOfColorState(colorState)
         with e ->
             debug "[Language Service] %O exception occurs while querying lexing states." e
             Lexer.queryLexState source defines line
@@ -173,10 +178,10 @@ type VSLanguageService
 
             let! opts = project.GetProjectCheckerOptions instance
             
-            let getSymbolDeclProjects sym =
+            let getSymbolDeclProjects symbol =
                 async {
                     let projects =
-                        match getSymbolDeclLocation sym with
+                        match getSymbolDeclLocation symbol with
                         | Some SymbolDeclarationLocation.File -> Some [project]
                         | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
                         | None -> None
@@ -226,3 +231,8 @@ type VSLanguageService
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
     member x.Checker = instance.Checker
+
+    /// This value is used for testing when VS lex cache isn't available
+    member internal x.SkipLexCache 
+        with get () = skipLexCache
+        and set v = skipLexCache <- v
