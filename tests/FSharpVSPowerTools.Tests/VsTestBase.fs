@@ -4,9 +4,9 @@ open TestUtilities.Mocks
 open FSharpVSPowerTools.ProjectSystem
 
 /// A base class for initializing necessary VS services
-type VsTestBase(projectProvider) =
+type VsTestBase() =
     let serviceProvider = MockServiceProvider()        
-    let dte = MockDTE(projectProvider)
+    let dte = MockDTE()
     do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
     do serviceProvider.Services.["SVsShell"] <- MockVsShell()
     do serviceProvider.Services.["GeneralOptionsPage"] <- MockGeneralOptionsPage()
@@ -19,10 +19,10 @@ type VsTestBase(projectProvider) =
 
     let fsharpLanguageService = FSharpLanguageService(serviceProvider)
     let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
-    let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, openDocumentsTracker)
+    let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
+                                                openDocumentsTracker, skipLexCache = true)
     let projectFactory = ProjectFactory(serviceProvider, vsLanguageService)
     
-
     member x.ServiceProvider = serviceProvider
     member x.FSharpLanguageService = fsharpLanguageService
     member x.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService
@@ -31,4 +31,6 @@ type VsTestBase(projectProvider) =
     member x.VsLanguageService = vsLanguageService
     member x.ProjectFactory = projectFactory
     member x.ClassificationTypeRegistryService = classificationRegistry
+
+    member x.AddProject(project: IProjectProvider) = dte.AddProject(project.ProjectFileName, project)
 

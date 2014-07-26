@@ -215,10 +215,11 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
     do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
     let source = buffer.CurrentSnapshot.GetText()
     let targetFramework = FSharpTargetFramework.NET_4_5
+    let projectFileName = filePath + ".fsproj"
 
     interface IProjectProvider with
         member x.IsForStandaloneScript = true
-        member x.ProjectFileName = Path.ChangeExtension(filePath, ".fsproj")
+        member x.ProjectFileName = projectFileName
         member x.TargetFramework = targetFramework
         member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
         member x.SourceFiles = [| filePath |]
@@ -226,7 +227,7 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
         member x.GetReferencedProjects() = []
         member x.GetAllReferencedProjectFileNames() = []
         member x.GetProjectCheckerOptions languageService =
-            languageService.GetScriptCheckerOptions (filePath, null, source, targetFramework)
+            languageService.GetScriptCheckerOptions (filePath, projectFileName, source, targetFramework)
 
 type private ProjectUniqueName = string
 

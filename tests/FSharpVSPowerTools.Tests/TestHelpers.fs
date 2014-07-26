@@ -3,8 +3,15 @@ module FSharpVSPowerTools.Tests.TestHelpers
 
 open TestUtilities.Mocks
 open NUnit.Framework
+open System.IO
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"
+
+let getTempFileName =
+    let counter = ref 0
+    fun ext ->
+        incr counter
+        Path.Combine(__SOURCE_DIRECTORY__, sprintf "test%i.%s" !counter ext)
 
 let createMockTextBuffer content fileName = 
     MockTextBuffer(content, filename = fileName, contentType = "F#")

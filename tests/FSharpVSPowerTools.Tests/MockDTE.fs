@@ -6,9 +6,20 @@ open EnvDTE80
 open System.Collections
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
+open System.Collections.Generic
 
 /// Create a simple mock DTE for an F# project
-type MockDTE(project: IProjectProvider) =
+type MockDTE() =
+    let projects = Dictionary()
+    member x.AddProject(projectName: string, project: IProjectProvider) =
+        match projects.TryGetValue(projectName) with
+        | true, project ->
+            Console.WriteLine("WARNING: a project with the same name has been already added to DTE.")
+            projects.[projectName] <- project
+        | false, _ ->
+            Console.WriteLine("Adding {0} to DTE.", projectName)
+            projects.[projectName] <- project
+
     interface DTE with
         member x.ActiveDocument: Document = 
             notimpl
@@ -91,7 +102,7 @@ type MockDTE(project: IProjectProvider) =
         member x.SelectedItems: SelectedItems = 
             notimpl
         member x.Solution: Solution = 
-            MockSolution(project, x) :> Solution
+            MockSolution(projects, x) :> Solution
         
         member x.SourceControl: SourceControl = 
             notimpl
@@ -159,7 +170,7 @@ and MockEvents() =
             with get (windowFilter: Window): WindowEvents = 
                 notimpl
         
-and MockSolution(project: IProjectProvider, dte: DTE) =
+and MockSolution(projects, dte: DTE) =
     interface IEnumerable with
         member x.GetEnumerator(): IEnumerator = 
             notimpl
@@ -189,9 +200,11 @@ and MockSolution(project: IProjectProvider, dte: DTE) =
         member x.FileName: string = 
             notimpl        
         member x.FindProjectItem(fileName: string): ProjectItem = 
-            if Array.exists ((=) fileName) project.SourceFiles then
+            let allProjects = projects |> Seq.map (|KeyValue|) |> Seq.map snd
+            match allProjects |> Seq.tryFind (fun project -> Array.exists ((=) fileName) project.SourceFiles) with
+            | Some project ->
                 MockProjectItem(fileName, project, dte) :> ProjectItem
-            else null
+            | None -> null
 
         member x.FullName: string = 
             notimpl        

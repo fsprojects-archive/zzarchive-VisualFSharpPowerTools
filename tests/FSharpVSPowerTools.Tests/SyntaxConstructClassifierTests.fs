@@ -7,13 +7,14 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
+open Microsoft.VisualStudio.Text.Classification
 
 type ClassificationSpan =
     { Classification: string
       Span: int * int * int * int }
 
-type SyntaxConstructClassifierHelper(buffer: ITextBuffer, fileName: string) =    
-    inherit VsTestBase(VirtualProjectProvider(buffer, fileName))
+type SyntaxConstructClassifierHelper() =    
+    inherit VsTestBase()
     
     let classifierProvider = new SyntaxConstructClassifierProvider(base.ServiceProvider, null,
                                     projectFactory = base.ProjectFactory,
@@ -21,11 +22,9 @@ type SyntaxConstructClassifierHelper(buffer: ITextBuffer, fileName: string) =
                                     classificationRegistry = base.ClassificationTypeRegistryService,
                                     textDocumentFactoryService = base.DocumentFactoryService)
 
-    let classifier = classifierProvider.GetClassifier(buffer)
+    member x.GetClassifier(buffer) = classifierProvider.GetClassifier(buffer)
 
-    member x.Classifier = classifier
-
-    member x.ClassificationSpans =
+    member x.ClassificationSpansOf(buffer: ITextBuffer, classifier: IClassifier) =
         classifier.GetClassificationSpans(SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length))
         |> Seq.sortBy (fun span -> span.Span.Start.Position)
         |> Seq.map (fun span ->
@@ -49,19 +48,14 @@ type SyntaxConstructClassifierHelper(buffer: ITextBuffer, fileName: string) =
 module SyntaxConstructClassifierTests =
     let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tests.fsx")
     type [<Measure>] ms
-    let timeout = 20000<ms>
+    let timeout = 30000<ms>
+    
+    let helper = new SyntaxConstructClassifierHelper()
 
     [<SetUp>]
     let deploy() =
         AssertListener.Initialize()
-        // IsSymbolUsedForProject seems to require a file to exist on disks
-        // If not, type checking fails with some weird errors
-        File.WriteAllText(fileName, "")
-
-    [<TearDown>]
-    let cleanup() =
-        File.Delete(fileName)
-
+    
     let (=>) (startLine, startCol) (endLine, endCol) =
         (startLine, startCol, endLine, endCol)
         
@@ -78,10 +72,12 @@ module SyntaxConstructClassifierTests =
     [<Test>]
     let ``should be able to get classification spans``() = 
         let content = "type T() = class end"
+        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        use helper = new SyntaxConstructClassifierHelper(buffer, fileName)
-        testEvent helper.Classifier.ClassificationChanged "Timed out before classification changed" 10000
-            (fun () -> assertFalse (Seq.isEmpty helper.ClassificationSpans))
+        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        let classifier = helper.GetClassifier(buffer)
+        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
+            (fun () -> helper.ClassificationSpansOf(buffer, classifier) |> Seq.isEmpty |> assertFalse)
 
     [<Test>]
     let ``should be able to get classification spans for main categories``() = 
@@ -94,11 +90,14 @@ let _ = <@ 1 = 1 @>
 module Module1 =
     let x = ()
 """
+        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        use helper = new SyntaxConstructClassifierHelper(buffer, fileName)
-        testEvent helper.Classifier.ClassificationChanged "Timed out before classification changed" 10000
+        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        let classifier = helper.GetClassifier(buffer)
+        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
             (fun () -> 
-                Seq.toList helper.ClassificationSpans
+                helper.ClassificationSpansOf(buffer, classifier)
+                |> Seq.toList
                 |> assertEqual
                     [ { Classification = "FSharp.Function"
                         Span = (2, 5) => (2, 18) };
@@ -124,17 +123,24 @@ open System
 open System.Collections.Generic
 let internal f() = ()
 """
+        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        use helper = new SyntaxConstructClassifierHelper(buffer, fileName)
-        testEvent helper.Classifier.ClassificationChanged "Timed out before classification changed" 10000
+        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        // IsSymbolUsedForProject seems to require a file to exist on disks
+        // If not, type checking fails with some weird errors
+        File.WriteAllText(fileName, "")
+        let classifier = helper.GetClassifier(buffer)
+        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
             (fun () -> 
-                Seq.toList helper.ClassificationSpans
+                helper.ClassificationSpansOf(buffer, classifier)
+                |> Seq.toList
                 |> assertEqual
                     [ { Classification = "FSharp.Unused"
                         Span = (2, 6) => (2, 11) };
                       { Classification = "FSharp.Unused"
                         Span = (3, 6) => (3, 31) };
                       { Classification = "FSharp.Unused"
-                        Span = (4, 14) => (4, 14) } ]) 
+                        Span = (4, 14) => (4, 14) } ])
+        File.Delete(fileName)
         
 

@@ -32,15 +32,19 @@ type VSLanguageService
     [<ImportingConstructor>] 
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
-     openDocumentsTracker: OpenDocumentsTracker) =
+     openDocumentsTracker: OpenDocumentsTracker, ?skipLexCache) =
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
-    
+    let skipLexCache = defaultArg skipLexCache false
+
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
-            let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
-            let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
-            fsharpLanguageService.LexStateOfColorState(colorState)
+            if skipLexCache then
+                Lexer.queryLexState source defines line
+            else
+                let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
+                let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
+                fsharpLanguageService.LexStateOfColorState(colorState)
         with e ->
             debug "[Language Service] %O exception occurs while querying lexing states." e
             Lexer.queryLexState source defines line
