@@ -70,6 +70,7 @@ type ScopeKind =
     | TopModule
     | NestedModule
     | OpenDeclaration
+    | HashDirective
     override x.ToString() = sprintf "%A" x
 
 type InsertContext =
@@ -335,6 +336,7 @@ module ParsedInput =
                 |> Option.orElse (ifPosInRange range (fun _ -> List.tryPick (walkSynModuleDecl false) modules))
             | SynModuleDecl.Open _ -> None
             | SynModuleDecl.Let (_, bindings, _) -> List.tryPick walkBinding bindings
+            | SynModuleDecl.DoExpr (_, expr, _) -> walkExpr expr
             | SynModuleDecl.Types (types, _) -> List.tryPick walkTypeDefn types
             | _ -> None
 
@@ -436,6 +438,7 @@ module ParsedInput =
                     doRange NestedModule fullIdent range.StartLine moduleBodyIdentation
                     List.iter (walkSynModuleDecl fullIdent) decls
             | SynModuleDecl.Open (_, range) -> doRange OpenDeclaration [] range.EndLine (range.StartColumn - 5)
+            | SynModuleDecl.HashDirective (_, range) -> doRange HashDirective [] range.EndLine range.StartColumn
             | _ -> ()
 
         match ast with 

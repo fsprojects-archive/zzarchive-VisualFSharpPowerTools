@@ -398,37 +398,30 @@ let _ = Class<_>()
 """ 
     ==> [2, 15, None]
 
-//[<Test>]
-//let ``for interactive only``() =
-//    """
-//module M
-//
-//
-//
-//
-//
-//let main () = 
-//    let _ = DateTime.Now
-//    0
-//""" 
-//    ==> [0, 15, Some Type]
+[<Test>]
+let ``module top level do expression is FunctionOrValue``() =
+    """
+DateTime
+""" 
+    ==> [1, 1, Some EntityKind.FunctionOrValue]
+
 
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
 let forEntity (ns: LongIdent) (fullName: LongIdent) (ident, source: Source, line) =
-    let tree = parseSource source
-    match ParsedInput.tryFindInsertionContext line tree ident (None, None, Some (ns.Split '.'), fullName.Split '.') with
+    let ast = parseSource source
+    match ParsedInput.tryFindInsertionContext line ast ident (None, None, Some (ns.Split '.'), fullName.Split '.') with
     | None -> failwith "Cannot find nearest open statement block"
-    | Some (e, ctx) -> source, e, ctx
+    | Some (e, ctx) -> source, e, ctx, ast
 
-let result (expected: Source) (source: Source, entity, ctx: InsertContext) = 
+let result (expected: Source) (source: Source, entity, ctx: InsertContext, ast) = 
     let lines = srcToLineArray source
 
     let doc =
         { new IInsertContextDocument<string[]> with
-              member x.GetLineStr (lines, line) = lines.[line]
-              member x.Insert (lines, line, lineStr) =  
+              member __.GetLineStr (lines, line) = lines.[line]
+              member __.Insert (lines, line, lineStr) =  
                 Array.append (
                     Array.append lines.[0..line - 1] [| lineStr |]) 
                     lines.[line..] }
@@ -443,9 +436,10 @@ let result (expected: Source) (source: Source, entity, ctx: InsertContext) =
             |> String.concat "\r\n"
 
         printfn 
-            "Expected:\n%s\nActual:\n%s" 
+            "Expected:\n%s\nActual:\n%s\nAST:\n%A" 
             (expected |> srcToLineArray |> Array.toList |> withLineNumbers) 
             (result |> Array.toList |> withLineNumbers)
+            ast
         reraise()
 
 [<Test>]
@@ -857,6 +851,23 @@ type T = { F: DateTime }
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
     |> result """open System
+
+type T = { F: DateTime }
+"""
+
+[<Test>]
+let ``implicit module, no other open statements exist, references exist``() =
+    """
+#r "System.Runtime"
+type T = { F: DateTime }
+"""
+    |> forLine 3
+    |> forIdent "DateTime"
+    |> forEntity "System" "System.DateTime"
+    |> result """
+#r "System.Runtime"
+
+open System
 
 type T = { F: DateTime }
 """
