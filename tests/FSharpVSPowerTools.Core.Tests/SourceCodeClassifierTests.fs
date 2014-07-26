@@ -1228,9 +1228,22 @@ let _ = DU.Case1
     => [ 4, []]
 
 [<Test>]
-let ``Microsoft FSharp Quotations Expr type``() =
+let ``type with different DisplayName``() =
     """
 open Microsoft.FSharp.Quotations
 let _ = Expr.Coerce (<@@ 1 @@>, typeof<int>)
 """
-    => [2, []]
+    => [ 2, []]
+
+[<Test>]
+let ``auto open module with ModuleSuffix attribute value``() =
+    """
+module Top =
+    [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+    module Module =
+        let func _ = ()
+open Top
+module Module1 =
+    let _ = func()
+"""
+    => [ 6, []]
