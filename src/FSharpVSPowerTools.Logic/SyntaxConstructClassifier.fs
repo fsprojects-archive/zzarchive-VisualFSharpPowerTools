@@ -88,7 +88,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 entities 
                                 |> Option.map (fun entities -> 
                                     entities 
-                                        |> List.map (fun e -> e.FullName, e.CleanIdents)
+                                        |> List.map (fun e -> e.FullName, e.CleanedIdents)
                                     |> Map.ofList),
                                 OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
                             else None, []

@@ -1,6 +1,7 @@
 ﻿[<AutoOpen>]
 module internal FSharpVSPowerTools.TypedAstUtils
 
+open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 let isSymbolLocalForProject (symbol: FSharpSymbol) = 
@@ -201,13 +202,11 @@ type FSharpEntity with
             match fullName with
             | Some fullName ->
                 match Option.attempt (fun _ -> x.DisplayName) with
-                | Some shortDisplayName when shortDisplayName.IndexOf '.' = -1 ->
-                    let res = Array.copy fullName
-                    res.[res.Length - 1] <- shortDisplayName
-                    Some res
+                | Some shortDisplayName when not (shortDisplayName.Contains ".") ->
+                    Some (fullName |> Array.replace (fullName.Length - 1) shortDisplayName)
                 | _ -> Some fullName
-            | None -> None
-            |> Option.map (fun fullDisplayName -> System.String.Join (".", fullDisplayName))
+            | None -> None 
+            |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
         //debug "GetFullDisplayName: FullName = %A, Result = %A" fullName res
         res
 
@@ -217,10 +216,8 @@ type FSharpMemberFunctionOrValue with
         match fullName with
         | Some fullName ->
             match Option.attempt (fun _ -> x.DisplayName) with
-            | Some shortDisplayName when shortDisplayName.IndexOf '.' = -1 ->
-                let res = Array.copy fullName
-                res.[res.Length - 1] <- shortDisplayName
-                Some res
+            | Some shortDisplayName when not (shortDisplayName.Contains ".") ->
+                Some (fullName |> Array.replace (fullName.Length - 1) shortDisplayName)
             | _ -> Some fullName
         | None -> None
         |> Option.map (fun fullDisplayName -> System.String.Join (".", fullDisplayName))

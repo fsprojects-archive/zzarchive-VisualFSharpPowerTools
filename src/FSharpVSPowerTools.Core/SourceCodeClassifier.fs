@@ -298,10 +298,10 @@ module SourceCodeClassifier =
                         |> Array.map (fun fullName ->
                             match entities |> Map.tryFind (System.String.Join (".", fullName)) with
                             | Some cleanIdents ->
-                                debug "[SourceCodeClassifier] Cleared FullName %A -> %A" fullName cleanIdents
+                                debug "[SourceCodeClassifier] Cleaned FullName %A -> %A" fullName cleanIdents
                                 cleanIdents
                             | None -> 
-                                debug "[SourceCodeClassifier] NOT Cleared FullName %A" fullName
+                                debug "[SourceCodeClassifier] NOT Cleaned FullName %A" fullName
                                 fullName)
                     { symbolUse with FullNames = lazy fullNames })
             | None -> symbolUses

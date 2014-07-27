@@ -20,8 +20,8 @@ type RawEntity =
       FullName: string
       /// Entity name parts with removed module suffixes (Ns.M1Module.M2Module.M3.entity -> Ns.M1.M2.M3.entity)
       /// and replaced compiled names with display names (FSharpEntity.DisplayName, FSharpValueOrFucntion.DisplayName).
-      /// Note: *all* parts are cleared, not the last one. 
-      CleanIdents: Idents
+      /// Note: *all* parts are cleaned, not the last one. 
+      CleanedIdents: Idents
       Namespace: Idents option
       IsPublic: bool
       TopRequireQualifiedAccessParent: Idents option
@@ -91,7 +91,7 @@ module AssemblyContentProvider =
         parent.FormatEntityFullName entity
         |> Option.map (fun (fullName, cleanIdents) ->
             { FullName = fullName
-              CleanIdents = cleanIdents
+              CleanedIdents = cleanIdents
               Namespace = ns
               IsPublic = entity.Accessibility.IsPublic
               TopRequireQualifiedAccessParent = parent.RequiresQualifiedAccess |> Option.map parent.FixParentModuleSuffix
@@ -136,7 +136,7 @@ module AssemblyContentProvider =
 
                           WithModuleSuffix = 
                             if entity.IsFSharpModule && hasModuleSuffixAttribute entity then 
-                                currentEntity |> Option.map (fun e -> e.CleanIdents) 
+                                currentEntity |> Option.map (fun e -> e.CleanedIdents) 
                             else parent.WithModuleSuffix
                           Namespace = ns }
 
@@ -146,7 +146,7 @@ module AssemblyContentProvider =
                             | Some displayName ->
                                 yield
                                     { FullName = func.FullName
-                                      CleanIdents = displayName.Split '.' |> currentParent.FixParentModuleSuffix
+                                      CleanedIdents = displayName.Split '.' |> currentParent.FixParentModuleSuffix
                                       Namespace = ns
                                       IsPublic = func.Accessibility.IsPublic
                                       TopRequireQualifiedAccessParent = 
