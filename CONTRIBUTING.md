@@ -54,7 +54,9 @@ When you consider to contribute, please follow the following coding conventions:
  
  - Use four spaces for indentation
  - Use camelCase for module functions and PascalCase for type members.
- - When you refer to class instances, use `x` in each  member. If you reference to the instances in constructors, we generally recommend to use `as self` pattern.
+ - When you refer to class instances, use `x` in a member if you need to refer to that instance; otherwise, please use 
+`__` if the class instance isn't used anywhere else.
+If you reference to the instances in constructors, we generally recommend to use `as self` pattern.
  - We turn on unused-variable warnings by default, please remove all unused identifiers before sending pull requests. 
 When suppressing unused variables, you could use `_` prefix to give them mnemonic names.
  - Use uppercase identifiers for type parameters e.g. 'T, 'U, etc.

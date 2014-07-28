@@ -2,6 +2,9 @@
 * Improve rename refactoring validation
 * Add support for VS 14
 * Implement Gray out unused open statements
+* Handle included files while working on F# scripts
+* Add VS unit tests for multiple features
+* Implement unused declaration scrollbar markers
 
 #### 1.3.0 - July 10 2014
 * Add report progress and cancellation to Rename Refactoring
