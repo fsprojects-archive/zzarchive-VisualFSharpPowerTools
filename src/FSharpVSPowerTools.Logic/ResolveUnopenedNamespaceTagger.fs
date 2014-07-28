@@ -95,9 +95,8 @@ type ResolveUnopenedNamespaceSmartTagger
                                                        e.TopRequireQualifiedAccessParent, 
                                                        e.AutoOpenParent,
                                                        e.Namespace,
-                                                       Array.append 
-                                                          e.CleanedIdents.[..e.CleanedIdents.Length - 2] 
-                                                          [|lastIdent.Substring(0, lastIdent.Length - 9)|] ])
+                                                       e.CleanedIdents 
+                                                       |> Array.replace (e.CleanedIdents.Length - 1) (lastIdent.Substring(0, lastIdent.Length - 9)) ])
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)

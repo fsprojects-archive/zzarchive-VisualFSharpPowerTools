@@ -220,5 +220,5 @@ type FSharpMemberFunctionOrValue with
                 Some (fullName |> Array.replace (fullName.Length - 1) shortDisplayName)
             | _ -> Some fullName
         | None -> None
-        |> Option.map (fun fullDisplayName -> System.String.Join (".", fullDisplayName))
+        |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
 
