@@ -70,7 +70,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
 
     and walkPat = function
         | SynPat.Ands (pats, _) -> List.iter walkPat pats
-        | SynPat.Named(SynPat.Wild _ as pat, ident, _, _, _) -> 
+        | SynPat.Named (pat, ident, _, _, _) -> 
             walkPat pat
             addIdent ident
         | SynPat.Typed(pat, t, _) -> 

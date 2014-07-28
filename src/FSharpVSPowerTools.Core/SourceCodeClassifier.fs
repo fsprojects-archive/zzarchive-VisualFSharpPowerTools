@@ -202,7 +202,7 @@ module SourceCodeClassifier =
         | _ -> None
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase,
-                                   openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents> option) =
+                                   openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
         let allSymbolsUses' =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
@@ -297,10 +297,18 @@ module SourceCodeClassifier =
                         symbolUse.FullNames.Value
                         |> Array.map (fun fullName ->
                             match entities |> Map.tryFind (System.String.Join (".", fullName)) with
-                            | Some cleanIdents ->
-                                debug "[SourceCodeClassifier] Cleaned FullName %A -> %A" fullName cleanIdents
+                            | Some [cleanIdents] ->
+                                debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
                                 cleanIdents
-                            | None -> 
+                            | Some (firstCleanIdents :: _ as cleanIdentsList) ->
+                                if cleanIdentsList |> List.exists ((=) fullName) then
+                                    debug "[SourceCodeClassifier] An exact match found among several clean idents: %A" fullName
+                                    fullName
+                                else
+                                    debug "[SourceCodeClassifier] No match found among several clean idents, return the first one FullName %A -> %A" 
+                                          fullName firstCleanIdents
+                                    firstCleanIdents
+                            | _ -> 
                                 debug "[SourceCodeClassifier] NOT Cleaned FullName %A" fullName
                                 fullName)
                     { symbolUse with FullNames = lazy fullNames })

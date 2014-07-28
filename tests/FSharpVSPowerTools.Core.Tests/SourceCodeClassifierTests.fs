@@ -9,6 +9,7 @@ let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = LanguageService(fun _ -> ())
+
 let opts source = 
     let opts = 
         languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, LanguageServiceTestHelper.args, [||], framework) 
@@ -22,10 +23,10 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
 
     let lexer = 
         { new LexerBase() with
-            member x.GetSymbolFromTokensAtLocation (_tokens, line, col) =
+            member __.GetSymbolFromTokensAtLocation (_tokens, line, col) =
                 let lineStr = sourceLines.[line]
                 Lexer.getSymbol source line col lineStr LanguageServiceTestHelper.args Lexer.queryLexState
-            member x.TokenizeLine line =
+            member __.TokenizeLine line =
                 let lineStr = sourceLines.[line]
                 Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
 
@@ -49,12 +50,15 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
                | None -> []
         let openDeclarations = OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
+
         let allEntities =
             entities
             |> Option.map (fun entities -> 
                 entities 
-                |> List.map (fun e -> e.FullName, e.CleanedIdents)
-                |> Map.ofList)
+                |> Seq.groupBy (fun e -> e.FullName)
+                |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                |> Map.ofSeq)
+
         SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, allEntities)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
@@ -1247,3 +1251,33 @@ module Module1 =
     let _ = func()
 """
     => [ 6, []]
+
+[<Test>]
+let ``a type which has more than one DisplayName causes the namespace it's defined in to be not marked as unused``() =
+    """
+open System
+let _ = IntPtr.Zero
+""" 
+    => [2, []]
+
+[<Test; Ignore "to be fixed">]
+let ``usage of an operator makes the module it's defined in to be not marked as unused``() =
+    """
+module M =
+    let (++|) x y = ()
+open M
+let _ = 1 ++| 2
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``type used in pattern matching with "as" keyword causes the module in which the type is defined to be not marked as unused``() =
+    """
+module M = 
+    type Class() = class end
+open M
+let _ = match obj() with 
+        | :? Class as c -> ()
+        | _ -> ()
+"""
+    => [ 4, []]
