@@ -1253,9 +1253,31 @@ module Module1 =
     => [ 6, []]
 
 [<Test>]
-let ``IntPtr causes System namespace not marked as unused``() =
+let ``a type which has more than one DisplayName causes the namespace it's defined in to be not marked as unused``() =
     """
 open System
 let _ = IntPtr.Zero
 """ 
     => [2, []]
+
+[<Test; Ignore "to be fixed">]
+let ``usage of an operator makes the module it's defined in to be not marked as unused``() =
+    """
+module M =
+    let (++|) x y = ()
+open M
+let _ = 1 ++| 2
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``type used in pattern matching with "as" keyword causes the module in which the type is defined to be not marked as unused``() =
+    """
+module M = 
+    type Class() = class end
+open M
+let _ = match obj() with 
+        | :? Class as c -> ()
+        | _ -> ()
+"""
+    => [ 4, []]
