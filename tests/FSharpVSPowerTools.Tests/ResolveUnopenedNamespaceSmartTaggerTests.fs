@@ -35,7 +35,7 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
 
 [<TestFixture>]
 module ResolveUnopenedNamespaceSmartTaggerTests =
-    let timeout = 10000<ms>
+    let timeout = 30000<ms>
     
     let snapshotPoint (snapshot: ITextSnapshot) line (column: int) = 
         let line = snapshot.GetLineFromLineNumber(line - 1)

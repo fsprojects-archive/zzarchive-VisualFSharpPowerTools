@@ -60,7 +60,6 @@
     <Content Include="app.config" />
     <Content Include="packages.config" />
     <Compile Include="TestHelpers.fs" />
-    <Compile Include="MockGeneralOptionsPage.fs" />
     <Compile Include="MockDTE.fs" />
     <Compile Include="Mocks.fs" />
     <Compile Include="VsTestBase.fs" />

@@ -24,64 +24,6 @@ let createDocumentFactoryService() =
                 textBuffer.Properties.TryGetProperty(typeof<ITextDocument>, &textDocument) 
     }
 
-let createTextUndoTransation() =
-    { 
-        new ITextUndoTransaction with
-            member __.AddUndo(undo: ITextUndoPrimitive): unit = notimpl
-            member __.CanRedo: bool = notimpl
-            member __.CanUndo: bool = notimpl
-            member __.Cancel(): unit = notimpl
-            member __.Complete() = 
-                ()
-
-            member __.Description with get (): string = notimpl and set (v: string): unit = notimpl
-            member __.Dispose(): unit = 
-                ()
-
-            member __.Do(): unit = notimpl
-            member __.History: ITextUndoHistory = notimpl            
-            member __.MergePolicy with get (): IMergeTextUndoTransactionPolicy = notimpl and set (v: IMergeTextUndoTransactionPolicy): unit = notimpl            
-            member __.Parent: ITextUndoTransaction = notimpl            
-            member __.State: UndoTransactionState = notimpl            
-            member __.Undo(): unit = notimpl            
-            member __.UndoPrimitives: Collections.Generic.IList<ITextUndoPrimitive> = notimpl            
-    }
-
-let createTextUndoHistory() =
-    {
-        new ITextUndoHistory with
-            member __.CanRedo: bool = notimpl
-            member __.CanUndo: bool = notimpl
-            member __.CreateTransaction(_description: string): ITextUndoTransaction = createTextUndoTransation()
-            member __.CurrentTransaction: ITextUndoTransaction = notimpl
-            member __.LastRedoTransaction: ITextUndoTransaction = notimpl
-            member __.LastUndoTransaction: ITextUndoTransaction = notimpl
-            member __.Properties: PropertyCollection = notimpl
-            member __.Redo(_count: int): unit = notimpl
-            member __.RedoDescription: string = notimpl
-            member __.RedoStack: ITextUndoTransaction seq = notimpl
-            member __.State: TextUndoHistoryState = notimpl
-            member __.Undo(_count: int): unit = notimpl
-            member __.UndoDescription: string = notimpl
-            [<CLIEvent>]
-            member __.UndoRedoHappened: IEvent<EventHandler<TextUndoRedoEventArgs>, _> = notimpl
-            member __.UndoStack: ITextUndoTransaction seq = notimpl
-            [<CLIEvent>]
-            member __.UndoTransactionCompleted: IEvent<EventHandler<TextUndoTransactionCompletedEventArgs>, _> = notimpl            
-    }
-
-let createTextUndoHistoryRegistry() =
-    {
-        new ITextUndoHistoryRegistry with
-            member __.AttachHistory(_context: obj, _history: ITextUndoHistory): unit = notimpl
-            member __.GetHistory(_context: obj): ITextUndoHistory = notimpl
-            member __.RegisterHistory(context: obj): ITextUndoHistory = 
-                createTextUndoHistory()
-            
-            member __.RemoveHistory(_history: ITextUndoHistory): unit = notimpl
-            member __.TryGetHistory(_context: obj, _history: byref<ITextUndoHistory>): bool = notimpl            
-    }
-
 let createSVsResourceManager() =
     {
         new IVsResourceManager with
