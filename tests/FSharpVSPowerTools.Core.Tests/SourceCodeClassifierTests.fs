@@ -53,7 +53,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
             entities
             |> Option.map (fun entities -> 
                 entities 
-                |> List.map (fun e -> e.FullName, e.CleanIdents)
+                |> List.map (fun e -> e.FullName, e.CleanedIdents)
                 |> Map.ofList)
         SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, allEntities)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
@@ -1227,3 +1227,23 @@ let _ = DU.Case1
 """
     => [ 4, []]
 
+[<Test>]
+let ``type with different DisplayName``() =
+    """
+open Microsoft.FSharp.Quotations
+let _ = Expr.Coerce (<@@ 1 @@>, typeof<int>)
+"""
+    => [ 2, []]
+
+[<Test>]
+let ``auto open module with ModuleSuffix attribute value``() =
+    """
+module Top =
+    [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+    module Module =
+        let func _ = ()
+open Top
+module Module1 =
+    let _ = func()
+"""
+    => [ 6, []]

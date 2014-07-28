@@ -16,10 +16,12 @@ type EntityKind =
     override x.ToString() = sprintf "%A" x
 
 type RawEntity = 
-    { /// Full entity name as it's seen in compiled code.
+    { /// Full entity name as it's seen in compiled code (raw FSharpEntity.FullName, FSharpValueOrFunction.FullName). 
       FullName: string
-      /// Entity name idents with removed module suffixes (Ns.M1Module.M2Module.M3.entity -> Ns.M1.M2.M3.entity)
-      CleanIdents: Idents
+      /// Entity name parts with removed module suffixes (Ns.M1Module.M2Module.M3.entity -> Ns.M1.M2.M3.entity)
+      /// and replaced compiled names with display names (FSharpEntity.DisplayName, FSharpValueOrFucntion.DisplayName).
+      /// Note: *all* parts are cleaned, not the last one. 
+      CleanedIdents: Idents
       Namespace: Idents option
       IsPublic: bool
       TopRequireQualifiedAccessParent: Idents option
@@ -51,7 +53,7 @@ type Parent =
     member x.FixParentModuleSuffix (idents: Idents) =
         Parent.RewriteParentIdents x.WithModuleSuffix idents
 
-    member x.FormatEntityFullName (entity: FSharpEntity) =
+    member __.FormatEntityFullName (entity: FSharpEntity) =
         // remove number of arguments from generic types
         // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
         // and System.Data.Listeners`1.Func -> System.Data.Listeners.Func
@@ -72,12 +74,14 @@ type Parent =
                     idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
             idents
 
-        entity.GetFullName() 
-        |> Option.map (fun fullName -> 
-            fullName,
-            fullName.Split '.' 
-            |> removeGenericParamsCount 
-            |> removeModuleSuffix)
+        entity.GetFullName()
+        |> Option.bind (fun fullName -> 
+            entity.GetFullDisplayName()
+            |> Option.map (fun fullDisplayName ->
+                fullName,
+                fullDisplayName.Split '.' 
+                |> removeGenericParamsCount 
+                |> removeModuleSuffix))
 
 module AssemblyContentProvider =
     open System.IO
@@ -87,7 +91,7 @@ module AssemblyContentProvider =
         parent.FormatEntityFullName entity
         |> Option.map (fun (fullName, cleanIdents) ->
             { FullName = fullName
-              CleanIdents = cleanIdents
+              CleanedIdents = cleanIdents
               Namespace = ns
               IsPublic = entity.Accessibility.IsPublic
               TopRequireQualifiedAccessParent = parent.RequiresQualifiedAccess |> Option.map parent.FixParentModuleSuffix
@@ -132,22 +136,24 @@ module AssemblyContentProvider =
 
                           WithModuleSuffix = 
                             if entity.IsFSharpModule && hasModuleSuffixAttribute entity then 
-                                currentEntity |> Option.map (fun e -> e.CleanIdents) 
+                                currentEntity |> Option.map (fun e -> e.CleanedIdents) 
                             else parent.WithModuleSuffix
                           Namespace = ns }
 
                     if entity.IsFSharpModule then
                         for func in entity.MembersFunctionsAndValues do
-                            let e =
+                            match func.GetFullDisplayName() with
+                            | Some displayName ->
+                                yield
                                     { FullName = func.FullName
-                                      CleanIdents = func.FullName.Split '.' |> currentParent.FixParentModuleSuffix
+                                      CleanedIdents = displayName.Split '.' |> currentParent.FixParentModuleSuffix
                                       Namespace = ns
                                       IsPublic = func.Accessibility.IsPublic
                                       TopRequireQualifiedAccessParent = 
                                           currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
                                       AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
                                       Kind = EntityKind.FunctionOrValue }
-                            yield e
+                            | None -> ()
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
                         yield! traverseEntity contentType currentParent e 

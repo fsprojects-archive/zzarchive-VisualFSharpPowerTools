@@ -26,6 +26,13 @@ module Array =
         |> Array.rev
         |> startsWith (Array.rev other)
 
+    /// Returns a new array with an element replaced with a given value.
+    let replace index value (arr: _ array) =
+        if index >= arr.Length then raise (IndexOutOfRangeException "index")
+        let res = Array.copy arr
+        res.[index] <- value
+        res
+
 [<RequireQualifiedAccess>]
 module Option =
     let inline ofNull value =

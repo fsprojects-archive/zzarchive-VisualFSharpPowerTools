@@ -49,7 +49,7 @@ module OpenDeclarationGetter =
              match e.Kind with
              | EntityKind.Module { IsAutoOpen = true } -> true
              | _ -> false)
-        |> List.map (fun e -> e.CleanIdents)
+        |> List.map (fun e -> e.CleanedIdents)
 
     let parseTooltip (ToolTipText elems): RawOpenDeclaration list =
         elems
