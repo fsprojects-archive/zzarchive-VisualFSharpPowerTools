@@ -94,8 +94,8 @@ namespace TestUtilities.Mocks {
         }
 
         public event EventHandler<TextViewLayoutChangedEventArgs> LayoutChanged {
-            add { throw new NotImplementedException(); }
-            remove { throw new NotImplementedException(); }
+            add { }
+            remove { }
         }
 
         public double LineHeight {
@@ -150,7 +150,7 @@ namespace TestUtilities.Mocks {
         }
 
         public Microsoft.VisualStudio.Text.ITextSnapshot TextSnapshot {
-            get { throw new NotImplementedException(); }
+            get { return _buffer.CurrentSnapshot; }
         }
 
         public ITextViewLineCollection TextViewLines {

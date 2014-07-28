@@ -4,6 +4,7 @@ module FSharpVSPowerTools.Tests.TestHelpers
 open TestUtilities.Mocks
 open NUnit.Framework
 open System.IO
+open System
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"
 
@@ -15,6 +16,9 @@ let getTempFileName =
 
 let createMockTextBuffer content fileName = 
     MockTextBuffer(content, filename = fileName, contentType = "F#")
+
+let createMockTextView buffer =
+    MockTextView(buffer)
 
 /// Tests that the specified condition is true.
 /// If not, calls Assert.Fail with a formatted string.
@@ -44,3 +48,18 @@ let inline assertTrue condition =
 /// Asserts that a condition is false.
 let inline assertFalse condition =
     Assert.IsFalse (condition)
+
+type [<Measure>] ms
+
+let (=>) (startLine, startCol) (endLine, endCol) =
+        (startLine, startCol, endLine, endCol)
+        
+let testEvent event errorMessage (timeout: int<_>) predicate =
+    let task =
+        event
+        |> Async.AwaitEvent
+        |> Async.StartAsTask
+    match task.Wait(TimeSpan.FromMilliseconds(float timeout)) with
+    | true -> predicate()
+    | false ->
+        Assert.Fail errorMessage

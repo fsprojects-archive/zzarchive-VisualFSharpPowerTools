@@ -14,19 +14,19 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(ResolveUnopenedNamespaceSmartTag))]
-    public class ResolveUpopenedNamespaceSmartTaggerProvider : IViewTaggerProvider
+    public class ResolveUnopenedNamespaceSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal IServiceProvider serviceProvider = null;
 
         [Import]
-        private ITextUndoHistoryRegistry undoHistoryRegistry = null;
+        internal ITextUndoHistoryRegistry undoHistoryRegistry = null;
 
-        [Import(typeof(ProjectFactory))]
-        private ProjectFactory projectFactory = null;
+        [Import]
+        internal ProjectFactory projectFactory = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {

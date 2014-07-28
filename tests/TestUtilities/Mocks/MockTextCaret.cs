@@ -113,8 +113,8 @@ namespace TestUtilities.Mocks {
 
         public CaretPosition Position {
             get { return new CaretPosition(
-                new VirtualSnapshotPoint(_position), 
-                new MockMappingPoint(), 
+                new VirtualSnapshotPoint(_position),
+                new MockMappingPoint(_position), 
                 PositionAffinity.Predecessor); 
             }
         }

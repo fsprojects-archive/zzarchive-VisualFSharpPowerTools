@@ -123,10 +123,10 @@ type ResolveUnopenedNamespaceSmartTagger
         
         let doc =
             { new IInsertContextDocument<ITextSnapshot> with
-                  member x.Insert (snapshot, line, lineStr) = 
+                  member __.Insert (snapshot, line, lineStr) = 
                     let pos = snapshot.GetLineFromLineNumber(line).Start.Position
                     snapshot.TextBuffer.Insert (pos, lineStr + Environment.NewLine)
-                  member x.GetLineStr (snapshot, line) = snapshot.GetLineFromLineNumber(line).GetText() }
+                  member __.GetLineStr (snapshot, line) = snapshot.GetLineFromLineNumber(line).GetText() }
         
         InsertContext.insertOpenDeclaration snapshot doc ctx ns |> ignore
         transaction.Complete()
@@ -140,20 +140,20 @@ type ResolveUnopenedNamespaceSmartTagger
 
     let openNamespaceAction snapshot ctx name ns =
         { new ISmartTagAction with
-            member x.ActionSets = null
-            member x.DisplayText = "open " + ns
-            member x.Icon = openNamespaceIcon
-            member x.IsEnabled = true
-            member x.Invoke() = openNamespace snapshot ctx ns name
+            member __.ActionSets = null
+            member __.DisplayText = "open " + ns
+            member __.Icon = openNamespaceIcon
+            member __.IsEnabled = true
+            member __.Invoke() = openNamespace snapshot ctx ns name
         }
 
     let qualifiedSymbolAction snapshotSpan fullName =
         { new ISmartTagAction with
-            member x.ActionSets = null
-            member x.DisplayText = fullName
-            member x.Icon = null
-            member x.IsEnabled = true
-            member x.Invoke() = replaceFullyQualifiedSymbol snapshotSpan fullName
+            member __.ActionSets = null
+            member __.DisplayText = fullName
+            member __.Icon = null
+            member __.IsEnabled = true
+            member __.Invoke() = replaceFullyQualifiedSymbol snapshotSpan fullName
         }
 
     let getSmartTagActions snapshotSpan candidates =
@@ -174,7 +174,7 @@ type ResolveUnopenedNamespaceSmartTagger
         |> Seq.toReadOnlyCollection
 
     interface ITagger<ResolveUnopenedNamespaceSmartTag> with
-        member x.GetTags _ =
+        member __.GetTags _ =
             seq {
                 match currentWord, state with
                 | Some word, Some candidates ->
@@ -187,8 +187,8 @@ type ResolveUnopenedNamespaceSmartTagger
             }
              
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
