@@ -18,7 +18,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     static member Empty = ParseAndCheckResults(None)
 
-    member x.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
+    member __.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
         async {
             match infoOpt with 
             | None -> 
@@ -27,7 +27,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
         }
 
-    member x.GetUsesOfSymbolInFile(symbol) =
+    member __.GetUsesOfSymbolInFile(symbol) =
         async {
             match infoOpt with 
             | None -> 
@@ -36,7 +36,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 return! checkResults.GetUsesOfSymbolInFile(symbol)
         }
 
-    member x.GetAllUsesOfAllSymbolsInFile() =
+    member __.GetAllUsesOfAllSymbolsInFile() =
         async {
             match infoOpt with
             | None -> 
@@ -45,17 +45,17 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 return! checkResults.GetAllUsesOfAllSymbolsInFile()
         }
 
-    member x.GetUntypedAst() =
+    member __.GetUntypedAst() =
         match infoOpt with 
         | None -> None
         | Some (_, parseResults) -> parseResults.ParseTree
 
-    member x.GetErrors() =
+    member __.GetErrors() =
         match infoOpt with 
         | None -> None
         | Some (checkResults, _parseResults) -> Some checkResults.Errors
 
-    member x.GetNavigationItems() =
+    member __.GetNavigationItems() =
         match infoOpt with 
         | None -> [| |]
         | Some (_checkResults, parseResults) -> 
@@ -65,13 +65,13 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 Debug.Assert(false, "couldn't update navigation items, ignoring")  
                 [| |]
 
-    member x.GetPartialAssemblySignature() =
+    member __.GetPartialAssemblySignature() =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.PartialAssemblySignature)
 
-    member x.ProjectContext =
+    member __.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
             
-    member x.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
+    member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
         asyncMaybe {
             match infoOpt with
             | Some (checkResults, _) -> 
@@ -211,7 +211,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
-  member x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework) =
+  member __.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework) =
       async {
         // We are in a stand-alone file or we are in a project, but currently editing a script file
         try 
@@ -244,7 +244,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       }
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
-  member x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
+  member __.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
     let opts =
         { ProjectFileName = projFilename
           ProjectFileNames = files
@@ -258,13 +258,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                     opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
     opts     
 
-  member x.ParseFileInProject(projectOptions, fileName: string, src) = 
+  member __.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
         Debug.WriteLine(sprintf "Parsing: Get untyped parse result (fileName=%s)" fileName)
         return! checker.ParseFileInProject(fileName, src, projectOptions)
     }
 
-  member internal x.TryGetStaleTypedParseResult(fileName:string, options, src, stale)  = 
+  member internal __.TryGetStaleTypedParseResult(fileName:string, options, src, stale)  = 
     // Try to get recent results from the F# service
     let res = 
         match stale with 
@@ -278,11 +278,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 (*
  // This is currently unused, but could be used in the future to ensure reactivity and analysis-responsiveness in some situations.
  // The method in the corresponding fsharpbinding code is used by Xamarin Studio.
-  member x.GetTypedParseResultWithTimeout(projectFilename, fileName:string, src, files, args, stale, timeout, targetFramework)  : ParseAndCheckResults = 
-    let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
+  member __.GetTypedParseResultWithTimeout(projectFilename, fileName:string, src, files, args, stale, timeout, targetFramework)  : ParseAndCheckResults = 
+    let opts = __.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
     Debug.WriteLine("Parsing: Get typed parse result, fileName={0}", [|fileName|])
     // Try to get recent results from the F# service
-    match x.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
+    match __.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
     | Some results ->
         Debug.WriteLine(sprintf "Parsing: using stale results")
         results
@@ -349,7 +349,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
      }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: ProjectOptions seq) =
+  member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: ProjectOptions seq) =
      async { 
         return 
             projectsOptions
@@ -364,11 +364,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 |> Async.RunSynchronously)
      }
 
-  member x.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)
+  member __.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)
 
   // additions
 
-  member x.Checker = checker
+  member __.Checker = checker
 
   member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
       let rec loop i options = 

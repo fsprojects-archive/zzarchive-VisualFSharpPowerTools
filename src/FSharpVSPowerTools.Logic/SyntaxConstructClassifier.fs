@@ -87,9 +87,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
                                 entities 
                                 |> Option.map (fun entities -> 
-                                    entities 
-                                        |> List.map (fun e -> e.FullName, e.CleanedIdents)
-                                    |> Map.ofList),
+                                     entities 
+                                     |> Seq.groupBy (fun e -> e.FullName)
+                                     |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                                     |> Map.ofSeq),
                                 OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
                             else None, []
 
@@ -153,17 +154,17 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
     interface IClassifier with
         // it's called for each visible line of code
-        member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
+        member __.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
             try getClassificationSpans snapshotSpan :> _
             with e -> 
                 Logging.logException e
                 upcast [||]
 
         [<CLIEvent>]
-        member x.ClassificationChanged = classificationChanged.Publish
+        member __.ClassificationChanged = classificationChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
             (docEventListener :> IDisposable).Dispose()
          
