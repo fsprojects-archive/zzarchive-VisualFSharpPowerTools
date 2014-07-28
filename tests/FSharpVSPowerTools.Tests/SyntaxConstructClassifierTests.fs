@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
-open TestUtilities
 open System
 open System.IO
 open FSharpVSPowerTools
@@ -22,9 +21,9 @@ type SyntaxConstructClassifierHelper() =
                                     classificationRegistry = base.ClassificationTypeRegistryService,
                                     textDocumentFactoryService = base.DocumentFactoryService)
 
-    member x.GetClassifier(buffer) = classifierProvider.GetClassifier(buffer)
+    member __.GetClassifier(buffer) = classifierProvider.GetClassifier(buffer)
 
-    member x.ClassificationSpansOf(buffer: ITextBuffer, classifier: IClassifier) =
+    member __.ClassificationSpansOf(buffer: ITextBuffer, classifier: IClassifier) =
         classifier.GetClassificationSpans(SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length))
         |> Seq.sortBy (fun span -> span.Span.Start.Position)
         |> Seq.map (fun span ->
@@ -41,33 +40,19 @@ type SyntaxConstructClassifierHelper() =
               Span = (lineStart, colStart, lineEnd, colEnd - 1) } )
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             classifierProvider.Dispose()
 
 [<TestFixture>]
 module SyntaxConstructClassifierTests =
-    type [<Measure>] ms
     let timeout = 30000<ms>
     
     let helper = new SyntaxConstructClassifierHelper()
 
     [<SetUp>]
     let deploy() =
-        AssertListener.Initialize()
+        TestUtilities.AssertListener.Initialize()
     
-    let (=>) (startLine, startCol) (endLine, endCol) =
-        (startLine, startCol, endLine, endCol)
-        
-    let testEvent event errorMessage (timeout: int<_>) predicate =
-        let task =
-            event
-            |> Async.AwaitEvent
-            |> Async.StartAsTask
-        match task.Wait(TimeSpan.FromMilliseconds(float timeout)) with
-        | true -> predicate()
-        | false ->
-            Assert.Fail errorMessage
-
     [<Test>]
     let ``should be able to get classification spans``() = 
         let content = "type T() = class end"

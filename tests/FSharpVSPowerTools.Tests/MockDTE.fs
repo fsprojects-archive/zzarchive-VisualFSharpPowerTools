@@ -10,6 +10,7 @@ open System.Collections.Generic
 /// Create a simple mock DTE for an F#-only solution
 type MockDTE() =
     let projects = Dictionary()
+    let mutable filePath = Unchecked.defaultof<_>
     member __.AddProject(projectName: string, project: IProjectProvider) =
         match projects.TryGetValue(projectName) with
         | true, project ->
@@ -19,8 +20,13 @@ type MockDTE() =
             printfn "Adding %s to DTE." projectName
             projects.[projectName] <- project
 
+    member __.SetActiveDocument(fileName) =
+        filePath <- fileName
+
     interface DTE with
-        member __.ActiveDocument: Document = notimpl
+        member x.ActiveDocument: Document = 
+            MockDocument(filePath, x) :> _
+
         member __.ActiveSolutionProjects: obj = notimpl
         member __.ActiveWindow: Window = notimpl
         member __.AddIns: AddIns = notimpl
@@ -31,11 +37,11 @@ type MockDTE() =
         member __.ContextAttributes: ContextAttributes = notimpl
         member __.DTE: DTE = notimpl
         member __.Debugger: Debugger = notimpl
-        member __.DisplayMode with get (): vsDisplay = notimpl and set (_: vsDisplay): unit = notimpl
+        member __.DisplayMode with get (): vsDisplay = notimpl and set (_v: vsDisplay): unit = notimpl
         member __.Documents: Documents = notimpl
         member __.Edition: string = notimpl
         member __.Events: Events = 
-            MockEvents() :> Events
+            MockEvents() :> _
         
         member __.ExecuteCommand(_commandName: string, _commandArgs: string): unit = notimpl
         member __.FileName: string = notimpl
@@ -60,7 +66,7 @@ type MockDTE() =
         member __.SatelliteDllPath(_path: string, _name: string): string = notimpl
         member __.SelectedItems: SelectedItems = notimpl
         member x.Solution: Solution = 
-            MockSolution(projects, x) :> Solution
+            MockSolution(projects, x) :> _
         
         member __.SourceControl: SourceControl = notimpl
         member __.StatusBar: StatusBar = notimpl
@@ -72,6 +78,43 @@ type MockDTE() =
                     
         member __.WindowConfigurations: WindowConfigurations = notimpl        
         member __.Windows: Windows = notimpl
+
+and MockDocument(filePath: string, dte: DTE) =
+    interface Document with
+        member __.Activate(): unit = notimpl
+        member __.ActiveWindow: Window = notimpl
+        member __.ClearBookmarks(): unit = notimpl
+        member __.Close(save: vsSaveChanges): unit = notimpl
+        member __.Collection: Documents = notimpl
+        member __.DTE: DTE = notimpl
+        member __.Extender with get (extenderName: string): obj = notimpl
+        member __.ExtenderCATID: string = notimpl
+        member __.ExtenderNames: obj = notimpl
+        member __.FullName: string = 
+            filePath
+
+        member __.IndentSize: int = notimpl
+        member __.Kind: string = notimpl
+        member __.Language with get (): string = notimpl and set (v: string): unit = notimpl
+        member __.MarkText(pattern: string, flags: int): bool = notimpl
+        member __.Name: string = notimpl
+        member __.NewWindow(): Window = notimpl
+        member __.Object(modelKind: string): obj = notimpl
+        member __.Path: string = notimpl
+        member __.PrintOut(): unit = notimpl
+        member __.ProjectItem: ProjectItem = 
+            dte.Solution.FindProjectItem filePath
+
+        member __.ReadOnly with get (): bool = notimpl and set (v: bool): unit = notimpl
+        member __.Redo(): bool = notimpl
+        member __.ReplaceText(findText: string, replaceText: string, flags: int): bool = notimpl
+        member __.Save(fileName: string): vsSaveStatus = notimpl
+        member __.Saved with get (): bool = notimpl and set (v: bool): unit = notimpl
+        member __.Selection: obj = notimpl
+        member __.TabSize: int = notimpl
+        member __.Type: string = notimpl
+        member __.Undo(): bool = notimpl
+        member __.Windows: Windows = notimpl        
 
 and MockEvents() =
     interface Events with
@@ -112,7 +155,7 @@ and MockSolution(projects, dte: DTE) =
             let allProjects = projects |> Seq.map (|KeyValue|) |> Seq.map snd
             match allProjects |> Seq.tryFind (fun project -> Array.exists ((=) fileName) project.SourceFiles) with
             | Some project ->
-                MockProjectItem(fileName, project, dte) :> ProjectItem
+                MockProjectItem(fileName, project, dte) :> _
             | None -> null
 
         member __.FullName: string = notimpl        
@@ -168,7 +211,7 @@ and MockProjectItem(_fileName: string, project: IProjectProvider, dte: DTE) =
         member __.ConfigurationManager: ConfigurationManager = notimpl
         member __.ContainingProject: Project = 
             if project.IsForStandaloneScript then null
-            else MockProject(project, dte) :> Project
+            else MockProject(project, dte) :> _
 
         member __.DTE: DTE = notimpl
         member __.Delete(): unit = notimpl

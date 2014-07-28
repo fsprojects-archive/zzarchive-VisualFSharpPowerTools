@@ -17,7 +17,10 @@ using Microsoft.VisualStudio.Text;
 
 namespace TestUtilities.Mocks {
     public class MockMappingPoint : IMappingPoint {
-        public MockMappingPoint() {
+
+        private SnapshotPoint position;
+        public MockMappingPoint(SnapshotPoint _position) {
+            position = _position;
         }
 
         public ITextBuffer AnchorBuffer {
@@ -33,15 +36,15 @@ namespace TestUtilities.Mocks {
         }
 
         public SnapshotPoint? GetPoint(Predicate<ITextBuffer> match, PositionAffinity affinity) {
-            throw new NotImplementedException();
+            return position;
         }
 
         public SnapshotPoint? GetPoint(ITextSnapshot targetSnapshot, PositionAffinity affinity) {
-            throw new NotImplementedException();
+            return position;
         }
 
         public SnapshotPoint? GetPoint(ITextBuffer targetBuffer, PositionAffinity affinity) {
-            throw new NotImplementedException();
+            return position;
         }
     }
 }

@@ -16,6 +16,7 @@ type VsTestBase() =
     do serviceProvider.Services.["GeneralOptionsPage"] <- MockGeneralOptionsPage()
     do serviceProvider.Services.["DTE"] <- dte
     do serviceProvider.Services.["SDTE"] <- dte
+    do serviceProvider.Services.["SVsResourceManager"] <- Mocks.createSVsResourceManager()
 
     let vsEditorAdaptersFactoryService = Mock<IVsEditorAdaptersFactoryService>().Create()
     
@@ -26,20 +27,25 @@ type VsTestBase() =
             .Create()
     
     let documentFactoryService = Mocks.createDocumentFactoryService()
+    let undoHistoryRegistry = Mocks.createTextUndoHistoryRegistry()
     let fsharpLanguageService = FSharpLanguageService(serviceProvider)
     let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
     let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
                                               openDocumentsTracker, SkipLexCache = true)
     let projectFactory = ProjectFactory(serviceProvider, vsLanguageService)
     
-    member x.ServiceProvider = serviceProvider
-    member x.FSharpLanguageService = fsharpLanguageService
-    member x.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService
-    member x.DocumentFactoryService = documentFactoryService
-    member x.OpenDocumentsTracker = openDocumentsTracker
-    member x.VsLanguageService = vsLanguageService
-    member x.ProjectFactory = projectFactory
-    member x.ClassificationTypeRegistryService = classificationRegistry
+    member __.ServiceProvider = serviceProvider
+    member __.FSharpLanguageService = fsharpLanguageService
+    member __.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService
+    member __.DocumentFactoryService = documentFactoryService
+    member __.OpenDocumentsTracker = openDocumentsTracker
+    member __.VsLanguageService = vsLanguageService
+    member __.ProjectFactory = projectFactory
+    member __.ClassificationTypeRegistryService = classificationRegistry
+    member __.UndoHistoryRegistry = undoHistoryRegistry
 
-    member x.AddProject(project: IProjectProvider) = dte.AddProject(project.ProjectFileName, project)
+    member __.AddProject(project: IProjectProvider) = 
+        dte.AddProject(project.ProjectFileName, project)
 
+    member __.SetActiveDocument(filePath: string) = 
+        dte.SetActiveDocument(filePath)

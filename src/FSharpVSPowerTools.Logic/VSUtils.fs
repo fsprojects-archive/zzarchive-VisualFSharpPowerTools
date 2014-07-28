@@ -131,11 +131,10 @@ type DTE with
         let doc =
             maybe {
                 let! doc = Option.ofNull x.ActiveDocument 
-                let! item = Option.ofNull doc.ProjectItem 
-                let! _ = Option.ofNull item.ContainingProject 
+                let! _ = Option.ofNull doc.ProjectItem
                 return doc }
         match doc with
-        | None -> debug "Should be able to find active document and active project."
+        | None -> debug "Should be able to find an active document."
         | _ -> ()
         doc
 
