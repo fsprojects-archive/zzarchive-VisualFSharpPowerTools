@@ -4,11 +4,6 @@ module FSharpVSPowerTools.Tests.Mocks
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Utilities
-open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Editor
-open Microsoft.VisualStudio.OLE.Interop
-open Microsoft.VisualStudio.TextManager.Interop
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
@@ -29,12 +24,35 @@ let createDocumentFactoryService() =
                 textBuffer.Properties.TryGetProperty(typeof<ITextDocument>, &textDocument) 
     }
 
+let createTextUndoTransation() =
+    { 
+        new ITextUndoTransaction with
+            member __.AddUndo(undo: ITextUndoPrimitive): unit = notimpl
+            member __.CanRedo: bool = notimpl
+            member __.CanUndo: bool = notimpl
+            member __.Cancel(): unit = notimpl
+            member __.Complete() = 
+                ()
+
+            member __.Description with get (): string = notimpl and set (v: string): unit = notimpl
+            member __.Dispose(): unit = 
+                ()
+
+            member __.Do(): unit = notimpl
+            member __.History: ITextUndoHistory = notimpl            
+            member __.MergePolicy with get (): IMergeTextUndoTransactionPolicy = notimpl and set (v: IMergeTextUndoTransactionPolicy): unit = notimpl            
+            member __.Parent: ITextUndoTransaction = notimpl            
+            member __.State: UndoTransactionState = notimpl            
+            member __.Undo(): unit = notimpl            
+            member __.UndoPrimitives: Collections.Generic.IList<ITextUndoPrimitive> = notimpl            
+    }
+
 let createTextUndoHistory() =
     {
         new ITextUndoHistory with
             member __.CanRedo: bool = notimpl
             member __.CanUndo: bool = notimpl
-            member __.CreateTransaction(_description: string): ITextUndoTransaction = notimpl
+            member __.CreateTransaction(_description: string): ITextUndoTransaction = createTextUndoTransation()
             member __.CurrentTransaction: ITextUndoTransaction = notimpl
             member __.LastRedoTransaction: ITextUndoTransaction = notimpl
             member __.LastUndoTransaction: ITextUndoTransaction = notimpl
