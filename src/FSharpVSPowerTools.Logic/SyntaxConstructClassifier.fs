@@ -40,6 +40,8 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
+            // If there is no backing document, an ITextDocument instance might be null
+            let! _ = Option.ofNull doc
             return! projectFactory.CreateForFileInProject doc.TextBuffer doc.FilePath projectItem.ContainingProject }
 
     let updateSyntaxConstructClassifiers force =
@@ -49,7 +51,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             oldToken.Cancel()
             oldToken.Dispose())
 
-        let snapshot = doc.TextBuffer.CurrentSnapshot
+        let snapshot = if doc <> null then doc.TextBuffer.CurrentSnapshot else null
         let currentState = state.Value
         let needUpdate =
             match force, currentState with
