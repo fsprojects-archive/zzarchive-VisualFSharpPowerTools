@@ -71,8 +71,9 @@ type Parent =
             if entity.IsFSharpModule && idents.Length > 0 && hasModuleSuffixAttribute entity then
                 let lastIdent = idents.[idents.Length - 1]
                 if lastIdent.EndsWith "Module" then
-                    idents.[idents.Length - 1] <- lastIdent.Substring(0, lastIdent.Length - 6)
-            idents
+                    idents |> Array.replace (idents.Length - 1) (lastIdent.Substring(0, lastIdent.Length - 6))
+                else idents
+            else idents
 
         entity.GetFullName()
         |> Option.bind (fun fullName -> 

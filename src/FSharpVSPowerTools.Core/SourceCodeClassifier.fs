@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools
 
+open System
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -296,7 +297,7 @@ module SourceCodeClassifier =
                     let fullNames =
                         symbolUse.FullNames.Value
                         |> Array.map (fun fullName ->
-                            match entities |> Map.tryFind (System.String.Join (".", fullName)) with
+                            match entities |> Map.tryFind (String.Join (".", fullName)) with
                             | Some [cleanIdents] ->
                                 debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
                                 cleanIdents

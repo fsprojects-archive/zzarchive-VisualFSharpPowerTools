@@ -111,7 +111,7 @@ TimeSpan
                     |> Seq.tryFind (fun action -> action.DisplayText = "open System")
                     |> Option.get
                 tagToInsert.Invoke()
-                buffer.CurrentSnapshot.GetText() |> assertEqual """
+                buffer.CurrentSnapshot.GetText() |> assertEquivString """
 #r "System.dll"
 
 open System
@@ -140,7 +140,7 @@ DateTime
                     |> Seq.tryFind (fun action -> action.DisplayText = "System.DateTime")
                     |> Option.get
                 tagToInsert.Invoke()
-                buffer.CurrentSnapshot.GetText() |> assertEqual """
+                buffer.CurrentSnapshot.GetText() |> assertEquivString """
 #r "System.dll"
 System.DateTime
 """)

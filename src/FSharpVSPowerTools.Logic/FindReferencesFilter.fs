@@ -81,7 +81,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
                 let searchCriteria = 
                     VSOBSEARCHCRITERIA2(
-                        dwCustom = Constants.FindReferencesResults,
+                        dwCustom = Constants.findReferencesResults,
                         eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD,
                         pIVsNavInfo = (findResults :> IVsNavInfo),
                         grfOptions = uint32 _VSOBSEARCHOPTIONS2.VSOBSO_LISTREFERENCES,

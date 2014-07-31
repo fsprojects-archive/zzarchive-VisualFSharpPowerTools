@@ -52,7 +52,7 @@ namespace FSharpVSPowerTools
     public class DepthColorizerAdornment : IWpfTextViewCreationListener
     {
         [Export]
-        [Name("FSharpDepthFullLineAdornment")]
+        [Name(Constants.depthAdornmentLayerName)]
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
         private AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
