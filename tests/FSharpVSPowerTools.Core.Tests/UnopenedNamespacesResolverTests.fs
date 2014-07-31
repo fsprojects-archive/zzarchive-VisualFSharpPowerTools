@@ -856,6 +856,23 @@ type T = { F: DateTime }
 """
 
 [<Test>]
+let ``nested module in implicit top level module``() =
+    """
+module M =
+    let x = ()
+let _ = DateTime.Now
+"""
+    |> forLine 4
+    |> forIdent "DateTime"
+    |> forEntity "System" "System.DateTime"
+    |> result """open System
+
+module M =
+    let x = ()
+let _ = DateTime.Now
+"""
+
+[<Test>]
 let ``implicit module, no other open statements exist, references exist``() =
     """
 #r "System.Runtime"
