@@ -55,10 +55,11 @@ type VsTestBase() =
     static let documentFactoryService = Mocks.createDocumentFactoryService()
 
     static let undoTransation =
-        Mock<ITextUndoTransaction>()
-            .Setup(fun x -> <@ x.Complete() @>).Returns(())
-            .Setup(fun x -> <@ x.Dispose() @>).Returns(())
-            .Create()
+        Mock<ITextUndoTransaction>.With(fun x ->
+            <@
+                x.Complete()
+                x.Dispose()
+            @>)
 
     static let undoHistory =
         Mock<ITextUndoHistory>()

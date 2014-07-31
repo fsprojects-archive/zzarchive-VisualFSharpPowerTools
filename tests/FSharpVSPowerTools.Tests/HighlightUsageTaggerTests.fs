@@ -36,7 +36,7 @@ type HighlightUsageTaggerHelper() =
 
 [<TestFixture>]
 module HighlightUsageTaggerTaggerTests =
-    let timeout = 20000<ms>
+    let timeout = 30000<ms>
 
     let helper = HighlightUsageTaggerHelper()
     let fileName = getTempFileName ".fsx"
