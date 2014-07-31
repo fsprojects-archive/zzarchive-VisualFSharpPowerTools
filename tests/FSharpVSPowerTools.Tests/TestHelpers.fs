@@ -63,3 +63,8 @@ let testEvent event errorMessage (timeout: int<_>) predicate =
     | true -> predicate()
     | false ->
         Assert.Fail errorMessage
+
+/// Asserts that two strings are the same modulo new line format.
+let inline assertEquivString (expected: string) (actual: string) =
+    expected.Replace("\r\n", "\n")
+    |> assertEqual (actual.Replace("\r\n", "\n"))

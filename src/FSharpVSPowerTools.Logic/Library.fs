@@ -11,10 +11,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 
-[<RequireQualifiedAccess>]
-module Constants =
-    let [<Literal>] FindReferencesResults = 0x11223344u
-
 type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?symbolUse: FSharpSymbolUse) =
     inherit LibraryNode(name)
     do
@@ -160,7 +156,7 @@ type FSharpLibrary(guid: Guid) =
               
         member x.GetList2(listType: uint32, _flags: uint32, pobSrch: VSOBSEARCHCRITERIA2 [], 
                           ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
-            if pobSrch <> null && not (Array.isEmpty pobSrch) && pobSrch.[0].dwCustom = Constants.FindReferencesResults then
+            if pobSrch <> null && not (Array.isEmpty pobSrch) && pobSrch.[0].dwCustom = Constants.findReferencesResults then
                 // Filter duplicated results
                 // Reference at http://social.msdn.microsoft.com/Forums/en-US/267c38d3-1732-465c-82cd-c36fceb486be/find-symbol-result-window-got-double-results-when-i-search-object-use-ivssimplelibrary2?forum=vsx
                 match enum<_>(int listType) with

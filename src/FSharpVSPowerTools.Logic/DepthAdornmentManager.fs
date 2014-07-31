@@ -33,7 +33,7 @@ type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self =
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works
 type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<DepthRegionTag>, serviceProvider: System.IServiceProvider) = 
-    let LayerName = "FSharpDepthFullLineAdornment" // must match the Name attribute Export-ed, further below
+    let LayerName = Constants.depthAdornmentLayerName // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
     
     // Gets a set of default colors to use depending on whether a light or dark theme is being used
