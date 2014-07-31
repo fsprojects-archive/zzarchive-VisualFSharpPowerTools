@@ -5,6 +5,7 @@ open TestUtilities.Mocks
 open NUnit.Framework
 open System.IO
 open System
+open Microsoft.VisualStudio.Text
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"
 
@@ -54,6 +55,10 @@ type [<Measure>] ms
 let (=>) (startLine, startCol) (endLine, endCol) =
         (startLine, startCol, endLine, endCol)
         
+let snapshotPoint (snapshot: ITextSnapshot) line (column: int) = 
+    let line = snapshot.GetLineFromLineNumber(line - 1)
+    SnapshotSpan(line.Start, column).Start
+
 let testEvent event errorMessage (timeout: int<_>) predicate =
     let task =
         event
@@ -64,7 +69,9 @@ let testEvent event errorMessage (timeout: int<_>) predicate =
     | false ->
         Assert.Fail errorMessage
 
+
 /// Asserts that two strings are the same modulo new line format.
 let inline assertEquivString (expected: string) (actual: string) =
     expected.Replace("\r\n", "\n")
     |> assertEqual (actual.Replace("\r\n", "\n"))
+
