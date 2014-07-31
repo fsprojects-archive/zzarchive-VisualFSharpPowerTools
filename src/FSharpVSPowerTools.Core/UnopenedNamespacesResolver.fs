@@ -387,13 +387,13 @@ module ParsedInput =
             | [] -> None
             | firstDecl :: _ -> 
                 match firstDecl with
-                | SynModuleDecl.NestedModule(_, _, _, r) -> Some r
-                | SynModuleDecl.Let(_, _, r) -> Some r
-                | SynModuleDecl.DoExpr(_, _, r) -> Some r
-                | SynModuleDecl.Types(_, r) -> Some r
-                | SynModuleDecl.Exception(_, r) -> Some r
-                | SynModuleDecl.Open(_, r) -> Some r
-                | SynModuleDecl.HashDirective(_, r) -> Some r
+                | SynModuleDecl.NestedModule (_, _, _, r) -> Some r
+                | SynModuleDecl.Let (_, _, r) -> Some r
+                | SynModuleDecl.DoExpr (_, _, r) -> Some r
+                | SynModuleDecl.Types (_, r) -> Some r
+                | SynModuleDecl.Exception (_, r) -> Some r
+                | SynModuleDecl.Open (_, r) -> Some r
+                | SynModuleDecl.HashDirective (_, r) -> Some r
                 | _ -> None
                 |> Option.map (fun r -> r.StartColumn)
 
@@ -491,8 +491,9 @@ module InsertContext =
             | ScopeKind.TopModule ->
                 if ctx.Pos.Line > 1 then
                     // it's an implicite module without any open declarations    
-                    if not ((getLineStr (ctx.Pos.Line - 2)).StartsWith "module") then 1
-                    else ctx.Pos.Line
+                    let line = getLineStr (ctx.Pos.Line - 2)
+                    let isImpliciteTopLevelModule = not (line.StartsWith "module" && not (line.EndsWith "="))
+                    if isImpliciteTopLevelModule then 1 else ctx.Pos.Line
                 else 1
             | ScopeKind.Namespace ->
                 // for namespaces the start line is start line of the first nested entity
