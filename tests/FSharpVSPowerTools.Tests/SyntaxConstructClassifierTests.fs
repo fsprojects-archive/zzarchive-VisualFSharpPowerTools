@@ -48,6 +48,7 @@ module SyntaxConstructClassifierTests =
     let timeout = 30000<ms>
     
     let helper = new SyntaxConstructClassifierHelper()
+    let fileName = getTempFileName ".fsx"
 
     [<SetUp>]
     let deploy() =
@@ -56,7 +57,6 @@ module SyntaxConstructClassifierTests =
     [<Test>]
     let ``should be able to get classification spans``() = 
         let content = "type T() = class end"
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         let classifier = helper.GetClassifier(buffer)
@@ -74,7 +74,6 @@ let _ = <@ 1 = 1 @>
 module Module1 =
     let x = ()
 """
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         let classifier = helper.GetClassifier(buffer)
@@ -107,7 +106,6 @@ open System
 open System.Collections.Generic
 let internal f() = ()
 """
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         // IsSymbolUsedForProject seems to require a file to exist on disks

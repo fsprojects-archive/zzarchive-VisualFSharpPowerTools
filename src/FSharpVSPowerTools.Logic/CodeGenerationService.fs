@@ -67,15 +67,16 @@ module ResourceProvider =
     open System.Windows
     open System.Windows.Media.Imaging
     open System.Windows.Media
+    open Microsoft.VisualStudio
 
     let getRefactoringIcon (serviceProvider: IServiceProvider) (kind: RefactoringIconKind) =
         let manager = serviceProvider.GetService<IVsResourceManager, SVsResourceManager>()
-        let hbmpValue: IntPtr ref = ref IntPtr.Zero
         let cmdDefUiPackageGuid = Guid "{44E07B02-29A5-11D3-B882-00C04F79F802}"
-        let IDBMP_REFACTOR_IMAGES = "#2029"
-        if manager.LoadResourceBitmap(ref cmdDefUiPackageGuid, 0, IDBMP_REFACTOR_IMAGES, hbmpValue) = 0 then
+        let IDBMP_REFACTOR_IMAGES = "#2029"        
+        match manager.LoadResourceBitmap(ref cmdDefUiPackageGuid, 0, IDBMP_REFACTOR_IMAGES) with
+        | VSConstants.S_OK, hbmpValue ->
             let iconSize = 16
-            use bitmap = Bitmap.FromHbitmap(!hbmpValue)
+            use bitmap = Bitmap.FromHbitmap(hbmpValue)
             // Get rid of the backdrop behind the refactoring icons.
             bitmap.MakeTransparent(System.Drawing.Color.Black)
             Imaging.CreateBitmapSourceFromHBitmap(
@@ -83,4 +84,5 @@ module ResourceProvider =
                        IntPtr.Zero,
                        Int32Rect(int kind * iconSize, 0, iconSize, iconSize),
                        BitmapSizeOptions.FromEmptyOptions()) :> ImageSource
-         else null    
+         | _ -> 
+            null    

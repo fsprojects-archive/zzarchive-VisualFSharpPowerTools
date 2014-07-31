@@ -36,12 +36,9 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
 [<TestFixture>]
 module ResolveUnopenedNamespaceSmartTaggerTests =
     let timeout = 30000<ms>
-    
-    let snapshotPoint (snapshot: ITextSnapshot) line (column: int) = 
-        let line = snapshot.GetLineFromLineNumber(line - 1)
-        SnapshotSpan(line.Start, column).Start
 
     let helper = ResolveUnopenedNamespaceSmartTaggerHelper()
+    let fileName = getTempFileName ".fsx"
 
     [<SetUp>]
     let deploy() =
@@ -50,7 +47,6 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     [<Test>]
     let ``should be able to get unopened namespace tags``() = 
         let content = "TimeSpan"
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
@@ -63,7 +59,6 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     [<Test>]
     let ``should not display unopened namespace tags on known values``() = 
         let content = "System.DateTime.Now"
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
@@ -76,7 +71,6 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     [<Test>]
     let ``should generate correct labels for unopened namespace tags``() = 
         let content = "DateTime"
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
@@ -96,7 +90,6 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
 #r "System.dll"
 TimeSpan
 """
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
@@ -125,7 +118,6 @@ TimeSpan
 #r "System.dll"
 DateTime
 """
-        let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
