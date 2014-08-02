@@ -1260,7 +1260,7 @@ let _ = IntPtr.Zero
 """ 
     => [2, []]
 
-[<Test; Ignore "to be fixed">]
+[<Test>]
 let ``usage of an operator makes the module it's defined in to be not marked as unused``() =
     """
 module M =

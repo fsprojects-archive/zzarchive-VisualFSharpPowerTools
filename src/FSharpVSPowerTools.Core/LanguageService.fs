@@ -410,10 +410,10 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
         async {
             let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, stringArrayToString source, stale)
-            let! allSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
+            let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
 
             let allSymbolsUses =
-                allSymbolsUses
+                fsharpSymbolsUses
                 |> Array.map (fun symbolUse ->
                     let fullNames = lazy (
                         match symbolUse.Symbol with
@@ -456,6 +456,16 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                         Some [|String.Join (".", fullNameWithoutClassName)|]
                                     else None
                                 | _ -> None
+                        // operators
+                        | MemberFunctionOrValue func when func.DisplayName <> "( .ctor )" ->
+                            let fullName = func.FullName
+                            let displayName = func.DisplayName
+                            let compiledName = func.CompiledName
+                            // for operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
+                            if displayName <> compiledName then
+                                let moduleOrNamespace = fullName.Substring (0, fullName.Length - displayName.Length)
+                                Some [| moduleOrNamespace + compiledName |]
+                            else None
                         | Entity e ->
                             match e with
                             | e, TypedAstUtils.Attribute, _ ->

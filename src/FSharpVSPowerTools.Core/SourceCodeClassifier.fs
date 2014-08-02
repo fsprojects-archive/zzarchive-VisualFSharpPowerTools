@@ -139,7 +139,7 @@ module SourceCodeClassifier =
 
     let getSymbolUsesPotentiallyRequireOpenDecls symbolsUses =
         symbolsUses
-        |> Array.filter (fun (symbolUse, _) ->
+        |> Array.filter (fun symbolUse ->
             let res = 
                 match symbolUse.SymbolUse.Symbol with
                 | UnionCase _ 
@@ -149,7 +149,7 @@ module SourceCodeClassifier =
                 | MemberFunctionOrValue func -> not func.IsMember
                 | _ -> false
             res)
-        |> Array.map (fun (symbolUse, _) -> symbolUse)
+        //|> Array.map (fun (symbolUse, _) -> symbolUse)
 
     let internal getCategory (symbolUse: FSharpSymbolUse) =
         match symbolUse.Symbol with
@@ -323,7 +323,7 @@ module SourceCodeClassifier =
 //            symbolUses
 
         let symbolPrefixes: (Range.range * Idents) [] =
-            allSymbolsUses'
+            allSymbolsUses
             |> getSymbolUsesPotentiallyRequireOpenDecls
             |> removeModuleSuffixes
             //|> printSymbolUses "SymbolUsesPotentiallyRequireOpenDecls"
