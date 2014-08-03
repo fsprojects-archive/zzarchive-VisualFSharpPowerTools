@@ -19,8 +19,9 @@ let fromRange (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endCol
         let length = endPos - startPos
         Some (SnapshotSpan(snapshot, startPos, length))
     with e ->
-        fail "Attempt to create a SnapshotSpan with wrong arguments (StartLine = %d, StartColumn = %d, EndLine = %d, EndColumn = %d)"
-             startLine startColumn endLine endColumn
+        fail "Attempting to create a SnapshotSpan (StartLine = %d, StartColumn = %d, EndLine = %d, EndColumn = %d) in a snapshot length = %d results in: %O"
+             startLine startColumn endLine endColumn snapshot.Length e
+        Logging.logException e
         None
     
 /// Retrieve snapshot span from VS zero-based positions

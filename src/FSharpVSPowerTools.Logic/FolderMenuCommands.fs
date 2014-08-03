@@ -179,8 +179,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             project?SetProjectFileDirty true
             project?ComputeSourcesAndFlags()
             ()
-        | [] -> logError "performVerticalMoveAction called with empty info.Items"
-        | _ -> logError "performVerticalMoveAction called with more than one item in info.Items"
+        | [] -> Logging.logError "performVerticalMoveAction called with empty info.Items"
+        | _ -> Logging.logError "performVerticalMoveAction called with more than one item in info.Items"
     
     let showDialog (wnd: Window) = 
         try 
@@ -207,7 +207,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 | Some x -> x.ProjectItems
                 | None -> 
                     let ex = ArgumentException(sprintf "folder named %s not found." folder.Name)
-                    logException ex
+                    Logging.logException ex
                     raise ex
         
         let folderExists =
@@ -225,7 +225,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 item.Delete()
             info.Project.IsDirty <- true
         else
-            messageBoxError Resource.validationDestinationFolderDoesNotExist
+            Logging.messageBoxError Resource.validationDestinationFolderDoesNotExist
     
     let askForFolderName resources = 
         let model = NewFolderNameDialogModel resources
@@ -245,12 +245,12 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         Debug.Assert(folder.FileCount = 1s, "Item should be unique.")
         if Directory.Exists(folder.FileNames(0s)) then
             // We tolerate that folder might already exist
-            messageBoxInfo Resource.validationExistingFolderOnDisk
+            Logging.messageBoxInfo Resource.validationExistingFolderOnDisk
         else
             try
                 Directory.CreateDirectory(folder.FileNames(0s)) |> ignore
             with _ ->
-                messageBoxError Resource.validationCannotCreateFolder
+                Logging.messageBoxError Resource.validationCannotCreateFolder
                 // Can't create folder, remove folder item for consistency
                 folder.Remove()        
 
@@ -284,7 +284,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         let newPath = Path.Combine(parentPath, name)
 
         if Directory.Exists(newPath) then
-            messageBoxError Resource.validationRenameFolderAlreadyExistsOnDisk
+            Logging.messageBoxError Resource.validationRenameFolderAlreadyExistsOnDisk
         else
             // F# project system can't rename folders with any item in it.
             // We remove all items in the folder and add it back later       

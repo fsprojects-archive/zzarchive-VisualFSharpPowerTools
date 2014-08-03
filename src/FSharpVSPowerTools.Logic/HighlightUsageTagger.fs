@@ -39,19 +39,19 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let symbolUsesToSpans fileName (lastIdent: string) (symbolUses: FSharpSymbolUse []) =
+    let symbolUsesToSpans (word: SnapshotSpan) fileName (lastIdent: string) (symbolUses: FSharpSymbolUse []) =
         let filePath = Path.GetFullPathSafe(fileName)
         symbolUses
         |> Seq.choose (fun symbolUse -> 
             // We have to filter by full paths otherwise the range is invalid wrt current snapshot
             if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
-                fromFSharpRange view.TextSnapshot symbolUse.RangeAlternate
+                fromFSharpRange word.Snapshot symbolUse.RangeAlternate
             else None)
         |> Seq.choose (fun span -> 
             // Sometimes F.C.S returns a composite identifier which should be truncated
             let index = span.GetText().LastIndexOf (lastIdent)
             if index > 0 then 
-                Some (SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index))
+                Some (SnapshotSpan(word.Snapshot, span.Start.Position + index, span.Length - index))
             elif index = 0 then Some span
             else None)
         |> Seq.toList
@@ -66,7 +66,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                     | Some (_, checkResults) ->
                         let! results = vsLanguageService.FindUsagesInFile (newWord, symbol, checkResults)
                         let refSpans =
-                            results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans fileName lastIdent refs)
+                            results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans newWord fileName lastIdent refs)
 
                         match refSpans with
                         | Some references -> 
@@ -78,7 +78,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                             synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                     | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
-                    logException e
+                    Logging.logException e
                     synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             }
 

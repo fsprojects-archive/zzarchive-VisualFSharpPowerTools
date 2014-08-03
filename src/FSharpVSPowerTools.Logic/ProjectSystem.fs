@@ -87,7 +87,7 @@ type FSharpLanguageService [<ImportingConstructor>]
     let asm = lazy try Assembly.Load(assemblyInfo)
                    with _ ->
                        let ex = AssemblyMissingException "FSharp.LanguageService"
-                       logException ex
+                       Logging.logException ex
                        raise ex
 
     let staticFlags = BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static
