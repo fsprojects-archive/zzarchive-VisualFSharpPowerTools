@@ -6,8 +6,6 @@ open FSharpVSPowerTools.ProjectSystem
 open Foq
 open Microsoft.VisualStudio.Editor
 open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Text.Operations
 
 /// A base class for initializing necessary VS services

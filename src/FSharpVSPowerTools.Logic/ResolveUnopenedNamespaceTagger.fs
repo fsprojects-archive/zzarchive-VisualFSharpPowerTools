@@ -77,7 +77,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                     entities |> List.filter (fun e ->
                                         match entityKind, e.Kind with
                                         | Attribute, Attribute 
-                                        | Type, Type
+                                        | Type, (Type | Attribute)
                                         | FunctionOrValue, _ -> true 
                                         | Attribute, _
                                         | _, Module _
