@@ -457,15 +457,16 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                     else None
                                 | _ -> None
                         // operators
-                        | MemberFunctionOrValue func when func.DisplayName <> "( .ctor )" ->
-                            let fullName = func.FullName
-                            let displayName = func.DisplayName
-                            let compiledName = func.CompiledName
-                            // for operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
-                            if displayName <> compiledName then
-                                let moduleOrNamespace = fullName.Substring (0, fullName.Length - displayName.Length)
-                                Some [| moduleOrNamespace + compiledName |]
-                            else None
+                        | MemberFunctionOrValue func ->
+                            match func with
+                            | Constructor _ -> None
+                            | _ ->
+                                // for operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
+                                if func.DisplayName <> func.CompiledName then
+                                    Option.attempt (fun _ -> func.EnclosingEntity.FullName)
+                                    |> Option.map (fun enclosingEntityFullName -> 
+                                        [| enclosingEntityFullName + "." + func.CompiledName|])
+                                else None
                         | Entity e ->
                             match e with
                             | e, TypedAstUtils.Attribute, _ ->
