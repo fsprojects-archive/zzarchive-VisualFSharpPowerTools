@@ -68,6 +68,7 @@
     <Compile Include="OpenDocumentsTracker.fs" />
     <Compile Include="FileSystem.fs" />
     <Compile Include="VSLanguageService.fs" />
+    <Compile Include="SolutionBuildEventListener.fs" />
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="NavigateToItem.fs" />
