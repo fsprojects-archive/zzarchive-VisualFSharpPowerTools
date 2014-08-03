@@ -16,6 +16,7 @@ type VsTestBase() =
     static let dte = MockDTE()
     static do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
     static do serviceProvider.Services.["SVsShell"] <- MockVsShell()
+    static do serviceProvider.Services.["SVsSolutionBuildManager"] <- Mocks.createVsSolutionBuildManager2()
         
     static do serviceProvider.Services.["GeneralOptionsPage"] <- 
                 Mock<IGeneralOptionsPage>.With(fun page ->
@@ -75,7 +76,7 @@ type VsTestBase() =
     static let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
     static let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
                                                      openDocumentsTracker, SkipLexCache = true)
-    static let projectFactory = ProjectFactory(serviceProvider, vsLanguageService)
+    static let projectFactory = new ProjectFactory(serviceProvider, vsLanguageService)
     
     member __.ServiceProvider = serviceProvider
     member __.FSharpLanguageService = fsharpLanguageService

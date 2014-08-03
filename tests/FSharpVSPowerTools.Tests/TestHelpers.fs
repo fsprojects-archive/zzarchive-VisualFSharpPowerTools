@@ -64,9 +64,16 @@ let testEvent event errorMessage (timeout: int<_>) predicate =
         event
         |> Async.AwaitEvent
         |> Async.StartAsTask
+    let sw = System.Diagnostics.Stopwatch()
+    sw.Start()
     match task.Wait(TimeSpan.FromMilliseconds(float timeout)) with
-    | true -> predicate()
+    | true -> 
+        sw.Stop()
+        Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
+        predicate()
     | false ->
+        sw.Stop()
+        Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
         Assert.Fail errorMessage
 
 

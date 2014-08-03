@@ -175,6 +175,14 @@ type Project with
         |> Option.bind (fun project ->
             try Option.ofNull (project.Object :?> VSProject) with _ -> None)
 
+let getProject (hierarchy: IVsHierarchy) =
+    match hierarchy.GetProperty(VSConstants.VSITEMID_ROOT,
+                                int __VSHPROPID.VSHPROPID_ExtObject) with
+    | VSConstants.S_OK, p ->
+        tryCast<Project> p
+    | _ -> 
+        None
+
 let inline ensureSucceeded hr = 
     ErrorHandler.ThrowOnFailure hr
     |> ignore
@@ -182,10 +190,7 @@ let inline ensureSucceeded hr =
 let private getSelectedFromSolutionExplorer<'T> (dte:EnvDTE80.DTE2) =
     let items = dte.ToolWindows.SolutionExplorer.SelectedItems :?> UIHierarchyItem[]
     items
-    |> Seq.choose (fun x -> 
-            match x.Object with
-            | :? 'T as p -> Some p
-            | _ -> None)
+    |> Seq.choose (fun x -> tryCast<'T> x.Object)
 
 let getSelectedItemsFromSolutionExplorer dte =
     getSelectedFromSolutionExplorer<ProjectItem> dte
