@@ -14,7 +14,6 @@ type MockDTE() =
     member __.AddProject(projectName: string, project: IProjectProvider) =
         match projects.TryGetValue(projectName) with
         | true, project ->
-            printfn "WARNING: a project with the same name has been already added to DTE."
             projects.[projectName] <- project
         | false, _ ->
             printfn "Adding %s to DTE." projectName
