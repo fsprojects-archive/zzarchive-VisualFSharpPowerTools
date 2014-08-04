@@ -1281,3 +1281,12 @@ let _ = match obj() with
         | _ -> ()
 """
     => [ 4, []]
+
+[<Test>]
+let ``a function from printf family prevents Printf module from marking as unused``() =
+    """
+open Microsoft.FSharp.Core.Printf
+open System.Text
+let _ = bprintf (StringBuilder()) "%A" 1
+"""
+    => [ 2, []]
