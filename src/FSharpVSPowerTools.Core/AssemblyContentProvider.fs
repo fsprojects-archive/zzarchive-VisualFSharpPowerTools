@@ -77,7 +77,7 @@ type Parent =
 
         entity.TryGetFullName()
         |> Option.bind (fun fullName -> 
-            entity.GetFullDisplayName()
+            entity.TryGetFullDisplayName()
             |> Option.map (fun fullDisplayName ->
                 fullName,
                 fullDisplayName.Split '.' 
