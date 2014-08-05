@@ -463,7 +463,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             | _ ->
                                 // for operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
                                 if TypedAstUtils.isOperator func.DisplayName && func.DisplayName <> func.CompiledName then
-                                    func.EnclosingEntity.TryGetFullName()
+                                    Option.attempt (fun _ -> func.EnclosingEntity)
+                                    |> Option.bind (fun e -> e.TryGetFullName())
                                     |> Option.map (fun enclosingEntityFullName -> 
                                         [| enclosingEntityFullName + "." + func.CompiledName|])
                                 else None
