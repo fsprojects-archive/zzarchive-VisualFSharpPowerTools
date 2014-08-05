@@ -119,9 +119,9 @@ module SourceCodeClassifier =
                     |> Seq.fold (fun (prev, acc) next ->
                          match prev with
                          | Some prev -> 
-                            if prev.FullNames.Value 
+                            if prev.FullNames
                                |> Array.exists (fun prevFullName ->
-                                    next.FullNames.Value 
+                                    next.FullNames
                                     |> Array.exists (fun nextFullName ->
                                          nextFullName.Length < prevFullName.Length
                                          && prevFullName |> Array.startsWith nextFullName)) then 
@@ -295,7 +295,7 @@ module SourceCodeClassifier =
                 symbolUses 
                 |> Array.map (fun symbolUse ->
                     let fullNames =
-                        symbolUse.FullNames.Value
+                        symbolUse.FullNames
                         |> Array.map (fun fullName ->
                             match entities |> Map.tryFind (String.Join (".", fullName)) with
                             | Some [cleanIdents] ->
@@ -312,7 +312,7 @@ module SourceCodeClassifier =
                             | _ -> 
                                 debug "[SourceCodeClassifier] NOT Cleaned FullName %A" fullName
                                 fullName)
-                    { symbolUse with FullNames = lazy fullNames })
+                    { symbolUse with FullNames = fullNames })
             | None -> symbolUses
 
 //        let printSymbolUses msg (symbolUses: SymbolUse[]) =
@@ -331,7 +331,7 @@ module SourceCodeClassifier =
             //|> printSymbolUses "SymbolUses without nested"
             |> Array.map (fun symbolUse ->
                 let sUseRange = symbolUse.SymbolUse.RangeAlternate
-                symbolUse.FullNames.Value
+                symbolUse.FullNames
                 |> Array.choose (fun fullName ->
                     getFullPrefix longIdentsByEndPos fullName sUseRange.End
                     |> Option.bind (function

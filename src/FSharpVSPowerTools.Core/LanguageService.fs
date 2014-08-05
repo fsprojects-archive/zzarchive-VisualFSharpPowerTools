@@ -127,7 +127,7 @@ type LexerBase() =
 type SymbolUse =
     { SymbolUse: FSharpSymbolUse 
       IsUsed: bool
-      FullNames: Idents[] Lazy }
+      FullNames: Idents[] }
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
@@ -414,8 +414,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
             let allSymbolsUses =
                 fsharpSymbolsUses
-                |> Array.map (fun symbolUse ->
-                    let fullNames = lazy (
+                |> Array.map (fun symbolUse -> 
+                    let fullNames =
                         match symbolUse.Symbol with
                         | MemberFunctionOrValue func when func.IsExtensionMember ->
                             if func.IsProperty then
@@ -462,8 +462,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             | Constructor _ -> None
                             | _ ->
                                 // for operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
-                                if func.DisplayName <> func.CompiledName then
-                                    func.EnclosingEntity.TryGetFullName()
+                                if TypedAstUtils.isOperator func.DisplayName && func.DisplayName <> func.CompiledName then
+                                    Option.attempt (fun _ -> func.EnclosingEntity)
+                                    |> Option.bind (fun e -> e.TryGetFullName())
                                     |> Option.map (fun enclosingEntityFullName -> 
                                         [| enclosingEntityFullName + "." + func.CompiledName|])
                                 else None
@@ -486,7 +487,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                  |]   
                         |  _ -> None
                         |> Option.getOrElse [|symbolUse.Symbol.FullName|]
-                        |> Array.map (fun fullName -> fullName.Split '.'))
+                        |> Array.map (fun fullName -> fullName.Split '.')
                     
                     { SymbolUse = symbolUse
                       IsUsed = true
