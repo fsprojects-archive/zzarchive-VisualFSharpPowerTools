@@ -75,7 +75,7 @@ type Parent =
                 else idents
             else idents
 
-        entity.GetFullName()
+        entity.TryGetFullName()
         |> Option.bind (fun fullName -> 
             entity.GetFullDisplayName()
             |> Option.map (fun fullDisplayName ->
@@ -143,7 +143,7 @@ module AssemblyContentProvider =
 
                     if entity.IsFSharpModule then
                         for func in entity.MembersFunctionsAndValues do
-                            match func.GetFullDisplayName() with
+                            match func.TryGetFullDisplayName() with
                             | Some displayName ->
                                 yield
                                     { FullName = func.FullName

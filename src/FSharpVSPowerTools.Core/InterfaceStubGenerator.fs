@@ -208,7 +208,7 @@ module InterfaceStubGenerator =
                         typ.BaseType 
                         |> Option.bind (fun t -> 
                             if t.HasTypeDefinition then
-                                t.TypeDefinition.GetFullName()
+                                t.TypeDefinition.TryGetFullName()
                              else None)
                         |> Option.exists ((=) "System.MulticastDelegate")
                     if isEventHandler then sprintf "IEvent<%s, _>" coreType else coreType

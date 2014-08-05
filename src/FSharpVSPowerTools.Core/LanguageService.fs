@@ -463,15 +463,18 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             | _ ->
                                 // for operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
                                 if func.DisplayName <> func.CompiledName then
-                                    Option.attempt (fun _ -> func.EnclosingEntity.FullName)
+                                    func.EnclosingEntity.TryGetFullName()
                                     |> Option.map (fun enclosingEntityFullName -> 
                                         [| enclosingEntityFullName + "." + func.CompiledName|])
                                 else None
                         | Entity e ->
                             match e with
                             | e, TypedAstUtils.Attribute, _ ->
-                                Some [| e.FullName; e.FullName.Substring(0, e.FullName.Length - (String.length "Attribute")) |]
-                            | e, _, _ -> Option.attempt (fun _ -> [| e.FullName |])
+                                e.TryGetFullName()
+                                |> Option.map (fun fullName ->
+                                    [| fullName; fullName.Substring(0, fullName.Length - "Attribute".Length) |])
+                            | e, _, _ -> 
+                                e.TryGetFullName() |> Option.map (fun x -> [| x |])
                         | UnionCase uc ->
                             Some [| let fullName = uc.FullName
                                     yield fullName
