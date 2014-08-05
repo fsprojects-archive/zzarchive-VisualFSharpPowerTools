@@ -45,7 +45,11 @@ type SyntaxConstructClassifierHelper() =
 
 [<TestFixture>]
 module SyntaxConstructClassifierTests =
-    let timeout = 30000<ms>
+#if APPVEYOR
+    let timeout = 60000<ms>
+#else
+    let timeout = 10000<ms>
+#endif
     
     let helper = new SyntaxConstructClassifierHelper()
     let fileName = getTempFileName ".fsx"
@@ -55,13 +59,13 @@ module SyntaxConstructClassifierTests =
         TestUtilities.AssertListener.Initialize()
     
     [<Test>]
-    let ``should be able to get classification spans``() = 
-        let content = "type T() = class end"
+    let ``should not return anything if the code doesn't contain semantic symbol``() = 
+        let content = "let x = 0"
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
-            (fun () -> helper.ClassificationSpansOf(buffer, classifier) |> Seq.isEmpty |> assertFalse)
+            (fun () -> helper.ClassificationSpansOf(buffer, classifier) |> Seq.isEmpty |> assertTrue)
 
     [<Test>]
     let ``should be able to get classification spans for main categories``() = 

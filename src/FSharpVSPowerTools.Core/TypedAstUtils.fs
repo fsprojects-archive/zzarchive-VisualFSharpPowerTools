@@ -110,7 +110,7 @@ type FSharpEntity with
                 if List.exists ((=) displayName) unrepresentedTypes then None
                 else try Some x.FullName with _ -> None)
 
-    member x.GetFullDisplayName() =
+    member x.TryGetFullDisplayName() =
         let fullName = x.TryGetFullName() |> Option.map (fun fullName -> fullName.Split '.')
         let res = 
             match fullName with

@@ -115,7 +115,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 items
                 |> List.toSeq
                 |> Seq.map (fun i -> i.ContainingProject)
-                |> Seq.distinctBy (fun p -> p.UniqueName)
+                |> Seq.distinctBy (fun p -> p.FullName)
                 |> Seq.toList
             match projects with
             | [ project ] -> 
