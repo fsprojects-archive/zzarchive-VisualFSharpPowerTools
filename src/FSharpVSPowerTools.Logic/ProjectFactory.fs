@@ -9,6 +9,7 @@ open EnvDTE
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text
 open System.IO
+open System.Diagnostics
 
 [<NoComparison; NoEquality>]
 type private CacheMessage<'K, 'V> =
@@ -75,16 +76,16 @@ type ProjectFactory
         debug "[ProjectFactory] %s changed." project.Name
         // we have to save the project otherwise SourceFiles would miss added / removed file
         project.Save()
-        cache.Remove project.UniqueName
+        cache.Remove project.FullName
 
     let onProjectItemChanged (projectItem: ProjectItem) =
         projectItem.VSProject |> Option.iter (fun item -> 
-            cache.TryGet item.Project.UniqueName
+            cache.TryGet item.Project.FullName
             |> Option.iter (vsLanguageService.InvalidateProject >> Async.RunSynchronously) 
             onProjectChanged item.Project)
 
     let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
-    do solutionBuildEventListener.ActiveConfigChanged.Add(fun p -> cache.Remove p.UniqueName)
+    do solutionBuildEventListener.ActiveConfigChanged.Add(fun p -> cache.Remove p.FullName)
 
     let fsharpProjectsCache = ref None
  
@@ -109,7 +110,7 @@ type ProjectFactory
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
     member x.CreateForProject (project: Project): IProjectProvider = 
-        cache.Get project.UniqueName (fun _ ->
+        cache.Get project.FullName (fun _ ->
             new ProjectProvider (project, x.CreateForProject, onProjectChanged)) :> _
 
     member x.CreateForFileInProject (buffer: ITextBuffer) (filePath: string) project: IProjectProvider option =
@@ -155,6 +156,7 @@ type ProjectFactory
             res
 
     member x.GetSymbolDeclarationLocation (symbol: FSharpSymbol) (currentFile: FilePath) (currentProject: IProjectProvider) : SymbolDeclarationLocation option =
+        Debug.Assert(currentProject.SourceFiles |> Array.exists ((=) currentFile), "Current file should be included in current project.")
         let isPrivateToFile = 
             match symbol with 
             | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
@@ -178,6 +180,7 @@ type ProjectFactory
                     Some (SymbolDeclarationLocation.Projects [currentProject])
                 else
                     let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
+                    Debug.Assert(allProjects |> List.exists (fun p -> p.ProjectFileName = currentProject.ProjectFileName), "Current project should appear in the project list.")
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
                     | projects -> Some (SymbolDeclarationLocation.Projects projects)
