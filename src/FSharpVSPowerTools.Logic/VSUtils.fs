@@ -191,7 +191,10 @@ let inline ensureSucceeded hr =
 let private getSelectedFromSolutionExplorer<'T> (dte:EnvDTE80.DTE2) =
     let items = dte.ToolWindows.SolutionExplorer.SelectedItems :?> UIHierarchyItem[]
     items
-    |> Seq.choose (fun x -> tryCast<'T> x.Object)
+    |> Seq.choose (fun x ->
+            match x.Object with
+            | :? 'T as p -> Some p
+            | _ -> None)
 
 let getSelectedItemsFromSolutionExplorer dte =
     getSelectedFromSolutionExplorer<ProjectItem> dte
