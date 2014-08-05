@@ -13,7 +13,8 @@ type MockDTE() =
     let mutable filePath = Unchecked.defaultof<_>
     member __.AddProject(projectName: string, project: IProjectProvider) =
         match projects.TryGetValue(projectName) with
-        | true, project ->
+        | true, _ ->
+            printfn "Project %s exists in DTE." projectName
             projects.[projectName] <- project
         | false, _ ->
             printfn "Adding %s to DTE." projectName

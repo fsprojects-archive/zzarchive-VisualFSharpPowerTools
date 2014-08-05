@@ -240,7 +240,7 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
     // Start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
     let events = events |> List.reduce Event.merge
-    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
+    let timer = DispatcherTimer(DispatcherPriority.Background,      
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))
     let tokenSource = new CancellationTokenSource()
 
