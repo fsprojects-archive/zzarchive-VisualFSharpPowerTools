@@ -100,15 +100,41 @@ let (|Entity|_|) (symbol: FSharpSymbol) =
 let private unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
     
 type FSharpEntity with
-    member x.GetFullName() =
+    member x.TryGetFullName() =
         match x with
-        | AbbreviatedType (TypeWithDefinition def) -> def.GetFullName()
+        | AbbreviatedType (TypeWithDefinition def) -> def.TryGetFullName()
         | x when x.IsArrayType || x.IsByRef -> None
         | _ ->
             Option.attempt (fun _ -> x.DisplayName)
             |> Option.bind (fun displayName ->
                 if List.exists ((=) displayName) unrepresentedTypes then None
                 else try Some x.FullName with _ -> None)
+
+    member x.GetFullDisplayName() =
+        let fullName = x.TryGetFullName() |> Option.map (fun fullName -> fullName.Split '.')
+        let res = 
+            match fullName with
+            | Some fullName ->
+                match Option.attempt (fun _ -> x.DisplayName) with
+                | Some shortDisplayName when not (shortDisplayName.Contains ".") ->
+                    Some (fullName |> Array.replace (fullName.Length - 1) shortDisplayName)
+                | _ -> Some fullName
+            | None -> None 
+            |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
+        //debug "GetFullDisplayName: FullName = %A, Result = %A" fullName res
+        res
+
+type FSharpMemberFunctionOrValue with
+    member x.TryGetFullDisplayName() =
+        let fullName = Option.attempt (fun _ -> x.FullName.Split '.')
+        match fullName with
+        | Some fullName ->
+            match Option.attempt (fun _ -> x.DisplayName) with
+            | Some shortDisplayName when not (shortDisplayName.Contains ".") ->
+                Some (fullName |> Array.replace (fullName.Length - 1) shortDisplayName)
+            | _ -> Some fullName
+        | None -> None
+        |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
 
 let (|Attribute|_|) (entity: FSharpEntity) =
     let isAttribute (entity: FSharpEntity) =
@@ -123,7 +149,7 @@ let (|Attribute|_|) (entity: FSharpEntity) =
             match ty with
             | None -> false
             | Some ty ->
-                match ty.GetFullName() with
+                match ty.TryGetFullName() with
                 | None -> false
                 | Some fullName ->
                     fullName = "System.Attribute" || isAttributeType (getBaseType ty)
@@ -194,31 +220,4 @@ let (|Function|_|) excluded (func: FSharpMemberFunctionOrValue) =
 
 let (|ExtensionMember|_|) (func: FSharpMemberFunctionOrValue) =
     if func.IsExtensionMember then Some() else None
-
-type FSharpEntity with
-    member x.GetFullDisplayName() =
-        let fullName = x.GetFullName() |> Option.map (fun fullName -> fullName.Split '.')
-        let res = 
-            match fullName with
-            | Some fullName ->
-                match Option.attempt (fun _ -> x.DisplayName) with
-                | Some shortDisplayName when not (shortDisplayName.Contains ".") ->
-                    Some (fullName |> Array.replace (fullName.Length - 1) shortDisplayName)
-                | _ -> Some fullName
-            | None -> None 
-            |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
-        //debug "GetFullDisplayName: FullName = %A, Result = %A" fullName res
-        res
-
-type FSharpMemberFunctionOrValue with
-    member x.GetFullDisplayName() =
-        let fullName = Option.attempt (fun _ -> x.FullName.Split '.')
-        match fullName with
-        | Some fullName ->
-            match Option.attempt (fun _ -> x.DisplayName) with
-            | Some shortDisplayName when not (shortDisplayName.Contains ".") ->
-                Some (fullName |> Array.replace (fullName.Length - 1) shortDisplayName)
-            | _ -> Some fullName
-        | None -> None
-        |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
 
