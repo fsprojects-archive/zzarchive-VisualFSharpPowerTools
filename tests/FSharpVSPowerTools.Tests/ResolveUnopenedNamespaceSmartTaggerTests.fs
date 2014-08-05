@@ -48,7 +48,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let deploy() =
         TestUtilities.AssertListener.Initialize()
 
-    [<Test>]
+    [<Test; Description "This test should be executed before others in order to build up LanguageService cache in the fastest way.">]
     let ``return nothing if tags not found``() = 
         let content = "TimeDate"
         let buffer = createMockTextBuffer content fileName
@@ -72,7 +72,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertEqual [])
 
-    [<Test; Ignore "Timed out on AppVeyor">]
+    [<Test; Category "AppVeyorLongRunning">]
     let ``should generate correct labels for unopened namespace tags``() = 
         let content = "DateTime"
         let buffer = createMockTextBuffer content fileName
@@ -88,7 +88,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
                 |> Seq.toList 
                 |> assertEqual [ ["open System"]; ["System.DateTime"] ])
 
-    [<Test; Ignore "Timed out on AppVeyor">]
+    [<Test; Category "AppVeyorLongRunning">]
     let ``should insert open declarations at correct positions``() = 
         let content = """
 #r "System.dll"
@@ -116,7 +116,7 @@ open System
 TimeSpan
 """ )
 
-    [<Test; Ignore "Timed out on AppVeyor">]
+    [<Test; Category "AppVeyorLongRunning">]
     let ``should insert namespace prefix at correct positions``() = 
         let content = """
 #r "System.dll"

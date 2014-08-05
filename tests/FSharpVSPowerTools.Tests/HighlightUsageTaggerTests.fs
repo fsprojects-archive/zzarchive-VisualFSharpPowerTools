@@ -87,7 +87,7 @@ x
                      [ (3, 1) => (3, 1);
                        (2, 5) => (2, 5) ])
 
-    [<Test; Ignore "Timed out on AppVeyor">]
+    [<Test; Category "AppVeyorLongRunning">]
     let ``should not generate highlight usage tags for keywords or whitespaces``() = 
         let content = """
 do printfn "Hello world!"

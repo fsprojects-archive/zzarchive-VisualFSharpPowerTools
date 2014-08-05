@@ -122,12 +122,14 @@ Target "CleanVSIX" (fun _ ->
 Target "UnitTests" (fun _ ->
     !! testAssemblies 
     |> NUnit (fun p ->
-        { p with
-            DisableShadowCopy = true
-            TimeOut = TimeSpan.FromMinutes 20.
-            Framework = "4.5"
-            Domain = NUnitDomainModel.MultipleDomainModel
-            OutputFile = "TestResults.xml" })
+        let param =
+            { p with
+                DisableShadowCopy = true
+                TimeOut = TimeSpan.FromMinutes 20.
+                Framework = "4.5"
+                Domain = NUnitDomainModel.MultipleDomainModel
+                OutputFile = "TestResults.xml" }
+        if isAppVeyorBuild then { param with ExcludeCategory = "AppVeyorLongRunning" } else param)
 )
 
 // --------------------------------------------------------------------------------------
