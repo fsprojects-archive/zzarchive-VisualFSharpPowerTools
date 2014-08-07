@@ -59,15 +59,16 @@ let snapshotPoint (snapshot: ITextSnapshot) line (column: int) =
     let line = snapshot.GetLineFromLineNumber(line - 1)
     SnapshotSpan(line.Start, column).Start
 
-let testEvent event errorMessage (timeout: int<_>) predicate =
+let testEventTrigger event errorMessage (timeout: int<_>) triggerEvent predicate =
     let task =
         event
         |> Async.AwaitEvent
         |> Async.StartAsTask
     let sw = System.Diagnostics.Stopwatch()
     sw.Start()
+    triggerEvent()
     match task.Wait(TimeSpan.FromMilliseconds(float timeout)) with
-    | true -> 
+    | true ->         
         sw.Stop()
         Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
         predicate()
@@ -76,6 +77,8 @@ let testEvent event errorMessage (timeout: int<_>) predicate =
         Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
         Assert.Fail errorMessage
 
+let testEvent event errorMessage (timeout: int<_>) predicate =
+    testEventTrigger event errorMessage timeout id predicate
 
 /// Asserts that two strings are the same modulo new line format.
 let inline assertEquivString (expected: string) (actual: string) =

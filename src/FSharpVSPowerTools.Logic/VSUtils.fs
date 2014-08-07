@@ -238,14 +238,17 @@ module ViewChange =
 
     let classificationEvent (classifier: IClassifier) = 
         classifier.ClassificationChanged |> Event.map (fun _ -> ())
-    
+
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
     // Start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
     do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
     let events = events |> List.reduce Event.merge
-    let timer = DispatcherTimer(DispatcherPriority.Background,      
+    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))
     let tokenSource = new CancellationTokenSource()
+
+    // This is none or forall option for unit testing purpose only
+    static let mutable skipTimerDelay = false
 
     let startNewTimer() = 
         timer.Stop()
@@ -266,12 +269,18 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
            async { 
             while true do
                 do! Async.AwaitEvent events
-                startNewTimer()
-                do! awaitPauseAfterChange()
+                if not skipTimerDelay then
+                    startNewTimer()
+                    do! awaitPauseAfterChange()
                 update() }
        Async.StartImmediate(computation, tokenSource.Token)
        // Go ahead and synchronously get the first bit of info for the original rendering
        update()
+
+    /// Skip all timer events in order to test events instantineously
+    static member internal SkipTimerDelay 
+        with get () = skipTimerDelay
+        and set v = skipTimerDelay <- v
 
     interface IDisposable with
         member x.Dispose() =

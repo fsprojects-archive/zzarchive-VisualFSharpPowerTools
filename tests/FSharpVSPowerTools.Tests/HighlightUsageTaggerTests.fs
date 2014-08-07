@@ -34,7 +34,6 @@ type HighlightUsageTaggerHelper() =
             let colEnd = span.Span.End.Position - endLine.Start.Position + 1
             (lineStart, colStart, lineEnd, colEnd - 1))
 
-[<TestFixture>]
 module HighlightUsageTaggerTaggerTests =
 #if APPVEYOR
     let timeout = 60000<ms>
@@ -45,11 +44,12 @@ module HighlightUsageTaggerTaggerTests =
     let helper = HighlightUsageTaggerHelper()
     let fileName = getTempFileName ".fsx"
 
-    [<SetUp>]
-    let deploy() =
+    [<TestFixtureSetUp>]
+    let setUp() =
         TestUtilities.AssertListener.Initialize()
+        DocumentEventListener.SkipTimerDelay <- true
 
-    [<Test; Ignore "Not yet support complex actions on ITextView">]
+    [<Test>]
     let ``should not display tags if moving to a place without symbol``() = 
         let content = """
 let x = 0
@@ -59,10 +59,12 @@ x
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)        
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 8) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertNotEqual [])
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 9) |> ignore)
             (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertEqual [])
 
     [<Test>]
@@ -75,9 +77,9 @@ x
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)                 
                 // There are duplications in resulting tags
@@ -96,9 +98,9 @@ do printfn "Hello world!"
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 1) |> ignore
-        let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        let tagger = helper.GetTagger(buffer, view)        
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 1) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)                 
                 |> Seq.isEmpty

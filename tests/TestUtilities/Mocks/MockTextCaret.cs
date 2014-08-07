@@ -79,7 +79,16 @@ namespace TestUtilities.Mocks {
 
         public CaretPosition MoveTo(Microsoft.VisualStudio.Text.SnapshotPoint bufferPosition) {
             _view.Selection.Clear();
-            _position = bufferPosition;
+            if (_position != bufferPosition) {
+                var oldPosition = Position;
+                _position = bufferPosition;
+                var newPosition = Position;
+                var changed = PositionChanged;
+                if (changed != null) {
+                    changed(this, new CaretPositionChangedEventArgs(_view, oldPosition, newPosition));
+                }
+            }
+            
             return Position;
         }
 
@@ -123,12 +132,7 @@ namespace TestUtilities.Mocks {
             _position = position;
         }
 
-        public event System.EventHandler<CaretPositionChangedEventArgs> PositionChanged {
-            add {
-            }
-            remove {
-            }
-        }
+        public event System.EventHandler<CaretPositionChangedEventArgs> PositionChanged;
 
         public double Right {
             get { throw new System.NotImplementedException(); }
