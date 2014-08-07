@@ -33,7 +33,6 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
                     None)
         |> Seq.concat
 
-[<TestFixture>]
 module ResolveUnopenedNamespaceSmartTaggerTests =
 #if APPVEYOR
     let timeout = 60000<ms>
@@ -44,9 +43,10 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let helper = ResolveUnopenedNamespaceSmartTaggerHelper()
     let fileName = getTempFileName ".fsx"
 
-    [<SetUp>]
-    let deploy() =
+    [<TestFixtureSetUp>]
+    let setUp() =
         TestUtilities.AssertListener.Initialize()
+        DocumentEventListener.SkipTimerDelay <- true
 
     [<Test; Description "This test should be executed before others in order to build up LanguageService cache in the fastest way.">]
     let ``return nothing if tags not found``() = 
@@ -55,9 +55,9 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
             (fun () -> helper.TagsOf(buffer, tagger) |> Seq.concat |> Seq.toList |> assertEqual [])
 
     [<Test>]
@@ -67,9 +67,9 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 17) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 17) |> ignore)
             (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertEqual [])
 
     [<Test; Category "AppVeyorLongRunning">]
@@ -79,9 +79,9 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger) 
                 |> Seq.map (Seq.map (fun action -> action.DisplayText) >> Seq.toList)
@@ -98,9 +98,9 @@ TimeSpan
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
@@ -126,9 +126,9 @@ DateTime
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)

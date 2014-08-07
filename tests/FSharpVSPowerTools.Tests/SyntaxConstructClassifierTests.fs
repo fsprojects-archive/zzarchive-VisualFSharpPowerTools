@@ -43,7 +43,6 @@ type SyntaxConstructClassifierHelper() =
         member __.Dispose() = 
             classifierProvider.Dispose()
 
-[<TestFixture>]
 module SyntaxConstructClassifierTests =
 #if APPVEYOR
     let timeout = 60000<ms>
@@ -54,10 +53,11 @@ module SyntaxConstructClassifierTests =
     let helper = new SyntaxConstructClassifierHelper()
     let fileName = getTempFileName ".fsx"
 
-    [<SetUp>]
-    let deploy() =
+    [<TestFixtureSetUp>]
+    let setUp() =
         TestUtilities.AssertListener.Initialize()
-    
+        DocumentEventListener.SkipTimerDelay <- true
+
     [<Test>]
     let ``should not return anything if the code doesn't contain semantic symbol``() = 
         let content = "let x = 0"

@@ -18,9 +18,9 @@ using Microsoft.VisualStudio.Text;
 namespace TestUtilities.Mocks {
     public class MockMappingPoint : IMappingPoint {
 
-        private SnapshotPoint position;
+        private SnapshotPoint? position;
         public MockMappingPoint(SnapshotPoint _position) {
-            position = _position;
+            position = _position.Snapshot == null ? (SnapshotPoint?)null : _position;
         }
 
         public ITextBuffer AnchorBuffer {
