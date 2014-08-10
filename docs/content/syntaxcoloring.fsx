@@ -21,6 +21,9 @@ We currently support coloring:
 
 There is a special user setting for enabling graying out unused declarations and open statements.
 
+[Unused declaration markers](#marker)
+-----------------------
+
 If unused declarations and open statements are found in current file, orange markers will appear on top of vertical scroll bar.
 You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).
 ![Syntax coloring](img/syntax_coloring_unused_decl.png)
@@ -32,7 +35,7 @@ Here is how the editor looks like in blue & dark theme:
 ![Syntax coloring](img/syntax_coloring_demo_dark.png)
 
 
-How to customize colors
+[How to customize colors](#customization)
 -----------------------
 
 Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:
