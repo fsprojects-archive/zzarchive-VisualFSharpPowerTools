@@ -417,6 +417,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 |> Array.map (fun symbolUse -> 
                     let fullNames =
                         match symbolUse.Symbol with
+                        // Make sure that unsafe manipulation isn't executed if unused declarations are disabled
+                        | _ when not checkForUnusedDeclarations -> 
+                            None
                         | MemberFunctionOrValue func when func.IsExtensionMember ->
                             if func.IsProperty then
                                 let range = symbolUse.RangeAlternate
@@ -502,9 +505,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
                         // Determining that a record, DU or module is used anywhere requires
                         // inspecting all their inclosed entities (fields, cases and func / vals)
-                        // for useness, which is too expensive to do. Hence we never gray them out.
+                        // for usefulness, which is too expensive to do. Hence we never gray them out.
                         | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
-                        // Usage of DU case parameters does not give any meaningfull feedback, so never gray them out.
+                        // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
                         | Parameter -> None
                         | _ ->
                             match Seq.toList uses with
