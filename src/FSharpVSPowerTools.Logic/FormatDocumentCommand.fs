@@ -11,11 +11,15 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
 
     override x.Execute() =
-        use disposable = Cursor.wait()
+        use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
     override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
-        formatSourceString isSignatureFile source config
+        let formattedText = formatSourceString isSignatureFile source config
+
+        { OldText = source
+          OldTextStartIndex = 0
+          NewText = formattedText }
 
     override x.SetNewCaretPosition(caretPos, scrollBarPos, originalSnapshot) =
         let caretLine = originalSnapshot.GetLineFromPosition(caretPos.Position)

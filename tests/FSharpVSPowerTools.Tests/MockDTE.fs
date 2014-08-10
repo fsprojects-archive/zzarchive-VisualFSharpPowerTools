@@ -236,7 +236,3 @@ and MockProjectItem(_fileName: string, project: IProjectProvider, dte: DTE) =
         member __.SaveAs(_newFileName: string): bool = notimpl        
         member __.Saved with get (): bool = notimpl and set (_v: bool): unit = notimpl        
         member __.SubProject: Project = notimpl
-        
-        
-        
-
