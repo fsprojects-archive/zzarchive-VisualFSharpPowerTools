@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>syntaxcoloring</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Visual F# Power Tools">
+    <meta name="description" content="A collection of additional commands for F# in Visual Studio">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko, Denis Ok">
 
     <script src="https://code.jquery.com/jquery-1.8.0.js"></script>
@@ -40,11 +40,21 @@
 <li>types</li>
 <li>value types</li>
 <li>modules</li>
-<li>functions / methods</li>
+<li>functions / methods (off by default)</li>
 <li>quotations</li>
 <li>patterns (off by default)</li>
 <li>mutable variables / reference cells (off by default)</li>
+<li>unused non public types, methods, functions and values declarations</li>
+<li>unused open statements</li>
 </ul>
+
+<p>There is a special user setting for enabling graying out unused declarations and open statements.</p>
+
+<h2><a href="#marker">Unused declaration markers</a></h2>
+
+<p>If unused declarations and open statements are found in current file, orange markers will appear on top of vertical scroll bar.
+You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).
+<img src="img/syntax_coloring_unused_decl.png" alt="Syntax coloring" /></p>
 
 <p>Here is how the editor looks like in blue &amp; dark theme:</p>
 
@@ -52,7 +62,7 @@
 
 <p><img src="img/syntax_coloring_demo_dark.png" alt="Syntax coloring" /></p>
 
-<h2>How to customize colors</h2>
+<h2><a href="#customization">How to customize colors</a></h2>
 
 <p>Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:</p>
 
@@ -64,6 +74,7 @@
 <li>F# Quotations</li>
 <li>F# Types</li>
 <li>F# Value Types</li>
+<li>F# Unused Items</li>
 </ul>
 
 <p>You can press Ctrl + F in 'Display items' to quickly navigate to these colors.</p>
