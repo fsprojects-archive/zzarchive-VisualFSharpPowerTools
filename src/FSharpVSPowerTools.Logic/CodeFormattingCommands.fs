@@ -13,8 +13,8 @@ open FSharpVSPowerTools
 
 [<NoComparison>]
 type FormattingResult = {
-    OldText: string
     OldTextStartIndex: int
+    OldTextLength: int
     NewText: string
 }
 
@@ -81,7 +81,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
                 let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
 
                 edit.Replace(formattingResult.OldTextStartIndex,
-                             formattingResult.OldText.Length,
+                             formattingResult.OldTextLength,
                              formattingResult.NewText) |> ignore
                 edit.Apply() |> ignore
 

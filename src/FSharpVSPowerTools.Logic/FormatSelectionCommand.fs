@@ -36,8 +36,8 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
             let startIndex = snapshot.GetLineFromLineNumber(range.StartLine-1).Start.Position + range.StartColumn
             let endIndex = snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn + 1
 
-            { OldText = source.[startIndex .. endIndex - 1]
-              OldTextStartIndex = startIndex
+            { OldTextStartIndex = startIndex
+              OldTextLength = endIndex - startIndex
               NewText = formattedSelection }
         else
             let startPos = TextUtils.getFSharpPos(x.TextView.Selection.Start)
@@ -47,8 +47,8 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
             let range = mkRange "/tmp.fsx" startPos endPos
             let formattedSelection = formatSelectionOnly isSignatureFile range source config
 
-            { OldText = source.[startIndex .. endIndex - 1]
-              OldTextStartIndex = startIndex
+            { OldTextStartIndex = startIndex
+              OldTextLength = endIndex - startIndex
               NewText = formattedSelection }
 
     override x.SetNewCaretPosition(caretPos, scrollBarPos, _originalSnapshot) =

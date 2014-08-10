@@ -17,8 +17,8 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
         let formattedText = formatSourceString isSignatureFile source config
 
-        { OldText = source
-          OldTextStartIndex = 0
+        { OldTextStartIndex = 0
+          OldTextLength = source.Length
           NewText = formattedText }
 
     override x.SetNewCaretPosition(caretPos, scrollBarPos, originalSnapshot) =
