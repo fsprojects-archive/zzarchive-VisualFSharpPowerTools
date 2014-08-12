@@ -1290,3 +1290,12 @@ open System.Text
 let _ = bprintf (StringBuilder()) "%A" 1
 """
     => [ 2, []]
+
+[<Test>]
+let ``assembly level attribute prevents namespace in which it's defined to be marked as unused``() =
+    """
+open System
+[<assembly: Version("1")>]
+()
+"""
+    => [ 2, []]
