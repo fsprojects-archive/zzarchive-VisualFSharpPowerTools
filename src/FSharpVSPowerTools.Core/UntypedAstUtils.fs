@@ -324,6 +324,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynModuleDecl.Let (_, bindings, _) -> List.iter walkBinding bindings
         | SynModuleDecl.DoExpr (_, expr, _) -> walkExpr expr
         | SynModuleDecl.Types (types, _) -> List.iter walkTypeDefn types
+        | SynModuleDecl.Attributes (attrs, _) -> List.iter walkAttribute attrs
         | _ -> ()
 
     match input with 
