@@ -16,8 +16,10 @@ type VsTestBase() =
     
     static do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
     static do serviceProvider.Services.["SVsShell"] <- MockVsShell()
+    static do serviceProvider.Services.["SVsStatusbar"] <- Mocks.createSVsStatusbar()
     static do serviceProvider.Services.["SVsSolutionBuildManager"] <- Mocks.createVsSolutionBuildManager2()
     static do serviceProvider.Services.["GeneralOptionsPage"] <- Mocks.createGeneralOptionsPage()
+    static do serviceProvider.Services.["FantomasOptionsPage"] <- new FantomasOptionsPage()
 
     static let dte = MockDTE()
     static do serviceProvider.Services.["DTE"] <- dte

@@ -17,8 +17,256 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Utilities;
+using System.Linq;
+using Microsoft.VisualStudio.Text.Formatting;
+using System.Collections.Generic;
 
 namespace TestUtilities.Mocks {
+
+    public class MockViewScroller : IViewScroller
+    {
+        public void EnsureSpanVisible(VirtualSnapshotSpan span, EnsureSpanVisibleOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void EnsureSpanVisible(SnapshotSpan span, EnsureSpanVisibleOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void EnsureSpanVisible(SnapshotSpan span)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ScrollViewportHorizontallyByPixels(double distanceToScroll)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ScrollViewportVerticallyByLine(ScrollDirection direction)
+        {
+            Console.WriteLine("ScrollViewportVerticallyByLines");
+        }
+
+        public void ScrollViewportVerticallyByLines(ScrollDirection direction, int count)
+        {
+            Console.WriteLine("ScrollViewportVerticallyByLines");
+        }
+
+        public bool ScrollViewportVerticallyByPage(ScrollDirection direction)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ScrollViewportVerticallyByPixels(double distanceToScroll)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
+    public class MockTextViewLines : IWpfTextViewLineCollection
+    {
+        private IEnumerable<ITextViewLine> _lines;
+        public MockTextViewLines(IEnumerable<ITextViewLine> lines)
+        {
+            _lines = lines;
+        }
+        public IWpfTextViewLine FirstVisibleLine
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public System.Windows.Media.Geometry GetLineMarkerGeometry(SnapshotSpan bufferSpan, bool clipToViewport, System.Windows.Thickness padding)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Windows.Media.Geometry GetLineMarkerGeometry(SnapshotSpan bufferSpan)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Windows.Media.Geometry GetMarkerGeometry(SnapshotSpan bufferSpan)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Windows.Media.Geometry GetMarkerGeometry(SnapshotSpan bufferSpan, bool clipToViewport, System.Windows.Thickness padding)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Windows.Media.Geometry GetTextMarkerGeometry(SnapshotSpan bufferSpan, bool clipToViewport, System.Windows.Thickness padding)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Windows.Media.Geometry GetTextMarkerGeometry(SnapshotSpan bufferSpan)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IWpfTextViewLine GetTextViewLineContainingBufferPosition(SnapshotPoint bufferPosition)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IWpfTextViewLine LastVisibleLine
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public System.Collections.ObjectModel.ReadOnlyCollection<IWpfTextViewLine> WpfTextViewLines
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public IWpfTextViewLine this[int index]
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public bool ContainsBufferPosition(SnapshotPoint bufferPosition)
+        {
+            throw new NotImplementedException();
+        }
+
+        ITextViewLine ITextViewLineCollection.FirstVisibleLine
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public SnapshotSpan FormattedSpan
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public TextBounds GetCharacterBounds(SnapshotPoint bufferPosition)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int GetIndexOfTextLine(ITextViewLine textLine)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Collections.ObjectModel.Collection<TextBounds> GetNormalizedTextBounds(SnapshotSpan bufferSpan)
+        {
+            throw new NotImplementedException();
+        }
+
+        public SnapshotSpan GetTextElementSpan(SnapshotPoint bufferPosition)
+        {
+            throw new NotImplementedException();
+        }
+
+        ITextViewLine ITextViewLineCollection.GetTextViewLineContainingBufferPosition(SnapshotPoint bufferPosition)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ITextViewLine GetTextViewLineContainingYCoordinate(double y)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Collections.ObjectModel.Collection<ITextViewLine> GetTextViewLinesIntersectingSpan(SnapshotSpan bufferSpan)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IntersectsBufferSpan(SnapshotSpan bufferSpan)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsValid
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        ITextViewLine ITextViewLineCollection.LastVisibleLine
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public int IndexOf(ITextViewLine item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Insert(int index, ITextViewLine item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void RemoveAt(int index)
+        {
+            throw new NotImplementedException();
+        }
+
+        ITextViewLine System.Collections.Generic.IList<ITextViewLine>.this[int index]
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public void Add(ITextViewLine item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Clear()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Contains(ITextViewLine item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CopyTo(ITextViewLine[] array, int arrayIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int Count
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public bool IsReadOnly
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public bool Remove(ITextViewLine item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public System.Collections.Generic.IEnumerator<ITextViewLine> GetEnumerator()
+        {
+            return _lines.GetEnumerator();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public class MockTextView : IWpfTextView, ITextView {
         private readonly ITextBuffer _buffer;
         private readonly PropertyCollection _props = new PropertyCollection();
@@ -154,7 +402,7 @@ namespace TestUtilities.Mocks {
         }
 
         public ITextViewLineCollection TextViewLines {
-            get { throw new NotImplementedException(); }
+            get { return new MockTextViewLines(Enumerable.Empty<ITextViewLine>()); }
         }
 
         public ITextViewModel TextViewModel {
@@ -162,7 +410,7 @@ namespace TestUtilities.Mocks {
         }
 
         public IViewScroller ViewScroller {
-            get { throw new NotImplementedException(); }
+            get { return new MockViewScroller(); }
         }
 
         public double ViewportBottom {
@@ -254,7 +502,7 @@ namespace TestUtilities.Mocks {
         }
 
         IWpfTextViewLineCollection IWpfTextView.TextViewLines {
-            get { throw new NotImplementedException(); }
+            get { return new MockTextViewLines(Enumerable.Empty<ITextViewLine>()); }
         }
 
         public System.Windows.FrameworkElement VisualElement {

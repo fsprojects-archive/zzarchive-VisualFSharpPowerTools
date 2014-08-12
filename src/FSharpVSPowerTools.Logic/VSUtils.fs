@@ -323,8 +323,7 @@ type CursorOverrideHandle(newCursor) =
             Mouse.OverrideCursor <- originalCursor
             disposed <- true
 
-    do 
-        System.Windows.Input.Mouse.OverrideCursor <- newCursor
+    do Mouse.OverrideCursor <- newCursor
 
     member x.Restore() = restore()
 

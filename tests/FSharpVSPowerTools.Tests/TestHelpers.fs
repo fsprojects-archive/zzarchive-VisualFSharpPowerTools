@@ -82,6 +82,9 @@ let testEvent event errorMessage (timeout: int<_>) predicate =
 
 /// Asserts that two strings are the same modulo new line format.
 let inline assertEquivString (expected: string) (actual: string) =
-    expected.Replace("\r\n", "\n")
-    |> assertEqual (actual.Replace("\r\n", "\n"))
+    actual.Replace("\r\n", "\n")
+    |> assertEqual (expected.Replace("\r\n", "\n"))
+
+let inline prependNewLine str = Environment.NewLine + str
+let inline appendNewLine str = str + Environment.NewLine
 

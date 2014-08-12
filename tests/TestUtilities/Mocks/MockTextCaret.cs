@@ -66,7 +66,7 @@ namespace TestUtilities.Mocks {
         }
 
         public CaretPosition MoveTo(Microsoft.VisualStudio.Text.VirtualSnapshotPoint bufferPosition) {
-            throw new System.NotImplementedException();
+            return MoveTo(bufferPosition.Position);
         }
 
         public CaretPosition MoveTo(Microsoft.VisualStudio.Text.SnapshotPoint bufferPosition, Microsoft.VisualStudio.Text.PositionAffinity caretAffinity, bool captureHorizontalPosition) {

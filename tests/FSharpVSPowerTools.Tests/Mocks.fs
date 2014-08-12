@@ -34,92 +34,6 @@ let createGeneralOptionsPage() =
             page.XmlDocEnabled --> true
         @>)
 
-let createVsEditorAdaptersFactoryService() =
-    let vsTextView =
-        { 
-          new IVsTextView with
-              member __.AddCommandFilter(pNewCmdTarg: OLE.Interop.IOleCommandTarget, ppNextCmdTarg: byref<OLE.Interop.IOleCommandTarget>): int = 
-                  VSConstants.S_OK
-              
-              member __.CenterColumns(iLine: int, iLeftCol: int, iColCount: int): int = 
-                  notimpl
-              member __.CenterLines(iTopLine: int, iCount: int): int = 
-                  notimpl
-              member __.ClearSelection(fMoveToAnchor: int): int = 
-                  notimpl
-              member __.CloseView(): int = 
-                  notimpl
-              member __.EnsureSpanVisible(span: TextSpan): int = 
-                  notimpl
-              member __.GetBuffer(ppBuffer: byref<IVsTextLines>): int = 
-                  notimpl
-              member __.GetCaretPos(piLine: byref<int>, piColumn: byref<int>): int = 
-                  notimpl
-              member __.GetLineAndColumn(iPos: int, piLine: byref<int>, piIndex: byref<int>): int = 
-                  notimpl
-              member __.GetLineHeight(piLineHeight: byref<int>): int = 
-                  notimpl
-              member __.GetNearestPosition(iLine: int, iCol: int, piPos: byref<int>, piVirtualSpaces: byref<int>): int = 
-                  notimpl
-              member __.GetPointOfLineColumn(iLine: int, iCol: int, ppt: OLE.Interop.POINT []): int = 
-                  notimpl
-              member __.GetScrollInfo(iBar: int, piMinUnit: byref<int>, piMaxUnit: byref<int>, piVisibleUnits: byref<int>, piFirstVisibleUnit: byref<int>): int = 
-                  notimpl
-              member __.GetSelectedText(pbstrText: byref<string>): int = 
-                  notimpl
-              member __.GetSelection(piAnchorLine: byref<int>, piAnchorCol: byref<int>, piEndLine: byref<int>, piEndCol: byref<int>): int = 
-                  notimpl
-              member __.GetSelectionDataObject(ppIDataObject: byref<OLE.Interop.IDataObject>): int = 
-                  notimpl
-              member __.GetSelectionMode(): TextSelMode = 
-                  notimpl
-              member __.GetSelectionSpan(pSpan: TextSpan []): int = 
-                  notimpl
-              member __.GetTextStream(iTopLine: int, iTopCol: int, iBottomLine: int, iBottomCol: int, pbstrText: byref<string>): int = 
-                  notimpl
-              member __.GetWindowHandle(): nativeint = 
-                  notimpl
-              member __.GetWordExtent(iLine: int, iCol: int, dwFlags: uint32, pSpan: TextSpan []): int = 
-                  notimpl
-              member __.HighlightMatchingBrace(dwFlags: uint32, cSpans: uint32, rgBaseSpans: TextSpan []): int = 
-                  notimpl
-              member __.Initialize(pBuffer: IVsTextLines, hwndParent: nativeint, initFlags: uint32, pInitView: INITVIEW []): int = 
-                  notimpl
-              member __.PositionCaretForEditing(iLine: int, cIndentLevels: int): int = 
-                  notimpl
-              member __.RemoveCommandFilter(pCmdTarg: OLE.Interop.IOleCommandTarget): int = 
-                  notimpl
-              member __.ReplaceTextOnLine(iLine: int, iStartCol: int, iCharsToReplace: int, pszNewText: string, iNewLen: int): int = 
-                  notimpl
-              member __.RestrictViewRange(iMinLine: int, iMaxLine: int, pClient: IVsViewRangeClient): int = 
-                  notimpl
-              member __.SendExplicitFocus(): int = 
-                  notimpl
-              member __.SetBuffer(pBuffer: IVsTextLines): int = 
-                  notimpl
-              member __.SetCaretPos(iLine: int, iColumn: int): int = 
-                  notimpl
-              member __.SetScrollPosition(iBar: int, iFirstVisibleUnit: int): int = 
-                  notimpl
-              member __.SetSelection(iAnchorLine: int, iAnchorCol: int, iEndLine: int, iEndCol: int): int = 
-                  notimpl
-              member __.SetSelectionMode(iSelMode: TextSelMode): int = 
-                  notimpl
-              member __.SetTopLine(iBaseLine: int): int = 
-                  notimpl
-              member __.UpdateCompletionStatus(pCompSet: IVsCompletionSet, dwFlags: uint32): int = 
-                  notimpl
-              member __.UpdateTipWindow(pTipWindow: IVsTipWindow, dwFlags: uint32): int = 
-                  notimpl
-              member __.UpdateViewFrameCaption(): int = 
-                  notimpl
-         }
-
-    Mock<IVsEditorAdaptersFactoryService>()
-        .Setup(fun x -> <@ x.GetViewAdapter (any()) @>)
-        .Returns(vsTextView)
-        .Create()
-
 let createClassificationTypeRegistryService() =
     Mock<IClassificationTypeRegistryService>()
         .Setup(fun x -> <@ x.GetClassificationType (any()) @>)
@@ -146,7 +60,11 @@ let createTextUndoHistoryRegistry() =
         .Create()
 
 let createEditorOptionsFactoryService() =
-    Mock<IEditorOptionsFactoryService>().Create()
+    let editorOptions =
+        Mock<IEditorOptions>.With (fun x ->
+            <@ x.GetOptionValue ((new IndentSize()).Key) --> 4 @>)
+    Mock<IEditorOptionsFactoryService>.With(fun x ->
+        <@ x.GetOptions (any()) --> editorOptions @>)
 
 let createEditorOperationsFactoryService() =
     Mock<IEditorOperationsFactoryService>().Create()
@@ -246,3 +164,98 @@ let createVsSolutionBuildManager2() =
             member __.UpdateSolutionConfigurationIsActive(pfIsActive: byref<int>): int = notimpl
             member __.StartSimpleUpdateSolutionConfiguration(dwFlags: uint32, dwDefQueryResults: uint32, fSuppressUI: int): int = notimpl                                   
     }
+
+let createSVsStatusbar() =
+    let setText str = 
+        printfn "Status bar: %s" str
+        0
+    Mock<IVsStatusbar>()
+        .Setup(fun x -> <@ x.SetText(any()) @>)
+        .Calls<string>(fun str -> setText str)
+        .Create()
+
+let createVsEditorAdaptersFactoryService() =
+    let vsTextView =
+        { 
+          new IVsTextView with
+              member __.AddCommandFilter(pNewCmdTarg: OLE.Interop.IOleCommandTarget, ppNextCmdTarg: byref<OLE.Interop.IOleCommandTarget>): int = 
+                  VSConstants.S_OK
+              
+              member __.CenterColumns(iLine: int, iLeftCol: int, iColCount: int): int = 
+                  notimpl
+              member __.CenterLines(iTopLine: int, iCount: int): int = 
+                  notimpl
+              member __.ClearSelection(fMoveToAnchor: int): int = 
+                  notimpl
+              member __.CloseView(): int = 
+                  notimpl
+              member __.EnsureSpanVisible(span: TextSpan): int = 
+                  notimpl
+              member __.GetBuffer(ppBuffer: byref<IVsTextLines>): int = 
+                  notimpl
+              member __.GetCaretPos(piLine: byref<int>, piColumn: byref<int>): int = 
+                  notimpl
+              member __.GetLineAndColumn(iPos: int, piLine: byref<int>, piIndex: byref<int>): int = 
+                  notimpl
+              member __.GetLineHeight(piLineHeight: byref<int>): int = 
+                  notimpl
+              member __.GetNearestPosition(iLine: int, iCol: int, piPos: byref<int>, piVirtualSpaces: byref<int>): int = 
+                  notimpl
+              member __.GetPointOfLineColumn(iLine: int, iCol: int, ppt: OLE.Interop.POINT []): int = 
+                  notimpl
+              member __.GetScrollInfo(iBar: int, piMinUnit: byref<int>, piMaxUnit: byref<int>, piVisibleUnits: byref<int>, piFirstVisibleUnit: byref<int>): int = 
+                  notimpl
+              member __.GetSelectedText(pbstrText: byref<string>): int = 
+                  notimpl
+              member __.GetSelection(piAnchorLine: byref<int>, piAnchorCol: byref<int>, piEndLine: byref<int>, piEndCol: byref<int>): int = 
+                  notimpl
+              member __.GetSelectionDataObject(ppIDataObject: byref<OLE.Interop.IDataObject>): int = 
+                  notimpl
+              member __.GetSelectionMode(): TextSelMode = 
+                  notimpl
+              member __.GetSelectionSpan(pSpan: TextSpan []): int = 
+                  notimpl
+              member __.GetTextStream(iTopLine: int, iTopCol: int, iBottomLine: int, iBottomCol: int, pbstrText: byref<string>): int = 
+                  notimpl
+              member __.GetWindowHandle(): nativeint = 
+                  notimpl
+              member __.GetWordExtent(iLine: int, iCol: int, dwFlags: uint32, pSpan: TextSpan []): int = 
+                  notimpl
+              member __.HighlightMatchingBrace(dwFlags: uint32, cSpans: uint32, rgBaseSpans: TextSpan []): int = 
+                  notimpl
+              member __.Initialize(pBuffer: IVsTextLines, hwndParent: nativeint, initFlags: uint32, pInitView: INITVIEW []): int = 
+                  notimpl
+              member __.PositionCaretForEditing(iLine: int, cIndentLevels: int): int = 
+                  notimpl
+              member __.RemoveCommandFilter(pCmdTarg: OLE.Interop.IOleCommandTarget): int = 
+                  notimpl
+              member __.ReplaceTextOnLine(iLine: int, iStartCol: int, iCharsToReplace: int, pszNewText: string, iNewLen: int): int = 
+                  notimpl
+              member __.RestrictViewRange(iMinLine: int, iMaxLine: int, pClient: IVsViewRangeClient): int = 
+                  notimpl
+              member __.SendExplicitFocus(): int = 
+                  notimpl
+              member __.SetBuffer(pBuffer: IVsTextLines): int = 
+                  notimpl
+              member __.SetCaretPos(iLine: int, iColumn: int): int = 
+                  notimpl
+              member __.SetScrollPosition(iBar: int, iFirstVisibleUnit: int): int = 
+                  notimpl
+              member __.SetSelection(iAnchorLine: int, iAnchorCol: int, iEndLine: int, iEndCol: int): int = 
+                  notimpl
+              member __.SetSelectionMode(iSelMode: TextSelMode): int = 
+                  notimpl
+              member __.SetTopLine(iBaseLine: int): int = 
+                  notimpl
+              member __.UpdateCompletionStatus(pCompSet: IVsCompletionSet, dwFlags: uint32): int = 
+                  notimpl
+              member __.UpdateTipWindow(pTipWindow: IVsTipWindow, dwFlags: uint32): int = 
+                  notimpl
+              member __.UpdateViewFrameCaption(): int = 
+                  notimpl
+         }
+
+    Mock<IVsEditorAdaptersFactoryService>()
+        .Setup(fun x -> <@ x.GetViewAdapter (any()) @>)
+        .Returns(vsTextView)
+        .Create()

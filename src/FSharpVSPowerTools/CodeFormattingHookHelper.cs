@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
 using FSharpVSPowerTools.CodeFormatting;
+using Microsoft.VisualStudio.Shell;
 
 namespace FSharpVSPowerTools
 {
@@ -33,7 +34,7 @@ namespace FSharpVSPowerTools
             IEditorOperationsFactoryService editorOperationsFactoryService,
             ITextBufferUndoManagerProvider textBufferUndoManagerProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
-            IServiceProvider serviceProvider)
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider)
         {
             _adaptersFactory = adaptersFactory;
             _editorOptionsFactory = editorOptionsFactory;

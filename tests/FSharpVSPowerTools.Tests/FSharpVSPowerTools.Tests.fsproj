@@ -62,7 +62,6 @@
     <Content Include="app.config" />
     <Content Include="packages.config" />
     <None Include="Foq.Usage.fsx" />
-    <Compile Include="FormattingTests.fs" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="MockDTE.fs" />
     <Compile Include="Mocks.fs" />
@@ -70,6 +69,7 @@
     <Compile Include="SyntaxConstructClassifierTests.fs" />
     <Compile Include="ResolveUnopenedNamespaceSmartTaggerTests.fs" />
     <Compile Include="HighlightUsageTaggerTests.fs" />
+    <Compile Include="FormattingTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />

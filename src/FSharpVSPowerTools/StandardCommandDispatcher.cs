@@ -50,7 +50,7 @@ namespace FSharpVSPowerTools
         {
             IEditorOptions editorOptions = _services.EditorOptionsFactory.GetOptions(_textView.TextBuffer);
             int indentSize = editorOptions.GetOptionValue((new IndentSize()).Key);
-            var customOptions = (FantomasOptionsPage) (Package.GetGlobalService(typeof (FantomasOptionsPage)));
+            var customOptions = _services.ServiceProvider.GetService(typeof (FantomasOptionsPage)) as FantomasOptionsPage;
 
             var config =
                 FormatConfig.FormatConfig.create(
