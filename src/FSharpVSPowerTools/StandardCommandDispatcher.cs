@@ -17,15 +17,16 @@ namespace FSharpVSPowerTools
         private IOleCommandTarget _commandChain;
         private readonly CommandMapping[] Commands;
 
-        public static void Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
+        public static StandardCommandDispatcher Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
-            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
-            if (!generalOptions.FormattingEnabled) return;
+            var generalOptions = Utils.GetGeneralOptionsPage(services.ServiceProvider);
+            if (!generalOptions.FormattingEnabled) return null;
 
             var dispatcher = new StandardCommandDispatcher();
             dispatcher._textView = textView;
             dispatcher._services = services;
             interopTextView.AddCommandFilter(dispatcher, out dispatcher._commandChain);
+            return dispatcher;
         }
 
         private StandardCommandDispatcher()

@@ -24,6 +24,7 @@ namespace FSharpVSPowerTools
         private readonly IEditorOperationsFactoryService _editorOperationsFactoryService;
         private readonly ITextBufferUndoManagerProvider _textBufferUndoManagerProvider;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly IServiceProvider _serviceProvider;
 
         [ImportingConstructor]
         public CodeFormattingHookHelper(
@@ -31,30 +32,39 @@ namespace FSharpVSPowerTools
             IEditorOptionsFactoryService editorOptionsFactory,
             IEditorOperationsFactoryService editorOperationsFactoryService,
             ITextBufferUndoManagerProvider textBufferUndoManagerProvider,
-            ITextDocumentFactoryService textDocumentFactoryService)
+            ITextDocumentFactoryService textDocumentFactoryService,
+            IServiceProvider serviceProvider)
         {
             _adaptersFactory = adaptersFactory;
             _editorOptionsFactory = editorOptionsFactory;
             _editorOperationsFactoryService = editorOperationsFactoryService;
             _textBufferUndoManagerProvider = textBufferUndoManagerProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
+            _serviceProvider = serviceProvider;
+        }
+
+        internal StandardCommandDispatcher RegisterCommandDispatcher(IWpfTextView wpfTextView)
+        {
+            var view = _adaptersFactory.GetViewAdapter(wpfTextView);
+            if (view != null)
+            {
+                return StandardCommandDispatcher.Register(view, wpfTextView, GetServices());
+            }
+            return null;
         }
 
         public void TextViewCreated(IWpfTextView wpfTextView)
         {
             System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
             {
-                var view = _adaptersFactory.GetViewAdapter(wpfTextView);
-                if (view != null)
-                {
-                    StandardCommandDispatcher.Register(view, wpfTextView, GetServices());
-                }
+                RegisterCommandDispatcher(wpfTextView);
             }));
         }
 
         private CodeFormattingServices GetServices()
         {
-            return new CodeFormattingServices(_editorOptionsFactory, _editorOperationsFactoryService, _textBufferUndoManagerProvider, _textDocumentFactoryService);
+            return new CodeFormattingServices(_editorOptionsFactory, _editorOperationsFactoryService, 
+                            _textBufferUndoManagerProvider, _textDocumentFactoryService, _serviceProvider);
         }
     }
 }
