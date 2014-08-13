@@ -24,7 +24,7 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     override x.SetNewCaretPosition(caretPos, scrollBarPos, originalSnapshot) =
         let caretLine = originalSnapshot.GetLineFromPosition(caretPos.Position)
         let line = originalSnapshot.GetLineNumberFromPosition(int caretPos)
-        let column = caretPos - caretLine.Start
+        let column = caretPos.Position - caretLine.Start.Position
         let maxLine = originalSnapshot.LineCount
 
         let currentSnapshot = x.TextBuffer.CurrentSnapshot

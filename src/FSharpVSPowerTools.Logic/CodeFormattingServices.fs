@@ -13,11 +13,13 @@ open Microsoft.VisualStudio.Text.Operations
 type CodeFormattingServices(editorOptionsFactory: IEditorOptionsFactoryService, 
                             editorOperationsFactoryService: IEditorOperationsFactoryService,
                             textBufferUndoManagerProvider: ITextBufferUndoManagerProvider, 
-                            textDocumentFactoryService: ITextDocumentFactoryService) = 
+                            textDocumentFactoryService: ITextDocumentFactoryService,
+                            serviceProvider: IServiceProvider) = 
     member val EditorOptionsFactory = editorOptionsFactory
     member val TextBufferUndoManagerProvider = textBufferUndoManagerProvider
     member val EditorOperationsFactoryService = editorOperationsFactoryService
     member val TextDocumentFactoryService = textDocumentFactoryService
+    member val ServiceProvider = serviceProvider
 
 module internal TextUtils =
     let getFSharpPos (point: VirtualSnapshotPoint) =

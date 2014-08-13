@@ -10,6 +10,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
 
 [<NoComparison>]
 type FormattingResult = {
@@ -71,7 +72,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
         let isSignatureFile = x.IsSignatureFile(x.TextBuffer)
 
         let config = getConfig()
-        let statusBar = Package.GetGlobalService(typedefof<SVsStatusbar>) :?> IVsStatusbar
+        let statusBar = x.Services.ServiceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
         try
             let formattingResult = x.GetFormatted(isSignatureFile, source, config)
@@ -95,7 +96,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
             statusBar.SetText(ex.Message) |> ignore 
             false
         | ex ->
-            statusBar.SetText(Resource.formattingErrorMessage + ex.Message) |> ignore
+            statusBar.SetText(sprintf "%s: %O" Resource.formattingErrorMessage ex) |> ignore
             false
 
     member x.IsSignatureFile(buffer: ITextBuffer) =

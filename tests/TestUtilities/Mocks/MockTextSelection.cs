@@ -83,7 +83,9 @@ namespace TestUtilities.Mocks {
         }
 
         public void Select(VirtualSnapshotPoint anchorPoint, VirtualSnapshotPoint activePoint) {
-            throw new NotImplementedException();
+            var selectionSpan = new SnapshotSpan(anchorPoint.Position, activePoint.Position);
+            bool isReversed = anchorPoint.Position.Position > activePoint.Position.Position;
+            Select(selectionSpan, isReversed);
         }
 
         public void Select(SnapshotSpan selectionSpan, bool isReversed) {

@@ -15,7 +15,7 @@
     <Name>FSharpVSPowerTools.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-  </PropertyGroup>    
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
@@ -69,6 +69,7 @@
     <Compile Include="SyntaxConstructClassifierTests.fs" />
     <Compile Include="ResolveUnopenedNamespaceSmartTaggerTests.fs" />
     <Compile Include="HighlightUsageTaggerTests.fs" />
+    <Compile Include="FormattingTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
