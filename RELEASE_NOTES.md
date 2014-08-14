@@ -1,3 +1,5 @@
+#### 1.5.0 - Unreleased
+
 #### 1.4.0 - August 10 2014
 * Improve rename refactoring validation
 * Add support for VS 14
