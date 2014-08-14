@@ -22,20 +22,20 @@ namespace FSharpVSPowerTools
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
         [Import]
-        private ITextDocumentFactoryService textDocumentFactoryService = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal IServiceProvider serviceProvider = null;
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             ITextDocument doc;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.DepthColorizerEnabled) return null;
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return null;
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
@@ -54,7 +54,7 @@ namespace FSharpVSPowerTools
         [Export]
         [Name(Constants.depthAdornmentLayerName)]
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
-        private AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
+        private AdornmentLayerDefinition adornmentLayerDefinition = null;
 
         [Import]
         private IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
