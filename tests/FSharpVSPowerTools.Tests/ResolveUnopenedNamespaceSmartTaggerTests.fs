@@ -73,6 +73,20 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
             (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertEqual [])
 
     [<Test>]
+    let ``should not fail if active document raises exceptions``() = 
+        let content = "System.IO.Path"
+        // Give an invalid path for active document
+        let fileName = ""
+        let buffer = createMockTextBuffer content fileName
+        helper.AddProject(VirtualProjectProvider(buffer, fileName))        
+        helper.SetActiveDocument(fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 10) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertEqual [])
+
+    [<Test>]
     let ``should generate correct labels for unopened namespace tags``() = 
         let content = "DateTime"
         let buffer = createMockTextBuffer content fileName

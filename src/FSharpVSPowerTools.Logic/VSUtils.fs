@@ -131,7 +131,7 @@ type DTE with
     member x.GetActiveDocument() =
         let doc =
             maybe {
-                let! doc = Option.ofNull x.ActiveDocument 
+                let! doc = Option.attempt (fun _ -> x.ActiveDocument) |> Option.bind Option.ofNull
                 let! _ = Option.ofNull doc.ProjectItem
                 return doc }
         match doc with
@@ -143,7 +143,8 @@ type ProjectItem with
     member x.VSProject =
         Option.ofNull x
         |> Option.bind (fun item ->
-            try Option.ofNull (item.ContainingProject.Object :?> VSProject) with _ -> None)
+            Option.attempt (fun _ -> item.ContainingProject.Object :?> VSProject)
+            |> Option.bind Option.ofNull)
 
     member x.TryGetProperty name = 
         let property = x.Properties |> Seq.cast<Property> |> Seq.tryFind (fun p -> p.Name = name)
@@ -174,7 +175,8 @@ type Project with
     member x.VSProject =
         Option.ofNull x
         |> Option.bind (fun project ->
-            try Option.ofNull (project.Object :?> VSProject) with _ -> None)
+            Option.attempt (fun _ -> project.Object :?> VSProject)
+            |> Option.bind Option.ofNull)
 
 let getProject (hierarchy: IVsHierarchy) =
     match hierarchy.GetProperty(VSConstants.VSITEMID_ROOT,

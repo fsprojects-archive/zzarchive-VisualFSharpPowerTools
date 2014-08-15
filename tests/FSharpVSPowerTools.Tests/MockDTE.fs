@@ -25,7 +25,10 @@ type MockDTE() =
 
     interface DTE with
         member x.ActiveDocument: Document = 
-            MockDocument(filePath, x) :> _
+            if String.IsNullOrEmpty(filePath) then
+                invalidArg "filePath" "Invalid path for active document"
+            else
+                MockDocument(filePath, x) :> _
 
         member __.ActiveSolutionProjects: obj = notimpl
         member __.ActiveWindow: Window = notimpl
