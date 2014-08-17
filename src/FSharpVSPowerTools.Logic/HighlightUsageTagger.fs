@@ -47,14 +47,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
             if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
                 fromFSharpRange word.Snapshot symbolUse.RangeAlternate
             else None)
-        |> Seq.choose (fun span -> 
-            // Sometimes F.C.S returns a composite identifier which should be truncated
-            let index = span.GetText().LastIndexOf (lastIdent)
-            if index > 0 then 
-                Some (SnapshotSpan(word.Snapshot, span.Start.Position + index, span.Length - index))
-            elif index = 0 then Some span
-            else None)
-        |> Seq.toList
+        |> fixInvalidSymbolSpans word.Snapshot lastIdent
 
     let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan,
                   fileName: string, projectProvider: IProjectProvider) =
@@ -132,11 +125,12 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                     if currentSnapshot = word.Snapshot then word
                     else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
                 // First, yield back the word the cursor is under (if it overlaps)
-                // Note that we'll yield back the same word again in the wordspans collection;
-                // the duplication here is expected.
                 if spans.OverlapsWith(NormalizedSnapshotSpanCollection word) then yield tagSpan word
                 // Second, yield all the other words in the file
-                for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) -> tagSpan span
+                // Note that we won't yield back the same word again in the wordspans collection;
+                // the duplication is not expected.
+                for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) do
+                    if span <> word then yield tagSpan span
             | _ -> ()
         ]
 

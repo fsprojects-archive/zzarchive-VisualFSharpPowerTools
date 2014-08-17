@@ -94,6 +94,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.ComponentModelHost
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // This is for updating documents after refactoring
 // Reference at https://pytools.codeplex.com/SourceControl/latest#Python/Product/PythonTools/PythonToolsPackage.cs
@@ -123,6 +124,24 @@ type DocumentUpdater(serviceProvider: IServiceProvider) =
 
     member x.EndGlobalUndo(linkedUndo: IVsLinkedUndoTransactionManager) = 
         ErrorHandler.ThrowOnFailure(linkedUndo.CloseLinkedUndo()) |> ignore
+
+/// Fix invalid symbols if they appear to have redundant suffix and prefix. 
+/// All symbol uses are assumed to belong to a single snapshot.
+let fixInvalidSymbolSpans (snapshot: ITextSnapshot) (lastIdent: string) (spans: SnapshotSpan seq) =
+        spans
+        |> Seq.choose (fun span -> 
+            let newLastIdent = span.GetText()
+            let index = newLastIdent.LastIndexOf lastIdent
+            if index > 0 then 
+                // Sometimes FCS returns a composite identifier (x.Length) for short symbols (Length), so we truncate the prefix
+                Some (SnapshotSpan(snapshot, span.Start.Position + index, span.Length - index))
+            elif index = 0 && newLastIdent <> lastIdent then
+                // The returned symbol use is too long, we truncate the redundant suffix
+                Some (SnapshotSpan(snapshot, span.Start.Position, lastIdent.Length))
+            elif index = 0 then Some span
+            else None)
+        |> Seq.distinctBy (fun span -> span.Start.Position)
+        |> Seq.toList
 
 open EnvDTE
 open VSLangProj
@@ -216,7 +235,7 @@ type ForegroundThreadGuard private() =
     static let mutable threadId = UnassignedThreadId
     static member BindThread() =
         if threadId <> UnassignedThreadId then 
-            () // fail "Thread is already set"
+            fail "Thread is already set"
         threadId <- Thread.CurrentThread.ManagedThreadId
     static member CheckThread() =
         if threadId = UnassignedThreadId then 

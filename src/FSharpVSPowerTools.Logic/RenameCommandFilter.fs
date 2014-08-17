@@ -36,7 +36,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         state <- s
         state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
-    let rename (oldText: string) (symbolKind:SymbolKind) (newText: string) (foundUsages: (string * range list) list) =
+    let rename (oldText: string) (symbolKind: SymbolKind) (newText: string) (foundUsages: (string * range list) list) =
         try
             let newText = IdentifierUtils.encapsulateIdentifier symbolKind newText
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
@@ -48,16 +48,8 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
                         let spans =
                             ranges
-                            |> Seq.choose (fun range -> maybe {
-                                let! snapshotSpan = fromFSharpRange buffer.CurrentSnapshot range
-                                let i = snapshotSpan.GetText().LastIndexOf(oldText)
-                                return
-                                    if i > 0 then 
-                                        // Subtract lengths of qualified identifiers
-                                        SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
-                                    else snapshotSpan })
-                            |> Seq.toList
-
+                            |> Seq.choose (fromFSharpRange buffer.CurrentSnapshot)
+                            |> fixInvalidSymbolSpans buffer.CurrentSnapshot oldText
                         spans
                         |> List.fold (fun (snapshot: ITextSnapshot) span ->
                             let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
