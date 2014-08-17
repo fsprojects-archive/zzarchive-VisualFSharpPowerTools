@@ -74,9 +74,15 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
                     |> Seq.concat
             
+                let nodes =
+                    // There are duplications from FCS, we remove duplications by checking text representation
+                    references 
+                    |> Seq.map (fun reference -> FSharpLibraryNode(symbol.Text, serviceProvider, reference))
+                    |> Seq.distinctBy (fun node -> node.GetTextWithOwnership(VSTREETEXTOPTIONS.TTO_DEFAULT))
+
                 let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
-                for reference in references do
-                    findResults.AddNode(FSharpLibraryNode(symbol.Text, serviceProvider, reference))
+                for node in nodes do
+                    findResults.AddNode(node)
 
                 let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
                 let searchCriteria = 

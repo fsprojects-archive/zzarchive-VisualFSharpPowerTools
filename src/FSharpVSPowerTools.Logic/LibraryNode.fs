@@ -171,7 +171,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
  
     abstract EnumClipboardFormats: _VSOBJCFFLAGS * VSOBJCLIPFORMAT [] -> uint32
     default x.EnumClipboardFormats(_flags: _VSOBJCFFLAGS, formats: VSOBJCLIPFORMAT []) =
-        if (formats = null || formats.Length = 0) then
+        if formats = null || formats.Length = 0 then
             uint32 clipboardFormats.Count
         else
             let mutable itemsToCopy = uint32 clipboardFormats.Count
@@ -301,7 +301,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                 let child = children.[int index] :> obj
                 ppCmdTrgtActive <-
                     match child with
-                    | :? IOleCommandTarget -> child :?> IOleCommandTarget
+                    | :? IOleCommandTarget as target -> target
                     | _ -> null
                 VSConstants.S_OK
 
@@ -341,7 +341,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             x.CheckIndexOutOfRange(index)
             let copied = children.[int index].EnumClipboardFormats(enum<_VSOBJCFFLAGS>(int grfFlags), rgcfFormats)
 
-            if (pcActual <> null && pcActual.Length > 0) then
+            if pcActual <> null && pcActual.Length > 0 then
                 pcActual.[0] <- copied
             VSConstants.S_OK
         
