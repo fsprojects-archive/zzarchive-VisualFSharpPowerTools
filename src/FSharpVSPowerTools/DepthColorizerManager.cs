@@ -54,7 +54,7 @@ namespace FSharpVSPowerTools
         [Export]
         [Name(Constants.depthAdornmentLayerName)]
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
-        private AdornmentLayerDefinition adornmentLayerDefinition = null;
+        private AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
         [Import]
         private IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
