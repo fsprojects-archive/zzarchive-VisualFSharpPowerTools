@@ -47,8 +47,17 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
                         let spans =
-                            ranges
-                            |> Seq.choose (fromFSharpRange buffer.CurrentSnapshot)
+                            match state with
+                            | Some { Word = Some (word, _); File = currentFile } when currentFile = fileName ->
+                                seq {
+                                    let spans = List.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                                    if List.forall ((<>) word) spans then
+                                        // Ensure that current word is always renamed
+                                        yield word
+                                    yield! spans
+                                }
+                            | _ -> 
+                                Seq.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
                             |> fixInvalidSymbolSpans buffer.CurrentSnapshot oldText
                         spans
                         |> List.fold (fun (snapshot: ITextSnapshot) span ->
