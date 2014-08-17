@@ -1299,3 +1299,13 @@ open System
 ()
 """
     => [ 2, []]
+
+[<Test>]
+let ``open declaration is not marked as unused if a related type extension is used``() =
+    """
+module Module =
+    open System
+    type String with
+        member __.Method() = ()
+"""
+    => [ 3, []]

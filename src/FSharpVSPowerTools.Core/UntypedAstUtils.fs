@@ -13,7 +13,12 @@ let internal longIdentToArray (longIdent: LongIdent): Idents =
 /// Returns all Idents and LongIdents found in an untyped AST.
 let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, Idents> =
     let identsByEndPos = Dictionary<Range.pos, Idents>()
-    
+
+    let addLongIdent (longIdent: LongIdent) =
+        let idents = longIdentToArray longIdent
+        for ident in longIdent do
+            identsByEndPos.[ident.idRange.End] <- idents
+
     let addLongIdentWithDots (LongIdentWithDots (longIdent, lids) as value) = 
         match longIdentToArray longIdent with
         | [||] -> ()
@@ -256,7 +261,11 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynMemberSig.Interface(t, _) -> walkType t
         | SynMemberSig.ValField(f, _) -> walkField f
         | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) -> 
-            walkComponentInfo info
+            let isTypeExtension = 
+                match repr with
+                | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAugmentation, _, _) -> true
+                | SynTypeDefnSigRepr.Simple(_, _) -> false
+            walkComponentInfo isTypeExtension info
             walkTypeDefnSigRepr repr
             List.iter walkMemberSig memberSigs
 
@@ -297,10 +306,12 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType t
         | _ -> ()
 
-    and walkComponentInfo (ComponentInfo(attrs, typars, constraints, _, _, _, _, _)) =
+    and walkComponentInfo isTypeExtension (ComponentInfo(attrs, typars, constraints, longIdent, _, _, _, _)) =
         List.iter walkAttribute attrs
         List.iter walkTyparDecl typars
         List.iter walkTypeConstraint constraints
+        if isTypeExtension then
+            addLongIdent longIdent
 
     and walkTypeDefnRepr = function
         | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.iter walkMember defns
@@ -311,7 +322,11 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
 
     and walkTypeDefn (TypeDefn (info, repr, members, _)) =
-        walkComponentInfo info
+        let isTypeExtension = 
+            match repr with
+            | SynTypeDefnRepr.ObjectModel (SynTypeDefnKind.TyconAugmentation, _, _) -> true
+            | _ -> false
+        walkComponentInfo isTypeExtension info
         walkTypeDefnRepr repr
         List.iter walkMember members
 
@@ -319,7 +334,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         match decl with
         | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
         | SynModuleDecl.NestedModule(info, modules, _, _) ->
-            walkComponentInfo info
+            walkComponentInfo false info
             List.iter walkSynModuleDecl modules
         | SynModuleDecl.Let (_, bindings, _) -> List.iter walkBinding bindings
         | SynModuleDecl.DoExpr (_, expr, _) -> walkExpr expr
