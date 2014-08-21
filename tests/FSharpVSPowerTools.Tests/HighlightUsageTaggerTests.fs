@@ -81,13 +81,33 @@ x
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
-                // There are duplications in resulting tags
-                |> Seq.distinct
+                helper.TagsOf(buffer, tagger)
                 |> Seq.toList
                 |> assertEqual
                      [ (3, 1) => (3, 1);
                        (2, 5) => (2, 5) ])
+
+    [<Test>]
+    let ``should not generate duplicated highlight usage tags for generic types``() = 
+        let content = """
+module GenericClass =
+    type Type1<'a, 'b>() =
+        static member Member1() = ()
+    let _ = Type1<_,_>.Member1()
+"""
+        let buffer = createMockTextBuffer content fileName
+        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        helper.SetActiveDocument(fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 13) |> ignore)
+            (fun () -> 
+                helper.TagsOf(buffer, tagger)                 
+                |> Seq.toList
+                |> assertEqual
+                     [ (5, 13) => (5, 17);
+                       (3, 10) => (3, 14) ])
 
     [<Test>]
     let ``should not generate highlight usage tags for keywords or whitespaces``() = 

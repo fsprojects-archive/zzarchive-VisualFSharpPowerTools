@@ -264,7 +264,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
             let isTypeExtension = 
                 match repr with
                 | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAugmentation, _, _) -> true
-                | SynTypeDefnSigRepr.Simple(_, _) -> false
+                | _ -> false
             walkComponentInfo isTypeExtension info
             walkTypeDefnSigRepr repr
             List.iter walkMemberSig memberSigs

@@ -36,7 +36,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         state <- s
         state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
-    let rename (oldText: string) (symbolKind:SymbolKind) (newText: string) (foundUsages: (string * range list) list) =
+    let rename (oldText: string) (symbolKind: SymbolKind) (newText: string) (foundUsages: (string * range list) list) =
         try
             let newText = IdentifierUtils.encapsulateIdentifier symbolKind newText
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
@@ -47,17 +47,18 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
                         let spans =
-                            ranges
-                            |> Seq.choose (fun range -> maybe {
-                                let! snapshotSpan = fromFSharpRange buffer.CurrentSnapshot range
-                                let i = snapshotSpan.GetText().LastIndexOf(oldText)
-                                return
-                                    if i > 0 then 
-                                        // Subtract lengths of qualified identifiers
-                                        SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
-                                    else snapshotSpan })
-                            |> Seq.toList
-
+                            match state with
+                            | Some { Word = Some (word, _); File = currentFile } when currentFile = fileName ->
+                                seq {
+                                    let spans = List.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                                    if List.forall ((<>) word) spans then
+                                        // Ensure that current word is always renamed
+                                        yield word
+                                    yield! spans
+                                }
+                            | _ -> 
+                                Seq.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                            |> fixInvalidSymbolSpans buffer.CurrentSnapshot oldText
                         spans
                         |> List.fold (fun (snapshot: ITextSnapshot) span ->
                             let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)

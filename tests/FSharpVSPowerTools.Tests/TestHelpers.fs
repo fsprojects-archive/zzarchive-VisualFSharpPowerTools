@@ -57,7 +57,7 @@ let (=>) (startLine, startCol) (endLine, endCol) =
         
 let snapshotPoint (snapshot: ITextSnapshot) line (column: int) = 
     let line = snapshot.GetLineFromLineNumber(line - 1)
-    SnapshotSpan(line.Start, column).Start
+    SnapshotPoint(snapshot, line.Start.Position + column)
 
 let testEventTrigger event errorMessage (timeout: int<_>) triggerEvent predicate =
     let task =
