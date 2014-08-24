@@ -100,8 +100,10 @@ module SignatureGenerator =
 
     and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
-        writeDocs ctx mem.XmlDoc
-        ctx.Writer.WriteLine("member {0} : {1}", mem.DisplayName, mem.FullType.Format(ctx.DisplayContext))
+        if mem.IsPropertyGetterMethod || mem.IsPropertySetterMethod then ()
+        else
+            writeDocs ctx mem.XmlDoc
+            ctx.Writer.WriteLine("member {0} : {1}", mem.DisplayName, mem.FullType.Format(ctx.DisplayContext))
 
     and internal writeDocs ctx docs =
         for doc in docs do

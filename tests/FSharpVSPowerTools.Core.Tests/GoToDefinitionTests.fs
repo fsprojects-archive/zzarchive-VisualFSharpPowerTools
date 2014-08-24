@@ -63,7 +63,7 @@ let tryGenerateDefinitionFromPos caretPos src =
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
 
-        let generatedCode = formatSymbol FSharpDisplayContext.Empty symbolUse.Symbol
+        let generatedCode = formatSymbol symbolUse.DisplayContext symbolUse.Symbol
         return generatedCode
     }
     |> Async.RunSynchronously
@@ -71,14 +71,17 @@ let tryGenerateDefinitionFromPos caretPos src =
 let generateDefinitionFromPos caretPos src =
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
-[<Test>]
+[<Test; Ignore>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
-    let x = new Tuple<int, int>(1, 2)
+    let _ = new Tuple<int, int>(1, 2)
     // TODO: interface inheritance
     // TODO: class type attributes
-    // TODO: xml comments
     // TODO: generic types
-    // TODO: simplified property syntax
+    // TODO: member types attributes
+    // TODO: member generic types
+    // TODO: method arguments attributes
+    // TODO: method arguments generic types
+    // TODO: xml comments
 
     """open System
 
@@ -87,7 +90,7 @@ let x = new Tuple<int, int>(1, 2)"""
     |> assertSrcAreEqual """namespace System
 
 type Tuple<'T1, 'T2> =
-    new : 'T1 * 'T2 -> Tuple<'T1, 'T2>
+    member .ctor : 'T1 * 'T2 -> unit
     member Equals : obj -> bool
     member GetHashCode : unit -> int
     member ToString : unit -> string
