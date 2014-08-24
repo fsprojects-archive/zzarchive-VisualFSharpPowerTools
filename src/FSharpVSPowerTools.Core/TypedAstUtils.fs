@@ -178,6 +178,12 @@ let (|UnionCase|_|) (e: FSharpSymbol) =
     | :? FSharpUnionCase as uc -> Some uc
     | _ -> None
 
+let (|RecordField|_|) (e: FSharpSymbol) =
+    match e with
+    | :? FSharpField as field ->
+        if field.DeclaringEntity.IsFSharpRecord then Some field else None
+    | _ -> None
+
 let (|Interface|_|) (e: FSharpEntity) = if e.IsInterface then Some() else None
         
 let (|FSharpType|_|) (e: FSharpEntity) = 

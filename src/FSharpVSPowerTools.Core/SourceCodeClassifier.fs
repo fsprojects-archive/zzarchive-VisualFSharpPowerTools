@@ -142,7 +142,7 @@ module SourceCodeClassifier =
         |> Array.filter (fun symbolUse ->
             let res = 
                 match symbolUse.SymbolUse.Symbol with
-                | UnionCase _ 
+                | Pattern | RecordField _
                 | Entity (Class | (FSharpType | ValueType | FSharpModule | Array), _, _)
                 | Entity (_, _, Tuple)
                 | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
@@ -197,8 +197,8 @@ module SourceCodeClassifier =
                 |> List.rev
                 |> List.toArray
                             
-            //debug "[SourceCodeClassifier] QualifiedSymbol: FullName = %A, Symbol end pos = (%d, %d), Res = %A" 
-            //      fullName endPos.Line endPos.Column prefix
+//            debug "[SourceCodeClassifier] QualifiedSymbol: FullName = %A, Symbol end pos = (%d, %d), Res = %A" 
+//                  fullName endPos.Line endPos.Column prefix
             Some prefix
         | _ -> None
 
@@ -319,7 +319,7 @@ module SourceCodeClassifier =
 //            debug "[SourceCodeClassifier] %s SymbolUses:" msg
 //            for sUse in symbolUses do
 //                let r = sUse.SymbolUse.RangeAlternate
-//                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames.Value r.StartLine r.StartColumn r.EndLine r.EndColumn
+//                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames r.StartLine r.StartColumn r.EndLine r.EndColumn
 //            symbolUses
 
         let symbolPrefixes: (Range.range * Idents) [] =

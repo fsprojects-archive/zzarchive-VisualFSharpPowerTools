@@ -460,12 +460,12 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                         Some [|String.Join (".", fullNameWithoutClassName)|]
                                     else None
                                 | _ -> None
-                        // operators
+                        // Operators
                         | MemberFunctionOrValue func ->
                             match func with
                             | Constructor _ -> None
                             | _ ->
-                                // for operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
+                                // For operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
                                 if TypedAstUtils.isOperator func.DisplayName && func.DisplayName <> func.CompiledName then
                                     Option.attempt (fun _ -> func.EnclosingEntity)
                                     |> Option.bind (fun e -> e.TryGetFullName())
@@ -479,13 +479,14 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                 |> Option.map (fun fullName ->
                                     [| fullName; fullName.Substring(0, fullName.Length - "Attribute".Length) |])
                             | e, _, _ -> 
-                                e.TryGetFullName() |> Option.map (fun x -> [| x |])
-                        | UnionCase uc ->
-                            Some [| let fullName = uc.FullName
+                                e.TryGetFullName() |> Option.map (fun fullName -> [| fullName |])
+                        | RecordField _
+                        | UnionCase _ as symbol ->
+                            Some [| let fullName = symbol.FullName
                                     yield fullName
                                     let idents = fullName.Split '.'
-                                    // Union cases can be accessible without mention the DU type. 
-                                    // So, we add a FullName with the DU type part removed.
+                                    // Union cases/Record fields can be accessible without mention the type. 
+                                    // So we add a FullName with the type part removed.
                                     if idents.Length > 1 then
                                         yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
                                  |]   

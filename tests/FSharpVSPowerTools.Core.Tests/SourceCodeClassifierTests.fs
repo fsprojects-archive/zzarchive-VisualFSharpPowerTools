@@ -1327,3 +1327,13 @@ module Module =
     let _ = System.String("")
 """
     => [ 3, [Category.Unused, 9, 26]]
+
+let ``record fields should be taken into account``() = 
+    """
+module M1 =
+    type Record = { Field: int }
+module M2 =
+    open M1
+    let x = { Field = 0 }
+"""
+    => [ 5, []]
