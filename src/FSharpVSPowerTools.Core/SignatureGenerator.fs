@@ -100,10 +100,37 @@ module SignatureGenerator =
 
     and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
-        if mem.IsPropertyGetterMethod || mem.IsPropertySetterMethod then ()
-        else
+
+        printfn "FullName: %O" mem.FullName
+        printfn "DisplayName: %O" mem.DisplayName
+//        printfn "LogicalName: %O" mem.LogicalName
+
+//        printfn "Compiler generated: %A" mem.IsCompilerGenerated
+//        printfn "Implicit constructor: %A" mem.IsImplicitConstructor
+
+        match mem with
+        | Constructor entity ->
+            writeDocs ctx mem.XmlDoc
+
+            let constructorSignature =
+                // NOTE: We're not sure that we can assume that the return type is always gonna
+                //       be written as 'unit', so we do something more robust.
+                let imperativeSignature = mem.FullType.Format(ctx.DisplayContext)
+                let removedReturnValue =
+                    // Remove everything after the last arrow '->' in case the
+                    // constructor is currified or contains function parameters
+                    let whereToChop = imperativeSignature.LastIndexOf(" -> ")
+                    imperativeSignature.Substring(0, whereToChop + 4)
+                let functionalSignature =
+                    removedReturnValue + entity.DisplayName
+
+                functionalSignature
+
+            ctx.Writer.WriteLine("new : {0}", constructorSignature)
+        | Function false ->
             writeDocs ctx mem.XmlDoc
             ctx.Writer.WriteLine("member {0} : {1}", mem.DisplayName, mem.FullType.Format(ctx.DisplayContext))
+        | _ -> ()
 
     and internal writeDocs ctx docs =
         for doc in docs do
