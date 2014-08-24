@@ -42,6 +42,7 @@ module SignatureGenerator =
         match typ.Namespace with
         | Some ns -> 
             ctx.Writer.WriteLine("namespace {0}", ns)
+            ctx.Writer.WriteLine("")
         | None ->
             // TODO: print modules or not?
             ()
