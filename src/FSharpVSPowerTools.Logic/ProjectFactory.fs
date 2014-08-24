@@ -74,8 +74,6 @@ type ProjectFactory
 
     let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
-        // we have to save the project otherwise SourceFiles would miss added / removed file
-        project.Save()
         cache.Remove project.FullName
 
     let onProjectItemChanged (projectItem: ProjectItem) =
@@ -99,7 +97,7 @@ type ProjectFactory
             events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)
             events.ProjectsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
             events.ProjectsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-            events.SolutionEvents.add_ProjectAdded (fun p -> fsharpProjectsCache := None)
+            events.SolutionEvents.add_ProjectAdded (fun _ -> fsharpProjectsCache := None)
             events.SolutionEvents.add_ProjectRemoved (fun p -> 
                 fsharpProjectsCache := None
                 onProjectChanged p)
