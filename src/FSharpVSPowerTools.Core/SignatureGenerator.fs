@@ -22,6 +22,19 @@ module SignatureGenerator =
     let internal (|Module|_|) (entity: FSharpEntity) = 
         if entity.IsFSharpModule then Some() else None
 
+    let getTypeNameWithGenericParams (typ: FSharpEntity) =
+        [|
+            yield typ.DisplayName
+            if typ.GenericParameters.Count > 0 then
+                yield "<"
+                let genericParamsRepr =
+                    [| for p in typ.GenericParameters -> "'" + p.DisplayName |]
+                    |> String.concat ", "
+                yield genericParamsRepr
+                yield ">"
+        |]
+        |> String.concat ""
+
     let rec internal writeModule ctx (modul: FSharpEntity) =
         Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
         writeDocs ctx modul.XmlDoc
@@ -47,7 +60,8 @@ module SignatureGenerator =
             // TODO: print modules or not?
             ()
         writeDocs ctx typ.XmlDoc
-        ctx.Writer.WriteLine("type {0} = ", typ.DisplayName)
+
+        ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
         ctx.Writer.Indent ctx.Indentation
         if typ.IsFSharpRecord then
             ctx.Writer.WriteLine("{")
@@ -103,10 +117,6 @@ module SignatureGenerator =
 
         printfn "FullName: %O" mem.FullName
         printfn "DisplayName: %O" mem.DisplayName
-//        printfn "LogicalName: %O" mem.LogicalName
-
-//        printfn "Compiler generated: %A" mem.IsCompilerGenerated
-//        printfn "Implicit constructor: %A" mem.IsImplicitConstructor
 
         match mem with
         | Constructor entity ->
@@ -122,7 +132,7 @@ module SignatureGenerator =
                     let whereToChop = imperativeSignature.LastIndexOf(" -> ")
                     imperativeSignature.Substring(0, whereToChop + 4)
                 let functionalSignature =
-                    removedReturnValue + entity.DisplayName
+                    removedReturnValue + (getTypeNameWithGenericParams entity)
 
                 functionalSignature
 

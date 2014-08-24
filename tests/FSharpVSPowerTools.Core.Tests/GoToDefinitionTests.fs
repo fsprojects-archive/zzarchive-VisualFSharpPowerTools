@@ -74,9 +74,9 @@ let generateDefinitionFromPos caretPos src =
 [<Test; Ignore>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
+    // TODO: accessibility modifiers
     // TODO: interface inheritance
     // TODO: class type attributes
-    // TODO: generic types
     // TODO: member types attributes
     // TODO: member generic types
     // TODO: method arguments attributes
@@ -90,7 +90,7 @@ let x = new Tuple<int, int>(1, 2)"""
     |> assertSrcAreEqual """namespace System
 
 type Tuple<'T1, 'T2> =
-    member .ctor : 'T1 * 'T2 -> unit
+    new : 'T1 * 'T2 -> Tuple<'T1, 'T2>
     member Equals : obj -> bool
     member GetHashCode : unit -> int
     member ToString : unit -> string
