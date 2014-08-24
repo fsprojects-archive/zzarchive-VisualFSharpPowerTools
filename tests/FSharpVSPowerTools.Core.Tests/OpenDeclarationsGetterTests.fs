@@ -78,7 +78,7 @@ let ``OpenDecl stays used if any of its declarations is used``() =
     assertEqual [true; false] (updatedDecl.Declarations |> List.map (fun decl -> decl.IsUsed))
 
 [<Test>]
-let ``OpenDecl marks matching child decl even thoug another one is already marked as used``() =
+let ``OpenDecl marks matching child decl even though another one is already marked as used``() =
     let decl = { openDecl
                   [ { openDeclWithAutoOpens ["System.IO"] with IsUsed = true }
                     openDeclWithAutoOpens ["Top.Module"]] 

@@ -146,7 +146,9 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.Tuple(es, _, _) -> List.iter walkExpr es
         | SynExpr.ArrayOrList(_, es, _) -> List.iter walkExpr es
         | SynExpr.Record(_, _, fields, _) -> 
-            fields |> List.iter (fun (_, e, _) -> e |> Option.iter walkExpr)
+            fields |> List.iter (fun ((ident, _), e, _) -> 
+                        addLongIdentWithDots ident
+                        e |> Option.iter walkExpr)
         | SynExpr.New(_, t, e, _) -> 
             walkExpr e
             walkType t
