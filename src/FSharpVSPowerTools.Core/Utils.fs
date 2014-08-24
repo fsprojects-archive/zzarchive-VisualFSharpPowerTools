@@ -12,19 +12,19 @@ module Seq =
 [<RequireQualifiedAccess>]
 module Array =
     /// Returns true if one array has another as its subset from index 0.
-    let startsWith (other: _ array) (value: _ array) =
+    let startsWith (prefix: _ array) (whole: _ array) =
         let rec loop index =
-            if index > other.Length - 1 then true
-            elif index > value.Length - 1 then false
-            elif other.[index] = value.[index] then loop (index + 1)
+            if index > prefix.Length - 1 then true
+            elif index > whole.Length - 1 then false
+            elif prefix.[index] = whole.[index] then loop (index + 1)
             else false
-        other.Length = 0 || loop 0
+        prefix.Length = 0 || loop 0
 
     /// Returns true if one array has trailing elements equal to another's.
-    let endsWith (other: _ array) (value: _ array) =
-        value 
+    let endsWith (suffix: _ array) (whole: _ array) =
+        whole 
         |> Array.rev
-        |> startsWith (Array.rev other)
+        |> startsWith (Array.rev suffix)
 
     /// Returns a new array with an element replaced with a given value.
     let replace index value (arr: _ array) =
