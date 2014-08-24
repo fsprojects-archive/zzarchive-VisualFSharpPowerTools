@@ -1309,3 +1309,21 @@ module Module =
         member __.Method() = ()
 """
     => [ 3, []]
+
+[<Test>]
+let ``should not mark open declaration with global prefix``() =
+    """
+module Module =
+    open global.System
+    let _ = String("")
+"""
+    => [ 3, []]
+
+[<Test>]
+let ``should mark open declaration with global prefix in double backticks``() =
+    """
+module Module =
+    open ``global``.Namesp
+    let _ = System.String("")
+"""
+    => [ 3, [Category.Unused, 9, 26]]

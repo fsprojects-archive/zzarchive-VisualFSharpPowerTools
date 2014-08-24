@@ -72,6 +72,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
             
     member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
+        Debug.Assert(not (List.isEmpty names), "The names should not be empty (for which GetToolTip raises exceptions).")
         asyncMaybe {
             match infoOpt with
             | Some (checkResults, _) -> 

@@ -154,8 +154,26 @@ module OpenDeclarationGetter =
                         function
                         | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
                             walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
-                        | SynModuleDecl.Open (LongIdentWithDots(ident, _), openStatementRange) ->
-                            let identArray = longIdentToArray ident
+                        | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openStatementRange) ->
+                            let identArray = 
+                                let isExactlyOne =
+                                    match longIdent with
+                                    | [_] -> true
+                                    | _ -> false
+                                longIdent
+                                |> List.mapi (fun i ident -> 
+                                    // Only filter out if global is a prefix of the open declaration
+                                    match i, ident.idText with
+                                    | 0, "`global`" when not isExactlyOne ->
+                                        let r = ident.idRange
+                                        // Make sure that we don't filter out ``global`` and the like
+                                        if r.StartLine = r.EndLine && r.EndColumn - r.StartColumn = 6 then
+                                            None
+                                        else Some ident
+                                    | _ -> 
+                                        Some ident)
+                                |> List.choose id
+                                |> longIdentToArray
                             let rawOpenDeclarations =  
                                 identArray
                                 |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
