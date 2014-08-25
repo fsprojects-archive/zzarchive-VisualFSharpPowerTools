@@ -113,6 +113,41 @@ type Tuple<'T1, 'T2> =
 """)
 
 [<Test>]
+let ``go to property definition generate enclosing type metadata`` () =
+    """open System
+
+let t = Tuple<int, int>(0, 0)
+let u = t.Item1"""
+    |> generateDefinitionFromPos (Pos.fromZ 3 10)
+    |> assertSrcAreEqual """namespace System
+
+type Tuple<'T1, 'T2> =
+    interface IComparable
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
+    interface ITuple
+    new : 'T1 * 'T2 -> Tuple<'T1, 'T2>
+    member Equals : obj -> bool
+    member GetHashCode : unit -> int
+    member ToString : unit -> string
+    member Item1 : 'T1
+    member Item2 : 'T2
+"""
+
+[<Test>]
+let ``go to method definition generate enclosing type metadata`` () =
+    """open System
+
+do Console.WriteLine("xxx")"""
+    |> generateDefinitionFromPos (Pos.fromZ 2 11)
+    |> assertSrcAreEqualForFirstLines 5 """namespace System
+
+type Console =
+    member Beep : unit -> unit
+    member Beep : int * int -> unit
+"""
+
+[<Test>]
 let ``go to list<'T> definition`` () =
     """open System
 
@@ -143,7 +178,6 @@ type List<'T> =
 // TODO: record type metadata
 // TODO: enum type metadata
 // TODO: static class metadata
-// TODO: enclosing type metadata when symbol is a method
 // TODO: set cursor on method when symbol is a method
 // TODO: set cursor on union case when symbol is a union case
 // TODO: set cursor on enum case when symbol is an enum case
