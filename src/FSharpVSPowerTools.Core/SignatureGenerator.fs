@@ -85,9 +85,13 @@ module SignatureGenerator =
         else ()
 
         // Interfaces
-        for inter in typ.AllInterfaces do
-            printfn "%A" inter
-            ctx.Writer.WriteLine("interface {0}", getTypeNameWithGenericParams inter.TypeDefinition)
+        [
+            for inter in typ.AllInterfaces do
+                yield inter, inter.Format(ctx.DisplayContext)
+        ]
+        |> List.sortBy (fun (inter, _name) -> inter.TypeDefinition.DisplayName)
+        |> List.iter (fun (_, name) -> ctx.Writer.WriteLine("interface {0}", name))
+
         // Members
         for value in typ.MembersFunctionsAndValues do
             Debug.Assert(not value.LogicalEnclosingEntity.IsFSharpModule, "F# type should not contain module functions or values.")

@@ -76,7 +76,6 @@ let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
     // TODO: include open directives so that IStructuralEquatable/... are not wiggled
     // TODO: sort members by display name
-    // TODO: sort implemented interfaces
     // TODO: accessibility modifiers
     // TODO: class type attributes
     // TODO: include argument names
@@ -101,9 +100,9 @@ let x = Tuple<int, int>(1, 2)""", (Pos.fromZ 1 8)
             """namespace System
 
 type Tuple<'T1, 'T2> =
-    interface IStructuralEquatable
-    interface IStructuralComparable
     interface IComparable
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
     interface ITuple
     new : 'T1 * 'T2 -> Tuple<'T1, 'T2>
     member Equals : obj -> bool
@@ -124,12 +123,12 @@ let x: List<int> = []"""
 type List<'T> =
     | op_Nil
     | op_ColonColon of Head : 'T * Tail : 'T list
-    interface IStructuralEquatable
-    interface IComparable<'T>
+    interface IComparable<List<'T>>
     interface IComparable
-    interface IStructuralComparable
-    interface IEnumerable<'T>
-    interface IEnumerable
+    interface Collections.Generic.IEnumerable<'T>
+    interface Collections.IEnumerable
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
     member Cons : 'T * 'T list -> 'T list
     member Tail : 'T list
     member Length : int
