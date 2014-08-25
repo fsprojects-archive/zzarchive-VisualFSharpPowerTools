@@ -61,6 +61,11 @@ module SignatureGenerator =
             ()
         writeDocs ctx typ.XmlDoc
 
+        // TODO: print attributes
+//        printfn "Attributes: "
+//        for attr in typ.Attributes do
+//            printfn "attr: %A" attr
+
         ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
         ctx.Writer.Indent ctx.Indentation
         if typ.IsFSharpRecord then
@@ -79,9 +84,15 @@ module SignatureGenerator =
                 writeField true ctx field
         else ()
 
+        // Interfaces
+        for inter in typ.AllInterfaces do
+            printfn "%A" inter
+            ctx.Writer.WriteLine("interface {0}", getTypeNameWithGenericParams inter.TypeDefinition)
+        // Members
         for value in typ.MembersFunctionsAndValues do
             Debug.Assert(not value.LogicalEnclosingEntity.IsFSharpModule, "F# type should not contain module functions or values.")
             writeMember ctx value
+        // Nested entities
         for entity in typ.NestedEntities do
             Debug.Assert(not entity.IsFSharpModule, "F# type should not contain modules.")
             // Nested types only happen due to C# interoperability
@@ -93,10 +104,11 @@ module SignatureGenerator =
         ctx.Writer.Write("| {0}", case.Name)
         let mutable isFirst = true
         for field in case.UnionCaseFields do
-            if not isFirst then
-                ctx.Writer.Write(" * ")
-            else
+            if isFirst then
+                ctx.Writer.Write(" of ")
                 isFirst <- false
+            else
+                ctx.Writer.Write(" * ")
             writeField false ctx field
         ctx.Writer.WriteLine("")
 
@@ -114,9 +126,6 @@ module SignatureGenerator =
 
     and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
-
-        printfn "FullName: %O" mem.FullName
-        printfn "DisplayName: %O" mem.DisplayName
 
         match mem with
         | Constructor entity ->
@@ -137,7 +146,8 @@ module SignatureGenerator =
                 functionalSignature
 
             ctx.Writer.WriteLine("new : {0}", constructorSignature)
-        | Function false ->
+        | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
+            // Discard explicit getter/setter methods
             writeDocs ctx mem.XmlDoc
             ctx.Writer.WriteLine("member {0} : {1}", mem.DisplayName, mem.FullType.Format(ctx.DisplayContext))
         | _ -> ()

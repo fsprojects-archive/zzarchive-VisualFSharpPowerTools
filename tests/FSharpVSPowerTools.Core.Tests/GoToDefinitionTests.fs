@@ -74,9 +74,11 @@ let generateDefinitionFromPos caretPos src =
 [<Test; Ignore>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
+    // TODO: sort members by display name
+    // TODO: sort implemented interfaces
     // TODO: accessibility modifiers
-    // TODO: interface inheritance
     // TODO: class type attributes
+    // TODO: include argument names
     // TODO: member types attributes
     // TODO: member generic types
     // TODO: method arguments attributes
@@ -90,6 +92,10 @@ let x = new Tuple<int, int>(1, 2)"""
     |> assertSrcAreEqual """namespace System
 
 type Tuple<'T1, 'T2> =
+    interface IStructuralEquatable
+    interface IStructuralComparable
+    interface IComparable
+    interface ITuple
     new : 'T1 * 'T2 -> Tuple<'T1, 'T2>
     member Equals : obj -> bool
     member GetHashCode : unit -> int
@@ -98,63 +104,28 @@ type Tuple<'T1, 'T2> =
     member Item2 : 'T2
 """
 
-(*
-namespace System
-{
-    [Serializable]
-    public class Tuple<T1, T2> : IStructuralEquatable, IStructuralComparable, IComparable, ITuple
-    {
-        // Summary:
-        //     Initializes a new instance of the System.Tuple<T1,T2> class.
-        //
-        // Parameters:
-        //   item1:
-        //     The value of the tuple's first component.
-        //
-        //   item2:
-        //     The value of the tuple's second component.
-        public Tuple(T1 item1, T2 item2);
+[<Test; Ignore>]
+let ``go to list<'T> definition`` () =
+    """open System
 
-        // Summary:
-        //     Gets the value of the current System.Tuple<T1,T2> object's first component.
-        //
-        // Returns:
-        //     The value of the current System.Tuple<T1,T2> object's first component.
-        public T1 Item1 { get; }
-        //
-        // Summary:
-        //     Gets the value of the current System.Tuple<T1,T2> object's second component.
-        //
-        // Returns:
-        //     The value of the current System.Tuple<T1,T2> object's second component.
-        public T2 Item2 { get; }
+let x: List<int> = []"""
+    |> generateDefinitionFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
 
-        // Summary:
-        //     Returns a value that indicates whether the current System.Tuple<T1,T2> object
-        //     is equal to a specified object.
-        //
-        // Parameters:
-        //   obj:
-        //     The object to compare with this instance.
-        //
-        // Returns:
-        //     true if the current instance is equal to the specified object; otherwise,
-        //     false.
-        public override bool Equals(object obj);
-        //
-        // Summary:
-        //     Returns the hash code for the current System.Tuple<T1,T2> object.
-        //
-        // Returns:
-        //     A 32-bit signed integer hash code.
-        public override int GetHashCode();
-        //
-        // Summary:
-        //     Returns a string that represents the value of this System.Tuple<T1,T2> instance.
-        //
-        // Returns:
-        //     The string representation of this System.Tuple<T1,T2> object.
-        public override string ToString();
-    }
-}
-*)
+type List<'T> =
+    | op_Nil
+    | op_ColonColon of Head : 'T * Tail : 'T list
+    interface IStructuralEquatable
+    interface IComparable<'T>
+    interface IComparable
+    interface IStructuralComparable
+    interface IEnumerable<'T>
+    interface IEnumerable
+    member Cons : 'T * 'T list -> 'T list
+    member Tail : 'T list
+    member Length : int
+    member Item : 'T
+    member IsEmpty : bool
+    member Head : 'T
+    member Empty : 'T list
+"""
