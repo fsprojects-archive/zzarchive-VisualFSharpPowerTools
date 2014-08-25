@@ -159,16 +159,20 @@ module SignatureGenerator =
     let formatSymbol displayContext (symbol: FSharpSymbol) =
         use writer = new ColumnIndentedTextWriter()
         let ctx = { Writer = writer; Indentation = 4; DisplayContext = displayContext }
-        match symbol with
-        | :? FSharpEntity as entity ->
-            match entity with
-            | Module _ -> writeModule ctx entity
-            | _ -> writeType ctx entity
-        | :? FSharpMemberFunctionOrValue as mem ->
-            if mem.LogicalEnclosingEntity.IsFSharpModule then
-                writeFunctionOrValue ctx mem
-            else
-                writeMember ctx mem
-        | _ ->
-            fail "Invalid symbol in this context: %O" symbol
+
+        let rec writeSymbol (symbol: FSharpSymbol) =
+            match symbol with
+            | :? FSharpEntity as entity ->
+                match entity with
+                | Module _ -> writeModule ctx entity
+                | _ -> writeType ctx entity
+            | :? FSharpMemberFunctionOrValue as mem ->
+                if mem.LogicalEnclosingEntity.IsFSharpModule then
+                    writeFunctionOrValue ctx mem
+                else
+                    writeSymbol mem.LogicalEnclosingEntity
+            | _ ->
+                fail "Invalid symbol in this context: %O" symbol
+
+        writeSymbol symbol
         writer.Dump()

@@ -86,11 +86,19 @@ let ``go to Tuple<'T1, 'T2> definition`` () =
     // TODO: method arguments generic types
     // TODO: xml comments
 
-    """open System
+    [
+        // Explicit 'new' statement: symbol is considered as a type
+        """open System
+let x = new Tuple<int, int>(1, 2)""", (Pos.fromZ 1 12)
 
-let x = new Tuple<int, int>(1, 2)"""
-    |> generateDefinitionFromPos (Pos.fromZ 2 12)
-    |> assertSrcAreEqual """namespace System
+        // Implicit 'new' statement: symbol is considered as a function
+        """open System
+let x = Tuple<int, int>(1, 2)""", (Pos.fromZ 1 8)
+    ]
+    |> List.map (fun (src, pos) -> generateDefinitionFromPos pos src)
+    |> List.iter (fun src ->
+        assertSrcAreEqual src
+            """namespace System
 
 type Tuple<'T1, 'T2> =
     interface IStructuralEquatable
@@ -103,7 +111,7 @@ type Tuple<'T1, 'T2> =
     member ToString : unit -> string
     member Item1 : 'T1
     member Item2 : 'T2
-"""
+""")
 
 [<Test>]
 let ``go to list<'T> definition`` () =
@@ -137,3 +145,8 @@ type List<'T> =
 // TODO: enum type metadata
 // TODO: static class metadata
 // TODO: enclosing type metadata when symbol is a method
+// TODO: set cursor on method when symbol is a method
+// TODO: set cursor on union case when symbol is a union case
+// TODO: set cursor on enum case when symbol is an enum case
+// TODO: set cursor on field when symbol is a record field
+// TODO: enclosing module metadata when symbol is a function??
