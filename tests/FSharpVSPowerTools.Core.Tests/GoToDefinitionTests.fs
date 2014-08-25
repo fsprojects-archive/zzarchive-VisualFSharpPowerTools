@@ -71,19 +71,25 @@ let tryGenerateDefinitionFromPos caretPos src =
 let generateDefinitionFromPos caretPos src =
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
+//type Interface =
+//    abstract member M: int -> unit
+//
+//type T() =
+//    let mutable x = 0
+//    member this.Property with get() = x and set value = x <- value
+
 [<Test>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
-    // TODO: include open directives so that IStructuralEquatable/... are not wiggled
-    // TODO: sort members by display name
     // TODO: accessibility modifiers
     // TODO: class type attributes
-    // TODO: include argument names
     // TODO: member types attributes
     // TODO: member generic types
     // TODO: method arguments attributes
     // TODO: method arguments generic types
     // TODO: xml comments
+    // TODO: include open directives so that IStructuralEquatable/... are not wiggled
+    // TODO: sort members by display name
 
     [
         // Explicit 'new' statement: symbol is considered as a type
@@ -104,13 +110,37 @@ type Tuple<'T1, 'T2> =
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
     interface ITuple
-    new : 'T1 * 'T2 -> Tuple<'T1, 'T2>
-    member Equals : obj -> bool
+    new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
+    member Equals : obj:obj -> bool
     member GetHashCode : unit -> int
     member ToString : unit -> string
     member Item1 : 'T1
     member Item2 : 'T2
 """)
+
+[<Test>]
+let ``adds necessary parenthesis to function parameters`` () =
+    """
+let _ = Async.AwaitTask"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 8)
+    |> assertSrcAreEqualForFirstLines 4 """namespace Microsoft.FSharp.Control
+
+type Async =
+    member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * System.AsyncCallback * obj -> System.IAsyncResult) * (System.IAsyncResult -> 'T) * (System.IAsyncResult -> unit)
+"""
+
+[<Test>]
+let ``adds necessary parenthesis to tuple parameters`` () =
+    """
+type T() =
+    member this.Test(x: int * int, y: int): int = 3
+    
+    let x = new T()"""
+    |> generateDefinitionFromPos (Pos.fromZ 4 16)
+    |> assertSrcAreEqual """type T =
+    new : unit -> T
+    member Test : x:(int * int) * y:int -> int
+"""
 
 [<Test>]
 let ``go to property definition generate enclosing type metadata`` () =
@@ -126,8 +156,8 @@ type Tuple<'T1, 'T2> =
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
     interface ITuple
-    new : 'T1 * 'T2 -> Tuple<'T1, 'T2>
-    member Equals : obj -> bool
+    new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
+    member Equals : obj:obj -> bool
     member GetHashCode : unit -> int
     member ToString : unit -> string
     member Item1 : 'T1
@@ -144,11 +174,12 @@ do Console.WriteLine("xxx")"""
 
 type Console =
     member Beep : unit -> unit
-    member Beep : int * int -> unit
+    member Beep : frequency:int * duration:int -> unit
 """
 
 [<Test>]
 let ``go to list<'T> definition`` () =
+    let _: List<int> = []
     """open System
 
 let x: List<int> = []"""
@@ -164,7 +195,7 @@ type List<'T> =
     interface Collections.IEnumerable
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
-    member Cons : 'T * 'T list -> 'T list
+    member Cons : head:'T * tail:'T list -> 'T list
     member Tail : 'T list
     member Length : int
     member Item : 'T
@@ -178,6 +209,11 @@ type List<'T> =
 // TODO: record type metadata
 // TODO: enum type metadata
 // TODO: static class metadata
+// TODO: handle optional parameters (see Async.AwaitEvent)
+// TODO: handle abbreviation (try string vs System.String...)
+// TODO: syntax coloring is deactivated on generated metadata file
+// TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
+// FIXME: buffer name should have the enclosing type name (if symbol = field, method, ...)
 // TODO: set cursor on method when symbol is a method
 // TODO: set cursor on union case when symbol is a union case
 // TODO: set cursor on enum case when symbol is an enum case

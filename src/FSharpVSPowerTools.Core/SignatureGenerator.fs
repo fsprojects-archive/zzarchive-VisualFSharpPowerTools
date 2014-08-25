@@ -35,6 +35,52 @@ module SignatureGenerator =
         |]
         |> String.concat ""
 
+    let internal generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
+        let generateInputParamsPart (mem: FSharpMemberFunctionOrValue) =
+            let takesInputParameters =
+                not (mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0)
+
+            let formatParamTypeName (typ: FSharpType) =
+                if typ.IsFunctionType || typ.IsTupleType then
+                    sprintf "(%s)" (typ.Format(ctx.DisplayContext))
+                else
+                    typ.Format(ctx.DisplayContext)
+
+            if takesInputParameters then
+                [
+                    for pGroup in mem.CurriedParameterGroups do
+                        yield [
+                            for p in pGroup do
+                                let formattedTypeName = formatParamTypeName p.Type
+
+                                match p.Name with
+                                | Some paramName -> yield sprintf "%s:%s" paramName formattedTypeName
+                                | None -> yield formattedTypeName
+                        ]
+                        |> String.concat " * "
+                ]
+                |> String.concat " -> "
+            else
+                "unit"
+
+        match mem with
+        | Constructor entity ->
+            let signatureInputParamsPart = generateInputParamsPart mem
+            let signatureReturnTypePart = getTypeNameWithGenericParams entity
+
+            sprintf "%s -> %s" signatureInputParamsPart signatureReturnTypePart
+
+        | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
+            let signatureReturnTypePart = mem.ReturnParameter.Type.Format(ctx.DisplayContext)
+
+            if mem.IsProperty then
+                signatureReturnTypePart
+            else
+                let signatureInputParamsPart = generateInputParamsPart mem
+                sprintf "%s -> %s" signatureInputParamsPart signatureReturnTypePart
+
+        | _ -> ""
+
     let rec internal writeModule ctx (modul: FSharpEntity) =
         Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
         writeDocs ctx modul.XmlDoc
@@ -89,7 +135,9 @@ module SignatureGenerator =
             for inter in typ.AllInterfaces do
                 yield inter, inter.Format(ctx.DisplayContext)
         ]
-        |> List.sortBy (fun (inter, _name) -> inter.TypeDefinition.DisplayName)
+        |> List.sortBy (fun (inter, _name) ->
+            // Sort by name without the namespace qualifier
+            inter.TypeDefinition.DisplayName)
         |> List.iter (fun (_, name) -> ctx.Writer.WriteLine("interface {0}", name))
 
         // Members
@@ -131,29 +179,16 @@ module SignatureGenerator =
     and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
 
+
         match mem with
-        | Constructor entity ->
+        | Constructor _entity ->
             writeDocs ctx mem.XmlDoc
+            ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
 
-            let constructorSignature =
-                // NOTE: We're not sure that we can assume that the return type is always gonna
-                //       be written as 'unit', so we do something more robust.
-                let imperativeSignature = mem.FullType.Format(ctx.DisplayContext)
-                let removedReturnValue =
-                    // Remove everything after the last arrow '->' in case the
-                    // constructor is currified or contains function parameters
-                    let whereToChop = imperativeSignature.LastIndexOf(" -> ")
-                    imperativeSignature.Substring(0, whereToChop + 4)
-                let functionalSignature =
-                    removedReturnValue + (getTypeNameWithGenericParams entity)
-
-                functionalSignature
-
-            ctx.Writer.WriteLine("new : {0}", constructorSignature)
         | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
             // Discard explicit getter/setter methods
             writeDocs ctx mem.XmlDoc
-            ctx.Writer.WriteLine("member {0} : {1}", mem.DisplayName, mem.FullType.Format(ctx.DisplayContext))
+            ctx.Writer.WriteLine("member {0} : {1}", mem.DisplayName, generateSignature ctx mem)
         | _ -> ()
 
     and internal writeDocs ctx docs =
