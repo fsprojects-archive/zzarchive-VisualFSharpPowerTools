@@ -71,9 +71,10 @@ let tryGenerateDefinitionFromPos caretPos src =
 let generateDefinitionFromPos caretPos src =
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
-[<Test; Ignore>]
+[<Test>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
+    // TODO: include open directives so that IStructuralEquatable/... are not wiggled
     // TODO: sort members by display name
     // TODO: sort implemented interfaces
     // TODO: accessibility modifiers
@@ -104,7 +105,7 @@ type Tuple<'T1, 'T2> =
     member Item2 : 'T2
 """
 
-[<Test; Ignore>]
+[<Test>]
 let ``go to list<'T> definition`` () =
     """open System
 
@@ -129,3 +130,10 @@ type List<'T> =
     member Head : 'T
     member Empty : 'T list
 """
+
+// Tests to add:
+// TODO: union type metadata
+// TODO: record type metadata
+// TODO: enum type metadata
+// TODO: static class metadata
+// TODO: enclosing type metadata when symbol is a method
