@@ -11,6 +11,8 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 module SignatureGenerator =
+    open Microsoft.FSharp.Compiler.PrettyNaming
+
     [<NoComparison>]
     type internal Context =
         {
@@ -112,10 +114,24 @@ module SignatureGenerator =
             ()
         writeDocs ctx typ.XmlDoc
 
-        // TODO: print attributes
-//        printfn "Attributes: "
-//        for attr in typ.Attributes do
-//            printfn "attr: %A" attr
+        for attr in typ.Attributes do
+            let name = 
+                let displayName = attr.AttributeType.DisplayName
+                if displayName.EndsWith "Attribute" && displayName.Length > "Attribute".Length then
+                    displayName.Substring(0, displayName.Length - "Attribute".Length)
+                else displayName
+            if attr.ConstructorArguments.Count = 0 then
+                ctx.Writer.WriteLine("[<{0}>]", name)
+            else
+                ctx.Writer.Write("[<{0}(", name)
+                let mutable isFirst = true
+                for arg in attr.ConstructorArguments do
+                    if isFirst then
+                        ctx.Writer.Write("{0}", sprintf "%A" arg)
+                        isFirst <- false
+                    else
+                        ctx.Writer.Write(", {0}", sprintf "%A" arg)
+                ctx.Writer.WriteLine(")>]")
 
         printfn "IsClass: %b" typ.IsClass
         printfn "IsOpaque: %b" typ.IsOpaque
@@ -129,6 +145,7 @@ module SignatureGenerator =
                     | _             -> false)
 
             (not typ.IsInterface)
+            && (not typ.IsValueType)
             && (typ.IsOpaque || not hasVisibleConstructor)
             && not (typ.IsFSharpRecord || typ.IsFSharpUnion)
 
@@ -136,6 +153,8 @@ module SignatureGenerator =
             ctx.Writer.WriteLine("[<Class>]")
         elif typ.IsInterface then
             ctx.Writer.WriteLine("[<Interface>]")
+        elif typ.IsValueType then
+             ctx.Writer.WriteLine("[<Struct>]")
 
         ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
         ctx.Writer.Indent ctx.Indentation
@@ -157,7 +176,7 @@ module SignatureGenerator =
 
         // Interfaces
         [
-            for inter in typ.AllInterfaces do
+            for inter in typ.DeclaredInterfaces do
                 if inter.TypeDefinition <> typ then
                     yield inter, inter.Format(ctx.DisplayContext)
         ]
@@ -181,7 +200,7 @@ module SignatureGenerator =
 
     and internal writeUnionCase ctx (case: FSharpUnionCase) =
         writeDocs ctx case.XmlDoc
-        ctx.Writer.Write("| {0}", case.Name)
+        ctx.Writer.Write("| {0}", DemangleOperatorName case.Name)
         let mutable isFirst = true
         for field in case.UnionCaseFields do
             if isFirst then

@@ -8,7 +8,7 @@
       "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
-      "../../src/FSharpVSPowerTools.Core/SignatureGenerator.fs"
+#load "../../src/FSharpVSPowerTools.Core/SignatureGenerator.fs"
       "TestHelpers.fs"
       "CodeGenerationTestInfrastructure.fs"
 #else
@@ -187,13 +187,17 @@ let x: List<int> = []"""
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
 
+[<DefaultAugmentation(false)>]
+[<StructuralEquality>]
+[<StructuralComparison>]
+[<CompiledName("FSharpList`1")>]
 type List<'T> =
-    | op_Nil
-    | op_ColonColon of Head: 'T * Tail: 'T list
+    | ( [] )
+    | ( :: ) of Head: 'T * Tail: 'T list
     interface IComparable<List<'T>>
     interface IComparable
-    interface Collections.Generic.IEnumerable<'T>
     interface Collections.IEnumerable
+    interface Collections.Generic.IEnumerable<'T>
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
     static member Cons : head:'T * tail:'T list -> 'T list
@@ -217,6 +221,26 @@ let f (x:MyInterface) = ()"""
     |> assertSrcAreEqual """[<Interface>]
 type MyInterface =
     abstract member Method : int -> unit
+"""
+
+[<Test>]
+let ``go to union type definition`` () =
+    """open System
+
+let x: Choice<'T, 'U> = failwith "Not implemented yet" """
+    |> generateDefinitionFromPos (Pos.fromZ 2 7)
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
+[<StructuralEquality>]
+[<StructuralComparison>]
+[<CompiledName("FSharpChoice`2")>]
+type Choice<'T1, 'T2> =
+    | Choice1Of2 of Item: 'T1
+    | Choice2Of2 of Item: 'T2
+    interface IComparable<Choice<'T1,'T2>>
+    interface IComparable
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
 """
 
 // Tests to add:
@@ -251,3 +275,14 @@ type MyInterface =
 // TODO: set cursor on enum case when symbol is an enum case
 // TODO: set cursor on field when symbol is a record field
 // TODO: enclosing module metadata when symbol is a function??
+// TODO: static class metadata
+// TODO: enclosing type metadata when symbol is a method
+
+#if INTERACTIVE
+#time "on";;
+let result =
+    """open System
+
+let x: Int32 = 0"""
+    |> generateDefinitionFromPos (Pos.fromZ 2 7)
+#endif
