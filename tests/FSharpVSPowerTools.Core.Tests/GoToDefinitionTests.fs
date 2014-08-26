@@ -216,7 +216,8 @@ let f (x:MyInterface) = ()"""
     |> generateDefinitionFromPos (Pos.fromZ 4 9)
     |> assertSrcAreEqual """[<Interface>]
 type MyInterface =
-    abstract member Method : int -> unit"""
+    abstract member Method : int -> unit
+"""
 
 // Tests to add:
 // TODO: union type metadata

@@ -214,8 +214,8 @@ module SignatureGenerator =
             let prefix =
                 // Is static?
                 if not mem.IsInstanceMember then "static "
-                // Is abstract?
-                elif mem.IsDispatchSlot then "abstract "
+                // Is abstract && enclosing type is interface/abstract?
+                elif mem.IsDispatchSlot && mem.EnclosingEntity.IsInterface then "abstract "
                 else ""
 
             ctx.Writer.WriteLine("{0}member {1} : {2}", prefix, mem.DisplayName, generateSignature ctx mem)
