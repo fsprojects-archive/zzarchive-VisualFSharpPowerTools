@@ -227,6 +227,8 @@ type MyInterface =
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes
+// TODO: fix empty interfaces/classes/structs display
+// TODO: fix nested module naming issue (see Microsoft.FSharp.Compiler.Range module)
 //
 //type MyInterface() =
 //    abstract member Method: int -> unit

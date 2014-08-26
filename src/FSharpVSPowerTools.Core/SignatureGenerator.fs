@@ -88,12 +88,17 @@ module SignatureGenerator =
         ctx.Writer.Indent ctx.Indentation
         for value in modul.MembersFunctionsAndValues do
             writeFunctionOrValue ctx value
+
+        if modul.MembersFunctionsAndValues.Count > 0 && modul.NestedEntities.Count > 0 then
+            ctx.Writer.WriteLine("")
+
         for entity in modul.NestedEntities do
             match entity with
-            | Module _ ->
-                writeModule ctx entity
-            | _ ->
-                writeType ctx entity
+            | Module _ -> writeModule ctx entity
+            | _ -> writeType ctx entity
+
+            ctx.Writer.WriteLine("")
+
         ctx.Writer.Unindent ctx.Indentation
 
     and internal writeType ctx (typ: FSharpEntity) =
