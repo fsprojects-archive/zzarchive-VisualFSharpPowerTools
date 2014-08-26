@@ -209,7 +209,6 @@ type List<'T> =
     static member Empty : 'T list
 """
 
-
 [<Test>]
 let ``go to interface definition`` () =
     """
@@ -241,6 +240,28 @@ type Choice<'T1, 'T2> =
     interface IComparable
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
+"""
+
+[<Test>]
+let ``go to module definition`` () =
+    """open System
+
+let f x = Option.map(x)"""
+    |> generateDefinitionFromPos (Pos.fromZ 2 10)
+    |> assertSrcAreEqual """module Microsoft.FSharp.Core.OptionModule = 
+    val isSome : 'T option -> bool
+    val isNone : 'T option -> bool
+    val get : 'T option -> 'T
+    val count : 'T option -> int
+    val fold : ('State -> 'T -> 'State) -> 'State -> 'T option -> 'State
+    val foldBack : ('T -> 'State -> 'State) -> 'T option -> 'State -> 'State
+    val exists : ('T -> bool) -> 'T option -> bool
+    val forall : ('T -> bool) -> 'T option -> bool
+    val iter : ('T -> unit) -> 'T option -> unit
+    val map : ('T -> 'U) -> 'T option -> 'U option
+    val bind : ('T -> 'U option) -> 'T option -> 'U option
+    val toArray : 'T option -> 'T []
+    val toList : 'T option -> 'T list
 """
 
 // Tests to add:

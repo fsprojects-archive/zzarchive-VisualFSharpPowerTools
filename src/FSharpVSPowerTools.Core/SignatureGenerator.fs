@@ -86,6 +86,7 @@ module SignatureGenerator =
     let rec internal writeModule ctx (modul: FSharpEntity) =
         Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
         writeDocs ctx modul.XmlDoc
+        writeAttributes ctx modul.Attributes
         ctx.Writer.WriteLine("module {0} = ", modul.FullName)
         ctx.Writer.Indent ctx.Indentation
         for value in modul.MembersFunctionsAndValues do
@@ -114,24 +115,7 @@ module SignatureGenerator =
             ()
         writeDocs ctx typ.XmlDoc
 
-        for attr in typ.Attributes do
-            let name = 
-                let displayName = attr.AttributeType.DisplayName
-                if displayName.EndsWith "Attribute" && displayName.Length > "Attribute".Length then
-                    displayName.Substring(0, displayName.Length - "Attribute".Length)
-                else displayName
-            if attr.ConstructorArguments.Count = 0 then
-                ctx.Writer.WriteLine("[<{0}>]", name)
-            else
-                ctx.Writer.Write("[<{0}(", name)
-                let mutable isFirst = true
-                for arg in attr.ConstructorArguments do
-                    if isFirst then
-                        ctx.Writer.Write("{0}", sprintf "%A" arg)
-                        isFirst <- false
-                    else
-                        ctx.Writer.Write(", {0}", sprintf "%A" arg)
-                ctx.Writer.WriteLine(")>]")
+        writeAttributes ctx typ.Attributes
 
         printfn "IsClass: %b" typ.IsClass
         printfn "IsOpaque: %b" typ.IsOpaque
@@ -210,6 +194,26 @@ module SignatureGenerator =
                 ctx.Writer.Write(" * ")
             writeField false ctx field
         ctx.Writer.WriteLine("")
+
+    and internal writeAttributes ctx (attributes: IList<FSharpAttribute>) =
+        for attr in attributes do
+            let name = 
+                let displayName = attr.AttributeType.DisplayName
+                if displayName.EndsWith "Attribute" && displayName.Length > "Attribute".Length then
+                    displayName.Substring(0, displayName.Length - "Attribute".Length)
+                else displayName
+            if attr.ConstructorArguments.Count = 0 then
+                ctx.Writer.WriteLine("[<{0}>]", name)
+            else
+                ctx.Writer.Write("[<{0}(", name)
+                let mutable isFirst = true
+                for arg in attr.ConstructorArguments do
+                    if isFirst then
+                        ctx.Writer.Write("{0}", sprintf "%A" arg)
+                        isFirst <- false
+                    else
+                        ctx.Writer.Write(", {0}", sprintf "%A" arg)
+                ctx.Writer.WriteLine(")>]")
 
     and internal writeField hasNewLine ctx (field: FSharpField) =
         writeDocs ctx field.XmlDoc
