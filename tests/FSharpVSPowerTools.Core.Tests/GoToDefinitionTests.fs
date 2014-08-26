@@ -189,7 +189,7 @@ let x: List<int> = []"""
 
 type List<'T> =
     | op_Nil
-    | op_ColonColon of Head : 'T * Tail : 'T list
+    | op_ColonColon of Head: 'T * Tail: 'T list
     interface IComparable<List<'T>>
     interface IComparable
     interface Collections.Generic.IEnumerable<'T>
