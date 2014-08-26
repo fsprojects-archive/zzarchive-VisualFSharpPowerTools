@@ -205,10 +205,35 @@ type List<'T> =
     static member Empty : 'T list
 """
 
+
+[<Test>]
+let ``go to interface definition`` () =
+    """
+type MyInterface =
+    abstract Method: int -> unit
+
+let f (x:MyInterface) = ()"""
+    |> generateDefinitionFromPos (Pos.fromZ 4 9)
+    |> assertSrcAreEqual """[<Interface>]
+type MyInterface =
+    abstract member Method : int -> unit"""
+
 // Tests to add:
 // TODO: union type metadata
 // TODO: record type metadata
 // TODO: enum type metadata
+// TODO: handle abstract method with default implementation
+// TODO: handle override methods
+// TODO: handle inherited classes
+//
+//type MyInterface() =
+//    abstract member Method: int -> unit
+//    default this.Method(x) = ()
+//
+//type MyInterface2() =
+//    inherit MyInterface() with
+//        override this.Method(x) = ()
+//
 // TODO: display event handlers (see System.Console.CancelKeyPress)
 // TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)

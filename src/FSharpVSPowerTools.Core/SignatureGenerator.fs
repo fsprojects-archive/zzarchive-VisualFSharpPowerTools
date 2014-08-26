@@ -153,7 +153,8 @@ module SignatureGenerator =
         // Interfaces
         [
             for inter in typ.AllInterfaces do
-                yield inter, inter.Format(ctx.DisplayContext)
+                if inter.TypeDefinition <> typ then
+                    yield inter, inter.Format(ctx.DisplayContext)
         ]
         |> List.sortBy (fun (inter, _name) ->
             // Sort by name without the namespace qualifier
@@ -210,9 +211,14 @@ module SignatureGenerator =
             // Discard explicit getter/setter methods
             writeDocs ctx mem.XmlDoc
 
-            let staticModifier = if not mem.IsInstanceMember then "static " else ""
+            let prefix =
+                // Is static?
+                if not mem.IsInstanceMember then "static "
+                // Is abstract?
+                elif mem.IsDispatchSlot then "abstract "
+                else ""
 
-            ctx.Writer.WriteLine("{0}member {1} : {2}", staticModifier, mem.DisplayName, generateSignature ctx mem)
+            ctx.Writer.WriteLine("{0}member {1} : {2}", prefix, mem.DisplayName, generateSignature ctx mem)
         | _ -> ()
 
     and internal writeDocs ctx docs =
