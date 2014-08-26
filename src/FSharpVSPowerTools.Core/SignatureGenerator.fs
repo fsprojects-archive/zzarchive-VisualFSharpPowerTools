@@ -52,7 +52,7 @@ module SignatureGenerator =
                 [
                     for pGroup in mem.CurriedParameterGroups do
                         yield [
-                            for p in pGroup do
+                            for (p: FSharpParameter) in pGroup do
                                 let formattedTypeName = formatParamTypeName p.Type
 
                                 match p.Name with

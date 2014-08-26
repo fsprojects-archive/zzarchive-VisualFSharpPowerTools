@@ -179,7 +179,7 @@ type Console =
 """
 
 [<Test>]
-let ``go to list<'T> definition`` () =
+let ``go to Microsoft.FSharp.Collections.List<'T> definition`` () =
     let _: List<int> = []
     """open System
 
@@ -272,7 +272,7 @@ let f x = Option.map(x)"""
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes
-// TODO: fix empty interfaces/classes/structs display
+// TODO: fix empty interfaces/classes/structs display (see Microsoft.FSharp.Compiler.Range module)
 // TODO: fix nested module naming issue (see Microsoft.FSharp.Compiler.Range module)
 //
 //type MyInterface() =
@@ -284,6 +284,7 @@ let f x = Option.map(x)"""
 //        override this.Method(x) = ()
 //
 // TODO: display event handlers (see System.Console.CancelKeyPress)
+// TODO: special formatting for operators like ::, []
 // TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)
 // TODO: handle abbreviation (try string vs System.String...)
