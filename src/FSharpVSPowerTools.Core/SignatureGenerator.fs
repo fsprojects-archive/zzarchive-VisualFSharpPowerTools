@@ -165,11 +165,12 @@ module SignatureGenerator =
             Debug.Assert(not value.LogicalEnclosingEntity.IsFSharpModule, "F# type should not contain module functions or values.")
             writeMember ctx value
         // Nested entities
-        for entity in typ.NestedEntities do
-            Debug.Assert(not entity.IsFSharpModule, "F# type should not contain modules.")
-            // Nested types only happen due to C# interoperability
-            ctx.Writer.WriteLine("")
-            writeType ctx entity
+        // Deactivate nested types display for the moment (C# doesn't do it)
+//        for entity in typ.NestedEntities do
+//            Debug.Assert(not entity.IsFSharpModule, "F# type should not contain modules.")
+//            // Nested types only happen due to C# interoperability
+//            ctx.Writer.WriteLine("")
+//            writeType ctx entity
         ctx.Writer.Unindent ctx.Indentation
 
     and internal writeUnionCase ctx (case: FSharpUnionCase) =

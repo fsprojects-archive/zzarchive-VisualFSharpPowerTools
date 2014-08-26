@@ -209,6 +209,7 @@ type List<'T> =
 // TODO: union type metadata
 // TODO: record type metadata
 // TODO: enum type metadata
+// TODO: display event handlers (see System.Console.CancelKeyPress)
 // TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)
 // TODO: handle abbreviation (try string vs System.String...)
