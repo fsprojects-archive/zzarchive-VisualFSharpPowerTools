@@ -221,6 +221,7 @@ type MyInterface =
 
 // Tests to add:
 // TODO: union type metadata
+// TODO: when displaying union type metadata, we must ignore parameters whose name = Item[xxx]
 // TODO: record type metadata
 // TODO: enum type metadata
 // TODO: handle abstract method with default implementation

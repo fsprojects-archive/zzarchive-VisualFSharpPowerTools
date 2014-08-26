@@ -190,9 +190,9 @@ module SignatureGenerator =
     and internal writeField hasNewLine ctx (field: FSharpField) =
         writeDocs ctx field.XmlDoc
         if hasNewLine then
-            ctx.Writer.WriteLine("{0} : {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
+            ctx.Writer.WriteLine("{0}: {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
         else
-            ctx.Writer.Write("{0} : {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
+            ctx.Writer.Write("{0}: {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
 
     and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
         Debug.Assert(value.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a valid F# module.")
