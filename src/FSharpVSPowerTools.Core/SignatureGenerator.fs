@@ -112,6 +112,26 @@ module SignatureGenerator =
 //        for attr in typ.Attributes do
 //            printfn "attr: %A" attr
 
+        printfn "IsClass: %b" typ.IsClass
+        printfn "IsOpaque: %b" typ.IsOpaque
+        printfn "IsFSharp: %b" typ.IsFSharp
+        printfn "IsFSharpModule: %b" typ.IsFSharpModule
+        let classAttributeHasToBeAdded =
+            let hasVisibleConstructor =
+                typ.MembersFunctionsAndValues
+                |> Seq.exists (function
+                    | Constructor _ -> true
+                    | _             -> false)
+
+            (not typ.IsInterface)
+            && (typ.IsOpaque || not hasVisibleConstructor)
+            && not (typ.IsFSharpRecord || typ.IsFSharpUnion)
+
+        if classAttributeHasToBeAdded then
+            ctx.Writer.WriteLine("[<Class>]")
+        elif typ.IsInterface then
+            ctx.Writer.WriteLine("[<Interface>]")
+
         ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
         ctx.Writer.Indent ctx.Indentation
         if typ.IsFSharpRecord then
@@ -148,6 +168,7 @@ module SignatureGenerator =
         for entity in typ.NestedEntities do
             Debug.Assert(not entity.IsFSharpModule, "F# type should not contain modules.")
             // Nested types only happen due to C# interoperability
+            ctx.Writer.WriteLine("")
             writeType ctx entity
         ctx.Writer.Unindent ctx.Indentation
 
@@ -179,7 +200,6 @@ module SignatureGenerator =
     and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
 
-
         match mem with
         | Constructor _entity ->
             writeDocs ctx mem.XmlDoc
@@ -188,7 +208,10 @@ module SignatureGenerator =
         | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
             // Discard explicit getter/setter methods
             writeDocs ctx mem.XmlDoc
-            ctx.Writer.WriteLine("member {0} : {1}", mem.DisplayName, generateSignature ctx mem)
+
+            let staticModifier = if not mem.IsInstanceMember then "static " else ""
+
+            ctx.Writer.WriteLine("{0}member {1} : {2}", staticModifier, mem.DisplayName, generateSignature ctx mem)
         | _ -> ()
 
     and internal writeDocs ctx docs =

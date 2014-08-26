@@ -81,7 +81,6 @@ let generateDefinitionFromPos caretPos src =
 [<Test>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
-    // TODO: accessibility modifiers
     // TODO: class type attributes
     // TODO: member types attributes
     // TODO: member generic types
@@ -120,13 +119,14 @@ type Tuple<'T1, 'T2> =
 
 [<Test>]
 let ``adds necessary parenthesis to function parameters`` () =
-    """
+    """open System
 let _ = Async.AwaitTask"""
     |> generateDefinitionFromPos (Pos.fromZ 1 8)
     |> assertSrcAreEqualForFirstLines 4 """namespace Microsoft.FSharp.Control
 
+[<Class>]
 type Async =
-    member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * System.AsyncCallback * obj -> System.IAsyncResult) * (System.IAsyncResult -> 'T) * (System.IAsyncResult -> unit)
+    static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * System.AsyncCallback * obj -> System.IAsyncResult) * (System.IAsyncResult -> 'T) * (System.IAsyncResult -> unit)
 """
 
 [<Test>]
@@ -170,11 +170,12 @@ let ``go to method definition generate enclosing type metadata`` () =
 
 do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqualForFirstLines 5 """namespace System
+    |> assertSrcAreEqualForFirstLines 6 """namespace System
 
+[<Class>]
 type Console =
-    member Beep : unit -> unit
-    member Beep : frequency:int * duration:int -> unit
+    static member Beep : unit -> unit
+    static member Beep : frequency:int * duration:int -> unit
 """
 
 [<Test>]
@@ -195,22 +196,23 @@ type List<'T> =
     interface Collections.IEnumerable
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
-    member Cons : head:'T * tail:'T list -> 'T list
+    static member Cons : head:'T * tail:'T list -> 'T list
     member Tail : 'T list
     member Length : int
     member Item : 'T
     member IsEmpty : bool
     member Head : 'T
-    member Empty : 'T list
+    static member Empty : 'T list
 """
 
 // Tests to add:
 // TODO: union type metadata
 // TODO: record type metadata
 // TODO: enum type metadata
-// TODO: static class metadata
+// TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)
 // TODO: handle abbreviation (try string vs System.String...)
+// TODO: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
 // FIXME: buffer name should have the enclosing type name (if symbol = field, method, ...)
