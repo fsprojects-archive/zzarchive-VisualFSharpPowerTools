@@ -2,6 +2,7 @@
 module internal FSharpVSPowerTools.TypedAstUtils
 
 open System
+open System.Text.RegularExpressions
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 let isSymbolLocalForProject (symbol: FSharpSymbol) = 
@@ -37,6 +38,9 @@ let hasModuleSuffixAttribute (entity: FSharpEntity) =
 let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
         && name.Substring (2, name.Length - 4) |> String.forall ((<>) ' ')
+
+let private UnnamedUnionFieldRegex = Regex("^Item(\d+)?$", RegexOptions.Compiled)
+let isUnnamedUnionCaseField (field: FSharpField) = UnnamedUnionFieldRegex.IsMatch(field.Name)
         
 type FSharpMemberFunctionOrValue with
     // FullType may fail with exception (see https://github.com/fsharp/fsharp/issues/307). 

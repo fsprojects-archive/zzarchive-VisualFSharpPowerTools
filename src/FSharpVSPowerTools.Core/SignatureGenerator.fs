@@ -42,7 +42,11 @@ module SignatureGenerator =
             let takesInputParameters =
                 not (mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0)
 
-            let formatParamTypeName (typ: FSharpType) =
+            let formatParamTypeName (typ: FSharpType) isOptional =
+//                if isOptional then
+//                    // result has the 'XXXX option' format: we remove the trailing ' option'
+//                    let result = typ.Format(ctx.DisplayContext)
+//                    result.Substring(0, result.Length - (" option").Length)
                 if typ.IsFunctionType || typ.IsTupleType then
                     sprintf "(%s)" (typ.Format(ctx.DisplayContext))
                 else
@@ -50,13 +54,17 @@ module SignatureGenerator =
 
             if takesInputParameters then
                 [
-                    for pGroup in mem.CurriedParameterGroups do
+                    for paramGroup in mem.CurriedParameterGroups do
                         yield [
-                            for (p: FSharpParameter) in pGroup do
-                                let formattedTypeName = formatParamTypeName p.Type
+                            for (param: FSharpParameter) in paramGroup do
+                                let isOptional = hasAttribute<OptionalArgumentAttribute> param.Attributes
+                                let formattedTypeName = formatParamTypeName param.Type isOptional
 
-                                match p.Name with
-                                | Some paramName -> yield sprintf "%s:%s" paramName formattedTypeName
+                                match param.Name with
+                                | Some paramName when not isOptional ->
+                                    yield sprintf "%s:%s" paramName formattedTypeName
+                                | Some paramName ->
+                                    yield sprintf "?%s:%s" paramName formattedTypeName
                                 | None -> yield formattedTypeName
                         ]
                         |> String.concat " * "
@@ -114,13 +122,12 @@ module SignatureGenerator =
             // TODO: print modules or not?
             ()
         writeDocs ctx typ.XmlDoc
-
         writeAttributes ctx typ.Attributes
 
-        printfn "IsClass: %b" typ.IsClass
-        printfn "IsOpaque: %b" typ.IsOpaque
-        printfn "IsFSharp: %b" typ.IsFSharp
-        printfn "IsFSharpModule: %b" typ.IsFSharpModule
+//        printfn "IsClass: %b" typ.IsClass
+//        printfn "IsOpaque: %b" typ.IsOpaque
+//        printfn "IsFSharp: %b" typ.IsFSharp
+//        printfn "IsFSharpModule: %b" typ.IsFSharpModule
         let classAttributeHasToBeAdded =
             let hasVisibleConstructor =
                 typ.MembersFunctionsAndValues
@@ -192,7 +199,8 @@ module SignatureGenerator =
                 isFirst <- false
             else
                 ctx.Writer.Write(" * ")
-            writeField false ctx field
+
+            writeUnionCaseField ctx field
         ctx.Writer.WriteLine("")
 
     and internal writeAttributes ctx (attributes: IList<FSharpAttribute>) =
@@ -217,8 +225,15 @@ module SignatureGenerator =
 
     and internal writeField hasNewLine ctx (field: FSharpField) =
         writeDocs ctx field.XmlDoc
+
         if hasNewLine then
             ctx.Writer.WriteLine("{0}: {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
+        else
+            ctx.Writer.Write("{0}: {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
+
+    and internal writeUnionCaseField ctx (field: FSharpField) =
+        if isUnnamedUnionCaseField field then
+            ctx.Writer.Write(field.FieldType.Format(ctx.DisplayContext))
         else
             ctx.Writer.Write("{0}: {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
 

@@ -7,8 +7,8 @@
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
       "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
-      "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
-#load "../../src/FSharpVSPowerTools.Core/SignatureGenerator.fs"
+#load "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
+      "../../src/FSharpVSPowerTools.Core/SignatureGenerator.fs"
       "TestHelpers.fs"
       "CodeGenerationTestInfrastructure.fs"
 #else
@@ -116,6 +116,15 @@ type Tuple<'T1, 'T2> =
     member Item1 : 'T1
     member Item2 : 'T2
 """)
+
+let _ =
+    """open System
+open System.Runtime.InteropServices
+type X() =
+    member this.Test([<OptionalArgument>] ?x: int) = ()
+
+let x = X()"""
+    |> generateDefinitionFromPos (Pos.fromZ 5 8)
 
 [<Test>]
 let ``adds necessary parenthesis to function parameters`` () =
@@ -234,8 +243,8 @@ let x: Choice<'T, 'U> = failwith "Not implemented yet" """
 [<StructuralComparison>]
 [<CompiledName("FSharpChoice`2")>]
 type Choice<'T1, 'T2> =
-    | Choice1Of2 of Item: 'T1
-    | Choice2Of2 of Item: 'T2
+    | Choice1Of2 of 'T1
+    | Choice2Of2 of 'T2
     interface IComparable<Choice<'T1,'T2>>
     interface IComparable
     interface Collections.IStructuralComparable
@@ -265,10 +274,12 @@ let f x = Option.map(x)"""
 """
 
 // Tests to add:
-// TODO: union type metadata
-// TODO: when displaying union type metadata, we must ignore parameters whose name = Item[xxx]
+// TODO: class extension members?
+// TODO: union type extension members?
 // TODO: record type metadata
+// TODO: record type extension members?
 // TODO: enum type metadata
+// TODO: handle module functions parameters!
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes
@@ -297,8 +308,6 @@ let f x = Option.map(x)"""
 // TODO: set cursor on enum case when symbol is an enum case
 // TODO: set cursor on field when symbol is a record field
 // TODO: enclosing module metadata when symbol is a function??
-// TODO: static class metadata
-// TODO: enclosing type metadata when symbol is a method
 
 #if INTERACTIVE
 #time "on";;

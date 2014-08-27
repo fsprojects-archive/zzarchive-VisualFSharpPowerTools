@@ -582,15 +582,12 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
             return! None |> liftMaybe
     }
 
-let private UnnamedFieldRegex = Regex("^Item(\d+)?$", RegexOptions.Compiled)
-
 let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
     let writer = ctxt.Writer
     let name =
         match ctxt.Qualifier with
         | None -> case.Name
         | Some qual -> sprintf "%s.%s" qual case.Name
-
 
     let paramsPattern =
         let unionCaseFieldsCount = case.UnionCaseFields.Count
@@ -599,7 +596,7 @@ let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
         else
             [|
                 for field in case.UnionCaseFields ->
-                    if UnnamedFieldRegex.IsMatch field.Name then
+                    if isUnnamedUnionCaseField field then
                         "_"
                     else
                         field.Name
