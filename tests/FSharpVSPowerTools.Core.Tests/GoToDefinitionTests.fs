@@ -44,7 +44,7 @@ let project() =
     let projFileName = @"C:\Project.fsproj"
     let files = [| fileName |]
     { ProjectFileName = projFileName
-      ProjectFileNames = [| fileName |]
+      ProjectFileNames = files
       ProjectOptions = args
       ReferencedProjects = Array.empty
       IsIncompleteTypeCheckEnvironment = false
@@ -81,7 +81,6 @@ let generateDefinitionFromPos caretPos src =
 [<Test>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
-    // TODO: class type attributes
     // TODO: member types attributes
     // TODO: member generic types
     // TODO: method arguments attributes
@@ -131,8 +130,10 @@ let ``adds necessary parenthesis to function parameters`` () =
     """open System
 let _ = Async.AwaitTask"""
     |> generateDefinitionFromPos (Pos.fromZ 1 8)
-    |> assertSrcAreEqualForFirstLines 4 """namespace Microsoft.FSharp.Control
+    |> assertSrcAreEqualForFirstLines 6 """namespace Microsoft.FSharp.Control
 
+[<Sealed>]
+[<CompiledName("FSharpAsync")>]
 [<Class>]
 type Async =
     static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * System.AsyncCallback * obj -> System.IAsyncResult) * (System.IAsyncResult -> 'T) * (System.IAsyncResult -> unit)
@@ -189,7 +190,6 @@ type Console =
 
 [<Test>]
 let ``go to Microsoft.FSharp.Collections.List<'T> definition`` () =
-    let _: List<int> = []
     """open System
 
 let x: List<int> = []"""
@@ -257,20 +257,21 @@ let ``go to module definition`` () =
 
 let f x = Option.map(x)"""
     |> generateDefinitionFromPos (Pos.fromZ 2 10)
-    |> assertSrcAreEqual """module Microsoft.FSharp.Core.OptionModule = 
-    val isSome : 'T option -> bool
-    val isNone : 'T option -> bool
-    val get : 'T option -> 'T
-    val count : 'T option -> int
-    val fold : ('State -> 'T -> 'State) -> 'State -> 'T option -> 'State
-    val foldBack : ('T -> 'State -> 'State) -> 'T option -> 'State -> 'State
-    val exists : ('T -> bool) -> 'T option -> bool
-    val forall : ('T -> bool) -> 'T option -> bool
-    val iter : ('T -> unit) -> 'T option -> unit
-    val map : ('T -> 'U) -> 'T option -> 'U option
-    val bind : ('T -> 'U option) -> 'T option -> 'U option
-    val toArray : 'T option -> 'T []
-    val toList : 'T option -> 'T list
+    |> assertSrcAreEqual """[<CompilationRepresentation(4)>]
+module Microsoft.FSharp.Core.OptionModule = 
+    val isSome : option:'T option -> bool
+    val isNone : option:'T option -> bool
+    val get : option:'T option -> 'T
+    val count : option:'T option -> int
+    val fold : folder:('State -> 'T -> 'State) -> state:'State -> option:'T option -> 'State
+    val foldBack : folder:('T -> 'State -> 'State) -> option:'T option -> state:'State -> 'State
+    val exists : predicate:('T -> bool) -> option:'T option -> bool
+    val forall : predicate:('T -> bool) -> option:'T option -> bool
+    val iter : action:('T -> unit) -> option:'T option -> unit
+    val map : mapping:('T -> 'U) -> option:'T option -> 'U option
+    val bind : binder:('T -> 'U option) -> option:'T option -> 'U option
+    val toArray : option:'T option -> 'T []
+    val toList : option:'T option -> 'T list
 """
 
 // Tests to add:
@@ -279,7 +280,6 @@ let f x = Option.map(x)"""
 // TODO: record type metadata
 // TODO: record type extension members?
 // TODO: enum type metadata
-// TODO: handle module functions parameters!
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes

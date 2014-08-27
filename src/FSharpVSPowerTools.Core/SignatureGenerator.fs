@@ -240,7 +240,10 @@ module SignatureGenerator =
     and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
         Debug.Assert(value.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a valid F# module.")
         writeDocs ctx value.XmlDoc
-        ctx.Writer.WriteLine("val {0} : {1}", value.DisplayName, value.FullType.Format(ctx.DisplayContext))
+        if value.FullType.IsFunctionType then
+            ctx.Writer.WriteLine("val {0} : {1}", value.DisplayName, generateSignature ctx value)
+        else
+            ctx.Writer.WriteLine("val {0} : {1}", value.DisplayName, value.FullType.Format(ctx.DisplayContext))
 
     and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
