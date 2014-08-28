@@ -1,5 +1,9 @@
 #### 1.5.0 - Unreleased
 
+#### 1.4.5 - August 28 2014
+* Fix forcing saving projects when project items change
+* Fix various issues on unused open declarations
+
 #### 1.4.0 - August 10 2014
 * Improve rename refactoring validation
 * Add support for VS 14
