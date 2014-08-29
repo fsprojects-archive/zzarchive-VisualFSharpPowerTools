@@ -17,21 +17,16 @@ namespace FSharpVSPowerTools
         private IOleCommandTarget _commandChain;
         private readonly CommandMapping[] Commands;
 
-        private static Logger logger = new Logger(ServiceProvider.GlobalProvider);
-
-        public static void Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
+        public static StandardCommandDispatcher Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
-            GeneralOptionsPage generalOptions = (GeneralOptionsPage)(Package.GetGlobalService(typeof(GeneralOptionsPage)));
-            if (!generalOptions.FormattingEnabled)
-            {
-                logger.Log(LogType.Information, "Formatting feature is disabled in General option page.");
-                return;
-            }
+            var generalOptions = Utils.GetGeneralOptionsPage(services.ServiceProvider);
+            if (!generalOptions.FormattingEnabled) return null;
 
             var dispatcher = new StandardCommandDispatcher();
             dispatcher._textView = textView;
             dispatcher._services = services;
             interopTextView.AddCommandFilter(dispatcher, out dispatcher._commandChain);
+            return dispatcher;
         }
 
         private StandardCommandDispatcher()
@@ -55,7 +50,7 @@ namespace FSharpVSPowerTools
         {
             IEditorOptions editorOptions = _services.EditorOptionsFactory.GetOptions(_textView.TextBuffer);
             int indentSize = editorOptions.GetOptionValue((new IndentSize()).Key);
-            var customOptions = (FantomasOptionsPage) (Package.GetGlobalService(typeof (FantomasOptionsPage)));
+            var customOptions = _services.ServiceProvider.GetService(typeof (FantomasOptionsPage)) as FantomasOptionsPage;
 
             var config =
                 FormatConfig.FormatConfig.create(
@@ -129,7 +124,7 @@ namespace FSharpVSPowerTools
             {
                 if (commandGroup == _commandGroup)
                 {
-                    return Array.FindIndex(commands, cmd => cmd.cmdID == _commandId);
+                    return System.Array.FindIndex(commands, cmd => cmd.cmdID == _commandId);
                 }
                 return -1;
             }

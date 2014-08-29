@@ -4,19 +4,12 @@ open System
 open System.Collections.Generic
 open System.ComponentModel.Composition
 open System.Threading
-
-open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Language.NavigateTo.Interfaces
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
-open Microsoft.FSharp.Compiler
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
@@ -31,66 +24,6 @@ type NavigateToItemExtraData =
         Description: string
     }
 
-module Index =
-    open System.Globalization
-    
-    [<System.Diagnostics.DebuggerDisplay("{DebugString()}")>]
-    type private IndexEntry(str: string, offset: int, item: Navigation.NavigableItem, isOperator: bool) =
-        member x.String = str
-        member x.Offset = offset
-        member x.Length = str.Length - offset
-        member x.Item = item
-        member x.IsOperator = isOperator
-        member x.StartsWith (s: string) = 
-            if s.Length > x.Length then 
-                false
-            else
-                CultureInfo.CurrentCulture.CompareInfo.IndexOf(str, s, offset, s.Length, CompareOptions.IgnoreCase) = offset
-        member private x.DebugString() = sprintf "%s (offset %d) (%s)" (str.Substring offset) offset str
-
-    let private IndexEntryComparer =
-        {
-            new IComparer<IndexEntry> with
-                member x.Compare(a, b) = 
-                    CultureInfo.CurrentCulture.CompareInfo.Compare(a.String, a.Offset, b.String, b.Offset, CompareOptions.IgnoreCase)
-        }
-        
-    type IIndexedNavigableItems =
-        abstract Find: searchValue: string * itemProcessor: (Navigation.NavigableItem * string * bool * MatchKind-> unit) -> unit
-
-    type Builder() =
-        let entries = ResizeArray()
-
-        member x.Add(items: seq<Navigation.NavigableItem>) =
-            for item in items do
-                let isOperator, name = 
-                    if PrettyNaming.IsMangledOpName item.Name then 
-                        true, PrettyNaming.DecompileOpName item.Name 
-                    else 
-                        false, item.Name
-                for i = 0 to name.Length - 1 do
-                    entries.Add(IndexEntry(name, i, item, isOperator))
-
-        member x.BuildIndex() =
-            entries.Sort(IndexEntryComparer)
-            {
-                new IIndexedNavigableItems with
-                    member x.Find(searchValue, processor) = 
-                        let entryToFind = IndexEntry(searchValue, 0, Unchecked.defaultof<_>, Unchecked.defaultof<_>)
-                        let mutable pos = entries.BinarySearch(entryToFind, IndexEntryComparer)
-                        if pos < 0 then pos <- ~~~pos
-                        while pos < entries.Count && entries.[pos].StartsWith searchValue do
-                            let entry = entries.[pos]
-                            let matchKind = 
-                                if entry.Offset = 0 then
-                                    if entry.Length = searchValue.Length then MatchKind.Exact
-                                    else MatchKind.Prefix
-                                else MatchKind.Substring
-                            processor(entry.Item, entry.String, entry.IsOperator, matchKind)
-                            pos <- pos + 1
-            }
-
-
 [<Package("f152487e-9a22-4cf9-bee6-a8f7c77f828d")>]
 [<Export(typeof<INavigateToItemProviderFactory>)>]
 type NavigateToItemProviderFactory 
@@ -100,7 +33,8 @@ type NavigateToItemProviderFactory
         [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
         fsharpLanguageService: VSLanguageService,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
-        vsCompositionService: ICompositionService
+        vsCompositionService: ICompositionService,
+        projectFactory: ProjectFactory
     ) =
     
     let dte = serviceProvider.GetService<DTE, SDTE>()
@@ -127,11 +61,11 @@ type NavigateToItemProviderFactory
                     props.["NavigateToEnabled"].Value :?> bool
                 with _ -> false
             if not navigateToEnabled then
-                debug "[NavigateTo] The feature is disabled in General option page."
                 provider <- null
                 false
             else
-                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory)
+                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory,
+                                                       projectFactory)
                 true
 and
     NavigateToItemProvider
@@ -139,101 +73,93 @@ and
             openDocumentsTracker: OpenDocumentsTracker,
             serviceProvider: IServiceProvider,
             fsharpLanguageService: VSLanguageService,
-            itemDisplayFactory: INavigateToItemDisplayFactory
+            itemDisplayFactory: INavigateToItemDisplayFactory,
+            projectFactory: ProjectFactory
         ) = 
     let processProjectsCTS = new CancellationTokenSource()
     let mutable searchCTS = CancellationTokenSource.CreateLinkedTokenSource(processProjectsCTS.Token)
     
     let projectIndexes = 
         lazy
-            let dte = serviceProvider.GetService<DTE, SDTE>()
             let listFSharpProjectsInSolution() = 
-                let rec handleProject (p: Project) =
-                    if p === null then []
-                    elif isFSharpProject p then [ProjectProvider.createForProject p]
-                    elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-                    else []
-                and handleProjectItems(items: ProjectItems) = 
-                    [
-                        for pi in items do
-                            yield! handleProject pi.SubProject
-                    ]
-                [
-                    for p in dte.Solution.Projects do yield! handleProject p
-                ]
+                projectFactory.ListFSharpProjectsInSolution(serviceProvider.GetService<DTE, SDTE>()) 
+                |> List.map projectFactory.CreateForProject
+
             let openedDocuments = 
-                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path,snapshot)) -> path, snapshot.GetText())
+                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path, doc)) -> path, doc.Snapshot.GetText())
                 |> Map.ofSeq
 
             let projects = 
                 match listFSharpProjectsInSolution() with
                 | [] -> maybe {
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, Microsoft.VisualStudio.Shell.Interop.SDTE>()
+                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                             let! doc = dte.GetActiveDocument()
-                            return! ProjectProvider.createForDocument doc }
-                            |> Option.toArray
+                            let! openDoc = openDocumentsTracker.TryFindOpenDocument doc.FullName
+                            let buffer = openDoc.Document.TextBuffer
+                            return! projectFactory.CreateForDocument buffer doc }
+                        |> Option.toArray
                 | xs -> List.toArray xs
             
             // TODO: consider making index more coarse grained (i.e. 1 TCS per project instead of file)
-            let length = projects |> Array.sumBy(fun p -> p.SourceFiles.Length)
+            let length = projects |> Array.sumBy (fun p -> p.SourceFiles.Length)
             let indexPromises = Array.init length (fun _ -> new Tasks.TaskCompletionSource<_>())
-            Tasks.Task.Run(fun() ->
-                let mutable i = 0
+            let fetchIndexes = async {
+                let i = ref 0
                 let counter = ref 0
                 let processNavigableItemsInFile items = 
                     // TODO: consider using linear scan implementation of IIndexedNavigableItems if number of items is small
-                    let indexBuilder = Index.Builder()
+                    let indexBuilder = Navigation.Index.Builder()
                     indexBuilder.Add items
                     indexPromises.[!counter].SetResult(indexBuilder.BuildIndex())
                     incr counter
 
-                while i < projects.Length && not processProjectsCTS.IsCancellationRequested do
-                    do fsharpLanguageService.ProcessNavigableItemsInProject(openedDocuments, projects.[i], processNavigableItemsInFile, processProjectsCTS.Token)
-                       |> Async.RunSynchronously
-                    i <- i + 1
-            )
-            |> ignore
+                while !i < projects.Length && not processProjectsCTS.IsCancellationRequested do
+                    do! fsharpLanguageService.ProcessNavigableItemsInProject(openedDocuments, projects.[!i], processNavigableItemsInFile, processProjectsCTS.Token)
+                    incr i }
+            Async.StartInThreadPoolSafe fetchIndexes
             indexPromises |> Array.map (fun tcs -> tcs.Task)
 
-    let runSearch(indexTasks: Tasks.Task<Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
-        let processItem (item: Navigation.NavigableItem, name: string, isOperator: bool, matchKind: MatchKind) = 
-            let kind, textKind = 
-                match item.Kind with
-                | Navigation.NavigableItemKind.Exception -> NavigateToItemKind.Class, "exception"
-                | Navigation.NavigableItemKind.Field -> NavigateToItemKind.Field, "field"
-                | Navigation.NavigableItemKind.Constructor -> NavigateToItemKind.Class, "constructor"
-                | Navigation.NavigableItemKind.Member -> NavigateToItemKind.Method, "member"
-                | Navigation.NavigableItemKind.Module -> NavigateToItemKind.Module, "module"
-                | Navigation.NavigableItemKind.ModuleAbbreviation -> NavigateToItemKind.Module, "module abbreviation"
-                | Navigation.NavigableItemKind.ModuleValue -> NavigateToItemKind.Field, "module value"
-                | Navigation.NavigableItemKind.Property -> NavigateToItemKind.Property, "property"
-                | Navigation.NavigableItemKind.Type -> NavigateToItemKind.Class, "type"
-                | Navigation.NavigableItemKind.EnumCase -> NavigateToItemKind.EnumItem, "enum"
-                | Navigation.NavigableItemKind.UnionCase -> NavigateToItemKind.Class, "union case"
-            let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
+    let runSearch(indexTasks: Tasks.Task<Navigation.Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct: CancellationToken) = 
+        let processItem (seen: HashSet<_>) (item: Navigation.NavigableItem, name: string, isOperator: bool, matchKind: Navigation.Index.MatchKind) = 
             let fileName, range01 = Microsoft.FSharp.Compiler.Range.Range.toFileZ item.Range
-            let extraData = { FileName = fileName; Span = range01; Description = textKind; }
             let itemName = if isOperator then "(" + name + ")" else name
-            let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, matchKind, itemDisplayFactory)
-            callback.AddItem navigateToItem
+            if (seen.Add(itemName, fileName, range01)) then
+                let kind, textKind = 
+                    match item.Kind with
+                    | Navigation.NavigableItemKind.Exception -> NavigateToItemKind.Class, "exception"
+                    | Navigation.NavigableItemKind.Field -> NavigateToItemKind.Field, "field"
+                    | Navigation.NavigableItemKind.Constructor -> NavigateToItemKind.Class, "constructor"
+                    | Navigation.NavigableItemKind.Member -> NavigateToItemKind.Method, "member"
+                    | Navigation.NavigableItemKind.Module -> NavigateToItemKind.Module, "module"
+                    | Navigation.NavigableItemKind.ModuleAbbreviation -> NavigateToItemKind.Module, "module abbreviation"
+                    | Navigation.NavigableItemKind.ModuleValue -> NavigateToItemKind.Field, "module value"
+                    | Navigation.NavigableItemKind.Property -> NavigateToItemKind.Property, "property"
+                    | Navigation.NavigableItemKind.Type -> NavigateToItemKind.Class, "type"
+                    | Navigation.NavigableItemKind.EnumCase -> NavigateToItemKind.EnumItem, "enum"
+                    | Navigation.NavigableItemKind.UnionCase -> NavigateToItemKind.Class, "union case"
+                let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
+                let extraData = { FileName = fileName; Span = range01; Description = textKind; }
+                let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, enum (int matchKind), itemDisplayFactory)
+                callback.AddItem navigateToItem
 
         let searchValueComputations = async {
+            let seen = HashSet()
             try
                 for i = 0 to indexTasks.Length - 1 do
                     let! index = Async.AwaitTask indexTasks.[i]
-                    index.Find(searchValue, processItem)
+                    index.Find(searchValue, processItem seen)
                     callback.ReportProgress(i + 1, indexTasks.Length)
             finally
                 callback.Done()
         }
         
-        Async.Start(searchValueComputations, cancellationToken = ct)
+        Async.StartInThreadPoolSafe(searchValueComputations, cancellationToken = ct)
 
     interface INavigateToItemProvider with
         member x.StartSearch(callback, searchValue) = 
             let token = searchCTS.Token
             let indexes = projectIndexes.Force()
-            runSearch(indexes, searchValue, callback, token)
+            runSearch(indexes, searchValue.Trim '`', callback, token)
         member x.StopSearch() = 
             searchCTS.Cancel()
             searchCTS <- CancellationTokenSource.CreateLinkedTokenSource(processProjectsCTS.Token)
@@ -347,15 +273,15 @@ and
                         with _ -> false
                 if canShow then
                     windowFrame.Show()
-                    |> ensureSucceded
+                    |> ensureSucceeded
 
                     let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                     let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
                     let mutable vsTextBuffer = Unchecked.defaultof<_>
                     vsTextView.GetBuffer(&vsTextBuffer)
-                    |> ensureSucceded
+                    |> ensureSucceeded
 
                     let (startRow, startCol), (endRow, endCol) = extraData.Span
                     vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
-                    |> ensureSucceded
+                    |> ensureSucceeded
 

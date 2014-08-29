@@ -1,39 +1,40 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
 
-open System.Windows
-open System.Windows.Threading
-open System.Collections.Generic
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
-open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
-open System.IO
-open FSharpVSPowerTools.Core
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
-open FSharp.CompilerBinding
-open Microsoft.FSharp.Compiler.Ast
+open FSharpVSPowerTools.AsyncMaybe
+open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type ImplementInterfaceSmartTag(actionSets) = 
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-/// This tagger will provide tags for every word in the buffer that
-/// matches the word currently under the cursor.
+[<NoEquality; NoComparison>]
+type InterfaceState =
+    { InterfaceData: InterfaceData 
+      EndPosOfWith: pos option
+      Tokens: TokenInformation list }
+
 type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer, 
-                                   editorOptionsFactory: IEditorOptionsFactoryService, textUndoHistory: ITextUndoHistory,
-                                   vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider) as self =
+                                   editorOptionsFactory: IEditorOptionsFactoryService, 
+                                   textUndoHistory: ITextUndoHistory,
+                                   vsLanguageService: VSLanguageService, 
+                                   serviceProvider: IServiceProvider,
+                                   projectFactory: ProjectFactory,
+                                   defaultBody: string) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable interfaceDefinition = None
+    let mutable state = None
 
-    let collectInterfaceData (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
+    let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
         async {
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
             let column = point.Position - point.GetContainingLine().Start.Position
@@ -44,166 +45,151 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                 ast.ParseTree
                 |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)
                 |> Option.map (fun iface -> 
-                    let lineStr = point.GetContainingLine().GetText()
                     let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
-                    let endPosOfWith =
-                        tokens |> List.tryPick (fun (t: TokenInformation) ->
-                                    if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column then
-                                        let text = lineStr.[t.LeftColumn..t.RightColumn]
-                                        match text with
-                                        | "with" -> Some (Pos.fromZ line (t.RightColumn + 1))
-                                        | _ -> None
-                                    else None)
-                    iface, endPosOfWith)
+                    let endPosOfWidth =
+                        tokens 
+                        |> List.tryPick (fun (t: TokenInformation) ->
+                                if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column && t.TokenName = "WITH" then
+                                    Some (Pos.fromZ line (t.RightColumn + 1))
+                                else None)
+                    { InterfaceData = iface; EndPosOfWith = endPosOfWidth; Tokens = tokens })
             return data
         }
 
+    let hasSameStartPos (r1: range) (r2: range) =
+        r1.Start = r2.Start
+
     let updateAtCaretPosition() =
-        match buffer.GetSnapshotPoint view.Caret.Position with
-        | Some point ->
-            maybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument()
-                let! project = ProjectProvider.createForDocument doc
-                let! newWord, symbol = vsLanguageService.GetSymbol(point, project)
-                return newWord, symbol, doc, project
-            }
-            |> function
-                | Some (newWord, symbol, doc, project) ->
-                    async {
+        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+        | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
+        | _ ->
+            let res =
+                maybe {
+                    let! point = buffer.GetSnapshotPoint view.Caret.Position
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let! doc = dte.GetActiveDocument()
+                    let! project = projectFactory.CreateForDocument buffer doc
+                    let! word, symbol = vsLanguageService.GetSymbol(point, project) 
+                    return point, doc, project, word, symbol
+                }
+
+            match res with
+            | Some (point, doc, project, newWord, symbol) ->
+                let wordChanged = 
+                    match currentWord with
+                    | None -> true
+                    | Some oldWord -> newWord <> oldWord
+                if wordChanged then
+                    asyncMaybe {
                         match symbol.Kind with
                         | SymbolKind.Ident ->
-                            let! interfaceData = collectInterfaceData point doc project
-                            match interfaceData with
-                            | Some interfaceData ->
-                                let! results = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, 
-                                                    AllowStaleResults.MatchingSource)
-                                // Recheck cursor position to ensure it's still in new word
-                                match results, buffer.GetSnapshotPoint view.Caret.Position with
-                                | Some (fsSymbolUse, _), Some point when (fsSymbolUse.Symbol :? FSharpEntity) && point.InSpan newWord ->
-                                    let entity = fsSymbolUse.Symbol :?> FSharpEntity
-                                    if entity.IsInterface then
-                                        interfaceDefinition <- Some (interfaceData, fsSymbolUse.DisplayContext, entity)
-                                        currentWord <- Some newWord
-                                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                                        return tagsChanged.Trigger(self, SnapshotSpanEventArgs(span))
-                                    else
-                                        return interfaceDefinition <- None
-                                | _ ->
-                                    return interfaceDefinition <- None
-                            | None ->
-                                return interfaceDefinition <- None 
-                        | _ ->
-                            return interfaceDefinition <- None 
+                            let! interfaceState = queryInterfaceState point doc project
+                            let! (fsSymbolUse, results) = 
+                                vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
+                            // Recheck cursor position to ensure it's still in new word
+                            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                            return!
+                                (match fsSymbolUse.Symbol with
+                                | :? FSharpEntity as entity when point.InSpan newWord ->
+                                    // The entity might correspond to another symbol so we check for symbol text and start ranges as well
+                                    if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text 
+                                        && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
+                                        Some (interfaceState, fsSymbolUse.DisplayContext, entity, results)
+                                    else None
+                                | _ -> None) |> liftMaybe
+                        | _ -> return! liftMaybe None
+                    } 
+                    |> Async.map (fun result -> 
+                        state <- result
+                        buffer.TriggerTagsChanged self tagsChanged)
+                    |> Async.StartImmediateSafe
+                    currentWord <- Some newWord
+            | _ -> 
+                currentWord <- None 
+                buffer.TriggerTagsChanged self tagsChanged
 
-                    } |> Async.StartImmediate
-                | None ->
-                    interfaceDefinition <- None 
-        | None -> ()
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
+                                    500us, updateAtCaretPosition)
 
-    let _ = DocumentEventsListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    200us, updateAtCaretPosition)
+    let getLineIdent (lineStr: string) =
+        lineStr.Length - lineStr.TrimStart(' ').Length
 
-    let getRange = function
-        | InterfaceData.Interface(typ, _) -> 
-            typ.Range
-        | InterfaceData.ObjExpr(typ, _) -> 
-            typ.Range
+    let inferStartColumn indentSize state = 
+        match InterfaceStubGenerator.getMemberNameAndRanges state.InterfaceData with
+        | (_, range) :: _ ->
+            let lineStr = buffer.CurrentSnapshot.GetLineFromLineNumber(range.StartLine-1).GetText()
+            getLineIdent lineStr
+        | [] ->
+            match state.InterfaceData with
+            | InterfaceData.Interface _ as iface ->
+                // 'interface ISomething with' is often in a new line, we use the indentation of that line
+                let lineStr = buffer.CurrentSnapshot.GetLineFromLineNumber(iface.Range.StartLine-1).GetText()
+                getLineIdent lineStr + indentSize
+            | InterfaceData.ObjExpr _ as iface ->
+                state.Tokens 
+                |> List.tryPick (fun (t: TokenInformation) ->
+                            if t.CharClass = TokenCharKind.Keyword && t.TokenName = "NEW" then
+                                Some (t.LeftColumn + indentSize)
+                            else None)
+                // There is no reference point, we indent the content at the start column of the interface
+                |> Option.getOrElse iface.Range.StartColumn
 
-    let inferStartColumn (lineStr: string) = function
-        | InterfaceData.Interface(_, Some (m :: _)) ->
-            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(m.Range.StartLine-1)
-            let str = line.GetText()
-            str.Length - str.TrimStart(' ').Length
-        | InterfaceData.ObjExpr(_, b :: _) -> 
-            let line = buffer.CurrentSnapshot.GetLineFromLineNumber(b.RangeOfBindingSansRhs.StartLine-1)
-            let str = line.GetText()
-            str.Length - str.TrimStart(' ').Length
-        | _ ->
-            let editorOptions = editorOptionsFactory.GetOptions(buffer)
-            let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-            lineStr.Length - lineStr.TrimStart(' ').Length + indentSize
+    // Check whether the interface is empty
+    let shouldImplementInterface _interfaceState (entity: FSharpEntity) =
+        not (InterfaceStubGenerator.hasNoInterfaceMember entity)
 
-    let countMembers = function
-        | InterfaceData.Interface(_, None) -> 
-            0
-        | InterfaceData.Interface(_, Some members) -> 
-            List.length members
-        | InterfaceData.ObjExpr(_, bindings) ->
-            List.length bindings
-
-    let getTypeParameters = function
-        | InterfaceData.Interface(typ, _)
-        | InterfaceData.ObjExpr(typ, _) ->
-            match typ with
-            | SynType.App(_, _, ts, _, _, _, _)
-            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
-                let (|TypeIdent|_|) = function
-                    | SynType.Var(SynTypar.Typar(s, req , _), _) ->
-                        match req with
-                        | NoStaticReq -> 
-                            Some ("'" + s.idText)
-                        | HeadTypeStaticReq -> 
-                            Some ("^" + s.idText)
-                    | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
-                        xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
-                    | _ -> 
-                        None
-                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
-            | _ ->
-                [||]
-
-    // Check whether the interface has been fully implemented
-    let shouldImplementInterface (interfaceData, _) (entity: FSharpEntity) =
-        // TODO: counting members is not enough.
-        // We should match member signatures, 
-        // it will be tricky in case of specialized interface implementation
-        let count = InterfaceStubGenerator.countInterfaceMembers entity
-        count > 0 && count > countMembers interfaceData
-
-    let handleImplementInterface (span: SnapshotSpan) (interfaceData, posOpt: pos option) displayContext entity = 
-        let line = span.Start.GetContainingLine()
-        let lineStr = line.GetText()
-        let startColumn = inferStartColumn lineStr interfaceData
+    let handleImplementInterface (snapshot: ITextSnapshot) state displayContext implementedMemberSignatures entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
-        let typeParams = getTypeParameters interfaceData
-        let stub = InterfaceStubGenerator.formatInterface 
-                        startColumn indentSize typeParams "x" "raise (System.NotImplementedException())" displayContext entity
+        let startColumn = inferStartColumn indentSize state
+        let typeParams = state.InterfaceData.TypeParameters
+        let stub = InterfaceStubGenerator.formatInterface startColumn indentSize typeParams 
+                    "x" defaultBody displayContext implementedMemberSignatures entity
+        if String.IsNullOrEmpty stub then
+            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+            statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore
+        else
+            use transaction = textUndoHistory.CreateTransaction(Resource.implementInterfaceCommandName)
+            match state.EndPosOfWith with
+            | Some pos -> 
+                let currentPos = snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
+                buffer.Insert(currentPos, stub + new String(' ', startColumn)) |> ignore
+            | None ->
+                let range = state.InterfaceData.Range
+                let currentPos = snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
+                buffer.Insert(currentPos, " with") |> ignore
+                buffer.Insert(currentPos + 5, stub + new String(' ', startColumn)) |> ignore
+            transaction.Complete()
 
-        use transaction = textUndoHistory.CreateTransaction("Implement Interface Explicitly")
-        match posOpt with
-        | Some pos -> 
-            let current = span.Snapshot.GetLineFromLineNumber(pos.Line-1).Start.Position + pos.Column
-            buffer.Insert(current, stub) |> ignore
-        | None ->
-            let range = getRange interfaceData
-            let current = span.Snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn
-            buffer.Insert(current, " with") |> ignore
-            buffer.Insert(current + 5, stub) |> ignore
-        transaction.Complete()
-
-    let implementInterface span data displayContext entity =
+    let implementInterface snapshot (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
         { new ISmartTagAction with
             member x.ActionSets = null
-            member x.DisplayText = "Implement Interface Explicitly"
+            member x.DisplayText = Resource.implementInterfaceCommandName
             member x.Icon = null
             member x.IsEnabled = true
             member x.Invoke() = 
-                if shouldImplementInterface data entity then
-                    handleImplementInterface span data displayContext entity
+                if shouldImplementInterface state entity then
+                    async {
+                        let getMemberByLocation(name, range: range) =
+                            let lineStr = 
+                                match fromFSharpRange snapshot range with
+                                | Some span -> span.End.GetContainingLine().GetText()
+                                | None -> String.Empty
+                            results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])
+                        let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures 
+                                                               getMemberByLocation displayContext state.InterfaceData
+                        return handleImplementInterface snapshot state displayContext implementedMemberSignatures entity
+                    }
+                    |> Async.StartImmediateSafe
                 else
-                    MessageBox.Show(Resource.implementInterfaceErrorMessage, Resource.vsPackageTitle, 
-                        MessageBoxButton.OK, MessageBoxImage.Error) |> ignore }
+                    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                    statusBar.SetText(Resource.interfaceEmptyStatusMessage) |> ignore }
 
-    member x.GetSmartTagActions(span: SnapshotSpan, data, displayContext, entity: FSharpEntity) =
+    member x.GetSmartTagActions(snapshot, interfaceDefinition) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
-        let trackingSpan = span.Snapshot.CreateTrackingSpan(span.Span, SpanTrackingMode.EdgeInclusive)
-        let _snapshot = trackingSpan.TextBuffer.CurrentSnapshot
-
-        actionList.Add(implementInterface span data displayContext entity)
+        actionList.Add(implementInterface snapshot interfaceDefinition)
         let actionSet = SmartTagActionSet(actionList.AsReadOnly())
         actionSetList.Add(actionSet)
         actionSetList.AsReadOnly()
@@ -211,17 +197,18 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     interface ITagger<ImplementInterfaceSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<ImplementInterfaceSmartTag> seq =
             seq {
-                match currentWord, interfaceDefinition with
-                | Some word, Some (data, displayContext, entity) ->
+                match currentWord, state with
+                | Some word, Some interfaceDefinition ->
                     let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
                     yield TagSpan<ImplementInterfaceSmartTag>(span, 
-                            ImplementInterfaceSmartTag(x.GetSmartTagActions(span, data, displayContext, entity)))
+                            ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
                             :> ITagSpan<_>
                 | _ -> ()
             }
 
-        member x.add_TagsChanged(handler) = tagsChanged.Publish.AddHandler(handler)
-        member x.remove_TagsChanged(handler) = tagsChanged.Publish.RemoveHandler(handler)
+        [<CLIEvent>]
+        member x.TagsChanged = tagsChanged.Publish
 
-
-
+    interface IDisposable with
+        member x.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()

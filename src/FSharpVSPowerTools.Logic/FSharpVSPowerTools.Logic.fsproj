@@ -57,18 +57,24 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
     <None Include="packages.config" />
+    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Resource.fs" />
-    <Compile Include="VSUtils.fs" />
+    <Compile Include="Constants.fs" />
     <Compile Include="Logger.fs" />
+    <Compile Include="VSUtils.fs" />
     <Compile Include="VisualStudioVersion.fs" />
     <Compile Include="ThemeManager.fs" />
     <Compile Include="ProjectSystem.fs" />
-    <Compile Include="ProjectProvider.fs" />
-    <Compile Include="VSLanguageService.fs" />
     <Compile Include="OpenDocumentsTracker.fs" />
+    <Compile Include="FileSystem.fs" />
+    <Compile Include="VSLanguageService.fs" />
+    <Compile Include="SolutionBuildEventListener.fs" />
+    <Compile Include="ProjectProvider.fs" />
+    <Compile Include="ProjectFactory.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />
     <Compile Include="NavigateToItem.fs" />
     <Compile Include="CodeFormattingServices.fs" />
+    <Compile Include="Status.fs" />
     <Compile Include="CodeFormattingCommands.fs" />
     <Compile Include="FormatDocumentCommand.fs" />
     <Compile Include="FormatSelectionCommand.fs" />
@@ -77,60 +83,78 @@
     <Compile Include="DepthAdornmentManager.fs" />
     <Compile Include="SyntaxConstructClassifier.fs" />
     <Compile Include="HighlightUsageTagger.fs" />
+    <Resource Include="CommonResources.xaml" />
+    <Compile Include="CommonResources.xaml.fs" />
     <Resource Include="RenameDialog.xaml" />
     <Compile Include="RenameDialog.fs" />
     <Compile Include="RenameCommandFilter.fs" />
     <Resource Include="FolderNameDialog.xaml" />
     <Compile Include="FolderNameDialog.fs" />
+    <Resource Include="MoveToFolderDialog.xaml" />
+    <Compile Include="MoveToFolderDialog.fs" />
+    <Compile Include="FolderMenuUI.fs" />
     <Compile Include="FolderMenuCommands.fs" />
+    <Compile Include="CodeGenerationService.fs" />
     <Compile Include="ImplementInterfaceSmartTagger.fs" />
+    <Compile Include="RecordStubGeneratorSmartTagger.fs" />
+    <Compile Include="UnionPatternMatchCaseGeneratorSmartTagger.fs" />
+    <Compile Include="LibraryNode.fs" />
+    <Compile Include="Library.fs" />
+    <Compile Include="FindReferencesFilter.fs" />
+    <Compile Include="ResolveUnopenedNamespaceTagger.fs" />
+    <Compile Include="UnusedDeclarationMargin.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="FantomasLib">
-      <HintPath>..\..\packages\Fantomas.1.1.0\lib\FantomasLib.dll</HintPath>
+      <HintPath>..\..\packages\Fantomas.1.4.0\lib\FantomasLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.43\lib\net40\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.59\lib\net45\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
+    <Reference Include="FSharp.ViewModule.Core.Wpf">
+      <HintPath>..\..\packages\FSharp.ViewModule.Core.0.9.6\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="FsXaml.Wpf">
-      <HintPath>..\..\packages\FsXaml.Wpf.0.9.3\lib\net45\FsXaml.Wpf.dll</HintPath>
+      <HintPath>..\..\packages\FsXaml.Wpf.0.9.7\lib\net45\FsXaml.Wpf.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FsXaml.Wpf.TypeProvider">
-      <HintPath>..\..\packages\FsXaml.Wpf.0.9.3\lib\net45\FsXaml.Wpf.TypeProvider.dll</HintPath>
+      <HintPath>..\..\packages\FsXaml.Wpf.0.9.7\lib\net45\FsXaml.Wpf.TypeProvider.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.Build" />
-    <Reference Include="Microsoft.Build.Engine" />
-    <Reference Include="Microsoft.Build.Framework" />
-    <Reference Include="Microsoft.Build.Tasks.v4.0" />
-    <Reference Include="Microsoft.Build.Utilities.v4.0" />
     <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.CoreUtility">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Editor">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Editor.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.11.0">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Shell.11.0.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Shell.Immutable.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
@@ -140,15 +164,19 @@
     <Reference Include="Microsoft.VisualStudio.Shell.Interop.9.0, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Text.Data">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.Data.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.Logic">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.Logic.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.UI">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.UI.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />

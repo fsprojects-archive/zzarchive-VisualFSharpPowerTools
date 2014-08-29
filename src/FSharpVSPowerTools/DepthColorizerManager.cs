@@ -22,27 +22,20 @@ namespace FSharpVSPowerTools
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
         [Import]
-        private ITextDocumentFactoryService textDocumentFactoryService = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
-
-        [Import]
-        private Logger logger = null;
+        internal IServiceProvider serviceProvider = null;
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             ITextDocument doc;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.DepthColorizerEnabled)
-            {
-                logger.Log(LogType.Information, "Depth Colorizer feature is disabled in General option page.");
-                return null;
-            }
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return null;
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
@@ -59,7 +52,7 @@ namespace FSharpVSPowerTools
     public class DepthColorizerAdornment : IWpfTextViewCreationListener
     {
         [Export]
-        [Name("FSharpDepthFullLineAdornment")]
+        [Name(Constants.depthAdornmentLayerName)]
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
         private AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
@@ -69,19 +62,12 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         private IServiceProvider serviceProvider = null;
 
-        [Import]
-        private Logger logger = null;
-
         public void TextViewCreated(IWpfTextView textView)
         {
             if (textView == null) return;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.DepthColorizerEnabled)
-            {
-                logger.Log(LogType.Information, "[Depth Colorizer] The feature is disabled in General option page.");
-                return;
-            }
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            if (!generalOptions.DepthColorizerEnabled) return;
 
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
             new FullLineAdornmentManager(textView, tagAggregator, serviceProvider);

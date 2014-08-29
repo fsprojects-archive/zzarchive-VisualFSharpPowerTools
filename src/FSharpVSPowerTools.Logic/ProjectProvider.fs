@@ -4,126 +4,179 @@ open System
 open System.IO
 open System.Diagnostics
 open EnvDTE
-open FSharp.CompilerBinding
 open FSharpVSPowerTools
+open VSLangProj
+open Microsoft.VisualStudio.Text
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type IProjectProvider =
-    abstract ProjectFileName: string
-    abstract TargetFSharpCoreVersion: string
-    abstract TargetFramework: FSharpTargetFramework
-    abstract CompilerOptions: string []
-    abstract SourceFiles: string []
+[<AutoOpen>]
+module FSharpSymbolExtensions =
+    type FSharpSymbol with
+        member x.TryGetLocation() = Option.orElse x.ImplementationLocation x.DeclarationLocation
 
-module ProjectProvider =
-    open System.Reflection
+type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, onChanged: Project -> unit) =
+    static let mutable getField = None
+    do Debug.Assert(project <> null, "Input project should be well-formed.")
+    let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
+    let refChanged = _dispReferencesEvents_ReferenceChangedEventHandler (fun _ -> onChanged project)
+    let refRemoved = _dispReferencesEvents_ReferenceRemovedEventHandler (fun _ -> onChanged project)
+        
+    do match project.VSProject with
+        | Some p -> 
+            p.Events.ReferencesEvents.add_ReferenceAdded refAdded
+            p.Events.ReferencesEvents.add_ReferenceChanged refChanged
+            p.Events.ReferencesEvents.add_ReferenceRemoved refRemoved
+        | _ -> debug "[ProjectProvider] Cannot subsribe for ReferencesEvents"
     
-    type private Expr = System.Linq.Expressions.Expression
+    let getProperty (tag: string) =
+        try 
+            let prop = project.Properties.[tag]
+            prop.Value.ToString() 
+        with e -> 
+            debug "[ProjectProvider] Cannot get property '%s' due to %O" tag e
+            null
 
-    let private InstanceNonPublic = BindingFlags.Instance ||| BindingFlags.NonPublic
+    let currentDir = getProperty "FullPath"
     
-    let private precompileFieldGet<'R>(f : FieldInfo) =
-        let p = Expr.Parameter(typeof<obj>)
-        let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
-        lambda.Compile().Invoke
-
-    type private ProjectProvider(project: Project) =
-        static let mutable getField = None
-        do Debug.Assert(project <> null, "Input project should be well-formed.")
+    let projectFileName = lazy (
+        let fileName = getProperty "FileName"
+        Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
+        Path.Combine(currentDir, fileName))
     
-        let getProperty (tag: string) =
-            let prop = try project.Properties.[tag] with _ -> null
-            match prop with
-            | null -> null
-            | _ -> try prop.Value.ToString() with _ -> null
+    let getSourcesAndFlags = 
+        // Warning! This place is very brittle because of assumption it makes about the underlying structure of F# DTE project
+        // Code below will work in VS2012/VS2013 but compatibility with further versions are not guaranteed
+        let underlyingProjectField = project.GetType().GetField("project", Reflection.instanceNonPublic)
+        let underlyingProject = underlyingProjectField.GetValue(project)
 
-        let currentDir = getProperty "FullPath"
-    
-        let projectFileName = 
-            let fileName = getProperty "FileName"
-            Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
-            Path.Combine(currentDir, fileName)
-    
-        let getSourcesAndFlags = 
-            // warning! this place is very brittle because of assumption it makes about the underlying structure of F# DTE project
-            // code below will work in VS2011\VS2012 but compatibility with further versions are not guaranteed
-            let underlyingProjectField = project.GetType().GetField("project", InstanceNonPublic)
-            let underlyingProject = underlyingProjectField.GetValue(project)
+        let getter =
+            match getField with
+            | None ->
+                let sourcesAndFlagsField = underlyingProject.GetType().GetField("sourcesAndFlags", Reflection.instanceNonPublic)
+                let getter = Reflection.precompileFieldGet<option<string[] * string[]>> sourcesAndFlagsField
+                getField <- Some getter
+                getter
+            | Some getter -> getter
+        fun() -> getter underlyingProject 
 
-            let getter =
-                match getField with
-                | None ->
-                    let sourcesAndFlagsField = underlyingProject.GetType().GetField("sourcesAndFlags", InstanceNonPublic)
-                    let getter = precompileFieldGet<option<string[] * string[]>> sourcesAndFlagsField
-                    getField <- Some getter
-                    getter
-                | Some getter -> getter
-            fun() -> getter underlyingProject
+    let compilerOptions = lazy (
+        match getSourcesAndFlags() with
+        | Some(_, flags) -> flags
+        | _ -> [||])
 
-        interface IProjectProvider with
-            member x.ProjectFileName = projectFileName
+    let getActiveConfigProperty (tag: string) =
+        try 
+            let prop = project.ConfigurationManager.ActiveConfiguration.Properties.[tag]
+            prop.Value.ToString()
+        with e -> 
+            debug "[ProjectProvider] Cannot get active config '%s' due to %O" tag e
+            null
 
-            member x.TargetFSharpCoreVersion = 
-                getProperty "TargetFSharpCoreVersion"
+    let targetFramework = lazy (
+        match getProperty "TargetFrameworkMoniker" with
+        | null -> FSharpTargetFramework.NET_4_5
+        | x -> 
+            try
+                let frameworkName = new Runtime.Versioning.FrameworkName(x)
+                match frameworkName.Version.Major, frameworkName.Version.Minor with
+                | 4, 5 -> FSharpTargetFramework.NET_4_5
+                | 4, 0 -> FSharpTargetFramework.NET_4_0
+                | 3, 5 -> FSharpTargetFramework.NET_3_5
+                | 3, 0 -> FSharpTargetFramework.NET_3_0
+                | 2, 0 -> FSharpTargetFramework.NET_2_0
+                | _ -> invalidArg "prop" "Unsupported .NET framework version" 
+            with :? ArgumentException -> FSharpTargetFramework.NET_4_5)
 
-            member x.TargetFramework = 
-                match getProperty "TargetFrameworkMoniker" with
-                | null -> FSharpTargetFramework.NET_4_5
-                | x -> 
-                    try
-                        let frameworkName = new Runtime.Versioning.FrameworkName(x)
-                        match frameworkName.Version.Major, frameworkName.Version.Minor with
-                        | 4, 5 -> FSharpTargetFramework.NET_4_5
-                        | 4, 0 -> FSharpTargetFramework.NET_4_0
-                        | 3, 5 -> FSharpTargetFramework.NET_3_5
-                        | 3, 0 -> FSharpTargetFramework.NET_3_0
-                        | 2, 0 -> FSharpTargetFramework.NET_2_0
-                        | _ -> invalidArg "prop" "Unsupported .NET framework version" 
-                    with :? ArgumentException -> FSharpTargetFramework.NET_4_5
+    let sourceFiles = lazy (
+        match getSourcesAndFlags() with
+        | Some(sources, _) -> sources
+        | _ -> [||])
 
-            member x.CompilerOptions = 
-                match getSourcesAndFlags() with
-                | Some(_, flags) -> flags
-                | _ -> [||]
-            member x.SourceFiles = 
-                match getSourcesAndFlags() with
-                | Some(sources, _) -> sources
-                | _ -> [||]
+    let fullOutputPath = lazy (
+        Path.Combine (getProperty "FullPath", getActiveConfigProperty "OutputPath", getProperty "OutputFileName")
+        |> Path.GetFullPathSafe)
 
-    type private VirtualProjectProvider (filePath: string) = 
-        do Debug.Assert (filePath <> null, "FilePath should not be null.")
-    
-        interface IProjectProvider with
-            member x.ProjectFileName = null
-            member x.TargetFSharpCoreVersion = null
-            member x.TargetFramework = FSharpTargetFramework.NET_4_5
+    let referencedProjects = lazy (project.GetReferencedFSharpProjects() |> List.map getProjectProvider)
+    let allReferencedProjects = lazy (
+        project.GetReferencedProjects()
+        |> List.map (fun p -> p.FileName)
+        |> List.choose (fun file -> 
+                if String.IsNullOrWhiteSpace file then None
+                else Some(Path.GetFileNameSafe file)))
 
-            member x.CompilerOptions = 
-                [|  
-                    yield "--noframework"
-                    yield "--debug-"
-                    yield "--optimize-"
-                    yield "--tailcalls-"
-                |]
+    let cache = ref None
 
-            member x.SourceFiles = [| filePath |]
-    
-    let createForProject (project: Project): IProjectProvider = ProjectProvider project :> _
+    let getProjectCheckerOptions languageService =
+        async {
+            match !cache with
+            | Some x -> return x
+            | None ->
+                let refs = referencedProjects.Value
+                let! referencedProjects =
+                    refs 
+                    |> List.toArray
+                    |> Async.Array.map (fun p -> async {
+                        let! opts = p.GetProjectCheckerOptions languageService 
+                        return p.FullOutputFilePath, opts })
+                    
+                let opts = languageService.GetProjectCheckerOptions (
+                                projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects) 
 
-    let createForFileInProject (filePath: string) project: IProjectProvider option =
-        if not (project === null) && isFSharpProject project then
-            Some (ProjectProvider(project) :> _)
-        elif not (filePath === null) then
-            let ext = Path.GetExtension filePath
-            if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
-               String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
-               String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
-                Some (VirtualProjectProvider(filePath) :> _)
-            else 
-                None
-        else 
-            None
+                let orphanedProjects = lazy (
+                    let refProjectsOutPaths = 
+                        opts.ReferencedProjects 
+                        |> Array.map fst
+                        |> Set.ofArray
 
-    let createForDocument (doc: Document) =
-        createForFileInProject doc.FullName doc.ProjectItem.ContainingProject
+                    opts.ProjectOptions 
+                    |> Seq.filter (fun x -> x.StartsWith("-r:"))
+                    |> Seq.map (fun x -> x.Substring(3).Trim())
+                    |> Set.ofSeq
+                    |> Set.difference refProjectsOutPaths)
 
-    
+                Debug.Assert (Set.isEmpty orphanedProjects.Value, 
+                    sprintf "Not all referenced projects are in the compiler options: %A" orphanedProjects.Value)
+
+                //debug "[ProjectProvider] Options for %s: %A" projectFileName opts
+                cache := Some opts
+                return opts
+        }
+
+    interface IProjectProvider with
+        member __.IsForStandaloneScript = false
+        member __.ProjectFileName = projectFileName.Value
+        member __.TargetFramework = targetFramework.Value
+        member __.CompilerOptions = compilerOptions.Value
+        member __.SourceFiles = sourceFiles.Value
+        member __.FullOutputFilePath = fullOutputPath.Value
+        member __.GetReferencedProjects() = referencedProjects.Value
+        member __.GetAllReferencedProjectFileNames() = allReferencedProjects.Value
+        member __.GetProjectCheckerOptions languageService = getProjectCheckerOptions languageService
+
+    interface IDisposable with
+        member __.Dispose() =
+            project.VSProject
+            |> Option.iter (fun p ->
+                 p.Events.ReferencesEvents.remove_ReferenceAdded refAdded
+                 p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
+                 p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
+                            
+type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) = 
+    do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
+    let source = buffer.CurrentSnapshot.GetText()
+    let targetFramework = FSharpTargetFramework.NET_4_5
+    let projectFileName = filePath + ".fsproj"
+
+    interface IProjectProvider with
+        member __.IsForStandaloneScript = true
+        member __.ProjectFileName = projectFileName
+        member __.TargetFramework = targetFramework
+        member __.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
+        member __.SourceFiles = [| filePath |]
+        member __.FullOutputFilePath = Path.ChangeExtension(filePath, ".dll")
+        member __.GetReferencedProjects() = []
+        member __.GetAllReferencedProjectFileNames() = []
+        member __.GetProjectCheckerOptions languageService =
+            languageService.GetScriptCheckerOptions (filePath, projectFileName, source, targetFramework)
+
+        

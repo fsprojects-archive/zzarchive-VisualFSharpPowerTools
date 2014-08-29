@@ -5,8 +5,9 @@ open System.ComponentModel.Composition
 
 type VisualStudioVersion = 
     | Unknown = 0
-    | VS2012 = 12
-    | VS2013 = 13
+    | VS2012 = 11
+    | VS2013 = 12
+    | VS14 = 14
 
 type IMinimalVisualStudioVersionMetadata =
     abstract Version: VisualStudioVersion with get
@@ -18,8 +19,7 @@ type ExportWithMinimalVisualStudioVersionAttribute(contractType: Type) =
     member val Version = VisualStudioVersion.Unknown with get,set
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module VisualStudioVersion =
-    
+module VisualStudioVersion =    
     let fromDTEVersion(s: string) =
         if String.IsNullOrEmpty s then 
             VisualStudioVersion.Unknown
@@ -31,8 +31,12 @@ module VisualStudioVersion =
                 match parts.[0] with
                 | "11" -> VisualStudioVersion.VS2012
                 | "12" -> VisualStudioVersion.VS2013
+                | "14" -> VisualStudioVersion.VS14
                 | _ -> VisualStudioVersion.Unknown
     
-    let matches (currentVersion: VisualStudioVersion) (featureVersion : VisualStudioVersion) = 
+    let matches (currentVersion: VisualStudioVersion) (featureVersion: VisualStudioVersion) = 
         currentVersion = featureVersion
+
+    let toString(version: VisualStudioVersion) =
+        version.ToString("d")
 

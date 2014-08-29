@@ -19,30 +19,24 @@ namespace FSharpVSPowerTools
     public class HighlightUsageTaggerProvider : IViewTaggerProvider
     {
         [Import]
-        private ITextSearchService textSearchService = null;
-
-        [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal IServiceProvider serviceProvider = null;
 
         [Import]
-        private Logger logger = null;
+        internal ProjectFactory projectFactory = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // Only provide highlighting on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.HighlightUsageEnabled)
-            {
-                logger.Log(LogType.Information, "Highlight Usage feature is disabled in General option page.");
-                return null;
-            }
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return null;
 
-            return new HighlightUsageTagger(textView, buffer, textSearchService, fsharpVsLanguageService, serviceProvider) as ITagger<T>;
+            return new HighlightUsageTagger(textView, buffer, fsharpVsLanguageService, 
+                                            serviceProvider, projectFactory) as ITagger<T>;
         }
     }
 }

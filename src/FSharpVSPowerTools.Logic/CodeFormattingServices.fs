@@ -13,23 +13,13 @@ open Microsoft.VisualStudio.Text.Operations
 type CodeFormattingServices(editorOptionsFactory: IEditorOptionsFactoryService, 
                             editorOperationsFactoryService: IEditorOperationsFactoryService,
                             textBufferUndoManagerProvider: ITextBufferUndoManagerProvider, 
-                            textDocumentFactoryService: ITextDocumentFactoryService) = 
+                            textDocumentFactoryService: ITextDocumentFactoryService,
+                            serviceProvider: IServiceProvider) = 
     member val EditorOptionsFactory = editorOptionsFactory
     member val TextBufferUndoManagerProvider = textBufferUndoManagerProvider
     member val EditorOperationsFactoryService = editorOperationsFactoryService
     member val TextDocumentFactoryService = textDocumentFactoryService
-
-module internal Disposable =
-    let create (onDispose: unit -> unit) =
-        { new IDisposable with
-            member x.Dispose() =
-                onDispose() }
-
-module internal Cursor =
-    let wait() =
-        let currentCursor = System.Windows.Forms.Cursor.Current
-        System.Windows.Forms.Cursor.Current <- System.Windows.Forms.Cursors.WaitCursor
-        Disposable.create(fun () -> System.Windows.Forms.Cursor.Current <- currentCursor)
+    member val ServiceProvider = serviceProvider
 
 module internal TextUtils =
     let getFSharpPos (point: VirtualSnapshotPoint) =

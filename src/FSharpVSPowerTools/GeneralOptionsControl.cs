@@ -1,27 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace FSharpVSPowerTools
 {
     public partial class GeneralOptionsControl : UserControl
     {
-        public GeneralOptionsControl()
+        private GeneralOptionsPage _optionsPage;
+        public GeneralOptionsControl(GeneralOptionsPage optionsPage)
         {
             InitializeComponent();
-        }
-        public GeneralOptionsPage OptionsPage { get; set; }
 
-        public bool XmlDocEnabled 
+            _optionsPage = optionsPage;
+        }
+        public bool XmlDocEnabled
         {
             get { return chbXmlDoc.Checked; }
-            set { chbXmlDoc.Checked = value;  }
+            set { chbXmlDoc.Checked = value; }
         }
 
         public bool FormattingEnabled
@@ -65,16 +59,65 @@ namespace FSharpVSPowerTools
             set { chbSyntaxColoring.Checked = value; }
         }
 
+        public bool InterfaceImplementationEnabled
+        {
+            get { return chbInterfaceImplementation.Checked; }
+            set { chbInterfaceImplementation.Checked = value; }
+        }
+
+        public bool FolderOrganizationEnabled
+        {
+            get { return chbFolderOrganization.Checked; }
+            set { chbFolderOrganization.Checked = value; }
+        }
+
+        public bool FindAllReferencesEnabled
+        {
+            get { return chbFindAllReferences.Checked; }
+            set { chbFindAllReferences.Checked = value; }
+        }
+
+        public bool GenerateRecordStubEnabled
+        {
+            get { return chbRecordStubGeneration.Checked; }
+            set { chbRecordStubGeneration.Checked = value; }
+        }
+
+        public bool UnionPatternMatchCaseGenerationEnabled
+        {
+            get { return chbUnionPatternMatchCaseGeneration.Checked; }
+            set { chbUnionPatternMatchCaseGeneration.Checked = value; }
+        }
+
+        public bool ResolveUnopenedNamespacesEnabled
+        {
+            get { return chbResolveUnopenedNamespaces.Checked; }
+            set { chbResolveUnopenedNamespaces.Checked = value;  }
+        }
+
+        public bool UnusedDeclarationsEnabled
+        {
+            get { return chbUnusedDeclarations.Checked; }
+            set { chbUnusedDeclarations.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
-            chbXmlDoc.Checked = OptionsPage.XmlDocEnabled;
-            chbFormatting.Checked = OptionsPage.FormattingEnabled;
-            chbNavBar.Checked = OptionsPage.NavBarEnabled;
-            chbHighlightUsage.Checked = OptionsPage.HighlightUsageEnabled;
-            chbRenameRefactoring.Checked = OptionsPage.RenameRefactoringEnabled;
-            chbDepthColorizer.Checked = OptionsPage.DepthColorizerEnabled;
-            chbNavigateTo.Checked = OptionsPage.NavigateToEnabled;
-            chbSyntaxColoring.Checked = OptionsPage.SyntaxColoringEnabled;
+            XmlDocEnabled = _optionsPage.XmlDocEnabled;
+            FormattingEnabled = _optionsPage.FormattingEnabled;
+            NavBarEnabled = _optionsPage.NavBarEnabled;
+            HighlightUsageEnabled = _optionsPage.HighlightUsageEnabled;
+            RenameRefactoringEnabled = _optionsPage.RenameRefactoringEnabled;
+            DepthColorizerEnabled = _optionsPage.DepthColorizerEnabled;
+            NavigateToEnabled = _optionsPage.NavigateToEnabled;
+            SyntaxColoringEnabled = _optionsPage.SyntaxColoringEnabled;
+            InterfaceImplementationEnabled = _optionsPage.InterfaceImplementationEnabled;
+            FolderOrganizationEnabled = _optionsPage.FolderOrganizationEnabled;
+            FindAllReferencesEnabled = _optionsPage.FindAllReferencesEnabled;
+            GenerateRecordStubEnabled = _optionsPage.GenerateRecordStubEnabled;
+            UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
+            ResolveUnopenedNamespacesEnabled = _optionsPage.ResolveUnopenedNamespacesEnabled;
+            UnusedDeclarationsEnabled = _optionsPage.UnusedDeclarationsEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

@@ -4,7 +4,7 @@
 // --------------------------------------------------------------------------------------
 
 // Binaries that have XML documentation (in a corresponding generated XML file)
-let referenceBinaries = []
+let referenceBinaries = [ "FSharpVSPowerTools.Core.dll" ]
 // Web site location for the generated documentation
 let website = "."
 
@@ -13,18 +13,18 @@ let githubLink = "http://github.com/fsprojects/VisualFSharpPowerTools"
 // Specify more information about your project
 let info =
   [ "project-name", "Visual F# Power Tools"
-    "project-author", "Anh-Dung Phan, Vasily Kirichenko"
-    "project-summary", "Visual F# Power Tools (by F# Community) "
+    "project-author", "Anh-Dung Phan, Vasily Kirichenko, Denis Ok"
+    "project-summary", "A collection of additional commands for F# in Visual Studio"
     "project-github", githubLink
-    "project-nuget", "http://nuget.com/packages/VisualFSharpPowerTools" ]
+    "project-nuget", "http://nuget.com/packages/VisualFSharpPowerTools.Core" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below
 // --------------------------------------------------------------------------------------
 
-#I "../../packages/FSharp.Formatting.2.4.0/lib/net40"
+#I "../../packages/FSharp.Formatting.2.4.12/lib/net40"
 #I "../../packages/RazorEngine.3.3.0/lib/net40"
-#I "../../packages/FSharp.Compiler.Service.0.0.26/lib/net40"
+#I "../../packages/FSharp.Compiler.Service.0.0.58/lib/net45"
 #r "../../packages/Microsoft.AspNet.Razor.2.0.30506.0/lib/net40/System.Web.Razor.dll"
 #r "../../packages/FAKE/tools/FakeLib.dll"
 #r "RazorEngine.dll"
@@ -38,21 +38,13 @@ open Fake.FileHelper
 open FSharp.Literate
 open FSharp.MetadataFormat
 
-// When called from 'build.fsx', use the public project URL as <root>
-// otherwise, use the current 'output' directory.
-#if RELEASE
-let root = website
-#else
-let root = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
-#endif
-
 // Paths with template/source/output locations
 let bin        = __SOURCE_DIRECTORY__ @@ "../../bin"
 let content    = __SOURCE_DIRECTORY__ @@ "../content"
 let output     = __SOURCE_DIRECTORY__ @@ "../output"
 let files      = __SOURCE_DIRECTORY__ @@ "../files"
 let templates  = __SOURCE_DIRECTORY__ @@ "templates"
-let formatting = __SOURCE_DIRECTORY__ @@ "../../packages/FSharp.Formatting.2.4.0/"
+let formatting = __SOURCE_DIRECTORY__ @@ "../../packages/FSharp.Formatting.2.4.12/"
 let docTemplate = formatting @@ "templates/docpage.cshtml"
 
 // Where to look for *.csproj templates (in this order)
@@ -67,16 +59,30 @@ let copyFiles () =
   CopyRecursive (formatting @@ "styles") (output @@ "content") true 
     |> Log "Copying styles and scripts: "
 
+// When called from 'build.fsx', use the public project URL as <root>
+// otherwise, use the current 'output' directory.
+#if RELEASE
+let refRoot = website + "/.."
+#else
+let refRoot = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
+#endif
+
 // Build API reference from XML comments
 let buildReference () =
   CleanDir (output @@ "reference")
   for lib in referenceBinaries do
     MetadataFormat.Generate
       ( bin @@ lib, output @@ "reference", layoutRoots, 
-        parameters = ("root", root)::info,
+        parameters = ("root", refRoot)::info,
         sourceRepo = githubLink @@ "tree/master",
         sourceFolder = __SOURCE_DIRECTORY__ @@ ".." @@ "..",
-        publicOnly = true )
+        libDirs = [ bin ] )
+
+#if RELEASE
+let docRoot = website
+#else
+let docRoot = "file://" + (__SOURCE_DIRECTORY__ @@ "../output")
+#endif
 
 // Build documentation from `fsx` and `md` files in `docs/content`
 let buildDocumentation () =
@@ -84,35 +90,11 @@ let buildDocumentation () =
   for dir in Seq.append [content] subdirs do
     let sub = if dir.Length > content.Length then dir.Substring(content.Length + 1) else "."
     Literate.ProcessDirectory
-      ( dir, docTemplate, output @@ sub, replacements = ("root", root)::info,
+      ( dir, docTemplate, output @@ sub, replacements = ("root", docRoot)::info,
         lineNumbers = false,
         layoutRoots = layoutRoots )
 
-// Remove `FSharp.Core` from `bin` directory.
-// Otherwise, version conflict can break code tips.
-let execute pipeline =
-    // Cache `FSharp.Core.*` files
-    let files = 
-        !! (bin @@ "FSharp.Core.*")
-        |> Seq.toArray
-        |> Array.map (fun file ->
-            (file, File.ReadAllBytes file))
-    if (files.Length > 0) then
-        TraceHelper.traceError "Consider setting CopyLocal to False for FSharp.Core in all *.fsproj files"
-    // Remove `FSharp.Core.*` files
-    files |> Seq.iter (fun (file,_) ->
-        TraceHelper.traceImportant <| sprintf  "Removing '%s'" file
-        File.Delete file)
-    // Execute document generation pipeline
-    pipeline()
-    // Restore `FSharp.Core.*` files
-    files |> Seq.iter (fun (file, bytes) ->
-        TraceHelper.traceImportant <| sprintf "Restoring '%s'" file
-        File.WriteAllBytes(file, bytes))
-
-
 // Generate
-execute(
-  copyFiles 
-  >> buildDocumentation
-  >> buildReference)
+copyFiles()
+buildDocumentation()
+buildReference()

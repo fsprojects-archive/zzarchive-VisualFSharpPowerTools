@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
- <!-- 
+  <!-- 
  This is the file that defines the actual layout and type of the commands.
  It is divided in different sections (e.g. command definition, command
  placement, ...), with each defining a specific set of properties.
@@ -8,7 +8,7 @@
  about how to use it.
  -->
 
- <!--
+  <!--
  The VSCT compiler (the tool that translates this file into the binary format
  that VisualStudio will consume) has the ability to import external files with
  definition of constants that can be used inside the definition of your command.
@@ -18,17 +18,17 @@
  of the constants that we will use inside the file.
  -->
 
- <!--This is the file that defines the IDs for all the commands exposed by VisualStudio.-->
- <Extern href="stdidcmd.h" />
+  <!--This is the file that defines the IDs for all the commands exposed by VisualStudio.-->
+  <Extern href="stdidcmd.h" />
 
- <!--This header contains the command ids for the menus provided by the shell.-->
- <Extern href="vsshlids.h"/>
+  <!--This header contains the command ids for the menus provided by the shell.-->
+  <Extern href="vsshlids.h"/>
 
- <!--Definition of some VSCT specific constants. In this sample we use it for the IDs
+  <!--Definition of some VSCT specific constants. In this sample we use it for the IDs
      inside the guidOfficeIcon group.-->
- <!--<Extern href="msobtnid.h"/>-->
+  <!--<Extern href="msobtnid.h"/>-->
 
- <!--
+  <!--
  The first section of this file is the Commands section. This is where we define
  the commands, menus and menu groups. This section uses a Guid to identify the
  package that provides the command defined inside it.
@@ -36,8 +36,8 @@
  translate in an actual GUID at compile time. It is not allow to use an actual
  GUID for the package attribute.
  -->
- <Commands package="guidMenuAndCommandsPkg">
-   <!--
+  <Commands package="guidMenuAndCommandsPkg">
+    <!--
    Inside this section we have different sub-sections: one for the menus, another
    for the menu groups, one for the buttons (the actual commands), one for the combos
    and the last one for the bitmaps used. Each element is identified by a command id that
@@ -49,95 +49,106 @@
    the guid attribute for the command set and the id attribute for the numeric part.
    -->
 
-   <Menus>
-     
-     <Menu guid="guidSHLMainMenu" id="IDM_VS_MENU_REFACTORING" priority="0x0100" type="Menu">
-      <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_REFACTORING"/>
-      <Strings>
-        <ButtonText>&amp;Refactor</ButtonText>
-        <CommandName>&amp;Refactor</CommandName>
-      </Strings>
-    </Menu>
-     
-     <Menu guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup" priority="0x202" type="Menu">
-       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" />
-       <Strings>
-         <ButtonText>F# Power Tools</ButtonText>
-         <CommandName>F# Power Tools</CommandName>
-       </Strings>
-     </Menu>
-     
-   </Menus>
+    <Menus>
 
-   <!--
+      <Menu guid="guidSHLMainMenu" id="IDM_VS_MENU_REFACTORING" priority="0x0100" type="Menu">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_REFACTORING"/>
+        <Strings>
+          <ButtonText>&amp;Refactor</ButtonText>
+          <CommandName>&amp;Refactor</CommandName>
+        </Strings>
+      </Menu>
+
+      <Menu guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup" priority="0x202" type="Menu">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" />
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>F# Power Tools</ButtonText>
+          <CommandName>F# Power Tools</CommandName>
+        </Strings>
+      </Menu>
+
+    </Menus>
+
+    <!--
    In this section we define new menu groups. A menu group is a container for other menus or
    buttons (commands); from a visual point of view you can see the group as the part of a menu
    contained between two lines. The parent of a group must be a menu.
    -->
-        
-   <Groups>     
-     <!--
+
+    <Groups>
+      <!--
      Now create a new group inside the standard editor's context menu. As always the ID of this
      menu is defined inside vsshlids.h.
      -->
-        
+
       <Group guid="guidSHLMainMenu" id="IDG_REFACTORING_COMMON" priority="0x0100">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_EDIT"/>
       </Group>
 
-     <Group guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0001">
-       <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
-     </Group>
+      <Group guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0001">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
+      </Group>
 
-     <Group guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup" priority="0x0002">
-       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup"/>
-     </Group>
-   
-   </Groups>
+      <Group guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup" priority="0x0002">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup"/>
+      </Group>
 
-   <!--
+      <Group guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMoveGroup" priority="0x0003">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsSubMenuGroup"/>
+      </Group>
+
+    </Groups>
+
+    <!--
    This section defines the elements the user can interact with, like a menu command or a button
    or combo box in a toolbar.
    -->
-   <Buttons>
-     <!--
+    <Buttons>
+      <!--
      An element inside this section is defined by its ID and must specify a parent group, a display
      priority, an image, a type, some visibility flags (optional) and a default text.
      -->
 
-     <Button guid="guidNewFolderCmdSet" id="cmdNewFolder" priority="0x0101" type="Button">
-       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
-       <Strings>
-         <ButtonText>New Folder</ButtonText>
-       </Strings>
-     </Button>
+      <Button guid="guidNewFolderCmdSet" id="cmdNewFolder" priority="0x0101" type="Button">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
+        <Strings>
+          <ButtonText>New Folder</ButtonText>
+        </Strings>
+      </Button>
 
-     <!--<Button guid="guidNewFolderCmdSet" id="cmdFolderRename" priority="0x0104" type="Button">
-       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
-       <Strings>
-         <ButtonText>Rename Folder</ButtonText>
-       </Strings>
-     </Button>-->
+      <Button guid="guidNewFolderCmdSet" id="cmdRenameFolder" priority="0x0102" type="Button">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
+        <Strings>
+          <ButtonText>Rename Folder</ButtonText>
+        </Strings>
+      </Button>
 
-     <Button guid="guidNewFolderCmdSet" id="cmdMoveFolderUp" priority="0x0105" type="Button">
-       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
-       <Strings>
-         <ButtonText>Move Folder Up</ButtonText>
-       </Strings>
-     </Button>
+      <Button guid="guidMoveCmdSet" id="cmdMoveFolderUp" priority="0x0110" type="Button">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMoveGroup"/>
+        <Strings>
+          <ButtonText>Move Folder Up</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidMoveCmdSet" id="cmdMoveFolderDown" priority="0x0111" type="Button">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMoveGroup"/>
+        <Strings>
+          <ButtonText>Move Folder Down</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidMoveCmdSet" id="cmdMoveToFolder" priority="0x0112" type="Button">
+        <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMoveGroup"/>
+        <Strings>
+          <ButtonText>Move to Folder</ButtonText>
+        </Strings>
+      </Button>
 
-     <Button guid="guidNewFolderCmdSet" id="cmdMoveFolderDown" priority="0x0106" type="Button">
-       <Parent guid="guidSolutionExplorerCmdSet" id="FSPowerToolsNewFolderGroup"/>
-       <Strings>
-         <ButtonText>Move Folder Down</ButtonText>
-       </Strings>
-     </Button>     
+    </Buttons>
+  </Commands>
 
-   </Buttons>   
- </Commands>
 
- 
- <!--
+  <!--
  Inside this section, we have the ability to place menu groups inside some other menu or
  menu / commands inside other groups.
  For instance, it is possible to place one of VisualStudio's menus or commands inside one of our
@@ -145,7 +156,7 @@
  -->
   <CommandPlacements>
     <!--Here we place two commands inside the empty menu group we created in the Groups section.-->
-    
+
     <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0010">
       <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_WEBITEMNODE"/>
     </CommandPlacement>
@@ -164,16 +175,16 @@
     <CommandPlacement guid="guidSolutionExplorerCmdSet" id="FSPowerToolsMenuGroup" priority="0x0100">
       <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_SOLNNODE"/>
     </CommandPlacement>
-    
+
   </CommandPlacements>
 
 
- 
- <!--This section is where you can associate a command with a keyboard shortcut; this association is
+
+  <!--This section is where you can associate a command with a keyboard shortcut; this association is
  valid within a specific UI context, that is when the shell is inside a specific mode, e.g. during
  debugging, editing a file or when the user is using a specific designer.-->
- <KeyBindings>
-   <!--
+  <KeyBindings>
+    <!--
    To define a binding, we have to specify the sequence of keys to press to activate the command (keystate).
    A key binding can use one or two key and optionally up to two modifiers (Alt, Control or Shift keys); the
    keys are specified using the key1 and key2 attributes (key2 can be omitted) and the modifiers using the
@@ -186,15 +197,15 @@
    way to detect the problem is to start Visual Studio under debugger, try to execute any command
    and look if there is a message in the output window about a duplicated accelerator found.
    -->
-   
-   <!--
+
+    <!--
    In this example we want to use the <Control><1> accelerator for the first command defined in
    the Buttons section above, so this is its definition:
    -->
- </KeyBindings>
+  </KeyBindings>
 
 
- <!--
+  <!--
  In this example we have always used descriptive names for the GUIDs and numeric IDs inside the definition
  of the elements. The VSCT compiler actually enforces the usage of these names instead of hard-coding
  the numbers in the definitions.
@@ -203,40 +214,45 @@
  
  The "Symbols" section is where this association between descriptive names and actual values happen.
  -->
- <Symbols>
-   <!--
+  <Symbols>
+    <!--
    The definition of symbols in a VSCT file derives from the way the IDs of the elements are defined
    by the command table. We have seen that the ID is a GUID/Number pair, where the GUID is also called
    Command Set and it provides the context in which the numeric ID is evaluated.
    It makes then sense for the VSCT schema to define the GuidSymbl tag as top level element containig
    the definiton of the numeric IDs.
    -->
-   
-   <!--The first GUID defined here is the one for the package. It does not contains numeric IDs.-->
-   <GuidSymbol name="guidMenuAndCommandsPkg" value="{f152487e-9a22-4cf9-bee6-a8f7c77f828d}" />
-   
-   <!--The GUID for the command set is the one that contains the numeric IDs used in this sample
+
+    <!--The first GUID defined here is the one for the package. It does not contains numeric IDs.-->
+    <GuidSymbol name="guidMenuAndCommandsPkg" value="{f152487e-9a22-4cf9-bee6-a8f7c77f828d}" />
+
+    <!--The GUID for the command set is the one that contains the numeric IDs used in this sample
        with the only exception of the one used for the bitmap.-->
-   <GuidSymbol name="guidPowerToolsCmdSet" value="{5debbcf2-6cb1-480c-9e69-edcb2196bad7}">
-     <!--Groups-->      
-     <IDSymbol name="PowerToolsCtxGroup" value="0x1013" />
-     <!--Commands-->
-    
-   </GuidSymbol>
+    <GuidSymbol name="guidPowerToolsCmdSet" value="{5debbcf2-6cb1-480c-9e69-edcb2196bad7}">
+      <!--Groups-->
+      <IDSymbol name="PowerToolsCtxGroup" value="0x1013" />
+      <!--Commands-->
 
-   <GuidSymbol name="guidSolutionExplorerCmdSet" value="{e396b698-e00e-444b-9f5f-3dcb1ef74e62}">
-     <IDSymbol name="FSPowerToolsMenuGroup" value="0x1060" />
-     <IDSymbol name="FSPowerToolsSubMenuGroup" value="0x1061" />
-     <IDSymbol name="FSPowerToolsNewFolderGroup" value="0x1063" />
-   </GuidSymbol>
+    </GuidSymbol>
 
-   <GuidSymbol name="guidNewFolderCmdSet" value="{e396b698-e00e-444b-9f5f-3dcb1ef74e63}">
-     <IDSymbol name="FSPowerToolsMenuGroup" value="0x1070" />
-     <IDSymbol name="cmdNewFolder" value="0x1071" />
-     <IDSymbol name="cmdFolderRename" value="0x1072"/>
-     <IDSymbol name="cmdMoveFolderUp" value="0x1073"/>
-     <IDSymbol name="cmdMoveFolderDown" value="0x1074"/>
-   </GuidSymbol>
+    <GuidSymbol name="guidSolutionExplorerCmdSet" value="{1D4A7B65-A22C-4405-837B-4214C0BED3C5}">
+      <IDSymbol name="FSPowerToolsMenuGroup" value="0x1060" />
+      <IDSymbol name="FSPowerToolsSubMenuGroup" value="0x1061" />
+      <IDSymbol name="FSPowerToolsNewFolderGroup" value="0x1063" />
+      <IDSymbol name="FSPowerToolsMoveGroup" value="0x1064"/>
+    </GuidSymbol>
 
- </Symbols>
+    <GuidSymbol name="guidNewFolderCmdSet" value="{9EDC1279-C317-43A6-B554-3A4D7853D55E}">
+      <IDSymbol name="FSPowerToolsMenuGroup" value="0x1070" />
+      <IDSymbol name="cmdNewFolder" value="0x1071" />
+      <IDSymbol name="cmdRenameFolder" value="0x1072"/>
+    </GuidSymbol>
+
+    <GuidSymbol name="guidMoveCmdSet" value="{7B573ACF-2772-4F46-B290-9B0EA94CBFAB}">
+      <IDSymbol name="cmdMoveFolderUp" value="0x1073"/>
+      <IDSymbol name="cmdMoveFolderDown" value="0x1074"/>
+      <IDSymbol name="cmdMoveToFolder" value="0x1075"/>
+    </GuidSymbol>
+
+  </Symbols>
 </CommandTable>

@@ -3,11 +3,13 @@ using FSharpVSPowerTools.SyntaxColoring;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Windows.Media;
@@ -16,12 +18,14 @@ namespace FSharpVSPowerTools
 {
     static class ClassificationTypes
     {
-        public const string FSharpReferenceType = "FSharp.ReferenceType";
-        public const string FSharpValueType = "FSharp.ValueType";
-        public const string FSharpPatternCase = "FSharp.PatternCase";
-        public const string FSharpFunction = "FSharp.Function";
-        public const string FSharpMutableVar = "FSharp.MutableVar";
-        public const string FSharpQuotation = "FSharp.Quotation";
+        public const string FSharpReferenceType = Constants.fsharpReferenceType;
+        public const string FSharpValueType = Constants.fsharpValueType;
+        public const string FSharpPatternCase = Constants.fsharpPatternCase;
+        public const string FSharpFunction = Constants.fsharpFunction;
+        public const string FSharpMutableVar = Constants.fsharpMutableVar;
+        public const string FSharpQuotation = Constants.fsharpQuotation;
+        public const string FSharpModule = Constants.fsharpModule;
+        public const string FSharpUnused = Constants.fsharpUnused;
 
         [Export]
         [Name(FSharpReferenceType)]
@@ -47,10 +51,21 @@ namespace FSharpVSPowerTools
         [Name(FSharpMutableVar)]
         [BaseDefinition("identifier")]
         internal static ClassificationTypeDefinition FSharpMutableVarClassificationType = null;
+        
         [Export]
         [Name(FSharpQuotation)]
         [BaseDefinition("identifier")]
         internal static ClassificationTypeDefinition FSharpQuotationClassificationType = null;
+
+        [Export]
+        [Name(FSharpModule)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpModuleClassificationType = null;
+
+        [Export]
+        [Name(FSharpUnused)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpUnusedClassificationType = null;
     }
 
     public class FontColor
@@ -83,7 +98,9 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpPatternCase, new FontColor(Colors.Black) },
                 { ClassificationTypes.FSharpFunction, new FontColor(Colors.Black) },
                 { ClassificationTypes.FSharpMutableVar, new FontColor(Colors.Black) },
-                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(255, 242, 223)) }
+                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(255, 242, 223)) },
+                { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(43, 145, 175)) },
+                { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(128, 128, 128)) }
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -98,7 +115,9 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpPatternCase, new FontColor(Color.FromRgb(220, 220, 220)) },
                 { ClassificationTypes.FSharpFunction, new FontColor(Color.FromRgb(220, 220, 220)) },
                 { ClassificationTypes.FSharpMutableVar, new FontColor(Color.FromRgb(220, 220, 220)) },
-                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(98, 58, 0)) }
+                { ClassificationTypes.FSharpQuotation, new FontColor(background: Color.FromRgb(98, 58, 0)) },
+                { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(78, 201, 176)) },
+                { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(155, 155, 155)) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
@@ -161,12 +180,12 @@ namespace FSharpVSPowerTools
 
                         var foregroundBrush = 
                             color.Foreground == null 
-                                ? oldProp.ForegroundBrush 
+                                ? null
                                 : new SolidColorBrush(color.Foreground.Value);
 
                         var backgroundBrush = 
                             color.Background == null 
-                                ? oldProp.BackgroundBrush 
+                                ? null
                                 : new SolidColorBrush(color.Background.Value);
 
                         var newProp = TextFormattingRunProperties.CreateTextFormattingRunProperties(
@@ -190,7 +209,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpReferenceType)]
         [Name(ClassificationTypes.FSharpReferenceType)]
         [UserVisible(true)]
-        sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
+        internal sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpReferenceTypeFormat(ClassificationColorManager colorManager)
@@ -206,7 +225,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpValueType)]
         [Name(ClassificationTypes.FSharpValueType)]
         [UserVisible(true)]
-        sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
+        internal sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpValueTypeFormat(ClassificationColorManager colorManager)
@@ -222,7 +241,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpPatternCase)]
         [Name(ClassificationTypes.FSharpPatternCase)]
         [UserVisible(true)]
-        sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
+        internal sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpPatternCaseFormat(ClassificationColorManager colorManager)
@@ -238,7 +257,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpFunction)]
         [Name(ClassificationTypes.FSharpFunction)]
         [UserVisible(true)]
-        sealed class FSharpFunctionFormat : ClassificationFormatDefinition
+        internal sealed class FSharpFunctionFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpFunctionFormat(ClassificationColorManager colorManager)
@@ -254,7 +273,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpMutableVar)]
         [Name(ClassificationTypes.FSharpMutableVar)]
         [UserVisible(true)]
-        sealed class FSharpMutableVarFormat : ClassificationFormatDefinition
+        internal sealed class FSharpMutableVarFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpMutableVarFormat(ClassificationColorManager colorManager)
@@ -270,7 +289,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpQuotation)]
         [Name(ClassificationTypes.FSharpQuotation)]
         [UserVisible(true)]
-        sealed class FSharpQuotationFormat : ClassificationFormatDefinition
+        internal sealed class FSharpQuotationFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
             public FSharpQuotationFormat(ClassificationColorManager colorManager)
@@ -282,42 +301,122 @@ namespace FSharpVSPowerTools
                 this.ForegroundCustomizable = false;
             }
         }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpModule)]
+        [Name(ClassificationTypes.FSharpModule)]
+        [UserVisible(true)]
+        internal sealed class FSharpModuleFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpModuleFormat(ClassificationColorManager colorManager)
+            {
+                this.DisplayName = "F# Modules";
+                var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpModule);
+                this.ForegroundColor = colors.Foreground;
+                this.BackgroundColor = colors.Background;
+            }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpUnused)]
+        [Name(ClassificationTypes.FSharpUnused)]
+        [UserVisible(true)]
+        internal sealed class FSharpUnusedFormat : ClassificationFormatDefinition
+        {
+            [ImportingConstructor]
+            public FSharpUnusedFormat(ClassificationColorManager colorManager)
+            {
+                this.DisplayName = "F# Unused Declarations";
+                var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpUnused);
+                this.ForegroundColor = colors.Foreground;
+                this.BackgroundColor = colors.Background;
+            }
+        }
     }
 
     [Export(typeof(IClassifierProvider))]
+    [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
-    public class SyntaxConstructClassifierProvider : IClassifierProvider
+    [TextViewRole(PredefinedTextViewRoles.Document)]
+    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener, IDisposable
     { 
         [Import]
-        private IClassificationTypeRegistryService classificationRegistry = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal IClassificationTypeRegistryService classificationRegistry = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import]
-        private Logger logger = null;
-        
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
+
         [Import]
-        private ITextDocumentFactoryService textDocumentFactoryService = null;
+        internal ProjectFactory projectFactory = null;
+
+        private readonly Type serviceType = typeof(SyntaxConstructClassifier);
+
+        private readonly IServiceProvider serviceProvider = null;
+        private readonly ClassificationColorManager classificationColorManager = null;
+        private readonly ShellEventListener shellEventListener = null;
+
+        [ImportingConstructor]
+        public SyntaxConstructClassifierProvider([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+                ClassificationColorManager classificationColorManager)
+        {
+            this.serviceProvider = serviceProvider;
+            this.classificationColorManager = classificationColorManager;
+
+            // Receive notification for Visual Studio theme change
+            shellEventListener = new ShellEventListener(this.serviceProvider);
+            shellEventListener.Initialize();
+            shellEventListener.OnThemeChanged += UpdateTheme;
+        }
+
+        private void UpdateTheme(object sender, EventArgs e)
+        {
+            classificationColorManager.UpdateColors();
+        }
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            if (!generalOptions.SyntaxColoringEnabled)
-            {
-                logger.Log(LogType.Information, "Syntax Coloring feature is disabled in General option page.");
-                return null;
-            }
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
+
+            bool includeUnusedDeclarations = generalOptions.UnusedDeclarationsEnabled;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return buffer.Properties.GetOrCreateSingletonProperty(() =>
-                    new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, serviceProvider));
+                return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
+                    () => new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService,
+                                    serviceProvider, projectFactory, includeUnusedDeclarations));
 
             return null;
+        }
+
+        public void SubjectBuffersConnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
+        {
+        }
+
+        public void SubjectBuffersDisconnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
+        {
+            if (reason != ConnectionReason.TextViewLifetime) return;
+
+            IDisposable classifier;
+            foreach (ITextBuffer buffer in subjectBuffers)
+            {
+                if (buffer.Properties.TryGetProperty(serviceType, out classifier))
+                {
+                    bool success = buffer.Properties.RemoveProperty(serviceType);
+                    Debug.Assert(success, "Should be able to remove classifier from the buffer");
+                    classifier.Dispose();
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            shellEventListener.OnThemeChanged -= UpdateTheme;
+            shellEventListener.Dispose();
         }
     }
 }

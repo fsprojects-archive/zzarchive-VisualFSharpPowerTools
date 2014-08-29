@@ -5,20 +5,74 @@ using System.Configuration;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
-using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace FSharpVSPowerTools
 {
+    public interface IGeneralOptionsPage
+    {
+        bool XmlDocEnabled { get; set; }
+
+        bool FormattingEnabled { get; set; }
+
+        bool NavBarEnabled { get; set; }
+
+        bool HighlightUsageEnabled { get; set; }
+
+        bool RenameRefactoringEnabled { get; set; }
+
+        bool DepthColorizerEnabled { get; set; }
+
+        bool NavigateToEnabled { get; set; }
+
+        bool SyntaxColoringEnabled { get; set; }
+
+        bool InterfaceImplementationEnabled { get; set; }
+
+        bool FolderOrganizationEnabled { get; set; }
+
+        bool FindAllReferencesEnabled { get; set; }
+
+        bool GenerateRecordStubEnabled { get; set; }
+
+        bool UnionPatternMatchCaseGenerationEnabled { get; set; }
+
+        bool ResolveUnopenedNamespacesEnabled { get; set; }
+
+        bool UnusedDeclarationsEnabled { get; set; }
+    }
+
     [ClassInterface(ClassInterfaceType.AutoDual)]
     [Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")]
-    public class GeneralOptionsPage : DialogPage
+    public class GeneralOptionsPage : DialogPage, IGeneralOptionsPage
     {   
         private GeneralOptionsControl _optionsControl;
         private const string navBarConfig = "fsharp-navigationbar-enabled";
         private bool _navBarEnabledInAppConfig;
 
-        // I've tried using [Logger] here, but doesn't work. Anyone knows why? Feel free to fix!
-        private Logger logger = new Logger(ServiceProvider.GlobalProvider);
+        private readonly Logger logger;
+
+        public GeneralOptionsPage()
+        {
+            var componentModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
+            logger = componentModel.DefaultExportProvider.GetExportedValue<Logger>();
+
+            XmlDocEnabled = true;
+            FormattingEnabled = true;
+            _navBarEnabledInAppConfig = GetNavigationBarConfig();
+            HighlightUsageEnabled = true;
+            RenameRefactoringEnabled = true;
+            DepthColorizerEnabled = false;
+            NavigateToEnabled = true;
+            SyntaxColoringEnabled = true;
+            InterfaceImplementationEnabled = true;
+            FolderOrganizationEnabled = false;
+            FindAllReferencesEnabled = true;
+            GenerateRecordStubEnabled = true;
+            UnionPatternMatchCaseGenerationEnabled = true;
+            ResolveUnopenedNamespacesEnabled = true;
+            UnusedDeclarationsEnabled = true;
+        }
 
         private bool GetNavigationBarConfig()
         {
@@ -65,6 +119,7 @@ namespace FSharpVSPowerTools
                     config.AppSettings.Settings.Remove(navBarConfig);
                     config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
                     config.Save(ConfigurationSaveMode.Minimal);
+                    
                     return true;
                 }
                 else
@@ -107,36 +162,36 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool SyntaxColoringEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool InterfaceImplementationEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool FolderOrganizationEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool FindAllReferencesEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool GenerateRecordStubEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool UnionPatternMatchCaseGenerationEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool ResolveUnopenedNamespacesEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool UnusedDeclarationsEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
             get
             {
-                _optionsControl = new GeneralOptionsControl();
-                _optionsControl.OptionsPage = this;
-                _optionsControl.XmlDocEnabled = XmlDocEnabled;
-                _optionsControl.FormattingEnabled = FormattingEnabled;
-                _optionsControl.NavBarEnabled = NavBarEnabled && _navBarEnabledInAppConfig;
-                _optionsControl.HighlightUsageEnabled = HighlightUsageEnabled;
-                _optionsControl.RenameRefactoringEnabled = RenameRefactoringEnabled;
-                _optionsControl.DepthColorizerEnabled = DepthColorizerEnabled;
-                _optionsControl.NavigateToEnabled = NavigateToEnabled;
-                _optionsControl.SyntaxColoringEnabled = SyntaxColoringEnabled;
-
+                _optionsControl = new GeneralOptionsControl(this);
                 return _optionsControl;
             }
-        }
-        public GeneralOptionsPage()
-        {
-            XmlDocEnabled = true;
-            FormattingEnabled = true;
-            _navBarEnabledInAppConfig = GetNavigationBarConfig();
-            HighlightUsageEnabled = true;
-            RenameRefactoringEnabled = true;
-            DepthColorizerEnabled = false;
-            NavigateToEnabled = true;
-            SyntaxColoringEnabled = true;
         }
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
@@ -159,6 +214,13 @@ namespace FSharpVSPowerTools
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;
                 SyntaxColoringEnabled = _optionsControl.SyntaxColoringEnabled;
+                InterfaceImplementationEnabled = _optionsControl.InterfaceImplementationEnabled;
+                FolderOrganizationEnabled = _optionsControl.FolderOrganizationEnabled;
+                FindAllReferencesEnabled = _optionsControl.FindAllReferencesEnabled;
+                GenerateRecordStubEnabled = _optionsControl.GenerateRecordStubEnabled;
+                UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
+                ResolveUnopenedNamespacesEnabled = _optionsControl.ResolveUnopenedNamespacesEnabled;
+                UnusedDeclarationsEnabled = _optionsControl.UnusedDeclarationsEnabled;
             }
 
             base.OnApply(e);

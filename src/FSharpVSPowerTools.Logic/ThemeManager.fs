@@ -1,14 +1,11 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
-open System.Diagnostics
 open System.ComponentModel.Composition
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.Win32
-open System.Windows.Media
 
 type VisualStudioTheme =
     | Unknown = 0
@@ -30,17 +27,16 @@ type ThemeManager [<ImportingConstructor>]
         let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
         let keyName = 
             match VisualStudioVersion.fromDTEVersion dte.Version with
-            | VisualStudioVersion.VS2012 ->
-                String.Format(@"Software\Microsoft\VisualStudio\11.0\{0}", categoryName)
-            | VisualStudioVersion.VS2013 ->
-                String.Format(@"Software\Microsoft\VisualStudio\12.0\{0}", categoryName)
+            | VisualStudioVersion.VS2012
+            | VisualStudioVersion.VS2013
+            | VisualStudioVersion.VS14 as version ->
+                Some (String.Format(@"Software\Microsoft\VisualStudio\{0}.0\{1}", VisualStudioVersion.toString version, categoryName))
             | v ->
-                Debug.WriteLine("Unknown Visual Studio version detected while updating theme colors: {0}", v)
-                null
-        use key = Registry.CurrentUser.OpenSubKey(keyName)
-        match key with
-        | null -> None
-        | _ -> Some (string <| key.GetValue(themePropertyName, String.Empty))
+                debug "Unknown Visual Studio version detected while updating theme colors: %O" v
+                None
+        keyName |> Option.map (fun keyName ->
+            use key = Registry.CurrentUser.OpenSubKey(keyName)
+            string (key.GetValue(themePropertyName, String.Empty)))
 
     member x.GetCurrentTheme() =
         match getThemeId() with

@@ -9,25 +9,18 @@
 
 open System
 open System.Diagnostics
-open System.ComponentModel.Composition
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Editor
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
-open Microsoft.VisualStudio.Utilities
-open FSharpVSPowerTools.Core
+open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
-type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: string, fsharpLanguageService: VSLanguageService) as self =
+type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: string, languageService: VSLanguageService) as self =
     let mutable passThruToEditor: IOleCommandTarget = null
-    do
-        if ErrorHandler.Succeeded(textView.AddCommandFilter(self, &passThruToEditor)) then
-            () // ok
-        else
-            if System.Diagnostics.Debugger.IsAttached then
-                System.Diagnostics.Debugger.Break()
+    do if not (ErrorHandler.Succeeded(textView.AddCommandFilter(self, &passThruToEditor))) && Debugger.IsAttached then 
+           Debugger.Break()
 
     /// Get the char for a <see cref="VSConstants.VSStd2KCmdID.TYPECHAR"/> command.
     let getTypedChar(pvaIn: IntPtr) =
@@ -35,23 +28,24 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
-            let hresult =
-                if pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
-                    match getTypedChar pvaIn with
-                    | ('/' | '<') as lastChar ->
-                        let curLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().GetText()
-                        let indexOfCaret = wpfTextView.Caret.Position.BufferPosition.Position 
-                                           - wpfTextView.Caret.Position.BufferPosition.GetContainingLine().Start.Position 
-                        match XmlDocComment.isBlank (curLine + (string lastChar)) with
-                        | Some i when i = indexOfCaret ->
-                            let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 // XmlDocable line #1 are 1-based, editor is 0-based
-                            let xmlDocables = 
-                                XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, fsharpLanguageService.Checker)
-                                |> Async.RunSynchronously
+            if pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
+                match getTypedChar pvaIn with
+                | ('/' | '<') as lastChar ->
+                    let indexOfCaret = wpfTextView.Caret.Position.BufferPosition.Position 
+                                        - wpfTextView.Caret.Position.BufferPosition.GetContainingLine().Start.Position 
+                        
+                    let curLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().GetText()
+                    let lineWithLastCharInserted = curLine.Insert (indexOfCaret, string lastChar)
+
+                    match XmlDocComment.isBlank lineWithLastCharInserted with
+                    | Some i when i = indexOfCaret ->
+                        async {
+                            // XmlDocable line #1 are 1-based, editor is 0-based
+                            let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
+                            let! xmlDocables = XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, languageService.Checker)
                             let xmlDocablesBelowThisLine = 
-                                xmlDocables 
-                                |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) // +1 because looking below current line for e.g. a 'member'
-                            let hr = passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) // parse it before we pass thru to editor, as we want to notice if no XmlDoc yet
+                                // +1 because looking below current line for e.g. a 'member'
+                                xmlDocables |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) 
                             match xmlDocablesBelowThisLine with
                             | [] -> ()
                             | XmlDocable(_line,indent,paramNames)::_t ->
@@ -70,14 +64,12 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                                 let middleSummaryLine = wpfTextView.TextSnapshot.GetLineFromLineNumber(lastLine.LineNumber - 1 - paramNames.Length)
                                 let _newCaret = wpfTextView.Caret.MoveTo(wpfTextView.GetTextViewLineContainingBufferPosition(middleSummaryLine.Start))
                                 ()
-                            hr
-                        | _ -> passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
-                    | _ -> passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
-                else
-                    passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
+                        } 
+                        |> Async.StartImmediateSafe
+                    | _ -> ()
+                | _ -> ()
+            passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
 
-            hresult
-
-        member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
+        member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD [], pCmdText: IntPtr) =
             passThruToEditor.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText)
 

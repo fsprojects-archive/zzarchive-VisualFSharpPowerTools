@@ -1,66 +1,79 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
-open System
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Shell
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Editor
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.VisualStudio.TextManager.Interop
-open FSharp.CompilerBinding
 open FSharpVSPowerTools
+open FSharp.ViewModule.Progress
+open Microsoft.VisualStudio.Editor
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.TextManager.Interop
+open System.IO
+open Microsoft.FSharp.Compiler.SourceCodeServices
+
+type FilePath = string
+
+[<RequireQualifiedAccess; NoComparison>]
+type SymbolDeclarationLocation = 
+    | File
+    | Projects of IProjectProvider list // Source file where a symbol is declared may be included into several projects
+
+and IProjectProvider =
+    abstract IsForStandaloneScript: bool
+    abstract ProjectFileName: string
+    abstract TargetFramework: FSharpTargetFramework
+    abstract CompilerOptions: string []
+    abstract SourceFiles: string []
+    abstract FullOutputFilePath: string
+    abstract GetReferencedProjects: unit -> IProjectProvider list
+    abstract GetAllReferencedProjectFileNames: unit -> string list
+    abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
 
 [<Export>]
 type VSLanguageService
     [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider, 
-     editorFactory: IVsEditorAdaptersFactoryService,
-     fsharpLanguageService: FSharpLanguageService) =
+    (editorFactory: IVsEditorAdaptersFactoryService, 
+     fsharpLanguageService: FSharpLanguageService,
+     openDocumentsTracker: OpenDocumentsTracker) =
 
-    let mutable instance = LanguageService (fun _ -> ())
-    
-    let invalidateProject (projectItem: EnvDTE.ProjectItem) =
-        async {
-            let project = projectItem.ContainingProject
-            if box project <> null && isFSharpProject project then
-                let p = ProjectProvider.createForProject project
-                debug "[Language Service] InteractiveChecker.InvalidateConfiguration for %s" p.ProjectFileName
-                let! opts = instance.GetCheckerOptions (null, p.ProjectFileName, null, p.SourceFiles, 
-                                                       p.CompilerOptions, p.TargetFramework)
-                return instance.InvalidateConfiguration(opts)
-        }
-        |> Async.StartImmediate
+    let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, Interop.SDTE>()
-    let events = dte.Events :?> EnvDTE80.Events2
-    let projectItemsEvents = events.ProjectItemsEvents
-    do projectItemsEvents.add_ItemAdded(fun p -> invalidateProject p)
-    do projectItemsEvents.add_ItemRemoved(fun p -> invalidateProject p)
-    do projectItemsEvents.add_ItemRenamed(fun p _ -> invalidateProject p)
-    do events.SolutionEvents.add_AfterClosing (fun _ -> instance <- LanguageService (fun _ -> ()))
+    let mutable skipLexCache = false
 
     let buildQueryLexState (textBuffer: ITextBuffer) source defines line =
         try
-            let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
-            let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
-            fsharpLanguageService.LexStateOfColorState(colorState)
+            if skipLexCache then
+                Lexer.queryLexState source defines line
+            else
+                let vsColorState = editorFactory.GetBufferAdapter(textBuffer) :?> IVsTextColorState
+                let colorState = fsharpLanguageService.GetColorStateAtStartOfLine(vsColorState, line)
+                fsharpLanguageService.LexStateOfColorState(colorState)
         with e ->
             debug "[Language Service] %O exception occurs while querying lexing states." e
             Lexer.queryLexState source defines line
-    
-    member x.TryGetLocation (symbol: FSharpSymbol) =
-        Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation
 
+    let filterSymbolUsesDuplicates (uses: FSharpSymbolUse[]) =
+        uses
+        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
+        |> Seq.groupBy (fst >> Path.GetFullPathSafe)
+        |> Seq.map (fun (_, symbolUses) -> 
+            symbolUses 
+            |> Seq.map snd 
+            |> Seq.distinctBy (fun s -> s.RangeAlternate))
+        |> Seq.concat
+        |> Seq.toArray
+        
     member x.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
         let lineStr = point.GetContainingLine().GetText()                
         let args = projectProvider.CompilerOptions
+        let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
+            let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+            let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+            SnapshotSpan(snapshot, startPos, endPos - startPos)
                                 
         Lexer.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
-        |> Option.map (fun symbol -> point.FromRange symbol.Range, symbol)
+        |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
 
     member x.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
         let snapshot = textBuffer.CurrentSnapshot
@@ -69,13 +82,10 @@ type VSLanguageService
         Lexer.tokenizeLine source args line lineStr (buildQueryLexState textBuffer)
 
     member x.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
-       instance.ParseFileInProject(
-            projectProvider.ProjectFileName,
-            currentFile,
-            source,
-            projectProvider.SourceFiles,
-            projectProvider.CompilerOptions,
-            projectProvider.TargetFramework) 
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            return! instance.ParseFileInProject(opts, currentFile, source) 
+        }
 
     member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
         instance.ProcessParseTrees(
@@ -87,40 +97,39 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member x.FindUsages (word: SnapshotSpan, currentFile: string, projectProvider: IProjectProvider) =
+    member x.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress : OperationState -> unit) =
         async {
-            try 
+            try                 
                 let (_, _, endLine, endCol) = word.ToRange()
-                let projectFileName = projectProvider.ProjectFileName
                 let source = word.Snapshot.GetText()
                 let currentLine = word.Start.GetContainingLine().GetText()
-                let framework = projectProvider.TargetFramework
-                let args = projectProvider.CompilerOptions
-                let sourceFiles = projectProvider.SourceFiles
+                let framework = currentProject.TargetFramework
+                let args = currentProject.CompilerOptions
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
-                return! 
-                    instance.GetUsesOfSymbolInProjectAtLocationInFile
-                        (projectFileName, currentFile, source, sourceFiles, endLine, endCol, currentLine, 
-                        args, framework, buildQueryLexState word.Snapshot.TextBuffer)
-            with e ->
-                debug "[Language Service] %O exception occurs while updating." e
-                return None }
+                reportProgress progress (Reporting Resource.findSymbolUseCurrentProject)
+                let! currentProjectOptions = currentProject.GetProjectCheckerOptions instance
+                reportProgress progress (Reporting Resource.findSymbolUseOtherProjects)
+                let! projectsToCheckOptions = 
+                    projectsToCheck 
+                    |> List.toArray
+                    |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
 
-    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) =
-        async {
-            try 
-                let (_, _, endLine, endCol) = word.ToRange()
-                let framework = projectProvider.TargetFramework
-                let args = projectProvider.CompilerOptions
-            
-                debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
-                      (word.GetText()) endLine endCol framework (String.concat " " args)
-            
-                let! res = x.GetFSharpSymbolUse (word, sym, currentFile, projectProvider, stale)
-                return res |> Option.map (fun (_, checkResults) -> x.FindUsagesInFile (word, sym, checkResults))
+                reportProgress progress (Reporting Resource.findSymbolUseAllProjects)
+
+                let newReportProgress projectName index length = 
+                    reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) length, index, length))
+                
+                let! res =
+                    instance.GetUsesOfSymbolInProjectAtLocationInFile
+                        (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 
+                         currentLine, args, buildQueryLexState word.Snapshot.TextBuffer, Some newReportProgress)
+                return 
+                    res 
+                    |> Option.map (fun (symbol, lastIdent, refs) -> 
+                        symbol, lastIdent, filterSymbolUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
@@ -132,7 +141,8 @@ type VSLanguageService
                 let currentLine = word.Start.GetContainingLine().GetText()
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
-                return! fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
+                let! res = fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
+                return res |> Option.map (fun (symbol, ident, refs) -> symbol, ident, filterSymbolUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while finding usages in file." e
                 return None
@@ -141,59 +151,88 @@ type VSLanguageService
     member x.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
             let (_, _, endLine, _) = word.ToRange()
-            let projectFileName = projectProvider.ProjectFileName
             let source = word.Snapshot.GetText()
             let currentLine = word.Start.GetContainingLine().GetText()
-            let framework = projectProvider.TargetFramework
-            let args = projectProvider.CompilerOptions
-            let sourceFiles = projectProvider.SourceFiles
-            let! results = instance.ParseAndCheckFileInProject(   
-                               projectFileName, currentFile, source, sourceFiles, args, framework, stale)
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            let! results = instance.ParseAndCheckFileInProject(opts, currentFile, source, stale)
             let! symbol = results.GetSymbolUseAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
             return symbol |> Option.map (fun s -> s, results)
         }
 
-    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider, stale) = 
+    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
+                                           checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
+
         async {
-            let projectFileName = projectProvider.ProjectFileName
-            let source = snapshot.GetText()
-            let framework = projectProvider.TargetFramework
-            let args = projectProvider.CompilerOptions
-            let sourceFiles = 
-                match projectProvider.SourceFiles with
-                // If there is no source file, use currentFile as an independent script
-                | [||] -> [| currentFile |] 
-                | files -> files
-
+            let source = snapshot.GetText() 
+            let args = project.CompilerOptions
+            let getLineStr line =
+                let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+                let lineNumber = line - lineStart
+                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
             let lexer = 
-                let getLineStr line =
-                    let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-                    let lineNumber = line - lineStart
-                    snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-
-                { new ILexer with
-                    member x.GetSymbolAtLocation line col =
-                        Lexer.getSymbol source line col (getLineStr line) args (buildQueryLexState snapshot.TextBuffer) 
+                { new LexerBase() with
+                    member x.GetSymbolFromTokensAtLocation (tokens, line, col) =
+                        Lexer.getSymbolFromTokens tokens line col (getLineStr line)
                     member x.TokenizeLine line =
                         Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
-            let! symbolUses = instance.GetAllUsesOfAllSymbolsInFile(
-                                projectFileName, currentFile, source, sourceFiles, args, framework, stale)
-            return symbolUses, lexer
+            let! opts = project.GetProjectCheckerOptions instance
+            
+            let getSymbolDeclProjects symbol =
+                async {
+                    let projects =
+                        match getSymbolDeclLocation symbol with
+                        | Some SymbolDeclarationLocation.File -> Some [project]
+                        | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
+                        | None -> None
+
+                    match projects with
+                    | Some projects ->
+                        return! 
+                            projects
+                            |> List.toArray
+                            |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
+                            |> Async.map Some
+                    | None -> return None
+                }
+
+            let sourceLines = snapshot.Lines |> Seq.map (fun line -> line.GetText()) |> Seq.toArray
+
+            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(
+                                                opts, currentFile, sourceLines, stale, checkForUnusedDeclarations,
+                                                getSymbolDeclProjects, lexer)
+            return allSymbolsUses, lexer
         }
 
-    member x.ParseFileInProject (snapshot: ITextSnapshot, currentFile: string, projectProvider: IProjectProvider) = 
+     member x.GetAllEntities (fileName, source, project: IProjectProvider) =
+        async { 
+            let! opts = project.GetProjectCheckerOptions instance
+            try 
+                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
+            with e ->
+                debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
+                return None
+        }
+
+    member x.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =
         async {
-            let projectFileName = projectProvider.ProjectFileName
-            let source = snapshot.GetText()
-            let framework = projectProvider.TargetFramework
-            let args = projectProvider.CompilerOptions
-            let sourceFiles = 
-                match projectProvider.SourceFiles with
-                | [||] -> [| currentFile |] 
-                | files -> files
-
-            return! instance.ParseFileInProject(projectFileName, currentFile, source, sourceFiles, args, framework)
+            let! opts = project.GetProjectCheckerOptions instance
+            return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)
         }
 
+    member x.InvalidateProject (projectProvider: IProjectProvider) = 
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions(instance) 
+            return instance.Checker.InvalidateConfiguration opts
+        }
+
+    member x.ClearCaches() = 
+        debug "[Language Service] Clearing FCS caches."
+        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+    
     member x.Checker = instance.Checker
+
+    /// This value is used for testing when VS lex cache isn't available
+    member internal x.SkipLexCache 
+        with get () = skipLexCache
+        and set v = skipLexCache <- v

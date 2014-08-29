@@ -19,18 +19,14 @@ using Microsoft.VisualStudio;
 
 namespace Microsoft.VsSDK.IntegrationTestLibrary
 {
-    /// <summary>
-    /// </summary>
-    public class TestUtils
+    public static class TestUtils
     {
 
-        #region Methods: Handling embedded resources
         /// <summary>
         /// Gets the embedded file identified by the resource name, and converts the
         /// file into a string.
         /// </summary>
         /// <param name="resourceName">In VS, is DefaultNamespace.FileName?</param>
-        /// <returns></returns>
         public static string GetEmbeddedStringResource(Assembly assembly, string resourceName)
         {
             string result = null;
@@ -57,13 +53,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
 
             return result;
         }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="embeddedResourceName"></param>
-        /// <param name="baseFileName"></param>
-        /// <param name="fileExtension"></param>
-        /// <returns></returns>
+
         public static void WriteEmbeddedResourceToFile(Assembly assembly, string embeddedResourceName, string fileName)
         {
             // Get file contents
@@ -122,9 +112,6 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
             }
         }
 
-        #endregion
-
-        #region Methods: Handling temporary files and directories
         /// <summary>
         /// Returns the first available file name on the form
         ///   [baseFileName]i.[extension]
@@ -133,7 +120,6 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
         /// that file as occupied.
         /// </summary>
         /// <param name="directory">Directory that the file should live in.</param>
-        /// <param name="baseFileName"></param>
         /// <param name="extension">may be null, in which case the .[extension] part
         /// is not added.</param>
         /// <returns>Full file name.</returns>
@@ -156,7 +142,6 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
         /// in the given directory. Also creates the directory to mark it as occupied.
         /// </summary>
         /// <param name="directory">Directory that the file should live in.</param>
-        /// <param name="baseDirectoryName"></param>
         /// <returns>Full directory name.</returns>
         public static string GetNewDirectoryName(string directory, string baseDirectoryName)
         {
@@ -201,14 +186,12 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
 
             return fullFileName;
         }
-        #endregion
 
-        #region Methods: Handling solutions
         /// <summary>
         /// Closes the currently open solution (if any), and creates a new solution with the given name.
         /// </summary>
         /// <param name="solutionName">Name of new solution.</param>
-        public void CreateEmptySolution(string directory, string solutionName)
+        public static void CreateEmptySolution(string directory, string solutionName)
         {
             CloseCurrentSolution(__VSSLNSAVEOPTIONS.SLNSAVEOPT_NoSave);
 
@@ -222,7 +205,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
             Assert.AreEqual(solutionName + ".sln", Path.GetFileName(dte.Solution.FileName), "Newly created solution has wrong Filename");
         }
 
-        public void CloseCurrentSolution(__VSSLNSAVEOPTIONS saveoptions)
+        public static void CloseCurrentSolution(__VSSLNSAVEOPTIONS saveoptions)
         {
             // Get solution service
             IVsSolution solutionService = (IVsSolution)VsIdeTestHostContext.ServiceProvider.GetService(typeof(IVsSolution));
@@ -231,7 +214,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
             solutionService.CloseSolutionElement((uint)saveoptions, null, 0);
         }
 
-        public void ForceSaveSolution()
+        public static void ForceSaveSolution()
         {
             // Get solution service
             IVsSolution solutionService = (IVsSolution)VsIdeTestHostContext.ServiceProvider.GetService(typeof(IVsSolution));
@@ -244,7 +227,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
         /// Get current number of open project in solution
         /// </summary>
         /// <returns></returns>
-        public int ProjectCount()
+        public static int ProjectCount()
         {
             // Get solution service
             IVsSolution solutionService = (IVsSolution)VsIdeTestHostContext.ServiceProvider.GetService(typeof(IVsSolution));
@@ -252,9 +235,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
             solutionService.GetProperty((int)__VSPROPID.VSPROPID_ProjectCount, out projectCount);
             return (int)projectCount;
         }
-        #endregion
 
-        #region Methods: Handling projects
         /// <summary>
         /// Creates a project.
         /// </summary>
@@ -262,7 +243,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
         /// <param name="templateName">Name of project template to use</param>
         /// <param name="language">language</param>
         /// <returns>New project.</returns>
-        public void CreateProjectFromTemplate(string projectName, string templateName, string language, bool exclusive)
+        public static void CreateProjectFromTemplate(string projectName, string templateName, string language, bool exclusive)
         {
             DTE dte = (DTE)VsIdeTestHostContext.ServiceProvider.GetService(typeof(DTE));
 
@@ -275,18 +256,12 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
 
             dte.Solution.AddFromTemplate(projectTemplate, projectDirectory, projectName, false);
         }
-        #endregion
 
-        #region Methods: Handling project items
         /// <summary>
         /// Create a new item in the project
         /// </summary>
         /// <param name="parent">the parent collection for the new item</param>
-        /// <param name="templateName"></param>
-        /// <param name="language"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public ProjectItem AddNewItemFromVsTemplate(ProjectItems parent, string templateName, string language, string name)
+        public static ProjectItem AddNewItemFromVsTemplate(ProjectItems parent, string templateName, string language, string name)
         {
             if (parent == null)
                 throw new ArgumentException("project");
@@ -308,7 +283,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
         /// Save an open document.
         /// </summary>
         /// <param name="documentMoniker">for filebased documents this is the full path to the document</param>
-        public void SaveDocument(string documentMoniker)
+        public static void SaveDocument(string documentMoniker)
         {
             // Get document cookie and hierarchy for the file
             IVsRunningDocumentTable runningDocumentTableService = (IVsRunningDocumentTable)VsIdeTestHostContext.ServiceProvider.GetService(typeof(IVsRunningDocumentTable));
@@ -329,7 +304,7 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
             solutionService.SaveSolutionElement((uint)__VSSLNSAVEOPTIONS.SLNSAVEOPT_ForceSave, hierarchy, docCookie);
         }
 
-        public void CloseInEditorWithoutSaving(string fullFileName)
+        public static void CloseInEditorWithoutSaving(string fullFileName)
         {
             // Get the RDT service
             IVsRunningDocumentTable runningDocumentTableService = (IVsRunningDocumentTable)VsIdeTestHostContext.ServiceProvider.GetService(typeof(IVsRunningDocumentTable));
@@ -358,10 +333,8 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
                 hierarchy,
                 docCookie);
         }
-        #endregion
 
-        #region Methods: Handling Toolwindows
-        public bool CanFindToolwindow(Guid persistenceGuid)
+        public static bool CanFindToolwindow(Guid persistenceGuid)
         {
             IVsUIShell uiShellService = VsIdeTestHostContext.ServiceProvider.GetService(typeof(SVsUIShell)) as IVsUIShell;
             Assert.IsNotNull(uiShellService);
@@ -371,10 +344,8 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
 
             return (windowFrame != null);
         }
-        #endregion
 
-        #region Methods: Loading packages
-        public IVsPackage LoadPackage(Guid packageGuid)
+        public static IVsPackage LoadPackage(Guid packageGuid)
         {
             IVsShell shellService = (IVsShell)VsIdeTestHostContext.ServiceProvider.GetService(typeof(SVsShell));
             IVsPackage package;
@@ -382,12 +353,11 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
             Assert.IsNotNull(package, "Failed to load package");
             return package;
         }
-        #endregion
 
         /// <summary>
         /// Executes a Command (menu item) in the given context
         /// </summary>
-        public void ExecuteCommand(CommandID cmd)
+        public static void ExecuteCommand(CommandID cmd)
         {
             object Customin = null;
             object Customout = null;
@@ -396,6 +366,5 @@ namespace Microsoft.VsSDK.IntegrationTestLibrary
             DTE dte = VsIdeTestHostContext.Dte;
             dte.Commands.Raise(guidString, cmdId, ref Customin, ref Customout);
         }
-
     }
 }

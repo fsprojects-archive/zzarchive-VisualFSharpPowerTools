@@ -1,13 +1,10 @@
 ﻿namespace FSharpVSPowerTools.DepthColorizer
 
 open System
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Formatting
-open Microsoft.VisualStudio.Utilities
-open System.ComponentModel.Composition
 open System.Windows.Media
 open System.Windows
 open System.Windows.Controls
@@ -36,7 +33,7 @@ type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self =
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works
 type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<DepthRegionTag>, serviceProvider: System.IServiceProvider) = 
-    let LayerName = "FSharpDepthFullLineAdornment" // must match the Name attribute Export-ed, further below
+    let LayerName = Constants.depthAdornmentLayerName // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
     
     // Gets a set of default colors to use depending on whether a light or dark theme is being used
@@ -112,7 +109,7 @@ type FullLineAdornmentManager(view: IWpfTextView, tagAggregator: ITagAggregator<
     // was once useful for debugging
     let trace s = 
         let ticks = System.DateTime.Now.Ticks
-        System.Diagnostics.Debug.WriteLine("{0}:{1}", ticks, s)
+        debug "%O:%O" ticks s
         ()
     
     let mutable pixelsPerChar = 7.0 // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.

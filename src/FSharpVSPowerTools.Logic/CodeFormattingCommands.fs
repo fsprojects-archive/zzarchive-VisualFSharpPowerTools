@@ -2,13 +2,22 @@
 
 open System
 open System.IO
-open System.Windows
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Operations
+open Microsoft.VisualStudio.Text.Formatting
+open Microsoft.VisualStudio.Shell.Interop
 open Fantomas.FormatConfig
+open Fantomas.CodeFormatter
 open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
+
+[<NoComparison>]
+type FormattingResult = {
+    OldTextStartIndex: int
+    OldTextLength: int
+    NewText: string
+}
 
 [<AbstractClass>]
 type CommandBase() =
@@ -18,16 +27,14 @@ type CommandBase() =
     abstract Execute: unit -> unit
 
 [<AbstractClass>]
-type FormatCommand(getConfig: Func<FormatConfig>) as self =
+type FormatCommand(getConfig: Func<FormatConfig>) =
     inherit CommandBase()
 
     // Rebind to this method call as it's more F#-friendly
     let getConfig() = getConfig.Invoke()
 
-    let tryCreateTextUndoTransaction() =
-        let textBufferUndoManager =
-            self.TextBuffer
-            |> self.Services.TextBufferUndoManagerProvider.GetTextBufferUndoManager
+    member x.TryCreateTextUndoTransaction() =
+        let textBufferUndoManager = x.Services.TextBufferUndoManagerProvider.GetTextBufferUndoManager(x.TextBuffer)
 
         // It is possible for an ITextBuffer to have a null ITextUndoManager.  This will happen in 
         // cases like the differencing viewer.  If VS doesn't consider the document to be editable then 
@@ -38,7 +45,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) as self =
 
     member x.ExecuteFormat() =
         let editorOperations = x.Services.EditorOperationsFactoryService.GetEditorOperations(x.TextView)
-        use textUndoTransaction = tryCreateTextUndoTransaction()
+        use textUndoTransaction = x.TryCreateTextUndoTransaction()
         // Handle the special case of a null ITextUndoTransaction up here because it simplifies
         // the rest of the method.  The implementation of operations such as 
         // AddBeforeTextBufferUndoChangePrimitive will directly access the ITextUndoHistory of 
@@ -61,34 +68,36 @@ type FormatCommand(getConfig: Func<FormatConfig>) as self =
                 textUndoTransaction.Cancel()
     
     member x.ExecuteFormatCore() =
-        let text = x.TextView.TextSnapshot.GetText()
-        let buffer = x.TextView.TextBuffer
-
-        let source = FormatCommand.GetAllText(buffer)
-        let isSignatureFile = x.IsSignatureFile(buffer)
+        let source = x.TextBuffer.CurrentSnapshot.GetText()
+        let isSignatureFile = x.IsSignatureFile(x.TextBuffer)
 
         let config = getConfig()
+        let statusBar = x.Services.ServiceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
         try
-            let formatted = x.GetFormatted(isSignatureFile, source, config)
+            let formattingResult = x.GetFormatted(isSignatureFile, source, config)
 
-            use edit = buffer.CreateEdit()
-            let setCaretPosition = x.GetNewCaretPositionSetter()
+            if isValidFSharpCode isSignatureFile (formattingResult.NewText) then
+                use edit = x.TextBuffer.CreateEdit()
+                let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
 
-            edit.Replace(0, text.Length, formatted) |> ignore
-            edit.Apply() |> ignore
-            setCaretPosition()
-            true
+                edit.Replace(formattingResult.OldTextStartIndex,
+                             formattingResult.OldTextLength,
+                             formattingResult.NewText) |> ignore
+                edit.Apply() |> ignore
+
+                x.SetNewCaretPosition(caretPos, scrollBarPos, currentSnapshot)
+                true
+            else
+                statusBar.SetText(Resource.formattingValidationMessage) |> ignore 
+                false
         with
-            | :? Fantomas.FormatConfig.FormatException as ex ->
-                msgboxErr ex.Message
-                false
-            | ex ->
-                msgboxErr (Resource.formattingErrorMessage + ex.Message)
-                false
-
-    abstract GetFormatted: isSignatureFile: bool * source: string * config: Fantomas.FormatConfig.FormatConfig -> string
-    abstract GetNewCaretPositionSetter: unit -> (unit -> unit)
+        | :? FormatException as ex ->
+            statusBar.SetText(ex.Message) |> ignore 
+            false
+        | ex ->
+            statusBar.SetText(sprintf "%s: %O" Resource.formattingErrorMessage ex) |> ignore
+            false
 
     member x.IsSignatureFile(buffer: ITextBuffer) =
         match x.Services.TextDocumentFactoryService.TryGetTextDocument(buffer) with
@@ -102,5 +111,17 @@ type FormatCommand(getConfig: Func<FormatConfig>) as self =
             // a signature file
             false
 
-    static member GetAllText(buffer: ITextBuffer) =
-        buffer.CurrentSnapshot.GetText()
+    member x.TakeCurrentSnapshot() =
+        let caretPos = x.TextView.Caret.Position.BufferPosition
+        let originalSnapshot = x.TextBuffer.CurrentSnapshot
+        // Get start line of scroll bar
+        let scrollBarLine = x.TextView.TextViewLines |> Seq.tryFind (fun l -> l.VisibilityState <> VisibilityState.Hidden)
+        let scrollBarPos =
+            match scrollBarLine with
+            | None -> 0
+            | Some scrollBarLine -> originalSnapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
+        (caretPos, scrollBarPos, originalSnapshot)
+
+    abstract GetFormatted: isSignatureFile: bool * source: string * config: FormatConfig -> FormattingResult
+    abstract SetNewCaretPosition: caretPos: SnapshotPoint * scrollBarPos: int * originalSnapshot: ITextSnapshot -> unit
+

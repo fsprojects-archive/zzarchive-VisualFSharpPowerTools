@@ -12,9 +12,7 @@ open System.IO
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharp.CompilerBinding
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tutorial.fs")
 let source = File.ReadAllText(fileName)
@@ -32,7 +30,8 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
 let framework = FSharpTargetFramework.NET_4_5
-let vsLanguageService = new FSharp.CompilerBinding.LanguageService(fun _ -> ())
+let languageService = new LanguageService(fun _ -> ())
+let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, [||])
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
 
@@ -68,10 +67,8 @@ let allUsesOfAllSymbols =
 //allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
 
-let getUsesOfSymbol line col lineStr =
-    vsLanguageService.GetUsesOfSymbolAtLocationInFile(projectFileName, fileName, source, sourceFiles, 
-                                                      line, col, lineStr, args, framework, AllowStaleResults.No, 
-                                                      Lexer.queryLexState)
+let getUsesOfSymbol line col lineStr = 
+    languageService.GetUsesOfSymbolAtLocationInFile(opts, fileName, source, line, col, lineStr, args, AllowStaleResults.No, Lexer.queryLexState)
     |> Async.RunSynchronously
     |> Option.map (fun (_, _, symbolUses) -> 
         symbolUses |> Array.map (fun x -> 
@@ -155,13 +152,27 @@ let ``should find usages of operators containing dots``() =
         [ (701, 10, 13); (702, 6, 9); (702, 12, 15); (704, 14, 17); (704, 21, 24); (704, 27, 30) ]
 
 [<Test>]
+let ``should find usages of operators containing 'at' symbol``() =
+    checkSymbolUsage
+        887 10 "    let (@) x y = ()"
+        [ (887, 9, 10); (888, 14, 15) ]
+
+    checkSymbolUsage
+        889 10 "    let (@@) x y = ()"
+        [ (889, 9, 11); (890, 14, 16) ]
+
+    checkSymbolUsage
+        891 10 "    let (@.@) x y = ()"
+        [ (891, 9, 12); (892, 14, 17) ]
+
+[<Test>]
 let ``should find fully qualified operator``() =
     checkSymbolUsage 
         728 9 "    M.N.(+.) 1 2" 
         [ (726, 17, 19); (728, 4, 11) ]
 
 [<Test>]
-let ``should find usages of symbols if where are operators containing dots on the same line``() =
+let ``should find usages of symbols if there are operators containing dots on the same line``() =
     let line = "    let x = 1 >>. ws >>. 2 >>. ws"
     let usages = [ (703, 8, 10); (704, 18, 20); (704, 31, 33) ]
     checkSymbolUsage 704 18 line usages
@@ -256,20 +267,76 @@ let ``should find usages of property initializers``() =
         [ (759, 19, 23)
           (761, 14, 18) ]
 
-[<Test; Ignore "FCS 0.0.36 does not support this">]
+[<Test>]
 let ``should find usages of properties with explicit getters and setters``() =
-    checkSymbolUsage 766 17 "        member x.Name"
-        [ (766, 17, 21)]
+    checkSymbolUsage 765 17 "        member x.Name with get() = 0 and set (v: int) = ()"
+        [ (765, 17, 21)
+          (767, 12, 35)
+          (768, 4, 27) ]
 
 [<Test>] 
 let ``should find usages of fully qualified record fields``() =
     checkSymbolUsage 770 9 "    type Record = { Field: int }"
-        [ (770, 9, 15) ]
-          // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
+        [ (770, 9, 15)
+          (771, 14, 20) ]
 
     checkSymbolUsage 771 14 "    let r = { Record.Field = 1 }"
-        [ (770, 9, 15) ]
-          // (771, 14), (771, 20) ] FCS 0.0.36 does not support this
+        [ (770, 9, 15)
+          (771, 14, 20) ]
+
+[<Test; Ignore "Bug in FCS 0.0.54">] 
+let ``should find usages of generic types``() =
+    checkSymbolUsage 895 9 "    type Type1<'a, 'b>() ="
+        [ (895, 9, 14)
+          (897, 12, 17) ]
+
+let getFirstSymbol line col lineStr symbolText =
+    async {
+        let! results = languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No)
+        return! results.GetSymbolUseAtLocation (line+1, col, lineStr, [symbolText]) }
+    |> Async.RunSynchronously
+
+[<Test; Ignore>]
+let ``should instantiate types correctly``() =
+    let symbolUse = getFirstSymbol 810 26 "              member x.Add(item: KeyValuePair<'K, 'V>): unit = " "Add"
+    let symbol = symbolUse.Value.Symbol :?> FSharpMemberFunctionOrValue
+    let genericType = symbol.FullType.GenericArguments.[0]
+    let genericSymbolUse = getFirstSymbol 779 15 "        { new IDictionary<'K, 'V> with" "IDictionary"
+    let genericParams = (genericSymbolUse.Value.Symbol :?> FSharpEntity).GenericParameters
+    let context = genericSymbolUse.Value.DisplayContext
+    let specificSymbolUse = getFirstSymbol 777 9 "    let x: KeyValuePair<string, int> = failwith \"\"" "x"
+    let specificType = (specificSymbolUse.Value.Symbol :?> FSharpMemberFunctionOrValue).FullType
+    let specificParams = specificType.GenericArguments
+    let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
+//    printfn "Generic type: %A" genericType
+//    printfn "Specific type: %A" specificType
+//    printfn "Generic params: %A" genericParams
+//    printfn "Specific params: %A" specificParams
+//    printfn "Instantiated type: %A" instantiatedType
+    instantiatedType.Format context |> assertEqual (specificType.Format context)
+
+[<Test>]
+let ``should instantiate types on a single entity``() =
+    let symbolUse = getFirstSymbol 833 39 "        { new IDictionary<string, int> with" "IDictionary"
+    let context = symbolUse.Value.DisplayContext
+    let symbol = symbolUse.Value.Symbol :?> FSharpEntity
+    let entity = symbol.DeclaredInterfaces.[0].TypeDefinition
+    let genericParams = entity.GenericParameters
+    let specificParams = symbol.DeclaredInterfaces.[0].GenericArguments
+    let currentMember = entity.MembersFunctionsAndValues.[5]
+    let genericType = currentMember.FullType
+    let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
+//    printfn "Checking member: %O" currentMember.DisplayName
+//    printfn "Generic type: %A" genericType
+//    printfn "Generic params: %A" genericParams
+//    printfn "Specific params: %A" specificParams
+//    printfn "Instantiated type: %A" instantiatedType
+    instantiatedType.Format context |> assertEqual "KeyValuePair<'TKey,'TValue> [] * int -> unit"
+
+#if INTERACTIVE
+``should instantiate types on a single entity``();;
+``should instantiate types correctly``();;
+#endif
 
 type ITempSource = 
     inherit System.IDisposable
@@ -290,7 +357,7 @@ let ``ProcessParseTree should be called for all files in project``() =
     use f1 = tempSource "module M1"
     use f2 = tempSource "module M2"
     let seen = ResizeArray()
-    vsLanguageService.ProcessParseTrees(
+    languageService.ProcessParseTrees(
         projectFileName, 
         Map.empty, 
         [| f1.FilePath; f2.FilePath |], 
@@ -307,7 +374,7 @@ let ``ProcessParseTree should be called for all files in project``() =
 let ``ProcessParseTree should prefer open documents``() =
     use f1 = tempSource "module Foo"
     let seen = ResizeArray()
-    vsLanguageService.ProcessParseTrees(
+    languageService.ProcessParseTrees(
         projectFileName,
         [f1.FilePath, "module Bar"] |> Map.ofList, 
         [| f1.FilePath|], 
@@ -332,9 +399,9 @@ let ``ProcessParseTree should prefer open documents``() =
 let ``ProcessParseTree should react on cancellation``() =
     use f1 = tempSource "module Foo"
     let seen = ResizeArray()
-    let cts = new System.Threading.CancellationTokenSource();
+    let cts = new System.Threading.CancellationTokenSource()
     cts.Cancel()
-    vsLanguageService.ProcessParseTrees(
+    languageService.ProcessParseTrees(
         projectFileName,
         Map.empty, 
         [| f1.FilePath|], 

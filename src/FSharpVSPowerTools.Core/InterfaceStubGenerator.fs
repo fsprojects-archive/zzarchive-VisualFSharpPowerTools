@@ -1,61 +1,88 @@
-﻿namespace FSharpVSPowerTools.Core
+﻿namespace FSharpVSPowerTools.CodeGeneration
 
 open System
-open System.IO
 open System.Diagnostics
-open System.Collections.Generic
-open System.CodeDom.Compiler
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+/// Capture information about an interface in ASTs
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type InterfaceData =
     | Interface of SynType * SynMemberDefns option
     | ObjExpr of SynType * SynBinding list
+    member x.Range =
+        match x with
+        | InterfaceData.Interface(typ, _) -> 
+            typ.Range
+        | InterfaceData.ObjExpr(typ, _) -> 
+            typ.Range
+    member x.TypeParameters = 
+        match x with
+        | InterfaceData.Interface(typ, _)
+        | InterfaceData.ObjExpr(typ, _) ->
+            let rec (|TypeIdent|_|) = function
+                | SynType.Var(SynTypar.Typar(s, req , _), _) ->
+                    match req with
+                    | NoStaticReq -> 
+                        Some ("'" + s.idText)
+                    | HeadTypeStaticReq -> 
+                        Some ("^" + s.idText)
+                | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
+                    xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
+                | SynType.App(t, _, ts, _, _, isPostfix, _) ->
+                    match t, ts with
+                    | TypeIdent typeName, [] -> Some typeName
+                    | TypeIdent typeName, [TypeIdent typeArg] -> 
+                        if isPostfix then 
+                            Some (sprintf "%s %s" typeArg typeName)
+                        else
+                            Some (sprintf "%s<%s>" typeName typeArg)
+                    | TypeIdent typeName, _ -> 
+                        let typeArgs = ts |> Seq.choose (|TypeIdent|_|) |> String.concat ", "
+                        if isPostfix then 
+                            Some (sprintf "(%s) %s" typeArgs typeName)
+                        else
+                            Some(sprintf "%s<%s>" typeName typeArgs)
+                    | _ ->
+                        debug "Unsupported case with %A and %A" t ts
+                        None
+                | SynType.Anon _ -> 
+                    Some "_"
+                | SynType.Tuple(ts, _) ->
+                    Some (ts |> Seq.choose (snd >> (|TypeIdent|_|)) |> String.concat " * ")
+                | SynType.Array(dimension, TypeIdent typeName, _) ->
+                    Some (sprintf "%s [%s]" typeName (new String(',', dimension-1)))
+                | SynType.MeasurePower(TypeIdent typeName, power, _) ->
+                    Some (sprintf "%s^%i" typeName power)
+                | SynType.MeasureDivide(TypeIdent numerator, TypeIdent denominator, _) ->
+                    Some (sprintf "%s/%s" numerator denominator)
+                | _ -> 
+                    None
+            match typ with
+            | SynType.App(_, _, ts, _, _, _, _)
+            | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
+                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
+            | _ ->
+                [||]
 
 module InterfaceStubGenerator =
-    type internal ColumnIndentedTextWriter() =
-        let stringWriter = new StringWriter()
-        let indentWriter = new IndentedTextWriter(stringWriter, " ")
-
-        member x.Write(s: string, [<ParamArray>] objs: obj []) =
-            indentWriter.Write(s, objs)
-
-        member x.WriteLine(s: string, [<ParamArray>] objs: obj []) =
-            indentWriter.WriteLine(s, objs)
-
-        member x.Indent i = 
-            indentWriter.Indent <- indentWriter.Indent + i
-
-        member x.Unindent i = 
-            indentWriter.Indent <- max 0 (indentWriter.Indent - i)
-
-        member x.Writer = 
-            indentWriter :> TextWriter
-
-        member x.Dump() =
-            indentWriter.InnerWriter.ToString()
-
-        interface IDisposable with
-            member x.Dispose() =
-                stringWriter.Dispose()
-                indentWriter.Dispose()  
-
     [<NoComparison>]
     type internal Context =
         {
             Writer: ColumnIndentedTextWriter
             /// Map generic types to specific instances for specialized interface implementation
             TypeInstantations: Map<string, string>
+            /// Data for interface instantiation
+            ArgInstantiations: (FSharpGenericParameter * FSharpType) seq
             /// Indentation inside method bodies
             Indentation: int
             /// Object identifier of the interface e.g. 'x', 'this', '__', etc.
             ObjectIdent: string
             /// A list of lines represents skeleton of each member
             MethodBody: string []
+            /// Context in order to display types in the short form
             DisplayContext: FSharpDisplayContext
         }
 
@@ -69,129 +96,84 @@ module InterfaceStubGenerator =
             let revd = List.rev xs
             Some(List.rev revd.Tail, revd.Head)
 
-    let internal isAttrib<'T> (attrib: FSharpAttribute)  =
-        attrib.AttributeType.CompiledName = typeof<'T>.Name
-
-    let internal hasAttrib<'T> (attribs: IList<FSharpAttribute>) = 
-        attribs |> Seq.exists (fun a -> isAttrib<'T>(a))
-
-    let internal (|MeasureProd|_|) (typ: FSharpType) = 
-        if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "*" && typ.GenericArguments.Count = 2 then
-            Some (typ.GenericArguments.[0], typ.GenericArguments.[1])
-        else None
-
-    let internal (|MeasureInv|_|) (typ: FSharpType) = 
-        if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "/" && typ.GenericArguments.Count = 1 then 
-            Some typ.GenericArguments.[0]
-        else None
-
-    let internal (|MeasureOne|_|) (typ: FSharpType) = 
-        if typ.HasTypeDefinition && typ.TypeDefinition.LogicalName = "1" && typ.GenericArguments.Count = 0 then 
-            Some ()
-        else None
-
     let internal getTypeParameterName (typar: FSharpGenericParameter) =
         (if typar.IsSolveAtCompileTime then "^" else "'") + typar.Name
-
-    let internal formatTypeArgument (ctx: Context) (typar: FSharpGenericParameter) =
-        let genericName = getTypeParameterName typar
-        match ctx.TypeInstantations.TryFind(genericName) with
-        | Some specificName ->
-            specificName
-        | None ->
-            genericName
-
-    let internal formatTypeArguments ctx (typars:seq<FSharpGenericParameter>) =
-        Seq.map (formatTypeArgument ctx) typars |> List.ofSeq
 
     let internal bracket (str: string) = 
         if str.Contains(" ") then "(" + str + ")" else str
 
-    let internal bracketIf cond str = 
-        if cond then "(" + str + ")" else str
-
-    let internal formatTypeWithSubstitution ctx (typ: FSharpType) =
-        let genericDefinition = typ.Format(ctx.DisplayContext)
+    let internal formatType ctx (typ: FSharpType) =
+        let genericDefinition = typ.Instantiate(Seq.toList ctx.ArgInstantiations).Format(ctx.DisplayContext)
         (genericDefinition, ctx.TypeInstantations)
         ||> Map.fold (fun s k v -> s.Replace(k, v))
 
-    let internal formatTyconRef (tcref: FSharpEntity) = 
-        tcref.DisplayName
+    let internal keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
 
-    let rec internal formatTypeApplication ctx typeName prec prefix args =
-        if prefix then 
-            match args with
-            | [] -> typeName
-            | [arg] -> typeName + "<" + (formatTypeWithPrec ctx 4 arg) + ">"
-            | args -> bracketIf (prec <= 1) (typeName + "<" + (formatTypesWithPrec ctx 2 "," args) + ">")
-        else
-            match args with
-            | [] -> typeName
-            | [arg] -> (formatTypeWithPrec ctx 2 arg) + " " + typeName 
-            | args -> bracketIf (prec <= 1) ((bracket (formatTypesWithPrec ctx 2 "," args)) + typeName)
+    /// Represent environment where a captured identifier should be renamed
+    type NamesWithIndices = Map<string, Set<int>>
 
-    and internal formatTypesWithPrec ctx prec sep typs = 
-        String.concat sep (typs |> Seq.map (formatTypeWithPrec ctx prec))
+    /// Rename a given argument if the identifier has been used
+    let normalizeArgName (namesWithIndices: NamesWithIndices) nm =
+        match nm with
+        | "()" -> nm, namesWithIndices
+        | _ ->
+            let nm = String.lowerCaseFirstChar nm
+            let nm, index = String.extractTrailingIndex nm
+                
+            let index, namesWithIndices =
+                match namesWithIndices |> Map.tryFind nm, index with
+                | Some indexes, index ->
+                    let rec getAvailableIndex idx =
+                        if indexes |> Set.contains idx then 
+                            getAvailableIndex (idx + 1)
+                        else idx
+                    let index = index |> Option.getOrElse 1 |> getAvailableIndex
+                    Some index, namesWithIndices |> Map.add nm (indexes |> Set.add index)
+                | None, Some index -> Some index, namesWithIndices |> Map.add nm (Set.ofList [index])
+                | None, None -> None, namesWithIndices |> Map.add nm Set.empty
 
-    and internal formatTypeWithPrec ctx prec (typ: FSharpType) =
-        // Measure types are stored as named types with 'fake' constructors for products, "1" and inverses
-        // of measures in a normalized form (see Andrew Kennedy technical reports). Here we detect this 
-        // embedding and use an approximate set of rules for layout out normalized measures in a nice way. 
-        match typ with 
-        | MeasureProd (ty, MeasureOne) 
-        | MeasureProd (MeasureOne, ty) -> formatTypeWithPrec ctx prec ty
-        | MeasureProd (ty1, MeasureInv ty2) 
-        | MeasureProd (ty1, MeasureProd (MeasureInv ty2, MeasureOne)) -> 
-            (formatTypeWithPrec ctx 2 ty1) + "/" + (formatTypeWithPrec ctx 2 ty2)
-        | MeasureProd (ty1, MeasureProd(ty2,MeasureOne)) 
-        | MeasureProd (ty1, ty2) -> 
-            (formatTypeWithPrec ctx 2 ty1) + "*" + (formatTypeWithPrec ctx 2 ty2)
-        | MeasureInv ty -> "/" + (formatTypeWithPrec ctx 1 ty)
-        | MeasureOne  -> "1" 
-        | _ when typ.HasTypeDefinition -> 
-            let tcref = typ.TypeDefinition 
-            let tyargs = typ.GenericArguments |> Seq.toList
-            // layout postfix array types
-            formatTypeApplication ctx (formatTyconRef tcref) prec tcref.UsesPrefixDisplay tyargs 
-        | _ when typ.IsTupleType ->
-            let tyargs = typ.GenericArguments |> Seq.toList
-            bracketIf (prec <= 2) (formatTypesWithPrec ctx 2 " * " tyargs)
-        | _ when typ.IsFunctionType ->
-            let rec loop soFar (typ:FSharpType) = 
-                if typ.IsFunctionType then 
-                    let _domainType, retType = typ.GenericArguments.[0], typ.GenericArguments.[1]
-                    loop (soFar + (formatTypeWithPrec ctx 4 typ.GenericArguments.[0]) + " -> ") retType
-                else 
-                    soFar + formatTypeWithPrec ctx 5 typ
-            bracketIf (prec <= 4) (loop "" typ)
-        | _ when typ.IsGenericParameter ->
-            formatTypeArgument ctx typ.GenericParameter
-        | _ -> failwith "Can't format type annotation" 
-
-    let internal formatType ctx typ = 
-        formatTypeWithPrec ctx 5 typ
+            let nm = 
+                match index with
+                | Some index -> sprintf "%s%d" nm index
+                | None -> nm
+                
+            let nm = if Set.contains nm keywordSet then sprintf "``%s``" nm else nm
+            nm, namesWithIndices
 
     // Format each argument, including its name and type 
-    let internal formatArgUsage ctx hasTypeAnnotation i (arg: FSharpParameter) = 
+    let internal formatArgUsage ctx hasTypeAnnotation (namesWithIndices: Map<string, Set<int>>) (arg: FSharpParameter) = 
         let nm = 
             match arg.Name with 
-            | None -> 
+            | None ->
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
-                else "arg" + string i 
-            | Some nm -> nm
-        // Detect an optional argument 
-        let isOptionalArg = hasAttrib<OptionalArgumentAttribute> arg.Attributes
+                else sprintf "arg%d" (namesWithIndices |> Map.toList |> List.map snd |> List.sumBy Set.count |> max 1)
+            | Some x -> x
+        
+        let nm, namesWithIndices = normalizeArgName namesWithIndices nm
+        
+        // Detect an optional argument
+        let isOptionalArg = hasAttribute<OptionalArgumentAttribute> arg.Attributes
         let argName = if isOptionalArg then "?" + nm else nm
-        if hasTypeAnnotation && argName <> "()" then 
-            argName + ": " + formatTypeWithPrec ctx 2 arg.Type
-        else argName
+        (if hasTypeAnnotation && argName <> "()" then 
+            argName + ": " + formatType ctx arg.Type
+        else argName),
+        namesWithIndices
 
     let internal formatArgsUsage ctx hasTypeAnnotation (v: FSharpMemberFunctionOrValue) args =
         let isItemIndexer = (v.IsInstanceMember && v.DisplayName = "Item")
-        let counter = let n = ref 0 in fun () -> incr n; !n
         let unit, argSep, tupSep = "()", " ", ", "
+        let args, namesWithIndices =
+            args
+            |> List.fold (fun (argsSoFar: string list list, namesWithIndices) args ->
+                let argsSoFar', namesWithIndices =
+                    args 
+                    |> List.fold (fun (acc: string list, allNames) arg -> 
+                        let name, allNames = formatArgUsage ctx hasTypeAnnotation allNames arg
+                        name :: acc, allNames) ([], namesWithIndices)
+                List.rev argsSoFar' :: argsSoFar, namesWithIndices) 
+                ([], Map.ofList [ ctx.ObjectIdent, Set.empty ])
         args
-        |> List.map (List.map (fun x -> formatArgUsage ctx hasTypeAnnotation (counter()) x))
+        |> List.rev
         |> List.map (function 
             | [] -> unit 
             | [arg] when arg = unit -> unit
@@ -199,152 +181,409 @@ module InterfaceStubGenerator =
             | args when isItemIndexer -> String.concat tupSep args
             | args -> bracket (String.concat tupSep args))
         |> String.concat argSep
-  
-    let internal formatMember (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
-        let getParamArgs (argInfos: FSharpParameter list list) = 
-            let args =
+        , namesWithIndices
+
+    [<RequireQualifiedAccess; NoComparison>]
+    type internal MemberInfo =
+        | PropertyGetSet of FSharpMemberFunctionOrValue * FSharpMemberFunctionOrValue
+        | Member of FSharpMemberFunctionOrValue
+
+    let internal getArgTypes (ctx: Context) (v: FSharpMemberFunctionOrValue) =
+        let argInfos = v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
+            
+        let retType = v.ReturnParameter.Type
+
+        let argInfos, retType = 
+            match argInfos, v.IsPropertyGetterMethod, v.IsPropertySetterMethod with
+            | [ AllAndLast(args, last) ], _, true -> [ args ], Some last.Type
+            | [[]], true, _ -> [], Some retType
+            | _, _, _ -> argInfos, Some retType
+
+        let retType = 
+            match retType with
+            | Some typ ->
+                let coreType = formatType ctx typ
+                if v.IsEvent then
+                    let isEventHandler = 
+                        typ.BaseType 
+                        |> Option.bind (fun t -> 
+                            if t.HasTypeDefinition then
+                                t.TypeDefinition.TryGetFullName()
+                             else None)
+                        |> Option.exists ((=) "System.MulticastDelegate")
+                    if isEventHandler then sprintf "IEvent<%s, _>" coreType else coreType
+                else coreType
+            | None -> 
+                "unit"
+            
+        argInfos, retType
+
+    /// Convert a getter/setter to its canonical form
+    let internal normalizePropertyName (v: FSharpMemberFunctionOrValue) =
+        let displayName = v.DisplayName
+        if (v.IsPropertyGetterMethod && displayName.StartsWith("get_")) || 
+            (v.IsPropertySetterMethod && displayName.StartsWith("set_")) then
+            displayName.[4..]
+        else displayName
+
+    let internal isEventMember (m: FSharpMemberFunctionOrValue) =
+        m.IsEvent || hasAttribute<CLIEventAttribute> m.Attributes
+    
+    let internal formatMember (ctx: Context) m = 
+        let getParamArgs (argInfos: FSharpParameter list list) (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
+            let args, namesWithIndices =
                 match argInfos with
-                | [[x]] when v.IsGetterMethod && x.Name.IsNone 
-                            && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> ""
+                | [[x]] when v.IsPropertyGetterMethod && x.Name.IsNone 
+                                && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> 
+                    "", Map.ofList [ctx.ObjectIdent, Set.empty]
                 | _  -> formatArgsUsage ctx true v argInfos
              
             if String.IsNullOrWhiteSpace(args) then "" 
             elif args.StartsWith("(") then args
             else sprintf "(%s)" args
+            , namesWithIndices
 
-        let buildUsage argInfos = 
-            let parArgs = getParamArgs argInfos
-            match v.IsMember, v.IsInstanceMember, v.LogicalName, v.DisplayName with
-            // Constructors
-            | _, _, ".ctor", _ -> "new" + parArgs
-            // Properties (skipping arguments)
-            | _, true, _, name when v.IsProperty -> name
-            // Ordinary instance members
-            | _, true, _, name -> name + parArgs
-            // Ordinary functions or values
-            | false, _, _, name when 
-                not (hasAttrib<RequireQualifiedAccessAttribute> v.LogicalEnclosingEntity.Attributes) -> 
-                name + " " + parArgs
-            // Ordinary static members or things (?) that require fully qualified access
-            | _, _, _, name -> name + parArgs
+        let preprocess (ctx: Context) (v: FSharpMemberFunctionOrValue) = 
+            let buildUsage argInfos = 
+                let parArgs, _ = getParamArgs argInfos ctx v
+                match v.IsMember, v.IsInstanceMember, v.LogicalName, v.DisplayName with
+                // Constructors
+                | _, _, ".ctor", _ -> "new" + parArgs
+                // Properties (skipping arguments)
+                | _, true, _, name when v.IsPropertyGetterMethod || v.IsPropertySetterMethod -> 
+                    if name.StartsWith("get_") || name.StartsWith("set_") then name.[4..] else name
+                // Ordinary instance members
+                | _, true, _, name -> name + parArgs
+                // Ordinary functions or values
+                | false, _, _, name when
+                    not (hasAttribute<RequireQualifiedAccessAttribute> v.LogicalEnclosingEntity.Attributes) -> 
+                    name + " " + parArgs
+                // Ordinary static members or things (?) that require fully qualified access
+                | _, _, _, name -> name + parArgs
 
-        let modifiers =
-            [ if v.InlineAnnotation = FSharpInlineAnnotation.AlwaysInline then yield "inline"
-              // Skip dispatch slot because we generate stub implementation
-              if v.IsDispatchSlot then () ]
+            let modifiers =
+                [ if v.InlineAnnotation = FSharpInlineAnnotation.AlwaysInline then yield "inline"
+                  if v.Accessibility.IsInternal then yield "internal" ]
 
-        let argInfos = 
-            v.CurriedParameterGroups |> Seq.map Seq.toList |> Seq.toList 
-            
-        let retType = v.ReturnParameter.Type
+            let argInfos, retType = getArgTypes ctx v
+            let usage = buildUsage argInfos
+            usage, modifiers, argInfos, retType
 
-        let argInfos, retType = 
-            match argInfos, v.IsGetterMethod, v.IsSetterMethod with
-            | [ AllAndLast(args, last) ], _, true -> [ args ], Some last.Type
-            | [[]], true, _ -> [], Some retType
-            | _, _, _ -> argInfos, Some retType
+        match m with
+        | MemberInfo.PropertyGetSet(getter, setter) ->
+            let (usage, modifiers, getterArgInfos, retType) = preprocess ctx getter
+            let (_, _, setterArgInfos, _) = preprocess ctx setter
+            let writer = ctx.Writer
+            writer.WriteLine("")
+            writer.Write("member ")
+            for modifier in modifiers do
+                writer.Write("{0} ", modifier)
+            writer.Write("{0}.", ctx.ObjectIdent)
 
-        let retType = defaultArg (retType |> Option.map (formatTypeWithSubstitution ctx)) "unit"
-        let usage = buildUsage argInfos
+            // Try to print getters and setters on the same identifier
+            writer.WriteLine(usage)
+            writer.Indent ctx.Indentation
+            match getParamArgs getterArgInfos ctx getter with
+            | "", _ | "()", _ ->
+                writer.WriteLine("with get (): {0} = ", retType)
+            | args, _ ->
+                writer.WriteLine("with get {0}: {1} = ", args, retType)
+            writer.Indent ctx.Indentation
+            for line in ctx.MethodBody do
+                writer.WriteLine(line)
+            writer.Unindent ctx.Indentation
+            match getParamArgs setterArgInfos ctx setter with
+            | "", _ | "()", _ ->
+                writer.WriteLine("and set (v: {0}): unit = ", retType)
+            | args, namesWithIndices ->
+                let valueArgName, _ = normalizeArgName namesWithIndices "v"
+                writer.WriteLine("and set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
+            writer.Indent ctx.Indentation
+            for line in ctx.MethodBody do
+                writer.WriteLine(line)
+            writer.Unindent ctx.Indentation
+            writer.Unindent ctx.Indentation
 
-        ctx.Writer.WriteLine("")
-        ctx.Writer.Write("member ")
-        for modifier in modifiers do
-            ctx.Writer.Write("{0} ", modifier)
-        ctx.Writer.Write("{0}.", ctx.ObjectIdent)
+        | MemberInfo.Member v ->
+            let (usage, modifiers, argInfos, retType) = preprocess ctx v
+            let writer = ctx.Writer
+            writer.WriteLine("")
+            if isEventMember v then
+                writer.WriteLine("[<CLIEvent>]")
+            writer.Write("member ")
+            for modifier in modifiers do
+                writer.Write("{0} ", modifier)
+            writer.Write("{0}.", ctx.ObjectIdent)
         
-        if v.IsSetterMethod then
-            ctx.Writer.WriteLine(usage)
-            ctx.Writer.Indent ctx.Indentation
-            match getParamArgs argInfos with
-            | "" | "()" ->
-                ctx.Writer.WriteLine("with set (v: {0}): unit = ", retType)
-            | args ->
-                ctx.Writer.WriteLine("with set {0} (v: {1}): unit = ", args, retType)
-            ctx.Writer.Indent ctx.Indentation
-            for line in ctx.MethodBody do
-                ctx.Writer.WriteLine(line)
-            ctx.Writer.Unindent ctx.Indentation
-            ctx.Writer.Unindent ctx.Indentation
-        elif v.IsGetterMethod then
-            ctx.Writer.WriteLine(usage)
-            ctx.Writer.Indent ctx.Indentation
-            match getParamArgs argInfos with
-            | "" ->
-                ctx.Writer.WriteLine("with get (): {0} = ", retType)
-            | args ->
-                ctx.Writer.WriteLine("with get {0}: {1} = ", args, retType)
-            ctx.Writer.Indent ctx.Indentation
-            for line in ctx.MethodBody do
-                ctx.Writer.WriteLine(line)
-            ctx.Writer.Unindent ctx.Indentation
-            ctx.Writer.Unindent ctx.Indentation
-        else
-            ctx.Writer.Write(usage)
-            ctx.Writer.WriteLine(": {0} = ", retType)
-            ctx.Writer.Indent ctx.Indentation
-            for line in ctx.MethodBody do
-                ctx.Writer.WriteLine(line)
-            ctx.Writer.Unindent ctx.Indentation
+            if v.IsEvent then
+                writer.Write(usage)
+                writer.WriteLine(": {0} = ", retType)
+                writer.Indent ctx.Indentation
+                for line in ctx.MethodBody do
+                    writer.WriteLine(line)
+                writer.Unindent ctx.Indentation
+            elif v.IsPropertySetterMethod then
+                writer.WriteLine(usage)
+                writer.Indent ctx.Indentation
+                match getParamArgs argInfos ctx v with
+                | "", _ | "()", _ ->
+                    writer.WriteLine("with set (v: {0}): unit = ", retType)
+                | args, namesWithIndices ->
+                    let valueArgName, _ = normalizeArgName namesWithIndices "v"
+                    writer.WriteLine("with set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
+                writer.Indent ctx.Indentation
+                for line in ctx.MethodBody do
+                    writer.WriteLine(line)
+                writer.Unindent ctx.Indentation
+                writer.Unindent ctx.Indentation
+            elif v.IsPropertyGetterMethod then
+                writer.Write(usage)
+                match getParamArgs argInfos ctx v with
+                | "", _ | "()", _ ->
+                    // Use the short-hand notation for getters without arguments
+                    writer.WriteLine(": {0} = ", retType)
+                    writer.Indent ctx.Indentation
+                    for line in ctx.MethodBody do
+                        writer.WriteLine(line)
+                    writer.Unindent ctx.Indentation
+                | args, _ ->
+                    writer.WriteLine("")
+                    writer.Indent ctx.Indentation
+                    writer.WriteLine("with get {0}: {1} = ", args, retType)
+                    writer.Indent ctx.Indentation
+                    for line in ctx.MethodBody do
+                        writer.WriteLine(line)
+                    writer.Unindent ctx.Indentation
+                    writer.Unindent ctx.Indentation
+            else
+                writer.Write(usage)
+                writer.WriteLine(": {0} = ", retType)
+                writer.Indent ctx.Indentation
+                for line in ctx.MethodBody do
+                    writer.WriteLine(line)
+                writer.Unindent ctx.Indentation
+
+    let rec internal getNonAbbreviatedType (typ: FSharpType) =
+        if typ.HasTypeDefinition && typ.TypeDefinition.IsFSharpAbbreviation then
+            getNonAbbreviatedType typ.AbbreviatedType
+        else typ
 
     /// Filter out duplicated interfaces in inheritance chain
     let rec internal getInterfaces (e: FSharpEntity) = 
-        seq {
-            yield e
-            for iface in e.DeclaredInterfaces do
-                yield! getInterfaces iface.TypeDefinition
+        seq { for iface in e.AllInterfaces ->
+                let typ = getNonAbbreviatedType iface
+                // Argument should be kept lazy so that it is only evaluated when instantiating a new type
+                typ.TypeDefinition, Seq.zip typ.TypeDefinition.GenericParameters typ.GenericArguments
         }
         |> Seq.distinct
 
     /// Get members in the decreasing order of inheritance chain
     let internal getInterfaceMembers (e: FSharpEntity) = 
         seq {
-            for iface in getInterfaces e do
-                yield! iface.MembersFunctionsAndValues |> Seq.filter (fun m -> 
-                           // Use this hack when FCS doesn't return enough information on .NET properties
-                           iface.IsFSharp || not m.IsProperty)
+            for (iface, instantiations) in getInterfaces e do
+                yield! iface.MembersFunctionsAndValues |> Seq.choose (fun m -> 
+                           // Use this hack when FCS doesn't return enough information on .NET properties and events
+                           if m.IsProperty || m.IsEventAddMethod || m.IsEventRemoveMethod then 
+                               None 
+                           else Some (m, instantiations))
          }
 
-    let countInterfaceMembers e =
-        getInterfaceMembers e |> Seq.length
+    /// Check whether an interface is empty
+    let hasNoInterfaceMember e =
+        getInterfaceMembers e |> Seq.isEmpty
+
+    let internal (|LongIdentPattern|_|) = function
+        | SynPat.LongIdent(LongIdentWithDots(xs, _), _, _, _, _, _) ->
+            let (name, range) = xs |> Seq.map (fun x -> x.idText, x.idRange) |> Seq.last
+            Some(name, range)
+        | _ -> 
+            None
+
+    // Get name and associated range of a member
+    // On merged properties (consisting both getters and setters), they have the same range values,
+    // so we use 'get_' and 'set_' prefix to ensure corresponding symbols are retrieved correctly.
+    let internal (|MemberNameAndRange|_|) = function
+        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, SynValData(Some mf, _, _), LongIdentPattern(name, range), 
+                    _retTy, _expr, _bindingRange, _seqPoint) when mf.MemberKind = MemberKind.PropertyGet ->
+            if name.StartsWith("get_") then Some(name, range) else Some("get_" + name, range)
+        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, SynValData(Some mf, _, _), LongIdentPattern(name, range), 
+                    _retTy, _expr, _bindingRange, _seqPoint) when mf.MemberKind = MemberKind.PropertySet ->
+            if name.StartsWith("set_") then Some(name, range) else Some("set_" + name, range)
+        | Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, LongIdentPattern(name, range), 
+                    _retTy, _expr, _bindingRange, _seqPoint) ->
+            Some(name, range)
+        | _ ->
+            None
+
+    /// Get associated member names and ranges
+    /// In case of properties, intrinsic ranges might not be correct for the purpose of getting
+    /// positions of 'member', which indicate the indentation for generating new members
+    let getMemberNameAndRanges = function
+        | InterfaceData.Interface(_, None) -> 
+            []
+        | InterfaceData.Interface(_, Some memberDefns) -> 
+            memberDefns
+            |> Seq.choose (function (SynMemberDefn.Member(binding, _)) -> Some binding | _ -> None)
+            |> Seq.choose (|MemberNameAndRange|_|)
+            |> Seq.toList
+        | InterfaceData.ObjExpr(_, bindings) -> 
+            List.choose (|MemberNameAndRange|_|) bindings
+
+    // Sometimes interface members are stored in the form of `IInterface<'T> -> ...`,
+    // so we need to get the 2nd generic argument
+    let internal (|MemberFunctionType|_|) (typ: FSharpType) =
+        if typ.IsFunctionType && typ.GenericArguments.Count = 2 then
+            Some typ.GenericArguments.[1]
+        else None
+
+    let internal (|TypeOfMember|_|) (m: FSharpMemberFunctionOrValue) =
+        match m.FullTypeSafe with
+        | Some (MemberFunctionType typ) when m.IsProperty && m.EnclosingEntity.IsFSharp ->
+            Some typ
+        | Some typ -> Some typ
+        | None -> None
+
+    let internal (|EventFunctionType|_|) (typ: FSharpType) =
+        match typ with
+        | MemberFunctionType typ ->
+            if typ.IsFunctionType && typ.GenericArguments.Count = 2 then
+                let retType = typ.GenericArguments.[0]
+                let argType = typ.GenericArguments.[1]
+                if argType.GenericArguments.Count = 2 then
+                    Some (argType.GenericArguments.[0], retType)
+                else None
+            else None
+        | _ ->
+            None
+
+    let internal removeWhitespace (str: string) = 
+        str.Replace(" ", "")
+
+    let internal normalizeEventName (m: FSharpMemberFunctionOrValue) =
+        let name = m.DisplayName
+        if name.StartsWith("add_") then name.[4..]
+        elif name.StartsWith("remove_")  then name.[7..]
+        else name
+
+    /// Ideally this info should be returned in error symbols from FCS. 
+    /// Because it isn't, we implement a crude way of getting member signatures:
+    ///  (1) Crack ASTs to get member names and their associated ranges
+    ///  (2) Check symbols of those members based on ranges
+    ///  (3) If any symbol found, capture its member signature 
+    let getImplementedMemberSignatures (getMemberByLocation: string * range -> Async<FSharpSymbolUse option>) displayContext interfaceData = 
+        let formatMemberSignature (symbolUse: FSharpSymbolUse) =            
+            match symbolUse.Symbol with
+            | :? FSharpMemberFunctionOrValue as m ->
+                match m.FullTypeSafe with
+                | Some _ when isEventMember m ->
+                    // Events don't have overloads so we use only display names for comparison
+                    let signature = normalizeEventName m
+                    Some [signature]
+                | Some typ ->
+                    let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (typ.Format(displayContext)))
+                    Some [signature]
+                | None ->
+                    None
+            | _ ->
+                fail "Should only accept symbol uses of members."
+                None
+        async {
+            let! symbolUses = 
+                getMemberNameAndRanges interfaceData
+                |> Seq.toArray
+                |> Async.Array.map getMemberByLocation
+            return symbolUses |> Seq.choose (Option.bind formatMemberSignature)
+                              |> Seq.concat
+                              |> Set.ofSeq
+        }
+
+    /// Check whether an entity is an interface or type abbreviation of an interface
+    let rec isInterface (e: FSharpEntity) =
+        e.IsInterface || (e.IsFSharpAbbreviation && isInterface e.AbbreviatedType.TypeDefinition)
 
     /// Generate stub implementation of an interface at a start column
     let formatInterface startColumn indentation (typeInstances: string []) objectIdent 
-        (methodBody: string) (displayContext: FSharpDisplayContext) (e: FSharpEntity) =
-        assert e.IsInterface
-        use writer = new ColumnIndentedTextWriter()
+            (methodBody: string) (displayContext: FSharpDisplayContext) excludedMemberSignatures (e: FSharpEntity) =
+        Debug.Assert(isInterface e, "The entity should be an interface.")
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
+        use writer = new ColumnIndentedTextWriter()
         let typeParams = Seq.map getTypeParameterName e.GenericParameters
-        let instantiations = Seq.zip typeParams typeInstances |> Map.ofSeq
-        let ctx = { Writer = writer; TypeInstantations = instantiations; Indentation = indentation; 
-                    ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
-        writer.Indent startColumn
-        for v in getInterfaceMembers e do
-            formatMember ctx v
-        writer.Dump()
+        let instantiations = 
+            let insts =
+                Seq.zip typeParams typeInstances
+                // Filter out useless instances (when it is replaced by the same name or by wildcard)
+                |> Seq.filter(fun (t1, t2) -> t1 <> t2 && t2 <> "_") 
+                |> Map.ofSeq
+            // A simple hack to handle instantiation of type alias 
+            if e.IsFSharpAbbreviation then
+                let typ = getNonAbbreviatedType e.AbbreviatedType
+                (typ.TypeDefinition.GenericParameters |> Seq.map getTypeParameterName, 
+                    typ.GenericArguments |> Seq.map (fun typ -> typ.Format(displayContext)))
+                ||> Seq.zip
+                |> Seq.fold (fun acc (x, y) -> Map.add x y acc) insts
+            else insts
+        let ctx = { Writer = writer; TypeInstantations = instantiations; ArgInstantiations = Seq.empty;
+                    Indentation = indentation; ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
+        let missingMembers =
+            getInterfaceMembers e
+            |> Seq.filter (fun (m, insts) ->               
+                match m with
+                | _ when isEventMember m  ->
+                    let signature = normalizeEventName m
+                    not (Set.contains signature excludedMemberSignatures)
+                | TypeOfMember typ ->
+                    let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts } typ))
+                    not (Set.contains signature excludedMemberSignatures) 
+                | _ -> 
+                    debug "FullType throws exceptions due to bugs in FCS."
+                    true)
+        // All members have already been implemented
+        if Seq.isEmpty missingMembers then
+            String.Empty
+        else
+            writer.Indent startColumn
 
-    let internal (|IndexerArg|) = function
-        | SynIndexerArg.Two(e1, e2) -> [e1; e2]
-        | SynIndexerArg.One e -> [e]
+            let getReturnType v = snd (getArgTypes ctx v)
+            let rec loop (members : (FSharpMemberFunctionOrValue * _) list) =
+                match members with
+                // Since there is no unified source of information for properties,
+                // we try to merge getters and setters when they seem to match.
+                // Assume that getter and setter come right after each other.
+                // They belong to the same property if names and return types are the same
+                | (getter, insts) :: (setter, _) :: otherMembers
+                | (setter, _) :: (getter, insts) :: otherMembers when
+                    getter.IsPropertyGetterMethod && setter.IsPropertySetterMethod &&
+                    normalizePropertyName getter = normalizePropertyName setter &&
+                    getReturnType getter = getReturnType setter ->
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.PropertyGetSet(getter, setter))
+                    loop otherMembers
+                | (m, insts) :: otherMembers -> 
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m)
+                    loop otherMembers
+                | [] -> ()
 
-    let internal (|IndexerArgList|) xs =
-        List.collect (|IndexerArg|) xs
+            missingMembers
+            |> Seq.sortBy (fun (m, _) -> 
+                // Sort by normalized name and return type so that getters and setters of the same properties
+                // are guaranteed to be neighbouring.
+                normalizePropertyName m, getReturnType m)
+            |> Seq.toList
+            |> loop
+            writer.Dump()
 
-    let internal inRange range pos = 
-        AstTraversal.rangeContainsPosLeftEdgeInclusive range pos
-
+    /// Find corresponding interface declaration at a given position
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =
         let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
             List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
         and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, range)) =
-            if not <| inRange range pos then
+            if not <| rangeContainsPos range pos then
                 None
             else
                 List.tryPick walkSynModuleDecl decls
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
-            if not <| inRange decl.Range pos then
+            if not <| rangeContainsPos decl.Range pos then
                 None
             else
                 match decl with
@@ -368,14 +607,14 @@ module InterfaceStubGenerator =
                     None
 
         and walkSynTypeDefn(TypeDefn(_componentInfo, representation, members, range)) = 
-            if not <| inRange range pos then
+            if not <| rangeContainsPos range pos then
                 None
             else
                 walkSynTypeDefnRepr representation
                 |> Option.orElse (List.tryPick walkSynMemberDefn members)        
 
         and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
-            if not <| inRange typeDefnRepr.Range pos then
+            if not <| rangeContainsPos typeDefnRepr.Range pos then
                 None
             else
                 match typeDefnRepr with
@@ -385,7 +624,7 @@ module InterfaceStubGenerator =
                     None
 
         and walkSynMemberDefn (memberDefn: SynMemberDefn) =
-            if not <| inRange memberDefn.Range pos then
+            if not <| rangeContainsPos memberDefn.Range pos then
                 None
             else
                 match memberDefn with
@@ -394,7 +633,7 @@ module InterfaceStubGenerator =
                 | SynMemberDefn.AutoProperty(_attributes, _isStatic, _id, _type, _memberKind, _memberFlags, _xmlDoc, _access, expr, _r1, _r2) ->
                     walkExpr expr
                 | SynMemberDefn.Interface(interfaceType, members, _range) ->
-                    if inRange interfaceType.Range pos then
+                    if rangeContainsPos interfaceType.Range pos then
                         Some(InterfaceData.Interface(interfaceType, members))
                     else
                         Option.bind (List.tryPick walkSynMemberDefn) members
@@ -416,7 +655,7 @@ module InterfaceStubGenerator =
             walkExpr expr
 
         and walkExpr expr =
-            if not <| inRange expr.Range pos then 
+            if not <| rangeContainsPos expr.Range pos then 
                 None
             else
                 match expr with
@@ -444,11 +683,11 @@ module InterfaceStubGenerator =
                 | SynExpr.ObjExpr(ty, baseCallOpt, binds, ifaces, _range1, _range2) -> 
                     match baseCallOpt with
                     | None -> 
-                        if inRange ty.Range pos then
+                        if rangeContainsPos ty.Range pos then
                             Some (InterfaceData.ObjExpr(ty, binds))
                         else
                             ifaces |> List.tryPick (fun (InterfaceImpl(ty, binds, range)) ->
-                                if inRange range pos then 
+                                if rangeContainsPos range pos then 
                                     Some (InterfaceData.ObjExpr(ty, binds))
                                 else None)
                     | Some _ -> 
@@ -579,7 +818,3 @@ module InterfaceStubGenerator =
             None
         | ParsedInput.ImplFile input -> 
             walkImplFileInput input
-
-
-
-

@@ -1,105 +1,79 @@
 ﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
-open System.Collections.Generic
-open System.Linq
-open System.Text
-open System.Threading.Tasks
-open System.Windows
-open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Formatting
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
+open FSharpVSPowerTools.ProjectSystem
 
 type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
 
-    let mutable isFormattingCursor = false
-
+    let mutable isFormattingCursorPosition = false
+    let mutable selStartPos = 0
+    let mutable selOffsetFromEnd = 0
+    let mutable isReversedSelection = false
+    
     override x.Execute() =
-        isFormattingCursor <- x.TextView.Selection.IsEmpty
+        isFormattingCursorPosition <- x.TextView.Selection.IsEmpty
+        selStartPos <- x.TextView.Selection.Start.Position.Position
+        selOffsetFromEnd <- x.TextBuffer.CurrentSnapshot.Length - x.TextView.Selection.End.Position.Position
+        isReversedSelection <- x.TextView.Selection.IsReversed
 
-        use disposable = Cursor.wait()
-        let resetSelection = x.GetSelectionResetter()
+        use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
-        resetSelection()
-
     override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
-        if isFormattingCursor then
-            let caretPos = new VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, int x.TextView.Caret.Position.BufferPosition)
+        if isFormattingCursorPosition then
+            let caretPos = VirtualSnapshotPoint(x.TextBuffer.CurrentSnapshot, int x.TextView.Caret.Position.BufferPosition)
             let pos = TextUtils.getFSharpPos(caretPos)
-            formatAroundCursor isSignatureFile pos source config
+            let range = inferSelectionFromCursorPos pos source
+            let formattedSelection = formatSelectionOnly isSignatureFile range source config
+
+            let snapshot = x.TextBuffer.CurrentSnapshot
+            let startIndex = snapshot.GetLineFromLineNumber(range.StartLine-1).Start.Position + range.StartColumn
+            let endIndex = snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn + 1
+
+            { OldTextStartIndex = startIndex
+              OldTextLength = endIndex - startIndex
+              NewText = formattedSelection }
         else
             let startPos = TextUtils.getFSharpPos(x.TextView.Selection.Start)
-            let endPos = TextUtils.getFSharpPos(x.TextView.Selection.End)
-            let range = Range.mkRange "fsfile" startPos endPos
+            let startIndex = x.TextView.Selection.Start.Position.Position
+            let endIndex = x.TextView.Selection.End.Position.Position
+            let endPos = TextUtils.getFSharpPos(VirtualSnapshotPoint(x.TextBuffer.CurrentSnapshot, endIndex-1))
+            let range = mkRange "/tmp.fsx" startPos endPos
+            let formattedSelection = formatSelectionOnly isSignatureFile range source config
 
-            formatSelectionFromString isSignatureFile range source config
+            { OldTextStartIndex = startIndex
+              OldTextLength = endIndex - startIndex
+              NewText = formattedSelection }
 
-    override x.GetNewCaretPositionSetter() =
-        let caretPos = x.TextView.Caret.Position.BufferPosition
-
-        if (isFormattingCursor || caretPos = x.TextView.Selection.Start.Position) then
-            let selStartPos = x.TextView.Selection.Start.Position.Position
-
-            // Get start line of scroll bar
-            let scrollBarLine = x.TextView.TextViewLines.FirstOrDefault(fun l -> l.VisibilityState <> VisibilityState.Hidden)
-            let scrollBarPos =
-                if (scrollBarLine = null) then 0 else scrollBarLine.Snapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
-
-            let setNewCaretPosition() =
-                // The caret is at the start of selection, its position is unchanged
-                let newSelStartPos = selStartPos
-                let newActivePoint = new VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newSelStartPos)
-                x.TextView.Caret.MoveTo(newActivePoint) |> ignore
-                x.TextView.ViewScroller.ScrollViewportVerticallyByLines(ScrollDirection.Down, scrollBarPos)
-
-            setNewCaretPosition
+    override x.SetNewCaretPosition(caretPos, scrollBarPos, _originalSnapshot) =
+        let currentSnapshot = x.TextBuffer.CurrentSnapshot
+        if isFormattingCursorPosition || caretPos = x.TextView.Selection.Start.Position then
+            // The caret is at the start of selection, its position is unchanged
+            let newSelStartPos = selStartPos
+            let newActivePoint = new VirtualSnapshotPoint(currentSnapshot, newSelStartPos)
+            x.TextView.Caret.MoveTo(newActivePoint) |> ignore
         else
-            let selOffsetFromEnd = x.TextView.TextBuffer.CurrentSnapshot.Length - x.TextView.Selection.End.Position.Position
+            // The caret is at the end of selection, its offset from the end of text is unchanged
+            let newSelEndPos = currentSnapshot.Length - selOffsetFromEnd
+            let newAnchorPoint = VirtualSnapshotPoint(currentSnapshot, newSelEndPos)
+            x.TextView.Caret.MoveTo(newAnchorPoint) |> ignore
+        x.TextView.ViewScroller.ScrollViewportVerticallyByLines(ScrollDirection.Down, scrollBarPos)
 
-            // Get start line of scroll bar
-            let scrollBarLine = x.TextView.TextViewLines.FirstOrDefault(fun l -> l.VisibilityState <> VisibilityState.Hidden);
-            let scrollBarPos =
-                if (scrollBarLine = null)
-                then 0
-                else scrollBarLine.Snapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
-
-            let setNewCaretPosition () =
-                // The caret is at the end of selection, its offset from the end of text is unchanged
-                let newSelEndPos = x.TextView.TextBuffer.CurrentSnapshot.Length - selOffsetFromEnd
-                let newAnchorPoint = new VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newSelEndPos)
-
-                x.TextView.Caret.MoveTo(newAnchorPoint) |> ignore
-                x.TextView.ViewScroller.ScrollViewportVerticallyByLines(ScrollDirection.Down, scrollBarPos)
-
-            setNewCaretPosition
-
-    member x.GetSelectionResetter() =
-        if isFormattingCursor then
-            id
-        else
+        if not isFormattingCursorPosition then
             // We're going to take advantage of the fact that nothing before or after the selection
             // should change, so the post-formatting range will start at the same point, and end at
             // the same offset from the end of the file.
-            let activePointPos = x.TextView.Selection.ActivePoint.Position.Position
-            let anchorPointPos = x.TextView.Selection.AnchorPoint.Position.Position
-            // They should always be different but just in case
-            let activePointIsAtStart = activePointPos <= anchorPointPos  
+            let newSelStartPos = selStartPos
+            let newSelEndPos = currentSnapshot.Length - selOffsetFromEnd
 
-            let selOffsetFromStart = x.TextView.Selection.Start.Position.Position
-            let selOffsetFromEnd = x.TextView.TextBuffer.CurrentSnapshot.Length - x.TextView.Selection.End.Position.Position
-
-            let resetSelection() =
-                let newSelStartPos = selOffsetFromStart
-                let newSelEndPos = x.TextView.TextBuffer.CurrentSnapshot.Length - selOffsetFromEnd
-                let newActivePointPos = if activePointIsAtStart then newSelStartPos else newSelEndPos
-                let newAnchorPointPos = if activePointIsAtStart then newSelEndPos else newSelStartPos
-                let newActivePoint = VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newActivePointPos) 
-                let newAnchorPoint = VirtualSnapshotPoint(x.TextView.TextBuffer.CurrentSnapshot, newAnchorPointPos)
-                x.TextView.Selection.Select(newAnchorPoint, newActivePoint)
-
-            resetSelection
+            let newActivePointPos = if isReversedSelection then newSelStartPos else newSelEndPos
+            let newAnchorPointPos = if isReversedSelection then newSelEndPos else newSelStartPos
+            let newActivePoint = VirtualSnapshotPoint(currentSnapshot, newActivePointPos) 
+            let newAnchorPoint = VirtualSnapshotPoint(currentSnapshot, newAnchorPointPos)
+            x.TextView.Selection.Select(newAnchorPoint, newActivePoint)

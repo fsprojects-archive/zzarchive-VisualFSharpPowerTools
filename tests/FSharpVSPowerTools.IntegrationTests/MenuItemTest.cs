@@ -15,23 +15,11 @@ namespace FSharpVSPowerTools.IntegrationTests
     {
         private delegate void ThreadInvoker();
 
-        private TestContext testContextInstance;
-
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
-        }
+        public TestContext TestContext { get; set; }
 
         /// <summary>
         ///A test for lauching the command and closing the associated dialogbox
@@ -42,18 +30,16 @@ namespace FSharpVSPowerTools.IntegrationTests
         {
             UIThreadInvoker.Invoke((ThreadInvoker)delegate()
             {
-                CommandID menuItemCmd = new CommandID(FSharpVSPowerTools.Refactoring.PkgCmdIDList.GuidBuiltinCmdSet,
-                                            (int)FSharpVSPowerTools.Refactoring.PkgCmdIDList.CmdidBuiltinRenameCommand);
+                var menuItemCmd = new CommandID(FSharpVSPowerTools.Constants.guidStandardCmdSet,
+                                                (int)FSharpVSPowerTools.Constants.cmdidStandardRenameCommand);
                 // Create the DialogBoxListener Thread.
-                string expectedDialogBoxText = string.Format(CultureInfo.CurrentCulture, "{0}\n\nInside {1}.MenuItemCallback()", "PowerToolsCommandsPackage", "FSharpVSPowerTools.PowerToolsCommandsPackage");
-                DialogBoxPurger purger = new DialogBoxPurger(NativeMethods.IDOK, expectedDialogBoxText);
+                var expectedDialogBoxText = string.Format(CultureInfo.CurrentCulture, "{0}\n\nInside {1}.MenuItemCallback()", "PowerToolsCommandsPackage", "FSharpVSPowerTools.PowerToolsCommandsPackage");
+                var purger = new DialogBoxPurger(NativeMethods.IDOK, expectedDialogBoxText);
 
                 try
                 {
                     purger.Start();
-
-                    TestUtils testUtils = new TestUtils();
-                    testUtils.ExecuteCommand(menuItemCmd);
+                    TestUtils.ExecuteCommand(menuItemCmd);
                 }
                 finally
                 {
@@ -61,6 +47,5 @@ namespace FSharpVSPowerTools.IntegrationTests
                 }
             });
         }
-
     }
 }

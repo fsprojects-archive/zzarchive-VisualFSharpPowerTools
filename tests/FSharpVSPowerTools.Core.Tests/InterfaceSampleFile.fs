@@ -159,3 +159,248 @@ let _ =
         member x.GetEnumerator(): System.Collections.IEnumerator = 
             raise (System.NotImplementedException())
  }
+
+let _ =
+    { new IComparer<'a> with
+          member x.Compare(x1: 'a, y: 'a): int = 
+              raise (System.NotImplementedException())
+ }
+
+type IKeyword =
+    abstract Method: ``member``: int -> Member: int -> member1: int -> unit
+
+type OKeyword =
+    interface IKeyword with
+        member x.Method(``member``: int) (member1: int) (member2: int): unit = 
+            raise (System.NotImplementedException())                     
+
+let xx =
+    { new System.Collections.ICollection with
+        member x.get_SyncRoot(): obj = 
+            raise (System.NotImplementedException())
+        
+        member x.get_IsSynchronized(): bool = 
+            raise (System.NotImplementedException())
+        
+        member x.GetEnumerator(): System.Collections.IEnumerator = 
+            raise (System.NotImplementedException())
+        
+        member x.CopyTo(array: System.Array, index: int): unit = 
+            raise (System.NotImplementedException())
+        
+        member x.get_Count(): int = 
+            raise (System.NotImplementedException())
+        
+ }
+
+let yy = { new IA<_> with
+               member x.M
+                   with get (): 'a = 
+                       raise (System.NotImplementedException())
+               
+               member x.N
+                   with get (): 'a = 
+                       raise (System.NotImplementedException())
+               
+}
+
+let _ =
+    seq { for _ in 1..10 -> { new IList<int> with
+                                  member x.get_Item(index: int): int = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.set_Item(index: int, value: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.IndexOf(item: int): int = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Insert(index: int, item: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.RemoveAt(index: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.get_Count(): int = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.get_IsReadOnly(): bool = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Add(item: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Clear(): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Contains(item: int): bool = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.CopyTo(array: int [], arrayIndex: int): unit = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.Remove(item: int): bool = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.GetEnumerator(): IEnumerator<int> = 
+                                      raise (System.NotImplementedException())
+                                  
+                                  member x.GetEnumerator(): System.Collections.IEnumerator = 
+                                      raise (System.NotImplementedException())
+                                  
+  }
+}
+
+module M =
+    type D = System.IDisposable
+
+    let _ = { new D with
+                  member x.Dispose(): unit = 
+                      raise (System.NotImplementedException())
+                   }
+
+type IWithUpperCaseArgs =
+    abstract Method: Arg1: int -> ARg2: int -> aRg3: int -> arG4: int -> arg5: int -> arg2: int -> unit
+
+let _ = { new IWithUpperCaseArgs with
+              member x.Method (arg1: int) (aRg2: int) (aRg3: int) (arG4: int) (arg5: int) (arg11: int): unit =
+                raise (System.NotImplementedException()) }
+
+//type Dict<'T> = IDictionary<int, 'T>
+//
+//let _ =
+//     { new Dict<string> }
+//
+//type IB = IList<int>
+//
+//type IC = IB
+//
+//let _ =
+//     { new IC }
+
+type IWithProperties =
+    abstract Item: v: int -> int with set
+
+let _ = { new IWithProperties with
+              member x.Item
+                  with set (v: int) (v1: int): unit = 
+                      raise (System.NotImplementedException())
+                }
+
+let _ = { new IDictionary<string, int> with
+              member x.GetEnumerator(): System.Collections.IEnumerator = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Item(key: string): int = 
+                  raise (System.NotImplementedException())
+              
+              member x.set_Item(key: string, value: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Keys(): ICollection<string> = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Values(): ICollection<int> = 
+                  raise (System.NotImplementedException())
+              
+              member x.ContainsKey(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(key: string, value: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(key: string): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.TryGetValue(key: string, value: byref<int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_Count(): int = 
+                  raise (System.NotImplementedException())
+              
+              member x.get_IsReadOnly(): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.Add(item: KeyValuePair<string,int>): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Clear(): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Contains(item: KeyValuePair<string,int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.CopyTo(array: KeyValuePair<string,int> [], arrayIndex: int): unit = 
+                  raise (System.NotImplementedException())
+              
+              member x.Remove(item: KeyValuePair<string,int>): bool = 
+                  raise (System.NotImplementedException())
+              
+              member x.GetEnumerator(): IEnumerator<KeyValuePair<string,int>> = 
+                  raise (System.NotImplementedException())
+              
+               }
+
+type IMy<'a> = abstract Method: 'a -> unit
+
+let _ = { new IMy<int option> with
+              member x.Method(arg1: int option): unit = 
+                  raise (System.NotImplementedException())
+               
+               }
+
+let _ = { new IMy<Choice<int, string>> with
+              member x.Method(arg1: Choice<int, string>): unit = 
+                  raise (System.NotImplementedException()) }
+
+let _ = { new IMy<int * int> with
+              member x.Method(arg1: int * int): unit = 
+                  raise (System.NotImplementedException()) }
+              
+type IMyEvent<'a> = 
+    [<CLIEvent>]
+    abstract M: IEvent<'a>     
+    
+type T1() =
+    interface IMyEvent<int> with
+        [<CLIEvent>]
+        member x.M: IEvent<int> = 
+            raise (System.NotImplementedException())
+
+type NewInfrastructure<'T> =
+    abstract ReadonlyProp: int
+    abstract ReadWriteProp: int with get, set
+
+let _ = { new NewInfrastructure<string> with
+              member x.ReadWriteProp
+                  with get (): int = 
+                      raise (System.NotImplementedException())
+                  and set (v: int): unit = 
+                      raise (System.NotImplementedException())
+              
+              member x.ReadonlyProp: int = 
+                  raise (System.NotImplementedException()) }
+
+type NewInfrastructure2<'T> =
+    [<CLIEvent>]
+    abstract CLIEvent: IEvent<int>
+    abstract ReadonlyProp: int
+
+let _ = { new NewInfrastructure2<string> with
+              [<CLIEvent>]
+              member x.CLIEvent: IEvent<int> = 
+                  raise (System.NotImplementedException())
+              
+              member x.ReadonlyProp: int = 
+                  raise (System.NotImplementedException()) }
+
+let _ = { new System.ComponentModel.INotifyPropertyChanged with
+              [<CLIEvent>]
+              member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler, _> = 
+                  raise (System.NotImplementedException())
+               }
+              
+              
+              
+        
+        

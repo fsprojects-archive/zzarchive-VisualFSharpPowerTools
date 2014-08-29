@@ -8,7 +8,7 @@ module FSharpVSPowerTools.Core.Tests.XmlDocTests
 #endif
 
 open System.IO
-open FSharpVSPowerTools.Core
+open FSharpVSPowerTools
 open NUnit.Framework
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
@@ -54,6 +54,7 @@ let ``should not create XML Doc for members which already have non-empty XML Doc
 [<TestCase ("/// <", 4)>]
 [<TestCase ("///    <", 7)>]
 [<TestCase (" ///<", 4)>]
+[<TestCase (" ///< ", 4)>]
 let ``detects blank XML doc comment``(sample, pos) =
     XmlDocComment.isBlank sample |> assertEqual (Some pos)
 
@@ -64,7 +65,6 @@ let ``detects blank XML doc comment``(sample, pos) =
 [<TestCase "////">]
 [<TestCase "word">]
 [<TestCase "///</">]
-[<TestCase "///< ">]
 let ``detects not blank XML doc comment``(sample) =
     XmlDocComment.isBlank sample |> assertEqual None
 
