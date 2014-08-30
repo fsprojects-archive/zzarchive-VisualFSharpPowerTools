@@ -282,10 +282,7 @@ module SignatureGenerator =
                 | Module _ -> writeModule ctx entity
                 | _ -> writeType ctx entity
             | :? FSharpMemberFunctionOrValue as mem ->
-                if mem.LogicalEnclosingEntity.IsFSharpModule then
-                    writeFunctionOrValue ctx mem
-                else
-                    writeSymbol mem.LogicalEnclosingEntity
+                writeSymbol mem.LogicalEnclosingEntity
             | _ ->
                 fail "Invalid symbol in this context: %O" symbol
 

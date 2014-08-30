@@ -81,13 +81,6 @@ let generateDefinitionFromPos caretPos src =
 [<Test>]
 let ``go to Tuple<'T1, 'T2> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
-    // TODO: member types attributes
-    // TODO: member generic types
-    // TODO: method arguments attributes
-    // TODO: method arguments generic types
-    // TODO: xml comments
-    // TODO: include open directives so that IStructuralEquatable/... are not wiggled
-    // TODO: sort members by display name
 
     [
         // Explicit 'new' statement: symbol is considered as a type
@@ -252,12 +245,19 @@ type Choice<'T1, 'T2> =
 """
 
 [<Test>]
-let ``go to module definition`` () =
-    """open System
+let ``go to metadata from module and module function`` () =
+    let src = """open System
 
 let f x = Option.map(x)"""
-    |> generateDefinitionFromPos (Pos.fromZ 2 10)
-    |> assertSrcAreEqual """[<CompilationRepresentation(4)>]
+
+    [
+        // From module: 'Option'
+        Pos.fromZ 2 10
+        // From module function: 'map'
+        Pos.fromZ 2 17
+    ]
+    |> List.map (fun pos -> generateDefinitionFromPos pos src)
+    |> List.iter (assertSrcAreEqual """[<CompilationRepresentation(4)>]
 module Microsoft.FSharp.Core.OptionModule = 
     val isSome : option:'T option -> bool
     val isNone : option:'T option -> bool
@@ -272,9 +272,16 @@ module Microsoft.FSharp.Core.OptionModule =
     val bind : binder:('T -> 'U option) -> option:'T option -> 'U option
     val toArray : option:'T option -> 'T []
     val toList : option:'T option -> 'T list
-"""
+""")
 
 // Tests to add:
+// TODO: member types attributes
+// TODO: member generic types
+// TODO: method arguments attributes
+// TODO: method arguments generic types
+// TODO: xml comments
+// TODO: include open directives so that IStructuralEquatable/... are not wiggled
+// TODO: sort members by display name
 // TODO: class extension members?
 // TODO: union type extension members?
 // TODO: record type metadata
@@ -307,7 +314,6 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: set cursor on union case when symbol is a union case
 // TODO: set cursor on enum case when symbol is an enum case
 // TODO: set cursor on field when symbol is a record field
-// TODO: enclosing module metadata when symbol is a function??
 
 #if INTERACTIVE
 #time "on";;
