@@ -245,6 +245,28 @@ type Choice<'T1, 'T2> =
 """
 
 [<Test>]
+let ``go to record type definition`` () =
+    """open System
+[<CustomEquality>]
+type MyRecord =
+    {
+        Field1: int
+        Field2: string
+    }
+    interface ICloneable with
+        member x.Clone(): obj = null
+
+let r: MyRecord = Unchecked.defaultof<_>"""
+    |> generateDefinitionFromPos (Pos.fromZ 10 7)
+    |> assertSrcAreEqual """[<CustomEquality>]
+type MyRecord =
+    {
+        Field1: int
+        Field2: string -> unit
+    }
+    interface ICloneable"""
+
+[<Test>]
 let ``go to metadata from module and module function`` () =
     let src = """open System
 
@@ -275,18 +297,16 @@ module Microsoft.FSharp.Core.OptionModule =
 """)
 
 // Tests to add:
-// TODO: member types attributes
-// TODO: member generic types
+// TODO: property/method attributes
 // TODO: method arguments attributes
-// TODO: method arguments generic types
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled
 // TODO: sort members by display name
 // TODO: class extension members?
 // TODO: union type extension members?
-// TODO: record type metadata
+// TODO: record type fields attributes
 // TODO: record type extension members?
-// TODO: enum type metadata
+// TODO: enum type attributes
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes
@@ -302,7 +322,6 @@ module Microsoft.FSharp.Core.OptionModule =
 //        override this.Method(x) = ()
 //
 // TODO: display event handlers (see System.Console.CancelKeyPress)
-// TODO: special formatting for operators like ::, []
 // TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)
 // TODO: handle abbreviation (try string vs System.String...)
