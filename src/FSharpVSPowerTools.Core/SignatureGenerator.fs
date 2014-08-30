@@ -144,8 +144,6 @@ module SignatureGenerator =
             ctx.Writer.WriteLine("[<Class>]")
         elif typ.IsInterface then
             ctx.Writer.WriteLine("[<Interface>]")
-        elif typ.IsValueType then
-             ctx.Writer.WriteLine("[<Struct>]")
 
         ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
         ctx.Writer.Indent ctx.Indentation
@@ -163,7 +161,6 @@ module SignatureGenerator =
             for field in typ.FSharpFields do
                 ctx.Writer.Write("| ")
                 writeField true ctx field
-        else ()
 
         // Interfaces
         [
@@ -175,6 +172,13 @@ module SignatureGenerator =
             // Sort by name without the namespace qualifier
             inter.TypeDefinition.DisplayName)
         |> List.iter (fun (_, name) -> ctx.Writer.WriteLine("interface {0}", name))
+
+        // Fields
+        let isClassOrStruct = typ.IsClass || (typ.IsValueType && not typ.IsEnum)
+        
+        if isClassOrStruct then
+            for field in typ.FSharpFields do
+                writeClassOrStructField ctx field
 
         // Members
         for value in typ.MembersFunctionsAndValues do
@@ -244,6 +248,14 @@ module SignatureGenerator =
             ctx.Writer.WriteLine("val {0} : {1}", value.DisplayName, generateSignature ctx value)
         else
             ctx.Writer.WriteLine("val {0} : {1}", value.DisplayName, value.FullType.Format(ctx.DisplayContext))
+
+    and internal writeClassOrStructField ctx (field: FSharpField) =
+        Debug.Assert(field.DeclaringEntity.IsClass ||
+                     (field.DeclaringEntity.IsValueType && not field.DeclaringEntity.IsEnum),
+                     "The declaring entity should be a class or a struct.")
+
+        writeDocs ctx field.XmlDoc
+        ctx.Writer.WriteLine("val {0} : {1}", field.DisplayName, field.FieldType.Format(ctx.DisplayContext))
 
     and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")

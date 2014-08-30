@@ -251,7 +251,7 @@ let ``go to record type definition`` () =
 type MyRecord =
     {
         Field1: int
-        Field2: string
+        Field2: string -> unit
     }
     interface ICloneable with
         member x.Clone(): obj = null
@@ -265,6 +265,29 @@ type MyRecord =
         Field2: string -> unit
     }
     interface ICloneable"""
+
+[<Test; Ignore>]
+let ``go to struct metadata`` () =
+    """
+[<Struct>]
+type MyStruct =
+    val Field1 : int
+    val Field2 : string
+    new(x, y) = { Field1 = x; Field2 = y }
+
+let x = new MyStruct()"""
+    |> generateDefinitionFromPos (Pos.fromZ 7 12)
+    |> assertSrcAreEqual """[<Struct>]
+type MyStruct =
+    interface System.IComparable<MyStruct>
+    interface System.IComparable
+    interface System.IEquatable<MyStruct>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+    new : x:int * y:string -> MyStruct
+    val Field1 : int
+    val Field2 : string
+"""
 
 [<Test>]
 let ``go to metadata from module and module function`` () =
@@ -306,6 +329,7 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: union type extension members?
 // TODO: record type fields attributes
 // TODO: record type extension members?
+// TODO: display in this order: constructors, fields, members, static members
 // TODO: enum type attributes
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
