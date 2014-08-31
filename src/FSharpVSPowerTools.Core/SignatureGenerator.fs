@@ -142,10 +142,10 @@ module SignatureGenerator =
     let private tryGetNeededTypeDefSyntaxDelimiter (typ: FSharpEntity) =
         let isStruct = typ.IsValueType && not typ.IsEnum
         let hasMembers = typ.MembersFunctionsAndValues.Count > 0
-        let needsTypeDefSyntaxDelimiters = not typ.IsFSharpModule && (isStruct || typ.IsInterface)
 
-        if not hasMembers && needsTypeDefSyntaxDelimiters then
-            if isStruct then Some "struct"
+        if not hasMembers && not typ.IsFSharpModule then
+            if typ.IsClass then Some "class"
+            elif isStruct then Some "struct"
             elif typ.IsInterface then Some "interface"
             else None
         else None
@@ -188,6 +188,7 @@ module SignatureGenerator =
 //        printfn "IsOpaque: %b" typ.IsOpaque
 //        printfn "IsFSharp: %b" typ.IsFSharp
 //        printfn "IsFSharpModule: %b" typ.IsFSharpModule
+        let neededTypeDefSyntaxDelimiter = tryGetNeededTypeDefSyntaxDelimiter typ
         let classAttributeHasToBeAdded =
             let hasVisibleConstructor =
                 typ.MembersFunctionsAndValues
@@ -200,10 +201,12 @@ module SignatureGenerator =
             && (typ.IsOpaque || not hasVisibleConstructor)
             && not (typ.IsFSharpRecord || typ.IsFSharpUnion)
             && not (hasAttribute<AbstractClassAttribute> typ.Attributes)
+            && not (hasAttribute<ClassAttribute> typ.Attributes)
+            && neededTypeDefSyntaxDelimiter <> Some "class"
 
         if classAttributeHasToBeAdded then
             ctx.Writer.WriteLine("[<Class>]")
-        elif typ.IsInterface && tryGetNeededTypeDefSyntaxDelimiter typ = None then
+        elif typ.IsInterface && neededTypeDefSyntaxDelimiter = None then
             ctx.Writer.WriteLine("[<Interface>]")
 
         ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
@@ -224,15 +227,13 @@ module SignatureGenerator =
 
         let isStruct = typ.IsValueType && not typ.IsEnum
         let hasMembers = typ.MembersFunctionsAndValues.Count > 0
-        let needsTypeDefSyntaxDelimiters = typ.IsClass || isStruct || typ.IsInterface
 
-        if not hasMembers && needsTypeDefSyntaxDelimiters then
-            if isStruct then
-                ctx.Writer.WriteLine("struct")
-            elif typ.IsInterface then
-                ctx.Writer.WriteLine("interface")
-
-            ctx.Writer.Indent ctx.Indentation
+        if not hasMembers then
+            match neededTypeDefSyntaxDelimiter with
+            | Some startDelimiter ->
+                ctx.Writer.WriteLine(startDelimiter)
+                ctx.Writer.Indent ctx.Indentation
+            | None -> ()
 
         // Interfaces
         [
@@ -276,7 +277,7 @@ module SignatureGenerator =
 //            ctx.Writer.WriteLine("")
 //            writeType ctx entity
 
-        if not hasMembers && needsTypeDefSyntaxDelimiters then
+        if not hasMembers && neededTypeDefSyntaxDelimiter <> None then
             ctx.Writer.Unindent ctx.Indentation
             ctx.Writer.WriteLine("end")
 
@@ -378,7 +379,7 @@ module SignatureGenerator =
                 elif mem.IsDispatchSlot && mem.EnclosingEntity.IsInterface then "abstract "
                 else ""
 
-            ctx.Writer.WriteLine("{0}member {1} : {2}", prefix, mem.DisplayName, generateSignature ctx mem)
+            ctx.Writer.WriteLine("{0}member {1} : {2}", prefix, DemangleOperatorName mem.DisplayName, generateSignature ctx mem)
         | _ -> ()
 
     and internal writeDocs ctx docs =

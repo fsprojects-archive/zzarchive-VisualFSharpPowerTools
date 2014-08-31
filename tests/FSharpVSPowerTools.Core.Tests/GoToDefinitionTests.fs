@@ -317,6 +317,18 @@ type MyStruct =
 """
 
 [<Test>]
+let ``go to empty class metadata`` () =
+    """
+type MyClass = class end
+
+let x: MyClass = Unchecked.defaultof<_>"""
+    |> generateDefinitionFromPos (Pos.fromZ 3 7)
+    |> assertSrcAreEqual """type MyClass =
+    class
+    end
+"""
+
+[<Test>]
 let ``go to empty interface metadata`` () =
     """
 type MyInterface = interface end
@@ -393,6 +405,7 @@ module Microsoft.FSharp.Core.OptionModule =
 """)
 
 // Tests to add:
+// TODO: should not generate metadata for namespace!
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
@@ -402,11 +415,9 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: record type fields attributes
 // TODO: record type extension members?
 // TODO: enum type attributes
-// TODO: handle private/internal constructors/methods/properties
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes
-// TODO: fix empty interfaces/classes/structs display (see Microsoft.FSharp.Compiler.Range module)
 // TODO: fix nested module naming issue (see Microsoft.FSharp.Compiler.Range module)
 //
 //type MyInterface() =
@@ -424,7 +435,7 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
-// FIXME: buffer name should have the enclosing type name (if symbol = field, method, ...)
+// TODO: add test for VS buffer name?
 // TODO: set cursor on method when symbol is a method
 // TODO: set cursor on union case when symbol is a union case
 // TODO: set cursor on enum case when symbol is an enum case
