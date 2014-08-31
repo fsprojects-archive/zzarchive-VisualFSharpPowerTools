@@ -451,8 +451,19 @@ type Class() =
     member remove_MyEvent : Handler<int> -> unit
 """
 
+[<Test>]
+let ``go to F# exception definition`` () =
+    [
+        "exception MyEmptyException"
+        "exception MyException of int * (int * string) * (int -> unit)"
+    ]
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 0 10))
+    |> assertSrcSeqAreEqual [
+        "exception MyEmptyException\n"
+        "exception MyException of int * (int * string) * (int -> unit)\n"
+    ]
+
 // Tests to add:
-// TODO: handle exceptions
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
@@ -476,9 +487,9 @@ type Class() =
 //    inherit MyAbstractClass()
 //    override this.Method(x) = ()
 //
+// ENHANCEMENT: special formatting for Events?
 // TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)
-// TODO: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
 // TODO: add test for VS buffer name?

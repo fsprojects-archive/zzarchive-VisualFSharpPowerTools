@@ -170,6 +170,8 @@ module SignatureGenerator =
         for entity in modul.NestedEntities do
             match entity with
             | Module _ -> writeModule ctx entity
+            | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
+            | _ when entity.IsFSharpExceptionDeclaration -> writeFSharpExceptionType ctx entity
             | _ -> writeType ctx entity
 
             ctx.Writer.WriteLine("")
@@ -294,7 +296,26 @@ module SignatureGenerator =
         ctx.Writer.Unindent ctx.Indentation
 
     and internal writeTypeAbbrev ctx (abbreviatingType: FSharpEntity) (abbreviatedType: FSharpType) =
+        writeDocs ctx abbreviatingType.XmlDoc
         ctx.Writer.WriteLine("type {0} = {1}", abbreviatingType.DisplayName, abbreviatedType.Format(ctx.DisplayContext))
+
+    and internal writeFSharpExceptionType ctx (exn: FSharpEntity) =
+        writeDocs ctx exn.XmlDoc
+
+        if exn.FSharpFields.Count > 0 then
+            let fields =
+                [
+                    for field in exn.FSharpFields ->
+                        if field.FieldType.IsFunctionType || field.FieldType.IsTupleType then
+                            sprintf "(%s)" (field.FieldType.Format(ctx.DisplayContext))
+                        else
+                            field.FieldType.Format(ctx.DisplayContext)
+                ]
+                |> String.concat " * "
+
+            ctx.Writer.WriteLine("exception {0} of {1}", exn.DisplayName, fields)
+        else
+            ctx.Writer.WriteLine("exception {0}", exn.DisplayName)
 
     and internal writeUnionCase ctx (case: FSharpUnionCase) =
         writeDocs ctx case.XmlDoc
@@ -411,6 +432,7 @@ module SignatureGenerator =
                 match entity with
                 | Module _ -> writeModule ctx entity
                 | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
+                | _ when entity.IsFSharpExceptionDeclaration -> writeFSharpExceptionType ctx entity
                 | _ -> writeType ctx entity
             | :? FSharpMemberFunctionOrValue as mem ->
                 writeSymbol mem.LogicalEnclosingEntity
