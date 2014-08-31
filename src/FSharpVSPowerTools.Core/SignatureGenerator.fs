@@ -21,10 +21,58 @@ module SignatureGenerator =
             DisplayContext: FSharpDisplayContext
         }
 
+    [<NoComparison>]
+    type private MembersPartition = {
+        Constructors: FSharpMemberFunctionOrValue[]
+        AbstractMembers: FSharpMemberFunctionOrValue[]
+        ConcreteInstanceMembers: FSharpMemberFunctionOrValue[]
+        StaticMembers: FSharpMemberFunctionOrValue[]
+    }
+    with
+        static member Create(members: seq<FSharpMemberFunctionOrValue>) =
+            let filteredMembers = members
+                                  |> Seq.filter (fun mem ->
+                                      not mem.IsPropertyGetterMethod &&
+                                      not mem.IsPropertySetterMethod)
+
+            let constructors = ResizeArray<_>()
+            let abstractMembers = ResizeArray<_>()
+            let concreteInstanceMembers = ResizeArray<_>()
+            let staticMembers = ResizeArray<_>()
+
+            for mem in filteredMembers do
+                match mem with
+                | Constructor _ -> constructors.Add(mem)
+                | _ ->
+                    if not mem.IsInstanceMember then
+                        staticMembers.Add(mem)
+                    // Is abstract && enclosing type is interface/abstract?
+                    elif mem.IsDispatchSlot && mem.EnclosingEntity.IsInterface then
+                        abstractMembers.Add(mem)
+                    else
+                        concreteInstanceMembers.Add(mem)
+
+            let sortByNameAndArgCount =
+                Array.sortInPlaceBy (fun (mem: FSharpMemberFunctionOrValue) ->
+                    mem.DisplayName, mem.CurriedParameterGroups.Count)
+
+            let res = 
+                { Constructors = constructors.ToArray()
+                  AbstractMembers = abstractMembers.ToArray()
+                  ConcreteInstanceMembers = concreteInstanceMembers.ToArray()
+                  StaticMembers = staticMembers.ToArray() }
+
+            sortByNameAndArgCount res.AbstractMembers
+            sortByNameAndArgCount res.ConcreteInstanceMembers
+            sortByNameAndArgCount res.StaticMembers
+
+            res
+
+
     let internal (|Module|_|) (entity: FSharpEntity) = 
         if entity.IsFSharpModule then Some() else None
 
-    let getTypeNameWithGenericParams (typ: FSharpEntity) =
+    let private getTypeNameWithGenericParams (typ: FSharpEntity) =
         [|
             yield typ.DisplayName
             if typ.GenericParameters.Count > 0 then
@@ -37,7 +85,7 @@ module SignatureGenerator =
         |]
         |> String.concat ""
 
-    let internal generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
+    let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
         let generateInputParamsPart (mem: FSharpMemberFunctionOrValue) =
             let takesInputParameters =
                 not (mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0)
@@ -91,10 +139,21 @@ module SignatureGenerator =
 
         | _ -> ""
 
+    let private tryGetNeededTypeDefSyntaxDelimiter (typ: FSharpEntity) =
+        let isStruct = typ.IsValueType && not typ.IsEnum
+        let hasMembers = typ.MembersFunctionsAndValues.Count > 0
+        let needsTypeDefSyntaxDelimiters = not typ.IsFSharpModule && (isStruct || typ.IsInterface)
+
+        if not hasMembers && needsTypeDefSyntaxDelimiters then
+            if isStruct then Some "struct"
+            elif typ.IsInterface then Some "interface"
+            else None
+        else None
+
     let rec internal writeModule ctx (modul: FSharpEntity) =
         Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
         writeDocs ctx modul.XmlDoc
-        writeAttributes ctx modul.Attributes
+        writeAttributes ctx modul modul.Attributes
         ctx.Writer.WriteLine("module {0} = ", modul.FullName)
         ctx.Writer.Indent ctx.Indentation
         for value in modul.MembersFunctionsAndValues do
@@ -121,8 +180,9 @@ module SignatureGenerator =
         | None ->
             // TODO: print modules or not?
             ()
+
         writeDocs ctx typ.XmlDoc
-        writeAttributes ctx typ.Attributes
+        writeAttributes ctx typ typ.Attributes
 
 //        printfn "IsClass: %b" typ.IsClass
 //        printfn "IsOpaque: %b" typ.IsOpaque
@@ -139,10 +199,11 @@ module SignatureGenerator =
             && (not typ.IsValueType)
             && (typ.IsOpaque || not hasVisibleConstructor)
             && not (typ.IsFSharpRecord || typ.IsFSharpUnion)
+            && not (hasAttribute<AbstractClassAttribute> typ.Attributes)
 
         if classAttributeHasToBeAdded then
             ctx.Writer.WriteLine("[<Class>]")
-        elif typ.IsInterface then
+        elif typ.IsInterface && tryGetNeededTypeDefSyntaxDelimiter typ = None then
             ctx.Writer.WriteLine("[<Interface>]")
 
         ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
@@ -185,15 +246,29 @@ module SignatureGenerator =
             inter.TypeDefinition.DisplayName)
         |> List.iter (fun (_, name) -> ctx.Writer.WriteLine("interface {0}", name))
 
+        let membersPartition = MembersPartition.Create(typ.MembersFunctionsAndValues)
+
+        // Constructors
+        for constr in membersPartition.Constructors do
+            writeMember ctx constr
+
         // Fields
         if typ.IsClass || isStruct then
             for field in typ.FSharpFields do
                 writeClassOrStructField ctx field
 
-        // Members
-        for value in typ.MembersFunctionsAndValues do
-            Debug.Assert(not value.LogicalEnclosingEntity.IsFSharpModule, "F# type should not contain module functions or values.")
-            writeMember ctx value
+        // Abstract members
+        for mem in membersPartition.AbstractMembers do
+            writeMember ctx mem
+
+        // Concrete instance members
+        for mem in membersPartition.ConcreteInstanceMembers do
+            writeMember ctx mem
+
+        // Static mmebers
+        for mem in membersPartition.StaticMembers do
+            writeMember ctx mem
+
         // Nested entities
         // Deactivate nested types display for the moment (C# doesn't do it)
 //        for entity in typ.NestedEntities do
@@ -222,25 +297,31 @@ module SignatureGenerator =
             writeUnionCaseField ctx field
         ctx.Writer.WriteLine("")
 
-    and internal writeAttributes ctx (attributes: IList<FSharpAttribute>) =
+    and internal writeAttributes ctx (typ: FSharpEntity) (attributes: IList<FSharpAttribute>) =
+        let typeDefSyntaxDelimOpt = tryGetNeededTypeDefSyntaxDelimiter typ
+        let bypassAttribute (attrib: FSharpAttribute) =
+            typeDefSyntaxDelimOpt = Some "struct" &&
+            attrib.AttributeType.CompiledName = typeof<StructAttribute>.Name
+
         for attr in attributes do
-            let name = 
-                let displayName = attr.AttributeType.DisplayName
-                if displayName.EndsWith "Attribute" && displayName.Length > "Attribute".Length then
-                    displayName.Substring(0, displayName.Length - "Attribute".Length)
-                else displayName
-            if attr.ConstructorArguments.Count = 0 then
-                ctx.Writer.WriteLine("[<{0}>]", name)
-            else
-                ctx.Writer.Write("[<{0}(", name)
-                let mutable isFirst = true
-                for arg in attr.ConstructorArguments do
-                    if isFirst then
-                        ctx.Writer.Write("{0}", sprintf "%A" arg)
-                        isFirst <- false
-                    else
-                        ctx.Writer.Write(", {0}", sprintf "%A" arg)
-                ctx.Writer.WriteLine(")>]")
+            if not (bypassAttribute attr) then
+                let name = 
+                    let displayName = attr.AttributeType.DisplayName
+                    if displayName.EndsWith "Attribute" && displayName.Length > "Attribute".Length then
+                        displayName.Substring(0, displayName.Length - "Attribute".Length)
+                    else displayName
+                if attr.ConstructorArguments.Count = 0 then
+                    ctx.Writer.WriteLine("[<{0}>]", name)
+                else
+                    ctx.Writer.Write("[<{0}(", name)
+                    let mutable isFirst = true
+                    for arg in attr.ConstructorArguments do
+                        if isFirst then
+                            ctx.Writer.Write("{0}", sprintf "%A" arg)
+                            isFirst <- false
+                        else
+                            ctx.Writer.Write(", {0}", sprintf "%A" arg)
+                    ctx.Writer.WriteLine(")>]")
 
     and internal writeField hasNewLine ctx (field: FSharpField) =
         writeDocs ctx field.XmlDoc

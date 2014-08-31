@@ -104,9 +104,9 @@ type Tuple<'T1, 'T2> =
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
     member Equals : obj:obj -> bool
     member GetHashCode : unit -> int
-    member ToString : unit -> string
     member Item1 : 'T1
     member Item2 : 'T2
+    member ToString : unit -> string
 """)
 
 let _ =
@@ -132,6 +132,7 @@ type Async =
     static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * System.AsyncCallback * obj -> System.IAsyncResult) * (System.IAsyncResult -> 'T) * (System.IAsyncResult -> unit)
 """
 
+
 [<Test>]
 let ``adds necessary parenthesis to tuple parameters`` () =
     """
@@ -143,6 +144,30 @@ type T() =
     |> assertSrcAreEqual """type T =
     new : unit -> T
     member Test : x:(int * int) * y:int -> int
+"""
+
+[<Test>]
+let ``members are sorted this way: abstract member/member/static member`` () =
+    """
+[<AbstractClass>]
+type Abstract =
+    member this.P = 3
+    abstract member AP: float
+    static member SP = 3
+    static member SM() = ()
+    member this.M1() = ()
+    abstract member M: unit -> int
+
+let x: Abstract = Unchecked.defaultof<_>"""
+    |> generateDefinitionFromPos (Pos.fromZ 10 7)
+    |> assertSrcAreEqual """[<AbstractClass>]
+type Abstract =
+    member AP : float
+    member M : unit -> int
+    member M1 : unit -> unit
+    member P : int
+    static member SM : unit -> unit
+    static member SP : int
 """
 
 [<Test>]
@@ -162,9 +187,9 @@ type Tuple<'T1, 'T2> =
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
     member Equals : obj:obj -> bool
     member GetHashCode : unit -> int
-    member ToString : unit -> string
     member Item1 : 'T1
     member Item2 : 'T2
+    member ToString : unit -> string
 """
 
 [<Test>]
@@ -173,10 +198,11 @@ let ``go to method definition generate enclosing type metadata`` () =
 
 do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqualForFirstLines 6 """namespace System
+    |> assertSrcAreEqualForFirstLines 7 """namespace System
 
 [<Class>]
 type Console =
+    static member BackgroundColor : ConsoleColor
     static member Beep : unit -> unit
     static member Beep : frequency:int * duration:int -> unit
 """
@@ -202,12 +228,12 @@ type List<'T> =
     interface Collections.Generic.IEnumerable<'T>
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
-    static member Cons : head:'T * tail:'T list -> 'T list
-    member Tail : 'T list
-    member Length : int
-    member Item : 'T
-    member IsEmpty : bool
     member Head : 'T
+    member IsEmpty : bool
+    member Item : 'T
+    member Length : int
+    member Tail : 'T list
+    static member Cons : head:'T * tail:'T list -> 'T list
     static member Empty : 'T list
 """
 
@@ -355,12 +381,10 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: method arguments attributes
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled
-// TODO: sort members by display name
 // TODO: class extension members?
 // TODO: union type extension members?
 // TODO: record type fields attributes
 // TODO: record type extension members?
-// TODO: display in this order: constructors, fields, members, static members
 // TODO: enum type attributes
 // TODO: handle private/internal constructors/methods/properties
 // TODO: handle abstract method with default implementation
@@ -389,9 +413,6 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: set cursor on union case when symbol is a union case
 // TODO: set cursor on enum case when symbol is an enum case
 // TODO: set cursor on field when symbol is a record field
-
-// ENHANCEMENT: if interface/end delimiters are present, don't write [<Interface>]
-// ENHANCEMENT: if struct/end delimiters are present, don't write [<Struct>]
 
 #if INTERACTIVE
 #time "on";;
