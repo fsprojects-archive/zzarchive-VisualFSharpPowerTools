@@ -287,6 +287,9 @@ module SignatureGenerator =
 
         ctx.Writer.Unindent ctx.Indentation
 
+    and internal writeTypeAbbrev ctx (abbreviatingType: FSharpEntity) (abbreviatedType: FSharpType) =
+        ctx.Writer.WriteLine("type {0} = {1}", abbreviatingType.DisplayName, abbreviatedType.Format(ctx.DisplayContext))
+
     and internal writeUnionCase ctx (case: FSharpUnionCase) =
         writeDocs ctx case.XmlDoc
         ctx.Writer.Write("| {0}", DemangleOperatorName case.Name)
@@ -399,6 +402,7 @@ module SignatureGenerator =
             | :? FSharpEntity as entity ->
                 match entity with
                 | Module _ -> writeModule ctx entity
+                | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
                 | _ -> writeType ctx entity
             | :? FSharpMemberFunctionOrValue as mem ->
                 writeSymbol mem.LogicalEnclosingEntity

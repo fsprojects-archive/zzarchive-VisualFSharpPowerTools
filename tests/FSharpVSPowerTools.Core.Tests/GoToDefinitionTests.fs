@@ -404,21 +404,27 @@ module Microsoft.FSharp.Core.OptionModule =
     val toList : option:'T option -> 'T list
 """)
 
-
 [<Test>]
-let ``interface inheritance by interfaces``() =
+let ``interface inheritance by interfaces`` () =
     """
 type T =
     abstract member M: unit -> unit
 
 type T2 =
     inherit T"""
-
     |> generateDefinitionFromPos (Pos.fromZ 4 5)
     |> assertSrcAreEqual """type T2 =
     interface
         inherit T
     end
+"""
+
+[<Test>]
+let ``go to type abbreviation definition`` () =
+    """
+let x: string = null"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 7)
+    |> assertSrcAreEqual """type string = System.String
 """
 
 // Tests to add:
@@ -434,7 +440,8 @@ type T2 =
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes
-// TODO: fix nested module naming issue (see Microsoft.FSharp.Compiler.Range module)
+// TODO: generic member constraints
+// TODO: static member constraints
 //
 //type MyInterface() =
 //    abstract member Method: int -> unit
@@ -447,7 +454,6 @@ type T2 =
 // TODO: display event handlers (see System.Console.CancelKeyPress)
 // TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)
-// TODO: handle abbreviation (try string vs System.String...)
 // TODO: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
