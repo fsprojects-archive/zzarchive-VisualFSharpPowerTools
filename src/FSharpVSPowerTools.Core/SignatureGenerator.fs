@@ -36,7 +36,8 @@ module SignatureGenerator =
             let filteredMembers = members
                                   |> Seq.filter (fun mem ->
                                       not mem.IsPropertyGetterMethod &&
-                                      not mem.IsPropertySetterMethod)
+                                      not mem.IsPropertySetterMethod &&
+                                      not mem.IsEvent)
 
             let constructors = ResizeArray<_>()
             let abstractMembers = ResizeArray<_>()
@@ -62,7 +63,7 @@ module SignatureGenerator =
                         then 0 
                         else mem.CurriedParameterGroups.Count
 
-                    mem.DisplayName, paramCount)
+                    mem.DisplayName.ToUpperInvariant(), paramCount)
 
             let res = 
                 { Constructors = constructors.ToArray()
@@ -263,7 +264,8 @@ module SignatureGenerator =
         // Fields
         if typ.IsClass || isStruct then
             for field in typ.FSharpFields do
-                writeClassOrStructField ctx field
+                if field.Accessibility.IsPublic || field.Accessibility.IsInternal then
+                    writeClassOrStructField ctx field
 
         // Abstract members
         for mem in membersPartition.AbstractMembers do

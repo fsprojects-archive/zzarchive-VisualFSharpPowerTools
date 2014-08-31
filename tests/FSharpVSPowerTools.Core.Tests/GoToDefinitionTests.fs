@@ -193,14 +193,14 @@ let ``go to method definition generate enclosing type metadata`` () =
 
 do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqualForFirstLines 7 """namespace System
+    |> assertSrcAreEqualForFirstLines 8 """namespace System
 
 [<Class>]
 type Console =
+    static member add_CancelKeyPress : value:ConsoleCancelEventHandler -> unit
     static member BackgroundColor : ConsoleColor
     static member Beep : unit -> unit
-    static member Beep : frequency:int * duration:int -> unit
-"""
+    static member Beep : frequency:int * duration:int -> unit"""
 
 [<Test>]
 let ``go to F# List<'T> definition`` () =
@@ -436,6 +436,21 @@ type MyAbstractClass =
     override Method : x:int -> unit
 """
 
+[<Test>]
+let ``go to class definition with events`` () =
+    """
+type Class() =
+    let event = Event<int>()
+    [<CLIEvent>]
+    member this.MyEvent = event.Publish"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type Class =
+    new : unit -> Class
+    member add_MyEvent : Handler<int> -> unit
+    member MyEvent : IEvent<int>
+    member remove_MyEvent : Handler<int> -> unit
+"""
+
 // Tests to add:
 // TODO: handle exceptions
 // TODO: property/method attributes
@@ -461,7 +476,6 @@ type MyAbstractClass =
 //    inherit MyAbstractClass()
 //    override this.Method(x) = ()
 //
-// TODO: display event handlers (see System.Console.CancelKeyPress)
 // TODO: display static member getter/setter availability
 // TODO: handle optional parameters (see Async.AwaitEvent)
 // TODO: special formatting for Events?
