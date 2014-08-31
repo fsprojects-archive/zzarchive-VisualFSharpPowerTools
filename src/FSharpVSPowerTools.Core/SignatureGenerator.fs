@@ -265,7 +265,7 @@ module SignatureGenerator =
         for mem in membersPartition.ConcreteInstanceMembers do
             writeMember ctx mem
 
-        // Static mmebers
+        // Static members
         for mem in membersPartition.StaticMembers do
             writeMember ctx mem
 

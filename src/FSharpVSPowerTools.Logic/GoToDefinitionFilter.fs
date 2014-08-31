@@ -94,15 +94,20 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                 let symbolResult = getDocumentState () |> Async.RunSynchronously
+                let isNamespace (fsSymbol: FSharpSymbol) =
+                    match fsSymbol with
+                    | :? FSharpEntity as e when e.IsNamespace -> true
+                    | _ -> false
+
                 match symbolResult with
                 | Some (_, _, FindDeclResult.DeclFound _) 
                 | None ->
-                    statusBar.SetText("Delegate go to definition to Visual F# Tools") |> ignore       
                     // Declaration location might exist so let's Visual F# Tools handle it  
                     x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-                | Some (fsSymbol, displayContext, FindDeclResult.DeclNotFound _) ->    
-                    navigateToMetadata displayContext fsSymbol
-                    statusBar.SetText("Try to go to definition by ourselves") |> ignore  
+                | Some (fsSymbol, displayContext, FindDeclResult.DeclNotFound _) ->
+                    if not (isNamespace fsSymbol) then
+                        navigateToMetadata displayContext fsSymbol
+                        statusBar.SetText("Generated symbol metadata") |> ignore  
                     VSConstants.S_OK
             else
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)

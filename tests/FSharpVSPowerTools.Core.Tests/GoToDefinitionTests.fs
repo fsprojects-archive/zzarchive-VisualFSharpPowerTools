@@ -405,7 +405,7 @@ module Microsoft.FSharp.Core.OptionModule =
 """)
 
 // Tests to add:
-// TODO: should not generate metadata for namespace!
+// TODO: interface inherited by other interfaces should be declared using "inherit ..." instead of "interface ..." (see EnvDTE.DTE)
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
