@@ -39,11 +39,15 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         }
 
     // Now the input is an entity or a member/value.
-    // If it is an entity, write the whole corresponding module and type
-    // otherwise, write containing module or type and go to the exact location of the member in that entity
+    // We always generate the full enclosing entity signature if the symbol is a member/value
     let navigateToMetadata displayContext (fsSymbol: FSharpSymbol) = 
-        let fileName = fsSymbol.FullName + ".fsi"
+        let fileName =
+            match fsSymbol with
+            | :? FSharpMemberFunctionOrValue as mem -> mem.LogicalEnclosingEntity.FullName + ".fsi"
+            | :? FSharpEntity as ent -> ent.FullName + ".fsi"
+            | _ -> fsSymbol.FullName + ".fsi"
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
+
         File.WriteAllText(filePath, SignatureGenerator.formatSymbol displayContext fsSymbol)
         
         let mutable hierarchy = Unchecked.defaultof<_>
