@@ -80,8 +80,6 @@ let generateDefinitionFromPos caretPos src =
 
 [<Test>]
 let ``go to Tuple<_, _> definition`` () =
-    let _ = new Tuple<int, int>(1, 2)
-
     [
         // Explicit 'new' statement: symbol is considered as a type
         """open System
@@ -425,6 +423,20 @@ let ``go to type abbreviation definition`` () =
 let x: string = null"""
     |> generateDefinitionFromPos (Pos.fromZ 1 7)
     |> assertSrcAreEqual """type string = System.String
+"""
+
+[<Test; Ignore>]
+let ``go to abstract class definition with default members`` () =
+    """
+[<AbstractClass>]
+type MyAbstractClass =
+    abstract member Method: int -> unit
+    default this.Method(x) = ()"""
+    |> generateDefinitionFromPos (Pos.fromZ 2 5)
+    |> assertSrcAreEqual """[<AbstractClass>]
+type MyAbstractClass =
+    abstract member Method : int -> unit
+    override Method : x:int -> unit
 """
 
 // Tests to add:

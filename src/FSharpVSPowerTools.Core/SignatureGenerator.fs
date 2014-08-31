@@ -47,7 +47,7 @@ module SignatureGenerator =
                     if not mem.IsInstanceMember then
                         staticMembers.Add(mem)
                     // Is abstract && enclosing type is interface/abstract?
-                    elif mem.IsDispatchSlot && mem.EnclosingEntity.IsInterface then
+                    elif mem.IsDispatchSlot then
                         abstractMembers.Add(mem)
                     else
                         concreteInstanceMembers.Add(mem)
@@ -383,7 +383,7 @@ module SignatureGenerator =
                 // Is static?
                 if not mem.IsInstanceMember then "static "
                 // Is abstract && enclosing type is interface/abstract?
-                elif mem.IsDispatchSlot && mem.EnclosingEntity.IsInterface then "abstract "
+                elif mem.IsDispatchSlot then "abstract "
                 else ""
 
             ctx.Writer.WriteLine("{0}member {1} : {2}", prefix, DemangleOperatorName mem.DisplayName, generateSignature ctx mem)
