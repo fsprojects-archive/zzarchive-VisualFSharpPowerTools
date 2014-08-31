@@ -244,7 +244,11 @@ module SignatureGenerator =
         |> List.sortBy (fun (inter, _name) ->
             // Sort by name without the namespace qualifier
             inter.TypeDefinition.DisplayName)
-        |> List.iter (fun (_, name) -> ctx.Writer.WriteLine("interface {0}", name))
+        |> List.iter (fun (_, name) ->
+            if typ.IsInterface then
+                ctx.Writer.WriteLine("inherit {0}", name)
+            else
+                ctx.Writer.WriteLine("interface {0}", name))
 
         let membersPartition = MembersPartition.Create(typ.MembersFunctionsAndValues)
 

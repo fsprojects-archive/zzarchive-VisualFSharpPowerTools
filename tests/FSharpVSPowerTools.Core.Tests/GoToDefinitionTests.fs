@@ -404,8 +404,24 @@ module Microsoft.FSharp.Core.OptionModule =
     val toList : option:'T option -> 'T list
 """)
 
+
+[<Test>]
+let ``interface inheritance by interfaces``() =
+    """
+type T =
+    abstract member M: unit -> unit
+
+type T2 =
+    inherit T"""
+
+    |> generateDefinitionFromPos (Pos.fromZ 4 5)
+    |> assertSrcAreEqual """type T2 =
+    interface
+        inherit T
+    end
+"""
+
 // Tests to add:
-// TODO: interface inherited by other interfaces should be declared using "inherit ..." instead of "interface ..." (see EnvDTE.DTE)
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
