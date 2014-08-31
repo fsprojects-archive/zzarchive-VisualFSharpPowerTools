@@ -220,8 +220,7 @@ module SignatureGenerator =
                 writeUnionCase ctx case
         elif typ.IsEnum then
             for field in typ.FSharpFields do
-                ctx.Writer.Write("| ")
-                writeField true ctx field
+                writeEnumValue ctx field
 
         let isStruct = typ.IsValueType && not typ.IsEnum
         let hasMembers = typ.MembersFunctionsAndValues.Count > 0
@@ -330,6 +329,13 @@ module SignatureGenerator =
             ctx.Writer.WriteLine("{0}: {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
         else
             ctx.Writer.Write("{0}: {1}", field.Name, field.FieldType.Format(ctx.DisplayContext))
+
+    and internal writeEnumValue ctx (field: FSharpField) =
+        // NOTE: for enum values, the compiler generates a "value__" field which 
+        //       is not visible from outside. That's why we don't display it
+        if not field.IsCompilerGenerated then
+            writeDocs ctx field.XmlDoc
+            ctx.Writer.WriteLine("| {0} = {1}", field.Name, field)
 
     and internal writeUnionCaseField ctx (field: FSharpField) =
         if isUnnamedUnionCaseField field then

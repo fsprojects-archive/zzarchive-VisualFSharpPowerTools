@@ -79,7 +79,7 @@ let generateDefinitionFromPos caretPos src =
 //    member this.Property with get() = x and set value = x <- value
 
 [<Test>]
-let ``go to Tuple<'T1, 'T2> definition`` () =
+let ``go to Tuple<_, _> definition`` () =
     let _ = new Tuple<int, int>(1, 2)
 
     [
@@ -344,6 +344,22 @@ let x = new MyStruct()"""
         interface System.Collections.IStructuralComparable
         interface System.Collections.IStructuralEquatable
     end
+"""
+
+[<Test; Ignore>]
+let ``go to enum type definition`` () =
+    """
+type Enum =
+    | A = 0
+    | B = 1
+    | C = 2
+
+let x = Enum.A"""
+    |> generateDefinitionFromPos (Pos.fromZ 6 8)
+    |> assertSrcAreEqual """type Enum =
+    | A = 0
+    | B = 1
+    | C = 2
 """
 
 [<Test>]
