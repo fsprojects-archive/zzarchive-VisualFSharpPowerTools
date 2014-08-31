@@ -71,9 +71,6 @@ let tryGenerateDefinitionFromPos caretPos src =
 let generateDefinitionFromPos caretPos src =
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
-//type Interface =
-//    abstract member M: int -> unit
-//
 //type T() =
 //    let mutable x = 0
 //    member this.Property with get() = x and set value = x <- value
@@ -440,6 +437,7 @@ type MyAbstractClass =
 """
 
 // Tests to add:
+// TODO: handle exceptions
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
@@ -455,13 +453,13 @@ type MyAbstractClass =
 // TODO: generic member constraints
 // TODO: static member constraints
 //
-//type MyInterface() =
+//type MyAbstractClass() =
 //    abstract member Method: int -> unit
 //    default this.Method(x) = ()
 //
-//type MyInterface2() =
-//    inherit MyInterface() with
-//        override this.Method(x) = ()
+//type MyClass() =
+//    inherit MyAbstractClass()
+//    override this.Method(x) = ()
 //
 // TODO: display event handlers (see System.Console.CancelKeyPress)
 // TODO: display static member getter/setter availability

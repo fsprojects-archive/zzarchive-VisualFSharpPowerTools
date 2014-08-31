@@ -21,6 +21,9 @@ module SignatureGenerator =
             DisplayContext: FSharpDisplayContext
         }
 
+    let hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
+        mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0
+
     [<NoComparison>]
     type private MembersPartition = {
         Constructors: FSharpMemberFunctionOrValue[]
@@ -54,7 +57,12 @@ module SignatureGenerator =
 
             let sortByNameAndArgCount =
                 Array.sortInPlaceBy (fun (mem: FSharpMemberFunctionOrValue) ->
-                    mem.DisplayName, mem.CurriedParameterGroups.Count)
+                    let paramCount =
+                        if hasUnitOnlyParameter mem
+                        then 0 
+                        else mem.CurriedParameterGroups.Count
+
+                    mem.DisplayName, paramCount)
 
             let res = 
                 { Constructors = constructors.ToArray()
@@ -86,9 +94,6 @@ module SignatureGenerator =
 
     let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
         let generateInputParamsPart (mem: FSharpMemberFunctionOrValue) =
-            let takesInputParameters =
-                not (mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0)
-
             let formatParamTypeName (typ: FSharpType) isOptional =
 //                if isOptional then
 //                    // result has the 'XXXX option' format: we remove the trailing ' option'
@@ -99,7 +104,7 @@ module SignatureGenerator =
                 else
                     typ.Format(ctx.DisplayContext)
 
-            if takesInputParameters then
+            if not (hasUnitOnlyParameter mem) then
                 [
                     for paramGroup in mem.CurriedParameterGroups do
                         yield [
