@@ -44,8 +44,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         let fileName =
             match fsSymbol with
             | :? FSharpMemberFunctionOrValue as mem -> mem.LogicalEnclosingEntity.FullName + ".fsi"
-            | :? FSharpEntity as ent -> ent.FullName + ".fsi"
-            | _ -> fsSymbol.FullName + ".fsi"
+            | _ ->
+                try fsSymbol.FullName + ".fsi"
+                with _ -> fsSymbol.DisplayName + ".fsi"
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
 
         File.WriteAllText(filePath, SignatureGenerator.formatSymbol displayContext fsSymbol)
