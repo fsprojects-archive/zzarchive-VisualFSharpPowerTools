@@ -66,6 +66,9 @@ let rec getAbbreviatedType (fsharpType: FSharpType) =
         getAbbreviatedType fsharpType.AbbreviatedType
     else fsharpType
 
+let isInterfaceOrAbstractClass (entity: FSharpEntity) =
+    entity.IsInterface || hasAttribute<AbstractClassAttribute> entity.Attributes
+
 /// Field (field, fieldAbbreviatedType)
 let (|Field|_|) (symbol: FSharpSymbol) =
     match symbol with

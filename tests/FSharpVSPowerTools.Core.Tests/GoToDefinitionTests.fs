@@ -160,8 +160,8 @@ let x: Abstract = Unchecked.defaultof<_>"""
     |> generateDefinitionFromPos (Pos.fromZ 10 7)
     |> assertSrcAreEqual """[<AbstractClass>]
 type Abstract =
-    member AP : float
-    member M : unit -> int
+    abstract member AP : float
+    abstract member M : unit -> int
     member M1 : unit -> unit
     member P : int
     static member SM : unit -> unit
