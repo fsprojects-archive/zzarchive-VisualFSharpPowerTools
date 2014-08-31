@@ -162,6 +162,18 @@ module SignatureGenerator =
                 ctx.Writer.Write("| ")
                 writeField true ctx field
 
+        let isStruct = typ.IsValueType && not typ.IsEnum
+        let hasMembers = typ.MembersFunctionsAndValues.Count > 0
+        let needsTypeDefSyntaxDelimiters = typ.IsClass || isStruct || typ.IsInterface
+
+        if not hasMembers && needsTypeDefSyntaxDelimiters then
+            if isStruct then
+                ctx.Writer.WriteLine("struct")
+            elif typ.IsInterface then
+                ctx.Writer.WriteLine("interface")
+
+            ctx.Writer.Indent ctx.Indentation
+
         // Interfaces
         [
             for inter in typ.DeclaredInterfaces do
@@ -174,9 +186,7 @@ module SignatureGenerator =
         |> List.iter (fun (_, name) -> ctx.Writer.WriteLine("interface {0}", name))
 
         // Fields
-        let isClassOrStruct = typ.IsClass || (typ.IsValueType && not typ.IsEnum)
-        
-        if isClassOrStruct then
+        if typ.IsClass || isStruct then
             for field in typ.FSharpFields do
                 writeClassOrStructField ctx field
 
@@ -191,6 +201,11 @@ module SignatureGenerator =
 //            // Nested types only happen due to C# interoperability
 //            ctx.Writer.WriteLine("")
 //            writeType ctx entity
+
+        if not hasMembers && needsTypeDefSyntaxDelimiters then
+            ctx.Writer.Unindent ctx.Indentation
+            ctx.Writer.WriteLine("end")
+
         ctx.Writer.Unindent ctx.Indentation
 
     and internal writeUnionCase ctx (case: FSharpUnionCase) =

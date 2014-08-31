@@ -182,7 +182,7 @@ type Console =
 """
 
 [<Test>]
-let ``go to Microsoft.FSharp.Collections.List<'T> definition`` () =
+let ``go to F# List<'T> definition`` () =
     """open System
 
 let x: List<int> = []"""
@@ -264,9 +264,10 @@ type MyRecord =
         Field1: int
         Field2: string -> unit
     }
-    interface ICloneable"""
+    interface ICloneable
+"""
 
-[<Test; Ignore>]
+[<Test>]
 let ``go to struct metadata`` () =
     """
 [<Struct>]
@@ -287,6 +288,36 @@ type MyStruct =
     new : x:int * y:string -> MyStruct
     val Field1 : int
     val Field2 : string
+"""
+
+[<Test>]
+let ``go to empty interface metadata`` () =
+    """
+type MyInterface = interface end
+
+let x: MyInterface = ()"""
+    |> generateDefinitionFromPos (Pos.fromZ 3 7)
+    |> assertSrcAreEqual """type MyInterface =
+    interface
+    end
+"""
+
+[<Test>]
+let ``go to empty struct metadata`` () =
+    """
+[<Struct>]
+type MyStruct = struct end
+
+let x = new MyStruct()"""
+    |> generateDefinitionFromPos (Pos.fromZ 4 12)
+    |> assertSrcAreEqual """type MyStruct =
+    struct
+        interface System.IComparable<MyStruct>
+        interface System.IComparable
+        interface System.IEquatable<MyStruct>
+        interface System.Collections.IStructuralComparable
+        interface System.Collections.IStructuralEquatable
+    end
 """
 
 [<Test>]
@@ -331,6 +362,7 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: record type extension members?
 // TODO: display in this order: constructors, fields, members, static members
 // TODO: enum type attributes
+// TODO: handle private/internal constructors/methods/properties
 // TODO: handle abstract method with default implementation
 // TODO: handle override methods
 // TODO: handle inherited classes
@@ -357,6 +389,9 @@ module Microsoft.FSharp.Core.OptionModule =
 // TODO: set cursor on union case when symbol is a union case
 // TODO: set cursor on enum case when symbol is an enum case
 // TODO: set cursor on field when symbol is a record field
+
+// ENHANCEMENT: if interface/end delimiters are present, don't write [<Interface>]
+// ENHANCEMENT: if struct/end delimiters are present, don't write [<Struct>]
 
 #if INTERACTIVE
 #time "on";;
