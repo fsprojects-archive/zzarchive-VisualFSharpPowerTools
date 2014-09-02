@@ -104,29 +104,20 @@ type Tuple<'T1, 'T2> =
     member ToString : unit -> string
 """)
 
-let _ =
-    """open System
-open System.Runtime.InteropServices
-type X() =
-    member this.Test([<OptionalArgument>] ?x: int) = ()
-
-let x = X()"""
-    |> generateDefinitionFromPos (Pos.fromZ 5 8)
-
 [<Test>]
 let ``adds necessary parenthesis to function parameters`` () =
     """open System
 let _ = Async.AwaitTask"""
     |> generateDefinitionFromPos (Pos.fromZ 1 8)
-    |> assertSrcAreEqualForFirstLines 6 """namespace Microsoft.FSharp.Control
+    |> assertSrcAreEqualForFirstLines 8 """namespace Microsoft.FSharp.Control
 
 [<Sealed>]
 [<CompiledName("FSharpAsync")>]
 [<Class>]
 type Async =
-    static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * System.AsyncCallback * obj -> System.IAsyncResult) * (System.IAsyncResult -> 'T) * (System.IAsyncResult -> unit)
+    static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * AsyncCallback * obj -> IAsyncResult) * (IAsyncResult -> 'T) * (IAsyncResult -> unit)
+    static member AwaitEvent : event:IEvent<'Del,'T> * ?cancelAction:(unit -> unit) -> Async<'T>
 """
-
 
 [<Test>]
 let ``adds necessary parenthesis to tuple parameters`` () =
@@ -464,6 +455,8 @@ let ``go to F# exception definition`` () =
     ]
 
 // Tests to add:
+// TODO: delegates special formatting
+// TODO: handle C# optional parameters
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
@@ -487,7 +480,6 @@ let ``go to F# exception definition`` () =
 //
 // ENHANCEMENT: special formatting for Events?
 // TODO: display static member getter/setter availability
-// TODO: handle optional parameters (see Async.AwaitEvent)
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
 // TODO: add test for VS buffer name?

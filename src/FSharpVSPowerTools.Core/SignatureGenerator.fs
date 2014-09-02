@@ -87,26 +87,26 @@ let private getTypeNameWithGenericParams (typ: FSharpEntity) =
 
 let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
     let generateInputParamsPart (mem: FSharpMemberFunctionOrValue) =
-        let formatParamTypeName (typ: FSharpType) isOptional =
-            if isOptional then
+        let formatParamTypeName (param: FSharpParameter) =
+            let formattedTypeName = param.Type.Format(ctx.DisplayContext)
+            if param.IsOptionalArg then
                 // result has the 'XXXX option' format: we remove the trailing ' option'
-                let result = typ.Format(ctx.DisplayContext)
+                let result = formattedTypeName
                 result.Substring(0, result.Length - (" option").Length)
-            elif typ.IsFunctionType || typ.IsTupleType then
-                sprintf "(%s)" (typ.Format(ctx.DisplayContext))
+            elif param.Type.IsFunctionType || param.Type.IsTupleType then
+                sprintf "(%s)" formattedTypeName
             else
-                typ.Format(ctx.DisplayContext)
+                formattedTypeName
 
         if not (hasUnitOnlyParameter mem) then
             [
                 for paramGroup in mem.CurriedParameterGroups do
                     yield [
                         for (param: FSharpParameter) in paramGroup do
-                            let isOptional = hasAttribute<OptionalArgumentAttribute> param.Attributes
-                            let formattedTypeName = formatParamTypeName param.Type isOptional
+                            let formattedTypeName = formatParamTypeName param
 
                             match param.Name with
-                            | Some paramName when not isOptional ->
+                            | Some paramName when not param.IsOptionalArg ->
                                 yield sprintf "%s:%s" paramName formattedTypeName
                             | Some paramName ->
                                 yield sprintf "?%s:%s" paramName formattedTypeName
