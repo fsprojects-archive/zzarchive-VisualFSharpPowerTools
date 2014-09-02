@@ -397,16 +397,19 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         // Discard explicit getter/setter methods
         writeDocs ctx mem.XmlDoc
 
-        let prefix =
+        let memberType =
             // Is static?
             if not mem.IsInstanceMember then
-                "static "
+                "static member"
             // Is abstract && enclosing type is interface/abstract?
             elif mem.IsDispatchSlot && isInterfaceOrAbstractClass mem.EnclosingEntity then
-                "abstract "
-            else ""
+                "abstract member"
+            elif mem.IsOverrideOrExplicitMember then
+                "override"
+            else
+                "member"
 
-        ctx.Writer.WriteLine("{0}member {1} : {2}", prefix, DemangleOperatorName mem.DisplayName, generateSignature ctx mem)
+        ctx.Writer.WriteLine("{0} {1} : {2}", memberType, DemangleOperatorName mem.DisplayName, generateSignature ctx mem)
     | _ -> ()
 
 and internal writeDocs ctx docs =

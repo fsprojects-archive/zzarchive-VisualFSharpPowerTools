@@ -422,7 +422,7 @@ let x: string = null"""
     |> assertSrcAreEqual """type string = System.String
 """
 
-[<Test; Ignore>]
+[<Test>]
 let ``go to abstract class definition with default members`` () =
     """
 [<AbstractClass>]
@@ -473,8 +473,6 @@ let ``go to F# exception definition`` () =
 // TODO: record type fields attributes
 // TODO: record type extension members?
 // TODO: enum type attributes
-// TODO: handle abstract method with default implementation
-// TODO: handle override methods
 // TODO: handle inherited classes
 // TODO: generic member constraints
 // TODO: static member constraints
