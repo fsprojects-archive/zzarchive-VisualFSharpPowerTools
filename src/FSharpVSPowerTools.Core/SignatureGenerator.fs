@@ -90,9 +90,12 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
         let formatParamTypeName (param: FSharpParameter) =
             let formattedTypeName = param.Type.Format(ctx.DisplayContext)
             if param.IsOptionalArg then
-                // result has the 'XXXX option' format: we remove the trailing ' option'
                 let result = formattedTypeName
-                result.Substring(0, result.Length - (" option").Length)
+                if mem.EnclosingEntity.IsFSharp && result.EndsWith(" option") then
+                    // result has the 'XXXX option' format: we remove the trailing ' option'
+                    result.Substring(0, result.Length - (" option").Length)
+                else
+                    result
             elif param.Type.IsFunctionType || param.Type.IsTupleType then
                 sprintf "(%s)" formattedTypeName
             else

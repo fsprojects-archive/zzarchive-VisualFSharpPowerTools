@@ -454,6 +454,21 @@ let ``go to F# exception definition`` () =
         "exception MyException of int * (int * string) * (int -> unit)\n"
     ]
 
+[<Test>]
+let ``handle F#-style optional parameter`` () =
+    """
+open System.Runtime.InteropServices 
+type T() =
+    static member Method([<Optional; DefaultParameterValue(0)>]?x: int) = (defaultArg x 0) * 2
+    static member Method2(?x: int) = (defaultArg x 0) * 2
+    """
+    |> generateDefinitionFromPos (Pos.fromZ 2 5)
+    |> assertSrcAreEqual """type T =
+    new : unit -> T
+    static member Method : ?x:int -> int
+    static member Method2 : ?x:int -> int
+"""
+
 // Tests to add:
 // TODO: delegates special formatting
 // TODO: handle C# optional parameters
