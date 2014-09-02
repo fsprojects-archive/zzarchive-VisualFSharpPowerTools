@@ -357,8 +357,11 @@ and internal writeEnumValue ctx (field: FSharpField) =
     // NOTE: for enum values, the compiler generates a "value__" field which 
     //       is not visible from outside. That's why we don't display it
     if not field.IsCompilerGenerated then
-        writeDocs ctx field.XmlDoc
-        ctx.Writer.WriteLine("| {0} = {1}", field.Name, field)
+        match field.LiteralValue with
+        | Some value ->
+            writeDocs ctx field.XmlDoc
+            ctx.Writer.WriteLine("| {0} = {1}", field.Name, value)
+        | None -> Debug.Fail("There should be a literal value for the enum field: " + field.FullName)
 
 and internal writeUnionCaseField ctx (field: FSharpField) =
     if isUnnamedUnionCaseField field then

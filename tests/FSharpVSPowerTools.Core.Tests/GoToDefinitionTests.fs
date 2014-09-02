@@ -353,7 +353,7 @@ let x = new MyStruct()"""
     end
 """
 
-[<Test; Ignore>]
+[<Test>]
 let ``go to enum type definition`` () =
     """
 type Enum =
