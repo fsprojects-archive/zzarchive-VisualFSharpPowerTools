@@ -179,19 +179,22 @@ type Tuple<'T1, 'T2> =
 """
 
 [<Test>]
-let ``go to method definition generate enclosing type metadata`` () =
+let ``go to method definition generate enclosing type metadata and supports C# events`` () =
     """open System
 
 do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqualForFirstLines 8 """namespace System
+    |> assertSrcAreEqualForFirstLines 11 """namespace System
 
 [<Class>]
 type Console =
     static member add_CancelKeyPress : value:ConsoleCancelEventHandler -> unit
     static member BackgroundColor : ConsoleColor
     static member Beep : unit -> unit
-    static member Beep : frequency:int * duration:int -> unit"""
+    static member Beep : frequency:int * duration:int -> unit
+    static member BufferHeight : int
+    static member BufferWidth : int
+    static member CancelKeyPress : IEvent<ConsoleCancelEventHandler, ConsoleCancelEventArgs>"""
 
 [<Test>]
 let ``go to F# List<'T> definition`` () =
@@ -256,7 +259,7 @@ type Choice<'T1, 'T2> =
     interface Collections.IStructuralEquatable
 """
 
-[<Test; Ignore("We should not generate implicit interface definition")>]
+[<Test>]
 let ``go to record type definition`` () =
     """open System
 [<CustomEquality>]

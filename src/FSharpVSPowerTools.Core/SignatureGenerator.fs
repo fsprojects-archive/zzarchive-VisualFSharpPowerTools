@@ -28,8 +28,7 @@ with
         let filteredMembers = members
                               |> Seq.filter (fun mem ->
                                   not mem.IsPropertyGetterMethod &&
-                                  not mem.IsPropertySetterMethod &&
-                                  not mem.IsEvent)
+                                  not mem.IsPropertySetterMethod)
 
         let constructors = ResizeArray<_>()
         let abstractMembers = ResizeArray<_>()
@@ -127,6 +126,12 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
         let signatureReturnTypePart = getTypeNameWithGenericParams entity
 
         sprintf "%s -> %s" signatureInputParamsPart signatureReturnTypePart
+
+    | _ when mem.IsEvent ->
+        let returnParameterType = mem.ReturnParameter.Type
+        let invokeMember = returnParameterType.TypeDefinition.MembersFunctionsAndValues
+                           |> Seq.find (fun m -> m.DisplayName = "Invoke")
+        sprintf "IEvent<%s, %s>" (returnParameterType.Format(ctx.DisplayContext)) (invokeMember.CurriedParameterGroups.[0].[1].Type.Format(ctx.DisplayContext))
 
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         let signatureReturnTypePart = mem.ReturnParameter.Type.Format(ctx.DisplayContext)
