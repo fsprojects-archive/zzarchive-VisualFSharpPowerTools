@@ -315,6 +315,31 @@ and internal writeFSharpExceptionType ctx (exn: FSharpEntity) =
     else
         ctx.Writer.WriteLine("exception {0}", exn.DisplayName)
 
+and internal writeDelegateType ctx (del: FSharpEntity) =
+    writeDocs ctx del.XmlDoc
+
+    let argsPart =
+        [
+            for arg in del.FSharpDelegateSignature.DelegateArguments do
+                match arg with
+                | Some name, typ ->
+                    if typ.IsFunctionType || typ.IsTupleType then
+                        yield sprintf "%s:(%s)" name (typ.Format(ctx.DisplayContext))
+                    else
+                        yield sprintf "%s:%s" name (typ.Format(ctx.DisplayContext))
+                | None, typ ->
+                    if typ.IsFunctionType || typ.IsTupleType then
+                        yield sprintf "(%s)" (typ.Format(ctx.DisplayContext))
+                    else
+                        yield sprintf "%s" (typ.Format(ctx.DisplayContext))
+        ]
+        |> String.concat " * "
+
+    ctx.Writer.WriteLine("type {0} =", del.DisplayName)
+    ctx.Writer.Indent ctx.Indentation
+    ctx.Writer.WriteLine("delegate of {0} -> {1}", argsPart, del.FSharpDelegateSignature.DelegateReturnType.Format(ctx.DisplayContext))
+    ctx.Writer.Unindent ctx.Indentation
+
 and internal writeUnionCase ctx (case: FSharpUnionCase) =
     writeDocs ctx case.XmlDoc
     ctx.Writer.Write("| {0}", DemangleOperatorName case.Name)
@@ -437,6 +462,7 @@ let formatSymbol displayContext (symbol: FSharpSymbol) =
             | Module _ -> writeModule ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
             | _ when entity.IsFSharpExceptionDeclaration -> writeFSharpExceptionType ctx entity
+            | _ when entity.IsDelegate -> writeDelegateType ctx entity
             | _ -> writeType ctx entity
         | :? FSharpMemberFunctionOrValue as mem ->
             writeSymbol mem.LogicalEnclosingEntity

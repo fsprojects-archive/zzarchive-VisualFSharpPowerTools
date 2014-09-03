@@ -472,8 +472,24 @@ type T() =
     static member Method2 : ?x:int -> int
 """
 
+[<Test>]
+let ``handle delegates`` () =
+    [
+        "type MyDelegate = delegate of unit * int -> unit"
+        "type MyDelegate = delegate of arg1:int -> int"
+    ]
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 0 5))
+    |> assertSrcSeqAreEqual [
+        """type MyDelegate =
+    delegate of unit * int -> unit
+"""
+
+        """type MyDelegate =
+    delegate of arg1:int -> int
+"""
+    ]
+
 // Tests to add:
-// TODO: delegates special formatting
 // TODO: handle C# optional parameters
 // TODO: property/method attributes
 // TODO: method arguments attributes
