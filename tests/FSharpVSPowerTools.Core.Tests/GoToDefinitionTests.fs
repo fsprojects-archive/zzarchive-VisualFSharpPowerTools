@@ -184,7 +184,7 @@ let ``go to method definition generate enclosing type metadata and supports C# e
 
 do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqualForFirstLines 11 """namespace System
+    |> assertSrcAreEqualForFirstLines 10 """namespace System
 
 [<Class>]
 type Console =
@@ -194,7 +194,7 @@ type Console =
     static member Beep : frequency:int * duration:int -> unit
     static member BufferHeight : int
     static member BufferWidth : int
-    static member CancelKeyPress : IEvent<ConsoleCancelEventHandler, ConsoleCancelEventArgs>"""
+"""
 
 [<Test>]
 let ``go to F# List<'T> definition`` () =

@@ -28,7 +28,9 @@ with
         let filteredMembers = members
                               |> Seq.filter (fun mem ->
                                   not mem.IsPropertyGetterMethod &&
-                                  not mem.IsPropertySetterMethod)
+                                  not mem.IsPropertySetterMethod &&
+                                  (not mem.IsEvent ||
+                                   mem.ReturnParameter.Type.TypeDefinition.FullName = "System.EventHandler`1"))
 
         let constructors = ResizeArray<_>()
         let abstractMembers = ResizeArray<_>()
@@ -400,7 +402,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
     | Constructor _entity ->
         writeDocs ctx mem.XmlDoc
         ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
-
+    | _ when mem.IsEvent -> ()
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         // Discard explicit getter/setter methods
         writeDocs ctx mem.XmlDoc
