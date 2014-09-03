@@ -259,7 +259,7 @@ type Choice<'T1, 'T2> =
     interface Collections.IStructuralEquatable
 """
 
-[<Test>]
+[<Test; Ignore("We should not generate implicit interface member definition")>]
 let ``go to record type definition`` () =
     """open System
 [<CustomEquality>]
