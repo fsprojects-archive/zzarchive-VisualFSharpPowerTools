@@ -143,7 +143,7 @@ module SourceCodeClassifier =
             let res = 
                 match symbolUse.SymbolUse.Symbol with
                 | Pattern | RecordField _
-                | Entity (Class | (FSharpType | ValueType | FSharpModule | Array), _, _)
+                | Entity (Class | (AbbreviatedType _ | FSharpType | ValueType | FSharpModule | Array), _, _)
                 | Entity (_, _, Tuple)
                 | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
                 | MemberFunctionOrValue func -> not func.IsMember
@@ -284,10 +284,10 @@ module SourceCodeClassifier =
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
 
-//        debug "LongIdents by line:" 
-//        longIdentsByEndPos 
-//        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
-//        |> Seq.iter (debug "%A")
+        debug "LongIdents by line:" 
+        longIdentsByEndPos 
+        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
+        |> Seq.iter (debug "%A")
 
         let removeModuleSuffixes (symbolUses: SymbolUse[]) =
             match allEntities with

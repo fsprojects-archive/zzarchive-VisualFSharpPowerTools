@@ -295,9 +295,18 @@ module String =
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
+    open System.Diagnostics
+    open System.Threading
+
+// Redirect debug output to F# Interactive for debugging purpose
+#if INTERACTIVE
+    Debug.Listeners.Add(new TextWriterTraceListener(System.Console.Out)) |> ignore
+    Debug.AutoFlush <- true
+#endif
+
     let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
-    let inline debug msg = Printf.kprintf System.Diagnostics.Debug.WriteLine msg
-    let inline fail msg = Printf.kprintf System.Diagnostics.Debug.Fail msg
+    let inline debug msg = Printf.kprintf Debug.WriteLine msg
+    let inline fail msg = Printf.kprintf Debug.Fail msg
     let maybe = MaybeBuilder()
     let asyncMaybe = AsyncMaybeBuilder()
     
@@ -312,8 +321,6 @@ module Pervasive =
     /// Load times used to reset type checking properly on script/project load/unload. It just has to be unique for each project load/reload.
     /// Not yet sure if this works for scripts.
     let fakeDateTimeRepresentingTimeLoaded x = DateTime(abs (int64 (match x with null -> 0 | _ -> x.GetHashCode())) % 103231L)
-
-    open System.Threading
     
     let synchronize f = 
         let ctx = SynchronizationContext.Current
