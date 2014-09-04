@@ -197,12 +197,12 @@ type MaybeBuilder () =
                 resource.Dispose ()
 
     // (unit -> bool) * M<'T> -> M<'T>
-    member __.While (guard, body: _ option): _ option =
+    member x.While (guard, body: _ option): _ option =
         if guard () then
             // OPTIMIZE: This could be simplified so we don't need to make calls to Bind and While.
-            __.Bind (body, (fun () -> __.While (guard, body)))
+            x.Bind (body, (fun () -> x.While (guard, body)))
         else
-            __.Zero ()
+            x.Zero ()
 
     // seq<'T> * ('T -> M<'U>) -> M<'U>
     // or
@@ -257,22 +257,22 @@ type AsyncMaybeBuilder () =
             if resource <> null then resource.Dispose ()
 
     // (unit -> bool) * M<'T> -> M<'T>
-    member __.While (guard, body : Async<_ option>) : Async<_ option> =
+    member x.While (guard, body : Async<_ option>) : Async<_ option> =
         if guard () then
             // OPTIMIZE : This could be simplified so we don't need to make calls to Bind and While.
-            __.Bind (body, (fun () -> __.While (guard, body)))
+            x.Bind (body, (fun () -> x.While (guard, body)))
         else
-            __.Zero ()
+            x.Zero ()
 
     // seq<'T> * ('T -> M<'U>) -> M<'U>
     // or
     // seq<'T> * ('T -> M<'U>) -> seq<M<'U>>
-    member __.For (sequence : seq<_>, body : 'T -> Async<unit option>) : Async<_ option> =
+    member x.For (sequence : seq<_>, body : 'T -> Async<unit option>) : Async<_ option> =
         // OPTIMIZE : This could be simplified so we don't need to make calls to Using, While, Delay.
-        __.Using (sequence.GetEnumerator (), fun enum ->
-            __.While (
+        x.Using (sequence.GetEnumerator (), fun enum ->
+            x.While (
                 enum.MoveNext,
-                __.Delay (fun () ->
+                x.Delay (fun () ->
                     body enum.Current)))
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
