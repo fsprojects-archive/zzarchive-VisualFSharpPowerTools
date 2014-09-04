@@ -1,4 +1,20 @@
-﻿module FSharpVSPowerTools.Core.Tests.SourceCodeClassifierTests
+﻿#if INTERACTIVE
+#r "../../bin/FSharp.Compiler.Service.dll"
+#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
+      "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/IdentifierUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs"
+      "../../src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs"
+      "TestHelpers.fs"
+#else
+module FSharpVSPowerTools.Core.Tests.SourceCodeClassifierTests
+#endif
 
 open System.IO
 open NUnit.Framework
@@ -1335,5 +1351,15 @@ module M1 =
 module M2 =
     open M1
     let x = { Field = 0 }
+"""
+    => [ 5, []]
+
+let ``handle type alias``() = 
+    """
+module TypeAlias =
+    type MyInt = int
+module Usage =
+    open TypeAlias
+    let f (x:MyInt) = x
 """
     => [ 5, []]

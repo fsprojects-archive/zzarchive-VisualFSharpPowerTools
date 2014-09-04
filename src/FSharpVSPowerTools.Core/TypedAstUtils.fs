@@ -102,7 +102,8 @@ let private unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]
 type FSharpEntity with
     member x.TryGetFullName() =
         match x with
-        | AbbreviatedType (TypeWithDefinition def) -> def.TryGetFullName()
+        | AbbreviatedType _ -> 
+            Some (String.Join(".", x.AccessPath, x.DisplayName))
         | x when x.IsArrayType || x.IsByRef -> None
         | _ ->
             Option.attempt (fun _ -> x.DisplayName)
