@@ -137,10 +137,12 @@ type ResolveUnopenedNamespaceSmartTagger
 
     let openNamespaceIcon = ResourceProvider.getRefactoringIcon serviceProvider RefactoringIconKind.AddUsing
 
-    let openNamespaceAction snapshot ctx name ns =
+    let openNamespaceAction snapshot ctx name ns multipleNames =
+        let displayText = "open " + ns + if multipleNames then " (" + name + ")" else ""
+
         { new ISmartTagAction with
             member __.ActionSets = null
-            member __.DisplayText = "open " + ns
+            member __.DisplayText = displayText
             member __.Icon = openNamespaceIcon
             member __.IsEnabled = true
             member __.Invoke() = openNamespace snapshot ctx ns name
@@ -158,14 +160,27 @@ type ResolveUnopenedNamespaceSmartTagger
     let getSmartTagActions snapshotSpan candidates =
         let openNamespaceActions = 
             candidates
-            |> Seq.distinctBy (fun (entity, _) -> entity.Namespace, entity.Name)
-            |> Seq.choose (fun (entity, ctx) -> 
-                entity.Namespace |> Option.map (openNamespaceAction snapshotSpan ctx entity.Name))
+            |> Seq.choose (fun (entity, ctx) -> entity.Namespace |> Option.map (fun ns -> ns, entity.Name, ctx))
+            |> Seq.groupBy (fun (ns, _, _) -> ns)
+            |> Seq.map (fun (ns, xs) -> 
+                ns, 
+                xs 
+                |> Seq.map (fun (_, name, ctx) -> name, ctx) 
+                |> Seq.distinctBy (fun (name, _) -> name)
+                |> Seq.sortBy fst
+                |> Seq.toArray)
+            |> Seq.map (fun (ns, names) ->
+                let multipleNames = names |> Array.length > 1
+                names |> Seq.map (fun (name, ctx) -> ns, name, ctx, multipleNames))
+            |> Seq.concat
+            |> Seq.map (fun (ns, name, ctx, multipleNames) -> 
+                openNamespaceAction snapshotSpan ctx name ns multipleNames)
             
         let qualifySymbolActions =
             candidates
             |> Seq.map (fun (entity, _) -> entity.FullRelativeName)
             |> Seq.distinct
+            |> Seq.sort
             |> Seq.map (qualifiedSymbolAction snapshotSpan)
             
         [ SmartTagActionSet (Seq.toReadOnlyCollection openNamespaceActions)
