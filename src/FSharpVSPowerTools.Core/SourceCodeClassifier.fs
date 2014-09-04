@@ -284,10 +284,10 @@ module SourceCodeClassifier =
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
 
-        debug "LongIdents by line:" 
-        longIdentsByEndPos 
-        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
-        |> Seq.iter (debug "%A")
+//        debug "LongIdents by line:" 
+//        longIdentsByEndPos 
+//        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
+//        |> Seq.iter (debug "%A")
 
         let removeModuleSuffixes (symbolUses: SymbolUse[]) =
             match allEntities with

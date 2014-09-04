@@ -298,7 +298,8 @@ module Pervasive =
     open System.Diagnostics
     open System.Threading
 
-// Redirect debug output to F# Interactive for debugging purpose
+// Redirect debug output to F# Interactive for debugging purpose.
+// It requires adding '-d:DEBUG' setting in F# Interactive Options.
 #if INTERACTIVE
     Debug.Listeners.Add(new TextWriterTraceListener(System.Console.Out)) |> ignore
     Debug.AutoFlush <- true
