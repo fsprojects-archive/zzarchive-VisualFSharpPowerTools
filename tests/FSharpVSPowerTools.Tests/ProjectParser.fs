@@ -33,6 +33,13 @@ module ProjectParser =
 
   let getFileName (p: ProjectResolver) : string = p.project.FullFileName
 
+  let getOutputPath (p: ProjectResolver) : string = 
+    seq {
+        for item in p.project.GetEvaluatedItemsByName("BuiltProjectOutputGroupKeyOutput") do
+            yield item.FinalItemSpec }     
+    |> Seq.tryHead
+    |> fun path -> defaultArg path String.Empty
+
   let getLoadTime (p: ProjectResolver) : DateTime = p.loadtime
 
   let getDirectory (p: ProjectResolver) : string =
@@ -52,6 +59,10 @@ module ProjectParser =
     | "v4.5" -> FSharpTargetFramework.NET_4_5
     | _      -> FSharpTargetFramework.NET_4_5
 
+  let getProjectReferences (p: ProjectResolver) =
+    [| for i in p.project.GetEvaluatedItemsByName("ProjectReferences") do      
+           yield i.FinalItemSpec |]
+
   // We really want the output of ResolveAssemblyReferences. However, this
   // needs as input ChildProjectReferences, which is populated by
   // ResolveProjectReferences. For some reason ResolveAssemblyReferences
@@ -62,8 +73,8 @@ module ProjectParser =
   // to be equivalent. See Microsoft.Common.targets if you want more info.
   let getReferences (p: ProjectResolver) : string array =
     ignore <| p.project.Build([|"ResolveReferences"|])
-    [| for i in p.project.GetEvaluatedItemsByName("ReferencePath")         
-         do yield "-r:" + i.FinalItemSpec |]
+    [| for i in p.project.GetEvaluatedItemsByName("ReferencePath") do      
+           yield "-r:" + i.FinalItemSpec |]
 
   let getOptions (p: ProjectResolver) : string array =
     let getprop s = p.project.GetEvaluatedProperty s

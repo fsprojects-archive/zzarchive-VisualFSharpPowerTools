@@ -3,21 +3,26 @@
 open System.IO
 open FSharpVSPowerTools.ProjectSystem
 
-type ConcreteProjectProvider(projectFileName) =    
+type ExternalProjectProvider(projectFileName) =    
     let projectResolver = ProjectParser.load(projectFileName) |> Option.get
     let fullProjectFileName = ProjectParser.getFileName projectResolver
+    let frameworkVersion = ProjectParser.getFrameworkVersion projectResolver
     let compilerOptions = ProjectParser.getOptions projectResolver
     let sourceFiles = ProjectParser.getFiles projectResolver
-    let referencedProjects: IProjectProvider list = []
+    let outputPath = ProjectParser.getOutputPath projectResolver
+    let referencedProjectFileNames = ProjectParser.getProjectReferences projectResolver |> Array.toList
+    let referencedProjects: IProjectProvider list = 
+        referencedProjectFileNames
+        |> List.map (fun proj -> ExternalProjectProvider(proj) :> _)
     interface IProjectProvider with
         member __.IsForStandaloneScript = false
         member __.ProjectFileName = fullProjectFileName
-        member __.TargetFramework = ProjectParser.getFrameworkVersion projectResolver
+        member __.TargetFramework = frameworkVersion
         member __.CompilerOptions = compilerOptions
         member __.SourceFiles = sourceFiles
-        member __.FullOutputFilePath = Path.ChangeExtension(projectFileName, ".dll")
+        member __.FullOutputFilePath = outputPath
         member __.GetReferencedProjects() = referencedProjects
-        member __.GetAllReferencedProjectFileNames() = []
+        member __.GetAllReferencedProjectFileNames() = referencedProjectFileNames
         member __.GetProjectCheckerOptions languageService =
             async {
                 let referencedProjectOptions = 

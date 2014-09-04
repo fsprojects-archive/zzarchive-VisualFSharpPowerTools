@@ -139,7 +139,7 @@ let _ = Project.GetSample()
         let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fsproj"))
         let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fs"))
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(ConcreteProjectProvider(projectFileName))
+        helper.AddProject(ExternalProjectProvider(projectFileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)        
@@ -150,4 +150,29 @@ let _ = Project.GetSample()
                 |> Seq.toList
                 |> assertEqual
                      [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
+
+    [<Test>]
+    let ``should generate highlight usage tags for multi-project symbols``() = 
+        let content = """
+namespace Project2
+
+module Test =
+    let _ = Project1.Class11()
+    let _ = Project1.Class11.X
+"""
+        // Use absolute path just to be sure
+        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/MultiProjects/Project2/Project2.fsproj"))
+        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/MultiProjects/Project2/Project21.fs"))
+        let buffer = createMockTextBuffer content fileName
+        helper.AddProject(ExternalProjectProvider(projectFileName))
+        helper.SetActiveDocument(fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)        
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 22) |> ignore)
+            (fun () -> 
+                helper.TagsOf(buffer, tagger)                 
+                |> Seq.toList
+                |> assertEqual
+                     [ (5, 22) => (5, 28); (6, 22) => (6, 28) ])
 

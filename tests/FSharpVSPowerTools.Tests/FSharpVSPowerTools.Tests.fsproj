@@ -63,7 +63,7 @@
     <Content Include="packages.config" />
     <None Include="Foq.Usage.fsx" />
     <Compile Include="ProjectParser.fs" />
-    <Compile Include="ConcreteProjectProvider.fs" />
+    <Compile Include="ExternalProjectProvider.fs" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="MockDTE.fs" />
     <Compile Include="Mocks.fs" />
