@@ -78,7 +78,6 @@
     <Compile Include="UnopenedNamespacesResolver.fs" />
     <Compile Include="SignatureGenerator.fs" />
     <Content Include="packages.config" />
-    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Compiler.Service">

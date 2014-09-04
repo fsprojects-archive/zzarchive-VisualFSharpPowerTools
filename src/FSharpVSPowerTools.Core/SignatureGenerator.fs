@@ -1,5 +1,6 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.SignatureGenerator
 
+open System
 open System.Diagnostics
 open System.Collections.Generic
 open FSharpVSPowerTools
@@ -25,12 +26,15 @@ type private MembersPartition = {
 }
 with
     static member Create(members: seq<FSharpMemberFunctionOrValue>) =
+        // NOTE: If we want to handle EventHandler<'T> types, we can test
+        //       match mem.ReturnParameter.Type with
+        //       | TypeWithDefinition -> mem.ReturnParameter.Type.TypeWithDefinition.FullName = "System.EventHandler`1"
+        //       | _ -> false
         let filteredMembers = members
                               |> Seq.filter (fun mem ->
                                   not mem.IsPropertyGetterMethod &&
                                   not mem.IsPropertySetterMethod &&
-                                  (not mem.IsEvent ||
-                                   mem.ReturnParameter.Type.TypeDefinition.FullName = "System.EventHandler`1"))
+                                  not mem.IsEvent)
 
         let constructors = ResizeArray<_>()
         let abstractMembers = ResizeArray<_>()
@@ -70,9 +74,6 @@ with
 
         res
 
-let internal (|Module|_|) (entity: FSharpEntity) = 
-    if entity.IsFSharpModule then Some() else None
-
 let private getTypeNameWithGenericParams (typ: FSharpEntity) =
     [|
         yield typ.DisplayName
@@ -103,9 +104,9 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
                 formattedTypeName
 
         if not (hasUnitOnlyParameter mem) then
-            [
+            [|
                 for paramGroup in mem.CurriedParameterGroups do
-                    yield [
+                    yield [|
                         for (param: FSharpParameter) in paramGroup do
                             let formattedTypeName = formatParamTypeName param
 
@@ -115,9 +116,9 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
                             | Some paramName ->
                                 yield sprintf "?%s:%s" paramName formattedTypeName
                             | None -> yield formattedTypeName
-                    ]
+                    |]
                     |> String.concat " * "
-            ]
+            |]
             |> String.concat " -> "
         else
             "unit"
@@ -129,7 +130,7 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
 
         sprintf "%s -> %s" signatureInputParamsPart signatureReturnTypePart
 
-    | _ when mem.IsEvent ->
+    | Event ->
         let returnParameterType = mem.ReturnParameter.Type
         let invokeMember = returnParameterType.TypeDefinition.MembersFunctionsAndValues
                            |> Seq.find (fun m -> m.DisplayName = "Invoke")
@@ -171,9 +172,10 @@ let rec internal writeModule ctx (modul: FSharpEntity) =
 
     for entity in modul.NestedEntities do
         match entity with
-        | Module _ -> writeModule ctx entity
+        | FSharpModule -> writeModule ctx entity
         | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
-        | _ when entity.IsFSharpExceptionDeclaration -> writeFSharpExceptionType ctx entity
+        | FSharpException -> writeFSharpExceptionType ctx entity
+        | Delegate -> writeDelegateType ctx entity
         | _ -> writeType ctx entity
 
         ctx.Writer.WriteLine("")
@@ -248,7 +250,9 @@ and internal writeType ctx (typ: FSharpEntity) =
     ]
     |> List.sortBy (fun (inter, _name) ->
         // Sort by name without the namespace qualifier
-        inter.TypeDefinition.DisplayName)
+        if inter.HasTypeDefinition
+        then inter.TypeDefinition.DisplayName.ToUpperInvariant()
+        else String.Empty)
     |> List.iter (fun (_, name) ->
         if typ.IsInterface then
             ctx.Writer.WriteLine("inherit {0}", name)
@@ -302,13 +306,13 @@ and internal writeFSharpExceptionType ctx (exn: FSharpEntity) =
 
     if exn.FSharpFields.Count > 0 then
         let fields =
-            [
+            [|
                 for field in exn.FSharpFields ->
                     if field.FieldType.IsFunctionType || field.FieldType.IsTupleType then
                         sprintf "(%s)" (field.FieldType.Format(ctx.DisplayContext))
                     else
                         field.FieldType.Format(ctx.DisplayContext)
-            ]
+            |]
             |> String.concat " * "
 
         ctx.Writer.WriteLine("exception {0} of {1}", exn.DisplayName, fields)
@@ -319,7 +323,7 @@ and internal writeDelegateType ctx (del: FSharpEntity) =
     writeDocs ctx del.XmlDoc
 
     let argsPart =
-        [
+        [|
             for arg in del.FSharpDelegateSignature.DelegateArguments do
                 match arg with
                 | Some name, typ ->
@@ -332,7 +336,7 @@ and internal writeDelegateType ctx (del: FSharpEntity) =
                         yield sprintf "(%s)" (typ.Format(ctx.DisplayContext))
                     else
                         yield sprintf "%s" (typ.Format(ctx.DisplayContext))
-        ]
+        |]
         |> String.concat " * "
 
     ctx.Writer.WriteLine("type {0} =", del.DisplayName)
@@ -343,22 +347,25 @@ and internal writeDelegateType ctx (del: FSharpEntity) =
 and internal writeUnionCase ctx (case: FSharpUnionCase) =
     writeDocs ctx case.XmlDoc
     ctx.Writer.Write("| {0}", DemangleOperatorName case.Name)
-    let mutable isFirst = true
-    for field in case.UnionCaseFields do
-        if isFirst then
-            ctx.Writer.Write(" of ")
-            isFirst <- false
-        else
-            ctx.Writer.Write(" * ")
 
-        writeUnionCaseField ctx field
+    if case.UnionCaseFields.Count > 0 then
+        case.UnionCaseFields
+        |> Seq.fold (fun isFirst field ->
+            if isFirst
+            then ctx.Writer.Write(" of ")
+            else ctx.Writer.Write(" * ")
+
+            writeUnionCaseField ctx field
+            false
+        ) true
+        |> ignore
+
     ctx.Writer.WriteLine("")
 
 and internal writeAttributes ctx (typ: FSharpEntity) (attributes: IList<FSharpAttribute>) =
     let typeDefSyntaxDelimOpt = tryGetNeededTypeDefSyntaxDelimiter typ
     let bypassAttribute (attrib: FSharpAttribute) =
-        typeDefSyntaxDelimOpt = Some "struct" &&
-        attrib.AttributeType.CompiledName = typeof<StructAttribute>.Name
+        typeDefSyntaxDelimOpt = Some "struct" && isAttribute<StructAttribute> attrib
 
     for attr in attributes do
         if not (bypassAttribute attr) then
@@ -370,14 +377,11 @@ and internal writeAttributes ctx (typ: FSharpEntity) (attributes: IList<FSharpAt
             if attr.ConstructorArguments.Count = 0 then
                 ctx.Writer.WriteLine("[<{0}>]", name)
             else
+                let argumentsStringRepr = [| for arg in attr.ConstructorArguments -> sprintf "%A" arg |]
+                                          |> String.concat ", "
+
                 ctx.Writer.Write("[<{0}(", name)
-                let mutable isFirst = true
-                for arg in attr.ConstructorArguments do
-                    if isFirst then
-                        ctx.Writer.Write("{0}", sprintf "%A" arg)
-                        isFirst <- false
-                    else
-                        ctx.Writer.Write(", {0}", sprintf "%A" arg)
+                ctx.Writer.Write(argumentsStringRepr)
                 ctx.Writer.WriteLine(")>]")
 
 and internal writeField hasNewLine ctx (field: FSharpField) =
@@ -427,7 +431,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
     | Constructor _entity ->
         writeDocs ctx mem.XmlDoc
         ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
-    | _ when mem.IsEvent -> ()
+    | Event -> ()
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         // Discard explicit getter/setter methods
         writeDocs ctx mem.XmlDoc
@@ -459,10 +463,10 @@ let formatSymbol displayContext (symbol: FSharpSymbol) =
         match symbol with
         | :? FSharpEntity as entity ->
             match entity with
-            | Module _ -> writeModule ctx entity
+            | FSharpModule -> writeModule ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
-            | _ when entity.IsFSharpExceptionDeclaration -> writeFSharpExceptionType ctx entity
-            | _ when entity.IsDelegate -> writeDelegateType ctx entity
+            | FSharpException -> writeFSharpExceptionType ctx entity
+            | Delegate -> writeDelegateType ctx entity
             | _ -> writeType ctx entity
         | :? FSharpMemberFunctionOrValue as mem ->
             writeSymbol mem.LogicalEnclosingEntity

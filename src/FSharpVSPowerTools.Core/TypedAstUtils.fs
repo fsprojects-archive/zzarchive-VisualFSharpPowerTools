@@ -18,6 +18,9 @@ let isSymbolLocalForProject (symbol: FSharpSymbol) =
 let hasAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
     attributes |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
 
+let isAttribute<'attribute> (attribute: FSharpAttribute) =
+    attribute.AttributeType.CompiledName = typeof<'attribute>.Name
+
 let tryGetAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
     attributes 
     |> Seq.tryFind (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
@@ -175,6 +178,7 @@ let (|Class|_|) (original: FSharpEntity, abbreviated: FSharpEntity, _) =
 let (|Record|_|) (e: FSharpEntity) = if e.IsFSharpRecord then Some() else None
 let (|UnionType|_|) (e: FSharpEntity) = if e.IsFSharpUnion then Some() else None
 let (|Delegate|_|) (e: FSharpEntity) = if e.IsDelegate then Some() else None
+let (|FSharpException|_|) (e: FSharpEntity) = if e.IsFSharpExceptionDeclaration then Some() else None
 let (|Parameter|_|) (symbol: FSharpSymbol) = 
     match symbol with
     | :? FSharpParameter -> Some()
@@ -233,4 +237,7 @@ let (|Function|_|) excluded (func: FSharpMemberFunctionOrValue) =
 
 let (|ExtensionMember|_|) (func: FSharpMemberFunctionOrValue) =
     if func.IsExtensionMember then Some() else None
+
+let (|Event|_|) (func: FSharpMemberFunctionOrValue) =
+    if func.IsEvent then Some () else None
 
