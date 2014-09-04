@@ -197,6 +197,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                   | Choice1Of2 (parseResults, CheckFileAnswer.Succeeded(checkResults)) ->
                       // Handle errors on the GUI thread
                       debug "[LanguageService] Update typed info - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo
+                      debug "[LanguageService] Update typed info - Errors? %A" checkResults.Errors
                       ParseAndCheckResults(checkResults, parseResults)
                   | Choice1Of2 _ ->
                       debug "[LanguageService] Update typed info - failed"

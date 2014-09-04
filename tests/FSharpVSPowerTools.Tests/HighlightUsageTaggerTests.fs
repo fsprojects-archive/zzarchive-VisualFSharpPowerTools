@@ -5,6 +5,7 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
+open System.IO
 
 type HighlightUsageTaggerHelper() =    
     inherit VsTestBase()
@@ -125,4 +126,28 @@ do printfn "Hello world!"
                 helper.TagsOf(buffer, tagger)                 
                 |> Seq.isEmpty
                 |> assertTrue)
+
+    [<Test>]
+    let ``should generate highlight usage tags for type-provided symbols``() = 
+        let content = """
+module TypeProviderTests
+open FSharp.Data
+type Project = XmlProvider<"<root><value>1</value><value>3</value></root>">
+let _ = Project.GetSample()
+"""
+        // Use absolute path just to be sure
+        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fsproj"))
+        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fs"))
+        let buffer = createMockTextBuffer content fileName
+        helper.AddProject(ConcreteProjectProvider(projectFileName))
+        helper.SetActiveDocument(fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)        
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 8) |> ignore)
+            (fun () -> 
+                helper.TagsOf(buffer, tagger)                 
+                |> Seq.toList
+                |> assertEqual
+                     [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
 
