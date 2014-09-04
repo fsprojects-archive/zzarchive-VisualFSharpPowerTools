@@ -69,6 +69,7 @@
     <Compile Include="CodeGenerationTestInfrastructure.fs" />
     <Compile Include="RecordStubGeneratorTests.fs" />
     <Compile Include="UnionPatternMatchCaseGeneratorTests.fs" />
+    <Compile Include="GoToDefinitionTests.fs" />
     <Compile Include="UnopenedNamespacesResolverTests.fs" />
     <None Include="DepthColorizerSampleFile.fs">
       <Link>DepthColorizerSampleFile.fs</Link>
@@ -89,7 +90,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.59\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+      <HintPath>..\..\packages\FSharp.Compiler.Service.0.0.60\lib\net45\FSharp.Compiler.Service.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />

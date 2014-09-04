@@ -20,15 +20,6 @@ let guidOldStandardCmdSet = VSConstants.GUID_VSStandardCommandSet97
 let cmdStandardNewFolder = uint32 VSConstants.VSStd97CmdID.NewFolder
 let cmdStandardRenameFolder = uint32 VSConstants.VSStd97CmdID.Rename
 
-let [<Literal>] depthAdornmentLayerName = "FSharpDepthFullLineAdornment"
-
-let cmdidStandardRenameCommand = uint32 VSConstants.VSStd2KCmdID.RENAME // ECMD_RENAME
-let guidStandardCmdSet = VSConstants.VSStd2K
-
-let cmdidFindReferences = uint32 VSConstants.VSStd97CmdID.FindReferences
-let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
-let [<Literal>] findReferencesResults = 0x11223344u
-
 let [<Literal>] fsharpUnusedDeclarationMargin = "FSharpUnusedDeclarationMargin"
 
 let [<Literal>] fsharpReferenceType = "FSharp.ReferenceType"
@@ -39,3 +30,14 @@ let [<Literal>] fsharpMutableVar = "FSharp.MutableVar"
 let [<Literal>] fsharpQuotation = "FSharp.Quotation"
 let [<Literal>] fsharpModule = "FSharp.Module"
 let [<Literal>] fsharpUnused = "FSharp.Unused"
+
+let [<Literal>] depthAdornmentLayerName = "FSharpDepthFullLineAdornment"
+
+let cmdidStandardRenameCommand = uint32 VSConstants.VSStd2KCmdID.RENAME // ECMD_RENAME
+let guidStandardCmdSet = VSConstants.VSStd2K
+
+let cmdidFindReferences = uint32 VSConstants.VSStd97CmdID.FindReferences
+let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
+let [<Literal>] findReferencesResults = 0x11223344u
+
+let cmdidGoToDefinition = uint32 VSConstants.VSStd97CmdID.GotoDefn

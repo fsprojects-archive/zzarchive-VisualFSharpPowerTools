@@ -100,6 +100,19 @@ module Helpers =
     let assertSrcAreEqual expectedSrc actualSrc =
         Collection.assertEqual (srcToLineArray expectedSrc) (srcToLineArray actualSrc)
 
+    let assertSrcAreEqualForFirstLines lineCount expectedSrc actualSrc =
+        let firstLinesFromActualSrc =
+            srcToLineArray actualSrc
+            |> Seq.take lineCount
+            |> Seq.toArray
+
+        let firstLinesFromExpectedSrc =
+            srcToLineArray expectedSrc
+            |> Seq.take lineCount
+            |> Seq.toArray
+
+        Collection.assertEqual firstLinesFromExpectedSrc firstLinesFromActualSrc
+
     let assertSrcSeqAreEqual expectedSrcSeq actualSrcSeq =
         Seq.zip expectedSrcSeq actualSrcSeq
         |> Seq.iter (fun (expectedSrc, actualSrc) -> assertSrcAreEqual expectedSrc actualSrc)

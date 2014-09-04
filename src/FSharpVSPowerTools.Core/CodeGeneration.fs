@@ -39,8 +39,14 @@ module internal Utils =
         let stringWriter = new StringWriter()
         let indentWriter = new IndentedTextWriter(stringWriter, " ")
 
+        member x.Write(s: string) =
+            indentWriter.Write("{0}", s)
+
         member x.Write(s: string, [<ParamArray>] objs: obj []) =
             indentWriter.Write(s, objs)
+
+        member x.WriteLine(s: string) =
+            indentWriter.WriteLine("{0}", s)
 
         member x.WriteLine(s: string, [<ParamArray>] objs: obj []) =
             indentWriter.WriteLine(s, objs)
