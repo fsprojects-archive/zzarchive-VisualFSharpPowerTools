@@ -1,5 +1,19 @@
-﻿module FSharpVSPowerTools.Core.Tests.UnopenedNamespacesResolverTests
-
+﻿#if INTERACTIVE
+#r "../../bin/FSharp.Compiler.Service.dll"
+#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
+      "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
+      "../../src/FSharpVSPowerTools.Core/UnopenedNamespacesResolver.fs"
+      "TestHelpers.fs"
+      "CodeGenerationTestInfrastructure.fs"
+#else
+module FSharpVSPowerTools.Core.Tests.UnopenedNamespacesResolverTests
+#endif
 open NUnit.Framework
 open FSharpVSPowerTools
 
@@ -903,5 +917,25 @@ open Another
 open System
 
 type T = { F: DateTime }
+"""
+
+[<Test>]
+let ``open module consisting of type aliases``() =
+    """
+module TypeAlias =
+    type MyInt = int
+module Usage =
+    let f (x:MyInt) = x
+"""
+    |> forLine 5
+    |> forIdent "MyInt"
+    |> forEntity "TypeAlias" "TypeAlias.MyInt"
+    |> result """
+module TypeAlias =
+    type MyInt = int
+module Usage =
+    open TypeAlias
+
+    let f (x:MyInt) = x
 """
 
