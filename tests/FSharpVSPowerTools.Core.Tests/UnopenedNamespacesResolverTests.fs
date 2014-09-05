@@ -608,6 +608,17 @@ DateTime
 """ 
     ==> [1, 1, Some EntityKind.FunctionOrValue]
 
+[<Test>]
+let ``second and subsequent parts in long ident is not an entity``() =
+    """
+let _ = System.empty
+let _ = System.Foo.empty
+""" 
+    ==> [1, 16, None
+         2, 16, None
+         2, 20, None ]
+
+// open declaration insertion integration tests
 
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line

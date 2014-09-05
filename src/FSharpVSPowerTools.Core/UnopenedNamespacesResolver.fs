@@ -186,9 +186,16 @@ module ParsedInput =
             |> Option.orElse (Option.bind walkExpr e1)
 
         and walkExprWithKind (parentKind: EntityKind option) = function
-            | SynExpr.LongIdent (_, _, _, r) -> 
-                if isPosInRange r then parentKind |> Option.orElse (Some FunctionOrValue) 
-                else None
+            | SynExpr.LongIdent (_, LongIdentWithDots(_, dotRanges), _, r) ->
+                match dotRanges with
+                | [] when isPosInRange r -> parentKind |> Option.orElse (Some FunctionOrValue) 
+                | firstDotRange :: _  ->
+                    let firstPartRange = 
+                        Range.mkRange "" r.Start (Range.mkPos firstDotRange.StartLine (firstDotRange.StartColumn - 1))
+                    if isPosInRange firstPartRange then
+                        parentKind |> Option.orElse (Some FunctionOrValue) 
+                    else None
+                | _ -> None
             | SynExpr.Paren (e, _, _, _) -> walkExprWithKind parentKind e
             | SynExpr.Quote(_, _, e, _, _) -> walkExprWithKind parentKind e
             | SynExpr.Typed(e, _, _) -> walkExprWithKind parentKind e
