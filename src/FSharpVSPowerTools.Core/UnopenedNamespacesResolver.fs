@@ -30,8 +30,8 @@ module Entity =
             | _ -> candidateNs.Length
         candidateNs.[0..nsCount - 1]
 
-    let tryCreate (targetNamespace: Idents option) (targetScope: Idents) (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option) 
-                  (autoOpenParent: Idents option) (candidateNamespace: Idents option) (candidate: Idents) =
+    let tryCreate (targetNamespace: Idents option, targetScope: Idents, ident: ShortIdent, requiresQualifiedAccessParent: Idents option, 
+                   autoOpenParent: Idents option, candidateNamespace: Idents option, candidate: Idents) =
         if candidate.Length = 0 || candidate.[candidate.Length - 1] <> ident then None
         else Some candidate
         |> Option.bind (fun candidate ->
@@ -463,7 +463,7 @@ module ParsedInput =
                                  entityNamespace: Idents option, entity: Idents) ->
             res 
             |> Option.bind (fun (scope, ns, pos) -> 
-                Entity.tryCreate ns scope.Idents ident requiresQualifiedAccessParent autoOpenParent entityNamespace entity 
+                Entity.tryCreate (ns, scope.Idents, ident, requiresQualifiedAccessParent, autoOpenParent, entityNamespace, entity)
                 |> Option.map (fun entity -> entity, scope, pos))
             |> Option.map (fun (e, scope, pos) ->
                 e,
