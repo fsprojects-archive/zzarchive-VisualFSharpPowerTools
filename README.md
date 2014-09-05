@@ -29,6 +29,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Resolve unopened namespaces
  - Gray out unused declarations
  - Gray out unused open statements
+ - Go to Metadata
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 
@@ -44,6 +45,7 @@ You can download the latest installer [here](https://ci.appveyor.com/project/dun
 ### Getting involved
 
 You can ask questions regarding the project on GitHub issues or on Twitter (tweeting to [@FSPowerTools](https://twitter.com/FSPowerTools) and [#fsharp](https://twitter.com/search?f=realtime&q=%23fsharp&src=typd) hashtag).
+
 Contributions are always welcome.
 The maintainers don't have much experience with Visual Studio Extensibility; any help is much appreciated.
 

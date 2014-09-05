@@ -1,4 +1,5 @@
 #### 1.5.0 - Unreleased
+* Implement Go to Metadata
 
 #### 1.4.5 - August 28 2014
 * Fix forcing saving projects when project items change

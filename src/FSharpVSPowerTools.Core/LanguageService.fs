@@ -346,7 +346,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     
                     dependentProjects |> Async.Array.mapi (fun index opts ->
                           async {                            
-                            let projectName = System.IO.Path.GetFileNameWithoutExtension(opts.ProjectFileName)
+                            let projectName = Path.GetFileNameWithoutExtension(opts.ProjectFileName)
                             reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
                             let! projectResults = checker.ParseAndCheckProject opts
                             let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
@@ -360,17 +360,17 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: ProjectOptions seq) =
      async { 
-        return 
+        return! 
             projectsOptions
-            |> Seq.exists (fun opts ->
+            |> Seq.toArray
+            |> Async.Array.exists (fun opts ->
                 async {
                     let! projectResults = checker.ParseAndCheckProject opts
                     let! refs = projectResults.GetUsesOfSymbol symbol
                     return
                         if opts.ProjectFileName = currentProjectName then
                             refs.Length > 1
-                        else refs.Length > 0 }
-                |> Async.RunSynchronously)
+                        else refs.Length > 0 })
      }
 
   member __.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)

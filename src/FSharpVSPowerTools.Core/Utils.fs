@@ -117,6 +117,22 @@ module Async =
                 return result
             }
 
+        /// Async implementation of Array.exists.
+        let exists (predicate : 'T -> Async<bool>) (array : 'T[]) : Async<bool> =
+            let len = Array.length array
+            let rec loop i =
+                async {
+                    if i >= len then
+                        return false
+                    else
+                        let! found = predicate array.[i]
+                        if found then
+                            return true
+                        else
+                            return! loop (i + 1)
+                }
+            loop 0
+
     [<RequireQualifiedAccess>]
     module List =
         let rec private mapImpl (mapping, mapped : 'U list, pending : 'T list) =
@@ -144,25 +160,25 @@ module Async =
 [<Sealed>]
 type MaybeBuilder () =
     // 'T -> M<'T>
-    member inline x.Return value: 'T option =
+    member inline __.Return value: 'T option =
         Some value
 
     // M<'T> -> M<'T>
-    member inline x.ReturnFrom value: 'T option =
+    member inline __.ReturnFrom value: 'T option =
         value
 
     // unit -> M<'T>
-    member inline x.Zero (): unit option =
+    member inline __.Zero (): unit option =
         Some ()     // TODO: Should this be None?
 
     // (unit -> M<'T>) -> M<'T>
-    member x.Delay (f: unit -> 'T option): 'T option =
+    member __.Delay (f: unit -> 'T option): 'T option =
         f ()
 
     // M<'T> -> M<'T> -> M<'T>
     // or
     // M<unit> -> M<'T> -> M<'T>
-    member inline x.Combine (r1, r2: 'T option): 'T option =
+    member inline __.Combine (r1, r2: 'T option): 'T option =
         match r1 with
         | None ->
             None
@@ -170,11 +186,11 @@ type MaybeBuilder () =
             r2
 
     // M<'T> * ('T -> M<'U>) -> M<'U>
-    member inline x.Bind (value, f: 'T -> 'U option): 'U option =
+    member inline __.Bind (value, f: 'T -> 'U option): 'U option =
         Option.bind f value
 
     // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
-    member x.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
+    member __.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
         try body resource
         finally
             if not <| obj.ReferenceEquals (null, box resource) then
@@ -202,23 +218,23 @@ type MaybeBuilder () =
 [<Sealed>]
 type AsyncMaybeBuilder () =
     // 'T -> M<'T>
-    member (*inline*) x.Return value : Async<'T option> = Some value |> async.Return
+    member (*inline*) __.Return value : Async<'T option> = Some value |> async.Return
 
     // M<'T> -> M<'T>
-    member (*inline*) x.ReturnFrom value : Async<'T option> = value
+    member (*inline*) __.ReturnFrom value : Async<'T option> = value
 
     // unit -> M<'T>
-    member (*inline*) x.Zero () : Async<unit option> =
+    member (*inline*) __.Zero () : Async<unit option> =
         Some ()     // TODO : Should this be None?
         |> async.Return
 
     // (unit -> M<'T>) -> M<'T>
-    member x.Delay (f : unit -> Async<'T option>) : Async<'T option> = f ()
+    member __.Delay (f : unit -> Async<'T option>) : Async<'T option> = f ()
 
     // M<'T> -> M<'T> -> M<'T>
     // or
     // M<unit> -> M<'T> -> M<'T>
-    member (*inline*) x.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
+    member (*inline*) __.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
         async {
             let! r1' = r1
             match r1' with
@@ -227,7 +243,7 @@ type AsyncMaybeBuilder () =
         }
 
     // M<'T> * ('T -> M<'U>) -> M<'U>
-    member (*inline*) x.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
+    member (*inline*) __.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
         async {
             let! value' = value
             match value' with
@@ -235,7 +251,7 @@ type AsyncMaybeBuilder () =
             | Some result -> return! f result
         }
     // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
-    member x.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
+    member __.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
         try body resource
         finally 
             if resource <> null then resource.Dispose ()
@@ -368,8 +384,8 @@ module Pervasive =
                 Thread.SpinWait 20
                 swap f
         
-        member x.Value = !refCell
-        member x.Swap(f: 'T -> 'T) = swap f
+        member __.Value = !refCell
+        member __.Swap(f: 'T -> 'T) = swap f
 
     open System.IO
 

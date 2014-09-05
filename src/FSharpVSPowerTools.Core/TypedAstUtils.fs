@@ -106,20 +106,13 @@ let (|Entity|_|) (symbol: FSharpSymbol) =
         let abbreviatedEntity, abbreviatedType = getEntityAbbreviatedType entity
         Some (entity, abbreviatedEntity, abbreviatedType)
     | _ -> None
-
-let private unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
-    
+   
 type FSharpEntity with
     member x.TryGetFullName() =
-        match x with
-        | AbbreviatedType _ -> 
-            Some (String.Join(".", x.AccessPath, x.DisplayName))
-        | x when x.IsArrayType || x.IsByRef -> None
-        | _ ->
+        x.TryFullName
+        |> Option.orTry (fun _ -> 
             Option.attempt (fun _ -> x.DisplayName)
-            |> Option.bind (fun displayName ->
-                if List.exists ((=) displayName) unrepresentedTypes then None
-                else try Some x.FullName with _ -> None)
+            |> Option.map (fun displayName -> String.Join(".", x.AccessPath, displayName)))
 
     member x.TryGetFullDisplayName() =
         let fullName = x.TryGetFullName() |> Option.map (fun fullName -> fullName.Split '.')
