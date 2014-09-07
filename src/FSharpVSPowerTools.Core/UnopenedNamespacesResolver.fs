@@ -30,8 +30,8 @@ module Entity =
             | _ -> candidateNs.Length
         candidateNs.[0..nsCount - 1]
 
-    let tryCreate (targetNamespace: Idents option) (targetScope: Idents) (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option) 
-                  (autoOpenParent: Idents option) (candidateNamespace: Idents option) (candidate: Idents) =
+    let tryCreate (targetNamespace: Idents option, targetScope: Idents, ident: ShortIdent, requiresQualifiedAccessParent: Idents option, 
+                   autoOpenParent: Idents option, candidateNamespace: Idents option, candidate: Idents) =
         if candidate.Length = 0 || candidate.[candidate.Length - 1] <> ident then None
         else Some candidate
         |> Option.bind (fun candidate ->
@@ -186,9 +186,16 @@ module ParsedInput =
             |> Option.orElse (Option.bind walkExpr e1)
 
         and walkExprWithKind (parentKind: EntityKind option) = function
-            | SynExpr.LongIdent (_, _, _, r) -> 
-                if isPosInRange r then parentKind |> Option.orElse (Some FunctionOrValue) 
-                else None
+            | SynExpr.LongIdent (_, LongIdentWithDots(_, dotRanges), _, r) ->
+                match dotRanges with
+                | [] when isPosInRange r -> parentKind |> Option.orElse (Some FunctionOrValue) 
+                | firstDotRange :: _  ->
+                    let firstPartRange = 
+                        Range.mkRange "" r.Start (Range.mkPos firstDotRange.StartLine (firstDotRange.StartColumn - 1))
+                    if isPosInRange firstPartRange then
+                        parentKind |> Option.orElse (Some FunctionOrValue) 
+                    else None
+                | _ -> None
             | SynExpr.Paren (e, _, _, _) -> walkExprWithKind parentKind e
             | SynExpr.Quote(_, _, e, _, _) -> walkExprWithKind parentKind e
             | SynExpr.Typed(e, _, _) -> walkExprWithKind parentKind e
@@ -463,7 +470,7 @@ module ParsedInput =
                                  entityNamespace: Idents option, entity: Idents) ->
             res 
             |> Option.bind (fun (scope, ns, pos) -> 
-                Entity.tryCreate ns scope.Idents ident requiresQualifiedAccessParent autoOpenParent entityNamespace entity 
+                Entity.tryCreate (ns, scope.Idents, ident, requiresQualifiedAccessParent, autoOpenParent, entityNamespace, entity)
                 |> Option.map (fun entity -> entity, scope, pos))
             |> Option.map (fun (e, scope, pos) ->
                 e,

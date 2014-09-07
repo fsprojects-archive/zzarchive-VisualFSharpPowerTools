@@ -17,66 +17,255 @@ module FSharpVSPowerTools.Core.Tests.UnopenedNamespacesResolverTests
 open NUnit.Framework
 open FSharpVSPowerTools
 
-let (=>) (ns: string option, 
-          scope: string, 
-          currentIdent, 
-          requireQualifiedAccessParent: string option, 
-          autoOpenParent: string option,
-          entityNs: string option, 
-          entityFullName: string) res = 
+// Entity.TryCreate tests
 
+type EntiryCreationArgs = 
+    { ns: string option
+      scope: string 
+      currentIdent: string 
+      requireQualifiedAccessParent: string option 
+      autoOpenParent: string option
+      entityNs: string option 
+      entityFullName: string }
+
+let assertEntityCreation args res = 
     Entity.tryCreate 
-            (ns |> Option.map (fun x -> x.Split '.'))
-            (scope.Split '.') 
-            currentIdent 
-            (requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.')) 
-            (autoOpenParent |> Option.map (fun x -> x.Split '.'))
-            (entityNs |> Option.map (fun x -> x.Split '.'))
-            (entityFullName.Split '.')
-    |> assertEqual (res |> Option.map (fun (fullRelativeName, ns, name) -> 
-        { FullRelativeName = fullRelativeName; Namespace = ns; Name = name }))
+            (args.ns |> Option.map (fun x -> x.Split '.'),
+             args.scope.Split '.', 
+             args.currentIdent,
+             args.requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.'), 
+             args.autoOpenParent |> Option.map (fun x -> x.Split '.'),
+             args.entityNs |> Option.map (fun x -> x.Split '.'),
+             args.entityFullName.Split '.')
+    |> assertEqual res
+
+let (=>) args res = assertEntityCreation args (Some res)
+let (!=>) = assertEntityCreation
 
 [<Test>] 
 let ``fully qualified external entities``() =
-    (Some "TopNs", "", "Now", None, None, Some "System", "System.DateTime.Now") => Some ("System.DateTime.Now", Some "System.DateTime", "Now")
-    (Some "TopNs", "", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
-    (Some "Myns", "Myns", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
-    (Some "Myns", "Myns.Nested", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "System"
+        entityFullName = "System.DateTime.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.DateTime.Now"
+        Namespace = Some "System.DateTime"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "System.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.Now"
+        Namespace = Some "System"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "System.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.Now"
+        Namespace = Some "System"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns.Nested"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "System.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.Now"
+        Namespace = Some "System"
+        Name = "Now" 
+    }
 
 [<Test>] 
 let ``fully qualified external entities with require qualified access module``() =
-    (Some "TopNs", "", "Now", Some "System", None, Some "System", "System.DateTime.Now") => 
-        Some ("System.DateTime.Now",  None, "System.DateTime.Now")
-
-    (Some "TopNs", "", "Now", Some "System.DateTime", None, Some "System",  "System.DateTime.Now") => 
-        Some ("System.DateTime.Now", Some "System", "DateTime.Now")
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = Some "System"
+        autoOpenParent = None
+        entityNs = Some "System"
+        entityFullName = "System.DateTime.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.DateTime.Now"
+        Namespace = None
+        Name = "System.DateTime.Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = Some "System.DateTime"
+        autoOpenParent = None
+        entityNs = Some "System"
+        entityFullName = "System.DateTime.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.DateTime.Now"
+        Namespace = Some "System"
+        Name = "DateTime.Now" 
+    }
 
 [<Test>]
 let ``simple entities``() =
-    (Some "TopNs", "", "Now", None, None, None, "Now") => None
-    (Some "Myns", "Myns", "Now", None, None, None, "Now") => None
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "Now" 
+    } 
+    !=> None
 
 [<Test>]
 let ``internal entities``() =
-    (Some "Myns", "Myns", "Now", None, None, Some "Myns", "Myns.Nested.Now") => Some ("Nested.Now", Some "Nested", "Now")   
-    (Some "Myns", "Myns.Nested", "Now", None, None, Some "Myns", "Myns.Nested.Nested2.Now") => Some ("Nested2.Now", Some "Nested2", "Now")
-    (Some "Myns", "Myns.Nested", "Now", None, None, Some "Myns", "") => None
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested.Now"
+        Namespace = Some "Nested"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns.Nested"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Nested2.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested2.Now"
+        Namespace = Some "Nested2"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns.Nested"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "" 
+    } 
+    !=> None
 
 [<Test>]
 let ``internal entities in different sub namespace``() =
-    (Some "Myns.Nested1", "Myns.Nested1", "Now", None, None, Some "Myns.Nested2", "Myns.Nested2.Now") => 
-        Some ("Myns.Nested2.Now", Some "Myns.Nested2", "Now")   
+    { 
+        ns = Some "Myns.Nested1"
+        scope = "Myns.Nested1"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns.Nested2"
+        entityFullName = "Myns.Nested2.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Myns.Nested2.Now"
+        Namespace = Some "Myns.Nested2"
+        Name = "Now" 
+    }
 
 [<Test>] 
 let ``internal entities with require qualified access module``() =
-    (Some "Myns", "Myns", "Now", Some "Myns.Nested", None, Some "Myns", "Myns.Nested.Now") => Some ("Nested.Now", None, "Nested.Now")   
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = Some "Myns.Nested"
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested.Now"
+        Namespace = None
+        Name = "Nested.Now"
+    }
 
 [<Test>]
 let ``entities in auto open module``() =
-    (Some "Myns", "Myns", "Now", None, Some "Myns.Nested", Some "Myns", "Myns.Nested.Now") => None
-    (Some "Myns", "Myns", "Now", None, Some "Myns.Nested.AutoOpenNested", Some "Myns", "Myns.Nested.AutoOpenNested.Now") => 
-        Some ("Nested.AutoOpenNested.Now", Some "Nested", "Now")
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = Some "Myns.Nested"
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Now" 
+    } 
+    !=> None
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = Some "Myns.Nested.AutoOpenNested"
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.AutoOpenNested.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested.AutoOpenNested.Now"
+        Namespace = Some "Nested"
+        Name = "Now"
+    }
 
+// ParsedInput.getEntityKind tests
 
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
 
@@ -419,6 +608,17 @@ DateTime
 """ 
     ==> [1, 1, Some EntityKind.FunctionOrValue]
 
+[<Test>]
+let ``second and subsequent parts in long ident is not an entity``() =
+    """
+let _ = System.empty
+let _ = System.Foo.empty
+""" 
+    ==> [1, 16, None
+         2, 16, None
+         2, 20, None ]
+
+// open declaration insertion integration tests
 
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
