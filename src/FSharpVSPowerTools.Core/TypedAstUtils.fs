@@ -15,28 +15,28 @@ let isSymbolLocalForProject (symbol: FSharpSymbol) =
     | :? FSharpField as m -> not m.Accessibility.IsPublic
     | _ -> false
 
-let hasAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
-    attributes |> Seq.exists (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
+let isAttribute<'T> (attribute: FSharpAttribute) =
+    attribute.AttributeType.CompiledName = typeof<'T>.Name
 
-let isAttribute<'attribute> (attribute: FSharpAttribute) =
-    attribute.AttributeType.CompiledName = typeof<'attribute>.Name
+let hasAttribute<'T> (attributes: seq<FSharpAttribute>) =
+    attributes |> Seq.exists isAttribute<'T>
 
-let tryGetAttribute<'attribute> (attributes: seq<FSharpAttribute>) =
-    attributes 
-    |> Seq.tryFind (fun a -> a.AttributeType.CompiledName = typeof<'attribute>.Name)
+let tryGetAttribute<'T> (attributes: seq<FSharpAttribute>) =
+    attributes |> Seq.tryFind isAttribute<'T>
     
 let hasModuleSuffixAttribute (entity: FSharpEntity) = 
-    (entity.Attributes
+     entity.Attributes
      |> tryGetAttribute<CompilationRepresentationAttribute>
      |> Option.bind (fun a -> 
           a.ConstructorArguments 
           |> Seq.tryPick (fun arg ->
                let res =
                    match arg with
-                   | :? int32 as arg when arg  = int CompilationRepresentationFlags.ModuleSuffix -> Some() 
-                   | :? CompilationRepresentationFlags as arg when arg  = CompilationRepresentationFlags.ModuleSuffix -> Some() 
+                   | :? int32 as arg when arg = int CompilationRepresentationFlags.ModuleSuffix -> Some() 
+                   | :? CompilationRepresentationFlags as arg when arg = CompilationRepresentationFlags.ModuleSuffix -> Some() 
                    | _ -> None
-               res))) = Some()
+               res))
+     |> Option.isSome
 
 let isOperator (name: string) =
     name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
