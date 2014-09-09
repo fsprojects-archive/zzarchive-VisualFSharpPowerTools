@@ -158,12 +158,24 @@ let private tryGetNeededTypeDefSyntaxDelimiter (typ: FSharpEntity) =
         else None
     else None
 
-let rec internal writeModule ctx (modul: FSharpEntity) =
+let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
+    if modul.IsFSharpModule && hasModuleSuffixAttribute modul then
+        if moduleName.EndsWith "Module" then
+            moduleName.Substring(0, moduleName.Length - "Module".Length)
+        else moduleName
+    else moduleName
+
+let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
+    printfn "Module XmlDocSig: %s" modul.XmlDocSig
     writeDocs ctx modul.XmlDoc
     writeAttributes ctx modul modul.Attributes
-    ctx.Writer.WriteLine("module {0} = ", modul.FullName)
-    ctx.Writer.Indent ctx.Indentation
+    if isTopLevel then
+        ctx.Writer.WriteLine("module {0}", tryRemoveModuleSuffix modul modul.FullName)
+    else
+        ctx.Writer.WriteLine("module {0} = ", modul.DisplayName)
+    if not isTopLevel then
+        ctx.Writer.Indent ctx.Indentation
     for value in modul.MembersFunctionsAndValues do
         writeFunctionOrValue ctx value
 
@@ -172,15 +184,15 @@ let rec internal writeModule ctx (modul: FSharpEntity) =
 
     for entity in modul.NestedEntities do
         match entity with
-        | FSharpModule -> writeModule ctx entity
+        | FSharpModule -> writeModule false ctx entity
         | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
         | FSharpException -> writeFSharpExceptionType ctx entity
         | Delegate -> writeDelegateType ctx entity
         | _ -> writeType ctx entity
 
         ctx.Writer.WriteLine("")
-
-    ctx.Writer.Unindent ctx.Indentation
+    if not isTopLevel then
+        ctx.Writer.Unindent ctx.Indentation
 
 and internal writeType ctx (typ: FSharpEntity) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
@@ -192,6 +204,7 @@ and internal writeType ctx (typ: FSharpEntity) =
         // TODO: print modules or not?
         ()
 
+    printfn "Type XmlDocSig: %s" typ.XmlDocSig
     writeDocs ctx typ.XmlDoc
     writeAttributes ctx typ typ.Attributes
 
@@ -434,6 +447,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
     | Event -> ()
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         // Discard explicit getter/setter methods
+        printfn "XmlDocSig: %s" mem.XmlDocSig
         writeDocs ctx mem.XmlDoc
 
         let memberType =
@@ -463,7 +477,7 @@ let formatSymbol displayContext (symbol: FSharpSymbol) =
         match symbol with
         | :? FSharpEntity as entity ->
             match entity with
-            | FSharpModule -> writeModule ctx entity
+            | FSharpModule -> writeModule true ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
             | FSharpException -> writeFSharpExceptionType ctx entity
             | Delegate -> writeDelegateType ctx entity
