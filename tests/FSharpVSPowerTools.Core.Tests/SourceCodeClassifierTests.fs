@@ -47,7 +47,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
 
     let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, sourceLines, AllowStaleResults.No, true,
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true,
                                                       (fun _ -> async { return Some [opts] }), lexer)
         |> Async.RunSynchronously
 
