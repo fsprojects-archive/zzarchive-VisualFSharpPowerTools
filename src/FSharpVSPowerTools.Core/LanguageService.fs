@@ -414,7 +414,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       loop 0 None
 
     member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedDeclarations, 
-                                           getSymbolDeclProjects, lexer: LexerBase) : SymbolUse [] Async =
+                                           getSymbolDeclProjects) : SymbolUse [] Async =
 
         async {
             let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)

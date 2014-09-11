@@ -46,7 +46,7 @@ let gitHome = "https://github.com/fsprojects"
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
-let fcsVersion = "0.0.60"
+let fcsVersion = "0.0.61"
 
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
