@@ -118,6 +118,12 @@ Target "CleanVSIX" (fun _ ->
     ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
 )
 
+Target "BuildTests" (fun _ ->    
+    !! "tests/data/**/*.sln"
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
+)
+
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
 
@@ -209,6 +215,7 @@ Target "All" DoNothing
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
+  ==> "BuildTests"
   ==> "UnitTests"
   ==> "Main"
 
