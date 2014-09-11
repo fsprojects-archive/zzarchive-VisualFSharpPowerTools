@@ -196,10 +196,8 @@ type VSLanguageService
                     | None -> return None
                 }
 
-            let sourceLines = snapshot.Lines |> Seq.map (fun line -> line.GetText()) |> Seq.toArray
-
             let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(
-                                                opts, currentFile, sourceLines, stale, checkForUnusedDeclarations,
+                                                opts, currentFile, source, stale, checkForUnusedDeclarations,
                                                 getSymbolDeclProjects, lexer)
             return allSymbolsUses, lexer
         }

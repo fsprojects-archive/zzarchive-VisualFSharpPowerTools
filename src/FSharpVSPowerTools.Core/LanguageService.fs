@@ -412,13 +412,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           }
       loop 0 None
 
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string[], stale, checkForUnusedDeclarations, 
-                                           getSymbolDeclProjects, lexer: LexerBase) : SymbolUse[] Async =
-
-        let stringArrayToString (arr: string[]) = String.Join (Environment.NewLine, arr)
+    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedDeclarations, 
+                                           getSymbolDeclProjects, lexer: LexerBase) : SymbolUse [] Async =
 
         async {
-            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, stringArrayToString source, stale)
+            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
             let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
 
             let allSymbolsUses =
@@ -431,26 +429,17 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             None
                         | MemberFunctionOrValue func when func.IsExtensionMember ->
                             if func.IsProperty then
-                                let range = symbolUse.RangeAlternate
-                                let line = range.StartLine - 1
-                                lexer.GetSymbolAtLocation (line, range.EndColumn) 
-                                |> Option.bind (fun sym ->
-                                    let origLineStr = source.[line]
-                                    let adjustedLineStr = 
-                                        origLineStr.Insert (sym.LeftColumn, 
-                                            // we use IsGetterMethod instead of IsPropertyGetterMethod because the latter 
-                                            // returns False.
-                                            (if func.IsGetterMethod then "get" else "set") + "_")
-                                    source.[line] <- adjustedLineStr
-                                    let adjustedSym = { sym with RightColumn = sym.RightColumn + 4 }
-                                    let res = x.GetUsesOfSymbolAtLocationInFile (
-                                                    projectOptions, fileName, stringArrayToString source, adjustedSym, line,
-                                                    adjustedLineStr, AllowStaleResults.No) |> Async.RunSynchronously
-                                    source.[line] <- origLineStr
-                                    res)
-                                |> Option.map (fun (symbol, _, _) ->  
-                                     debug "[LanguageService] Getting real FullName for %s: %s" symbolUse.Symbol.FullName symbol.FullName
-                                     [|symbol.FullName|])
+                                let fullNames =
+                                    [|
+                                        if func.HasGetterMethod then
+                                            yield func.GetterMethod.EnclosingEntity.TryGetFullName()
+                                        if func.HasSetterMethod then
+                                            yield func.SetterMethod.EnclosingEntity.TryGetFullName()
+                                    |]
+                                    |> Array.choose id
+                                match fullNames with
+                                | [||] -> None 
+                                | _ -> Some fullNames
                             else 
                                 match func.EnclosingEntity with
                                 // C# extension method
@@ -493,8 +482,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             Some [| let fullName = symbol.FullName
                                     yield fullName
                                     let idents = fullName.Split '.'
-                                    // Union cases/Record fields can be accessible without mention the type. 
-                                    // So we add a FullName with the type part removed.
+                                    // Union cases/Record fields can be accessible without mentioning the enclosing type. 
+                                    // So we add a FullName without having the type part.
                                     if idents.Length > 1 then
                                         yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
                                  |]   
