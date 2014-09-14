@@ -197,6 +197,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                   | Choice1Of2 (parseResults, CheckFileAnswer.Succeeded(checkResults)) ->
                       // Handle errors on the GUI thread
                       debug "[LanguageService] Update typed info - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo
+                      debug "[LanguageService] Update typed info - Errors? %A" checkResults.Errors
                       ParseAndCheckResults(checkResults, parseResults)
                   | Choice1Of2 _ ->
                       debug "[LanguageService] Update typed info - failed"
@@ -263,8 +264,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
           UnresolvedReferences = None
           ReferencedProjects = referencedProjects }
-    Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
+    Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
+                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects)
     opts     
 
   member __.ParseFileInProject(projectOptions, fileName: string, src) = 
@@ -413,7 +414,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       loop 0 None
 
     member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedDeclarations, 
-                                           getSymbolDeclProjects, lexer: LexerBase) : SymbolUse [] Async =
+                                           getSymbolDeclProjects) : SymbolUse [] Async =
 
         async {
             let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)

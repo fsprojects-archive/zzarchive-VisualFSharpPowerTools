@@ -107,7 +107,9 @@ type ProjectFactory
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
-    member x.CreateForProject (project: Project): IProjectProvider = 
+    abstract CreateForProject: Project -> IProjectProvider
+
+    default x.CreateForProject (project: Project): IProjectProvider = 
         cache.Get project.FullName (fun _ ->
             new ProjectProvider (project, x.CreateForProject, onProjectChanged)) :> _
 

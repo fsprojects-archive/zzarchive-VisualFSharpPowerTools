@@ -46,7 +46,7 @@ let gitHome = "https://github.com/fsprojects"
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
-let fcsVersion = "0.0.60"
+let fcsVersion = "0.0.61"
 
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
@@ -116,6 +116,12 @@ Target "CleanVSIX" (fun _ ->
         ++ "bin/vsix/Microsoft.Build*"
     DeleteFiles filesToDelete
     ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
+)
+
+Target "BuildTests" (fun _ ->    
+    !! "tests/data/**/*.sln"
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
 )
 
 // --------------------------------------------------------------------------------------
@@ -209,6 +215,7 @@ Target "All" DoNothing
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
+  ==> "BuildTests"
   ==> "UnitTests"
   ==> "Main"
 

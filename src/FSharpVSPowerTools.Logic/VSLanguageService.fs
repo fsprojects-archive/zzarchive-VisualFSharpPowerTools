@@ -198,7 +198,7 @@ type VSLanguageService
 
             let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(
                                                 opts, currentFile, source, stale, checkForUnusedDeclarations,
-                                                getSymbolDeclProjects, lexer)
+                                                getSymbolDeclProjects)
             return allSymbolsUses, lexer
         }
 
