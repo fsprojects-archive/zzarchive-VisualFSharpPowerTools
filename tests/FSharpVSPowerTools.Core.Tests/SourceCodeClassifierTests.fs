@@ -35,7 +35,7 @@ let opts source =
 let (=>) source (expected: (int * ((Category * int * int) list)) list) = 
     let opts = opts source
     
-    let sourceLines = source.Replace("\r\n", "\n").Split([|"\n"|], System.StringSplitOptions.None)
+    let sourceLines = source.Replace("\r\n", "\n").Split('\n')
 
     let lexer = 
         { new LexerBase() with
@@ -1363,3 +1363,17 @@ module Usage =
     let f (x:MyInt) = x
 """
     => [ 5, []]
+
+let ``handle override members``() = 
+    """
+type IInterface =
+    abstract Property: int
+
+type IClass() =
+    interface IInterface with
+        member __.Property = 0
+
+let f (x: IClass) = (x :> IInterface).Property
+"""
+    => [ 7, []]
+
