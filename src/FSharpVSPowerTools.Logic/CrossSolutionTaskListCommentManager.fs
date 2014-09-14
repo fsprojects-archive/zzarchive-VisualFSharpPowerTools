@@ -53,13 +53,13 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
     static member SetOpenDocumentsTracker(tracker) =
         openDocsTracker <- Some(tracker)
 
-    member x.Activate() =
+    member __.Activate() =
         slnEventsListener.SolutionOpened.AddHandler(onSolutionOpened)
         slnEventsListener.SolutionClosed.AddHandler(onSolutionClosed)
         optionsMonitor.OptionsChanged.AddHandler(onOptionsChanged)
         optionsMonitor.Start()
 
-    member x.Deactivate() =
+    member __.Deactivate() =
         slnEventsListener.SolutionOpened.RemoveHandler(onSolutionOpened)
         slnEventsListener.SolutionClosed.RemoveHandler(onSolutionClosed)
         optionsMonitor.OptionsChanged.RemoveHandler(onOptionsChanged)

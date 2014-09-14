@@ -9,19 +9,13 @@ open System.Windows.Threading
 type internal OptionsReader(serviceProvider: IServiceProvider) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     
-    member x.GetOptions() =
+    member __.GetOptions() =
         let taskListOptions = dte.get_Properties("Environment", "TaskList")
         let mutable ct = None
         for o in taskListOptions do
             if o.Name = "CommentTokens" then
                 ct <- Some((o.Value :?> obj[]) |> Array.map (fun o -> o :?> string))
 
-        let vfptOptions = dte.get_Properties("F# Power Tools", "General")
-        let mutable tlce = false
-        for o in vfptOptions do
-            if o.Name = "TaskListCommentsEnabled" then
-                tlce <- o.Value :?> bool
-        
         if ct.IsSome then
             ct.Value |> Array.map (fun s -> let parts = s.Split(':') in
                                                 { Comment = parts.[0]; Priority = Int32.Parse(parts.[1]) })
@@ -32,8 +26,8 @@ type internal OptionsReader(serviceProvider: IServiceProvider) =
 type internal OptionsChangedEventArgs(oldOptions: CommentOption[], newOptions: CommentOption[]) =
     inherit EventArgs()
 
-    member x.OldOptions = oldOptions
-    member x.NewOptions = newOptions
+    member __.OldOptions = oldOptions
+    member __.NewOptions = newOptions
 
 
 type internal OptionsMonitor(serviceProvider: IServiceProvider) =
@@ -60,24 +54,24 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
                                     Interval = TimeSpan.FromMilliseconds(3000.0))
     
     [<CLIEvent>]
-    member x.OptionsChanged = optionsChanged.Publish
+    member __.OptionsChanged = optionsChanged.Publish
 
-    member x.GetOptions() =
+    member __.GetOptions() =
         currentOptions
 
     /// Starts listening for option changes
-    member x.Start() =
+    member __.Start() =
         if timer.IsEnabled then invalidOp "Already listening for option changes"
         else
             timer.Tick.AddHandler(onElapsed)
             timer.Start()
 
     /// Stops listening for option changes
-    member x.Stop() =
+    member __.Stop() =
         if not timer.IsEnabled then invalidOp "Not currently listening for option changes"
         else
             timer.Tick.RemoveHandler(onElapsed)
             timer.Stop()
 
     /// Gets whether this monitor is currently listening for option changes
-    member x.IsListening = timer.IsEnabled
+    member __.IsListening = timer.IsEnabled

@@ -211,7 +211,7 @@ type BasicProjectFactory() =
         debug "[ProjectFactory] %s changed." project.Name
         cache.Remove project.FullName
 
-    member x.ListFSharpProjectsInSolution(dte: DTE) =
+    member __.ListFSharpProjectsInSolution(dte: DTE) =
         let rec handleProject (p: Project) = 
             if p === null then []
             elif isFSharpProject p then [ p ]

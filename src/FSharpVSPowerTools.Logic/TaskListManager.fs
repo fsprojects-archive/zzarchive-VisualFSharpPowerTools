@@ -44,10 +44,10 @@ type internal TaskListManager private (taskProvider: TaskProvider) =
         |> List.filter (fun (t: Task) -> t.Document = filePath)
         |> List.iter taskProvider.Tasks.Remove
 
-    member x.ClearTaskList() =
+    member __.ClearTaskList() =
         taskProvider.Tasks.Clear()
 
-    member x.AddToTaskList(comments: Comment[]) =
+    member __.AddToTaskList(comments: Comment[]) =
         comments
         |> Array.map convertCommentToTask
         |> addToTaskList

@@ -19,38 +19,38 @@ type SolutionEventsListener(serviceProvider: IServiceProvider) as self =
     member x.SolutionClosed = solutionClosed.Publish
 
     interface IVsSolutionEvents with
-        member x.OnAfterCloseSolution(_pUnkReserved: obj): int = 
+        member __.OnAfterCloseSolution(_pUnkReserved: obj): int = 
             solutionClosed.Trigger(EventArgs.Empty)
             VSConstants.S_OK
         
-        member x.OnAfterLoadProject(_pStubHierarchy: IVsHierarchy, _pRealHierarchy: IVsHierarchy): int = 
+        member __.OnAfterLoadProject(_pStubHierarchy: IVsHierarchy, _pRealHierarchy: IVsHierarchy): int = 
             VSConstants.E_NOTIMPL
 
-        member x.OnAfterOpenProject(_pHierarchy: IVsHierarchy, _fAdded: int): int = 
+        member __.OnAfterOpenProject(_pHierarchy: IVsHierarchy, _fAdded: int): int = 
             VSConstants.E_NOTIMPL
         
-        member x.OnAfterOpenSolution(_pUnkReserved: obj, _fNewSolution: int): int = 
+        member __.OnAfterOpenSolution(_pUnkReserved: obj, _fNewSolution: int): int = 
             solutionOpened.Trigger(EventArgs.Empty)
             VSConstants.S_OK
         
-        member x.OnBeforeCloseProject(_pHierarchy: IVsHierarchy, _fRemoved: int): int = 
+        member __.OnBeforeCloseProject(_pHierarchy: IVsHierarchy, _fRemoved: int): int = 
             VSConstants.E_NOTIMPL
         
-        member x.OnBeforeCloseSolution(_pUnkReserved: obj): int = 
+        member __.OnBeforeCloseSolution(_pUnkReserved: obj): int = 
             VSConstants.E_NOTIMPL
         
-        member x.OnBeforeUnloadProject(_pRealHierarchy: IVsHierarchy, _pStubHierarchy: IVsHierarchy): int = 
+        member __.OnBeforeUnloadProject(_pRealHierarchy: IVsHierarchy, _pStubHierarchy: IVsHierarchy): int = 
             VSConstants.E_NOTIMPL
         
-        member x.OnQueryCloseProject(_pHierarchy: IVsHierarchy, _fRemoving: int, _pfCancel: byref<int>): int = 
+        member __.OnQueryCloseProject(_pHierarchy: IVsHierarchy, _fRemoving: int, _pfCancel: byref<int>): int = 
             VSConstants.E_NOTIMPL
         
-        member x.OnQueryCloseSolution(_pUnkReserved: obj, _pfCancel: byref<int>): int = 
+        member __.OnQueryCloseSolution(_pUnkReserved: obj, _pfCancel: byref<int>): int = 
             VSConstants.E_NOTIMPL
         
-        member x.OnQueryUnloadProject(_pRealHierarchy: IVsHierarchy, _pfCancel: byref<int>): int = 
+        member __.OnQueryUnloadProject(_pRealHierarchy: IVsHierarchy, _pfCancel: byref<int>): int = 
             VSConstants.E_NOTIMPL
         
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             solution.UnadviseSolutionEvents(!slnCookie) |> ignore
