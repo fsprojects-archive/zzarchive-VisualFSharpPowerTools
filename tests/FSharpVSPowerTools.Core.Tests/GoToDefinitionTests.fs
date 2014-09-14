@@ -63,7 +63,7 @@ let tryGenerateDefinitionFromPos caretPos src =
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
 
-        let! generatedCode = liftMaybe <| formatSymbol symbolUse.DisplayContext symbolUse.Symbol
+        let! generatedCode = liftMaybe <| formatSymbol 4 symbolUse.DisplayContext symbolUse.Symbol
         return generatedCode
     }
     |> Async.RunSynchronously

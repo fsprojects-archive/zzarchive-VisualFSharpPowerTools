@@ -14,7 +14,7 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 
 type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
-                          projectFactory: ProjectFactory) =
+                          editorOptionsFactory: IEditorOptionsFactoryService, projectFactory: ProjectFactory) =
     let getDocumentState () =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -49,8 +49,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 with _ -> fsSymbol.DisplayName + ".fsi"
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                
-        match SignatureGenerator.formatSymbol displayContext fsSymbol with
+        let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
+        let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)        
+        match SignatureGenerator.formatSymbol indentSize displayContext fsSymbol with
         | Some signature ->
             File.WriteAllText(filePath, signature)
         

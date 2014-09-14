@@ -479,9 +479,9 @@ and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     ctx.Writer.Write(" : ")
     ctx.Writer.WriteLine("{0}", group.OverallType.Format(ctx.DisplayContext))
 
-let formatSymbol displayContext (symbol: FSharpSymbol) =
+let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
     use writer = new ColumnIndentedTextWriter()
-    let ctx = { Writer = writer; Indentation = 4; DisplayContext = displayContext }
+    let ctx = { Writer = writer; Indentation = indentation; DisplayContext = displayContext }
 
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with
