@@ -469,6 +469,16 @@ and internal writeDocs ctx docs =
     for doc in docs do
         ctx.Writer.WriteLine("/// {0}", doc)
 
+and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
+    let group = case.Group
+    ctx.Writer.Write("val |")
+    for name in group.Names do
+        ctx.Writer.Write("{0}|", name)
+    if group.IsTotal then
+        ctx.Writer.Write("_|")
+    ctx.Writer.Write(" : ")
+    ctx.Writer.WriteLine("{0}", group.OverallType.Format(ctx.DisplayContext))
+
 let formatSymbol displayContext (symbol: FSharpSymbol) =
     use writer = new ColumnIndentedTextWriter()
     let ctx = { Writer = writer; Indentation = 4; DisplayContext = displayContext }
@@ -482,10 +492,13 @@ let formatSymbol displayContext (symbol: FSharpSymbol) =
             | FSharpException -> writeFSharpExceptionType ctx entity
             | Delegate -> writeDelegateType ctx entity
             | _ -> writeType ctx entity
+            |> Some
         | :? FSharpMemberFunctionOrValue as mem ->
             writeSymbol mem.LogicalEnclosingEntity
+        | :? FSharpActivePatternCase as case ->
+            Some (writeActivePattern ctx case)
         | _ ->
-            fail "Invalid symbol in this context: %O" symbol
-
+            debug "Invalid symbol in this context: %O" (symbol.GetType().Name)
+            None
     writeSymbol symbol
-    writer.Dump()
+    |> Option.map (fun _ -> writer.Dump())

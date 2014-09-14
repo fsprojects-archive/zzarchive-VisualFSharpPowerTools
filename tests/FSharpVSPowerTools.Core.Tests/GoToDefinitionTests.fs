@@ -63,7 +63,7 @@ let tryGenerateDefinitionFromPos caretPos src =
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
 
-        let generatedCode = formatSymbol symbolUse.DisplayContext symbolUse.Symbol
+        let! generatedCode = liftMaybe <| formatSymbol symbolUse.DisplayContext symbolUse.Symbol
         return generatedCode
     }
     |> Async.RunSynchronously
@@ -257,6 +257,21 @@ type Choice<'T1, 'T2> =
     interface IComparable
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
+"""
+
+[<Test>]
+let ``go to active patterns`` () =
+    """
+let (|DivisibleBy|_|) by n = 
+    if n % by = 0 then Some DivisibleBy else None
+    
+let fizzBuzz = function 
+    | DivisibleBy 3 & DivisibleBy 5 -> "FizzBuzz" 
+    | DivisibleBy 3 -> "Fizz" 
+    | DivisibleBy 5 -> "Buzz" 
+    | _ -> ""  """
+    |> generateDefinitionFromPos (Pos.fromZ 5 7)
+    |> assertSrcAreEqual """val |DivisibleBy| : int -> int -> unit option
 """
 
 [<Test; Ignore("We should not generate implicit interface member definition")>]

@@ -48,44 +48,50 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 try fsSymbol.FullName + ".fsi"
                 with _ -> fsSymbol.DisplayName + ".fsi"
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
-
-        File.WriteAllText(filePath, SignatureGenerator.formatSymbol displayContext fsSymbol)
+        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                
+        match SignatureGenerator.formatSymbol displayContext fsSymbol with
+        | Some signature ->
+            File.WriteAllText(filePath, signature)
         
-        let mutable hierarchy = Unchecked.defaultof<_>
-        let mutable itemId = Unchecked.defaultof<_>
-        let mutable windowFrame = Unchecked.defaultof<_>
-        let isOpened = 
-            VsShellUtilities.IsDocumentOpen(
-                serviceProvider, 
-                filePath, 
-                Constants.LogicalViewTextGuid,
-                &hierarchy,
-                &itemId,
-                &windowFrame)
-        let canShow = 
-            if isOpened then true
-            else
-                try
-                    VsShellUtilities.OpenDocument(
-                        serviceProvider, 
-                        filePath, 
-                        Constants.LogicalViewTextGuid, 
-                        &hierarchy,
-                        &itemId,
-                        &windowFrame)
-                    true
-                with _ -> false
-        if canShow then
-            windowFrame.Show() |> ensureSucceeded
-            let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-            let mutable vsTextLines = Unchecked.defaultof<_>
-            vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
-            let vsTextBuffer = vsTextLines :> IVsTextBuffer
-            let mutable currentFlags = 0u
-            if ErrorHandler.Failed(vsTextBuffer.GetStateFlags(&currentFlags)) then ()
-            else
-                // Try to set buffer to read-only mode
-                vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
+            let mutable hierarchy = Unchecked.defaultof<_>
+            let mutable itemId = Unchecked.defaultof<_>
+            let mutable windowFrame = Unchecked.defaultof<_>
+            let isOpened = 
+                VsShellUtilities.IsDocumentOpen(
+                    serviceProvider, 
+                    filePath, 
+                    Constants.LogicalViewTextGuid,
+                    &hierarchy,
+                    &itemId,
+                    &windowFrame)
+            let canShow = 
+                if isOpened then true
+                else
+                    try
+                        VsShellUtilities.OpenDocument(
+                            serviceProvider, 
+                            filePath, 
+                            Constants.LogicalViewTextGuid, 
+                            &hierarchy,
+                            &itemId,
+                            &windowFrame)
+                        true
+                    with _ -> false
+            if canShow then
+                windowFrame.Show() |> ensureSucceeded
+                let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+                let mutable vsTextLines = Unchecked.defaultof<_>
+                vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
+                let vsTextBuffer = vsTextLines :> IVsTextBuffer
+                let mutable currentFlags = 0u
+                if ErrorHandler.Failed(vsTextBuffer.GetStateFlags(&currentFlags)) then ()
+                else
+                    // Try to set buffer to read-only mode
+                    vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
+            statusBar.SetText("Generated symbol metadata") |> ignore  
+        | None ->
+            statusBar.SetText("Can't generate metadata for this symbol.") |> ignore  
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
@@ -93,7 +99,6 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
-                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                 let symbolResult = getDocumentState () |> Async.RunSynchronously
                 let isNamespace (fsSymbol: FSharpSymbol) =
                     match fsSymbol with
@@ -108,7 +113,6 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 | Some (fsSymbol, displayContext, FindDeclResult.DeclNotFound _) ->
                     if not (isNamespace fsSymbol) then
                         navigateToMetadata displayContext fsSymbol
-                        statusBar.SetText("Generated symbol metadata") |> ignore  
                     VSConstants.S_OK
             else
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
