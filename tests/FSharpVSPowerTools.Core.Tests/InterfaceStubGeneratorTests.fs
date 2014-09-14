@@ -360,6 +360,13 @@ member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandl
     raise (System.NotImplementedException())
 """
 
+[<Test>]
+let ``should work in argument position``() =
+    checkInterfaceStub 406 31 "    inherit Base ({new System.IDisposable with" ["System"; "IDisposable"] """
+member x.Dispose(): unit = 
+    raise (System.NotImplementedException())
+"""
+
 open System
 open FsCheck
 

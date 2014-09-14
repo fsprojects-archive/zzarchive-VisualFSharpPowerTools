@@ -573,6 +573,8 @@ module InterfaceStubGenerator =
 
     /// Find corresponding interface declaration at a given position
     let tryFindInterfaceDeclaration (pos: pos) (parsedInput: ParsedInput) =
+        debug "%A" parsedInput
+
         let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
             List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
