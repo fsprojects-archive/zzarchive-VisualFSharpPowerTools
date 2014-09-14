@@ -507,6 +507,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         // inspecting all their inclosed entities (fields, cases and func / vals)
                         // for usefulness, which is too expensive to do. Hence we never gray them out.
                         | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
+                        // FCS returns inconsistent results for override members; we're going to skip these symbols.
+                        | MemberFunctionOrValue func when func.IsOverrideOrExplicitMember -> None
                         // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
                         | Parameter -> None
                         | _ ->
