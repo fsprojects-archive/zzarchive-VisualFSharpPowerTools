@@ -19,8 +19,8 @@ type TaskListCommentFilter(view: IWpfTextView,
 
         let lines = newText.Split([| Environment.NewLine |], StringSplitOptions.None)
 
-        (new CommentExtractor(optionsReader.GetOptions())).GetComments(filePath, lines)
-        |> TaskListManager.GetInstance().MergeTaskListComments
+        let comments = (new CommentExtractor(optionsReader.GetOptions())).GetComments(filePath, lines)
+        TaskListManager.GetInstance().MergeTaskListComments(filePath, comments)
 
     let onTextChanged () =
         view.TextBuffer.CurrentSnapshot.GetText() |> handleTextChanged

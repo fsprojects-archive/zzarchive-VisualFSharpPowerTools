@@ -32,19 +32,16 @@ type internal TaskListManager private (taskProvider: TaskProvider) =
             invalidOp "Please ensure the Initialize method is called before attempting to obtain the TaskListManager instance"
         instance
 
-    member x.MergeTaskListComments(newComments) =
+    member x.MergeTaskListComments(filePath, newComments) =
         let currentComments =
             taskProvider.Tasks
             |> Seq.cast
             |> Seq.toList
 
-        let filesContainingNewComments =
-            newComments |> Seq.map (fun c -> c.File) |> Seq.distinct |> Seq.toArray
-
         x.AddToTaskList newComments
         
         currentComments
-        |> List.filter (fun (t: Task) -> (Seq.tryFind (fun f -> f = t.Document) filesContainingNewComments).IsSome)
+        |> List.filter (fun (t: Task) -> t.Document = filePath)
         |> List.iter taskProvider.Tasks.Remove
 
     member x.ClearTaskList() =
