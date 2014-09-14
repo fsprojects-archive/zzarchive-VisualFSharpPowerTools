@@ -260,7 +260,41 @@ type Choice<'T1, 'T2> =
 """
 
 [<Test>]
-let ``go to active patterns`` () =
+let ``go to union case`` () =
+    """open System
+
+let x = Choice1Of2 () """
+    |> generateDefinitionFromPos (Pos.fromZ 2 9)
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
+[<StructuralEquality>]
+[<StructuralComparison>]
+[<CompiledName("FSharpChoice`2")>]
+type Choice<'T1, 'T2> =
+    | Choice1Of2 of 'T1
+    | Choice2Of2 of 'T2
+    interface IComparable<Choice<'T1,'T2>>
+    interface IComparable
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
+"""
+
+[<Test>]
+let ``go to total active patterns`` () =
+    """
+let (|Even|Odd|) i = 
+    if i % 2 = 0 then Even else Odd
+
+let testNumber i =
+    match i with
+    | Even -> printfn "%d is even" i
+    | Odd -> printfn "%d is odd" i"""
+    |> generateDefinitionFromPos (Pos.fromZ 6 7)
+    |> assertSrcAreEqual """val |Even|Odd| : int -> Choice<unit,unit>
+"""
+
+[<Test>]
+let ``go to partial active patterns`` () =
     """
 let (|DivisibleBy|_|) by n = 
     if n % by = 0 then Some DivisibleBy else None
@@ -269,9 +303,9 @@ let fizzBuzz = function
     | DivisibleBy 3 & DivisibleBy 5 -> "FizzBuzz" 
     | DivisibleBy 3 -> "Fizz" 
     | DivisibleBy 5 -> "Buzz" 
-    | _ -> ""  """
+    | _ -> "" """
     |> generateDefinitionFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """val |DivisibleBy| : int -> int -> unit option
+    |> assertSrcAreEqual """val |DivisibleBy|_| : int -> int -> unit option
 """
 
 [<Test; Ignore("We should not generate implicit interface member definition")>]
@@ -295,6 +329,23 @@ type MyRecord =
         Field2: string -> unit
     }
     interface ICloneable
+"""
+
+let ``go to record field`` () =
+    """open System
+type MyRecord =
+    {
+        Field1: int
+        Field2: string -> string
+    }
+
+let r = { Field1 = 0; Field2 = id }"""
+    |> generateDefinitionFromPos (Pos.fromZ 7 11)
+    |> assertSrcAreEqual """type MyRecord =
+    {
+        Field1: int
+        Field2: string -> string
+    }
 """
 
 [<Test>]

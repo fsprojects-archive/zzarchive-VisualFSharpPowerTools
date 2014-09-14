@@ -474,7 +474,7 @@ and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     ctx.Writer.Write("val |")
     for name in group.Names do
         ctx.Writer.Write("{0}|", name)
-    if group.IsTotal then
+    if not group.IsTotal then
         ctx.Writer.Write("_|")
     ctx.Writer.Write(" : ")
     ctx.Writer.WriteLine("{0}", group.OverallType.Format(ctx.DisplayContext))
@@ -485,7 +485,7 @@ let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
 
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with
-        | :? FSharpEntity as entity ->
+        | Entity(entity, _, _) ->
             match entity with
             | FSharpModule -> writeModule true ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
@@ -493,10 +493,17 @@ let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
             | Delegate -> writeDelegateType ctx entity
             | _ -> writeType ctx entity
             |> Some
-        | :? FSharpMemberFunctionOrValue as mem ->
+        | MemberFunctionOrValue mem ->
             writeSymbol mem.LogicalEnclosingEntity
         | :? FSharpActivePatternCase as case ->
             Some (writeActivePattern ctx case)
+        | UnionCase uc ->
+            match uc.ReturnType with
+            | TypeWithDefinition entity ->
+                writeSymbol entity
+            | _ -> None
+        | Field(field, _) ->
+            writeSymbol field.DeclaringEntity
         | _ ->
             debug "Invalid symbol in this context: %O" (symbol.GetType().Name)
             None
