@@ -4,12 +4,12 @@ using System.Runtime.InteropServices;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.ComponentModelHost;
 using EnvDTE;
 using EnvDTE80;
 using FSharpVSPowerTools.Navigation;
 using FSharpVSPowerTools.Folders;
 using FSharpVSPowerTools.ProjectSystem;
+using FSharpVSPowerTools.TaskList;
 
 namespace FSharpVSPowerTools
 {
@@ -29,6 +29,7 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package, IDisposable
     {
+        private CrossSolutionTaskListCommentManager taskListCommentManager;
         private FolderMenuCommands newFolderMenu;
         private FSharpLibrary library;
 
@@ -50,16 +51,27 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote: true);
 
             var generalOptions = GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            PerformRegistrations(generalOptions);
+
+            library = new FSharpLibrary(Constants.guidSymbolLibrary);
+            library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
+
+            RegisterLibrary();
+        }
+
+        private void PerformRegistrations(GeneralOptionsPage generalOptions)
+        {
             if (generalOptions.FolderOrganizationEnabled)
             {
                 SetupMenu();
                 RegisterPriorityCommandTarget();
             }
 
-            library = new FSharpLibrary(Constants.guidSymbolLibrary);
-            library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
-
-            RegisterLibrary();
+            if (generalOptions.TaskListCommentsEnabled)
+            {
+                taskListCommentManager = new CrossSolutionTaskListCommentManager(this);
+                taskListCommentManager.Activate();
+            }
         }
 
         private void SetupMenu()
@@ -117,6 +129,7 @@ namespace FSharpVSPowerTools
         {
             UnregisterPriorityCommandTarget();
             UnregisterLibrary();
-        }   
+            taskListCommentManager.Deactivate();
+        }
     }
 }

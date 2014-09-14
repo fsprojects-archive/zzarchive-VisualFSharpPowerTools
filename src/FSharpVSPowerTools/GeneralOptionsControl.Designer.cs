@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbTaskListComments = new System.Windows.Forms.CheckBox();
             this.chbUnusedDeclarations = new System.Windows.Forms.CheckBox();
             this.chbResolveUnopenedNamespaces = new System.Windows.Forms.CheckBox();
             this.chbUnionPatternMatchCaseGeneration = new System.Windows.Forms.CheckBox();
@@ -55,6 +56,7 @@ namespace FSharpVSPowerTools
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbTaskListComments);
             this.grbOptions.Controls.Add(this.chbUnusedDeclarations);
             this.grbOptions.Controls.Add(this.chbResolveUnopenedNamespaces);
             this.grbOptions.Controls.Add(this.chbUnionPatternMatchCaseGeneration);
@@ -80,6 +82,18 @@ namespace FSharpVSPowerTools
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbTaskListComments
+            // 
+            this.chbTaskListComments.AutoSize = true;
+            this.chbTaskListComments.Checked = true;
+            this.chbTaskListComments.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbTaskListComments.Location = new System.Drawing.Point(203, 195);
+            this.chbTaskListComments.Name = "chbTaskListComments";
+            this.chbTaskListComments.Size = new System.Drawing.Size(120, 17);
+            this.chbTaskListComments.TabIndex = 18;
+            this.chbTaskListComments.Text = "Task List comments";
+            this.chbTaskListComments.UseVisualStyleBackColor = true;
             // 
             // chbUnusedDeclarations
             // 
@@ -331,5 +345,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;
         private System.Windows.Forms.CheckBox chbResolveUnopenedNamespaces;
         private System.Windows.Forms.CheckBox chbUnusedDeclarations;
+        private System.Windows.Forms.CheckBox chbTaskListComments;
     }
 }

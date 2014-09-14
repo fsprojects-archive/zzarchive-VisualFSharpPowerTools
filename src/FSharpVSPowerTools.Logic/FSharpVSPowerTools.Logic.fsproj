@@ -69,6 +69,7 @@
     <Compile Include="FileSystem.fs" />
     <Compile Include="VSLanguageService.fs" />
     <Compile Include="SolutionBuildEventListener.fs" />
+    <Compile Include="SolutionEventsListener.fs" />
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="ProjectFactory.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />
@@ -104,6 +105,10 @@
     <Compile Include="ResolveUnopenedNamespaceTagger.fs" />
     <Compile Include="UnusedDeclarationMargin.fs" />
     <Compile Include="GoToDefinitionFilter.fs" />
+    <Compile Include="TaskListCommentOptions.fs" />
+    <Compile Include="TaskListManager.fs" />
+    <Compile Include="CrossSolutionTaskListCommentManager.fs" />
+    <Compile Include="TaskListCommentFilter.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

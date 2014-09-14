@@ -30,6 +30,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Gray out unused declarations
  - Gray out unused open statements
  - Go to Metadata
+ - Task List comments
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 

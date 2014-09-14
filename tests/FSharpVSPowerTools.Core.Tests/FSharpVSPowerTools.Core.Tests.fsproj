@@ -71,6 +71,7 @@
     <Compile Include="UnionPatternMatchCaseGeneratorTests.fs" />
     <Compile Include="GoToDefinitionTests.fs" />
     <Compile Include="UnopenedNamespacesResolverTests.fs" />
+    <Compile Include="TaskListCommentExtractorTests.fs" />
     <None Include="DepthColorizerSampleFile.fs">
       <Link>DepthColorizerSampleFile.fs</Link>
     </None>

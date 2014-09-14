@@ -261,8 +261,8 @@ module ViewChange =
         classifier.ClassificationChanged |> Event.map (fun _ -> ())
 
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
-    // Start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
-    do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
+    // Start an async loop on the UI thread that will execute the update action after the delay
+    do if List.isEmpty events then invalidArg "events" "Events must be a non-empty list"
     let events = events |> List.reduce Event.merge
     let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))
