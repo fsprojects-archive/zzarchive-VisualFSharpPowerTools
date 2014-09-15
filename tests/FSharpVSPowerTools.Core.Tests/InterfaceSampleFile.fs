@@ -399,10 +399,3 @@ let _ = { new System.ComponentModel.INotifyPropertyChanged with
               member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler, _> = 
                   raise (System.NotImplementedException())
                }
-     
-type Base(x: System.IDisposable) = class end
-              
-type Derived() = 
-    inherit Base ({new System.IDisposable with 
-                       member x.Dispose(): unit =
-                           raise (System.NotImplementedException())})

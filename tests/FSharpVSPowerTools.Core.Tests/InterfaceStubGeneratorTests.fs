@@ -10,7 +10,6 @@ module FSharpVSPowerTools.Core.Tests.InterfaceStubGeneratorTests
 
 open NUnit.Framework
 open System.IO
-open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
@@ -19,20 +18,8 @@ open FSharpVSPowerTools.CodeGeneration
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "InterfaceSampleFile.fs")
 let source = File.ReadAllText(fileName)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
-
-let args = 
-  [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
-
-let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = LanguageService(fun _ -> ())
-let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], args, [||]) 
+let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], TestHelpers.LanguageServiceTestHelper.args, [||]) 
 
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
@@ -357,13 +344,6 @@ let ``should ensure .NET event handlers are generated correctly``() =
     checkInterfaceStub 397 37 "let _ = { new System.ComponentModel.INotifyPropertyChanged with" ["System"; "ComponentModel"; "INotifyPropertyChanged"] """
 [<CLIEvent>]
 member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler, _> = 
-    raise (System.NotImplementedException())
-"""
-
-[<Test>]
-let ``should work in argument position``() =
-    checkInterfaceStub 406 31 "    inherit Base ({new System.IDisposable with" ["System"; "IDisposable"] """
-member x.Dispose(): unit = 
     raise (System.NotImplementedException())
 """
 
