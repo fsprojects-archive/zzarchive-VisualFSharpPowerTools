@@ -16,45 +16,20 @@ module FSharpVSPowerTools.Core.Tests.GoToDefinitionTests
 #endif
 
 open NUnit.Framework
-open System
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.SignatureGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
-let args = 
-    [|
-        "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
-    |]
-
 let languageService = LanguageService(fun _ -> ())
-let project() =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    let files = [| fileName |]
-    { ProjectFileName = projFileName
-      ProjectFileNames = files
-      ProjectOptions = args
-      ReferencedProjects = Array.empty
-      IsIncompleteTypeCheckEnvironment = false
-      UseScriptResolutionRules = false
-      LoadTime = DateTime.UtcNow
-      UnresolvedReferences = None }
+let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
 
 let tryGenerateDefinitionFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
     let projectOptions = project()
 
     asyncMaybe {

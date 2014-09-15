@@ -495,7 +495,7 @@ let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
             |> Some
         | MemberFunctionOrValue mem ->
             writeSymbol mem.LogicalEnclosingEntity
-        | :? FSharpActivePatternCase as case ->
+        | ActivePatternCase case ->
             Some (writeActivePattern ctx case)
         | UnionCase uc ->
             match uc.ReturnType with
