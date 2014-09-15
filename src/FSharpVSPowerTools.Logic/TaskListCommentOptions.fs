@@ -10,23 +10,24 @@ type internal OptionsReader(serviceProvider: IServiceProvider) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     
     member __.GetOptions() =
-        let taskListOptions = dte.get_Properties("Environment", "TaskList")
-        let mutable ct = None
-        for o in taskListOptions do
-            if o.Name = "CommentTokens" then
-                ct <- Some((o.Value :?> obj[]) |> Array.map (fun o -> o :?> string))
+        dte.get_Properties("Environment", "TaskList")
+        |> Seq.cast
+        |> Seq.tryPick (fun (prop: Property) ->
+            if prop.Name = "CommentTokens" then
+                Some (prop.Value :?> obj[] |> Array.map (fun o -> o :?> string))
+            else None)
+        |> function
+           | Some ct ->
+                ct |> Array.choose (fun s -> 
+                    match s.Split(':') with
+                    | [| comment; priority |] -> Some { Comment = comment; Priority = Int32.Parse priority } 
+                    | _ -> None)
+           | None -> [| CommentOption.Default |]
 
-        if ct.IsSome then
-            ct.Value |> Array.map (fun s -> let parts = s.Split(':') in
-                                                { Comment = parts.[0]; Priority = Int32.Parse(parts.[1]) })
-        else
-            [| CommentOption.Default |]
-    
 
-type internal OptionsChangedEventArgs(oldOptions: CommentOption[], newOptions: CommentOption[]) =
+type internal OptionsChangedEventArgs(newOptions: CommentOption[]) =
     inherit EventArgs()
 
-    member __.OldOptions = oldOptions
     member __.NewOptions = newOptions
 
 
@@ -46,7 +47,7 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
         new EventHandler(fun _ _ ->
                             let newOptions = optionsReader.GetOptions()
                             if haveOptionsChanged newOptions then
-                                optionsChanged.Trigger(new OptionsChangedEventArgs(currentOptions, newOptions))
+                                optionsChanged.Trigger(new OptionsChangedEventArgs(newOptions))
                             currentOptions <- newOptions
         )
 
@@ -55,9 +56,6 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
     
     [<CLIEvent>]
     member __.OptionsChanged = optionsChanged.Publish
-
-    member __.GetOptions() =
-        currentOptions
 
     /// Starts listening for option changes
     member __.Start() =
@@ -72,6 +70,3 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
         else
             timer.Tick.RemoveHandler(onElapsed)
             timer.Stop()
-
-    /// Gets whether this monitor is currently listening for option changes
-    member __.IsListening = timer.IsEnabled
