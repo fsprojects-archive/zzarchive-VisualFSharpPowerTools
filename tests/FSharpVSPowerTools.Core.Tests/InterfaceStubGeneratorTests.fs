@@ -56,6 +56,40 @@ let allUsesOfAllSymbols =
 allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
 
+let private isInterfaceDeclarationAt line col =
+    let results = 
+        vsLanguageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.MatchingSource)
+        |> Async.RunSynchronously
+    
+    let ast = results.GetUntypedAst()
+    let pos = Range.Pos.fromZ (line-1) col
+    (ast |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)).IsSome
+
+[<Test>]
+let ``should find interface declaration in class interface implementation``() = 
+    isInterfaceDeclarationAt 5 14 |> assertTrue
+
+[<Test>]
+let ``should find interface declaration in object expression``() = 
+    isInterfaceDeclarationAt 9 11 |> assertTrue
+    isInterfaceDeclarationAt 82 11 |> assertTrue
+
+[<Test>]
+let ``should find second interface declaration in object expression``() = 
+    isInterfaceDeclarationAt 66 17 |> assertTrue
+
+[<Test>]
+let ``should find interface declaration in base class constructor call``() = 
+    isInterfaceDeclarationAt 406 31 |> assertTrue
+
+[<Test>]
+let ``should find abbreviated interface declaration``() = 
+    isInterfaceDeclarationAt 257 19 |> assertTrue
+
+[<Test>]
+let ``should not find interface declaration in object expression if the base type is class``() = 
+    isInterfaceDeclarationAt 51 18 |> assertFalse
+
 let getInterfaceStub typeParams line col lineStr idents =
     let results = 
         vsLanguageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.MatchingSource)
