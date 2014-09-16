@@ -20,7 +20,7 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
     let getTaskListCommentsFromFiles options =
         let preferOpenDocOverDiskContent filePath =
             (filePath, match openDocsTracker.Value.TryFindOpenDocument(filePath) with
-                       | Some(doc) -> doc.Snapshot.GetText().Split([| Environment.NewLine |], StringSplitOptions.None)
+                       | Some(doc) -> doc.Snapshot.GetText().Split([| Environment.NewLine; "\r\n"; "\r"; "\n" |], StringSplitOptions.None)
                        | None -> File.ReadAllLines(filePath))
         let projFactory = new BasicProjectFactory()
         let sources =
