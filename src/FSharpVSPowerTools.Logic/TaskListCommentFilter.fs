@@ -17,7 +17,7 @@ type TaskListCommentFilter(view: IWpfTextView,
                               |> Seq.find (fun p -> p.Key <> null && obj.Equals(p.Key, typeof<ITextDocument>))
             (docProperty.Value :?> ITextDocument).FilePath
 
-        let lines = newText.Split([| Environment.NewLine |], StringSplitOptions.None)
+        let lines = newText.Split([| Environment.NewLine; "\r\n"; "\r"; "\n" |], StringSplitOptions.None)
 
         let comments = (new CommentExtractor(optionsReader.GetOptions())).GetComments(filePath, lines)
         TaskListManager.GetInstance().MergeTaskListComments(filePath, comments)

@@ -4,6 +4,8 @@ open NUnit.Framework
 open FSharpVSPowerTools.TaskList
 open System
 
+let newlines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
+
 [<Test>]
 let ``should match token case-insensitively``() = 
     let sample = "// tODo something"
@@ -53,7 +55,7 @@ let ``task list comments only allow asterisk, backslash, or whitespace between /
     let sample = "//*/  /* TODO something
 //+ TODO something else"
     let options = [| { Comment = "TODO"; Priority = 2 } |]
-    let fileName, fileLines = "File1.fs", sample.Split([| Environment.NewLine |], StringSplitOptions.None)
+    let fileName, fileLines = "File1.fs", sample.Split(newlines, StringSplitOptions.None)
     let expected =
         [| {
             Text = "TODO something"
@@ -73,7 +75,7 @@ let ``tokens can only be immediately followed by chars other than space that are
 // TODO1 something else
 // TODOa something else"
     let options = [| { Comment = "TODO"; Priority = 2 } |]
-    let fileName, fileLines = "File1.fs", sample.Split([| Environment.NewLine |], StringSplitOptions.None)
+    let fileName, fileLines = "File1.fs", sample.Split(newlines, StringSplitOptions.None)
     let expected =
         [| {
             Text = "TODO(-e_3 something"
@@ -90,7 +92,7 @@ let ``tokens can only be immediately followed by chars other than space that are
 let ``comments can have any indentation and any content before them``() = 
     let sample = "   other stuff// TODO something"
     let options = [| { Comment = "TODO"; Priority = 2 } |]
-    let fileName, fileLines = "File1.fs", sample.Split([| Environment.NewLine |], StringSplitOptions.None)
+    let fileName, fileLines = "File1.fs", sample.Split(newlines, StringSplitOptions.None)
     let expected =
         [| {
             Text = "TODO something"
