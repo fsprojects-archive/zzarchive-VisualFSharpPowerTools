@@ -572,13 +572,19 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
         let! patMatchExpr, insertionParams = tryFindCaseInsertionParamsAtPos codeGenService project pos document
         let! symbolRange, _symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 
-        match symbolUse.Symbol with
-        | :? FSharpUnionCase as case when case.ReturnType.TypeDefinition.IsFSharpUnion ->
-            return! Some (symbolRange, patMatchExpr, case.ReturnType.TypeDefinition, insertionParams) |> liftMaybe
-        | :? FSharpEntity as entity when entity.IsFSharpUnion ->
-            return! Some (symbolRange, patMatchExpr, entity, insertionParams) |> liftMaybe
-        | _ ->
-            return! None |> liftMaybe
+        let! superficialTypeDefinition =
+            match symbolUse.Symbol with
+            | :? FSharpUnionCase as case -> Some case.ReturnType.TypeDefinition |> liftMaybe
+            | :? FSharpEntity as entity -> Some entity |> liftMaybe
+            | _ -> None |> liftMaybe
+
+        let! realTypeDefinition =
+            match superficialTypeDefinition with
+            | AbbreviatedType typ when typ.TypeDefinition.IsFSharpUnion -> Some typ.TypeDefinition |> liftMaybe
+            | _ when superficialTypeDefinition.IsFSharpUnion -> Some superficialTypeDefinition |> liftMaybe
+            | _ -> None |> liftMaybe 
+
+        return symbolRange, patMatchExpr, realTypeDefinition, insertionParams
     }
 
 let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
