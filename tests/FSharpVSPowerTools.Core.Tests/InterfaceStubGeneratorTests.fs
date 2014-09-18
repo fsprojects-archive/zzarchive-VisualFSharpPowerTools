@@ -427,7 +427,7 @@ do reg()
 
 let normalizeArgs =
     List.fold (fun (acc, namesWithIndices) arg ->
-            let arg, namesWithIndices = InterfaceStubGenerator.normalizeArgName namesWithIndices arg
+            let arg, namesWithIndices = normalizeArgName namesWithIndices arg
             arg :: acc, namesWithIndices)
         ([], Map.empty)
     >> fst

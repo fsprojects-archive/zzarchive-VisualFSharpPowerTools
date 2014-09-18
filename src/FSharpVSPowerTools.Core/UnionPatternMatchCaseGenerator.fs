@@ -621,7 +621,7 @@ let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
                 else
                     let newName, newNamesWithIndices = normalizeArgName currentNamesWithIndices name
                     newNames.[i] <- newName
-                    i, newNamesWithIndices
+                    i+1, newNamesWithIndices
             ) (0, Map.empty)
             |> ignore
 
