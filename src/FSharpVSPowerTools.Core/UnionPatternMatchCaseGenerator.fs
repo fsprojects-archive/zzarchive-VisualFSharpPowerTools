@@ -1,12 +1,13 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 
+open System
+open System.Diagnostics
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open System.Diagnostics
 
 [<NoEquality; NoComparison>]
 type PatternMatchExpr = {
@@ -599,13 +600,32 @@ let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
         if unionCaseFieldsCount <= 0 then
             ""
         else
-            [|
-                for field in case.UnionCaseFields ->
-                    if isUnnamedUnionCaseField field then
-                        "_"
-                    else
-                        field.Name
-            |]
+            let fieldNames =
+                [|
+                    for field in case.UnionCaseFields ->
+                        if isUnnamedUnionCaseField field
+                        then "_"
+                        else
+                            // Lowercase the first character of the field name
+                            sprintf "%c%s" (Char.ToLower(field.Name.[0])) (field.Name.Substring(1))
+                |]
+
+            // Deduplicate field names if there are conflicts
+            let newNames = Array.zeroCreate fieldNames.Length
+
+            fieldNames
+            |> Array.fold (fun (i, currentNamesWithIndices) name ->
+                if name = "_" then
+                    newNames.[i] <- name
+                    i+1, currentNamesWithIndices
+                else
+                    let newName, newNamesWithIndices = normalizeArgName currentNamesWithIndices name
+                    newNames.[i] <- newName
+                    i, newNamesWithIndices
+            ) (0, Map.empty)
+            |> ignore
+
+            newNames
             |> String.concat ", "
             |> sprintf "(%s)"
     
