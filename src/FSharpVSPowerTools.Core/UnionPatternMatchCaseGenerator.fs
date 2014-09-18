@@ -592,7 +592,7 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
 
 let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
     let writer = ctxt.Writer
-    let name =
+    let caseName =
         match ctxt.Qualifier with
         | None -> case.Name
         | Some qual -> sprintf "%s.%s" qual case.Name
@@ -605,34 +605,35 @@ let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
             let fieldNames =
                 [|
                     for field in case.UnionCaseFields ->
-                        if isUnnamedUnionCaseField field
-                        then "_"
+                        if String.IsNullOrEmpty(field.Name) || isUnnamedUnionCaseField field then
+                            "_"
                         else
                             // Lowercase the first character of the field name
                             sprintf "%c%s" (Char.ToLower(field.Name.[0])) (field.Name.Substring(1))
                 |]
 
             // Deduplicate field names if there are conflicts
-            let newNames = Array.zeroCreate fieldNames.Length
+            let newFieldNames =
+                Seq.unfold (fun ((i, currentNamesWithIndices) as _state) ->
+                    if i < fieldNames.Length then
+                        let name = fieldNames.[i]
+                        let newName, newNamesWithIndices =
+                            if name = "_" then
+                                name, currentNamesWithIndices
+                            else
+                                normalizeArgName currentNamesWithIndices name
 
-            fieldNames
-            |> Array.fold (fun (i, currentNamesWithIndices) name ->
-                if name = "_" then
-                    newNames.[i] <- name
-                    i+1, currentNamesWithIndices
-                else
-                    let newName, newNamesWithIndices = normalizeArgName currentNamesWithIndices name
-                    newNames.[i] <- newName
-                    i+1, newNamesWithIndices
-            ) (0, Map.empty)
-            |> ignore
+                        Some(newName, (i+1, newNamesWithIndices))
+                    else
+                        None
+                ) (0, Map.empty)
 
-            newNames
+            newFieldNames
             |> String.concat ", "
             |> sprintf "(%s)"
     
     writer.WriteLine("")
-    writer.Write("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+    writer.Write("| {0}{1} -> {2}", caseName, paramsPattern, ctxt.CaseDefaultValue)
 
 let formatMatchExpr insertionParams (caseDefaultValue: string)
                     (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
