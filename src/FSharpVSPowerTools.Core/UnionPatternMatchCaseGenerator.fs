@@ -1,6 +1,5 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 
-open System.Text.RegularExpressions
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
@@ -386,14 +385,14 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
         match pat with
         | SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _,
                            constructorArgs, _, _) ->
-          // Get list of qualifiers, this can be checked for length later.
-          let reversedIdents =
-            unionCaseLongIdent
-            |> List.map (fun id -> id.idText)
-            |> List.rev
-          match reversedIdents with
-          | [] -> []
-          | name::quals ->
+            // Get list of qualifiers, this can be checked for length later.
+            let reversedIdents =
+                unionCaseLongIdent
+                |> List.map (fun id -> id.idText)
+                |> List.rev
+            match reversedIdents with
+            | [] -> []
+            | name::quals ->
                 getIfArgsAreFree constructorArgs (fun () ->
                     [ (name, quals |> List.rev) ]
                 )
@@ -619,12 +618,15 @@ let formatMatchExpr insertionParams (caseDefaultValue: string)
     
     // Use the shortest qualified style for further cases
     let shortestQualifier =
-        casesWritten
-        |> Seq.minBy (fun (_, lst) -> lst.Length)
-        |> snd
-        |> function
-           | [] -> None
-           | lst -> Some (String.concat "." lst)
+        if casesWritten.IsEmpty
+        then None
+        else
+            casesWritten
+            |> Seq.minBy (fun (_, lst) -> lst.Length)
+            |> snd
+            |> function
+               | [] -> None
+               | lst -> Some (String.concat "." lst)
 
     let ctxt =
         { UnionTypeName = entity.DisplayName

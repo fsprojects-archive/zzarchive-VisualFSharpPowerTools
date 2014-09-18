@@ -71,6 +71,12 @@ module Option =
         function
         | Some x -> Some x
         | None -> f()
+
+    /// Some(Some x) -> Some x | None -> None
+    let inline flatten x =
+        match x with
+        | Some x -> x
+        | None -> None
     
 // Async helper functions copied from https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/ControlCollections.Async.fs
 [<RequireQualifiedAccess>]

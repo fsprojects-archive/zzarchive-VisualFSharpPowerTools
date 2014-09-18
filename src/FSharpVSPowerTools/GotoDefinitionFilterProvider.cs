@@ -16,19 +16,22 @@ namespace FSharpVSPowerTools
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
-    internal class GoToDefinitionFilterProvider : IVsTextViewCreationListener
+    public class GoToDefinitionFilterProvider : IVsTextViewCreationListener
     {
         [Import]
-        private IVsEditorAdaptersFactoryService editorFactory = null;
+        internal IVsEditorAdaptersFactoryService editorFactory = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private System.IServiceProvider serviceProvider = null;
+        internal System.IServiceProvider serviceProvider = null;
 
-        [Import(typeof(ProjectFactory))]
-        private ProjectFactory projectFactory = null;
+        [Import]
+        internal IEditorOptionsFactoryService editorOptionsFactory = null;
+
+        [Import]
+        internal ProjectFactory projectFactory = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -39,7 +42,7 @@ namespace FSharpVSPowerTools
             //if (!generalOptions.FindAllReferencesEnabled) return;
 
             AddCommandFilter(textViewAdapter, new GoToDefinitionFilter(textView, fsharpVsLanguageService, serviceProvider,
-                                                                       projectFactory));
+                                                                       editorOptionsFactory, projectFactory));
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, GoToDefinitionFilter commandFilter)

@@ -16,45 +16,20 @@ module FSharpVSPowerTools.Core.Tests.GoToDefinitionTests
 #endif
 
 open NUnit.Framework
-open System
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.SignatureGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
-let args = 
-    [|
-        "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
-    |]
-
 let languageService = LanguageService(fun _ -> ())
-let project() =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    let files = [| fileName |]
-    { ProjectFileName = projFileName
-      ProjectFileNames = files
-      ProjectOptions = args
-      ReferencedProjects = Array.empty
-      IsIncompleteTypeCheckEnvironment = false
-      UseScriptResolutionRules = false
-      LoadTime = DateTime.UtcNow
-      UnresolvedReferences = None }
+let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
 
 let tryGenerateDefinitionFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
     let projectOptions = project()
 
     asyncMaybe {
@@ -63,7 +38,7 @@ let tryGenerateDefinitionFromPos caretPos src =
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
 
-        let generatedCode = formatSymbol symbolUse.DisplayContext symbolUse.Symbol
+        let! generatedCode = liftMaybe <| formatSymbol 4 symbolUse.DisplayContext symbolUse.Symbol
         return generatedCode
     }
     |> Async.RunSynchronously
@@ -259,6 +234,55 @@ type Choice<'T1, 'T2> =
     interface Collections.IStructuralEquatable
 """
 
+[<Test>]
+let ``go to union case`` () =
+    """open System
+
+let x = Choice1Of2 () """
+    |> generateDefinitionFromPos (Pos.fromZ 2 9)
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
+[<StructuralEquality>]
+[<StructuralComparison>]
+[<CompiledName("FSharpChoice`2")>]
+type Choice<'T1, 'T2> =
+    | Choice1Of2 of 'T1
+    | Choice2Of2 of 'T2
+    interface IComparable<Choice<'T1,'T2>>
+    interface IComparable
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
+"""
+
+[<Test>]
+let ``go to total active patterns`` () =
+    """
+let (|Even|Odd|) i = 
+    if i % 2 = 0 then Even else Odd
+
+let testNumber i =
+    match i with
+    | Even -> printfn "%d is even" i
+    | Odd -> printfn "%d is odd" i"""
+    |> generateDefinitionFromPos (Pos.fromZ 6 7)
+    |> assertSrcAreEqual """val |Even|Odd| : int -> Choice<unit,unit>
+"""
+
+[<Test>]
+let ``go to partial active patterns`` () =
+    """
+let (|DivisibleBy|_|) by n = 
+    if n % by = 0 then Some DivisibleBy else None
+    
+let fizzBuzz = function 
+    | DivisibleBy 3 & DivisibleBy 5 -> "FizzBuzz" 
+    | DivisibleBy 3 -> "Fizz" 
+    | DivisibleBy 5 -> "Buzz" 
+    | _ -> "" """
+    |> generateDefinitionFromPos (Pos.fromZ 5 7)
+    |> assertSrcAreEqual """val |DivisibleBy|_| : int -> int -> unit option
+"""
+
 [<Test; Ignore("We should not generate implicit interface member definition")>]
 let ``go to record type definition`` () =
     """open System
@@ -280,6 +304,23 @@ type MyRecord =
         Field2: string -> unit
     }
     interface ICloneable
+"""
+
+let ``go to record field`` () =
+    """open System
+type MyRecord =
+    {
+        Field1: int
+        Field2: string -> string
+    }
+
+let r = { Field1 = 0; Field2 = id }"""
+    |> generateDefinitionFromPos (Pos.fromZ 7 11)
+    |> assertSrcAreEqual """type MyRecord =
+    {
+        Field1: int
+        Field2: string -> string
+    }
 """
 
 [<Test>]
