@@ -575,14 +575,16 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
 
         let! superficialTypeDefinition =
             match symbolUse.Symbol with
-            | :? FSharpUnionCase as case -> Some case.ReturnType.TypeDefinition |> liftMaybe
-            | :? FSharpEntity as entity -> Some entity |> liftMaybe
+            | TypedAstUtils.UnionCase(case) when case.ReturnType.HasTypeDefinition ->
+                Some case.ReturnType.TypeDefinition |> liftMaybe
+            | Entity(entity, _, _) -> Some entity |> liftMaybe
             | _ -> None |> liftMaybe
 
         let! realTypeDefinition =
             match superficialTypeDefinition with
-            | AbbreviatedType typ when typ.TypeDefinition.IsFSharpUnion -> Some typ.TypeDefinition |> liftMaybe
-            | _ when superficialTypeDefinition.IsFSharpUnion -> Some superficialTypeDefinition |> liftMaybe
+            | AbbreviatedType(TypeWithDefinition typeDef) when typeDef.IsFSharpUnion ->
+                Some typeDef |> liftMaybe
+            | UnionType(_) -> Some superficialTypeDefinition |> liftMaybe
             | _ -> None |> liftMaybe 
 
         return symbolRange, patMatchExpr, realTypeDefinition, insertionParams
