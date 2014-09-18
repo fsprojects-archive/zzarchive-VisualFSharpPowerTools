@@ -160,7 +160,7 @@ type VSLanguageService
         }
 
     member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
-                                           checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
+                                            checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
 
         async {
             let source = snapshot.GetText() 

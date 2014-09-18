@@ -81,27 +81,26 @@ module Module1 =
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
         let classifier = helper.GetClassifier(buffer)
-        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
-            (fun () -> 
-                helper.ClassificationSpansOf(buffer, classifier)
-                |> Seq.toList
-                |> assertEqual
-                    [ { Classification = "FSharp.Function"
-                        Span = (2, 5) => (2, 18) };
-                      { Classification = "FSharp.ReferenceType"
-                        Span = (3, 25) => (3, 35) };
-                      { Classification = "FSharp.ValueType"
-                        Span = (3, 37) => (3, 39) }; 
-                      { Classification = "FSharp.MutableVar"
-                        Span = (4, 13) => (4, 24) };
-                      { Classification = "FSharp.PatternCase"
-                        Span = (5, 7) => (5, 19) }; 
-                      { Classification = "FSharp.PatternCase"
-                        Span = (5, 29) => (5, 32) };
-                      { Classification = "FSharp.Quotation"
-                        Span = (6, 9) => (6, 19) }; 
-                      { Classification = "FSharp.Module"
-                        Span = (7, 8) => (7, 14) } ]) 
+        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
+            helper.ClassificationSpansOf(buffer, classifier)
+            |> Seq.toList
+            |> assertEqual
+                [ { Classification = "FSharp.Function"
+                    Span = (2, 5) => (2, 18) };
+                  { Classification = "FSharp.ReferenceType"
+                    Span = (3, 25) => (3, 35) };
+                  { Classification = "FSharp.ValueType"
+                    Span = (3, 37) => (3, 39) }; 
+                  { Classification = "FSharp.MutableVar"
+                    Span = (4, 13) => (4, 24) };
+                  { Classification = "FSharp.PatternCase"
+                    Span = (5, 7) => (5, 19) }; 
+                  { Classification = "FSharp.PatternCase"
+                    Span = (5, 29) => (5, 32) };
+                  { Classification = "FSharp.Quotation"
+                    Span = (6, 9) => (6, 19) }; 
+                  { Classification = "FSharp.Module"
+                    Span = (7, 8) => (7, 14) } ] 
 
     [<Test>]
     let ``should be able to get classification spans for unused items``() = 
@@ -116,17 +115,45 @@ let internal f() = ()
         // If not, type checking fails with some weird errors
         File.WriteAllText(fileName, "")
         let classifier = helper.GetClassifier(buffer)
-        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
-            (fun () -> 
-                helper.ClassificationSpansOf(buffer, classifier)
-                |> Seq.toList
-                |> assertEqual
-                    [ { Classification = "FSharp.Unused"
-                        Span = (2, 6) => (2, 11) };
-                      { Classification = "FSharp.Unused"
-                        Span = (3, 6) => (3, 31) };
-                      { Classification = "FSharp.Unused"
-                        Span = (4, 14) => (4, 14) } ])
+        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
+            helper.ClassificationSpansOf(buffer, classifier)
+            |> Seq.toList
+            |> assertEqual
+                [ { Classification = "FSharp.Unused"
+                    Span = (2, 6) => (2, 11) };
+                  { Classification = "FSharp.Unused"
+                    Span = (3, 6) => (3, 31) };
+                  { Classification = "FSharp.Unused"
+                    Span = (4, 14) => (4, 14) } ]
         File.Delete(fileName)
         
 
+    [<Test>]
+    let ``should be able to get classification spans for provided types``() = 
+        let content = """
+module TypeProviderTests
+open FSharp.Data
+type Project = XmlProvider<"<root><value>1</value><value>3</value></root>">
+let _ = Project.GetSample()
+"""
+        // Use absolute path just to be sure
+        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fsproj"))
+        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fs"))
+        let buffer = createMockTextBuffer content fileName
+        helper.AddProject(ExternalProjectProvider(projectFileName))
+        helper.SetActiveDocument(fileName)
+        let classifier = helper.GetClassifier(buffer)
+        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ -> 
+            helper.ClassificationSpansOf(buffer, classifier)
+            |> Seq.toList
+            |> assertEqual 
+                [ { Classification = "FSharp.Module"
+                    Span = (2, 8, 2, 24) }
+                  { Classification = "FSharp.ReferenceType"
+                    Span = (4, 6, 4, 12) }
+                  { Classification = "FSharp.ReferenceType"
+                    Span = (4, 16, 4, 26) }
+                  { Classification = "FSharp.ReferenceType"
+                    Span = (5, 9, 5, 15) }
+                  { Classification = "FSharp.Function"
+                    Span = (5, 17, 5, 25) } ]
