@@ -646,10 +646,9 @@ module InterfaceStubGenerator =
                 | SynMemberDefn.LetBindings(bindings, _isStatic, _isRec, _range) ->
                     List.tryPick walkBinding bindings
                 | SynMemberDefn.Open _
-                | SynMemberDefn.ImplicitInherit _
-                | SynMemberDefn.Inherit _
-                | SynMemberDefn.ImplicitCtor _ -> 
-                    None
+                | SynMemberDefn.ImplicitCtor _
+                | SynMemberDefn.Inherit _ -> None
+                | SynMemberDefn.ImplicitInherit (_, expr, _, _) -> walkExpr expr
 
         and walkBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, _valData, _headPat, _retTy, expr, _bindingRange, _seqPoint)) =
             walkExpr expr

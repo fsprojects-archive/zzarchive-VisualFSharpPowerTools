@@ -469,23 +469,43 @@ and internal writeDocs ctx docs =
     for doc in docs do
         ctx.Writer.WriteLine("/// {0}", doc)
 
-let formatSymbol displayContext (symbol: FSharpSymbol) =
+and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
+    let group = case.Group
+    ctx.Writer.Write("val |")
+    for name in group.Names do
+        ctx.Writer.Write("{0}|", name)
+    if not group.IsTotal then
+        ctx.Writer.Write("_|")
+    ctx.Writer.Write(" : ")
+    ctx.Writer.WriteLine("{0}", group.OverallType.Format(ctx.DisplayContext))
+
+let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
     use writer = new ColumnIndentedTextWriter()
-    let ctx = { Writer = writer; Indentation = 4; DisplayContext = displayContext }
+    let ctx = { Writer = writer; Indentation = indentation; DisplayContext = displayContext }
 
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with
-        | :? FSharpEntity as entity ->
+        | Entity(entity, _, _) ->
             match entity with
             | FSharpModule -> writeModule true ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
             | FSharpException -> writeFSharpExceptionType ctx entity
             | Delegate -> writeDelegateType ctx entity
             | _ -> writeType ctx entity
-        | :? FSharpMemberFunctionOrValue as mem ->
+            |> Some
+        | MemberFunctionOrValue mem ->
             writeSymbol mem.LogicalEnclosingEntity
+        | ActivePatternCase case ->
+            Some (writeActivePattern ctx case)
+        | UnionCase uc ->
+            match uc.ReturnType with
+            | TypeWithDefinition entity ->
+                writeSymbol entity
+            | _ -> None
+        | Field(field, _) ->
+            writeSymbol field.DeclaringEntity
         | _ ->
-            fail "Invalid symbol in this context: %O" symbol
-
+            debug "Invalid symbol in this context: %O" (symbol.GetType().Name)
+            None
     writeSymbol symbol
-    writer.Dump()
+    |> Option.map (fun _ -> writer.Dump())
