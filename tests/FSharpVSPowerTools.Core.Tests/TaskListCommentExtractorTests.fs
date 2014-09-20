@@ -52,13 +52,13 @@ let ``only the first task list comment per line is taken``() =
 
 [<Test>]
 let ``task list comments only allow asterisk, backslash, or whitespace between // and token``() = 
-    let sample = "//*/  /* TODO something
+    let sample = "//*/  /* TODO stuff
 //+ TODO something else"
     let options = [| { Comment = "TODO"; Priority = 2 } |]
     let fileName, fileLines = "File1.fs", sample.Split(newlines, StringSplitOptions.None)
     let expected =
         [| {
-            Text = "TODO something"
+            Text = "TODO stuff"
             File = fileName
             Line = 0
             Column = 9
@@ -92,7 +92,7 @@ let ``tokens can only be immediately followed by chars other than space that are
 let ``comments can have any indentation and any content before them``() = 
     let sample = "   other stuff// TODO something"
     let options = [| { Comment = "TODO"; Priority = 2 } |]
-    let fileName, fileLines = "File1.fs", sample.Split(newlines, StringSplitOptions.None)
+    let fileName, fileLines = "File1.fs", [| sample |]
     let expected =
         [| {
             Text = "TODO something"
@@ -101,6 +101,19 @@ let ``comments can have any indentation and any content before them``() =
             Column = 17
             Priority = 2
         } |]
+    let actual = (new CommentExtractor(options)).GetComments(fileName, fileLines)
+
+    assertEqual expected actual
+
+[<Test>]
+let ``comments within strings are not considered``() = 
+    let sample = "let str1 = \"// TODO something\"
+                  let str2 = \"
+                      // TODO other stuff
+                  \""
+    let options = [| { Comment = "TODO"; Priority = 2 } |]
+    let fileName, fileLines = "File1.fs", sample.Split(newlines, StringSplitOptions.None)
+    let expected = [||]
     let actual = (new CommentExtractor(options)).GetComments(fileName, fileLines)
 
     assertEqual expected actual
