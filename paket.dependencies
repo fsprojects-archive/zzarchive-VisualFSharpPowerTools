@@ -1,0 +1,13 @@
+source http://nuget.org/api/v2
+
+nuget FAKE
+nuget NUnit.Runners
+nuget FSharp.Formatting
+nuget FSharp.Compiler.Service
+nuget Fantomas
+nuget Expression.Blend.Sdk
+nuget FSharp.ViewModule.Core
+nuget FsXaml.Wpf
+nuget FsCheck
+nuget NUnit
+nuget Foq
