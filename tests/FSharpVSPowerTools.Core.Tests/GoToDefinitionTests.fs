@@ -46,10 +46,6 @@ let tryGenerateDefinitionFromPos caretPos src =
 let generateDefinitionFromPos caretPos src =
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
-//type T() =
-//    let mutable x = 0
-//    member this.Property with get() = x and set value = x <- value
-
 [<Test>]
 let ``go to Tuple definition`` () =
     [
@@ -433,7 +429,7 @@ val bind : binder:('T -> 'U option) -> option:'T option -> 'U option
 val toArray : option:'T option -> 'T []
 val toList : option:'T option -> 'T list
 """)
-
+        
 [<Test>]
 let ``interface inheritance by interfaces`` () =
     """
@@ -468,6 +464,36 @@ type MyAbstractClass =
     |> assertSrcAreEqual """[<AbstractClass>]
 type MyAbstractClass =
     abstract member Method : int -> unit
+    override Method : x:int -> unit
+"""
+
+[<Test>]
+let ``go to non-abstract class definition with virtual member`` () =
+    """
+type MyBaseClass() =
+    abstract member Method: int -> unit
+    default this.Method(x) = ()"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyBaseClass =
+    new : unit -> MyBaseClass
+    abstract member Method : int -> unit
+    override Method : x:int -> unit
+"""
+
+[<Test>]
+let ``go to subclass class definition with override members`` () =
+    """
+type MyBaseClass() =
+    abstract member Method: int -> unit
+    default this.Method(x) = ()
+
+type MyClass() =
+    inherit MyBaseClass()
+    override this.Method(x) = ()"""
+    |> generateDefinitionFromPos (Pos.fromZ 5 5)
+    |> assertSrcAreEqual """type MyClass =
+    inherit MyBaseClass
+    new : unit -> MyClass
     override Method : x:int -> unit
 """
 

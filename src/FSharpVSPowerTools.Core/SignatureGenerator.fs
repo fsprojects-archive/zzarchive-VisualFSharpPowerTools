@@ -45,10 +45,11 @@ with
             match mem with
             | Constructor _ -> constructors.Add(mem)
             | _ ->
-                if not mem.IsInstanceMember then
-                    staticMembers.Add(mem)
-                // Is abstract && enclosing type is interface/abstract?
-                elif mem.IsDispatchSlot && isInterfaceOrAbstractClass mem.EnclosingEntity then
+                if not mem.IsInstanceMember then staticMembers.Add(mem)
+                // Is abstract
+                elif mem.IsDispatchSlot &&
+                     (isInterfaceOrAbstractClass mem.EnclosingEntity ||
+                      (mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp)) then 
                     abstractMembers.Add(mem)
                 else
                     concreteInstanceMembers.Add(mem)
@@ -255,6 +256,16 @@ and internal writeType ctx (typ: FSharpEntity) =
             ctx.Writer.Indent ctx.Indentation
         | None -> ()
 
+    // Inherited class
+    match typ.BaseType with
+    | Some(TypeWithDefinition(baseTypDef) as baseTyp) when baseTypDef.DisplayName <> "obj" ->
+        match baseTypDef.TryFullName with
+        | Some "System.ValueType"
+        | Some "System.Enum" -> ()
+        | _ ->
+            ctx.Writer.WriteLine("inherit {0}", baseTyp.Format(ctx.DisplayContext))
+    | _ -> ()
+
     // Interfaces
     [
         for inter in typ.DeclaredInterfaces do
@@ -455,7 +466,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
             if not mem.IsInstanceMember then
                 "static member"
             // Is abstract && enclosing type is interface/abstract?
-            elif mem.IsDispatchSlot && isInterfaceOrAbstractClass mem.EnclosingEntity then
+            elif mem.IsDispatchSlot && (isInterfaceOrAbstractClass mem.EnclosingEntity || (mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp)) then
                 "abstract member"
             elif mem.IsOverrideOrExplicitMember then
                 "override"
