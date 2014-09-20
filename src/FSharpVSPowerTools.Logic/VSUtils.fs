@@ -157,6 +157,13 @@ type DTE with
         | None -> debug "Should be able to find an active document."
         | _ -> ()
         doc
+        
+    member x.TryGetProperty(category, page, name) : obj option = 
+        x.get_Properties(category, page)
+        |> Seq.cast
+        |> Seq.tryPick (fun (prop: Property) ->
+            if prop.Name = name then Some (prop.Value)
+            else None)
 
 type ProjectItem with
     member x.VSProject =

@@ -6,12 +6,14 @@ open EnvDTE
 open Microsoft.VisualStudio.Shell.Interop
 open System.IO
 open Microsoft.VisualStudio.Shell
+open EnvDTE80
 
 type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
     let slnEventsListener = new SolutionEventsListener(serviceProvider)
     let optionsReader = new OptionsReader(serviceProvider)
     let optionsMonitor = new OptionsMonitor(serviceProvider)
     let dte = serviceProvider.GetService<DTE, SDTE>()
+    let projItemsEvents = (dte.Events :?> Events2).ProjectItemsEvents
     do TaskListManager.Initialize(new TaskProvider(serviceProvider))
     let taskListManager = TaskListManager.GetInstance()
 
@@ -50,6 +52,27 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
     let onOptionsChanged =
         new Handler<OptionsChangedEventArgs>(fun _ e -> repopulateTaskList e.NewOptions)
 
+    let onProjectItemAdded (projItem: ProjectItem) =
+        let options = optionsReader.GetOptions()
+        let filePath = projItem.GetProperty("FullPath")
+        let comments = (new CommentExtractor(options)).GetComments(filePath, File.ReadAllLines(filePath))
+        taskListManager.AddToTaskList(comments)
+
+    let onProjectItemRemoved (projItem: ProjectItem) =
+        taskListManager.MergeTaskListComments(projItem.GetProperty("FullPath"), [||])
+
+    let onProjectItemRenamed (projItem: ProjectItem) (oldName: string) =
+        let options = optionsReader.GetOptions()
+        let newFilePath = projItem.GetProperty("FullPath")
+        let oldFilePath =
+            let dirName = newFilePath
+                          |> Path.GetDirectoryName
+            Path.Combine(dirName, oldName)
+
+        let comments = (new CommentExtractor(options)).GetComments(newFilePath, File.ReadAllLines(newFilePath))
+        taskListManager.AddToTaskList(comments)
+        taskListManager.MergeTaskListComments(oldFilePath, [||])
+
     static member SetOpenDocumentsTracker(tracker) =
         openDocsTracker <- Some(tracker)
 
@@ -58,6 +81,9 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
         slnEventsListener.SolutionClosed.AddHandler(onSolutionClosed)
         optionsMonitor.OptionsChanged.AddHandler(onOptionsChanged)
         optionsMonitor.Start()
+        projItemsEvents.add_ItemAdded(fun pi -> onProjectItemAdded pi)
+        projItemsEvents.add_ItemRemoved(fun pi -> onProjectItemRemoved pi)
+        projItemsEvents.add_ItemRenamed(fun pi oldName -> onProjectItemRenamed pi oldName)
 
     member __.Deactivate() =
         slnEventsListener.SolutionOpened.RemoveHandler(onSolutionOpened)
