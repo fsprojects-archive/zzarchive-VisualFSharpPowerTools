@@ -57,36 +57,41 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
         new Handler<OptionsChangedEventArgs>(fun _ e -> repopulateTaskList e.NewOptions)
 
     let onProjectAdded (proj: Project) =
-        let options = optionsReader.GetOptions()
-        let commentExtractor = new CommentExtractor(options)
-        projectFactory.CreateForProject(proj).SourceFiles
-        |> Array.iter (fun file -> (file, commentExtractor.GetComments(file, File.ReadAllLines(file)))
-                                   |> taskListManager.MergeTaskListComments)
+        if isFSharpProject proj then
+            let options = optionsReader.GetOptions()
+            let commentExtractor = new CommentExtractor(options)
+            projectFactory.CreateForProject(proj).SourceFiles
+            |> Array.iter (fun file -> (file, commentExtractor.GetComments(file, File.ReadAllLines(file)))
+                                       |> taskListManager.MergeTaskListComments)
 
     let onProjectRemoved (proj: Project) =
-        projectFactory.CreateForProject(proj).SourceFiles
-        |> Array.iter (fun file -> taskListManager.MergeTaskListComments(file, [||]))
+        if isFSharpProject proj then
+            projectFactory.CreateForProject(proj).SourceFiles
+            |> Array.iter (fun file -> taskListManager.MergeTaskListComments(file, [||]))
 
     let onProjectItemAdded (projItem: ProjectItem) =
-        let options = optionsReader.GetOptions()
-        let filePath = projItem.GetProperty("FullPath")
-        let comments = (new CommentExtractor(options)).GetComments(filePath, File.ReadAllLines(filePath))
-        taskListManager.AddToTaskList(comments)
+        if isFSharpProject projItem.ContainingProject then
+            let options = optionsReader.GetOptions()
+            let filePath = projItem.GetProperty("FullPath")
+            let comments = (new CommentExtractor(options)).GetComments(filePath, File.ReadAllLines(filePath))
+            taskListManager.AddToTaskList(comments)
 
     let onProjectItemRemoved (projItem: ProjectItem) =
-        taskListManager.MergeTaskListComments(projItem.GetProperty("FullPath"), [||])
+        if isFSharpProject projItem.ContainingProject then
+            taskListManager.MergeTaskListComments(projItem.GetProperty("FullPath"), [||])
 
     let onProjectItemRenamed (projItem: ProjectItem) (oldName: string) =
-        let options = optionsReader.GetOptions()
-        let newFilePath = projItem.GetProperty("FullPath")
-        let oldFilePath =
-            let dirName = newFilePath
-                          |> Path.GetDirectoryName
-            Path.Combine(dirName, oldName)
+        if isFSharpProject projItem.ContainingProject then
+            let options = optionsReader.GetOptions()
+            let newFilePath = projItem.GetProperty("FullPath")
+            let oldFilePath =
+                let dirName = newFilePath
+                              |> Path.GetDirectoryName
+                Path.Combine(dirName, oldName)
 
-        let comments = (new CommentExtractor(options)).GetComments(newFilePath, File.ReadAllLines(newFilePath))
-        taskListManager.AddToTaskList(comments)
-        taskListManager.MergeTaskListComments(oldFilePath, [||])
+            let comments = (new CommentExtractor(options)).GetComments(newFilePath, File.ReadAllLines(newFilePath))
+            taskListManager.AddToTaskList(comments)
+            taskListManager.MergeTaskListComments(oldFilePath, [||])
 
     static member SetOpenDocumentsTracker(tracker) =
         openDocsTracker <- Some(tracker)
