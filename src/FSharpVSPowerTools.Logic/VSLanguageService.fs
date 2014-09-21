@@ -5,6 +5,7 @@ open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Editor
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open System
@@ -35,7 +36,7 @@ type VSLanguageService
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: OpenDocumentsTracker,
-     serviceProvider: IServiceProvider) =
+     [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
 
