@@ -525,7 +525,7 @@ let ``go to F# exception definition`` () =
     ]
 
 [<Test>]
-let ``handle F#-style optional parameter`` () =
+let ``handle optional parameters`` () =
     """
 open System.Runtime.InteropServices 
 type T() =
@@ -646,8 +646,17 @@ module Parallel =
 
 """
 
-// Tests to add:
-// TODO: handle C# optional parameters
+[<Test; Ignore("activate when generic constraints are supported")>]
+let ``handle generic constraints`` () =
+    """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
+    | Value of 'T
+    """
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
+    | Value of 'T
+    """
+
+// Tests to add/activate:
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
@@ -656,19 +665,14 @@ module Parallel =
 // TODO: union type extension members?
 // TODO: record type fields attributes
 // TODO: record type extension members?
-// TODO: enum type attributes
-// TODO: handle inherited classes
+// TODO: enum value attributes
+// type MyEnum =
+//    | [<Description("FieldA")>] A = 0
+//    | [<Description("FieldB")>] B = 1
+
 // TODO: generic member constraints
 // TODO: static member constraints
-//
-//type MyAbstractClass() =
-//    abstract member Method: int -> unit
-//    default this.Method(x) = ()
-//
-//type MyClass() =
-//    inherit MyAbstractClass()
-//    override this.Method(x) = ()
-//
+
 // ENHANCEMENT: special formatting for Events?
 // TODO: display static member getter/setter availability
 // TODO: syntax coloring is deactivated on generated metadata file
