@@ -20,8 +20,12 @@ let internal hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
 let internal mustAppearAsAbstractMember (mem: FSharpMemberFunctionOrValue) =
     let enclosingEntityIsFSharpClass = mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp
 
-    mem.IsDispatchSlot && (isInterfaceOrAbstractClass mem.EnclosingEntity || enclosingEntityIsFSharpClass)
-    
+    if mem.IsDispatchSlot then
+        match mem.EnclosingEntity with
+        | Interface | AbstractClass -> true
+        | _ -> enclosingEntityIsFSharpClass 
+    else
+        false
 
 [<NoComparison>]
 type private MembersPartition = {

@@ -108,9 +108,6 @@ let rec getAbbreviatedType (fsharpType: FSharpType) =
         getAbbreviatedType fsharpType.AbbreviatedType
     else fsharpType
 
-let isInterfaceOrAbstractClass (entity: FSharpEntity) =
-    entity.IsInterface || hasAttribute<AbstractClassAttribute> entity.Attributes
-
 let (|Attribute|_|) (entity: FSharpEntity) =
     let isAttribute (entity: FSharpEntity) =
         let getBaseType (entity: FSharpEntity) =
@@ -144,8 +141,9 @@ let (|Record|_|) (e: FSharpEntity) = if e.IsFSharpRecord then Some() else None
 let (|UnionType|_|) (e: FSharpEntity) = if e.IsFSharpUnion then Some() else None
 let (|Delegate|_|) (e: FSharpEntity) = if e.IsDelegate then Some() else None
 let (|FSharpException|_|) (e: FSharpEntity) = if e.IsFSharpExceptionDeclaration then Some() else None
-
 let (|Interface|_|) (e: FSharpEntity) = if e.IsInterface then Some() else None
+let (|AbstractClass|_|) (e: FSharpEntity) =
+    if hasAttribute<AbstractClassAttribute> e.Attributes then Some() else None
         
 let (|FSharpType|_|) (e: FSharpEntity) = 
     if e.IsDelegate || e.IsFSharpExceptionDeclaration || e.IsFSharpRecord || e.IsFSharpUnion 
