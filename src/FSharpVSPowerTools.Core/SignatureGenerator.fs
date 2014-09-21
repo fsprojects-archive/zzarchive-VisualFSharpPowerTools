@@ -265,14 +265,13 @@ and internal writeType ctx (typ: FSharpEntity) =
         | None -> ()
 
     // Inherited class
-    match typ.BaseType with
-    | Some(TypeWithDefinition(baseTypDef) as baseTyp) when baseTypDef.DisplayName <> "obj" ->
-        match baseTypDef.TryFullName with
-        | Some "System.ValueType"
-        | Some "System.Enum" -> ()
-        | _ ->
-            ctx.Writer.WriteLine("inherit {0}", baseTyp.Format(ctx.DisplayContext))
-    | _ -> ()
+    try
+        match typ.BaseType with
+        | Some(TypeWithDefinition(baseTypDef) as baseTyp) when baseTypDef.DisplayName <> "obj" ->
+            if not (typ.IsValueType || typ.IsEnum) then
+                ctx.Writer.WriteLine("inherit {0}", baseTyp.Format(ctx.DisplayContext))
+        | _ -> ()
+    with _ -> ()
 
     // Interfaces
     [
