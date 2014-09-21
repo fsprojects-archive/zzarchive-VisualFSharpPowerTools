@@ -14,8 +14,14 @@ type internal Context = {
     DisplayContext: FSharpDisplayContext
 }
 
-let hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
+let internal hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
     mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0
+
+let internal mustAppearAsAbstractMember (mem: FSharpMemberFunctionOrValue) =
+    let enclosingEntityIsFSharpClass = mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp
+
+    mem.IsDispatchSlot && (isInterfaceOrAbstractClass mem.EnclosingEntity || enclosingEntityIsFSharpClass)
+    
 
 [<NoComparison>]
 type private MembersPartition = {
@@ -47,9 +53,7 @@ with
             | _ ->
                 if not mem.IsInstanceMember then staticMembers.Add(mem)
                 // Is abstract
-                elif mem.IsDispatchSlot &&
-                     (isInterfaceOrAbstractClass mem.EnclosingEntity ||
-                      (mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp)) then 
+                elif mustAppearAsAbstractMember mem then 
                     abstractMembers.Add(mem)
                 else
                     concreteInstanceMembers.Add(mem)
@@ -466,7 +470,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
             if not mem.IsInstanceMember then
                 "static member"
             // Is abstract && enclosing type is interface/abstract?
-            elif mem.IsDispatchSlot && (isInterfaceOrAbstractClass mem.EnclosingEntity || (mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp)) then
+            elif mustAppearAsAbstractMember mem then
                 "abstract member"
             elif mem.IsOverrideOrExplicitMember then
                 "override"
