@@ -681,6 +681,29 @@ type MyRecord with
     member Method2 : unit -> unit
 """
 
+[<Test>]
+let ``handle union type extension members`` () =
+    """
+type MyUnion = A of int | B of float
+with
+    member __.Method1() = ()
+
+type MyUnion with
+    member __.Method2() = "allo!"
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyUnion =
+    | A of int
+    | B of float
+    interface System.IComparable<MyUnion>
+    interface System.IComparable
+    interface System.IEquatable<MyUnion>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+    member Method1 : unit -> unit
+    member Method2 : unit -> string
+"""
+
 // Tests to add/activate:
 // TODO: property/method attributes
 // TODO: method arguments attributes
