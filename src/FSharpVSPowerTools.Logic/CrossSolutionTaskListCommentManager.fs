@@ -56,6 +56,10 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
     let onOptionsChanged =
         new Handler<OptionsChangedEventArgs>(fun _ e -> repopulateTaskList e.NewOptions)
 
+    let isCompiledFSharpProjectItem (pi: ProjectItem) =
+        isFSharpProject pi.ContainingProject &&
+        match pi.TryGetProperty "ItemType" with | Some("Compile") -> true | _ -> false
+
     let onProjectAdded (proj: Project) =
         if isFSharpProject proj then
             let options = optionsReader.GetOptions()
@@ -70,18 +74,18 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
             |> Array.iter (fun file -> taskListManager.MergeTaskListComments(file, [||]))
 
     let onProjectItemAdded (projItem: ProjectItem) =
-        if isFSharpProject projItem.ContainingProject then
+        if isCompiledFSharpProjectItem projItem then
             let options = optionsReader.GetOptions()
             let filePath = projItem.GetProperty("FullPath")
             let comments = (new CommentExtractor(options)).GetComments(filePath, File.ReadAllLines(filePath))
             taskListManager.AddToTaskList(comments)
 
     let onProjectItemRemoved (projItem: ProjectItem) =
-        if isFSharpProject projItem.ContainingProject then
+        if isCompiledFSharpProjectItem projItem then
             taskListManager.MergeTaskListComments(projItem.GetProperty("FullPath"), [||])
 
     let onProjectItemRenamed (projItem: ProjectItem) (oldName: string) =
-        if isFSharpProject projItem.ContainingProject then
+        if isCompiledFSharpProjectItem projItem then
             let options = optionsReader.GetOptions()
             let newFilePath = projItem.GetProperty("FullPath")
             let oldFilePath =
