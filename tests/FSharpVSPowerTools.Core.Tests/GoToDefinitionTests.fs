@@ -656,6 +656,31 @@ let ``handle generic constraints`` () =
     | Value of 'T
     """
 
+[<Test>]
+let ``handle record extension members`` () =
+    """
+type MyRecord =
+    { A: string; B: int }
+    member __.Method1() = ()
+
+type MyRecord with
+    member __.Method2() = ()
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyRecord =
+    {
+        A: string
+        B: int
+    }
+    interface System.IComparable<MyRecord>
+    interface System.IComparable
+    interface System.IEquatable<MyRecord>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+    member Method1 : unit -> unit
+    member Method2 : unit -> unit
+"""
+
 // Tests to add/activate:
 // TODO: property/method attributes
 // TODO: method arguments attributes
