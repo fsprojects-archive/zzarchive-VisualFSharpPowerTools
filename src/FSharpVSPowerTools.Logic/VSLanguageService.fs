@@ -42,9 +42,16 @@ type VSLanguageService
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let recoverAfterFailure _e =
-        // Try to clean obsolete binaries. We can't be sure that this command is executed successfully.
-        dte.Solution.SolutionBuild.Clean(WaitForCleanToFinish=true)
-        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+        try
+            statusBar.SetText("Trying to recover from internal errors...") |> ignore 
+            // Try to clean obsolete binaries. We can't be sure that this command is executed successfully.
+            dte.Solution.SolutionBuild.Clean(WaitForCleanToFinish=true)
+            instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+            statusBar.SetText("Error recovery completed.") |> ignore
+        with e ->
+            statusBar.SetText(sprintf "Error recovery failed with '%O'." e) |> ignore 
+            
     
     do instance.SetCriticalErrorHandler(recoverAfterFailure)
 

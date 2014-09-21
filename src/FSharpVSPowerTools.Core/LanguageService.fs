@@ -195,6 +195,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       debug "[LanguageService] Update typed info - failed"
                       ParseAndCheckResults.Empty
                   | Choice2Of2 e -> 
+                      fail "[LanguageService] Unexpected type checking errors occurred for '%s' with %A" fileName options
                       fail "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
                       handleCriticalErrors e
                       ParseAndCheckResults.Empty  
