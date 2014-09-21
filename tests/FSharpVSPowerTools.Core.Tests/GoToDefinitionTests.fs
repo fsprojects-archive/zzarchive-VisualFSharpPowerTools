@@ -704,15 +704,28 @@ type MyUnion with
     member Method2 : unit -> string
 """
 
+[<Test>]
+let ``handle class extesion members`` () =
+    """
+type MyClass() =
+    member x.Method() = ()
+
+type MyClass with
+    member x.MyExtensionMethod() = ()
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass =
+    new : unit -> MyClass
+    member Method : unit -> unit
+    member MyExtensionMethod : unit -> unit
+"""
+
 // Tests to add/activate:
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled
-// TODO: class extension members?
-// TODO: union type extension members?
 // TODO: record type fields attributes
-// TODO: record type extension members?
 // TODO: enum value attributes
 // type MyEnum =
 //    | [<Description("FieldA")>] A = 0
