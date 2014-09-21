@@ -129,7 +129,6 @@ namespace FSharpVSPowerTools
         {
             UnregisterPriorityCommandTarget();
             UnregisterLibrary();
-            taskListCommentManager.Deactivate();
         }
     }
 }

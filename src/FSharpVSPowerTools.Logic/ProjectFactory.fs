@@ -203,7 +203,7 @@ type ProjectFactory
             (solutionBuildEventListener :> IDisposable).Dispose()
 
 
-type BasicProjectFactory() =
+type BasicProjectFactory(events: EnvDTE80.Events2) =
     let fsharpProjectsCache = ref None
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
 
@@ -211,8 +211,12 @@ type BasicProjectFactory() =
         debug "[ProjectFactory] %s changed." project.Name
         cache.Remove project.FullName
 
+    do events.SolutionEvents.add_AfterClosing (fun _ -> 
+        fsharpProjectsCache := None
+        cache.Clear())
+
     member __.ListFSharpProjectsInSolution(dte: DTE) =
-        let rec handleProject (p: Project) = 
+        let rec handleProject (p: Project) =
             if p === null then []
             elif isFSharpProject p then [ p ]
             elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
