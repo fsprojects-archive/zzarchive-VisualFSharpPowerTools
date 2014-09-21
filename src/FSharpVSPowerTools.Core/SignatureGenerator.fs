@@ -480,7 +480,16 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
             else
                 "member"
 
-        ctx.Writer.WriteLine("{0} {1} : {2}", memberType, DemangleOperatorName mem.DisplayName, generateSignature ctx mem)
+        let propertyType =
+            if mem.HasSetterMethod && mem.HasGetterMethod then " with get, set"
+            elif mem.HasSetterMethod then " with set"
+            else ""
+
+        ctx.Writer.WriteLine("{0} {1} : {2}{3}",
+                             memberType,
+                             DemangleOperatorName mem.DisplayName,
+                             generateSignature ctx mem,
+                             propertyType)
     | _ -> ()
 
 and internal writeDocs ctx docs =

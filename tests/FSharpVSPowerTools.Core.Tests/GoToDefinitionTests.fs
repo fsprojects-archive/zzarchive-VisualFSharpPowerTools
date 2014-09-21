@@ -160,11 +160,11 @@ do Console.WriteLine("xxx")"""
 [<Class>]
 type Console =
     static member add_CancelKeyPress : value:ConsoleCancelEventHandler -> unit
-    static member BackgroundColor : ConsoleColor
+    static member BackgroundColor : ConsoleColor with get, set
     static member Beep : unit -> unit
     static member Beep : frequency:int * duration:int -> unit
-    static member BufferHeight : int
-    static member BufferWidth : int
+    static member BufferHeight : int with get, set
+    static member BufferWidth : int with get, set
 """
 
 [<Test>]
@@ -705,7 +705,7 @@ type MyUnion with
 """
 
 [<Test>]
-let ``handle class extesion members`` () =
+let ``handle class extension members`` () =
     """
 type MyClass() =
     member x.Method() = ()
@@ -720,6 +720,28 @@ type MyClass with
     member MyExtensionMethod : unit -> unit
 """
 
+[<Test>]
+let ``handle class properties with setter``() =
+    """
+type MyClass() =
+    let mutable instanceValue = 0
+    static let mutable staticValue = 0
+
+    member val GetterAndSetter = 0 with get, set
+    member __.SetterOnly with set(value) = instanceValue <- value
+
+    static member val StaticGetterAndSetter = 0 with get, set
+    static member StaticSetterOnly with set(value) = staticValue <- value
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass =
+    new : unit -> MyClass
+    member GetterAndSetter : int with get, set
+    member SetterOnly : int with set
+    static member StaticGetterAndSetter : int with get, set
+    static member StaticSetterOnly : int with set
+"""
+
 // Tests to add/activate:
 // TODO: property/method attributes
 // TODO: method arguments attributes
@@ -731,11 +753,9 @@ type MyClass with
 //    | [<Description("FieldA")>] A = 0
 //    | [<Description("FieldB")>] B = 1
 
-// TODO: generic member constraints
 // TODO: static member constraints
 
 // ENHANCEMENT: special formatting for Events?
-// TODO: display static member getter/setter availability
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
 // TODO: add test for VS buffer name?
