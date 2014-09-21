@@ -147,13 +147,16 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
   do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
+  let mutable errorHandler = None
+  let handleCriticalErrors e = 
+      errorHandler |> Option.iter (fun handle -> handle e)
 
   // Create an instance of interactive checker. The callback is called by the F# compiler service
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
   let checker = 
-    let checker = InteractiveChecker.Create(200)
+    let checker = InteractiveChecker.Create(projectCacheSize=200)
     checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
@@ -172,20 +175,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           Environment.ExpandEnvironmentVariables("%HOMEDRIVE%%HOMEPATH%")
       Path.Combine(dir, Path.GetFileName(path))
    
-  // We use an additional mailbox processor here so we can get work off the GUI 
-  // thread and timeout on synchronous requests. Note, there is already a background thread in F.C.S.
-  //
-  // Every request to the mailbox is 'PostAndReply' or 'PostAndAsyncReply'.  This means the requests are
-  // a lot like a function call, except 
-  //   (a) they may be asynchronous (reply is interleaved on the UI thread)
-  //   (b) they may be on on a timeout (to prevent blocking the UI thread)
-  //   (c) only one request is active at a time, the rest are in the queue
-
-  let mbox = MailboxProcessor.Start(fun mbox -> 
+  let parseAndCheckFileInProject(fileName, source, options) =
       async { 
-          while true do
               debug "Worker: Awaiting request"
-              let! (fileName, source, options, reply: AsyncReplyChannel<_>) = mbox.Receive()
               let fileName = fixFileName (fileName)
               debug "Worker: Parse and typecheck source..."
               let! res = 
@@ -204,9 +196,10 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       ParseAndCheckResults.Empty
                   | Choice2Of2 e -> 
                       fail "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
+                      handleCriticalErrors e
                       ParseAndCheckResults.Empty  
-              reply.Reply results
-      })
+              return results
+      }
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, targetFramework) =
@@ -310,7 +303,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           | Some results -> return results
           | None -> 
               Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
-              let! results = mbox.PostAndAsyncReply(fun r -> fileName, src, opts, r)
+              let! results = parseAndCheckFileInProject(fileName, src, opts)
               Debug.WriteLine(sprintf "Worker: Starting background compilations")
               checker.StartBackgroundCompile(opts)
               return results
@@ -563,3 +556,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
             return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)
         }
+
+    member x.SetCriticalErrorHandler func = 
+        errorHandler <- Some func
