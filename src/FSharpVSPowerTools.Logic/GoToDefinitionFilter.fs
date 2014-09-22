@@ -43,7 +43,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     let navigateToMetadata displayContext (fsSymbol: FSharpSymbol) = 
         let fileName =
             match fsSymbol with
-            | :? FSharpMemberFunctionOrValue as mem -> mem.LogicalEnclosingEntity.FullName + ".fsi"
+            | :? FSharpMemberFunctionOrValue as mem ->
+                try mem.LogicalEnclosingEntity.FullName + ".fsi"
+                with _ -> mem.LogicalEnclosingEntity.DisplayName + ".fsi"
             | _ ->
                 try fsSymbol.FullName + ".fsi"
                 with _ -> fsSymbol.DisplayName + ".fsi"
