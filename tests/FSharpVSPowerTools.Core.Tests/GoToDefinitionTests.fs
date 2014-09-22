@@ -763,6 +763,31 @@ type MyClass() =
     static member StaticSetterOnly : int with set
 """
 
+let ``handle union case attributes`` () =
+    """
+type Union =
+    | [<System.Diagnostics.Conditional("MyConditional")>]
+      [<System.Obsolete("hello")>]
+      Case1 of int
+    | [<System.Obsolete("cuir")>] Case2 of string
+    | Case3
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type Union =
+    | [<Conditional("MyConditional")>]
+      [<Obsolete("hello")>]
+      Case1 of int
+    | [<Obsolete("cuir")>]
+      Case2 of string
+    | Case3
+    interface System.IComparable<Union>
+    interface System.IComparable
+    interface System.IEquatable<Union>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+"""
+
+
 // Tests to add/activate:
 // TODO: property/method attributes
 // TODO: method arguments attributes

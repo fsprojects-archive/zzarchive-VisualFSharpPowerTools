@@ -178,7 +178,7 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
     printfn "Module XmlDocSig: %s" modul.XmlDocSig
     writeDocs ctx modul.XmlDoc
-    writeAttributes ctx modul modul.Attributes
+    writeAttributes ctx (Some modul) modul.Attributes
     if isTopLevel then
         ctx.Writer.WriteLine("module {0}", tryRemoveModuleSuffix modul modul.FullName)
     else
@@ -215,7 +215,7 @@ and internal writeType ctx (typ: FSharpEntity) =
 
     printfn "Type XmlDocSig: %s" typ.XmlDocSig
     writeDocs ctx typ.XmlDoc
-    writeAttributes ctx typ typ.Attributes
+    writeAttributes ctx (Some typ) typ.Attributes
 
     let neededTypeDefSyntaxDelimiter = tryGetNeededTypeDefSyntaxDelimiter typ
     let classAttributeHasToBeAdded =
@@ -377,7 +377,15 @@ and internal writeDelegateType ctx (del: FSharpEntity) =
 
 and internal writeUnionCase ctx (case: FSharpUnionCase) =
     writeDocs ctx case.XmlDoc
-    ctx.Writer.Write("| {0}", DemangleOperatorName case.Name)
+
+    if case.Attributes.Count > 0 then
+        ctx.Writer.Write("| ")
+        ctx.Writer.Indent(2)
+        writeAttributes ctx None case.Attributes
+        ctx.Writer.Write(DemangleOperatorName case.Name)
+        ctx.Writer.Unindent(2)
+    else
+        ctx.Writer.Write("| {0}", DemangleOperatorName case.Name)
 
     if case.UnionCaseFields.Count > 0 then
         case.UnionCaseFields
@@ -393,12 +401,12 @@ and internal writeUnionCase ctx (case: FSharpUnionCase) =
 
     ctx.Writer.WriteLine("")
 
-and internal writeAttributes ctx (typ: FSharpEntity) (attributes: IList<FSharpAttribute>) =
-    let typeDefSyntaxDelimOpt = tryGetNeededTypeDefSyntaxDelimiter typ
+and internal writeAttributes ctx (typ: option<FSharpEntity>) (attributes: IList<FSharpAttribute>) =
+    let typeDefSyntaxDelimOpt = Option.bind tryGetNeededTypeDefSyntaxDelimiter typ
     let bypassAttribute (attrib: FSharpAttribute) =
         typeDefSyntaxDelimOpt = Some "struct" && isAttribute<StructAttribute> attrib
 
-    for attr in attributes do
+    for (attr: FSharpAttribute) in attributes do
         if not (bypassAttribute attr) then
             let name = 
                 let displayName = attr.AttributeType.DisplayName
