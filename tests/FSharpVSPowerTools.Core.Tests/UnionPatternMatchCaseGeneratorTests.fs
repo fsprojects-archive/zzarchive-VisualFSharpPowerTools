@@ -354,6 +354,77 @@ let f1 x =
 """
 
 [<Test>]
+let ``handle abbreviated option types`` () =
+    """
+let f (i: int option) =
+    match i with
+    | Some _ -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 3 6)
+    |> assertSrcAreEqual """
+let f (i: int option) =
+    match i with
+    | Some _ -> ()
+    | None -> failwith ""
+"""
+
+[<Test>]
+let ``handle abbreviated option types with qualified access`` () =
+    """
+[<RequireQualifiedAccess>]
+type Union1 = Case1 | Case2
+type Abbrev = Union1
+
+let f union1 =
+    match union1 with
+    | Abbrev.Case1 -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 7 6)
+    |> assertSrcAreEqual """
+[<RequireQualifiedAccess>]
+type Union1 = Case1 | Case2
+type Abbrev = Union1
+
+let f union1 =
+    match union1 with
+    | Abbrev.Case1 -> ()
+    | Abbrev.Case2 -> failwith ""
+"""
+
+[<Test>]
+let ``handle uppercase field names`` () =
+    """
+let _ =
+    match None with
+    | None -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 3 6)
+    |> assertSrcAreEqual """
+let _ =
+    match None with
+    | None -> ()
+    | Some(value) -> failwith ""
+"""
+
+[<Test>]
+let ``handle really similar field names`` () =
+    """
+type A = Case1 | Case2 of value2: int * Value: int * value: int * value1: int
+let _ =
+    match Case1 with
+    | Case1 -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 4 6)
+    |> assertSrcAreEqual """
+type A = Case1 | Case2 of value2: int * Value: int * value: int * value1: int
+let _ =
+    match Case1 with
+    | Case1 -> ()
+    | Case2(value2, value1, value3, value4) -> failwith ""
+"""
+    
+
+[<Test>]
 let ``nested union match case generation`` () =
     """
 type Union1 = Case1 | Case2

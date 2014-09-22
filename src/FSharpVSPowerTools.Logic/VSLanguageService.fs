@@ -61,7 +61,7 @@ type VSLanguageService
         |> Seq.concat
         |> Seq.toArray
         
-    member x.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
+    member __.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
@@ -75,19 +75,19 @@ type VSLanguageService
         Lexer.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
 
-    member x.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
+    member __.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
         let snapshot = textBuffer.CurrentSnapshot
         let source = snapshot.GetText()
         let lineStr = snapshot.GetLineFromLineNumber(line).GetText()
         Lexer.tokenizeLine source args line lineStr (buildQueryLexState textBuffer)
 
-    member x.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
+    member __.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
         async {
             let! opts = projectProvider.GetProjectCheckerOptions instance
             return! instance.ParseFileInProject(opts, currentFile, source) 
         }
 
-    member x.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
+    member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
         instance.ProcessParseTrees(
             projectProvider.ProjectFileName, 
             openDocuments, 
@@ -97,7 +97,7 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member x.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress : OperationState -> unit) =
+    member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress : OperationState -> unit) =
         async {
             try                 
                 let (_, _, endLine, endCol) = word.ToRange()
@@ -134,7 +134,7 @@ type VSLanguageService
                 debug "[Language Service] %O exception occurs while updating." e
                 return None }
 
-    member x.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
+    member __.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
         async {
             try 
                 let (_, _, endLine, _) = word.ToRange()
@@ -148,7 +148,7 @@ type VSLanguageService
                 return None
         }
 
-    member x.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
+    member __.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
             let (_, _, endLine, _) = word.ToRange()
             let source = word.Snapshot.GetText()
@@ -159,8 +159,8 @@ type VSLanguageService
             return symbol |> Option.map (fun s -> s, results)
         }
 
-    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
-                                           checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
+    member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
+                                            checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
 
         async {
             let source = snapshot.GetText() 
@@ -171,9 +171,9 @@ type VSLanguageService
                 snapshot.GetLineFromLineNumber(lineNumber).GetText() 
             let lexer = 
                 { new LexerBase() with
-                    member x.GetSymbolFromTokensAtLocation (tokens, line, col) =
+                    member __.GetSymbolFromTokensAtLocation (tokens, line, col) =
                         Lexer.getSymbolFromTokens tokens line col (getLineStr line)
-                    member x.TokenizeLine line =
+                    member __.TokenizeLine line =
                         Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
             let! opts = project.GetProjectCheckerOptions instance
@@ -202,7 +202,7 @@ type VSLanguageService
             return allSymbolsUses, lexer
         }
 
-     member x.GetAllEntities (fileName, source, project: IProjectProvider) =
+     member __.GetAllEntities (fileName, source, project: IProjectProvider) =
         async { 
             let! opts = project.GetProjectCheckerOptions instance
             try 
@@ -212,25 +212,26 @@ type VSLanguageService
                 return None
         }
 
-    member x.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =
+    member __.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =
         async {
             let! opts = project.GetProjectCheckerOptions instance
-            return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)
+            try return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)
+            with _ -> return None
         }
 
-    member x.InvalidateProject (projectProvider: IProjectProvider) = 
+    member __.InvalidateProject (projectProvider: IProjectProvider) = 
         async {
             let! opts = projectProvider.GetProjectCheckerOptions(instance) 
             return instance.Checker.InvalidateConfiguration opts
         }
 
-    member x.ClearCaches() = 
+    member __.ClearCaches() = 
         debug "[Language Service] Clearing FCS caches."
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
-    member x.Checker = instance.Checker
+    member __.Checker = instance.Checker
 
     /// This value is used for testing when VS lex cache isn't available
-    member internal x.SkipLexCache 
+    member internal __.SkipLexCache 
         with get () = skipLexCache
         and set v = skipLexCache <- v

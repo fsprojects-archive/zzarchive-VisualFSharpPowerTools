@@ -10,15 +10,12 @@ type internal OptionsReader(serviceProvider: IServiceProvider) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     
     member __.GetOptions() =
-        dte.get_Properties("Environment", "TaskList")
-        |> Seq.cast
-        |> Seq.tryPick (fun (prop: Property) ->
-            if prop.Name = "CommentTokens" then
-                Some (prop.Value :?> obj[] |> Array.map (fun o -> o :?> string))
-            else None)
+        dte.TryGetProperty("Environment", "TaskList", "CommentTokens")
         |> function
            | Some ct ->
-                ct |> Array.choose (fun s -> 
+                ct :?> obj[]
+                |> Array.map (fun o -> o :?> string)
+                |> Array.choose (fun s -> 
                     match s.Split(':') with
                     | [| comment; priority |] -> Some { Comment = comment; Priority = Int32.Parse priority } 
                     | _ -> None)
