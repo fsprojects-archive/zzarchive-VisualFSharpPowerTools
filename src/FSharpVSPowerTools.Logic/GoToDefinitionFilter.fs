@@ -44,6 +44,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         let fileName =
             match fsSymbol with
             | :? FSharpMemberFunctionOrValue as mem ->
+                // FIXME: remove this try-catch when TryFullName will stop throwing an exception
+                //        with provided erased types.
+                //        Same for the match clause below.
                 try mem.LogicalEnclosingEntity.FullName + ".fsi"
                 with _ -> mem.LogicalEnclosingEntity.DisplayName + ".fsi"
             | _ ->
