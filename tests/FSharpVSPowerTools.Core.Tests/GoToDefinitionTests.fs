@@ -788,7 +788,34 @@ type Union =
     interface System.Collections.IStructuralEquatable
 """
 
+[<Test>]
+let ``handle record field property attributes`` () =
+    """open System
+type Record = {
+    [<Obsolete("Reason1")>]
+    Field1: int
+
+    [<Obsolete("Reason2")>]
+    Field2: float
+}"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type Record =
+    {
+        [<Obsolete("Reason1")>]
+        Field1: int
+        [<Obsolete("Reason2")>]
+        Field2: float
+    }
+    interface IComparable<Record>
+    interface IComparable
+    interface IEquatable<Record>
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
+"""
+
+
 // Tests to add:
+// TODO: record field field attributes (vs property attributes)
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
