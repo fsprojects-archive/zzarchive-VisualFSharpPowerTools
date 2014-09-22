@@ -763,6 +763,7 @@ type MyClass() =
     static member StaticSetterOnly : int with set
 """
 
+[<Test>]
 let ``handle union case attributes`` () =
     """
 type Union =
