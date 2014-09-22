@@ -99,7 +99,7 @@ module AssemblyContentProvider =
               AutoOpenParent = parent.AutoOpen |> Option.map parent.FixParentModuleSuffix
               Kind = 
                 match entity with
-                | TypedAstActivePatterns.Attribute -> EntityKind.Attribute 
+                | TypedAstPatterns.Attribute -> EntityKind.Attribute 
                 | FSharpModule ->
                     EntityKind.Module 
                         { IsAutoOpen = hasAttribute<AutoOpenAttribute> entity.Attributes

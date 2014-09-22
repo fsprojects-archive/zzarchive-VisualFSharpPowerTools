@@ -95,7 +95,7 @@ module TypedAstExtensionHelpers =
 
 
 [<AutoOpen>]
-module internal TypedAstActivePatterns =
+module internal TypedAstPatterns =
     let (|AbbreviatedType|_|) (entity: FSharpEntity) =
         if entity.IsFSharpAbbreviation then Some entity.AbbreviatedType
         else None
