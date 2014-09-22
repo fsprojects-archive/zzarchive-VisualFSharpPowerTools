@@ -46,10 +46,6 @@ let tryGenerateDefinitionFromPos caretPos src =
 let generateDefinitionFromPos caretPos src =
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
-//type T() =
-//    let mutable x = 0
-//    member this.Property with get() = x and set value = x <- value
-
 [<Test>]
 let ``go to Tuple definition`` () =
     [
@@ -164,11 +160,11 @@ do Console.WriteLine("xxx")"""
 [<Class>]
 type Console =
     static member add_CancelKeyPress : value:ConsoleCancelEventHandler -> unit
-    static member BackgroundColor : ConsoleColor
+    static member BackgroundColor : ConsoleColor with get, set
     static member Beep : unit -> unit
     static member Beep : frequency:int * duration:int -> unit
-    static member BufferHeight : int
-    static member BufferWidth : int
+    static member BufferHeight : int with get, set
+    static member BufferWidth : int with get, set
 """
 
 [<Test>]
@@ -433,7 +429,7 @@ val bind : binder:('T -> 'U option) -> option:'T option -> 'U option
 val toArray : option:'T option -> 'T []
 val toList : option:'T option -> 'T list
 """)
-
+        
 [<Test>]
 let ``interface inheritance by interfaces`` () =
     """
@@ -472,6 +468,36 @@ type MyAbstractClass =
 """
 
 [<Test>]
+let ``go to non-abstract class definition with virtual member`` () =
+    """
+type MyBaseClass() =
+    abstract member Method: int -> unit
+    default this.Method(x) = ()"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyBaseClass =
+    new : unit -> MyBaseClass
+    abstract member Method : int -> unit
+    override Method : x:int -> unit
+"""
+
+[<Test>]
+let ``go to subclass class definition with override members`` () =
+    """
+type MyBaseClass() =
+    abstract member Method: int -> unit
+    default this.Method(x) = ()
+
+type MyClass() =
+    inherit MyBaseClass()
+    override this.Method(x) = ()"""
+    |> generateDefinitionFromPos (Pos.fromZ 5 5)
+    |> assertSrcAreEqual """type MyClass =
+    inherit MyBaseClass
+    new : unit -> MyClass
+    override Method : x:int -> unit
+"""
+
+[<Test>]
 let ``go to class definition with events`` () =
     """
 type Class() =
@@ -499,7 +525,7 @@ let ``go to F# exception definition`` () =
     ]
 
 [<Test>]
-let ``handle F#-style optional parameter`` () =
+let ``handle optional parameters`` () =
     """
 open System.Runtime.InteropServices 
 type T() =
@@ -620,44 +646,156 @@ module Parallel =
 
 """
 
+[<Test; Ignore("activate when generic constraints are supported")>]
+let ``handle generic constraints`` () =
+    """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
+    | Value of 'T
+    """
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
+    | Value of 'T
+    """
+
+[<Test; Ignore("activate when static constraints are supported")>]
+let ``handle static constraints on module functions`` () =
+    """
+let inline func x = x + x"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 11)
+    |> assertSrcAreEqual """
+    val inline inlineFunc : x: ^a ->  ^b when  ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
+"""
+
+[<Test; Ignore("activate when static constraints are supported")>]
+let ``handle static constraints on members`` () =
+    """
+type MyClass() =
+    member inline __.Test x = x + x
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass =
+    new : unit -> MyClass
+    member Test : x: ^a ->  ^b when  ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
+"""
+
+[<Test>]
+let ``handle record extension members`` () =
+    """
+type MyRecord =
+    { A: string; B: int }
+    member __.Method1() = ()
+
+type MyRecord with
+    member __.Method2() = ()
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyRecord =
+    {
+        A: string
+        B: int
+    }
+    interface System.IComparable<MyRecord>
+    interface System.IComparable
+    interface System.IEquatable<MyRecord>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+    member Method1 : unit -> unit
+    member Method2 : unit -> unit
+"""
+
+[<Test>]
+let ``handle union type extension members`` () =
+    """
+type MyUnion = A of int | B of float
+with
+    member __.Method1() = ()
+
+type MyUnion with
+    member __.Method2() = "allo!"
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyUnion =
+    | A of int
+    | B of float
+    interface System.IComparable<MyUnion>
+    interface System.IComparable
+    interface System.IEquatable<MyUnion>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+    member Method1 : unit -> unit
+    member Method2 : unit -> string
+"""
+
+[<Test>]
+let ``handle class extension members`` () =
+    """
+type MyClass() =
+    member x.Method() = ()
+
+type MyClass with
+    member x.MyExtensionMethod() = ()
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass =
+    new : unit -> MyClass
+    member Method : unit -> unit
+    member MyExtensionMethod : unit -> unit
+"""
+
+[<Test>]
+let ``handle class properties with setter``() =
+    """
+type MyClass() =
+    let mutable instanceValue = 0
+    static let mutable staticValue = 0
+
+    member val GetterAndSetter = 0 with get, set
+    member __.SetterOnly with set(value) = instanceValue <- value
+
+    static member val StaticGetterAndSetter = 0 with get, set
+    static member StaticSetterOnly with set(value) = staticValue <- value
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass =
+    new : unit -> MyClass
+    member GetterAndSetter : int with get, set
+    member SetterOnly : int with set
+    static member StaticGetterAndSetter : int with get, set
+    static member StaticSetterOnly : int with set
+"""
+
+[<Test>]
+let ``handle union case attributes`` () =
+    """
+type Union =
+    | [<System.Diagnostics.Conditional("MyConditional")>]
+      [<System.Obsolete("hello")>]
+      Case1 of int
+    | [<System.Obsolete("cuir")>] Case2 of string
+    | Case3
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type Union =
+    | [<Conditional("MyConditional")>]
+      [<Obsolete("hello")>]
+      Case1 of int
+    | [<Obsolete("cuir")>]
+      Case2 of string
+    | Case3
+    interface System.IComparable<Union>
+    interface System.IComparable
+    interface System.IEquatable<Union>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+"""
+
 // Tests to add:
-// TODO: handle C# optional parameters
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled
-// TODO: class extension members?
-// TODO: union type extension members?
 // TODO: record type fields attributes
-// TODO: record type extension members?
-// TODO: enum type attributes
-// TODO: handle inherited classes
-// TODO: generic member constraints
-// TODO: static member constraints
-//
-//type MyAbstractClass() =
-//    abstract member Method: int -> unit
-//    default this.Method(x) = ()
-//
-//type MyClass() =
-//    inherit MyAbstractClass()
-//    override this.Method(x) = ()
-//
 // ENHANCEMENT: special formatting for Events?
-// TODO: display static member getter/setter availability
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
 // TODO: add test for VS buffer name?
-// TODO: set cursor on method when symbol is a method
-// TODO: set cursor on union case when symbol is a union case
-// TODO: set cursor on enum case when symbol is an enum case
-// TODO: set cursor on field when symbol is a record field
-
-#if INTERACTIVE
-#time "on";;
-let result =
-    """open System
-
-let x: Int32 = 0"""
-    |> generateDefinitionFromPos (Pos.fromZ 2 7)
-#endif
+// TODO: set cursor on method/... when symbol is a method/union case/enum value/record field

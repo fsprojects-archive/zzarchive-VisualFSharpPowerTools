@@ -43,10 +43,16 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     let navigateToMetadata displayContext (fsSymbol: FSharpSymbol) = 
         let fileName =
             match fsSymbol with
-            | :? FSharpMemberFunctionOrValue as mem -> mem.LogicalEnclosingEntity.FullName + ".fsi"
+            | :? FSharpMemberFunctionOrValue as mem ->
+                match mem.LogicalEnclosingEntity.TryGetFullName() with
+                | Some fullName -> fullName + ".fsi"
+                | _ -> "tmp.fsi"
             | _ ->
                 try fsSymbol.FullName + ".fsi"
-                with _ -> fsSymbol.DisplayName + ".fsi"
+                with _ ->
+                    try fsSymbol.DisplayName + ".fsi"
+                    with _ -> "tmp.fsi"
+
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
