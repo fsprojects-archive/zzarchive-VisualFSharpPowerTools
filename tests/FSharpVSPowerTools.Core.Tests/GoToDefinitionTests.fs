@@ -824,8 +824,25 @@ type Record = {
     interface Collections.IStructuralEquatable
 """
 
+[<Test; Ignore("activate when method/property attributes are supported by FCS")>]
+let ``handle property/method attributes``() =
+    """
+type MyClass() =
+    [<Obsolete("Prop is obsolete")>]
+    member __.Prop = 0
+    [<Obsolete("Method is obsolete")>]
+    member __.Method() = ()
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass =
+    new : unit -> MyClass
+    [<Obsolete("Method is obsolete")>]
+    member Method : unit -> unit
+    [<Obsolete("Prop is obsolete")>]
+    member Prop : int
+"""
+
 // Tests to add:
-// TODO: class property/method attributes
 // TODO: class method arguments attributes
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled

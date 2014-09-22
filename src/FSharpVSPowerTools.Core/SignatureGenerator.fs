@@ -477,6 +477,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         // Discard explicit getter/setter methods
         printfn "XmlDocSig: %s" mem.XmlDocSig
         writeDocs ctx mem.XmlDoc
+        writeAttributes ctx None mem.Attributes
 
         let memberType =
             // Is static?
