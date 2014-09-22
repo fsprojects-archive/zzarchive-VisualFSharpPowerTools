@@ -788,34 +788,14 @@ type Union =
     interface System.Collections.IStructuralEquatable
 """
 
-
-// Tests to add/activate:
+// Tests to add:
 // TODO: property/method attributes
 // TODO: method arguments attributes
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled
 // TODO: record type fields attributes
-// TODO: enum value attributes
-// type MyEnum =
-//    | [<Description("FieldA")>] A = 0
-//    | [<Description("FieldB")>] B = 1
-
-// TODO: static member constraints
-
 // ENHANCEMENT: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
 // TODO: add test for VS buffer name?
-// TODO: set cursor on method when symbol is a method
-// TODO: set cursor on union case when symbol is a union case
-// TODO: set cursor on enum case when symbol is an enum case
-// TODO: set cursor on field when symbol is a record field
-
-#if INTERACTIVE
-#time "on";;
-let result =
-    """open System
-
-let x: Int32 = 0"""
-    |> generateDefinitionFromPos (Pos.fromZ 2 7)
-#endif
+// TODO: set cursor on method/... when symbol is a method/union case/enum value/record field
