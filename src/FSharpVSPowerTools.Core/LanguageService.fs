@@ -472,7 +472,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                 else None
                         | Entity e ->
                             match e with
-                            | e, TypedAstUtils.Attribute, _ ->
+                            | e, TypedAstActivePatterns.Attribute, _ ->
                                 e.TryGetFullName()
                                 |> Option.map (fun fullName ->
                                     [| fullName; fullName.Substring(0, fullName.Length - "Attribute".Length) |])

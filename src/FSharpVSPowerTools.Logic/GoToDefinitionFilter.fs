@@ -47,11 +47,17 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 // FIXME: remove this try-catch when TryFullName will stop throwing an exception
                 //        with provided erased types.
                 //        Same for the match clause below.
-                try mem.LogicalEnclosingEntity.FullName + ".fsi"
-                with _ -> mem.LogicalEnclosingEntity.DisplayName + ".fsi"
+                match mem.LogicalEnclosingEntity.TryGetFullName() with
+                | Some fullName -> fullName + ".fsi"
+                | _ ->
+                    try mem.LogicalEnclosingEntity.DisplayName + ".fsi"
+                    with _ -> "tmp.fsi"
             | _ ->
                 try fsSymbol.FullName + ".fsi"
-                with _ -> fsSymbol.DisplayName + ".fsi"
+                with _ ->
+                    try fsSymbol.DisplayName + ".fsi"
+                    with _ -> "tmp.fsi"
+
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
