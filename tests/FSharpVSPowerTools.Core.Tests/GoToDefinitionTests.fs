@@ -1,4 +1,5 @@
 ﻿#if INTERACTIVE
+#r "System.Runtime.Serialization.dll"
 #r "../../bin/FSharp.Compiler.Service.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
@@ -26,10 +27,17 @@ open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
 let languageService = LanguageService(fun _ -> ())
 let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
+let args =
+    LanguageServiceTestHelper.args
+    |> Array.append
+        [|
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Runtime.Serialization.dll"
+            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.Serialization.dll"
+        |]
 
 let tryGenerateDefinitionFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
     let projectOptions = project()
 
     asyncMaybe {
@@ -789,18 +797,21 @@ type Union =
 """
 
 [<Test>]
-let ``handle record field property attributes`` () =
+let ``handle record field attributes`` () =
     """open System
+open System.Runtime.Serialization
 type Record = {
+    [<DefaultValue>]
     [<Obsolete("Reason1")>]
     Field1: int
 
     [<Obsolete("Reason2")>]
     Field2: float
 }"""
-    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> generateDefinitionFromPos (Pos.fromZ 2 5)
     |> assertSrcAreEqual """type Record =
     {
+        [<DefaultValue>]
         [<Obsolete("Reason1")>]
         Field1: int
         [<Obsolete("Reason2")>]
@@ -813,9 +824,7 @@ type Record = {
     interface Collections.IStructuralEquatable
 """
 
-
 // Tests to add:
-// TODO: record field field attributes (vs property attributes)
 // TODO: class property/method attributes
 // TODO: class method arguments attributes
 // TODO: xml comments

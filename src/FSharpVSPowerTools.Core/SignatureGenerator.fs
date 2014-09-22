@@ -425,6 +425,7 @@ and internal writeAttributes ctx (typ: option<FSharpEntity>) (attributes: IList<
 
 and internal writeField hasNewLine ctx (field: FSharpField) =
     writeDocs ctx field.XmlDoc
+    writeAttributes ctx None field.FieldAttributes
     writeAttributes ctx None field.PropertyAttributes
 
     if hasNewLine then
