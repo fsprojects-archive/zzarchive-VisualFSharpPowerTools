@@ -816,11 +816,10 @@ type Record = {
 
 // Tests to add:
 // TODO: record field field attributes (vs property attributes)
-// TODO: property/method attributes
-// TODO: method arguments attributes
+// TODO: class property/method attributes
+// TODO: class method arguments attributes
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled
-// TODO: record type fields attributes
 // ENHANCEMENT: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
