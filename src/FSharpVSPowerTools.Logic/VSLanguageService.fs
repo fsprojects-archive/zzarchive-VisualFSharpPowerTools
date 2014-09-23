@@ -5,7 +5,10 @@ open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Editor
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
+open System
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
@@ -32,9 +35,25 @@ type VSLanguageService
     [<ImportingConstructor>] 
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
-     openDocumentsTracker: OpenDocumentsTracker) =
+     openDocumentsTracker: OpenDocumentsTracker,
+     [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
+
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let recoverAfterFailure _e =
+        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+        try
+            statusBar.SetText("Trying to recover from internal errors...") |> ignore 
+            // Try to clean obsolete binaries. We can't be sure that this command is executed successfully.
+            dte.Solution.SolutionBuild.Clean(WaitForCleanToFinish=true)
+            instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+            statusBar.SetText("Error recovery completed.") |> ignore
+        with e ->
+            statusBar.SetText(sprintf "Error recovery failed with '%O'." e) |> ignore 
+            
+    
+    do instance.SetCriticalErrorHandler(recoverAfterFailure)
 
     let mutable skipLexCache = false
 

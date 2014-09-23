@@ -44,7 +44,7 @@ type VsTestBase() =
     static let fsharpLanguageService = FSharpLanguageService(serviceProvider)
     static let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
     static let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
-                                                     openDocumentsTracker, SkipLexCache = true)
+                                                     openDocumentsTracker, serviceProvider, SkipLexCache = true)
     static let projectFactory = new MockProjectFactory(serviceProvider, vsLanguageService, dte)
     
     member __.ServiceProvider = serviceProvider
