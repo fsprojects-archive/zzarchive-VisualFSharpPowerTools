@@ -93,6 +93,8 @@ module TypedAstExtensionHelpers =
             | None -> None
             |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
 
+    type FSharpAssemblySignature with
+        member x.TryGetEntities() = try x.Entities :> _ seq with _ -> Seq.empty
 
 [<AutoOpen>]
 module internal TypedAstPatterns =
