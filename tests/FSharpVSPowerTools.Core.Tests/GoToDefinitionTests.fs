@@ -88,7 +88,7 @@ let _ = Async.AwaitTask"""
 [<Class>]
 type Async =
     static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * AsyncCallback * obj -> IAsyncResult) * (IAsyncResult -> 'T) * (IAsyncResult -> unit)
-    static member AwaitEvent : event:IEvent<'Del,'T> * ?cancelAction:(unit -> unit) -> Async<'T>
+    static member AwaitEvent : event:IEvent<'Del,'T> * ?cancelAction:(unit -> unit) -> Async<'T> when 'Del : delegate<'T, unit> and 'Del :> Delegate
 """
 
 [<Test>]
@@ -568,8 +568,8 @@ let x = Array.map
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
 val append : array1:'T [] -> array2:'T [] -> 'T []
-val average : array: ^T [] ->  ^T
-val averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U
+val average : array: ^T [] ->  ^T when ^T : (static member op_Addition :  ^T *  ^T ->  ^T) and ^T : (static member DivideByInt :  ^T * int ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
+val averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member op_Addition :  ^U *  ^U ->  ^U) and ^U : (static member DivideByInt :  ^U * int ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
 val blit : source:'T [] -> sourceIndex:int -> target:'T [] -> targetIndex:int -> count:int -> unit
 val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
 val concat : arrays:seq<'T []> -> 'T []
@@ -604,10 +604,10 @@ val map : mapping:('T -> 'U) -> array:'T [] -> 'U []
 val map2 : mapping:('T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 val mapi2 : mapping:(int -> 'T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 val mapi : mapping:(int -> 'T -> 'U) -> array:'T [] -> 'U []
-val max : array:'T [] -> 'T
-val maxBy : projection:('T -> 'U) -> array:'T [] -> 'T
-val min : array:'T [] -> 'T
-val minBy : projection:('T -> 'U) -> array:'T [] -> 'T
+val max : array:'T [] -> 'T when 'T : comparison
+val maxBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
+val min : array:'T [] -> 'T when 'T : comparison
+val minBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
 val ofList : list:'T list -> 'T []
 val ofSeq : source:seq<'T> -> 'T []
 val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
@@ -619,14 +619,14 @@ val scan : folder:('State -> 'T -> 'State) -> state:'State -> array:'T [] -> 'St
 val scanBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State -> 'State []
 val set : array:'T [] -> index:int -> value:'T -> unit
 val sub : array:'T [] -> startIndex:int -> count:int -> 'T []
-val sort : array:'T [] -> 'T []
-val sortBy : projection:('T -> 'Key) -> array:'T [] -> 'T []
+val sort : array:'T [] -> 'T [] when 'T : comparison
+val sortBy : projection:('T -> 'Key) -> array:'T [] -> 'T [] when 'Key : comparison
 val sortWith : comparer:('T -> 'T -> int) -> array:'T [] -> 'T []
-val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit
+val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit when 'Key : comparison
 val sortInPlaceWith : comparer:('T -> 'T -> int) -> array:'T [] -> unit
-val sortInPlace : array:'T [] -> unit
-val sum : array: ^T [] ->  ^T
-val sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U
+val sortInPlace : array:'T [] -> unit when 'T : comparison
+val sum : array: ^T [] ->  ^T when ^T : (static member op_Addition :  ^T *  ^T ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
+val sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member op_Addition :  ^U *  ^U ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
 val toList : array:'T [] -> 'T list
 val toSeq : array:'T [] -> seq<'T>
 val tryFind : predicate:('T -> bool) -> array:'T [] -> 'T option
