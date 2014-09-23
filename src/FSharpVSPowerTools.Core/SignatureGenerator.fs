@@ -528,10 +528,13 @@ and internal writeUnionCaseField ctx (field: FSharpField) =
 and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
     Debug.Assert(value.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a valid F# module.")
     writeDocs ctx value.XmlDoc
+
+    let constraints = getConstraints ctx.DisplayContext value.GenericParameters
+
     if value.FullType.IsFunctionType then
-        ctx.Writer.WriteLine("val {0} : {1}", value.DisplayName, generateSignature ctx value)
+        ctx.Writer.WriteLine("val {0} : {1}{2}", value.DisplayName, generateSignature ctx value, constraints)
     else
-        ctx.Writer.WriteLine("val {0} : {1}", value.DisplayName, value.FullType.Format(ctx.DisplayContext))
+        ctx.Writer.WriteLine("val {0} : {1}{2}", value.DisplayName, value.FullType.Format(ctx.DisplayContext), constraints)
 
 and internal writeClassOrStructField ctx (field: FSharpField) =
     Debug.Assert(field.DeclaringEntity.IsClass ||

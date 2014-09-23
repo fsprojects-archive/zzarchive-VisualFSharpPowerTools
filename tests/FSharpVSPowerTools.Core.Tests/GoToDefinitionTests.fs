@@ -900,6 +900,23 @@ type MyClass<'T when 'T : struct>() =
 """
 
 [<Test>]
+let ``handle generic constraints on module functions and values`` () =
+    [
+        """let func<'X when 'X : null and 'X : comparison>(x: 'X) = 0"""
+        """let value<'X when 'X : null and 'X : comparison> = typeof<'X>.ToString()"""
+    ]
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 0 4))
+    |> assertSrcSeqAreEqual [
+        """module File
+val func : x:'X -> int when 'X : null and 'X : comparison
+"""
+
+        """module File
+val value : string when 'X : null and 'X : comparison
+"""
+    ]
+
+[<Test>]
 let ``handle statically resolved constraints on types`` () =
     [
         """open System
