@@ -110,10 +110,10 @@ let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstrain
     |]
     |> String.concat ""
 
-let private getConstraints (ctx: FSharpDisplayContext) (typ: FSharpEntity) =
+let private getConstraints (ctx: FSharpDisplayContext) (params: IList<FSharpGenericParameter>) =
     let supportedConstraints =
         [|
-            for param in typ.GenericParameters do
+            for param in params do
                 let paramName = formatGenericParam param
 
                 for c in param.Constraints do
@@ -167,7 +167,7 @@ let private getTypeNameWithGenericParams ctx (typ: FSharpEntity) isInTypeName =
                 |> String.concat ", "
             yield genericParamsRepr
             if isInTypeName then
-                yield getConstraints ctx.DisplayContext typ
+                yield getConstraints ctx.DisplayContext typ.GenericParameters
             yield ">"
     |]
     |> String.concat ""
@@ -572,11 +572,14 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
             elif mem.HasSetterMethod then " with set"
             else ""
 
-        ctx.Writer.WriteLine("{0} {1} : {2}{3}",
+        let constraints = getConstraints ctx.DisplayContext mem.GenericParameters
+
+        ctx.Writer.WriteLine("{0} {1} : {2}{3}{4}",
                              memberType,
                              DemangleOperatorName mem.DisplayName,
                              generateSignature ctx mem,
-                             propertyType)
+                             propertyType,
+                             constraints)
     | _ -> ()
 
 and internal writeDocs ctx docs =

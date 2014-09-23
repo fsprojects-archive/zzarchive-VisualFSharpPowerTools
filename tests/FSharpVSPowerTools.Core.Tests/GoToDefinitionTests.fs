@@ -883,6 +883,23 @@ type MyClass<'T when 'T : delegate<obj * int, unit>>() =
     ]
 
 [<Test>]
+let ``handle generic constraints on methods`` () =
+    """
+type MyClass<'T when 'T : struct>() =
+    member __.NormalMethod() = ()
+    member __.Method<'X when 'X : null>(x: 'X) = 0
+    static member StaticMethod<'X when 'X : equality>(x: 'X * 'X) =
+        x = x
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass<'T when 'T : struct> =
+    new : unit -> MyClass<'T>
+    member Method : x:'X -> int when 'X : null
+    member NormalMethod : unit -> unit
+    static member StaticMethod : x:('X * 'X) -> bool when 'X : equality
+"""
+
+[<Test>]
 let ``handle statically resolved constraints on types`` () =
     [
         """open System
@@ -908,6 +925,7 @@ type MyClass<'T when 'T : (member Create : int * 'T -> 'T)> =
 """
     ]
 
+// BUG: demangle operator name doesn't escape names with spaces
 // TODO: special formatting for instance member constraints
 // TODO: special formatting for properties??
 
