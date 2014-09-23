@@ -83,15 +83,91 @@ with
 
         res
 
-let private getTypeNameWithGenericParams (typ: FSharpEntity) =
+let private isStaticallyResolved (param: FSharpGenericParameter) =
+    param.Constraints
+    |> Seq.exists (fun c -> c.IsMemberConstraint)
+
+let private formatGenericParam (param: FSharpGenericParameter) =
+    if isStaticallyResolved param then "^" + param.Name
+    else "'" + param.Name
+
+let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstraint) =
+    [|
+        yield "("
+        yield
+            if c.MemberIsStatic
+            then "static member " + c.MemberName
+            else "member " + c.MemberName
+        yield " : "
+        yield
+            if c.MemberArgumentTypes.Count = 0
+            then "unit"
+            else
+                [| for argType in c.MemberArgumentTypes -> argType.Format(ctx) |]
+                |> String.concat " * "
+        yield sprintf " -> %s" (c.MemberReturnType.Format(ctx))
+        yield ")"
+    |]
+    |> String.concat ""
+
+let private getConstraints (ctx: FSharpDisplayContext) (typ: FSharpEntity) =
+    let supportedConstraints =
+        [|
+            for param in typ.GenericParameters do
+                let paramName = formatGenericParam param
+
+                for c in param.Constraints do
+                    if c.IsSupportsNullConstraint then
+                        yield sprintf "%s : null" paramName
+                    elif c.IsRequiresDefaultConstructorConstraint then
+                        yield sprintf "%s : (new : unit -> %s)" paramName paramName
+                    elif c.IsCoercesToConstraint then
+                        yield sprintf "%s :> %s" paramName (c.CoercesToTarget.Format(ctx))
+                    elif c.IsNonNullableValueTypeConstraint then
+                        yield sprintf "%s : struct" paramName
+                    elif c.IsReferenceTypeConstraint then
+                        yield sprintf "%s : not struct" paramName
+                    elif c.IsComparisonConstraint then
+                        yield sprintf "%s : comparison" paramName
+                    elif c.IsEqualityConstraint then
+                        yield sprintf "%s : equality" paramName
+                    elif c.IsUnmanagedConstraint then
+                        yield sprintf "%s : unmanaged" paramName
+                    elif c.IsEnumConstraint then
+                        yield sprintf "%s : enum<%s>" paramName (c.EnumConstraintTarget.Format(ctx))
+                    elif c.IsDelegateConstraint then
+                        yield sprintf "%s : delegate<%s, %s>"
+                                paramName
+                                (c.DelegateConstraintData.DelegateTupledArgumentType.Format(ctx))
+                                (c.DelegateConstraintData.DelegateReturnType.Format(ctx))
+                    elif c.IsMemberConstraint then
+                        yield sprintf "%s : %s" paramName (formatMemberConstraint ctx c.MemberConstraintData)
+        |]
+
+    if supportedConstraints.Length = 0 then ""
+    else
+        supportedConstraints
+        |> String.concat " and "
+        |> sprintf " when %s"
+
+let private getTypeNameWithGenericParams ctx (typ: FSharpEntity) isInTypeName =
     [|
         yield typ.DisplayName
         if typ.GenericParameters.Count > 0 then
             yield "<"
             let genericParamsRepr =
-                [| for p in typ.GenericParameters -> "'" + p.DisplayName |]
+                [|
+                    for i in 0 .. typ.GenericParameters.Count - 1 do
+                        let p = typ.GenericParameters.[i]
+                        if i = 0 && isStaticallyResolved p then
+                            yield " " + formatGenericParam p
+                        else
+                            yield formatGenericParam p
+                |]
                 |> String.concat ", "
             yield genericParamsRepr
+            if isInTypeName then
+                yield getConstraints ctx.DisplayContext typ
             yield ">"
     |]
     |> String.concat ""
@@ -135,7 +211,7 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
     match mem with
     | Constructor entity ->
         let signatureInputParamsPart = generateInputParamsPart mem
-        let signatureReturnTypePart = getTypeNameWithGenericParams entity
+        let signatureReturnTypePart = getTypeNameWithGenericParams ctx entity false
 
         sprintf "%s -> %s" signatureInputParamsPart signatureReturnTypePart
 
@@ -238,7 +314,7 @@ and internal writeType ctx (typ: FSharpEntity) =
     elif typ.IsInterface && neededTypeDefSyntaxDelimiter = None then
         ctx.Writer.WriteLine("[<Interface>]")
 
-    ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams typ)
+    ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams ctx typ true)
     ctx.Writer.Indent ctx.Indentation
     if typ.IsFSharpRecord then
         ctx.Writer.WriteLine("{")

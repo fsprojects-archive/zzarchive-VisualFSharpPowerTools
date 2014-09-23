@@ -27,17 +27,10 @@ open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
 let languageService = LanguageService(fun _ -> ())
 let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
-let args =
-    LanguageServiceTestHelper.args
-    |> Array.append
-        [|
-            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Runtime.Serialization.dll"
-            @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.Serialization.dll"
-        |]
 
 let tryGenerateDefinitionFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
     let projectOptions = project()
 
     asyncMaybe {
@@ -516,6 +509,7 @@ type Class() =
     |> assertSrcAreEqual """type Class =
     new : unit -> Class
     member add_MyEvent : Handler<int> -> unit
+    [<CLIEvent>]
     member MyEvent : IEvent<int>
     member remove_MyEvent : Handler<int> -> unit
 """
@@ -653,16 +647,6 @@ module Parallel =
     val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
 
 """
-
-[<Test; Ignore("activate when generic constraints are supported")>]
-let ``handle generic constraints`` () =
-    """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
-    | Value of 'T
-    """
-    |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
-    | Value of 'T
-    """
 
 [<Test; Ignore("activate when static constraints are supported")>]
 let ``handle static constraints on module functions`` () =
@@ -841,6 +825,91 @@ type MyClass() =
     [<Obsolete("Prop is obsolete")>]
     member Prop : int
 """
+
+[<Test>]
+let ``handle generic constraints on type`` () =
+    [
+        """open System
+type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T, 'U when 'T : comparison and 'U : equality>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T when 'T : delegate<obj * int, unit>>() =
+    member x.Method() = ()
+"""
+    ]
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
+    |> assertSrcSeqAreEqual [
+        """type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T when 'T : delegate<obj * int, unit>> =
+    new : unit -> MyClass<'T>
+    member Method : unit -> unit
+"""
+    ]
+
+[<Test>]
+let ``handle statically resolved constraints on types`` () =
+    [
+        """open System
+type MyClass<'T when 'T : (static member Create : unit -> 'T) and 'T : (member Prop : int)> =
+    class end
+"""
+
+        """open System
+type MyClass<'T when 'T : (member Create : int * 'T -> 'T)> =
+    class end
+"""
+    ] 
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
+    |> assertSrcSeqAreEqual [
+        """type MyClass< ^T when ^T : (static member Create : unit ->  ^T) and ^T : (member get_Prop :  ^T -> int)> =
+    class
+    end
+"""
+
+        """type MyClass< ^T when ^T : (member Create :  ^T * int *  ^T ->  ^T)> =
+    class
+    end
+"""
+    ]
+
+// TODO: special formatting for instance member constraints
+// TODO: special formatting for properties??
 
 // Tests to add:
 // TODO: class method arguments attributes
