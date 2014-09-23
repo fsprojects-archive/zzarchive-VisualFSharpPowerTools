@@ -568,8 +568,8 @@ let x = Array.map
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
 val append : array1:'T [] -> array2:'T [] -> 'T []
-val average : array: ^T [] ->  ^T when ^T : (static member op_Addition :  ^T *  ^T ->  ^T) and ^T : (static member DivideByInt :  ^T * int ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
-val averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member op_Addition :  ^U *  ^U ->  ^U) and ^U : (static member DivideByInt :  ^U * int ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
+val inline average : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member DivideByInt :  ^T * int ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
+val inline averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member DivideByInt :  ^U * int ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
 val blit : source:'T [] -> sourceIndex:int -> target:'T [] -> targetIndex:int -> count:int -> unit
 val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
 val concat : arrays:seq<'T []> -> 'T []
@@ -592,22 +592,22 @@ val foldBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State ->
 val fold2 : folder:('State -> 'T1 -> 'T2 -> 'State) -> state:'State -> array1:'T1 [] -> array2:'T2 [] -> 'State
 val foldBack2 : folder:('T1 -> 'T2 -> 'State -> 'State) -> array1:'T1 [] -> array2:'T2 [] -> state:'State -> 'State
 val get : array:'T [] -> index:int -> 'T
-val init : count:int -> initializer:(int -> 'T) -> 'T []
+val inline init : count:int -> initializer:(int -> 'T) -> 'T []
 val zeroCreate : count:int -> 'T []
 val isEmpty : array:'T [] -> bool
-val iter : action:('T -> unit) -> array:'T [] -> unit
+val inline iter : action:('T -> unit) -> array:'T [] -> unit
 val iter2 : action:('T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
 val iteri : action:(int -> 'T -> unit) -> array:'T [] -> unit
 val iteri2 : action:(int -> 'T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
 val length : array:'T [] -> int
-val map : mapping:('T -> 'U) -> array:'T [] -> 'U []
+val inline map : mapping:('T -> 'U) -> array:'T [] -> 'U []
 val map2 : mapping:('T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 val mapi2 : mapping:(int -> 'T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 val mapi : mapping:(int -> 'T -> 'U) -> array:'T [] -> 'U []
-val max : array:'T [] -> 'T when 'T : comparison
-val maxBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
-val min : array:'T [] -> 'T when 'T : comparison
-val minBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
+val inline max : array:'T [] -> 'T when 'T : comparison
+val inline maxBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
+val inline min : array:'T [] -> 'T when 'T : comparison
+val inline minBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
 val ofList : list:'T list -> 'T []
 val ofSeq : source:seq<'T> -> 'T []
 val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
@@ -625,8 +625,8 @@ val sortWith : comparer:('T -> 'T -> int) -> array:'T [] -> 'T []
 val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit when 'Key : comparison
 val sortInPlaceWith : comparer:('T -> 'T -> int) -> array:'T [] -> unit
 val sortInPlace : array:'T [] -> unit when 'T : comparison
-val sum : array: ^T [] ->  ^T when ^T : (static member op_Addition :  ^T *  ^T ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
-val sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member op_Addition :  ^U *  ^U ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
+val inline sum : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
+val inline sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
 val toList : array:'T [] -> 'T list
 val toSeq : array:'T [] -> seq<'T>
 val tryFind : predicate:('T -> bool) -> array:'T [] -> 'T option
@@ -913,6 +913,83 @@ val func : x:'X -> int when 'X : null and 'X : comparison
 
         """module File
 val value : string when 'X : null and 'X : comparison
+"""
+    ]
+
+[<Test>]
+let ``operator names are demangled`` () =
+    """let inline func x = x + x"""
+    |> generateDefinitionFromPos (Pos.fromZ 0 11)
+    |> assertSrcAreEqual """module File
+val inline func : x: ^a ->  ^b when ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
+"""
+
+[<Test>]
+let ``double-backtick identifiers are supported`` () =
+    [
+        """type ``My class``() =
+    member __.``a property`` = 0
+    member __.``a method``() = ()""", Pos.fromZ 0 5
+
+        """module ``My module``
+let ``a value`` = 0""", Pos.fromZ 0 9
+
+        """type ``My abbrev`` = int""", Pos.fromZ 0 5
+
+        """type Union = ``My Case`` of int | Case2""", Pos.fromZ 0 5
+
+        """type Record = { ``My Record`` : string }""", Pos.fromZ 0 5
+
+        """exception ``My exception``""", Pos.fromZ 0 12
+
+        """exception ``My exception 2`` of int""", Pos.fromZ 0 12
+
+        """type ``My delegate``= delegate of int -> int""", Pos.fromZ 0 5
+    ]
+    |> List.map (fun (src, pos) -> generateDefinitionFromPos pos src)
+    |> assertSrcSeqAreEqual [
+        """type ``My class`` =
+    new : unit -> ``My class``
+    member ``a method`` : unit -> unit
+    member ``a property`` : int
+"""
+
+        """module ``My module``
+val ``a value`` : int
+"""
+
+        """type ``My abbrev`` = int
+"""
+
+        """type Union =
+    | ``My Case`` of int
+    | Case2
+    interface System.IComparable<Union>
+    interface System.IComparable
+    interface System.IEquatable<Union>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+"""
+
+        """type Record =
+    {
+        ``My Record``: string
+    }
+    interface System.IComparable<Record>
+    interface System.IComparable
+    interface System.IEquatable<Record>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+"""
+
+        """exception ``My exception``
+"""
+
+        """exception ``My exception 2`` of int
+"""
+
+        """type ``My delegate`` =
+    delegate of int -> int
 """
     ]
 
