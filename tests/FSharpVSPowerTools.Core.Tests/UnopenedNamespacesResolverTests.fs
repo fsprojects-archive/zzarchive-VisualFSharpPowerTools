@@ -309,7 +309,7 @@ module Nested1 =
     let range x = x
 let _ = range()
 """ 
-    ==> [6, 9, Some FunctionOrValue ]
+    ==> [6, 9, Some (FunctionOrValue false) ]
 
 [<Test>]
 let ``return type annotation is a Type``() =
@@ -340,11 +340,11 @@ type T() =
         let a = 1
         { Field = new Task<_>() }
 """ 
-    ==> [2, 10, Some FunctionOrValue
+    ==> [2, 10, Some (FunctionOrValue false)
          3, 13, Some Type
-         5, 18, Some FunctionOrValue
-         6, 22, Some FunctionOrValue
-         7, 26, Some FunctionOrValue
+         5, 18, Some (FunctionOrValue false)
+         6, 22, Some (FunctionOrValue false)
+         7, 26, Some (FunctionOrValue false)
          10, 23, Some Type]
 
 [<Test>]
@@ -447,7 +447,7 @@ module TopLevel
 let _ = { new IMy with 
             method x.Method x = DateTime.Now }
 """ 
-    ==> [3, 34, Some FunctionOrValue]
+    ==> [3, 34, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``type in a let binging inside CE is a FuncOrConstructor``() =
@@ -459,7 +459,7 @@ let _ =
         return () 
     }
 """ 
-    ==> [4, 18, Some FunctionOrValue]
+    ==> [4, 18, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``type as a qualifier in a function application in argument position is FuncOrConstructor``() =
@@ -468,8 +468,8 @@ module TopLevel
 let _ = func (DateTime.Add 1)
 let _ = func1 1 (2, DateTime.Add 1)
 """ 
-    ==> [2, 16, Some FunctionOrValue
-         3, 22, Some FunctionOrValue]
+    ==> [2, 16, Some (FunctionOrValue false)
+         3, 22, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``constructor as argument is a FuncOrConstructor``() =
@@ -477,7 +477,7 @@ let ``constructor as argument is a FuncOrConstructor``() =
 module TopLevel
 let _ = x.func (DateTime())
 """ 
-    ==> [2, 17, Some FunctionOrValue]
+    ==> [2, 17, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``type in match is a FunctionOrConstructor``() =
@@ -487,7 +487,7 @@ let _ =
     match 1 with
     | Case1 -> DateTime.Now
 """ 
-    ==> [4, 17, Some FunctionOrValue]
+    ==> [4, 17, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``DU type in match is a Type``() =
@@ -510,7 +510,7 @@ type R = {
 let _ = new Task<_>()
 let _ = { Field = new Task<_>() }
 """ 
-    ==> [2, 9, Some FunctionOrValue
+    ==> [2, 9, Some (FunctionOrValue false)
          4, 12, Some Type
          6, 13, Some Type
          7, 23, Some Type]
@@ -540,8 +540,8 @@ let x: IMy<_, _, _> = upcast My(arg)
 type T() =
     let x: IMy<_, _, _> = upcast My(arg)
 """ 
-    ==> [2, 30, Some FunctionOrValue
-         4, 34, Some FunctionOrValue]
+    ==> [2, 30, Some (FunctionOrValue false)
+         4, 34, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``open declaration is not an entity``() =
@@ -606,7 +606,7 @@ let ``module top level do expression is FunctionOrValue``() =
     """
 DateTime
 """ 
-    ==> [1, 1, Some EntityKind.FunctionOrValue]
+    ==> [1, 1, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``second and subsequent parts in long ident is not an entity``() =

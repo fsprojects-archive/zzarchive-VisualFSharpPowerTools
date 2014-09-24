@@ -11,7 +11,7 @@ type ModuleKind = { IsAutoOpen: bool; HasModuleSuffix: bool }
 type EntityKind =
     | Attribute
     | Type
-    | FunctionOrValue
+    | FunctionOrValue of isActivePattern:bool
     | Module of ModuleKind
     override x.ToString() = sprintf "%A" x
 
@@ -171,7 +171,7 @@ module AssemblyContentProvider =
                                           TopRequireQualifiedAccessParent = 
                                               currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
                                           AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
-                                          Kind = EntityKind.FunctionOrValue })
+                                          Kind = EntityKind.FunctionOrValue func.IsActivePattern })
                             | None -> ()
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
