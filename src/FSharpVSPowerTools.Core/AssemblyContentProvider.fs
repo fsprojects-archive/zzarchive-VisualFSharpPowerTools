@@ -145,15 +145,33 @@ module AssemblyContentProvider =
                         for func in entity.MembersFunctionsAndValues do
                             match func.TryGetFullDisplayName() with
                             | Some displayName ->
-                                yield
-                                    { FullName = func.FullName
-                                      CleanedIdents = displayName.Split '.' |> currentParent.FixParentModuleSuffix
-                                      Namespace = ns
-                                      IsPublic = func.Accessibility.IsPublic
-                                      TopRequireQualifiedAccessParent = 
-                                          currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
-                                      AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
-                                      Kind = EntityKind.FunctionOrValue }
+                                if displayName = "SourceCodeClassifierTests.M.( |Pattern|_| )" then
+                                    debug "!!!"
+                                
+                                let cleanIdentsList =
+                                    let rawIdents = displayName.Split '.'
+
+                                    if func.IsActivePattern then
+                                        func.CompiledName.Split([|'|'|], StringSplitOptions.RemoveEmptyEntries)
+                                        |> Array.filter ((<>) "_")
+                                        |> Array.map (fun patternCase ->
+                                            rawIdents |> Array.replace (rawIdents.Length - 1) patternCase)
+                                    else
+                                        [| rawIdents |]
+                                
+                                let fullName = func.GetFullCompiledNameIdents()
+
+                                yield!
+                                    cleanIdentsList
+                                    |> Array.map (fun cleanIdents ->
+                                        { FullName = func.GetFullCompiledNameIdents() |> String.concat "."
+                                          CleanedIdents = currentParent.FixParentModuleSuffix cleanIdents
+                                          Namespace = ns
+                                          IsPublic = func.Accessibility.IsPublic
+                                          TopRequireQualifiedAccessParent = 
+                                              currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
+                                          AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
+                                          Kind = EntityKind.FunctionOrValue })
                             | None -> ()
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do

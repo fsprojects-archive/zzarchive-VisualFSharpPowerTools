@@ -82,6 +82,7 @@ module TypedAstExtensionHelpers =
     type FSharpMemberFunctionOrValue with
         // FullType may fail with exception (see https://github.com/fsharp/fsharp/issues/307). 
         member x.FullTypeSafe = Option.attempt (fun _ -> x.FullType)
+
         member x.TryGetFullDisplayName() =
             let fullName = Option.attempt (fun _ -> x.FullName.Split '.')
             match fullName with
@@ -92,6 +93,17 @@ module TypedAstExtensionHelpers =
                 | _ -> Some fullName
             | None -> None
             |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
+
+        member x.GetFullCompiledNameIdents() =
+            // For operator ++ displayName is ( ++ ) compiledName is op_PlusPlus
+            // For active pattern (|Pattern|_|) compiled name is |Pattern|_|
+            if (x.IsActivePattern || isOperator x.DisplayName) && x.DisplayName <> x.CompiledName then
+                Option.attempt (fun _ -> x.EnclosingEntity)
+                |> Option.bind (fun e -> e.TryGetFullName())
+                |> Option.map (fun enclosingEntityFullName -> 
+                    [| enclosingEntityFullName + "." + x.CompiledName|])
+            else None
+            |> Option.getOrElse (x.FullName.Split '.')
 
     type FSharpAssemblySignature with
         member x.TryGetEntities() = try x.Entities :> _ seq with _ -> Seq.empty
