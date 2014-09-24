@@ -145,9 +145,6 @@ module AssemblyContentProvider =
                         for func in entity.MembersFunctionsAndValues do
                             match func.TryGetFullDisplayName() with
                             | Some displayName ->
-                                if displayName = "SourceCodeClassifierTests.M.( |Pattern|_| )" then
-                                    debug "!!!"
-                                
                                 let fullNameAndIdents =
                                     let rawIdents = displayName.Split '.'
 
@@ -159,8 +156,6 @@ module AssemblyContentProvider =
                                              idents |> String.concat ".", idents)
                                     else [| func.FullName, rawIdents |]
                                 
-                                //let fullName = func.GetFullCompiledNameIdents()
-
                                 yield!
                                     fullNameAndIdents
                                     |> Array.map (fun (fullName, cleanIdents) ->

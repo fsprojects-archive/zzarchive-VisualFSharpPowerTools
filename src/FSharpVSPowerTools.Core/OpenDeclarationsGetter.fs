@@ -152,10 +152,10 @@ module OpenDeclarationGetter =
                             (qualifyOpenDeclarations: Line -> EndColumn -> Idents -> RawOpenDeclaration list) =
         match ast, entities with
         | Some (ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _))), Some entities ->
-            let autoOpenModules = getAutoOpenModules entities
-            let activePatterns = getActivePatterns entities
+            let autoOpenModulesAndActivePatterns = 
+                getAutoOpenModules entities @ getActivePatterns entities
             //debug "All AutoOpen modules: %A" autoOpenModules
-
+             
             let rec walkModuleOrNamespace acc (decls, moduleRange) =
                 let openStatements =
                     decls
@@ -213,7 +213,7 @@ module OpenDeclarationGetter =
 
                             let rec loop acc maxLength =
                                 let newModules =
-                                    (autoOpenModules @ activePatterns)
+                                    autoOpenModulesAndActivePatterns
                                     |> List.filter (fun autoOpenModule -> 
                                         autoOpenModule.Length = maxLength + 1
                                         && acc |> List.exists (fun collectedAutoOpenModule ->

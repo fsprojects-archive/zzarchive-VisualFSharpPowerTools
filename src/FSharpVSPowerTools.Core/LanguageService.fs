@@ -414,8 +414,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
             let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
 
-            let allFullNames = fsharpSymbolsUses |> Array.map (fun x -> x.Symbol.FullName)
-
             let allSymbolsUses =
                 fsharpSymbolsUses
                 |> Array.map (fun symbolUse -> 
