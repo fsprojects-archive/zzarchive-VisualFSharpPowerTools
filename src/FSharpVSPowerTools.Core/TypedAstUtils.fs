@@ -48,7 +48,8 @@ module internal TypedAstUtils =
 
     let isOperator (name: string) =
         name.StartsWith "( " && name.EndsWith " )" && name.Length > 4
-            && name.Substring (2, name.Length - 4) |> String.forall ((<>) ' ')
+            && name.Substring (2, name.Length - 4) 
+               |> String.forall (fun c -> c <> ' ' && not (Char.IsLetter c))
 
     let private UnnamedUnionFieldRegex = Regex("^Item(\d+)?$", RegexOptions.Compiled)
     let isUnnamedUnionCaseField (field: FSharpField) = UnnamedUnionFieldRegex.IsMatch(field.Name)
@@ -94,16 +95,14 @@ module TypedAstExtensionHelpers =
             | None -> None
             |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
 
-        member x.GetFullCompiledNameIdents() =
+        member x.TryGetFullCompiledOperatorNameIdents() =
             // For operator ++ displayName is ( ++ ) compiledName is op_PlusPlus
-            // For active pattern (|Pattern|_|) compiled name is |Pattern|_|
-            if (x.IsActivePattern || isOperator x.DisplayName) && x.DisplayName <> x.CompiledName then
+            if isOperator x.DisplayName && x.DisplayName <> x.CompiledName then
                 Option.attempt (fun _ -> x.EnclosingEntity)
                 |> Option.bind (fun e -> e.TryGetFullName())
                 |> Option.map (fun enclosingEntityFullName -> 
                     [| enclosingEntityFullName + "." + x.CompiledName|])
             else None
-            |> Option.getOrElse (x.FullName.Split '.')
 
     type FSharpAssemblySignature with
         member x.TryGetEntities() = try x.Entities :> _ seq with _ -> Seq.empty
