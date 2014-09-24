@@ -454,7 +454,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                         Some [|String.Join (".", fullNameWithoutClassName)|]
                                     else None
                                 | _ -> None
-                        // Operators and active patterns
+                        // Operators
                         | MemberFunctionOrValue func ->
                             match func with
                             | Constructor _ -> None
