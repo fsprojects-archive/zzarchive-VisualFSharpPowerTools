@@ -477,12 +477,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                     if idents.Length > 1 then
                                         yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
                                  |]   
-                        | ActivePatternCase _ ->
-                            let symbolFullName = symbolUse.Symbol.FullName
-                            //let caseFullName = case.FullName
-                            let idents = symbolFullName.Split '.'
-                            let patternFullName = idents.[..idents.Length - 2]
-                            Some patternFullName
                         |  _ -> None
                         |> Option.getOrElse [|symbolUse.Symbol.FullName|]
                         |> Array.map (fun fullName -> fullName.Split '.')
