@@ -414,6 +414,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
             let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
 
+            let allFullNames = fsharpSymbolsUses |> Array.map (fun x -> x.Symbol.FullName)
+
             let allSymbolsUses =
                 fsharpSymbolsUses
                 |> Array.map (fun symbolUse -> 
@@ -452,11 +454,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                         Some [|String.Join (".", fullNameWithoutClassName)|]
                                     else None
                                 | _ -> None
-                        // Operators
+                        // Operators and active patterns
                         | MemberFunctionOrValue func ->
                             match func with
                             | Constructor _ -> None
-                            | _ -> Some (func.GetFullCompiledNameIdents())
+                            | _ -> func.TryGetFullCompiledOperatorNameIdents()
                         | Entity e ->
                             match e with
                             | e, TypedAstPatterns.Attribute, _ ->
@@ -475,6 +477,12 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                     if idents.Length > 1 then
                                         yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
                                  |]   
+                        | ActivePatternCase _ ->
+                            let symbolFullName = symbolUse.Symbol.FullName
+                            //let caseFullName = case.FullName
+                            let idents = symbolFullName.Split '.'
+                            let patternFullName = idents.[..idents.Length - 2]
+                            Some patternFullName
                         |  _ -> None
                         |> Option.getOrElse [|symbolUse.Symbol.FullName|]
                         |> Array.map (fun fullName -> fullName.Split '.')

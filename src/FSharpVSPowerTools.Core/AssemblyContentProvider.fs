@@ -148,23 +148,23 @@ module AssemblyContentProvider =
                                 if displayName = "SourceCodeClassifierTests.M.( |Pattern|_| )" then
                                     debug "!!!"
                                 
-                                let cleanIdentsList =
+                                let fullNameAndIdents =
                                     let rawIdents = displayName.Split '.'
 
-                                    if func.IsActivePattern then
+                                    if false && func.IsActivePattern then
                                         func.CompiledName.Split([|'|'|], StringSplitOptions.RemoveEmptyEntries)
                                         |> Array.filter ((<>) "_")
                                         |> Array.map (fun patternCase ->
-                                            rawIdents |> Array.replace (rawIdents.Length - 1) patternCase)
-                                    else
-                                        [| rawIdents |]
+                                             let idents = Array.append rawIdents [| patternCase |]
+                                             idents |> String.concat ".", idents)
+                                    else [| func.FullName, rawIdents |]
                                 
-                                let fullName = func.GetFullCompiledNameIdents()
+                                //let fullName = func.GetFullCompiledNameIdents()
 
                                 yield!
-                                    cleanIdentsList
-                                    |> Array.map (fun cleanIdents ->
-                                        { FullName = func.GetFullCompiledNameIdents() |> String.concat "."
+                                    fullNameAndIdents
+                                    |> Array.map (fun (fullName, cleanIdents) ->
+                                        { FullName = fullName
                                           CleanedIdents = currentParent.FixParentModuleSuffix cleanIdents
                                           Namespace = ns
                                           IsPublic = func.Accessibility.IsPublic

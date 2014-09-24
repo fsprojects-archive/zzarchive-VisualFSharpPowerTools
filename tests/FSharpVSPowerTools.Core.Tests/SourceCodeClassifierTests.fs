@@ -1389,8 +1389,8 @@ let f (x: IClass) = (x :> IInterface).Property
 let ``active patterns should be taken into account``() =
     """
 module M = 
-    let (|Pattern|_|) x = Some x
+    let (|Pattern|_|) _ = Some()
 open M
-let Pattern x = x
+let f (Pattern _) = ()
 """
     => [ 4, []]

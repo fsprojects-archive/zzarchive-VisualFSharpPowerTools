@@ -316,7 +316,7 @@ module SourceCodeClassifier =
             | None -> symbolUses
 
         let printSymbolUses msg (symbolUses: SymbolUse[]) =
-            debug "[SourceCodeClassifier] %s SymbolUses:" msg
+            debug "[SourceCodeClassifier] %s SymbolUses:\n" msg
             for sUse in symbolUses do
                 let r = sUse.SymbolUse.RangeAlternate
                 debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames r.StartLine r.StartColumn r.EndLine r.EndColumn
@@ -340,7 +340,7 @@ module SourceCodeClassifier =
                          | prefix -> Some (sUseRange, prefix)))) 
             |> Array.concat
 
-        debug "[SourceCodeClassifier] Symbols prefixes: %A, Open declarations: %A" symbolPrefixes openDeclarations
+        debug "[SourceCodeClassifier] Symbols prefixes:\n%A,\nOpen declarations:\n%A" symbolPrefixes openDeclarations
         
         let openDeclarations = 
             Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->
