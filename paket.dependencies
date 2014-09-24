@@ -11,3 +11,4 @@ nuget FsXaml.Wpf
 nuget FsCheck
 nuget NUnit
 nuget Foq
+nuget Nuget.CommandLine
