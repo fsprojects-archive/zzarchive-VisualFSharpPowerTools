@@ -11,7 +11,7 @@ type ModuleKind = { IsAutoOpen: bool; HasModuleSuffix: bool }
 type EntityKind =
     | Attribute
     | Type
-    | FunctionOrValue
+    | FunctionOrValue of isActivePattern:bool
     | Module of ModuleKind
     override x.ToString() = sprintf "%A" x
 
@@ -145,15 +145,28 @@ module AssemblyContentProvider =
                         for func in entity.MembersFunctionsAndValues do
                             match func.TryGetFullDisplayName() with
                             | Some displayName ->
-                                yield
-                                    { FullName = func.FullName
-                                      CleanedIdents = displayName.Split '.' |> currentParent.FixParentModuleSuffix
-                                      Namespace = ns
-                                      IsPublic = func.Accessibility.IsPublic
-                                      TopRequireQualifiedAccessParent = 
-                                          currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
-                                      AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
-                                      Kind = EntityKind.FunctionOrValue }
+                                let fullNameAndIdents =
+                                    let rawIdents = displayName.Split '.'
+
+                                    if false && func.IsActivePattern then
+                                        func.CompiledName.Split([|'|'|], StringSplitOptions.RemoveEmptyEntries)
+                                        |> Array.filter ((<>) "_")
+                                        |> Array.map (fun patternCase ->
+                                             let idents = Array.append rawIdents [| patternCase |]
+                                             idents |> String.concat ".", idents)
+                                    else [| func.FullName, rawIdents |]
+                                
+                                yield!
+                                    fullNameAndIdents
+                                    |> Array.map (fun (fullName, cleanIdents) ->
+                                        { FullName = fullName
+                                          CleanedIdents = currentParent.FixParentModuleSuffix cleanIdents
+                                          Namespace = ns
+                                          IsPublic = func.Accessibility.IsPublic
+                                          TopRequireQualifiedAccessParent = 
+                                              currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
+                                          AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
+                                          Kind = EntityKind.FunctionOrValue func.IsActivePattern })
                             | None -> ()
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do

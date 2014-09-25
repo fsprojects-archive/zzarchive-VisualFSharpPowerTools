@@ -456,14 +456,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         | MemberFunctionOrValue func ->
                             match func with
                             | Constructor _ -> None
-                            | _ ->
-                                // For operator ++ displayName = ( ++ ), compiledName = op_PlusPlus
-                                if TypedAstUtils.isOperator func.DisplayName && func.DisplayName <> func.CompiledName then
-                                    Option.attempt (fun _ -> func.EnclosingEntity)
-                                    |> Option.bind (fun e -> e.TryGetFullName())
-                                    |> Option.map (fun enclosingEntityFullName -> 
-                                        [| enclosingEntityFullName + "." + func.CompiledName|])
-                                else None
+                            | _ -> func.TryGetFullCompiledOperatorNameIdents()
                         | Entity e ->
                             match e with
                             | e, TypedAstPatterns.Attribute, _ ->
@@ -572,5 +565,5 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)
         }
 
-    member x.SetCriticalErrorHandler func = 
+    member __.SetCriticalErrorHandler func = 
         errorHandler <- Some func

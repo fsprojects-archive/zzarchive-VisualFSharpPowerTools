@@ -51,6 +51,14 @@ module OpenDeclarationGetter =
              | _ -> false)
         |> List.map (fun e -> e.CleanedIdents)
 
+    let getActivePatterns entities =
+        entities 
+        |> List.filter (fun e -> 
+             match e.Kind with
+             | EntityKind.FunctionOrValue true -> true
+             | _ -> false)
+        |> List.map (fun e -> e.CleanedIdents)
+
     let parseTooltip (ToolTipText elems): RawOpenDeclaration list =
         elems
         |> List.map (fun e -> 
@@ -144,9 +152,10 @@ module OpenDeclarationGetter =
                             (qualifyOpenDeclarations: Line -> EndColumn -> Idents -> RawOpenDeclaration list) =
         match ast, entities with
         | Some (ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _))), Some entities ->
-            let autoOpenModules = getAutoOpenModules entities
+            let autoOpenModulesAndActivePatterns = 
+                getAutoOpenModules entities @ getActivePatterns entities
             //debug "All AutoOpen modules: %A" autoOpenModules
-
+             
             let rec walkModuleOrNamespace acc (decls, moduleRange) =
                 let openStatements =
                     decls
@@ -204,7 +213,7 @@ module OpenDeclarationGetter =
 
                             let rec loop acc maxLength =
                                 let newModules =
-                                    autoOpenModules
+                                    autoOpenModulesAndActivePatterns
                                     |> List.filter (fun autoOpenModule -> 
                                         autoOpenModule.Length = maxLength + 1
                                         && acc |> List.exists (fun collectedAutoOpenModule ->

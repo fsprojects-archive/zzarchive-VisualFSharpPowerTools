@@ -58,6 +58,11 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         let entities =
             languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             |> Async.RunSynchronously
+
+//        entities |> Option.iter (fun es ->
+//            using (new StreamWriter(@"L:\_entities_.txt")) <| fun w ->
+//                es |> List.iter (fun e -> w.WriteLine (sprintf "%A" e)))
+
         let qualifyOpenDeclarations line endColumn idents = 
             let lineStr = sourceLines.[line - 1]
             languageService.GetIdentTooltip (line, endColumn, lineStr, Array.toList idents, opts, fileName, source)
@@ -1344,6 +1349,7 @@ module Module =
 """
     => [ 3, [Category.Unused, 9, 26]]
 
+[<Test>]
 let ``record fields should be taken into account``() = 
     """
 module M1 =
@@ -1354,6 +1360,7 @@ module M2 =
 """
     => [ 5, []]
 
+[<Test>]
 let ``handle type alias``() = 
     """
 module TypeAlias =
@@ -1364,6 +1371,7 @@ module Usage =
 """
     => [ 5, []]
 
+[<Test>]
 let ``handle override members``() = 
     """
 type IInterface =
@@ -1377,3 +1385,32 @@ let f (x: IClass) = (x :> IInterface).Property
 """
     => [ 7, []]
 
+[<Test>]
+let ``active pattern cases should be taken into account``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let f (Pattern _) = ()
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``active patterns applied as a function should be taken into account``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let _ = (|Pattern|_|) ()
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``not used active pattern does not make the module in which it's defined to not mark as unused``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let _ = 1
+"""
+    => [ 4, [ Category.Unused, 5, 6 ]]
