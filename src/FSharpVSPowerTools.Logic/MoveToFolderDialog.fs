@@ -25,10 +25,9 @@ type MoveToFolderDialogModel(resources: MoveToFolderDialogResources) as self =
             | None -> Some Resource.validatingEmptyName
             | Some f ->
                 match f.Name with
-                    | null -> Some Resource.validatingEmptyName
-                    | "" -> Some Resource.validatingEmptyName
+                    | n when System.String.IsNullOrEmpty(n) -> Some Resource.validatingEmptyName
                     | _ -> resources.FileNames
-                            |> List.map(fun fn -> Path.Combine(f.FullPath, fn))
+                            |> List.map (fun fn -> Path.Combine(f.FullPath, fn))
                             |> List.filter File.Exists
                             |> function
                                | [] -> None
