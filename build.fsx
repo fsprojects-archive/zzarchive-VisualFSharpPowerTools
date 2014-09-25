@@ -3,10 +3,12 @@
 // --------------------------------------------------------------------------------------
 
 #r @"packages/FAKE/tools/FakeLib.dll"
+#r @"packages/Octokit/lib/net45/Octokit.dll"
 open Fake 
 open Fake.Git
 open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
+open Octokit
 open System
 open System.IO
 open System.Text.RegularExpressions
@@ -41,7 +43,9 @@ let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted 
-let gitHome = "https://github.com/fsprojects"
+let gitOwner = "fsprojects"
+let gitHome = "https://github.com/" + gitOwner
+
 // The name of the project on GitHub
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
@@ -187,17 +191,72 @@ Target "ReleaseDocs" (fun _ ->
     fullclean tempDocsDir
     CopyRecursive "docs/output" tempDocsDir true |> tracefn "%A"
     StageAll tempDocsDir
-    Commit tempDocsDir (sprintf "[skip ci] Update generated documentation for version %s" release.NugetVersion)
+    Git.Commit.Commit tempDocsDir (sprintf "[skip ci] Update generated documentation for version %s" release.NugetVersion)
     Branches.push tempDocsDir
 )
 
+type Draft = 
+    { Client : GitHubClient
+      DraftRelease : Release }
+
+let createClient user password = 
+    async { 
+        let github = new GitHubClient(new ProductHeaderValue("FAKE"))
+        github.Credentials <- Credentials(user, password)
+        return github
+    }
+
+let createDraft owner project releaseNotes (client : Async<GitHubClient>) = 
+    async { 
+        let data = new ReleaseUpdate(releaseNotes.NugetVersion)
+        data.Name <- releaseNotes.NugetVersion
+        data.Body <- toLines releaseNotes.Notes
+        data.Draft <- true
+        data.Prerelease <- false
+        let! client' = client
+        let! draft = Async.AwaitTask <| client'.Release.Create(owner, project, data)
+        tracefn "Created draft release id %d" draft.Id
+        return { Client = client'
+                 DraftRelease = draft }
+    }
+
+let uploadFile fileName (draft : Async<Draft>) = 
+    async { 
+        let fi = FileInfo(fileName)
+        let archiveContents = File.OpenRead(fi.FullName)
+        let assetUpload = new ReleaseAssetUpload()
+        assetUpload.FileName <- fi.Name
+        assetUpload.ContentType <- "application/octet-stream"
+        assetUpload.RawData <- archiveContents
+        let! draft' = draft
+        let! asset = Async.AwaitTask <| draft'.Client.Release.UploadAsset(draft'.DraftRelease, assetUpload)
+        tracefn "Uploaded %s" asset.Name
+        return draft'
+    }
+
+let releaseDraft (draft : Async<Draft>) = 
+    async { 
+        let! draft' = draft
+        let update = draft'.DraftRelease.ToUpdate()
+        update.Draft <- false
+        let! released = Async.AwaitTask <| draft'.Client.Release.Edit(gitOwner, gitName, draft'.DraftRelease.Id, update)
+        tracefn "Released %d on github" released.Id
+    }
+
 Target "Release" (fun _ ->
     StageAll ""
-    Commit "" (sprintf "Bump version to %s" release.NugetVersion)
+    Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
     Branches.push ""
 
     Branches.tag "" release.NugetVersion
     Branches.pushTag "" "origin" release.NugetVersion
+
+    // release on github
+    createClient (getBuildParamOrDefault "github-user" "") (getBuildParamOrDefault "github-pw" "")
+    |> createDraft gitOwner gitName release
+    |> uploadFile "./bin/FSharpVSPowerTools.vsix"
+    |> releaseDraft
+    |> Async.RunSynchronously
 )
 
 // --------------------------------------------------------------------------------------

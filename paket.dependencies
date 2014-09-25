@@ -1,6 +1,7 @@
 source http://nuget.org/api/v2
 
 nuget FAKE
+nuget Octokit
 nuget NUnit.Runners
 nuget FSharp.Formatting
 nuget FSharp.Compiler.Service
