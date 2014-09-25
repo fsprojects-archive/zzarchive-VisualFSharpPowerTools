@@ -321,7 +321,7 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
         | FSharpModule -> writeModule false ctx entity
         | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
         | FSharpException -> writeFSharpExceptionType ctx entity
-        | Delegate -> writeDelegateType ctx entity
+        | Delegate when entity.IsFSharp -> writeDelegateType ctx entity
         | _ -> writeType ctx entity
 
         ctx.Writer.WriteLine("")
@@ -393,7 +393,7 @@ and internal writeType ctx (typ: FSharpEntity) =
     try
         match typ.BaseType with
         | Some(TypeWithDefinition(baseTypDef) as baseTyp) when baseTypDef.DisplayName <> "obj" ->
-            if not (typ.IsValueType || typ.IsEnum) then
+            if not (typ.IsValueType || typ.IsEnum || typ.IsDelegate || typ.IsArrayType) then
                 ctx.Writer.WriteLine("inherit {0}", baseTyp.Format(ctx.DisplayContext))
         | _ -> ()
     with _ -> ()
@@ -678,7 +678,7 @@ let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
             | FSharpModule -> writeModule true ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
             | FSharpException -> writeFSharpExceptionType ctx entity
-            | Delegate -> writeDelegateType ctx entity
+            | Delegate when entity.IsFSharp -> writeDelegateType ctx entity
             | _ -> writeType ctx entity
             |> Some
         | MemberFunctionOrValue mem ->

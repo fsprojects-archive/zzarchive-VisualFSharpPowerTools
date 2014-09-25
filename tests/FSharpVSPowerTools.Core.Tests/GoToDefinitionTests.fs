@@ -1049,7 +1049,6 @@ type MyClass<'T when 'T : (member ``A property`` : int)> =
 """
     ]
 
-// TODO: deactivate provided erased types metadata generation
 // TODO: fix abbreviation metadata generation (it should be put inside a module or a namespace)
 
 // Tests to add:
