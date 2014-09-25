@@ -81,9 +81,7 @@ Target "AssemblyInfo" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
-// Clean build results & restore NuGet packages
-
-Target "RestorePackages" RestorePackages
+// Clean build results
 
 Target "Clean" (fun _ ->
     CleanDirs ["bin"; "bin/vsix"; "temp"; "nuget"]
@@ -165,7 +163,6 @@ Target "NuGet" (fun _ ->
             ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
             Tags = tags
             OutputPath = "bin"
-            ToolPath = ".nuget/nuget.exe"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = true
             Dependencies = ["FSharp.Compiler.Service", fcsVersion] })
@@ -212,7 +209,6 @@ Target "All" DoNothing
 
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
-  ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
   ==> "BuildTests"
