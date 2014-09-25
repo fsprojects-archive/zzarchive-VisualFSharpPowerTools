@@ -1019,8 +1019,34 @@ type MyClass<'T when 'T : (member Create : int * 'T -> 'T)> =
 """
     ]
 
+[<Test>]
+let ``handle double-backtick identifiers on member constraints`` () =
+    [
+        """open System
+type MyClass<'T when 'T : (static member ``A static member`` : unit -> 'T)> =
+    class end
+"""
+
+        """open System
+type MyClass<'T when 'T : (member ``A property`` : int)> =
+    class end
+"""
+    ] 
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
+    |> assertSrcSeqAreEqual [
+        """type MyClass< ^T when ^T : (static member ``A static member`` : unit ->  ^T)> =
+    class
+    end
+"""
+
+        """type MyClass< ^T when ^T : (member ``get_A property`` :  ^T -> int)> =
+    class
+    end
+"""
+    ]
+
 // BUG: demangle operator name doesn't escape names with spaces
-// TODO: special formatting for instance member constraints
+// TODO: special formatting for instance member static constraints
 // TODO: special formatting for properties??
 
 // Tests to add:
