@@ -88,7 +88,7 @@ let private isStaticallyResolved (param: FSharpGenericParameter) =
     param.Constraints
     |> Seq.exists (fun c -> c.IsMemberConstraint)
 
-let private formatValueOrMember name =
+let private formatValueOrMemberName name =
     let applyRightIfIdentical f (x, x') =
         if x = x' then x, f x else x, x'
 
@@ -108,7 +108,7 @@ let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstrain
         yield
             sprintf "%smember %s"
                 (if c.MemberIsStatic then "static " else "")
-                (formatValueOrMember c.MemberName)
+                (formatValueOrMemberName c.MemberName)
         yield " : "
         yield
             if c.MemberArgumentTypes.Count = 0
@@ -207,10 +207,12 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
                             let formattedTypeName = formatParamTypeName param
 
                             match param.Name with
-                            | Some paramName when not param.IsOptionalArg ->
-                                yield sprintf "%s:%s" paramName formattedTypeName
                             | Some paramName ->
-                                yield sprintf "?%s:%s" paramName formattedTypeName
+                                let paramName = QuoteIdentifierIfNeeded paramName
+                                if param.IsOptionalArg then
+                                    yield sprintf "?%s:%s" paramName formattedTypeName
+                                else
+                                    yield sprintf "%s:%s" paramName formattedTypeName
                             | None -> yield formattedTypeName
                     |]
                     |> String.concat " * "
@@ -488,10 +490,10 @@ and internal writeUnionCase ctx (case: FSharpUnionCase) =
         ctx.Writer.Write("| ")
         ctx.Writer.Indent(2)
         writeAttributes ctx None case.Attributes
-        ctx.Writer.Write(formatValueOrMember case.Name)
+        ctx.Writer.Write(formatValueOrMemberName case.Name)
         ctx.Writer.Unindent(2)
     else
-        ctx.Writer.Write("| {0}", formatValueOrMember case.Name)
+        ctx.Writer.Write("| {0}", formatValueOrMemberName case.Name)
 
     if case.UnionCaseFields.Count > 0 then
         case.UnionCaseFields
@@ -564,7 +566,7 @@ and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
     writeDocs ctx value.XmlDoc
 
     let constraints = getConstraints ctx.DisplayContext value.GenericParameters
-    let valueName = formatValueOrMember value.LogicalName
+    let valueName = formatValueOrMemberName value.LogicalName
 
     if value.FullType.IsFunctionType then
         let inlineSpecifier =
@@ -626,7 +628,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         ctx.Writer.WriteLine("{0} {1}{2} : {3}{4}{5}",
                              memberType,
                              inlineAnnotation,
-                             formatValueOrMember mem.LogicalName,
+                             formatValueOrMemberName mem.LogicalName,
                              generateSignature ctx mem,
                              propertyType,
                              constraints)

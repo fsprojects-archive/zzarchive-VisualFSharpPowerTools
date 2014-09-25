@@ -932,7 +932,8 @@ let ``double-backtick identifiers are supported`` () =
     member __.``a method``() = ()""", Pos.fromZ 0 5
 
         """module ``My module``
-let ``a value`` = 0""", Pos.fromZ 0 9
+let ``a value`` = 0
+let f (``a param``: int) = ``a param`` * 2""", Pos.fromZ 0 9
 
         """type ``My abbrev`` = int""", Pos.fromZ 0 5
 
@@ -956,6 +957,7 @@ let ``a value`` = 0""", Pos.fromZ 0 9
 
         """module ``My module``
 val ``a value`` : int
+val f : ``a param``:int -> int
 """
 
         """type ``My abbrev`` = int
