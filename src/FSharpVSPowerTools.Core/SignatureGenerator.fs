@@ -615,10 +615,17 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
             elif mem.HasSetterMethod then " with set"
             else ""
 
+        let inlineAnnotation =
+            match mem.InlineAnnotation with
+            | FSharpInlineAnnotation.AlwaysInline
+            | FSharpInlineAnnotation.PseudoValue -> "inline "
+            | _ -> ""
+
         let constraints = getConstraints ctx.DisplayContext mem.GenericParameters
 
-        ctx.Writer.WriteLine("{0} {1} : {2}{3}{4}",
+        ctx.Writer.WriteLine("{0} {1}{2} : {3}{4}{5}",
                              memberType,
+                             inlineAnnotation,
                              formatValueOrMember mem.LogicalName,
                              generateSignature ctx mem,
                              propertyType,

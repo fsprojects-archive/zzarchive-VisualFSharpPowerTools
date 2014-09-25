@@ -1005,6 +1005,13 @@ type MyClass<'T when 'T : (static member Create : unit -> 'T) and 'T : (member P
 type MyClass<'T when 'T : (member Create : int * 'T -> 'T)> =
     class end
 """
+
+        """open System
+type MyClass() =
+    member inline __.Method< ^T when ^T : (member ConstraintMethod : unit -> unit)>(t : ^T) = ()
+    static member inline StaticMethod< ^T when ^T : (static member Create : unit -> ^T)>() =
+        (^T : (static member Create : unit -> ^T) ())
+"""
     ] 
     |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
     |> assertSrcSeqAreEqual [
@@ -1045,8 +1052,6 @@ type MyClass<'T when 'T : (member ``A property`` : int)> =
 """
     ]
 
-// BUG: demangle operator name doesn't escape names with spaces
-// TODO: special formatting for instance member static constraints
 // TODO: special formatting for properties??
 
 // Tests to add:
