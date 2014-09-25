@@ -648,27 +648,6 @@ module Parallel =
 
 """
 
-[<Test; Ignore("activate when static constraints are supported")>]
-let ``handle static constraints on module functions`` () =
-    """
-let inline func x = x + x"""
-    |> generateDefinitionFromPos (Pos.fromZ 1 11)
-    |> assertSrcAreEqual """
-    val inline inlineFunc : x: ^a ->  ^b when  ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
-"""
-
-[<Test; Ignore("activate when static constraints are supported")>]
-let ``handle static constraints on members`` () =
-    """
-type MyClass() =
-    member inline __.Test x = x + x
-"""
-    |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyClass =
-    new : unit -> MyClass
-    member Test : x: ^a ->  ^b when  ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
-"""
-
 [<Test>]
 let ``handle record extension members`` () =
     """
