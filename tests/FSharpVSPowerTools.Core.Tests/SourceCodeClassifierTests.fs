@@ -1386,7 +1386,7 @@ let f (x: IClass) = (x :> IInterface).Property
     => [ 7, []]
 
 [<Test>]
-let ``active patterns should be taken into account``() =
+let ``active pattern cases should be taken into account``() =
     """
 module M = 
     let (|Pattern|_|) _ = Some()
@@ -1394,3 +1394,23 @@ open M
 let f (Pattern _) = ()
 """
     => [ 4, []]
+
+[<Test>]
+let ``active patterns applied as a function should be taken into account``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let _ = (|Pattern|_|) ()
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``not used active pattern does not make the module in which it's defined to not mark as unused``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let _ = 1
+"""
+    => [ 4, [ Category.Unused, 5, 6 ]]
