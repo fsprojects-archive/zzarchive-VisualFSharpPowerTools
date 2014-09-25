@@ -7,7 +7,7 @@ open System
 let newlines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
 let defaultOptions = [| { Comment = "TODO"; Priority = 2 } |]
 
-let inline (=>) (options, srcFile, srcLines) (expected: (int * string * string * int * int)[]) =
+let (=>) (options, srcFile, srcLines) (expected: (int * string * string * int * int)[]) =
     let expectedRecords =
         expected
         |> Array.map (fun (pri, text, file, line, col) ->
@@ -28,9 +28,18 @@ let ``should match token case-insensitively``() =
     => [| (2, "tODo something", "File1.fs", 0, 3) |]
 
 [<Test>]
-let ``should only match single line comments starting with //``() = 
-    (defaultOptions, "File1.fs", [| "(* TODO something *)" |])
-    => [||]
+let ``should match multiline comments``() = 
+    let lines = "(* TODO x *)(* TODO y *) let x = 1
+                 (*
+                 TODO other things
+                 *)".Split(newlines, StringSplitOptions.None)
+
+    (defaultOptions, "File1.fs", lines)
+    => [|
+        (2, "TODO x", "File1.fs", 0, 3)
+        (2, "TODO y", "File1.fs", 0, 15)
+        (2, "TODO other things", "File1.fs", 2, 17)
+       |]
 
 [<Test>]
 let ``only the first task list comment per line is taken``() = 
@@ -43,7 +52,7 @@ let ``task list comments only allow asterisk, backslash, or whitespace between /
     => [| (2, "TODO stuff", "File1.fs", 0, 9) |]
 
 [<Test>]
-let ``tokens can only be immediately followed by chars other than space that aren't alfanumeric or underscore``() = 
+let ``tokens can only be immediately followed by chars other than space that aren't alphanumeric or underscore``() = 
     (defaultOptions, "File1.fs", [| "// TODO(-e_3 something"
                                     "// TODO_ something else"
                                     "// TODO1 something else"
@@ -61,5 +70,6 @@ let ``comments within strings are not considered``() =
                  let str2 = \"
                      // TODO other stuff
                  \"".Split(newlines, StringSplitOptions.None)
+
     (defaultOptions, "File1.fs", lines)
     => [||]
