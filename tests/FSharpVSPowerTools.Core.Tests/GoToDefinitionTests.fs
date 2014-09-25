@@ -1049,8 +1049,8 @@ type MyClass<'T when 'T : (member ``A property`` : int)> =
 """
     ]
 
-// TODO: temporarily skip attributes if they contains an enum value as a parameter
 // TODO: deactivate provided erased types metadata generation
+// TODO: fix abbreviation metadata generation (it should be put inside a module or a namespace)
 
 // Tests to add:
 // TODO: class method arguments attributes
