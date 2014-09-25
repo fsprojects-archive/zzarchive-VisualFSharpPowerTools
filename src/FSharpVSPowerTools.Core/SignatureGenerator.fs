@@ -15,10 +15,10 @@ type internal Context = {
     DisplayContext: FSharpDisplayContext
 }
 
-let internal hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
+let private hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
     mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0
 
-let internal mustAppearAsAbstractMember (mem: FSharpMemberFunctionOrValue) =
+let private mustAppearAsAbstractMember (mem: FSharpMemberFunctionOrValue) =
     let enclosingEntityIsFSharpClass = mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp
 
     if mem.IsDispatchSlot then
@@ -27,6 +27,12 @@ let internal mustAppearAsAbstractMember (mem: FSharpMemberFunctionOrValue) =
         | _ -> enclosingEntityIsFSharpClass 
     else
         false
+
+let private needsInlineAnnotation (mem: FSharpMemberFunctionOrValue) =
+    match mem.InlineAnnotation with
+    | FSharpInlineAnnotation.AlwaysInline
+    | FSharpInlineAnnotation.PseudoValue -> true
+    | _ -> false
 
 [<NoComparison>]
 type private MembersPartition = {
@@ -583,11 +589,7 @@ and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
     let valueName = formatValueOrMemberName value.LogicalName
 
     if value.FullType.IsFunctionType then
-        let inlineSpecifier =
-            match value.InlineAnnotation with
-            | FSharpInlineAnnotation.AlwaysInline
-            | FSharpInlineAnnotation.PseudoValue -> "inline "
-            | _ -> ""
+        let inlineSpecifier = if needsInlineAnnotation value then "inline " else ""
         ctx.Writer.WriteLine("val {0}{1} : {2}{3}", inlineSpecifier, valueName, generateSignature ctx value, constraints)
     else
         ctx.Writer.WriteLine("val {0} : {1}{2}", valueName, value.FullType.Format(ctx.DisplayContext), constraints)
@@ -632,10 +634,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
             else ""
 
         let inlineAnnotation =
-            match mem.InlineAnnotation with
-            | FSharpInlineAnnotation.AlwaysInline
-            | FSharpInlineAnnotation.PseudoValue -> "inline "
-            | _ -> ""
+            if needsInlineAnnotation mem then "inline " else ""
 
         let constraints = getConstraints ctx.DisplayContext mem.GenericParameters
 
