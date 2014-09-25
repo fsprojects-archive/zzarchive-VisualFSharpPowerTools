@@ -3,6 +3,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:local="clr-namespace:FSharpVSPowerTools.Folders;assembly=FSharpVSPowerTools.Logic" 
+        xmlns:fsxaml="http://github.com/fsprojects/FsXaml"        
         mc:Ignorable="d" 
         WindowStyle="ToolWindow"
         Height="150"
@@ -13,6 +14,10 @@
         Title="{Binding WindowTitle, Mode=OneWay}" 
         ShowInTaskbar="False">
     <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/FSharpVSPowerTools.Logic;component/CommonResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
         <Style TargetType="HeaderedContentControl">
             <Setter Property="Focusable" Value="False"/>
         </Style>
@@ -24,42 +29,26 @@
             <Setter Property="Width" Value="100"/>
             <Setter Property="Height" Value="30"/>
         </Style>
+        </ResourceDictionary>
     </Window.Resources>
     <DockPanel Margin="20">
         <HeaderedContentControl DockPanel.Dock="Top">
             <HeaderedContentControl.Header>
                 <Label Content="Folder _name:" Target="{Binding ElementName=txtName}" Margin="0,0,0,3"/>
             </HeaderedContentControl.Header>
-            <TextBox x:Name="txtName" Text="{Binding Name, NotifyOnValidationError=True, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, ValidatesOnExceptions=True}">
-                <TextBox.Resources>
-                    <ControlTemplate x:Key="InputErrorTemplate">
-                        <DockPanel>
-                            <Ellipse DockPanel.Dock="Right" Margin="2,0" ToolTip="Contains invalid data" Width="10" Height="10">
-                                <Ellipse.Fill>
-                                    <LinearGradientBrush>
-                                        <GradientStop Color="#11FF1111" Offset="0" />
-                                        <GradientStop Color="#FFFF0000" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                            <AdornedElementPlaceholder />
-                        </DockPanel>
-                    </ControlTemplate>
-                </TextBox.Resources>
-                <TextBox.Style>
-                    <Style TargetType="TextBox">
-                        <Setter Property="Validation.ErrorTemplate" Value="{StaticResource InputErrorTemplate}" />
-                        <Style.Triggers>
-                            <Trigger Property="Validation.HasError" Value="True">
-                                <Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBox.Style>
-            </TextBox>
+            <TextBox 
+                x:Name="txtName" 
+                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                fsxaml:AutoSelectText.OnLoaded="True"
+                Style="{StaticResource ValidatingTextBox}"/>
         </HeaderedContentControl>
         <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button Name="btnOk" IsDefault="True" Height="25" Width="90">OK</Button>
+            <Button
+                Height="25"
+                Width="90"
+                IsDefault="True"
+                fsxaml:DefaultButton.DialogResultOnClick="True"
+                IsEnabled="{Binding IsValid}">OK</Button>
             <Button Name="btnCancel" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
         </StackPanel>
     </DockPanel>
