@@ -276,28 +276,23 @@ let private tryGetNeededTypeDefSyntaxDelimiter (typ: FSharpEntity) =
     else None
 
 let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
-    match modul.Namespace with
-    | Some namespacePrefix -> 
-        let moduleNameOnly =
-            if modul.IsFSharpModule && hasModuleSuffixAttribute modul then
-                if moduleName.EndsWith "Module" then
-                    moduleName.Substring(0, moduleName.Length - "Module".Length)
-                else moduleName
-            else moduleName
-            |> fun name ->
-                let prefixLength = namespacePrefix.Length + 1
-                if prefixLength >= name.Length then name
-                else name.Remove(0, prefixLength)
-                |> QuoteIdentifierIfNeeded
-
-        namespacePrefix + "." + moduleNameOnly
-    | None ->
+    let fullModuleNameWithoutModule =
         if modul.IsFSharpModule && hasModuleSuffixAttribute modul then
             if moduleName.EndsWith "Module" then
                 moduleName.Substring(0, moduleName.Length - "Module".Length)
             else moduleName
         else moduleName
-        |> QuoteIdentifierIfNeeded
+
+    match modul.Namespace with
+    | Some namespacePrefix -> 
+        let moduleNameOnly =
+            let prefixLength = namespacePrefix.Length + 1
+            if prefixLength >= fullModuleNameWithoutModule.Length
+            then fullModuleNameWithoutModule
+            else fullModuleNameWithoutModule.Remove(0, prefixLength)
+
+        namespacePrefix + "." + (QuoteIdentifierIfNeeded moduleNameOnly)
+    | None -> QuoteIdentifierIfNeeded fullModuleNameWithoutModule
 
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
