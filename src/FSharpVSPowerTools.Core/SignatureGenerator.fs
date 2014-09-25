@@ -103,20 +103,39 @@ let private formatGenericParam (param: FSharpGenericParameter) =
     else "'" + param.Name
 
 let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstraint) =
+    let hasPropertyShape =
+        (c.MemberIsStatic && c.MemberArgumentTypes.Count = 0) ||
+        (not c.MemberIsStatic && c.MemberArgumentTypes.Count = 1)
+    let formattedMemberName, isProperty =
+        match hasPropertyShape, TryChopPropertyName c.MemberName with
+        | true, Some(chopped) when chopped <> c.MemberName ->
+            formatValueOrMemberName chopped, true
+        | _, _ -> formatValueOrMemberName c.MemberName, false
+        
     [|
         yield "("
         yield
             sprintf "%smember %s"
                 (if c.MemberIsStatic then "static " else "")
-                (formatValueOrMemberName c.MemberName)
+                formattedMemberName
         yield " : "
-        yield
-            if c.MemberArgumentTypes.Count = 0
-            then "unit"
+
+        printfn "Argument types for %s" c.MemberName
+        for t in c.MemberArgumentTypes do
+            printfn "%s" <| t.Format(ctx)
+        
+        if isProperty then
+            yield (c.MemberReturnType.Format(ctx))
+        else
+            if c.MemberArgumentTypes.Count <= 1
+            then yield "unit"
             else
-                [| for argType in c.MemberArgumentTypes -> argType.Format(ctx) |]
-                |> String.concat " * "
-        yield sprintf " -> %s" (c.MemberReturnType.Format(ctx))
+                let startIdx = if c.MemberIsStatic then 0 else 1
+                yield
+                    [| for i in startIdx .. c.MemberArgumentTypes.Count - 1 ->
+                        c.MemberArgumentTypes.[i].Format(ctx) |]
+                    |> String.concat " * "
+            yield sprintf " -> %s" (c.MemberReturnType.Format(ctx))
         yield ")"
     |]
     |> String.concat ""

@@ -568,8 +568,8 @@ let x = Array.map
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
 val append : array1:'T [] -> array2:'T [] -> 'T []
-val inline average : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member DivideByInt :  ^T * int ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
-val inline averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member DivideByInt :  ^U * int ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
+val inline average : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member DivideByInt :  ^T * int ->  ^T) and ^T : (static member Zero :  ^T)
+val inline averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member DivideByInt :  ^U * int ->  ^U) and ^U : (static member Zero :  ^U)
 val blit : source:'T [] -> sourceIndex:int -> target:'T [] -> targetIndex:int -> count:int -> unit
 val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
 val concat : arrays:seq<'T []> -> 'T []
@@ -625,8 +625,8 @@ val sortWith : comparer:('T -> 'T -> int) -> array:'T [] -> 'T []
 val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit when 'Key : comparison
 val sortInPlaceWith : comparer:('T -> 'T -> int) -> array:'T [] -> unit
 val sortInPlace : array:'T [] -> unit when 'T : comparison
-val inline sum : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member get_Zero : unit ->  ^T)
-val inline sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member get_Zero : unit ->  ^U)
+val inline sum : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member Zero :  ^T)
+val inline sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member Zero :  ^U)
 val toList : array:'T [] -> 'T list
 val toSeq : array:'T [] -> seq<'T>
 val tryFind : predicate:('T -> bool) -> array:'T [] -> 'T option
@@ -975,7 +975,7 @@ val f : ``a param``:int -> int
     ]
 
 [<Test>]
-let ``handle statically resolved constraints on types`` () =
+let ``handle statically resolved constraints`` () =
     [
         """open System
 type MyClass<'T when 'T : (static member Create : unit -> 'T) and 'T : (member Prop : int)> =
@@ -988,6 +988,11 @@ type MyClass<'T when 'T : (member Create : int * 'T -> 'T)> =
 """
 
         """open System
+type MyClass<'T when 'T : (static member MyProp : int)> =
+    class end
+"""
+
+        """open System
 type MyClass() =
     member inline __.Method< ^T when ^T : (member ConstraintMethod : unit -> unit)>(t : ^T) = ()
     static member inline StaticMethod< ^T when ^T : (static member Create : unit -> ^T)>() =
@@ -996,14 +1001,25 @@ type MyClass() =
     ] 
     |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
     |> assertSrcSeqAreEqual [
-        """type MyClass< ^T when ^T : (static member Create : unit ->  ^T) and ^T : (member get_Prop :  ^T -> int)> =
+        """type MyClass< ^T when ^T : (static member Create : unit ->  ^T) and ^T : (member Prop : int)> =
     class
     end
 """
 
-        """type MyClass< ^T when ^T : (member Create :  ^T * int *  ^T ->  ^T)> =
+        """type MyClass< ^T when ^T : (member Create : int *  ^T ->  ^T)> =
     class
     end
+"""
+
+        """type MyClass< ^T when ^T : (static member MyProp : int)> =
+    class
+    end
+"""
+
+        """type MyClass =
+    new : unit -> MyClass
+    member inline Method : t: ^T -> unit when ^T : (member ConstraintMethod : unit -> unit)
+    static member inline StaticMethod : unit ->  ^T when ^T : (static member Create : unit ->  ^T)
 """
     ]
 
@@ -1027,13 +1043,11 @@ type MyClass<'T when 'T : (member ``A property`` : int)> =
     end
 """
 
-        """type MyClass< ^T when ^T : (member ``get_A property`` :  ^T -> int)> =
+        """type MyClass< ^T when ^T : (member ``A property`` : int)> =
     class
     end
 """
     ]
-
-// TODO: special formatting for properties??
 
 // Tests to add:
 // TODO: class method arguments attributes
