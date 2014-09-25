@@ -1,0 +1,23 @@
+NUGET
+  remote: http://nuget.org/api/v2
+  specs:
+    Expression.Blend.Sdk (1.0.2)
+    FAKE (3.5.4)
+    Fantomas (1.5.0)
+      FSharp.Compiler.Service (>= 0.0.57)
+    Foq (1.6)
+    FsCheck (1.0.0)
+    FSharp.Compiler.Service (0.0.62)
+    FSharp.Formatting (2.4.25)
+      Microsoft.AspNet.Razor (2.0.30506.0)
+      RazorEngine (3.3.0)
+      FSharp.Compiler.Service (>= 0.0.59)
+    FSharp.ViewModule.Core (0.9.9.1)
+    FsXaml.Wpf (0.9.8)
+      Expression.Blend.Sdk (>= 1.0.2)
+    Microsoft.AspNet.Razor (2.0.30506.0)
+    NUnit (2.6.3)
+    NuGet.CommandLine (2.8.2)
+    NUnit.Runners (2.6.3)
+    RazorEngine (3.3.0)
+      Microsoft.AspNet.Razor (>= 2.0.30506.0)

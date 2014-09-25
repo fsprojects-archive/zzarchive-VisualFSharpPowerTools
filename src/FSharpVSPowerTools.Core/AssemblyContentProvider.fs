@@ -99,7 +99,7 @@ module AssemblyContentProvider =
               AutoOpenParent = parent.AutoOpen |> Option.map parent.FixParentModuleSuffix
               Kind = 
                 match entity with
-                | TypedAstUtils.Attribute -> EntityKind.Attribute 
+                | TypedAstPatterns.Attribute -> EntityKind.Attribute 
                 | FSharpModule ->
                     EntityKind.Module 
                         { IsAutoOpen = hasAttribute<AutoOpenAttribute> entity.Attributes
@@ -161,15 +161,22 @@ module AssemblyContentProvider =
                 | _ -> () }
 
     let getAssemblySignatureContent contentType (signature: FSharpAssemblySignature) =
-            seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                    yield! traverseEntity contentType Parent.Empty e }
+            signature.TryGetEntities()
+            |> Seq.map (traverseEntity contentType Parent.Empty)
+            |> Seq.concat
             |> Seq.distinct
             |> Seq.toList
 
+    let private getAssemblySignaturesContent contentType (assemblies: FSharpAssembly list) = 
+        assemblies 
+        |> List.map (fun asm -> getAssemblySignatureContent contentType asm.Contents)
+        |> Seq.concat 
+        |> Seq.toList
+
     let private entityCache = Dictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
 
-    let getAssemblyContent contentType (asm: FSharpAssembly) =
-        match asm.FileName with
+    let getAssemblyContent contentType (fileName: string option) (assemblies: FSharpAssembly list) =
+        match fileName with
         | Some fileName ->
             let assemblyWriteTime = FileInfo(fileName).LastWriteTime
             match contentType, entityCache.TryGetValue fileName with
@@ -179,12 +186,12 @@ module AssemblyContentProvider =
                 entities
             | _ ->
                 //debug "[AssemblyContentProvider] Getting entities from %s." fileName
-                let entities = getAssemblySignatureContent contentType asm.Contents
+                let entities = getAssemblySignaturesContent contentType assemblies
                 entityCache.[fileName] <- (assemblyWriteTime, contentType, entities)
                 entities
         | None -> 
             //debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
-            getAssemblySignatureContent contentType asm.Contents
+            getAssemblySignaturesContent contentType assemblies
         |> List.filter (fun entity -> 
             match contentType, entity.IsPublic with
             | Full, _ | Public, true -> true

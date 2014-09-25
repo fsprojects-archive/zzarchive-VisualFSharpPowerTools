@@ -143,7 +143,7 @@ module SourceCodeClassifier =
             let res = 
                 match symbolUse.SymbolUse.Symbol with
                 | Pattern | RecordField _
-                | Entity (Class | (FSharpType | ValueType | FSharpModule | Array), _, _)
+                | Entity (Class | (AbbreviatedType _ | FSharpType | ValueType | FSharpModule | Array), _, _)
                 | Entity (_, _, Tuple)
                 | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
                 | MemberFunctionOrValue func -> not func.IsMember

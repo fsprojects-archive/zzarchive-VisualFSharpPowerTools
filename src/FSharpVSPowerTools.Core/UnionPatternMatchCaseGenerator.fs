@@ -1,13 +1,13 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 
-open System.Text.RegularExpressions
+open System
+open System.Diagnostics
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open System.Diagnostics
 
 [<NoEquality; NoComparison>]
 type PatternMatchExpr = {
@@ -386,14 +386,14 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
         match pat with
         | SynPat.LongIdent(LongIdentWithDots(unionCaseLongIdent, _), _, _,
                            constructorArgs, _, _) ->
-          // Get list of qualifiers, this can be checked for length later.
-          let reversedIdents =
-            unionCaseLongIdent
-            |> List.map (fun id -> id.idText)
-            |> List.rev
-          match reversedIdents with
-          | [] -> []
-          | name::quals ->
+            // Get list of qualifiers, this can be checked for length later.
+            let reversedIdents =
+                unionCaseLongIdent
+                |> List.map (fun id -> id.idText)
+                |> List.rev
+            match reversedIdents with
+            | [] -> []
+            | name::quals ->
                 getIfArgsAreFree constructorArgs (fun () ->
                     [ (name, quals |> List.rev) ]
                 )
@@ -573,42 +573,67 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
         let! patMatchExpr, insertionParams = tryFindCaseInsertionParamsAtPos codeGenService project pos document
         let! symbolRange, _symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 
-        match symbolUse.Symbol with
-        | :? FSharpUnionCase as case when case.ReturnType.TypeDefinition.IsFSharpUnion ->
-            return! Some (symbolRange, patMatchExpr, case.ReturnType.TypeDefinition, insertionParams) |> liftMaybe
-        | :? FSharpEntity as entity when entity.IsFSharpUnion ->
-            return! Some (symbolRange, patMatchExpr, entity, insertionParams) |> liftMaybe
-        | _ ->
-            return! None |> liftMaybe
-    }
+        let! superficialTypeDefinition =
+            match symbolUse.Symbol with
+            | TypedAstPatterns.UnionCase(case) when case.ReturnType.HasTypeDefinition ->
+                Some case.ReturnType.TypeDefinition |> liftMaybe
+            | Entity(entity, _, _) -> Some entity |> liftMaybe
+            | _ -> None |> liftMaybe
 
-let private UnnamedFieldRegex = Regex("^Item(\d+)?$", RegexOptions.Compiled)
+        let! realTypeDefinition =
+            match superficialTypeDefinition with
+            | AbbreviatedType(TypeWithDefinition typeDef) when typeDef.IsFSharpUnion ->
+                Some typeDef |> liftMaybe
+            | UnionType(_) -> Some superficialTypeDefinition |> liftMaybe
+            | _ -> None |> liftMaybe 
+
+        return symbolRange, patMatchExpr, realTypeDefinition, insertionParams
+    }
 
 let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
     let writer = ctxt.Writer
-    let name =
+    let caseName =
         match ctxt.Qualifier with
         | None -> case.Name
         | Some qual -> sprintf "%s.%s" qual case.Name
-
 
     let paramsPattern =
         let unionCaseFieldsCount = case.UnionCaseFields.Count
         if unionCaseFieldsCount <= 0 then
             ""
         else
-            [|
-                for field in case.UnionCaseFields ->
-                    if UnnamedFieldRegex.IsMatch field.Name then
-                        "_"
+            let fieldNames =
+                [|
+                    for field in case.UnionCaseFields ->
+                        if String.IsNullOrEmpty(field.Name) || isUnnamedUnionCaseField field then
+                            "_"
+                        else
+                            // Lowercase the first character of the field name
+                            sprintf "%c%s" (Char.ToLower(field.Name.[0])) (field.Name.Substring(1))
+                |]
+
+            // Deduplicate field names if there are conflicts
+            let newFieldNames =
+                Seq.unfold (fun ((i, currentNamesWithIndices) as _state) ->
+                    if i < fieldNames.Length then
+                        let name = fieldNames.[i]
+                        let newName, newNamesWithIndices =
+                            if name = "_" then
+                                name, currentNamesWithIndices
+                            else
+                                normalizeArgName currentNamesWithIndices name
+
+                        Some(newName, (i+1, newNamesWithIndices))
                     else
-                        field.Name
-            |]
+                        None
+                ) (0, Map.empty)
+
+            newFieldNames
             |> String.concat ", "
             |> sprintf "(%s)"
     
     writer.WriteLine("")
-    writer.Write("| {0}{1} -> {2}", name, paramsPattern, ctxt.CaseDefaultValue)
+    writer.Write("| {0}{1} -> {2}", caseName, paramsPattern, ctxt.CaseDefaultValue)
 
 let formatMatchExpr insertionParams (caseDefaultValue: string)
                     (patMatchExpr: PatternMatchExpr) (entity: FSharpEntity) =
@@ -622,12 +647,15 @@ let formatMatchExpr insertionParams (caseDefaultValue: string)
     
     // Use the shortest qualified style for further cases
     let shortestQualifier =
-        casesWritten
-        |> Seq.minBy (fun (_, lst) -> lst.Length)
-        |> snd
-        |> function
-           | [] -> None
-           | lst -> Some (String.concat "." lst)
+        if casesWritten.IsEmpty
+        then None
+        else
+            casesWritten
+            |> Seq.minBy (fun (_, lst) -> lst.Length)
+            |> snd
+            |> function
+               | [] -> None
+               | lst -> Some (String.concat "." lst)
 
     let ctxt =
         { UnionTypeName = entity.DisplayName

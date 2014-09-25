@@ -103,6 +103,33 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
                 |> assertEqual [ ["open System"]; ["System.DateTime"] ])
 
     [<Test>]
+    let ``should generate correct labels for unopened namespace tags if single namespace contains multiple sutable quilified idents``() = 
+        let content = "empty"
+        let buffer = createMockTextBuffer content fileName
+        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        helper.SetActiveDocument(fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
+            (fun () -> 
+                helper.TagsOf(buffer, tagger) 
+                |> Seq.map (Seq.map (fun action -> action.DisplayText) >> Seq.toList)
+                |> Seq.toList 
+                |> assertEqual 
+                    [ ["open Microsoft.FSharp.Collections (Array.empty)"
+                       "open Microsoft.FSharp.Collections (List.empty)"
+                       "open Microsoft.FSharp.Collections (Map.empty)"
+                       "open Microsoft.FSharp.Collections (Seq.empty)"
+                       "open Microsoft.FSharp.Collections (Set.empty)" ]
+
+                      ["Microsoft.FSharp.Collections.Array.empty"
+                       "Microsoft.FSharp.Collections.List.empty"
+                       "Microsoft.FSharp.Collections.Map.empty"
+                       "Microsoft.FSharp.Collections.Seq.empty"
+                       "Microsoft.FSharp.Collections.Set.empty" ] ])
+
+    [<Test>]
     let ``should insert open declarations at correct positions``() = 
         let content = """
 #r "System.dll"

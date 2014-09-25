@@ -46,6 +46,8 @@ let gitHome = "https://github.com/fsprojects"
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
+let fcsVersion = "0.0.61"
+
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
@@ -69,7 +71,7 @@ Target "AssemblyInfo" (fun _ ->
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Core/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Core" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Core.Tests" :: Attribute.Title "FSharpVSPowerTools.Core" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
@@ -79,9 +81,7 @@ Target "AssemblyInfo" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
-// Clean build results & restore NuGet packages
-
-Target "RestorePackages" RestorePackages
+// Clean build results
 
 Target "Clean" (fun _ ->
     CleanDirs ["bin"; "bin/vsix"; "temp"; "nuget"]
@@ -114,6 +114,12 @@ Target "CleanVSIX" (fun _ ->
         ++ "bin/vsix/Microsoft.Build*"
     DeleteFiles filesToDelete
     ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
+)
+
+Target "BuildTests" (fun _ ->    
+    !! "tests/data/**/*.sln"
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
 )
 
 // --------------------------------------------------------------------------------------
@@ -157,10 +163,9 @@ Target "NuGet" (fun _ ->
             ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
             Tags = tags
             OutputPath = "bin"
-            ToolPath = ".nuget/nuget.exe"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = true
-            Dependencies = ["FSharp.Compiler.Service", "0.0.57"] })
+            Dependencies = ["FSharp.Compiler.Service", fcsVersion] })
         (project + ".Core.nuspec")
 )
 
@@ -204,9 +209,9 @@ Target "All" DoNothing
 
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
-  ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
+  ==> "BuildTests"
   ==> "UnitTests"
   ==> "Main"
 
