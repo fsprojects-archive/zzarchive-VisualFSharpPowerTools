@@ -124,3 +124,33 @@ module Helpers =
 
     let assertSrcWasNotChangedAfterCodeGen (srcBefore, srcAfter) =
         assertSrcAreEqual srcBefore srcAfter
+
+    let getSymbolAt languageService projectOptions args caretPos src =
+        let document: IDocument = upcast MockDocument(src)
+        let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+
+        asyncMaybe {
+            let! _range, symbolAtPos =
+                liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
+            let! _range, _symbol, symbolUse = 
+                codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
+
+            return symbolUse.Symbol
+        }
+        |> Async.RunSynchronously
+        |> Option.get
+
+    let getDisplayContextAt languageService projectOptions args caretPos src =
+        let document: IDocument = upcast MockDocument(src)
+        let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+
+        asyncMaybe {
+            let! _range, symbolAtPos =
+                liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
+            let! _range, _symbol, symbolUse = 
+                codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
+
+            return symbolUse.DisplayContext
+        }
+        |> Async.RunSynchronously
+        |> Option.get

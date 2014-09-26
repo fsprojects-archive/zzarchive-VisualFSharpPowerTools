@@ -1,4 +1,5 @@
 ﻿#if INTERACTIVE
+#r "System.Runtime.Serialization.dll"
 #r "../../bin/FSharp.Compiler.Service.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
@@ -87,7 +88,7 @@ let _ = Async.AwaitTask"""
 [<Class>]
 type Async =
     static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * AsyncCallback * obj -> IAsyncResult) * (IAsyncResult -> 'T) * (IAsyncResult -> unit)
-    static member AwaitEvent : event:IEvent<'Del,'T> * ?cancelAction:(unit -> unit) -> Async<'T>
+    static member AwaitEvent : event:IEvent<'Del,'T> * ?cancelAction:(unit -> unit) -> Async<'T> when 'Del : delegate<'T, unit> and 'Del :> Delegate
 """
 
 [<Test>]
@@ -508,6 +509,7 @@ type Class() =
     |> assertSrcAreEqual """type Class =
     new : unit -> Class
     member add_MyEvent : Handler<int> -> unit
+    [<CLIEvent>]
     member MyEvent : IEvent<int>
     member remove_MyEvent : Handler<int> -> unit
 """
@@ -566,8 +568,8 @@ let x = Array.map
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
 val append : array1:'T [] -> array2:'T [] -> 'T []
-val average : array: ^T [] ->  ^T
-val averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U
+val inline average : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member DivideByInt :  ^T * int ->  ^T) and ^T : (static member Zero :  ^T)
+val inline averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member DivideByInt :  ^U * int ->  ^U) and ^U : (static member Zero :  ^U)
 val blit : source:'T [] -> sourceIndex:int -> target:'T [] -> targetIndex:int -> count:int -> unit
 val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
 val concat : arrays:seq<'T []> -> 'T []
@@ -590,22 +592,22 @@ val foldBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State ->
 val fold2 : folder:('State -> 'T1 -> 'T2 -> 'State) -> state:'State -> array1:'T1 [] -> array2:'T2 [] -> 'State
 val foldBack2 : folder:('T1 -> 'T2 -> 'State -> 'State) -> array1:'T1 [] -> array2:'T2 [] -> state:'State -> 'State
 val get : array:'T [] -> index:int -> 'T
-val init : count:int -> initializer:(int -> 'T) -> 'T []
+val inline init : count:int -> initializer:(int -> 'T) -> 'T []
 val zeroCreate : count:int -> 'T []
 val isEmpty : array:'T [] -> bool
-val iter : action:('T -> unit) -> array:'T [] -> unit
+val inline iter : action:('T -> unit) -> array:'T [] -> unit
 val iter2 : action:('T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
 val iteri : action:(int -> 'T -> unit) -> array:'T [] -> unit
 val iteri2 : action:(int -> 'T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
 val length : array:'T [] -> int
-val map : mapping:('T -> 'U) -> array:'T [] -> 'U []
+val inline map : mapping:('T -> 'U) -> array:'T [] -> 'U []
 val map2 : mapping:('T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 val mapi2 : mapping:(int -> 'T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 val mapi : mapping:(int -> 'T -> 'U) -> array:'T [] -> 'U []
-val max : array:'T [] -> 'T
-val maxBy : projection:('T -> 'U) -> array:'T [] -> 'T
-val min : array:'T [] -> 'T
-val minBy : projection:('T -> 'U) -> array:'T [] -> 'T
+val inline max : array:'T [] -> 'T when 'T : comparison
+val inline maxBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
+val inline min : array:'T [] -> 'T when 'T : comparison
+val inline minBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
 val ofList : list:'T list -> 'T []
 val ofSeq : source:seq<'T> -> 'T []
 val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
@@ -617,14 +619,14 @@ val scan : folder:('State -> 'T -> 'State) -> state:'State -> array:'T [] -> 'St
 val scanBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State -> 'State []
 val set : array:'T [] -> index:int -> value:'T -> unit
 val sub : array:'T [] -> startIndex:int -> count:int -> 'T []
-val sort : array:'T [] -> 'T []
-val sortBy : projection:('T -> 'Key) -> array:'T [] -> 'T []
+val sort : array:'T [] -> 'T [] when 'T : comparison
+val sortBy : projection:('T -> 'Key) -> array:'T [] -> 'T [] when 'Key : comparison
 val sortWith : comparer:('T -> 'T -> int) -> array:'T [] -> 'T []
-val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit
+val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit when 'Key : comparison
 val sortInPlaceWith : comparer:('T -> 'T -> int) -> array:'T [] -> unit
-val sortInPlace : array:'T [] -> unit
-val sum : array: ^T [] ->  ^T
-val sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U
+val sortInPlace : array:'T [] -> unit when 'T : comparison
+val inline sum : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member Zero :  ^T)
+val inline sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member Zero :  ^U)
 val toList : array:'T [] -> 'T list
 val toSeq : array:'T [] -> seq<'T>
 val tryFind : predicate:('T -> bool) -> array:'T [] -> 'T option
@@ -644,37 +646,6 @@ module Parallel =
     val init : count:int -> initializer:(int -> 'T) -> 'T []
     val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
 
-"""
-
-[<Test; Ignore("activate when generic constraints are supported")>]
-let ``handle generic constraints`` () =
-    """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
-    | Value of 'T
-    """
-    |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type Arg<'T when 'T :> System.Runtime.Serialization.ISerializable and 'T :> System.ICloneable> =
-    | Value of 'T
-    """
-
-[<Test; Ignore("activate when static constraints are supported")>]
-let ``handle static constraints on module functions`` () =
-    """
-let inline func x = x + x"""
-    |> generateDefinitionFromPos (Pos.fromZ 1 11)
-    |> assertSrcAreEqual """
-    val inline inlineFunc : x: ^a ->  ^b when  ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
-"""
-
-[<Test; Ignore("activate when static constraints are supported")>]
-let ``handle static constraints on members`` () =
-    """
-type MyClass() =
-    member inline __.Test x = x + x
-"""
-    |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyClass =
-    new : unit -> MyClass
-    member Test : x: ^a ->  ^b when  ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
 """
 
 [<Test>]
@@ -788,12 +759,302 @@ type Union =
     interface System.Collections.IStructuralEquatable
 """
 
+[<Test>]
+let ``handle record field attributes`` () =
+    """open System
+open System.Runtime.Serialization
+type Record = {
+    [<DefaultValue>]
+    [<Obsolete("Reason1")>]
+    Field1: int
+
+    [<Obsolete("Reason2")>]
+    Field2: float
+}"""
+    |> generateDefinitionFromPos (Pos.fromZ 2 5)
+    |> assertSrcAreEqual """type Record =
+    {
+        [<DefaultValue>]
+        [<Obsolete("Reason1")>]
+        Field1: int
+        [<Obsolete("Reason2")>]
+        Field2: float
+    }
+    interface IComparable<Record>
+    interface IComparable
+    interface IEquatable<Record>
+    interface Collections.IStructuralComparable
+    interface Collections.IStructuralEquatable
+"""
+
+[<Test; Ignore("activate when method/property attributes are supported by FCS")>]
+let ``handle property/method attributes``() =
+    """
+type MyClass() =
+    [<Obsolete("Prop is obsolete")>]
+    member __.Prop = 0
+    [<Obsolete("Method is obsolete")>]
+    member __.Method() = ()
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass =
+    new : unit -> MyClass
+    [<Obsolete("Method is obsolete")>]
+    member Method : unit -> unit
+    [<Obsolete("Prop is obsolete")>]
+    member Prop : int
+"""
+
+[<Test>]
+let ``handle generic constraints on type`` () =
+    [
+        """open System
+type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T, 'U when 'T : comparison and 'U : equality>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>>() =
+    member x.Method() = ()
+"""
+
+        """open System
+type MyClass<'T when 'T : delegate<obj * int, unit>>() =
+    member x.Method() = ()
+"""
+    ]
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
+    |> assertSrcSeqAreEqual [
+        """type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
+    new : unit -> MyClass<'T, 'U>
+    member Method : unit -> unit
+"""
+
+        """type MyClass<'T when 'T : delegate<obj * int, unit>> =
+    new : unit -> MyClass<'T>
+    member Method : unit -> unit
+"""
+    ]
+
+[<Test>]
+let ``handle generic constraints on methods`` () =
+    """
+type MyClass<'T when 'T : struct>() =
+    member __.NormalMethod() = ()
+    member __.Method<'X when 'X : null>(x: 'X) = 0
+    static member StaticMethod<'X when 'X : equality>(x: 'X * 'X) =
+        x = x
+"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> assertSrcAreEqual """type MyClass<'T when 'T : struct> =
+    new : unit -> MyClass<'T>
+    member Method : x:'X -> int when 'X : null
+    member NormalMethod : unit -> unit
+    static member StaticMethod : x:('X * 'X) -> bool when 'X : equality
+"""
+
+[<Test>]
+let ``handle generic constraints on module functions and values`` () =
+    [
+        """let func<'X when 'X : null and 'X : comparison>(x: 'X) = 0"""
+        """let value<'X when 'X : null and 'X : comparison> = typeof<'X>.ToString()"""
+    ]
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 0 4))
+    |> assertSrcSeqAreEqual [
+        """module File
+val func : x:'X -> int when 'X : null and 'X : comparison
+"""
+
+        """module File
+val value : string when 'X : null and 'X : comparison
+"""
+    ]
+
+[<Test>]
+let ``operator names are demangled`` () =
+    """let inline func x = x + x"""
+    |> generateDefinitionFromPos (Pos.fromZ 0 11)
+    |> assertSrcAreEqual """module File
+val inline func : x: ^a ->  ^b when ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
+"""
+
+[<Test>]
+let ``double-backtick identifiers are supported`` () =
+    [
+        """type ``My class``() =
+    member __.``a property`` = 0
+    member __.``a method``() = ()""", Pos.fromZ 0 5
+
+        """module ``My module``
+let ``a value`` = 0
+let f (``a param``: int) = ``a param`` * 2""", Pos.fromZ 0 9
+
+        """type ``My abbrev`` = int""", Pos.fromZ 0 5
+
+        """type Union = ``My Case`` of int | Case2""", Pos.fromZ 0 5
+
+        """type Record = { ``My Record`` : string }""", Pos.fromZ 0 5
+
+        """exception ``My exception``""", Pos.fromZ 0 12
+
+        """exception ``My exception 2`` of int""", Pos.fromZ 0 12
+
+        """type ``My delegate``= delegate of int -> int""", Pos.fromZ 0 5
+    ]
+    |> List.map (fun (src, pos) -> generateDefinitionFromPos pos src)
+    |> assertSrcSeqAreEqual [
+        """type ``My class`` =
+    new : unit -> ``My class``
+    member ``a method`` : unit -> unit
+    member ``a property`` : int
+"""
+
+        """module ``My module``
+val ``a value`` : int
+val f : ``a param``:int -> int
+"""
+
+        """type ``My abbrev`` = int
+"""
+
+        """type Union =
+    | ``My Case`` of int
+    | Case2
+    interface System.IComparable<Union>
+    interface System.IComparable
+    interface System.IEquatable<Union>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+"""
+
+        """type Record =
+    {
+        ``My Record``: string
+    }
+    interface System.IComparable<Record>
+    interface System.IComparable
+    interface System.IEquatable<Record>
+    interface System.Collections.IStructuralComparable
+    interface System.Collections.IStructuralEquatable
+"""
+
+        """exception ``My exception``
+"""
+
+        """exception ``My exception 2`` of int
+"""
+
+        """type ``My delegate`` =
+    delegate of int -> int
+"""
+    ]
+
+[<Test>]
+let ``handle statically resolved constraints`` () =
+    [
+        """open System
+type MyClass<'T when 'T : (static member Create : unit -> 'T) and 'T : (member Prop : int)> =
+    class end
+"""
+
+        """open System
+type MyClass<'T when 'T : (member Create : int * 'T -> 'T)> =
+    class end
+"""
+
+        """open System
+type MyClass<'T when 'T : (static member MyProp : int)> =
+    class end
+"""
+
+        """open System
+type MyClass() =
+    member inline __.Method< ^T when ^T : (member ConstraintMethod : unit -> unit)>(t : ^T) = ()
+    static member inline StaticMethod< ^T when ^T : (static member Create : unit -> ^T)>() =
+        (^T : (static member Create : unit -> ^T) ())
+"""
+    ] 
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
+    |> assertSrcSeqAreEqual [
+        """type MyClass< ^T when ^T : (static member Create : unit ->  ^T) and ^T : (member Prop : int)> =
+    class
+    end
+"""
+
+        """type MyClass< ^T when ^T : (member Create : int *  ^T ->  ^T)> =
+    class
+    end
+"""
+
+        """type MyClass< ^T when ^T : (static member MyProp : int)> =
+    class
+    end
+"""
+
+        """type MyClass =
+    new : unit -> MyClass
+    member inline Method : t: ^T -> unit when ^T : (member ConstraintMethod : unit -> unit)
+    static member inline StaticMethod : unit ->  ^T when ^T : (static member Create : unit ->  ^T)
+"""
+    ]
+
+[<Test>]
+let ``handle double-backtick identifiers on member constraints`` () =
+    [
+        """open System
+type MyClass<'T when 'T : (static member ``A static member`` : unit -> 'T)> =
+    class end
+"""
+
+        """open System
+type MyClass<'T when 'T : (member ``A property`` : int)> =
+    class end
+"""
+    ] 
+    |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
+    |> assertSrcSeqAreEqual [
+        """type MyClass< ^T when ^T : (static member ``A static member`` : unit ->  ^T)> =
+    class
+    end
+"""
+
+        """type MyClass< ^T when ^T : (member ``A property`` : int)> =
+    class
+    end
+"""
+    ]
+
+// TODO: fix abbreviation metadata generation (it should be put inside a module or a namespace)
+
 // Tests to add:
-// TODO: property/method attributes
-// TODO: method arguments attributes
+// TODO: class method arguments attributes
 // TODO: xml comments
 // TODO: include open directives so that IStructuralEquatable/... are not wiggled
-// TODO: record type fields attributes
 // ENHANCEMENT: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)

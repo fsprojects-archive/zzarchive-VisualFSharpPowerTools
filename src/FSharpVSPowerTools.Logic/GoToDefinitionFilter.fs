@@ -113,6 +113,10 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     match fsSymbol with
                     | :? FSharpEntity as e when e.IsNamespace -> true
                     | _ -> false
+                let isProvidedAndErased (fsSymbol: FSharpSymbol) =
+                    match fsSymbol with
+                    | :? FSharpEntity as e when e.IsProvidedAndErased -> true
+                    | _ -> false
 
                 match symbolResult with
                 | Some (_, _, FindDeclResult.DeclFound _) 
@@ -120,7 +124,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     // Declaration location might exist so let's Visual F# Tools handle it  
                     x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
                 | Some (fsSymbol, displayContext, FindDeclResult.DeclNotFound _) ->
-                    if not (isNamespace fsSymbol) then
+                    if not (isNamespace fsSymbol || isProvidedAndErased fsSymbol) then
                         navigateToMetadata displayContext fsSymbol
                     VSConstants.S_OK
             else
