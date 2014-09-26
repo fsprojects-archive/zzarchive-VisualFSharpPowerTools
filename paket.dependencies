@@ -1,7 +1,6 @@
 source http://nuget.org/api/v2
 
 nuget FAKE
-nuget Octokit
 nuget NUnit.Runners
 nuget FSharp.Formatting
 nuget FSharp.Compiler.Service
@@ -14,4 +13,4 @@ nuget NUnit
 nuget Foq
 nuget Nuget.CommandLine
 
-github fsharp/FAKE modules/Octokit.fsx
+github fsharp/FAKE modules/Octokit/Octokit.fsx
