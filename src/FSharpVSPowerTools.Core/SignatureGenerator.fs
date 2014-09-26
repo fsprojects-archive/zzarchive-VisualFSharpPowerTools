@@ -95,14 +95,11 @@ let private isStaticallyResolved (param: FSharpGenericParameter) =
     |> Seq.exists (fun c -> c.IsMemberConstraint)
 
 let private formatValueOrMemberName name =
-    let applyRightIfIdentical f (x, x') =
-        if x = x' then x, f x else x, x'
-
-    name
-    |> fun x -> x, x
-    |> applyRightIfIdentical QuoteIdentifierIfNeeded
-    |> applyRightIfIdentical DemangleOperatorName
-    |> snd
+    let newName = QuoteIdentifierIfNeeded name
+    if newName = name then
+        DemangleOperatorName name
+    else
+        newName
 
 let private formatGenericParam (param: FSharpGenericParameter) =
     if isStaticallyResolved param then "^" + param.Name
@@ -125,10 +122,6 @@ let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstrain
                 (if c.MemberIsStatic then "static " else "")
                 formattedMemberName
         yield " : "
-
-        printfn "Argument types for %s" c.MemberName
-        for t in c.MemberArgumentTypes do
-            printfn "%s" <| t.Format(ctx)
         
         if isProperty then
             yield (c.MemberReturnType.Format(ctx))
@@ -302,7 +295,6 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
 
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
-    printfn "Module XmlDocSig: %s" modul.XmlDocSig
     writeDocs ctx modul.XmlDoc
     writeAttributes ctx (Some modul) modul.Attributes
     if isTopLevel then
@@ -339,7 +331,6 @@ and internal writeType ctx (typ: FSharpEntity) =
         // TODO: print modules or not?
         ()
 
-    printfn "Type XmlDocSig: %s" typ.XmlDocSig
     writeDocs ctx typ.XmlDoc
     writeAttributes ctx (Some typ) typ.Attributes
 
@@ -612,7 +603,6 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
     | Event -> ()
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         // Discard explicit getter/setter methods
-        printfn "XmlDocSig: %s" mem.XmlDocSig
         writeDocs ctx mem.XmlDoc
         writeAttributes ctx None mem.Attributes
 

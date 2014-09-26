@@ -250,4 +250,4 @@ module internal TypedAstPatterns =
         if func.IsExtensionMember then Some() else None
 
     let (|Event|_|) (func: FSharpMemberFunctionOrValue) =
-    if func.IsEvent then Some () else None
+        if func.IsEvent then Some () else None
