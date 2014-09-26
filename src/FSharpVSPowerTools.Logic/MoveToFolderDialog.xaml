@@ -82,12 +82,7 @@
             </TreeView>
         </HeaderedContentControl>
         <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button 
-                IsDefault="True"
-                IsEnabled="{Binding IsValid}"
-                Height="25" 
-                Width="90"
-                fsxaml:DefaultButton.DialogResultOnClick="True">OK</Button>
+            <Button Content="OK" Style="{StaticResource DialogOkButton}"/>
             <Button Name="btnCancel" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
         </StackPanel>
     </DockPanel>

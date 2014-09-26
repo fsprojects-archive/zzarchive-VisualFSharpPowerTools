@@ -43,12 +43,7 @@
                 Style="{StaticResource ValidatingTextBox}"/>
         </HeaderedContentControl>
         <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button
-                Height="25"
-                Width="90"
-                IsDefault="True"
-                fsxaml:DefaultButton.DialogResultOnClick="True"
-                IsEnabled="{Binding IsValid}">OK</Button>
+            <Button Style="{StaticResource DialogOkButton}"/>
             <Button Name="btnCancel" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
         </StackPanel>
     </DockPanel>
