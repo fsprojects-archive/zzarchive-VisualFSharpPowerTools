@@ -2,7 +2,7 @@ NUGET
   remote: http://nuget.org/api/v2
   specs:
     Expression.Blend.Sdk (1.0.2)
-    FAKE (3.5.4)
+    FAKE (3.5.5)
     Fantomas (1.5.0)
       FSharp.Compiler.Service (>= 0.0.57)
     Foq (1.6)
@@ -29,3 +29,7 @@ NUGET
       Microsoft.Net.Http (>= 0)
     RazorEngine (3.3.0)
       Microsoft.AspNet.Razor (>= 2.0.30506.0)
+GITHUB
+  remote: fsharp/FAKE
+  specs:
+    modules/Octokit.fsx (8e475ed413a3df4d3ee3eecf88c8c05c70401462)
