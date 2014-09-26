@@ -3,7 +3,6 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.TaskList;
-using System;
 using Microsoft.VisualStudio.Editor;
 using FSharpVSPowerTools.ProjectSystem;
 using Microsoft.VisualStudio.TextManager.Interop;
@@ -36,13 +35,6 @@ namespace FSharpVSPowerTools
             if (!generalOptions.TaskListCommentsEnabled) return;
 
             taskCommentFilter = new TaskListCommentFilter(textView, serviceProvider, openDocsTracker);
-            textView.Closed += OnViewClosed;
-        }
-
-        private void OnViewClosed(object sender, EventArgs e)
-        {
-            ((IDisposable)taskCommentFilter).Dispose();
-            textView.Closed -= OnViewClosed;
         }
     }
 }
