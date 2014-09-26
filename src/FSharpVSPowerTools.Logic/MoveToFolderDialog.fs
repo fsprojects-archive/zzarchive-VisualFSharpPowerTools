@@ -33,12 +33,8 @@ type MoveToFolderDialogModel(resources: MoveToFolderDialogResources) as self =
                                | [] -> None
                                | files -> Some (files |> List.reduce (fun acc fn -> acc + (sprintf "File %s already exists.\n" fn)))
 
-    let validateFolder = 
-        validate "SelectedFolder" 
-            >> custom folderSelectedAndExists
-            >> result
     let originalFolder : Folder option = None
-    let folder = self.Factory.Backing(<@@ self.SelectedFolder @@>, originalFolder, validateFolder)
+    let folder = self.Factory.Backing(<@@ self.SelectedFolder @@>, originalFolder, custom folderSelectedAndExists)
     
     member x.WindowTitle = 
         let fileCount = List.length resources.FileNames
