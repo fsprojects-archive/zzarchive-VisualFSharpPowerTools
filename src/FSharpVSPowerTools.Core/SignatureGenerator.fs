@@ -324,12 +324,9 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
 and internal writeType ctx (typ: FSharpEntity) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
     match typ.Namespace with
-    | Some ns -> 
-        ctx.Writer.WriteLine("namespace {0}", ns)
-        ctx.Writer.WriteLine("")
-    | None ->
-        // TODO: print modules or not?
-        ()
+    | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+    | None -> ctx.Writer.WriteLine("module {0}", typ.AccessPath)
+    ctx.Writer.WriteLine("")
 
     writeDocs ctx typ.XmlDoc
     writeAttributes ctx (Some typ) typ.Attributes
@@ -446,12 +443,22 @@ and internal writeType ctx (typ: FSharpEntity) =
     ctx.Writer.Unindent ctx.Indentation
 
 and internal writeTypeAbbrev ctx (abbreviatingType: FSharpEntity) (abbreviatedType: FSharpType) =
+    match abbreviatingType.Namespace with
+    | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+    | None -> ctx.Writer.WriteLine("module {0}", abbreviatingType.AccessPath)
+    ctx.Writer.WriteLine("")
+
     writeDocs ctx abbreviatingType.XmlDoc
     ctx.Writer.WriteLine("type {0} = {1}",
                          QuoteIdentifierIfNeeded abbreviatingType.LogicalName,
                          abbreviatedType.Format(ctx.DisplayContext))
 
 and internal writeFSharpExceptionType ctx (exn: FSharpEntity) =
+    match exn.Namespace with
+    | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+    | None -> ctx.Writer.WriteLine("module {0}", exn.AccessPath)
+    ctx.Writer.WriteLine("")
+
     writeDocs ctx exn.XmlDoc
 
     if exn.FSharpFields.Count > 0 then
@@ -470,6 +477,10 @@ and internal writeFSharpExceptionType ctx (exn: FSharpEntity) =
         ctx.Writer.WriteLine("exception {0}", QuoteIdentifierIfNeeded exn.LogicalName)
 
 and internal writeDelegateType ctx (del: FSharpEntity) =
+    match del.Namespace with
+    | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+    | None -> ctx.Writer.WriteLine("module {0}", del.AccessPath)
+    ctx.Writer.WriteLine("")
     writeDocs ctx del.XmlDoc
 
     let argsPart =
