@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.TaskList
 
+open System
 open System.Text.RegularExpressions
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
@@ -21,66 +22,93 @@ type CommentOption = { Comment : string; Priority : int } with
     static member Default = { Comment = "TODO"; Priority = 2 }
 
 
+type Pos = {
+    Line: int
+    Column: int
+}
+
+type CommentPos =
+    | OnelineCommentPos of Pos
+    | MultilineCommentPos of Pos * Pos
+
+
 [<AutoOpen>]
 module private Utils =
     let sourceTok = SourceTokenizer([], "/tmp.fsx")
 
-    let rec collectCommentTokens (line: string) (tokenizer: LineTokenizer) state (acc: TokenInformation list list) prevTokenIsEndComm =
-        match tokenizer.ScanToken(state) with
-        | Some tok, state ->
-            match tok.CharClass with
-            | TokenCharKind.Comment ->
-                let currTokStr = line.[tok.LeftColumn..tok.RightColumn]
-                if prevTokenIsEndComm then
-                    if currTokStr = "(*" then
-                        collectCommentTokens line tokenizer state ([ tok ] :: acc) false
-                    else
-                        collectCommentTokens line tokenizer state ((tok :: acc.Head) :: acc.Tail) (currTokStr = "*)")
-                else
-                    match acc with
-                    | hd :: tl -> collectCommentTokens line tokenizer state ((tok :: hd) :: tl) (currTokStr = "*)")
-                    | [] -> collectCommentTokens line tokenizer state ([ tok ] :: acc) (currTokStr = "*)")
-            | _ ->
-                collectCommentTokens line tokenizer state ([] :: acc) false
+    let scanLineComments (firstToken: TokenInformation) (tokenizer: LineTokenizer) state =
+        let rec scanLineComments' acc state =
+            match tokenizer.ScanToken(state) with
+            | Some tok, state ->
+                match tok.CharClass with
+                | TokenCharKind.LineComment ->
+                    scanLineComments' (tok::acc) state
+                | _ ->
+                    assert false
+                    (acc, state)
+            | None, state ->
+                (acc, state)
+        scanLineComments' [firstToken] state
 
-        | None, state ->
-            let acc =
-                acc
-                |> List.filter (not << List.isEmpty)
-                |> List.map List.rev
-                |> List.rev
-            (state, acc)
+    let createNewLineTokenizer (lines: string[]) (lineNumber: int) =
+        let nextLine = if lines.Length <= (lineNumber + 1) then "" else lines.[lineNumber + 1]
+        sourceTok.CreateLineTokenizer(nextLine)
 
-    let rec collectLineCommentTokens (tokenizer: LineTokenizer) state acc =
+    let scanMultilineComments (lines: string[], lineNumber: int, tokenizer: LineTokenizer, state) (firstToken: TokenInformation) =
+        let rec scanMultilineComments' (tokenizer: LineTokenizer) acc state nestLevel lineNumber =
+            match tokenizer.ScanToken(state) with
+            | Some tok, state ->
+                match tok.CharClass with
+                | TokenCharKind.Comment ->
+                    match lines.[lineNumber].[tok.LeftColumn..tok.RightColumn], nestLevel with
+                    | "*)", 0 -> (lineNumber, acc, tokenizer, state)
+                    | "*)", _ -> scanMultilineComments' tokenizer ((lineNumber, tok)::acc) state (nestLevel - 1) lineNumber
+                    | "(*", _ -> scanMultilineComments' tokenizer ((lineNumber, tok)::acc) state (nestLevel + 1) lineNumber
+                    | _ -> scanMultilineComments' tokenizer ((lineNumber, tok)::acc) state nestLevel lineNumber
+                | _ ->
+                    (lineNumber, acc, tokenizer, state)
+            | None, state ->
+                let tokenizer = createNewLineTokenizer lines lineNumber
+                scanMultilineComments' tokenizer acc state nestLevel (lineNumber + 1)
+        let tryFindNotBlankToken lineNumAndTokens =
+            lineNumAndTokens
+            |> List.tryFind (fun (lineNum, tok) ->
+                not <| String.IsNullOrWhiteSpace(lines.[lineNum].Substring(tok.LeftColumn, tok.FullMatchedLength)))
+
+        let endLineNumber, multilineCommentTokens, tokenizer, state =
+            scanMultilineComments' tokenizer [] state 0 lineNumber
+        let notBlankTokenOpt = tryFindNotBlankToken (List.rev multilineCommentTokens)
+        let lineNumber, columnNumber =
+            match notBlankTokenOpt with
+            | Some (ln, tok) -> (ln, tok.LeftColumn)
+            | None -> (lineNumber, (multilineCommentTokens |> List.rev |> List.head |> snd).LeftColumn)
+        let beginPos = { Line = lineNumber; Column = columnNumber }
+        let endPos = { Line = endLineNumber; Column = (multilineCommentTokens.Head |> snd).RightColumn }
+        (beginPos, endPos, tokenizer, state)
+
+    let rec nextCommentPos (lines: string[], lineNumber: int, tokenizer: LineTokenizer, state) =
         match tokenizer.ScanToken(state) with
         | Some tok, state ->
             match tok.CharClass with
             | TokenCharKind.LineComment ->
-                collectLineCommentTokens tokenizer state (tok :: acc)
+                let lineCommentTokens, state = scanLineComments tok tokenizer state
+                let lineCommentPos = OnelineCommentPos { Line = lineNumber; Column = (List.rev lineCommentTokens).Head.LeftColumn }
+                Some (lineCommentPos, (lines, lineNumber + 1, createNewLineTokenizer lines lineNumber, state))
+            | TokenCharKind.Comment ->
+                let beginPos, endPos, tokenizer, state = scanMultilineComments (lines, lineNumber, tokenizer, state) tok
+                let multilineCommentPos = MultilineCommentPos (beginPos, endPos)
+                Some (multilineCommentPos, (lines, lineNumber + (endPos.Line - beginPos.Line), tokenizer, state))
             | _ ->
-                collectLineCommentTokens tokenizer state acc
-        | None, state -> (state, List.rev acc)
-    
-    let rec collectCommentTokensPerLine lineCommAcc multilineCommAcc state lineNumber lines = 
-        match lines with
-        | line :: lines ->
-            let tokenizer = sourceTok.CreateLineTokenizer(line)
-            let (_, lineTokens) = collectLineCommentTokens tokenizer state []
-            let tokenizer = sourceTok.CreateLineTokenizer(line)
-            let (state, multilineTokens) = collectCommentTokens line tokenizer state [] false
+                nextCommentPos (lines, lineNumber, tokenizer, state)
+        | None, state ->
+            if lines.Length <= lineNumber + 1 then
+                None
+            else
+                nextCommentPos (lines, lineNumber + 1, createNewLineTokenizer lines lineNumber, state)
 
-            let lineCommAcc =
-                match lineTokens with
-                | [] -> lineCommAcc
-                | _ -> (lineNumber, lineTokens) :: lineCommAcc
-
-            let multilineCommAcc =
-                match multilineTokens with
-                | [] -> multilineCommAcc
-                | _ -> (lineNumber, multilineTokens) :: multilineCommAcc
-
-            collectCommentTokensPerLine lineCommAcc multilineCommAcc state (lineNumber + 1) lines
-        | [] -> (List.rev lineCommAcc, List.rev multilineCommAcc)
+    let collectCommentPositions lines = 
+        let tokenizerState = 0L
+        Seq.unfold nextCommentPos (lines, 0, sourceTok.CreateLineTokenizer(lines.[0]), tokenizerState)
 
 
 type CommentExtractor(options: CommentOption[]) =
@@ -110,38 +138,27 @@ type CommentExtractor(options: CommentOption[]) =
                     Priority = priorityByComment.[m.Groups.[2].Value.ToLowerInvariant()]
                 })
 
+    let extractMultilineComment beginPos endPos (lines: string[]) =
+        if beginPos.Line = endPos.Line then
+            lines.[beginPos.Line].Substring(beginPos.Column, endPos.Column - beginPos.Column + 1)
+        else
+            lines.[beginPos.Line].Substring(beginPos.Column)
+
     let collectTaskListComments filePath lines =
-        let lineTokens, multilineTokens = collectCommentTokensPerLine [] [] 0L 0 lines
+        let commentPositions = collectCommentPositions lines
     
-        let lineCommentsByLine =
-            lineTokens
-            |> List.map (fun (lineNumber, tokens) ->
-                             let leftIndex = tokens.[0].LeftColumn
-                             let rightIndex = tokens.[tokens.Length - 1].RightColumn
-                             
-                             (lineNumber,
-                              leftIndex,
-                              lines.[lineNumber].[leftIndex..rightIndex]))
-            |> List.choose (fun (lineNumber, column, comment) -> toTaskListComment filePath linePattern lineNumber column comment)
-    
-        let multilineCommentsByLine =
-            multilineTokens
-            |> List.collect (fun (lineNumber, tokenLists) ->
-                                 tokenLists
-                                 |> List.map (fun tokens ->
-                                                  let leftIndex = tokens.[0].LeftColumn
-                                                  let rightIndex = tokens.[tokens.Length - 1].RightColumn
-                                                  
-                                                  (lineNumber,
-                                                   leftIndex,
-                                                   lines.[lineNumber].[leftIndex..rightIndex]))
-                                 |> List.choose (fun (lineNumber, column, comment) -> toTaskListComment filePath multilinePattern lineNumber column comment))
-    
-        lineCommentsByLine @ multilineCommentsByLine
+        commentPositions
+        |> Seq.choose (function
+                       | OnelineCommentPos { Line = line; Column = col } ->
+                           let comment = lines.[line].Substring(col)
+                           toTaskListComment filePath linePattern line col comment
+                       | MultilineCommentPos (beginPos, endPos) ->
+                           let comment = extractMultilineComment beginPos endPos lines
+                           toTaskListComment filePath multilinePattern beginPos.Line beginPos.Column comment
+        )
 
     member __.GetComments(filePath: string, fileLines: string[]) =
         fileLines
-        |> List.ofArray
         |> collectTaskListComments filePath
-        |> Array.ofList
+        |> Seq.toArray
         
