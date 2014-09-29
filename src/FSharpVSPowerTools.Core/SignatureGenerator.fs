@@ -10,13 +10,15 @@ open Microsoft.FSharp.Compiler.Lexhelp.Keywords
 open System.IO
 open System.Text.RegularExpressions
 
-[<NoComparison>]
-type internal Context = {
-    Writer: ColumnIndentedTextWriter
-    Indentation: int
-    DisplayContext: FSharpDisplayContext
-    OpenDeclarations: string list
-}
+[<NoComparison; NoEquality>]
+type internal Context = 
+    {
+        Writer: ColumnIndentedTextWriter
+        Indentation: int
+        DisplayContext: FSharpDisplayContext
+        OpenDeclarations: string list
+        GetXmlDocBySignature: string -> string list
+    }
 
 let private hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
     mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0
@@ -38,13 +40,13 @@ let private needsInlineAnnotation (mem: FSharpMemberFunctionOrValue) =
     | _ -> false
 
 [<NoComparison>]
-type private MembersPartition = {
-    Constructors: FSharpMemberFunctionOrValue[]
-    AbstractMembers: FSharpMemberFunctionOrValue[]
-    ConcreteInstanceMembers: FSharpMemberFunctionOrValue[]
-    StaticMembers: FSharpMemberFunctionOrValue[]
-}
-with
+type private MembersPartition = 
+    {
+        Constructors: FSharpMemberFunctionOrValue[]
+        AbstractMembers: FSharpMemberFunctionOrValue[]
+        ConcreteInstanceMembers: FSharpMemberFunctionOrValue[]
+        StaticMembers: FSharpMemberFunctionOrValue[]
+    }
     static member Create(members: seq<FSharpMemberFunctionOrValue>) =
         // NOTE: If we want to handle EventHandler<'T> types, we can test
         //       match mem.ReturnParameter.Type with
@@ -306,7 +308,7 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
 
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
-    writeDocs ctx modul.XmlDoc
+    writeDocs ctx modul.XmlDoc (fun _ -> modul.XmlDocSig)
     writeAttributes ctx (Some modul) modul.Attributes
     if isTopLevel then
         let qualifiedModuleName = tryRemoveModuleSuffix modul modul.FullName
@@ -358,7 +360,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
-    writeDocs ctx typ.XmlDoc
+    writeDocs ctx typ.XmlDoc (fun _ -> typ.XmlDocSig)
     writeAttributes ctx (Some typ) typ.Attributes
 
     let neededTypeDefSyntaxDelimiter = tryGetNeededTypeDefSyntaxDelimiter typ
@@ -484,7 +486,7 @@ and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity)
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
-    writeDocs ctx abbreviatingType.XmlDoc
+    writeDocs ctx abbreviatingType.XmlDoc (fun _ -> abbreviatingType.XmlDocSig)
     ctx.Writer.WriteLine("type {0} = {1}",
         getTypeNameWithGenericParams ctx abbreviatingType true,
         abbreviatedType.Format(ctx.DisplayContext))
@@ -501,7 +503,7 @@ and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
-    writeDocs ctx exn.XmlDoc
+    writeDocs ctx exn.XmlDoc (fun _ -> exn.XmlDocSig)
 
     if exn.FSharpFields.Count > 0 then
         let fields =
@@ -529,7 +531,7 @@ and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
                 ctx.Writer.WriteLine("")
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
-    writeDocs ctx del.XmlDoc
+    writeDocs ctx del.XmlDoc (fun _ -> del.XmlDocSig)
 
     let argsPart =
         [|
@@ -554,7 +556,7 @@ and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
     ctx.Writer.Unindent ctx.Indentation
 
 and internal writeUnionCase ctx (case: FSharpUnionCase) =
-    writeDocs ctx case.XmlDoc
+    writeDocs ctx case.XmlDoc (fun _ -> case.XmlDocSig)
 
     if case.Attributes.Count > 0 then
         ctx.Writer.Write("| ")
@@ -601,7 +603,7 @@ and internal writeAttributes ctx (typ: option<FSharpEntity>) (attributes: IList<
                 ctx.Writer.WriteLine(")>]")
 
 and internal writeField hasNewLine ctx (field: FSharpField) =
-    writeDocs ctx field.XmlDoc
+    writeDocs ctx field.XmlDoc (fun _ -> field.XmlDocSig)
     writeAttributes ctx None field.FieldAttributes
     writeAttributes ctx None field.PropertyAttributes
 
@@ -618,7 +620,7 @@ and internal writeEnumValue ctx (field: FSharpField) =
     if not field.IsCompilerGenerated then
         match field.LiteralValue with
         | Some value ->
-            writeDocs ctx field.XmlDoc
+            writeDocs ctx field.XmlDoc (fun _ -> field.XmlDocSig)
             ctx.Writer.WriteLine("| {0} = {1}", field.Name, value)
         | None -> Debug.Fail("There should be a literal value for the enum field: " + field.FullName)
 
@@ -630,7 +632,7 @@ and internal writeUnionCaseField ctx (field: FSharpField) =
 
 and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
     Debug.Assert(value.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a valid F# module.")
-    writeDocs ctx value.XmlDoc
+    writeDocs ctx value.XmlDoc (fun _ -> value.XmlDocSig)
 
     let constraints = getConstraints ctx.DisplayContext value.GenericParameters
     let valueName = formatValueOrMemberName value.LogicalName
@@ -646,7 +648,7 @@ and internal writeClassOrStructField ctx (field: FSharpField) =
                  (field.DeclaringEntity.IsValueType && not field.DeclaringEntity.IsEnum),
                  "The declaring entity should be a class or a struct.")
 
-    writeDocs ctx field.XmlDoc
+    writeDocs ctx field.XmlDoc (fun _ -> field.XmlDocSig)
     ctx.Writer.WriteLine("val {0} : {1}", QuoteIdentifierIfNeeded field.DisplayName, field.FieldType.Format(ctx.DisplayContext))
 
 and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
@@ -654,12 +656,12 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
 
     match mem with
     | Constructor _entity ->
-        writeDocs ctx mem.XmlDoc
+        writeDocs ctx mem.XmlDoc (fun _ -> mem.XmlDocSig)
         ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
     | Event -> ()
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         // Discard explicit getter/setter methods
-        writeDocs ctx mem.XmlDoc
+        writeDocs ctx mem.XmlDoc (fun _ -> mem.XmlDocSig)
         writeAttributes ctx None mem.Attributes
 
         let memberType =
@@ -693,12 +695,21 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
                              constraints)
     | _ -> ()
 
-and internal writeDocs ctx docs =
-    for doc in docs do
-        ctx.Writer.WriteLine("/// {0}", doc)
+and internal writeDocs ctx docs getXmlDocSig =
+    let xmlDocs =
+        if Seq.isEmpty docs then            
+            getXmlDocSig()
+            |> ctx.GetXmlDocBySignature
+            :> seq<_>
+        else docs :> seq<_>
+
+    xmlDocs
+    |> Seq.collect (fun line -> line.Replace("\r\n", "\n").Split('\r', '\n'))
+    |> Seq.iter (fun line -> ctx.Writer.WriteLine("/// {0}", line))
 
 and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     let group = case.Group
+    writeDocs ctx case.XmlDoc (fun _ -> case.XmlDocSig)
     ctx.Writer.Write("val |")
     for name in group.Names do
         ctx.Writer.Write("{0}|", name)
@@ -707,10 +718,11 @@ and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     ctx.Writer.Write(" : ")
     ctx.Writer.WriteLine("{0}", group.OverallType.Format(ctx.DisplayContext))
 
-let formatSymbol indentation displayContext openDeclarations (symbol: FSharpSymbol) =
+let formatSymbol getXmlDocBySignature indentation displayContext openDeclarations (symbol: FSharpSymbol) =
     use writer = new ColumnIndentedTextWriter()
     let ctx = { Writer = writer; Indentation = indentation;
-                DisplayContext = displayContext; OpenDeclarations = openDeclarations }
+                DisplayContext = displayContext; OpenDeclarations = openDeclarations;
+                GetXmlDocBySignature = getXmlDocBySignature }
 
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with

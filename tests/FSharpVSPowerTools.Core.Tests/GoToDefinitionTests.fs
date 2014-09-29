@@ -46,7 +46,7 @@ let tryGenerateDefinitionFromPos caretPos src =
             |> liftAsync
         let! parseTree = parseResults.ParseTree |> liftMaybe           
         let openDeclarations = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation caretPos parseTree
-        let! generatedCode = liftMaybe <| formatSymbol 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol
+        let! generatedCode = liftMaybe <| formatSymbol (fun _ -> []) 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol
         return generatedCode
     }
     |> Async.RunSynchronously
