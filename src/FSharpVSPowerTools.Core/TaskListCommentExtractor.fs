@@ -122,25 +122,20 @@ type CommentExtractor(options: CommentOption[]) =
                              (lineNumber,
                               leftIndex,
                               lines.[lineNumber].[leftIndex..rightIndex]))
-            |> List.map (fun (lineNumber, column, comment) -> toTaskListComment filePath linePattern lineNumber column comment)
-            |> List.filter Option.isSome
-            |> List.map Option.get
+            |> List.choose (fun (lineNumber, column, comment) -> toTaskListComment filePath linePattern lineNumber column comment)
     
         let multilineCommentsByLine =
             multilineTokens
-            |> List.map (fun (lineNumber, tokenLists) ->
-                             tokenLists
-                             |> List.map (fun tokens ->
-                                              let leftIndex = tokens.[0].LeftColumn
-                                              let rightIndex = tokens.[tokens.Length - 1].RightColumn
-                                              
-                                              (lineNumber,
-                                               leftIndex,
-                                               lines.[lineNumber].[leftIndex..rightIndex]))
-                             |> List.map (fun (lineNumber, column, comment) -> toTaskListComment filePath multilinePattern lineNumber column comment)
-                             |> List.filter Option.isSome
-                             |> List.map Option.get)
-            |> List.collect id
+            |> List.collect (fun (lineNumber, tokenLists) ->
+                                 tokenLists
+                                 |> List.map (fun tokens ->
+                                                  let leftIndex = tokens.[0].LeftColumn
+                                                  let rightIndex = tokens.[tokens.Length - 1].RightColumn
+                                                  
+                                                  (lineNumber,
+                                                   leftIndex,
+                                                   lines.[lineNumber].[leftIndex..rightIndex]))
+                                 |> List.choose (fun (lineNumber, column, comment) -> toTaskListComment filePath multilinePattern lineNumber column comment))
     
         lineCommentsByLine @ multilineCommentsByLine
 
