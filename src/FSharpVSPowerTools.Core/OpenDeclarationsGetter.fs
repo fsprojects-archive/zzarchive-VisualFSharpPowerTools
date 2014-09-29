@@ -303,7 +303,6 @@ module OpenDeclarationGetter =
                        walkModuleOrNamespace acc (decls, moduleRange) @ acc
                    else acc) []
             |> Seq.distinct
-            |> Seq.map (sprintf "open %s")
             |> Seq.toList
             |> List.rev       
         | _ -> []

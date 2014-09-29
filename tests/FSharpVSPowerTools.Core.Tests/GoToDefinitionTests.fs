@@ -38,8 +38,12 @@ let tryGenerateDefinitionFromPos caretPos src =
             liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
-
-        let! generatedCode = liftMaybe <| formatSymbol 4 symbolUse.DisplayContext symbolUse.Symbol
+        let! parseResults =
+            codeGenService.ParseFileInProject(document, projectOptions)
+            |> liftAsync
+        let! parseTree = parseResults.ParseTree |> liftMaybe           
+        let openDeclarations = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation caretPos parseTree
+        let! generatedCode = liftMaybe <| formatSymbol 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol
         return generatedCode
     }
     |> Async.RunSynchronously
@@ -82,6 +86,7 @@ let ``adds necessary parenthesis to function parameters`` () =
 let _ = Async.AwaitTask"""
     |> generateDefinitionFromPos (Pos.fromZ 1 8)
     |> assertSrcAreEqualForFirstLines 8 """namespace Microsoft.FSharp.Control
+open System
 
 [<Sealed>]
 [<CompiledName("FSharpAsync")>]
@@ -179,6 +184,7 @@ let ``go to F# List<'T> definition`` () =
 let x: List<int> = []"""
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
+open System
 
 [<DefaultAugmentation(false)>]
 [<StructuralEquality>]
@@ -224,6 +230,7 @@ let ``go to union type definition`` () =
 let x: Choice<'T, 'U> = failwith "Not implemented yet" """
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+open System
 
 [<StructuralEquality>]
 [<StructuralComparison>]
@@ -244,6 +251,7 @@ let ``go to union case`` () =
 let x = Choice1Of2 () """
     |> generateDefinitionFromPos (Pos.fromZ 2 9)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+open System
 
 [<StructuralEquality>]
 [<StructuralComparison>]
@@ -304,7 +312,7 @@ let fizzBuzz = function
 
 [<Test; Ignore("We should not generate implicit interface member definition")>]
 let ``go to record type definition`` () =
-    """open System
+    """
 [<CustomEquality>]
 type MyRecord =
     {
@@ -328,7 +336,7 @@ type MyRecord =
 """
 
 let ``go to record field`` () =
-    """open System
+    """
 type MyRecord =
     {
         Field1: int
@@ -439,7 +447,7 @@ type Enum =
 
 [<Test>]
 let ``go to metadata from module and module function`` () =
-    let src = """open System
+    let src = """
 
 let f x = Option.map(x)"""
 
@@ -591,6 +599,7 @@ type T() =
     """
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
     |> assertSrcAreEqual """module File
+open System.Runtime.InteropServices
 
 type T =
     new : unit -> T
@@ -844,6 +853,8 @@ type Record = {
 }"""
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
     |> assertSrcAreEqual """module File
+open System
+open System.Runtime.Serialization
 
 type Record =
     {
@@ -911,6 +922,7 @@ type MyClass<'T when 'T : delegate<obj * int, unit>>() =
     |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
     |> assertSrcSeqAreEqual [
         """module File
+open System
 
 type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> =
     new : unit -> MyClass<'T, 'U>
@@ -918,6 +930,7 @@ type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> 
 """
 
         """module File
+open System
 
 type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
     new : unit -> MyClass<'T, 'U>
@@ -925,6 +938,7 @@ type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
 """
 
         """module File
+open System
 
 type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
     new : unit -> MyClass<'T, 'U>
@@ -932,6 +946,7 @@ type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
 """
 
         """module File
+open System
 
 type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
     new : unit -> MyClass<'T, 'U>
@@ -939,6 +954,7 @@ type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
 """
 
         """module File
+open System
 
 type MyClass<'T when 'T : delegate<obj * int, unit>> =
     new : unit -> MyClass<'T>
@@ -1078,22 +1094,22 @@ type ``My delegate`` =
 [<Test>]
 let ``handle statically resolved constraints`` () =
     [
-        """open System
+        """
 type MyClass<'T when 'T : (static member Create : unit -> 'T) and 'T : (member Prop : int)> =
     class end
 """
 
-        """open System
+        """
 type MyClass<'T when 'T : (member Create : int * 'T -> 'T)> =
     class end
 """
 
-        """open System
+        """
 type MyClass<'T when 'T : (static member MyProp : int)> =
     class end
 """
 
-        """open System
+        """
 type MyClass() =
     member inline __.Method< ^T when ^T : (member ConstraintMethod : unit -> unit)>(t : ^T) = ()
     static member inline StaticMethod< ^T when ^T : (static member Create : unit -> ^T)>() =
@@ -1135,12 +1151,12 @@ type MyClass =
 [<Test>]
 let ``handle double-backtick identifiers on member constraints`` () =
     [
-        """open System
+        """
 type MyClass<'T when 'T : (static member ``A static member`` : unit -> 'T)> =
     class end
 """
 
-        """open System
+        """
 type MyClass<'T when 'T : (member ``A property`` : int)> =
     class end
 """

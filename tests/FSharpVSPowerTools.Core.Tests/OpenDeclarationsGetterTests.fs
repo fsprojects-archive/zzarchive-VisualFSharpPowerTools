@@ -300,7 +300,7 @@ module M =
     open InternalModuleWithSuffix
     let x = 0
 """
-    |-> (pos 6 9, ["open System"; "open System.IO"; "open InternalModuleWithSuffix"])
+    |-> (pos 6 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
 
 [<Test>]
 let ``open declarations with duplication``() =
@@ -315,7 +315,7 @@ module M =
     open System.Collections.Generic
 open System.Collections.Generic
 """
-    |-> (pos 8 9, ["open System"; "open System.IO"; "open InternalModuleWithSuffix"])
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
 
 [<Test>]
 let ``open declarations with global prefix``() =
@@ -328,4 +328,4 @@ module M =
     open System
     let x = 0
 """
-    |-> (pos 8 9, ["open System"; "open System.IO"; "open InternalModuleWithSuffix"])
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
