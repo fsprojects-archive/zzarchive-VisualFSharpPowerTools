@@ -282,16 +282,24 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
             else moduleName
         else moduleName
 
-    match modul.Namespace with
-    | Some namespacePrefix -> 
-        let moduleNameOnly =
-            let prefixLength = namespacePrefix.Length + 1
-            if prefixLength >= fullModuleNameWithoutModule.Length
-            then fullModuleNameWithoutModule
-            else fullModuleNameWithoutModule.Remove(0, prefixLength)
+    let prefixToConsider =
+        match modul.Namespace with
+        | Some namespacePrefix -> namespacePrefix
+        // TODO: it's not because there's no namespace that the module is not inside a module
+        // Ex: module Microsoft.FSharp.Compiler.Range.Pos
+        // -> Pos is in the Range module
+        | None -> if modul.AccessPath = "global" then "" else modul.AccessPath
 
-        namespacePrefix + "." + (QuoteIdentifierIfNeeded moduleNameOnly)
-    | None -> QuoteIdentifierIfNeeded fullModuleNameWithoutModule
+    let moduleNameOnly =
+        let prefixLength = prefixToConsider.Length + 1
+        if prefixLength >= fullModuleNameWithoutModule.Length || prefixToConsider = ""
+        then fullModuleNameWithoutModule
+        else fullModuleNameWithoutModule.Remove(0, prefixLength)
+
+    if prefixToConsider = "" then
+        QuoteIdentifierIfNeeded moduleNameOnly
+    else
+        prefixToConsider + "." + (QuoteIdentifierIfNeeded moduleNameOnly)
 
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
@@ -312,24 +320,23 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     for entity in modul.NestedEntities do
         match entity with
         | FSharpModule -> writeModule false ctx entity
-        | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
-        | FSharpException -> writeFSharpExceptionType ctx entity
-        | Delegate when entity.IsFSharp -> writeDelegateType ctx entity
-        | _ -> writeType ctx entity
+        | AbbreviatedType abbreviatedType -> writeTypeAbbrev true ctx entity abbreviatedType
+        | FSharpException -> writeFSharpExceptionType true ctx entity
+        | Delegate when entity.IsFSharp -> writeDelegateType true ctx entity
+        | _ -> writeType true ctx entity
 
         ctx.Writer.WriteLine("")
     if not isTopLevel then
         ctx.Writer.Unindent ctx.Indentation
 
-and internal writeType ctx (typ: FSharpEntity) =
+and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
-    match typ.Namespace with
-    | Some ns -> 
-        ctx.Writer.WriteLine("namespace {0}", ns)
+
+    if not isNestedEntity then
+        match typ.Namespace with
+        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+        | None -> ctx.Writer.WriteLine("module {0}", typ.AccessPath)
         ctx.Writer.WriteLine("")
-    | None ->
-        // TODO: print modules or not?
-        ()
 
     writeDocs ctx typ.XmlDoc
     writeAttributes ctx (Some typ) typ.Attributes
@@ -445,13 +452,25 @@ and internal writeType ctx (typ: FSharpEntity) =
 
     ctx.Writer.Unindent ctx.Indentation
 
-and internal writeTypeAbbrev ctx (abbreviatingType: FSharpEntity) (abbreviatedType: FSharpType) =
+and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity) (abbreviatedType: FSharpType) =
+    if not isNestedEntity then
+        match abbreviatingType.Namespace with
+        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+        | None -> ctx.Writer.WriteLine("module {0}", abbreviatingType.AccessPath)
+        ctx.Writer.WriteLine("")
+
     writeDocs ctx abbreviatingType.XmlDoc
     ctx.Writer.WriteLine("type {0} = {1}",
                          QuoteIdentifierIfNeeded abbreviatingType.LogicalName,
                          abbreviatedType.Format(ctx.DisplayContext))
 
-and internal writeFSharpExceptionType ctx (exn: FSharpEntity) =
+and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
+    if not isNestedEntity then
+        match exn.Namespace with
+        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+        | None -> ctx.Writer.WriteLine("module {0}", exn.AccessPath)
+        ctx.Writer.WriteLine("")
+
     writeDocs ctx exn.XmlDoc
 
     if exn.FSharpFields.Count > 0 then
@@ -469,7 +488,12 @@ and internal writeFSharpExceptionType ctx (exn: FSharpEntity) =
     else
         ctx.Writer.WriteLine("exception {0}", QuoteIdentifierIfNeeded exn.LogicalName)
 
-and internal writeDelegateType ctx (del: FSharpEntity) =
+and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
+    if not isNestedEntity then
+        match del.Namespace with
+        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
+        | None -> ctx.Writer.WriteLine("module {0}", del.AccessPath)
+        ctx.Writer.WriteLine("")
     writeDocs ctx del.XmlDoc
 
     let argsPart =
@@ -660,10 +684,10 @@ let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
         | Entity(entity, _, _) ->
             match entity with
             | FSharpModule -> writeModule true ctx entity
-            | AbbreviatedType abbreviatedType -> writeTypeAbbrev ctx entity abbreviatedType
-            | FSharpException -> writeFSharpExceptionType ctx entity
-            | Delegate when entity.IsFSharp -> writeDelegateType ctx entity
-            | _ -> writeType ctx entity
+            | AbbreviatedType abbreviatedType -> writeTypeAbbrev false ctx entity abbreviatedType
+            | FSharpException -> writeFSharpExceptionType false ctx entity
+            | Delegate when entity.IsFSharp -> writeDelegateType false ctx entity
+            | _ -> writeType false ctx entity
             |> Some
         | MemberFunctionOrValue mem ->
             writeSymbol mem.LogicalEnclosingEntity

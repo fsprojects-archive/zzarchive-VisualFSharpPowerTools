@@ -99,7 +99,9 @@ type T() =
     
     let x = new T()"""
     |> generateDefinitionFromPos (Pos.fromZ 4 16)
-    |> assertSrcAreEqual """type T =
+    |> assertSrcAreEqual """module File
+
+type T =
     new : unit -> T
     member Test : x:(int * int) * y:int -> int
 """
@@ -118,7 +120,9 @@ type Abstract =
 
 let x: Abstract = Unchecked.defaultof<_>"""
     |> generateDefinitionFromPos (Pos.fromZ 10 7)
-    |> assertSrcAreEqual """[<AbstractClass>]
+    |> assertSrcAreEqual """module File
+
+[<AbstractClass>]
 type Abstract =
     abstract member AP : float
     abstract member M : unit -> int
@@ -206,7 +210,9 @@ type MyInterface =
 
 let f (x:MyInterface) = ()"""
     |> generateDefinitionFromPos (Pos.fromZ 4 9)
-    |> assertSrcAreEqual """[<Interface>]
+    |> assertSrcAreEqual """module File
+
+[<Interface>]
 type MyInterface =
     abstract member Method : int -> unit
 """
@@ -265,6 +271,22 @@ let testNumber i =
     |> assertSrcAreEqual """val |Even|Odd| : int -> Choice<unit,unit>
 """
 
+[<Test; Ignore("activate when it's possible to know in which module or namespace an active pattern is defined")>]
+let ``go to total active patterns should display enclosing module or namespace`` () =
+    """
+let (|Even|Odd|) i = 
+    if i % 2 = 0 then Even else Odd
+
+let testNumber i =
+    match i with
+    | Even -> printfn "%d is even" i
+    | Odd -> printfn "%d is odd" i"""
+    |> generateDefinitionFromPos (Pos.fromZ 6 7)
+    |> assertSrcAreEqual """module File
+
+val |Even|Odd| : int -> Choice<unit,unit>
+"""
+
 [<Test>]
 let ``go to partial active patterns`` () =
     """
@@ -294,7 +316,9 @@ type MyRecord =
 
 let r: MyRecord = Unchecked.defaultof<_>"""
     |> generateDefinitionFromPos (Pos.fromZ 10 7)
-    |> assertSrcAreEqual """[<CustomEquality>]
+    |> assertSrcAreEqual """module File
+
+[<CustomEquality>]
 type MyRecord =
     {
         Field1: int
@@ -313,7 +337,9 @@ type MyRecord =
 
 let r = { Field1 = 0; Field2 = id }"""
     |> generateDefinitionFromPos (Pos.fromZ 7 11)
-    |> assertSrcAreEqual """type MyRecord =
+    |> assertSrcAreEqual """module File
+
+type MyRecord =
     {
         Field1: int
         Field2: string -> string
@@ -331,7 +357,9 @@ type MyStruct =
 
 let x = new MyStruct()"""
     |> generateDefinitionFromPos (Pos.fromZ 7 12)
-    |> assertSrcAreEqual """[<Struct>]
+    |> assertSrcAreEqual """module File
+
+[<Struct>]
 type MyStruct =
     interface System.IComparable<MyStruct>
     interface System.IComparable
@@ -350,7 +378,9 @@ type MyClass = class end
 
 let x: MyClass = Unchecked.defaultof<_>"""
     |> generateDefinitionFromPos (Pos.fromZ 3 7)
-    |> assertSrcAreEqual """type MyClass =
+    |> assertSrcAreEqual """module File
+
+type MyClass =
     class
     end
 """
@@ -362,7 +392,9 @@ type MyInterface = interface end
 
 let x: MyInterface = ()"""
     |> generateDefinitionFromPos (Pos.fromZ 3 7)
-    |> assertSrcAreEqual """type MyInterface =
+    |> assertSrcAreEqual """module File
+
+type MyInterface =
     interface
     end
 """
@@ -375,7 +407,9 @@ type MyStruct = struct end
 
 let x = new MyStruct()"""
     |> generateDefinitionFromPos (Pos.fromZ 4 12)
-    |> assertSrcAreEqual """type MyStruct =
+    |> assertSrcAreEqual """module File
+
+type MyStruct =
     struct
         interface System.IComparable<MyStruct>
         interface System.IComparable
@@ -395,7 +429,9 @@ type Enum =
 
 let x = Enum.A"""
     |> generateDefinitionFromPos (Pos.fromZ 6 8)
-    |> assertSrcAreEqual """type Enum =
+    |> assertSrcAreEqual """module File
+
+type Enum =
     | A = 0
     | B = 1
     | C = 2
@@ -440,7 +476,9 @@ type T =
 type T2 =
     inherit T"""
     |> generateDefinitionFromPos (Pos.fromZ 4 5)
-    |> assertSrcAreEqual """type T2 =
+    |> assertSrcAreEqual """module File
+
+type T2 =
     interface
         inherit T
     end
@@ -451,7 +489,9 @@ let ``go to type abbreviation definition`` () =
     """
 let x: string = null"""
     |> generateDefinitionFromPos (Pos.fromZ 1 7)
-    |> assertSrcAreEqual """type string = System.String
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
+type string = System.String
 """
 
 [<Test>]
@@ -462,7 +502,9 @@ type MyAbstractClass =
     abstract member Method: int -> unit
     default this.Method(x) = ()"""
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
-    |> assertSrcAreEqual """[<AbstractClass>]
+    |> assertSrcAreEqual """module File
+
+[<AbstractClass>]
 type MyAbstractClass =
     abstract member Method : int -> unit
     override Method : x:int -> unit
@@ -475,7 +517,9 @@ type MyBaseClass() =
     abstract member Method: int -> unit
     default this.Method(x) = ()"""
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyBaseClass =
+    |> assertSrcAreEqual """module File
+
+type MyBaseClass =
     new : unit -> MyBaseClass
     abstract member Method : int -> unit
     override Method : x:int -> unit
@@ -492,7 +536,9 @@ type MyClass() =
     inherit MyBaseClass()
     override this.Method(x) = ()"""
     |> generateDefinitionFromPos (Pos.fromZ 5 5)
-    |> assertSrcAreEqual """type MyClass =
+    |> assertSrcAreEqual """module File
+
+type MyClass =
     inherit MyBaseClass
     new : unit -> MyClass
     override Method : x:int -> unit
@@ -506,7 +552,9 @@ type Class() =
     [<CLIEvent>]
     member this.MyEvent = event.Publish"""
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type Class =
+    |> assertSrcAreEqual """module File
+
+type Class =
     new : unit -> Class
     member add_MyEvent : Handler<int> -> unit
     [<CLIEvent>]
@@ -522,8 +570,15 @@ let ``go to F# exception definition`` () =
     ]
     |> List.map (generateDefinitionFromPos (Pos.fromZ 0 10))
     |> assertSrcSeqAreEqual [
-        "exception MyEmptyException\n"
-        "exception MyException of int * (int * string) * (int -> unit)\n"
+        """module File
+
+exception MyEmptyException
+"""
+
+        """module File
+
+exception MyException of int * (int * string) * (int -> unit)
+"""
     ]
 
 [<Test>]
@@ -535,7 +590,9 @@ type T() =
     static member Method2(?x: int) = (defaultArg x 0) * 2
     """
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
-    |> assertSrcAreEqual """type T =
+    |> assertSrcAreEqual """module File
+
+type T =
     new : unit -> T
     static member Method : ?x:int -> int
     static member Method2 : ?x:int -> int
@@ -549,11 +606,15 @@ let ``handle delegates`` () =
     ]
     |> List.map (generateDefinitionFromPos (Pos.fromZ 0 5))
     |> assertSrcSeqAreEqual [
-        """type MyDelegate =
+        """module File
+
+type MyDelegate =
     delegate of unit * int -> unit
 """
 
-        """type MyDelegate =
+        """module File
+
+type MyDelegate =
     delegate of arg1:int -> int
 """
     ]
@@ -659,7 +720,9 @@ type MyRecord with
     member __.Method2() = ()
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyRecord =
+    |> assertSrcAreEqual """module File
+
+type MyRecord =
     {
         A: string
         B: int
@@ -684,7 +747,9 @@ type MyUnion with
     member __.Method2() = "allo!"
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyUnion =
+    |> assertSrcAreEqual """module File
+
+type MyUnion =
     | A of int
     | B of float
     interface System.IComparable<MyUnion>
@@ -706,7 +771,9 @@ type MyClass with
     member x.MyExtensionMethod() = ()
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyClass =
+    |> assertSrcAreEqual """module File
+
+type MyClass =
     new : unit -> MyClass
     member Method : unit -> unit
     member MyExtensionMethod : unit -> unit
@@ -726,7 +793,9 @@ type MyClass() =
     static member StaticSetterOnly with set(value) = staticValue <- value
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyClass =
+    |> assertSrcAreEqual """module File
+
+type MyClass =
     new : unit -> MyClass
     member GetterAndSetter : int with get, set
     member SetterOnly : int with set
@@ -745,7 +814,9 @@ type Union =
     | Case3
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type Union =
+    |> assertSrcAreEqual """module File
+
+type Union =
     | [<Conditional("MyConditional")>]
       [<Obsolete("hello")>]
       Case1 of int
@@ -772,7 +843,9 @@ type Record = {
     Field2: float
 }"""
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
-    |> assertSrcAreEqual """type Record =
+    |> assertSrcAreEqual """module File
+
+type Record =
     {
         [<DefaultValue>]
         [<Obsolete("Reason1")>]
@@ -797,7 +870,9 @@ type MyClass() =
     member __.Method() = ()
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyClass =
+    |> assertSrcAreEqual """module File
+
+type MyClass =
     new : unit -> MyClass
     [<Obsolete("Method is obsolete")>]
     member Method : unit -> unit
@@ -835,27 +910,37 @@ type MyClass<'T when 'T : delegate<obj * int, unit>>() =
     ]
     |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
     |> assertSrcSeqAreEqual [
-        """type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> =
+        """module File
+
+type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> =
     new : unit -> MyClass<'T, 'U>
     member Method : unit -> unit
 """
 
-        """type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
+        """module File
+
+type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
     new : unit -> MyClass<'T, 'U>
     member Method : unit -> unit
 """
 
-        """type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
+        """module File
+
+type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
     new : unit -> MyClass<'T, 'U>
     member Method : unit -> unit
 """
 
-        """type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
+        """module File
+
+type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
     new : unit -> MyClass<'T, 'U>
     member Method : unit -> unit
 """
 
-        """type MyClass<'T when 'T : delegate<obj * int, unit>> =
+        """module File
+
+type MyClass<'T when 'T : delegate<obj * int, unit>> =
     new : unit -> MyClass<'T>
     member Method : unit -> unit
 """
@@ -871,7 +956,9 @@ type MyClass<'T when 'T : struct>() =
         x = x
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
-    |> assertSrcAreEqual """type MyClass<'T when 'T : struct> =
+    |> assertSrcAreEqual """module File
+
+type MyClass<'T when 'T : struct> =
     new : unit -> MyClass<'T>
     member Method : x:'X -> int when 'X : null
     member NormalMethod : unit -> unit
@@ -928,7 +1015,9 @@ let f (``a param``: int) = ``a param`` * 2""", Pos.fromZ 0 9
     ]
     |> List.map (fun (src, pos) -> generateDefinitionFromPos pos src)
     |> assertSrcSeqAreEqual [
-        """type ``My class`` =
+        """module File
+
+type ``My class`` =
     new : unit -> ``My class``
     member ``a method`` : unit -> unit
     member ``a property`` : int
@@ -939,10 +1028,14 @@ val ``a value`` : int
 val f : ``a param``:int -> int
 """
 
-        """type ``My abbrev`` = int
+        """module File
+
+type ``My abbrev`` = int
 """
 
-        """type Union =
+        """module File
+
+type Union =
     | ``My Case`` of int
     | Case2
     interface System.IComparable<Union>
@@ -952,7 +1045,9 @@ val f : ``a param``:int -> int
     interface System.Collections.IStructuralEquatable
 """
 
-        """type Record =
+        """module File
+
+type Record =
     {
         ``My Record``: string
     }
@@ -963,13 +1058,19 @@ val f : ``a param``:int -> int
     interface System.Collections.IStructuralEquatable
 """
 
-        """exception ``My exception``
+        """module File
+
+exception ``My exception``
 """
 
-        """exception ``My exception 2`` of int
+        """module File
+
+exception ``My exception 2`` of int
 """
 
-        """type ``My delegate`` =
+        """module File
+
+type ``My delegate`` =
     delegate of int -> int
 """
     ]
@@ -1001,22 +1102,30 @@ type MyClass() =
     ] 
     |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
     |> assertSrcSeqAreEqual [
-        """type MyClass< ^T when ^T : (static member Create : unit ->  ^T) and ^T : (member Prop : int)> =
+        """module File
+
+type MyClass< ^T when ^T : (static member Create : unit ->  ^T) and ^T : (member Prop : int)> =
     class
     end
 """
 
-        """type MyClass< ^T when ^T : (member Create : int *  ^T ->  ^T)> =
+        """module File
+
+type MyClass< ^T when ^T : (member Create : int *  ^T ->  ^T)> =
     class
     end
 """
 
-        """type MyClass< ^T when ^T : (static member MyProp : int)> =
+        """module File
+
+type MyClass< ^T when ^T : (static member MyProp : int)> =
     class
     end
 """
 
-        """type MyClass =
+        """module File
+
+type MyClass =
     new : unit -> MyClass
     member inline Method : t: ^T -> unit when ^T : (member ConstraintMethod : unit -> unit)
     static member inline StaticMethod : unit ->  ^T when ^T : (static member Create : unit ->  ^T)
@@ -1038,12 +1147,16 @@ type MyClass<'T when 'T : (member ``A property`` : int)> =
     ] 
     |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
     |> assertSrcSeqAreEqual [
-        """type MyClass< ^T when ^T : (static member ``A static member`` : unit ->  ^T)> =
+        """module File
+
+type MyClass< ^T when ^T : (static member ``A static member`` : unit ->  ^T)> =
     class
     end
 """
 
-        """type MyClass< ^T when ^T : (member ``A property`` : int)> =
+        """module File
+
+type MyClass< ^T when ^T : (member ``A property`` : int)> =
     class
     end
 """

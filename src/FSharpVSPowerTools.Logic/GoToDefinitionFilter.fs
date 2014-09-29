@@ -109,14 +109,12 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
                 let symbolResult = getDocumentState () |> Async.RunSynchronously
-                let isNamespace (fsSymbol: FSharpSymbol) =
+                let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
                     match fsSymbol with
-                    | :? FSharpEntity as e when e.IsNamespace -> true
-                    | _ -> false
-                let isProvidedAndErased (fsSymbol: FSharpSymbol) =
-                    match fsSymbol with
-                    | :? FSharpEntity as e when e.IsProvidedAndErased -> true
-                    | _ -> false
+                    | :? FSharpEntity as e when e.IsNamespace -> false
+                    | :? FSharpEntity as e when e.IsProvidedAndErased -> false
+                    | :? FSharpEntity as e when e.IsEnum && not e.IsFSharp -> false
+                    | _ -> true
 
                 match symbolResult with
                 | Some (_, _, FindDeclResult.DeclFound _) 
@@ -124,7 +122,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     // Declaration location might exist so let's Visual F# Tools handle it  
                     x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
                 | Some (fsSymbol, displayContext, FindDeclResult.DeclNotFound _) ->
-                    if not (isNamespace fsSymbol || isProvidedAndErased fsSymbol) then
+                    if shouldGenerateDefinition fsSymbol then
                         navigateToMetadata displayContext fsSymbol
                     VSConstants.S_OK
             else
