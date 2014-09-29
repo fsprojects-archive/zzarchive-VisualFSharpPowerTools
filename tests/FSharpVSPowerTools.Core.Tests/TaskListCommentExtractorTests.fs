@@ -42,6 +42,11 @@ let ``should match multiline comments``() =
        |]
 
 [<Test>]
+let ``should match nested comments``() =
+    (defaultOptions, "File1.fs", [| "(* TODO (* (* nested *) nested *) nested *)" |])
+    => [| (2, "TODO (* (* nested *) nested *) nested", "File1.fs", 0, 3) |]
+
+[<Test>]
 let ``only the first task list comment per line is taken``() = 
     (defaultOptions, "File1.fs", [| "// TODO something // TODO something else" |])
     => [| (2, "TODO something // TODO something else", "File1.fs", 0, 3) |]
