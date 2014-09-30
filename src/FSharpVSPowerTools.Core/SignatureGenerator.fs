@@ -321,12 +321,15 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
             ctx.Writer.WriteLine("open {0}", decl))          
     else
         ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)
+
     if not isTopLevel then
         ctx.Writer.Indent ctx.Indentation
+    if modul.MembersFunctionsAndValues.Count > 0 then
+        ctx.Writer.WriteLine("")
     for value in modul.MembersFunctionsAndValues do
         writeFunctionOrValue ctx value
 
-    if modul.MembersFunctionsAndValues.Count > 0 && modul.NestedEntities.Count > 0 then
+    if modul.NestedEntities.Count > 0 then
         ctx.Writer.WriteLine("")
 
     for entity in modul.NestedEntities do

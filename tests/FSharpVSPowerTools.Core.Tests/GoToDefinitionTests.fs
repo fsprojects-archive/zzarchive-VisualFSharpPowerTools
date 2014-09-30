@@ -532,6 +532,7 @@ let f x = Option.map(x)"""
     |> List.iter (assertSrcAreEqual """/// Basic operations on options.
 [<CompilationRepresentation(4)>]
 module Microsoft.FSharp.Core.Option
+
 /// Returns true if the option is not None.
 val isSome : option:'T option -> bool
 /// Returns true if the option is None.
@@ -725,6 +726,7 @@ let x = Array.map
 [<CompilationRepresentation(4)>]
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
+
 /// Builds a new array that contains the elements of the first array followed by the elements of the second array.
 val append : array1:'T [] -> array2:'T [] -> 'T []
 /// Returns the average of the elements in the array.
@@ -916,6 +918,7 @@ val zip3 : array1:'T1 [] -> array2:'T2 [] -> array3:'T3 [] -> ('T1 * 'T2 * 'T3) 
 
 /// Provides parallel operations on arrays 
 module Parallel = 
+
     /// Apply the given function to each element of the array. Return
     ///  the array comprised of the results "x" for each element where
     ///  the function returns Some(x).
@@ -1221,10 +1224,12 @@ let ``handle generic constraints on module functions and values`` () =
     |> List.map (generateDefinitionFromPos (Pos.fromZ 0 4))
     |> assertSrcSeqAreEqual [
         """module File
+
 val func : x:'X -> int when 'X : null and 'X : comparison
 """
 
         """module File
+
 val value : string when 'X : null and 'X : comparison
 """
     ]
@@ -1234,6 +1239,7 @@ let ``operator names are demangled`` () =
     """let inline func x = x + x"""
     |> generateDefinitionFromPos (Pos.fromZ 0 11)
     |> assertSrcAreEqual """module File
+
 val inline func : x: ^a ->  ^b when ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
 """
 
@@ -1245,6 +1251,7 @@ let ``double-backtick identifiers are supported`` () =
     member __.``a method``() = ()""", Pos.fromZ 0 5
 
         """module ``My module``
+
 let ``a value`` = 0
 let f (``a param``: int) = ``a param`` * 2""", Pos.fromZ 0 9
 
@@ -1271,6 +1278,7 @@ type ``My class`` =
 """
 
         """module ``My module``
+
 val ``a value`` : int
 val f : ``a param``:int -> int
 """
@@ -1415,6 +1423,8 @@ let ``type abbreviations with generic params`` () =
     |> generateDefinitionFromPos (Pos.fromZ 0 11)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
 
+/// The type of optional values. When used from other CLI languages the
+///  empty option is the null value. 
 type option<'T> = Option<'T>
 """
 
@@ -1424,6 +1434,7 @@ let ``type abbreviations for basic types`` () =
     |> generateDefinitionFromPos (Pos.fromZ 0 8)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
 
+/// An abbreviation for the CLI type System.Collections.Generic.List<_>
 type ResizeArray<'T> = System.Collections.Generic.List<'T>
 """
 
