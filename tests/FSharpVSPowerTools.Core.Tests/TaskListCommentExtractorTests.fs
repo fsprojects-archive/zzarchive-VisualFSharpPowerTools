@@ -42,6 +42,11 @@ let ``should match multiline comments``() =
        |]
 
 [<Test>]
+let ``should match multiline comments with no spaces``() =
+    (defaultOptions, "File1.fs", [| "(*TODO something*)" |])
+    => [| (2, "TODO something", "File1.fs", 0, 2) |]
+
+[<Test>]
 let ``should match nested comments``() =
     (defaultOptions, "File1.fs", [| "(* TODO (* (* nested *) nested *) nested *)" |])
     => [| (2, "TODO (* (* nested *) nested *) nested", "File1.fs", 0, 3) |]
