@@ -4,10 +4,13 @@
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
       "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/IdentifierUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/SignatureGenerator.fs"
       "TestHelpers.fs"
@@ -1207,15 +1210,53 @@ let ``type abbreviations for basic types`` () =
 type ResizeArray<'T> = System.Collections.Generic.List<'T>
 """
 
+let generateFileNameForSymbol caretPos src =
+    let document: IDocument = upcast MockDocument(src)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
+    let projectOptions = project()
+
+    asyncMaybe {
+        let! _range, symbolAtPos =
+            liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
+        let! _range, _symbol, symbolUse = 
+            codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
+        
+        return getFileNameFromSymbol symbolUse.Symbol
+    }
+    |> Async.RunSynchronously
+    |> Option.get
+
+[<Test>]
+let ``file names for union cases should refer to union type names`` () =
+    """let x = Some 0 "" """
+    |> generateFileNameForSymbol (Pos.fromZ 0 8)
+    |> assertSrcAreEqual "Microsoft.FSharp.Core.option.fsi"
+
+[<Test>]
+let ``file names for record fields should refer to record type names`` () =
+     """
+type MyRecord =
+    {
+        Field1: int
+        Field2: string -> string
+    }
+
+let r = { Field1 = 0; Field2 = id }"""
+    |> generateFileNameForSymbol (Pos.fromZ 7 11)
+    |> assertSrcAreEqual "File.MyRecord.fsi"
+
+[<Test>]
+let ``file names for members should refer to type names`` () =
+    """open System
+let _ = Async.AwaitTask"""
+    |> generateFileNameForSymbol (Pos.fromZ 1 16)
+    |> assertSrcAreEqual "Microsoft.FSharp.Control.FSharpAsync.fsi"
 
 // TODO: fix abbreviation metadata generation (it should be put inside a module or a namespace)
 
 // Tests to add:
 // TODO: class method arguments attributes
-// TODO: xml comments
-// TODO: include open directives so that IStructuralEquatable/... are not wiggled
 // ENHANCEMENT: special formatting for Events?
 // TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
-// TODO: add test for VS buffer name?
 // TODO: set cursor on method/... when symbol is a method/union case/enum value/record field
