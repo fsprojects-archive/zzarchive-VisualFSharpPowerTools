@@ -42,14 +42,24 @@ let ``should match multiline comments``() =
        |]
 
 [<Test>]
+let ``should match multiline comments with no spaces``() =
+    (defaultOptions, "File1.fs", [| "(*TODO something*)" |])
+    => [| (2, "TODO something", "File1.fs", 0, 2) |]
+
+[<Test>]
+let ``should match nested comments``() =
+    (defaultOptions, "File1.fs", [| "(* TODO (* (* nested *) nested *) nested *)" |])
+    => [| (2, "TODO (* (* nested *) nested *) nested", "File1.fs", 0, 3) |]
+
+[<Test>]
 let ``only the first task list comment per line is taken``() = 
     (defaultOptions, "File1.fs", [| "// TODO something // TODO something else" |])
     => [| (2, "TODO something // TODO something else", "File1.fs", 0, 3) |]
 
 [<Test>]
-let ``task list comments only allow asterisk, backslash, or whitespace between // and token``() = 
-    (defaultOptions, "File1.fs", [| "//*/  /* TODO stuff"; "//+ TODO something else" |])
-    => [| (2, "TODO stuff", "File1.fs", 0, 9) |]
+let ``task list comments only allow asterisk, slash, or whitespace between // and token``() = 
+    (defaultOptions, "File1.fs", [| "//*/  /* TODO stuff"; "//+ TODO something else"; "// *TODO other" |])
+    => [| (2, "TODO stuff", "File1.fs", 0, 9); (2, "TODO other", "File1.fs", 2, 4) |]
 
 [<Test>]
 let ``tokens can only be immediately followed by chars other than space that aren't alphanumeric or underscore``() = 
@@ -63,6 +73,22 @@ let ``tokens can only be immediately followed by chars other than space that are
 let ``comments can have any indentation and any content before them``() = 
     (defaultOptions, "File1.fs", [| "   other stuff// TODO something" |])
     => [| (2, "TODO something", "File1.fs", 0, 17) |]
+
+[<Test>]
+let ``mix cases``() =
+    (defaultOptions, "File1.fs", [| "//"
+                                    "(* TODO a *)"
+                                    "(*"; ""; ""; ""; "*)"
+                                    "// TODO b" |])
+    => [| (2, "TODO a", "File1.fs", 1, 3); (2, "TODO b", "File1.fs", 7, 3) |]
+
+[<Test>]
+let ``empty comments``() =
+    (defaultOptions, "File1.fs", [| "//"
+                                    "// "
+                                    "(**)"
+                                    "(* *)" |])
+    => [||]
 
 [<Test>]
 let ``comments within strings are not considered``() = 
