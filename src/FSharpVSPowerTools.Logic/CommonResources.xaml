@@ -48,5 +48,14 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <Style TargetType="{x:Type Button}" x:Key="DialogOkButton">
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="Width" Value="90"/>
+        <Setter Property="Height" Value="25"/>
+        <Setter Property="IsDefault" Value="True"/>
+        <Setter Property="IsEnabled" Value="{Binding IsValid}"/>
+        <Setter Property="fsxaml:DefaultButton.DialogResultOnClick" Value="True"/>
+        <Setter Property="Content" Value="OK"/>
+    </Style>
 </ResourceDictionary>
 

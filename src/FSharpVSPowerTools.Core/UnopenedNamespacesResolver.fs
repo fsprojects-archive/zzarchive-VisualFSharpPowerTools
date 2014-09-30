@@ -188,12 +188,12 @@ module ParsedInput =
         and walkExprWithKind (parentKind: EntityKind option) = function
             | SynExpr.LongIdent (_, LongIdentWithDots(_, dotRanges), _, r) ->
                 match dotRanges with
-                | [] when isPosInRange r -> parentKind |> Option.orElse (Some FunctionOrValue) 
+                | [] when isPosInRange r -> parentKind |> Option.orElse (Some (FunctionOrValue false)) 
                 | firstDotRange :: _  ->
                     let firstPartRange = 
                         Range.mkRange "" r.Start (Range.mkPos firstDotRange.StartLine (firstDotRange.StartColumn - 1))
                     if isPosInRange firstPartRange then
-                        parentKind |> Option.orElse (Some FunctionOrValue) 
+                        parentKind |> Option.orElse (Some (FunctionOrValue false))
                     else None
                 | _ -> None
             | SynExpr.Paren (e, _, _, _) -> walkExprWithKind parentKind e
@@ -231,7 +231,7 @@ module ParsedInput =
             | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
             | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
                 List.tryPick (walkExprWithKind parentKind) [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExprWithKind parentKind e)
-            | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some EntityKind.FunctionOrValue)
+            | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some (EntityKind.FunctionOrValue false))
             | SynExpr.LongIdentSet(_, e, _) -> walkExprWithKind parentKind e
             | SynExpr.DotGet(e, _, _, _) -> walkExprWithKind parentKind e
             | SynExpr.DotSet(e, _, _, _) -> walkExprWithKind parentKind e

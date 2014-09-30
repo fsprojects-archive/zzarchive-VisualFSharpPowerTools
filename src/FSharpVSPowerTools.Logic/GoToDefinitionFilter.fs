@@ -12,6 +12,8 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
+open Microsoft.VisualStudio.Text
+open Microsoft.FSharp.Compiler.Range
 
 type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           editorOptionsFactory: IEditorOptionsFactoryService, projectFactory: ProjectFactory) =
@@ -33,20 +35,15 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     let fsSymbol = fsSymbolUse.Symbol
                     let lineStr = span.Start.GetContainingLine().GetText()
                     let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, false)
-                    return Some (fsSymbol, fsSymbolUse.DisplayContext, findDeclResult) 
+                    return Some (fsSymbol, fsSymbolUse.DisplayContext, span, fileScopedCheckResults.GetUntypedAst(), findDeclResult) 
                 | _ -> return None
             | _ -> return None
         }
 
     // Now the input is an entity or a member/value.
     // We always generate the full enclosing entity signature if the symbol is a member/value
-    let navigateToMetadata displayContext (fsSymbol: FSharpSymbol) = 
-        let fileName =
-            match fsSymbol with
-            | :? FSharpMemberFunctionOrValue as mem -> mem.LogicalEnclosingEntity.FullName + ".fsi"
-            | _ ->
-                try fsSymbol.FullName + ".fsi"
-                with _ -> fsSymbol.DisplayName + ".fsi"
+    let navigateToMetadata displayContext (span: SnapshotSpan) parseTree (fsSymbol: FSharpSymbol) = 
+        let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
@@ -67,7 +64,10 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             // TODO: navigate to exaction location
             windowFrame.Show() |> ensureSucceeded
         else
-            match SignatureGenerator.formatSymbol indentSize displayContext fsSymbol with
+            let (startLine, startCol, _, _) = span.ToRange()
+            let pos = mkPos (startLine+1) startCol
+            let openDeclarations = parseTree |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) |> Option.getOrElse []
+            match SignatureGenerator.formatSymbol indentSize displayContext openDeclarations fsSymbol with
             | Some signature ->
                 File.WriteAllText(filePath, signature)
                 let canShow = 
@@ -103,19 +103,21 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
                 let symbolResult = getDocumentState () |> Async.RunSynchronously
-                let isNamespace (fsSymbol: FSharpSymbol) =
+                let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
                     match fsSymbol with
-                    | :? FSharpEntity as e when e.IsNamespace -> true
-                    | _ -> false
+                    | :? FSharpEntity as e when e.IsNamespace -> false
+                    | :? FSharpEntity as e when e.IsProvidedAndErased -> false
+                    | :? FSharpEntity as e when e.IsEnum && not e.IsFSharp -> false
+                    | _ -> true
 
                 match symbolResult with
-                | Some (_, _, FindDeclResult.DeclFound _) 
+                | Some (_, _, _, _, FindDeclResult.DeclFound _) 
                 | None ->
                     // Declaration location might exist so let's Visual F# Tools handle it  
                     x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-                | Some (fsSymbol, displayContext, FindDeclResult.DeclNotFound _) ->
-                    if not (isNamespace fsSymbol) then
-                        navigateToMetadata displayContext fsSymbol
+                | Some (fsSymbol, displayContext, span, parseTree, FindDeclResult.DeclNotFound _) ->
+                    if shouldGenerateDefinition fsSymbol then
+                        navigateToMetadata displayContext span parseTree fsSymbol
                     VSConstants.S_OK
             else
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)

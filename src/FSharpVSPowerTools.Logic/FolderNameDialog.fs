@@ -1,8 +1,8 @@
 ﻿namespace FSharpVSPowerTools.Folders
 
-open System
-open System.ComponentModel
 open FSharpVSPowerTools
+open FSharp.ViewModule
+open FSharp.ViewModule.Validation
 
 type NewFolderNameDialog = FsXaml.XAML<"FolderNameDialog.xaml">
 
@@ -12,40 +12,22 @@ type NewFolderNameDialogResources =
       FolderNames : Set<string>
       OriginalName : string }
 
-type NewFolderNameDialogModel(resources :NewFolderNameDialogResources) =
+type NewFolderNameDialogModel(resources :NewFolderNameDialogResources) as self =
+    inherit ViewModelBase()
 
-    let mutable name = resources.OriginalName
+    let validateExists (folderName : string) =
+        match folderName.Trim() with
+            | a when resources.FolderNames.Contains(a) -> Some Resource.validationFolderWithGivenNameAlreadyExists
+            | _ -> None
 
-    let validate (name :string) =
-        let name = name.Trim()
-        match name with
-        | "" -> Choice2Of2 Resource.validatingEmptyName
-        | a when resources.FolderNames.Contains a -> Choice2Of2 Resource.validationFolderWithGivenNameAlreadyExists
-        | _ -> Choice1Of2()
+    let validateName = 
+        validate "Name" 
+            >> notNullOrWhitespace 
+            >> fixErrorsWithMessage Resource.validatingEmptyName
+            >> custom validateExists
+            >> result
 
-    let mutable validationResult = validate name
-
-    let errorsChanged = Event<_,_>() 
-
-    member x.Result = validationResult
+    let name = self.Factory.Backing(<@@ self.Name @@>, resources.OriginalName, validateName)
 
     member x.WindowTitle = resources.WindowTitle
-
-    member x.Name
-        with get() = name
-        and set (v :string) =
-            name <- v
-            validationResult <- validate name
-            errorsChanged.Trigger(x :> obj, DataErrorsChangedEventArgs("Name"))
-
-    interface INotifyDataErrorInfo with
-        member x.GetErrors _ = 
-            match validationResult with
-            | Choice2Of2 e -> [e]
-            | _ -> []
-            :> Collections.IEnumerable
-
-        member x.HasErrors = match validationResult with Choice2Of2 _ -> true | _ -> false
-        [<CLIEvent>]
-        member x.ErrorsChanged = errorsChanged.Publish
-        
+    member x.Name with get() = name.Value and set(v) = name.Value <- v

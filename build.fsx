@@ -41,7 +41,9 @@ let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted 
-let gitHome = "https://github.com/fsprojects"
+let gitOwner = "fsprojects"
+let gitHome = "https://github.com/" + gitOwner
+
 // The name of the project on GitHub
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
@@ -81,9 +83,7 @@ Target "AssemblyInfo" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
-// Clean build results & restore NuGet packages
-
-Target "RestorePackages" RestorePackages
+// Clean build results
 
 Target "Clean" (fun _ ->
     CleanDirs ["bin"; "bin/vsix"; "temp"; "nuget"]
@@ -165,7 +165,6 @@ Target "NuGet" (fun _ ->
             ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
             Tags = tags
             OutputPath = "bin"
-            ToolPath = ".nuget/nuget.exe"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = true
             Dependencies = ["FSharp.Compiler.Service", fcsVersion] })
@@ -190,17 +189,27 @@ Target "ReleaseDocs" (fun _ ->
     fullclean tempDocsDir
     CopyRecursive "docs/output" tempDocsDir true |> tracefn "%A"
     StageAll tempDocsDir
-    Commit tempDocsDir (sprintf "[skip ci] Update generated documentation for version %s" release.NugetVersion)
+    Git.Commit.Commit tempDocsDir (sprintf "[skip ci] Update generated documentation for version %s" release.NugetVersion)
     Branches.push tempDocsDir
 )
 
+#load "paket-files/fsharp/FAKE/modules/Octokit/Octokit.fsx"
+open Octokit
+
 Target "Release" (fun _ ->
     StageAll ""
-    Commit "" (sprintf "Bump version to %s" release.NugetVersion)
+    Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
     Branches.push ""
 
     Branches.tag "" release.NugetVersion
     Branches.pushTag "" "origin" release.NugetVersion
+
+    // release on github
+    createClient (getBuildParamOrDefault "github-user" "") (getBuildParamOrDefault "github-pw" "")
+    |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes 
+    |> uploadFile "./bin/FSharpVSPowerTools.vsix"
+    |> releaseDraft
+    |> Async.RunSynchronously
 )
 
 // --------------------------------------------------------------------------------------
@@ -212,7 +221,6 @@ Target "All" DoNothing
 
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
-  ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
   ==> "BuildTests"

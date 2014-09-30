@@ -575,7 +575,7 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
 
         let! superficialTypeDefinition =
             match symbolUse.Symbol with
-            | TypedAstUtils.UnionCase(case) when case.ReturnType.HasTypeDefinition ->
+            | TypedAstPatterns.UnionCase(case) when case.ReturnType.HasTypeDefinition ->
                 Some case.ReturnType.TypeDefinition |> liftMaybe
             | Entity(entity, _, _) -> Some entity |> liftMaybe
             | _ -> None |> liftMaybe

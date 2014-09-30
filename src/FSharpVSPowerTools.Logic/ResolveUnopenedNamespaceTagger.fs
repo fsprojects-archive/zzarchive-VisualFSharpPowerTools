@@ -78,7 +78,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                         match entityKind, e.Kind with
                                         | Attribute, Attribute 
                                         | Type, (Type | Attribute)
-                                        | FunctionOrValue, _ -> true 
+                                        | FunctionOrValue _, _ -> true 
                                         | Attribute, _
                                         | _, Module _
                                         | Module _, _
