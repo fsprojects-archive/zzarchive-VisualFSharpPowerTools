@@ -43,18 +43,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     // Now the input is an entity or a member/value.
     // We always generate the full enclosing entity signature if the symbol is a member/value
     let navigateToMetadata displayContext (span: SnapshotSpan) parseTree (fsSymbol: FSharpSymbol) = 
-        let fileName =
-            match fsSymbol with
-            | :? FSharpMemberFunctionOrValue as mem ->
-                match mem.LogicalEnclosingEntity.TryGetFullName() with
-                | Some fullName -> fullName + ".fsi"
-                | _ -> "tmp.fsi"
-            | _ ->
-                try fsSymbol.FullName + ".fsi"
-                with _ ->
-                    try fsSymbol.DisplayName + ".fsi"
-                    with _ -> "tmp.fsi"
-
+        let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)

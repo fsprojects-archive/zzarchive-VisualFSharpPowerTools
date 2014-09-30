@@ -7,6 +7,8 @@ open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.PrettyNaming
 open Microsoft.FSharp.Compiler.Lexhelp.Keywords
+open System.IO
+open System.Text.RegularExpressions
 
 [<NoComparison>]
 type internal Context = {
@@ -736,3 +738,31 @@ let formatSymbol indentation displayContext openDeclarations (symbol: FSharpSymb
             None
     writeSymbol symbol
     |> Option.map (fun _ -> writer.Dump())
+
+let [<Literal>] private tempFileName = "tmp.fsi"
+
+/// Get file name from symbol's full name and escape illegal characters
+let getFileNameFromSymbol (symbol: FSharpSymbol) =    
+    let fileName =        
+        match symbol with
+        | MemberFunctionOrValue mem ->
+            mem.LogicalEnclosingEntity.TryGetFullName()
+            |> Option.map (fun fullName -> fullName + ".fsi")
+            |> Option.getOrElse tempFileName
+        | UnionCase uc ->
+            match uc.ReturnType with
+            | TypeWithDefinition entity ->
+                entity.TryGetFullName()
+                |> Option.map (fun fullName -> fullName + ".fsi")
+                |> Option.getOrElse tempFileName
+            | _ -> tempFileName
+        | Field(field, _) ->
+                field.DeclaringEntity.TryGetFullName()
+                |> Option.map (fun fullName -> fullName + ".fsi")
+                |> Option.getOrElse tempFileName
+        | _ ->
+            Option.attempt(fun _ -> symbol.FullName + ".fsi")
+            |> Option.getOrElse tempFileName
+    let regexSearch = String(Path.GetInvalidFileNameChars()) + String(Path.GetInvalidPathChars())
+    let r = Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
+    r.Replace(fileName, "")
