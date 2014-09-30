@@ -1230,7 +1230,7 @@ let generateFileNameForSymbol caretPos src =
 let ``file names for union cases should refer to union type names`` () =
     """let x = Some 0 "" """
     |> generateFileNameForSymbol (Pos.fromZ 0 8)
-    |> assertSrcAreEqual """Microsoft.FSharp.Core.option.fsi"""
+    |> assertSrcAreEqual "Microsoft.FSharp.Core.option.fsi"
 
 [<Test>]
 let ``file names for record fields should refer to record type names`` () =
@@ -1243,14 +1243,14 @@ type MyRecord =
 
 let r = { Field1 = 0; Field2 = id }"""
     |> generateFileNameForSymbol (Pos.fromZ 7 11)
-    |> assertSrcAreEqual """File.MyRecord.fsi"""
+    |> assertSrcAreEqual "File.MyRecord.fsi"
 
 [<Test>]
 let ``file names for members should refer to type names`` () =
     """open System
 let _ = Async.AwaitTask"""
     |> generateFileNameForSymbol (Pos.fromZ 1 16)
-    |> assertSrcAreEqual """Microsoft.FSharp.Control.FSharpAsync.fsi"""
+    |> assertSrcAreEqual "Microsoft.FSharp.Control.FSharpAsync.fsi"
 
 // TODO: fix abbreviation metadata generation (it should be put inside a module or a namespace)
 

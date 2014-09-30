@@ -739,7 +739,7 @@ let formatSymbol indentation displayContext openDeclarations (symbol: FSharpSymb
     writeSymbol symbol
     |> Option.map (fun _ -> writer.Dump())
 
-let [<Literal>] private tempFileName = "tmp.fsi"
+let [<Literal>] private tempFileName = "tmp"
 
 /// Get file name from symbol's full name and escape illegal characters
 let getFileNameFromSymbol (symbol: FSharpSymbol) =    
@@ -747,22 +747,15 @@ let getFileNameFromSymbol (symbol: FSharpSymbol) =
         match symbol with
         | MemberFunctionOrValue mem ->
             mem.LogicalEnclosingEntity.TryGetFullName()
-            |> Option.map (fun fullName -> fullName + ".fsi")
-            |> Option.getOrElse tempFileName
         | UnionCase uc ->
             match uc.ReturnType with
             | TypeWithDefinition entity ->
                 entity.TryGetFullName()
-                |> Option.map (fun fullName -> fullName + ".fsi")
-                |> Option.getOrElse tempFileName
-            | _ -> tempFileName
-        | Field(field, _) ->
-                field.DeclaringEntity.TryGetFullName()
-                |> Option.map (fun fullName -> fullName + ".fsi")
-                |> Option.getOrElse tempFileName
-        | _ ->
-            Option.attempt(fun _ -> symbol.FullName + ".fsi")
-            |> Option.getOrElse tempFileName
+            | _ -> None
+        | Field (field, _) -> field.DeclaringEntity.TryGetFullName()
+        | _ -> Option.attempt(fun _ -> symbol.FullName)
+        |> Option.getOrElse tempFileName
+
     let regexSearch = String(Path.GetInvalidFileNameChars()) + String(Path.GetInvalidPathChars())
     let r = Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
-    r.Replace(fileName, "")
+    r.Replace(fileName + ".fsi", "")
