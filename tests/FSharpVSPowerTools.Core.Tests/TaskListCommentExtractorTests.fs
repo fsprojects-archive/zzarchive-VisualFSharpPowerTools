@@ -70,6 +70,14 @@ let ``comments can have any indentation and any content before them``() =
     => [| (2, "TODO something", "File1.fs", 0, 17) |]
 
 [<Test>]
+let ``empty comments``() =
+    (defaultOptions, "File1.fs", [| "//"
+                                    "// "
+                                    "(**)"
+                                    "(* *)" |])
+    => [||]
+
+[<Test>]
 let ``comments within strings are not considered``() = 
     let lines = "let str1 = \"// TODO something\"
                  let str2 = \"
