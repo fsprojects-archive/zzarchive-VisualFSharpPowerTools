@@ -36,20 +36,6 @@ type CommentPos =
 module private Utils =
     let sourceTok = SourceTokenizer([], "/tmp.fsx")
 
-    let scanLineComments (firstToken: TokenInformation) (tokenizer: LineTokenizer) state =
-        let rec scanLineComments' acc state =
-            match tokenizer.ScanToken(state) with
-            | Some tok, state ->
-                match tok.CharClass with
-                | TokenCharKind.LineComment ->
-                    scanLineComments' (tok::acc) state
-                | _ ->
-                    assert false
-                    (acc, state)
-            | None, state ->
-                (acc, state)
-        scanLineComments' [firstToken] state
-
     let createNewLineTokenizer (lines: string[]) (lineNumber: int) =
         let nextLine = if lines.Length <= (lineNumber + 1) then "" else lines.[lineNumber + 1]
         sourceTok.CreateLineTokenizer(nextLine)
@@ -91,8 +77,7 @@ module private Utils =
         | Some tok, state ->
             match tok.CharClass with
             | TokenCharKind.LineComment ->
-                let lineCommentTokens, state = scanLineComments tok tokenizer state
-                let lineCommentPos = OnelineCommentPos { Line = lineNumber; Column = (List.rev lineCommentTokens).Head.LeftColumn }
+                let lineCommentPos = OnelineCommentPos { Line = lineNumber; Column = tok.LeftColumn }
                 Some (lineCommentPos, (lines, lineNumber + 1, createNewLineTokenizer lines lineNumber, state))
             | TokenCharKind.Comment ->
                 let beginPos, endPos, tokenizer, state = scanMultilineComments (lines, lineNumber, tokenizer, state) tok
