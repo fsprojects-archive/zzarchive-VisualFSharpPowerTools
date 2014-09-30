@@ -1189,6 +1189,25 @@ type MyClass< ^T when ^T : (member ``A property`` : int)> =
 """
     ]
 
+[<Test>]
+let ``type abbreviations with generic params`` () =
+    """let x: option<'T> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 0 11)
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
+type option<'T> = Option<'T>
+"""
+
+[<Test>]
+let ``type abbreviations for basic types`` () =
+    """let x: ResizeArray<'T> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 0 8)
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
+
+type ResizeArray<'T> = System.Collections.Generic.List<'T>
+"""
+
+
 // TODO: fix abbreviation metadata generation (it should be put inside a module or a namespace)
 
 // Tests to add:

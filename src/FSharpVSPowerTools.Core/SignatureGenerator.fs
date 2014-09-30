@@ -484,8 +484,8 @@ and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity)
 
     writeDocs ctx abbreviatingType.XmlDoc
     ctx.Writer.WriteLine("type {0} = {1}",
-                         QuoteIdentifierIfNeeded abbreviatingType.LogicalName,
-                         abbreviatedType.Format(ctx.DisplayContext))
+        getTypeNameWithGenericParams ctx abbreviatingType true,
+        abbreviatedType.Format(ctx.DisplayContext))
 
 and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
     if not isNestedEntity then
