@@ -75,6 +75,14 @@ let ``comments can have any indentation and any content before them``() =
     => [| (2, "TODO something", "File1.fs", 0, 17) |]
 
 [<Test>]
+let ``mix cases``() =
+    (defaultOptions, "File1.fs", [| "//"
+                                    "(* TODO a *)"
+                                    "(*"; ""; ""; ""; "*)"
+                                    "// TODO b" |])
+    => [| (2, "TODO a", "File1.fs", 1, 3); (2, "TODO b", "File1.fs", 7, 3) |]
+
+[<Test>]
 let ``empty comments``() =
     (defaultOptions, "File1.fs", [| "//"
                                     "// "
