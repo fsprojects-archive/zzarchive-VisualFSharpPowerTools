@@ -309,9 +309,12 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     if isTopLevel then
         let qualifiedModuleName = tryRemoveModuleSuffix modul modul.FullName
         ctx.Writer.WriteLine("module {0}", qualifiedModuleName)
-        for decl in ctx.OpenDeclarations do
-            if decl <> qualifiedModuleName then
-                ctx.Writer.WriteLine("open {0}", decl)            
+        ctx.OpenDeclarations
+        |> Seq.filter ((<>) qualifiedModuleName)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))          
     else
         ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)
     if not isTopLevel then
@@ -345,9 +348,12 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     if not isNestedEntity then
         let parent = getParentPath typ
         ctx.Writer.WriteLine(parent)
-        for decl in ctx.OpenDeclarations do
-            if not <| parent.EndsWith(decl) then
-                ctx.Writer.WriteLine("open {0}", decl)
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
     writeDocs ctx typ.XmlDoc
@@ -468,9 +474,12 @@ and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity)
     if not isNestedEntity then
         let parent = getParentPath abbreviatingType
         ctx.Writer.WriteLine(parent)
-        for decl in ctx.OpenDeclarations do
-            if not <| parent.EndsWith(decl) then
-                ctx.Writer.WriteLine("open {0}", decl)
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
     writeDocs ctx abbreviatingType.XmlDoc
@@ -482,9 +491,12 @@ and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
     if not isNestedEntity then
         let parent = getParentPath exn
         ctx.Writer.WriteLine(parent)
-        for decl in ctx.OpenDeclarations do
-            if not <| parent.EndsWith(decl) then
-                ctx.Writer.WriteLine("open {0}", decl)
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
     writeDocs ctx exn.XmlDoc
@@ -507,10 +519,13 @@ and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
 and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
     if not isNestedEntity then
         let parent = getParentPath del
-        ctx.Writer.WriteLine(parent)
-        for decl in ctx.OpenDeclarations do
-            if not <| parent.EndsWith(decl) then
-                ctx.Writer.WriteLine("open {0}", decl)
+        ctx.Writer.WriteLine(parent)        
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
     writeDocs ctx del.XmlDoc
 
@@ -550,15 +565,12 @@ and internal writeUnionCase ctx (case: FSharpUnionCase) =
 
     if case.UnionCaseFields.Count > 0 then
         case.UnionCaseFields
-        |> Seq.fold (fun isFirst field ->
-            if isFirst
-            then ctx.Writer.Write(" of ")
-            else ctx.Writer.Write(" * ")
-
-            writeUnionCaseField ctx field
-            false
-        ) true
-        |> ignore
+        |> Seq.iteri (fun i field ->
+            if i = 0 then 
+                ctx.Writer.Write(" of ")
+            else 
+                ctx.Writer.Write(" * ")
+            writeUnionCaseField ctx field)
 
     ctx.Writer.WriteLine("")
 

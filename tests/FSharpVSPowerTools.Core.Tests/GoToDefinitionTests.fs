@@ -86,6 +86,7 @@ let ``adds necessary parenthesis to function parameters`` () =
 let _ = Async.AwaitTask"""
     |> generateDefinitionFromPos (Pos.fromZ 1 8)
     |> assertSrcAreEqualForFirstLines 8 """namespace Microsoft.FSharp.Control
+
 open System
 
 [<Sealed>]
@@ -184,6 +185,7 @@ let ``go to F# List<'T> definition`` () =
 let x: List<int> = []"""
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
+
 open System
 
 [<DefaultAugmentation(false)>]
@@ -230,6 +232,7 @@ let ``go to union type definition`` () =
 let x: Choice<'T, 'U> = failwith "Not implemented yet" """
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
 open System
 
 [<StructuralEquality>]
@@ -251,6 +254,7 @@ let ``go to union case`` () =
 let x = Choice1Of2 () """
     |> generateDefinitionFromPos (Pos.fromZ 2 9)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
 open System
 
 [<StructuralEquality>]
@@ -599,6 +603,7 @@ type T() =
     """
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
     |> assertSrcAreEqual """module File
+
 open System.Runtime.InteropServices
 
 type T =
@@ -853,6 +858,7 @@ type Record = {
 }"""
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
     |> assertSrcAreEqual """module File
+
 open System
 open System.Runtime.Serialization
 
@@ -922,6 +928,7 @@ type MyClass<'T when 'T : delegate<obj * int, unit>>() =
     |> List.map (generateDefinitionFromPos (Pos.fromZ 1 5))
     |> assertSrcSeqAreEqual [
         """module File
+
 open System
 
 type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> =
@@ -930,6 +937,7 @@ type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> 
 """
 
         """module File
+
 open System
 
 type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
@@ -938,6 +946,7 @@ type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
 """
 
         """module File
+
 open System
 
 type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
@@ -946,6 +955,7 @@ type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
 """
 
         """module File
+
 open System
 
 type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
@@ -954,6 +964,7 @@ type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
 """
 
         """module File
+
 open System
 
 type MyClass<'T when 'T : delegate<obj * int, unit>> =
