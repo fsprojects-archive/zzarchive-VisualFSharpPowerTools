@@ -52,9 +52,9 @@ let ``only the first task list comment per line is taken``() =
     => [| (2, "TODO something // TODO something else", "File1.fs", 0, 3) |]
 
 [<Test>]
-let ``task list comments only allow asterisk, backslash, or whitespace between // and token``() = 
-    (defaultOptions, "File1.fs", [| "//*/  /* TODO stuff"; "//+ TODO something else" |])
-    => [| (2, "TODO stuff", "File1.fs", 0, 9) |]
+let ``task list comments only allow asterisk, slash, or whitespace between // and token``() = 
+    (defaultOptions, "File1.fs", [| "//*/  /* TODO stuff"; "//+ TODO something else"; "// *TODO other" |])
+    => [| (2, "TODO stuff", "File1.fs", 0, 9); (2, "TODO other", "File1.fs", 2, 4) |]
 
 [<Test>]
 let ``tokens can only be immediately followed by chars other than space that aren't alphanumeric or underscore``() = 
