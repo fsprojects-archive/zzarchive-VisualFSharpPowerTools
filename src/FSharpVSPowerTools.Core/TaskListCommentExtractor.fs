@@ -12,6 +12,8 @@ type Comment =
         Column: int
         Priority : int
     }
+with
+    override this.ToString() = sprintf "%A" this
 
 
 [<StructuralEquality; NoComparison>]
