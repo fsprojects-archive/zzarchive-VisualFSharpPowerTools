@@ -13,6 +13,7 @@ type internal Context = {
     Writer: ColumnIndentedTextWriter
     Indentation: int
     DisplayContext: FSharpDisplayContext
+    OpenDeclarations: string list
 }
 
 let private hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
@@ -306,7 +307,14 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     writeDocs ctx modul.XmlDoc
     writeAttributes ctx (Some modul) modul.Attributes
     if isTopLevel then
-        ctx.Writer.WriteLine("module {0}", tryRemoveModuleSuffix modul modul.FullName)
+        let qualifiedModuleName = tryRemoveModuleSuffix modul modul.FullName
+        ctx.Writer.WriteLine("module {0}", qualifiedModuleName)
+        ctx.OpenDeclarations
+        |> Seq.filter ((<>) qualifiedModuleName)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))          
     else
         ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)
     if not isTopLevel then
@@ -329,13 +337,23 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     if not isTopLevel then
         ctx.Writer.Unindent ctx.Indentation
 
+and internal getParentPath (entity: FSharpEntity) =
+    match entity.Namespace with
+    | Some ns -> sprintf "namespace %s" ns
+    | None -> sprintf "module %s" entity.AccessPath
+
 and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
 
     if not isNestedEntity then
-        match typ.Namespace with
-        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
-        | None -> ctx.Writer.WriteLine("module {0}", typ.AccessPath)
+        let parent = getParentPath typ
+        ctx.Writer.WriteLine(parent)
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
     writeDocs ctx typ.XmlDoc
@@ -454,9 +472,14 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
 
 and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity) (abbreviatedType: FSharpType) =
     if not isNestedEntity then
-        match abbreviatingType.Namespace with
-        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
-        | None -> ctx.Writer.WriteLine("module {0}", abbreviatingType.AccessPath)
+        let parent = getParentPath abbreviatingType
+        ctx.Writer.WriteLine(parent)
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
     writeDocs ctx abbreviatingType.XmlDoc
@@ -466,9 +489,14 @@ and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity)
 
 and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
     if not isNestedEntity then
-        match exn.Namespace with
-        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
-        | None -> ctx.Writer.WriteLine("module {0}", exn.AccessPath)
+        let parent = getParentPath exn
+        ctx.Writer.WriteLine(parent)
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
     writeDocs ctx exn.XmlDoc
@@ -490,9 +518,14 @@ and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
 
 and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
     if not isNestedEntity then
-        match del.Namespace with
-        | Some ns -> ctx.Writer.WriteLine("namespace {0}", ns)
-        | None -> ctx.Writer.WriteLine("module {0}", del.AccessPath)
+        let parent = getParentPath del
+        ctx.Writer.WriteLine(parent)        
+        ctx.OpenDeclarations
+        |> Seq.filter (not << parent.EndsWith)
+        |> Seq.iteri (fun i decl ->
+            if i = 0 then 
+                ctx.Writer.WriteLine("")
+            ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
     writeDocs ctx del.XmlDoc
 
@@ -532,15 +565,12 @@ and internal writeUnionCase ctx (case: FSharpUnionCase) =
 
     if case.UnionCaseFields.Count > 0 then
         case.UnionCaseFields
-        |> Seq.fold (fun isFirst field ->
-            if isFirst
-            then ctx.Writer.Write(" of ")
-            else ctx.Writer.Write(" * ")
-
-            writeUnionCaseField ctx field
-            false
-        ) true
-        |> ignore
+        |> Seq.iteri (fun i field ->
+            if i = 0 then 
+                ctx.Writer.Write(" of ")
+            else 
+                ctx.Writer.Write(" * ")
+            writeUnionCaseField ctx field)
 
     ctx.Writer.WriteLine("")
 
@@ -675,9 +705,10 @@ and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     ctx.Writer.Write(" : ")
     ctx.Writer.WriteLine("{0}", group.OverallType.Format(ctx.DisplayContext))
 
-let formatSymbol indentation displayContext (symbol: FSharpSymbol) =
+let formatSymbol indentation displayContext openDeclarations (symbol: FSharpSymbol) =
     use writer = new ColumnIndentedTextWriter()
-    let ctx = { Writer = writer; Indentation = indentation; DisplayContext = displayContext }
+    let ctx = { Writer = writer; Indentation = indentation;
+                DisplayContext = displayContext; OpenDeclarations = openDeclarations }
 
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with

@@ -1,9 +1,25 @@
-﻿module FSharpVSPowerTools.Core.Tests.OpenDeclarationsGetterTests
+﻿#if INTERACTIVE
+#r "../../bin/FSharp.Compiler.Service.dll"
+#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
+      "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/IdentifierUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs"      
+      "TestHelpers.fs"
+#else
+module FSharpVSPowerTools.Core.Tests.OpenDeclarationsGetterTests
+#endif
 
 open System.IO
 open NUnit.Framework
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Range
 
 let openDeclWithAutoOpens decls =
     { Declarations = 
@@ -207,7 +223,7 @@ let (=>) source (expected: (Line * (OpenDecl list)) list) =
         |> List.sortBy (fun (line, _) -> line)
     try actual |> Collection.assertEquiv (expected |> List.sortBy (fun (line, _) -> line))
     with _ -> 
-        debug "AST: %A" parseResults.ParseTree; 
+        debug "AST: %A" parseResults.ParseTree
         reraise()
 
 [<Test>]
@@ -259,3 +275,57 @@ module M =
     open InternalModuleWithSuffix
 """
     => [ 6, [Some "OpenDeclarationsGetterTests", ["OpenDeclarationsGetterTests.InternalModuleWithSuffix"]]]
+
+let (|->) source ((pos, expected): pos * string list) = 
+    let opts = opts source
+    let sourceLines = source.Replace("\r\n", "\n").Split('\n')
+    let parseResults = languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
+
+    let actual = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos (Option.get parseResults.ParseTree)
+
+    try actual |> Collection.assertEquiv expected
+    with _ -> 
+        debug "AST: %A" parseResults.ParseTree
+        reraise()
+
+let pos startLine startCol =
+    Range.mkPos startLine startCol
+
+[<Test>]
+let ``open declarations from nested modules``() =
+    """
+open System
+open System.IO
+module M =
+    open InternalModuleWithSuffix
+    let x = 0
+"""
+    |-> (pos 6 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+
+[<Test>]
+let ``open declarations with duplication``() =
+    """
+open System
+open System.IO
+module M =
+    open System.IO
+    open InternalModuleWithSuffix
+    open System
+    let x = 0
+    open System.Collections.Generic
+open System.Collections.Generic
+"""
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+
+[<Test>]
+let ``open declarations with global prefix``() =
+    """
+open global.System
+open System.IO
+module M =
+    open System.IO
+    open InternalModuleWithSuffix
+    open System
+    let x = 0
+"""
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])

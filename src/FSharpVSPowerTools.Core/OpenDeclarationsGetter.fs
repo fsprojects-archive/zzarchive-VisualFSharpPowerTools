@@ -3,6 +3,7 @@
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler.Range
 
 type RawOpenDeclaration =
     { Idents: Idents
@@ -256,4 +257,52 @@ module OpenDeclarationGetter =
             modules
             |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
                     walkModuleOrNamespace acc (decls, moduleRange) @ acc) []       
+        | _ -> []
+
+    let getEffectiveOpenDeclarationsAtLocation (pos: pos) (ast: ParsedInput) =
+        match ast with
+        | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) ->
+            let rec walkModuleOrNamespace acc (decls, moduleRange) =
+                let openStatements =
+                    decls
+                    |> List.fold (fun acc -> 
+                        function
+                        | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
+                            if rangeContainsPos moduleRange pos then
+                                walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
+                            else []
+                        | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openDeclRange) ->
+                            let identArray = 
+                                let isExactlyOne =
+                                    match longIdent with
+                                    | [_] -> true
+                                    | _ -> false
+                                longIdent
+                                |> List.mapi (fun i ident -> 
+                                    // Only filter out if global is a prefix of the open declaration
+                                    match i, ident.idText with
+                                    | 0, "`global`" when not isExactlyOne ->
+                                        let r = ident.idRange
+                                        // Make sure that we don't filter out ``global`` and the like
+                                        if r.StartLine = r.EndLine && r.EndColumn - r.StartColumn = 6 then
+                                            None
+                                        else Some ident
+                                    | _ -> 
+                                        Some ident)
+                                |> List.choose id
+                                |> longIdentToArray
+                            if openDeclRange.EndLine < pos.Line || (openDeclRange.EndLine = pos.Line && openDeclRange.EndColumn < pos.Column) then 
+                                String.Join(".", identArray) :: acc
+                            else acc
+                        | _ -> acc) [] 
+                openStatements @ acc
+
+            modules
+            |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
+                   if rangeContainsPos moduleRange pos then
+                       walkModuleOrNamespace acc (decls, moduleRange) @ acc
+                   else acc) []
+            |> Seq.distinct
+            |> Seq.toList
+            |> List.rev       
         | _ -> []
