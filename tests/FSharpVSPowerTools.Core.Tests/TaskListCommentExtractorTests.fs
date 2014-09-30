@@ -42,22 +42,17 @@ let ``should match multiline comments``() =
        |]
 
 [<Test>]
-let ``should match multiline comments with no spaces``() =
-    (defaultOptions, "File1.fs", [| "(*TODO something*)" |])
-    => [| (2, "TODO something", "File1.fs", 0, 2) |]
+let ``should match comments with no spaces``() =
+    (defaultOptions, "File1.fs", [| "(*TODO something*)"; "//TODO stuff" |])
+    => [| (2, "TODO something", "File1.fs", 0, 2); (2, "TODO stuff", "File1.fs", 1, 2) |]
 
 [<Test>]
 let ``should match nested comments``() =
-    (defaultOptions, "File1.fs", [| "(* TODO (* (* nested *) nested *) nested *)" |])
-    => [| (2, "TODO (* (* nested *) nested *) nested", "File1.fs", 0, 3) |]
+    (defaultOptions, "File1.fs", [| "(* TODO (* (* nested *) nested *) nested *)"; "// TODO something // TODO nested" |])
+    => [| (2, "TODO (* (* nested *) nested *) nested", "File1.fs", 0, 3); (2, "TODO something // TODO nested", "File1.fs", 1, 3) |]
 
 [<Test>]
-let ``only the first task list comment per line is taken``() = 
-    (defaultOptions, "File1.fs", [| "// TODO something // TODO something else" |])
-    => [| (2, "TODO something // TODO something else", "File1.fs", 0, 3) |]
-
-[<Test>]
-let ``task list comments only allow asterisk, slash, or whitespace between // and token``() = 
+let ``line comments only allow asterisk, slash, or whitespace between // and token``() = 
     (defaultOptions, "File1.fs", [| "//*/  /* TODO stuff"; "//+ TODO something else"; "// *TODO other" |])
     => [| (2, "TODO stuff", "File1.fs", 0, 9); (2, "TODO other", "File1.fs", 2, 4) |]
 
@@ -94,6 +89,7 @@ let ``empty comments``() =
 let ``comments within strings are not considered``() = 
     let lines = "let str1 = \"// TODO something\"
                  let str2 = \"
+                     (* TODO work *)
                      // TODO other stuff
                  \"".Split(newlines, StringSplitOptions.None)
 
