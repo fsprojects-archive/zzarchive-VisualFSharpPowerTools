@@ -1445,6 +1445,19 @@ let ``handle operators as compiled members`` () =
     |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
     |> assertEqual true
 
+let ``handle generic definitions`` () =
+    """let x: System.Collections.Generic.List<'T> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 0 35)
+    |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
+    |> assertEqual true
+
+[<Test>]
+let ``handle generic definitions 2`` () =
+    """let x: System.Collections.Generic.Dictionary<'K, 'V> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 0 35)
+    |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
+    |> assertEqual true
+
 let generateFileNameForSymbol caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
