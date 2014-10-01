@@ -1210,6 +1210,13 @@ let ``type abbreviations for basic types`` () =
 type ResizeArray<'T> = System.Collections.Generic.List<'T>
 """
 
+[<Test>]
+let ``handle operators as compiled members`` () =
+    """let x: System.DateTime = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 0 20)
+    |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
+    |> assertEqual true
+
 let generateFileNameForSymbol caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
