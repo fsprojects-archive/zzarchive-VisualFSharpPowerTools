@@ -666,7 +666,10 @@ and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
     writeDocs ctx value.XmlDoc (fun _ -> value.XmlDocSig)
 
     let constraints = getConstraints ctx value.GenericParameters
-    let valueName = formatValueOrMemberName value.LogicalName
+    let valueName = 
+        if value.IsActivePattern then 
+            sprintf "(%s)" value.LogicalName 
+        else formatValueOrMemberName value.LogicalName
 
     if value.FullType.IsFunctionType then
         let inlineSpecifier = if needsInlineAnnotation value then "inline " else ""
@@ -743,11 +746,12 @@ and internal writeDocs ctx docs getXmlDocSig =
 and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     let group = case.Group
     writeDocs ctx case.XmlDoc (fun _ -> case.XmlDocSig)
-    ctx.Writer.Write("val |")
+    ctx.Writer.Write("val (|")
     for name in group.Names do
         ctx.Writer.Write("{0}|", name)
     if not group.IsTotal then
         ctx.Writer.Write("_|")
+    ctx.Writer.Write(")")
     ctx.Writer.Write(" : ")
     ctx.Writer.WriteLine("{0}", formatType ctx group.OverallType)
 
