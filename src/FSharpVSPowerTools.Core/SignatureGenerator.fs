@@ -99,16 +99,23 @@ type private MembersPartition =
 ///  'List<'T>.Enumerator' is formatted as 'List`1.Enumerator<'T>'
 ///  'Dictionary<'TKey,'TValue>.Enumerator' is formatted as 'Dictionary`2.Enumerator<'TKey,'TValue>'
 let private formatType ctx (typ: FSharpType) =
-        let genericDefinition = typ.Format(ctx.DisplayContext)
-        if genericDefinition.Contains("`") && not (genericDefinition.Contains("``")) then
-            match genericDefinition.LastIndexOf("<") with            
-            | i when i >= 0 && i < genericDefinition.Length ->
-                let typeParams = genericDefinition.[i..]
+        let definition = typ.Format(ctx.DisplayContext)
+        if definition.Contains("`") && not (definition.Contains("``")) then
+            match definition.LastIndexOf("<") with            
+            | i when i >= 0 && i < definition.Length ->
+                let typeParams = definition.[i..]
                 let arity = (typeParams |> Seq.filter ((=) ',') |> Seq.length) + 1
-                genericDefinition.[0..i-1].Replace(sprintf "`%i" arity, typeParams)
-            | _ -> genericDefinition    
+                // This type is potentially a nested type; we use the fully qualified form to bypass compiler errors.
+                let fullyQualifiedDefinition = typ.Format(FSharpDisplayContext.Empty)
+                Debug.Assert(fullyQualifiedDefinition.EndsWith(definition), 
+                    sprintf "Fully qualified identifier '%s' should be consistent with the short identifier '%s'." fullyQualifiedDefinition definition)
+                match fullyQualifiedDefinition.LastIndexOf("<") with            
+                | j when j >= 0 && j < fullyQualifiedDefinition.Length ->
+                    fullyQualifiedDefinition.[0..j-1].Replace(sprintf "`%i" arity, typeParams)
+                | _ -> definition
+            | _ -> definition    
         else
-            genericDefinition
+            definition
 
 let private isStaticallyResolved (param: FSharpGenericParameter) =
     param.Constraints

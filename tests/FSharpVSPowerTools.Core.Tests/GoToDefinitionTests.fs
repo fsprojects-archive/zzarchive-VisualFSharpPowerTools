@@ -1446,15 +1446,17 @@ let ``handle operators as compiled members`` () =
     |> assertEqual true
 
 let ``handle generic definitions`` () =
-    """let x: System.Collections.Generic.List<'T> = failwith "" """
-    |> generateDefinitionFromPos (Pos.fromZ 0 35)
+    """open System
+let x: Collections.Generic.List<'T> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
     |> assertEqual true
 
 [<Test>]
 let ``handle generic definitions 2`` () =
-    """let x: System.Collections.Generic.Dictionary<'K, 'V> = failwith "" """
-    |> generateDefinitionFromPos (Pos.fromZ 0 35)
+    """open System
+let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
     |> assertEqual true
 
