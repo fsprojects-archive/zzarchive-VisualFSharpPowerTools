@@ -687,7 +687,8 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         ctx.Writer.WriteLine("{0} {1}{2} : {3}{4}{5}",
                              memberType,
                              inlineAnnotation,
-                             formatValueOrMemberName mem.LogicalName,
+                             // We don't need to demangle operator names since member operators should appear in their compiled forms
+                             QuoteIdentifierIfNeeded mem.LogicalName,
                              generateSignature ctx mem,
                              propertyType,
                              constraints)
