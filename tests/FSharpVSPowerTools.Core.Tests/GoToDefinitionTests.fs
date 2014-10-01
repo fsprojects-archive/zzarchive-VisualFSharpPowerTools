@@ -347,7 +347,7 @@ let testNumber i =
     | Even -> printfn "%d is even" i
     | Odd -> printfn "%d is odd" i"""
     |> generateDefinitionFromPos (Pos.fromZ 6 7)
-    |> assertSrcAreEqual """val |Even|Odd| : int -> Choice<unit,unit>
+    |> assertSrcAreEqual """val (|Even|Odd|) : int -> Choice<unit,unit>
 """
 
 [<Test; Ignore("activate when it's possible to know in which module or namespace an active pattern is defined")>]
@@ -363,7 +363,7 @@ let testNumber i =
     |> generateDefinitionFromPos (Pos.fromZ 6 7)
     |> assertSrcAreEqual """module File
 
-val |Even|Odd| : int -> Choice<unit,unit>
+val (|Even|Odd|) : int -> Choice<unit,unit>
 """
 
 [<Test>]
@@ -378,7 +378,7 @@ let fizzBuzz = function
     | DivisibleBy 5 -> "Buzz" 
     | _ -> "" """
     |> generateDefinitionFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """val |DivisibleBy|_| : int -> int -> unit option
+    |> assertSrcAreEqual """val (|DivisibleBy|_|) : int -> int -> unit option
 """
 
 [<Test; Ignore("We should not generate implicit interface member definition")>]
@@ -1465,7 +1465,7 @@ let ``handle active patterns as parts of module declarations`` () =
     """open Microsoft.FSharp.Quotations
 let f = Patterns.(|AddressOf|_|)"""
     |> generateDefinitionFromPos (Pos.fromZ 1 13)
-    |> fun str -> str.Contains("val |AddressSet|_| : input:Expr -> (Expr * Expr) option")
+    |> fun str -> str.Contains("val (|AddressSet|_|) : input:Expr -> (Expr * Expr) option")
     |> assertEqual true
 
 let generateFileNameForSymbol caretPos src =
