@@ -44,20 +44,22 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
     let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
     let xmlIndexService = serviceProvider.GetService<IVsXMLMemberIndexService, SVsXMLMemberIndexService>()
+
     /// If the XML comment starts with '<' not counting whitespace then treat it as a literal XML comment.
     /// Otherwise, escape it and surround it with <summary></summary>
-    let processXml (xml:string) =
+    let processXml (xml: string) =
         if String.IsNullOrEmpty(xml) then xml
         else
             let trimmedXml = xml.TrimStart([|' ';'\r';'\n'|])
-            if trimmedXml.Length>0 then
-                if trimmedXml.[0] <> '<' then 
+            if String.IsNullOrEmpty(trimmedXml) then xml
+            else
+                match trimmedXml.[0] with
+                | '<' ->
+                    String.Join("", "<root>", xml, "</root>")
+                | _ ->
                     let escapedXml = SecurityElement.Escape(xml)
                     String.Join("", "<summary>", escapedXml, "</summary>")
-                else 
-                    String.Join("", "<root>", xml, "</root>")
-            else xml
-
+            
     let getXmlDocBySignature (fsSymbol: FSharpSymbol) signature =
         match fsSymbol.Assembly.FileName with
         | Some assemblyName ->

@@ -708,7 +708,7 @@ and internal writeDocs ctx docs getXmlDocSig =
 
     xmlDocs
     |> Seq.collect (fun line -> line.Replace("\r\n", "\n").Split('\r', '\n'))
-    |> Seq.iter (fun line -> ctx.Writer.WriteLine("/// {0}", line))
+    |> Seq.iter (fun line -> ctx.Writer.WriteLine("/// {0}", line.TrimStart()))
 
 and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     let group = case.Group

@@ -50,13 +50,13 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbGotoMetadata = new System.Windows.Forms.CheckBox();
+            this.chbGoToMetadata = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
-            this.grbOptions.Controls.Add(this.chbGotoMetadata);
+            this.grbOptions.Controls.Add(this.chbGoToMetadata);
             this.grbOptions.Controls.Add(this.chbUnusedDeclarations);
             this.grbOptions.Controls.Add(this.chbResolveUnopenedNamespaces);
             this.grbOptions.Controls.Add(this.chbUnionPatternMatchCaseGeneration);
@@ -299,15 +299,15 @@ namespace FSharpVSPowerTools
             // 
             // chbGotoMetadata
             // 
-            this.chbGotoMetadata.AutoSize = true;
-            this.chbGotoMetadata.Checked = true;
-            this.chbGotoMetadata.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGotoMetadata.Location = new System.Drawing.Point(204, 157);
-            this.chbGotoMetadata.Name = "chbGotoMetadata";
-            this.chbGotoMetadata.Size = new System.Drawing.Size(99, 17);
-            this.chbGotoMetadata.TabIndex = 18;
-            this.chbGotoMetadata.Text = "Go to metadata";
-            this.chbGotoMetadata.UseVisualStyleBackColor = true;
+            this.chbGoToMetadata.AutoSize = true;
+            this.chbGoToMetadata.Checked = true;
+            this.chbGoToMetadata.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbGoToMetadata.Location = new System.Drawing.Point(204, 157);
+            this.chbGoToMetadata.Name = "chbGotoMetadata";
+            this.chbGoToMetadata.Size = new System.Drawing.Size(99, 17);
+            this.chbGoToMetadata.TabIndex = 18;
+            this.chbGoToMetadata.Text = "Go to metadata";
+            this.chbGoToMetadata.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -345,6 +345,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;
         private System.Windows.Forms.CheckBox chbResolveUnopenedNamespaces;
         private System.Windows.Forms.CheckBox chbUnusedDeclarations;
-        private System.Windows.Forms.CheckBox chbGotoMetadata;
+        private System.Windows.Forms.CheckBox chbGoToMetadata;
     }
 }

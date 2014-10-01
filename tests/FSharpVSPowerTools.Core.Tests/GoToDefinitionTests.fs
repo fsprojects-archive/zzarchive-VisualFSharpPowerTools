@@ -139,7 +139,7 @@ open System
 [<Class>]
 type Async =
     /// Creates three functions that can be used to implement the .NET Asynchronous 
-    ///  Programming Model (APM) for a given asynchronous computation.
+    /// Programming Model (APM) for a given asynchronous computation.
     static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * AsyncCallback * obj -> IAsyncResult) * (IAsyncResult -> 'T) * (IAsyncResult -> unit)
 """
 
@@ -744,18 +744,18 @@ val copy : array:'T [] -> 'T []
 /// Creates an array whose elements are all initially the given value.
 val create : count:int -> value:'T -> 'T []
 /// Applies the given function to successive elements, returning the first
-///  result where function returns Some(x) for some x. If the function 
-///  never returns Some(x) then None is returned.
+/// result where function returns Some(x) for some x. If the function 
+/// never returns Some(x) then None is returned.
 val tryPick : chooser:('T -> 'U option) -> array:'T [] -> 'U option
 /// Fills a range of elements of the array with the given value.
 val fill : target:'T [] -> targetIndex:int -> count:int -> value:'T -> unit
 /// Applies the given function to successive elements, returning the first
-///  result where function returns Some(x) for some x. If the function 
-///  never returns Some(x) then KeyNotFoundException is raised.
+/// result where function returns Some(x) for some x. If the function 
+/// never returns Some(x) then KeyNotFoundException is raised.
 val pick : chooser:('T -> 'U option) -> array:'T [] -> 'U
 /// Applies the given function to each element of the array. Returns
-///  the array comprised of the results "x" for each element where
-///  the function returns Some(x)
+/// the array comprised of the results "x" for each element where
+/// the function returns Some(x)
 val choose : chooser:('T -> 'U option) -> array:'T [] -> 'U []
 /// Returns an empty array of the given type.
 val empty : 'T []
@@ -764,37 +764,37 @@ val exists : predicate:('T -> bool) -> array:'T [] -> bool
 /// Tests if any pair of corresponding elements of the arrays satisfies the given predicate.
 val exists2 : predicate:('T1 -> 'T2 -> bool) -> array1:'T1 [] -> array2:'T2 [] -> bool
 /// Returns a new collection containing only the elements of the collection
-///  for which the given predicate returns "true".
+/// for which the given predicate returns "true".
 val filter : predicate:('T -> bool) -> array:'T [] -> 'T []
 /// Returns the first element for which the given function returns 'true'.
-///  Raise KeyNotFoundException if no such element exists.
+/// Raise KeyNotFoundException if no such element exists.
 val find : predicate:('T -> bool) -> array:'T [] -> 'T
 /// Returns the index of the first element in the array
-///  that satisfies the given predicate. Raise KeyNotFoundException if 
-///  none of the elements satisy the predicate.
+/// that satisfies the given predicate. Raise KeyNotFoundException if 
+/// none of the elements satisy the predicate.
 val findIndex : predicate:('T -> bool) -> array:'T [] -> int
 /// Tests if all elements of the array satisfy the given predicate.
 val forall : predicate:('T -> bool) -> array:'T [] -> bool
 /// Tests if all corresponding elements of the array satisfy the given predicate pairwise.
 val forall2 : predicate:('T1 -> 'T2 -> bool) -> array1:'T1 [] -> array2:'T2 [] -> bool
 /// Applies a function to each element of the collection, threading an accumulator argument
-///  through the computation. If the input function is f and the elements are i0...iN then computes 
-///  f (... (f s i0)...) iN
+/// through the computation. If the input function is f and the elements are i0...iN then computes 
+/// f (... (f s i0)...) iN
 val fold : folder:('State -> 'T -> 'State) -> state:'State -> array:'T [] -> 'State
 /// Applies a function to each element of the array, threading an accumulator argument
-///  through the computation. If the input function is f and the elements are i0...iN then computes 
-///  f i0 (...(f iN s))
+/// through the computation. If the input function is f and the elements are i0...iN then computes 
+/// f i0 (...(f iN s))
 val foldBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State -> 'State
 /// Applies a function to pairs of elements drawn from the two collections, 
-///  left-to-right, threading an accumulator argument
-///  through the computation. The two input
-///  arrays must have the same lengths, otherwise an ArgumentException is
-///  raised.
+/// left-to-right, threading an accumulator argument
+/// through the computation. The two input
+/// arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val fold2 : folder:('State -> 'T1 -> 'T2 -> 'State) -> state:'State -> array1:'T1 [] -> array2:'T2 [] -> 'State
 /// Apply a function to pairs of elements drawn from the two collections, right-to-left, 
-///  threading an accumulator argument through the computation. The two input
-///  arrays must have the same lengths, otherwise an ArgumentException is
-///  raised.
+/// threading an accumulator argument through the computation. The two input
+/// arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val foldBack2 : folder:('T1 -> 'T2 -> 'State -> 'State) -> array1:'T1 [] -> array2:'T2 [] -> state:'State -> 'State
 /// Gets an element from an array.
 val get : array:'T [] -> index:int -> 'T
@@ -807,34 +807,34 @@ val isEmpty : array:'T [] -> bool
 /// Applies the given function to each element of the array.
 val inline iter : action:('T -> unit) -> array:'T [] -> unit
 /// Applies the given function to pair of elements drawn from matching indices in two arrays. The
-///  two arrays must have the same lengths, otherwise an ArgumentException is
-///  raised.
+/// two arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val iter2 : action:('T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
 /// Applies the given function to each element of the array. The integer passed to the
-///  function indicates the index of element.
+/// function indicates the index of element.
 val iteri : action:(int -> 'T -> unit) -> array:'T [] -> unit
 /// Applies the given function to pair of elements drawn from matching indices in two arrays,
-///  also passing the index of the elements. The two arrays must have the same lengths, 
-///  otherwise an ArgumentException is raised.
+/// also passing the index of the elements. The two arrays must have the same lengths, 
+/// otherwise an ArgumentException is raised.
 val iteri2 : action:(int -> 'T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
 /// Returns the length of an array. You can also use property arr.Length.
 val length : array:'T [] -> int
 /// Builds a new array whose elements are the results of applying the given function
-///  to each of the elements of the array.
+/// to each of the elements of the array.
 val inline map : mapping:('T -> 'U) -> array:'T [] -> 'U []
 /// Builds a new collection whose elements are the results of applying the given function
-///  to the corresponding elements of the two collections pairwise. The two input
-///  arrays must have the same lengths, otherwise an ArgumentException is
-///  raised.
+/// to the corresponding elements of the two collections pairwise. The two input
+/// arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val map2 : mapping:('T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 /// Builds a new collection whose elements are the results of applying the given function
-///  to the corresponding elements of the two collections pairwise, also passing the index of 
-///  the elements. The two input arrays must have the same lengths, otherwise an ArgumentException is
-///  raised.
+/// to the corresponding elements of the two collections pairwise, also passing the index of 
+/// the elements. The two input arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val mapi2 : mapping:(int -> 'T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
 /// Builds a new array whose elements are the results of applying the given function
-///  to each of the elements of the array. The integer index passed to the
-///  function indicates the index of element being transformed.
+/// to each of the elements of the array. The integer index passed to the
+/// function indicates the index of element being transformed.
 val mapi : mapping:(int -> 'T -> 'U) -> array:'T [] -> 'U []
 /// Returns the greatest of all elements of the array, compared via Operators.max on the function result.
 val inline max : array:'T [] -> 'T when 'T : comparison
@@ -849,21 +849,21 @@ val ofList : list:'T list -> 'T []
 /// Builds a new array from the given enumerable object.
 val ofSeq : source:seq<'T> -> 'T []
 /// Splits the collection into two collections, containing the 
-///  elements for which the given predicate returns "true" and "false"
-///  respectively.
+/// elements for which the given predicate returns "true" and "false"
+/// respectively.
 val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
 /// Returns an array with all elements permuted according to the
-///  specified permutation.
+/// specified permutation.
 val permute : indexMap:(int -> int) -> array:'T [] -> 'T []
 /// Applies a function to each element of the array, threading an accumulator argument
-///  through the computation. If the input function is f and the elements are i0...iN 
-///  then computes f (... (f i0 i1)...) iN.
-///  Raises ArgumentException if the array has size zero.
+/// through the computation. If the input function is f and the elements are i0...iN 
+/// then computes f (... (f i0 i1)...) iN.
+/// Raises ArgumentException if the array has size zero.
 val reduce : reduction:('T -> 'T -> 'T) -> array:'T [] -> 'T
 /// Applies a function to each element of the array, threading an accumulator argument
-///  through the computation. If the input function is f and the elements are i0...iN 
-///  then computes f i0 (...(f iN-1 iN)).
-///  Raises ArgumentException if the array has size zero.
+/// through the computation. If the input function is f and the elements are i0...iN 
+/// then computes f i0 (...(f iN-1 iN)).
+/// Raises ArgumentException if the array has size zero.
 val reduceBack : reduction:('T -> 'T -> 'T) -> array:'T [] -> 'T
 /// Returns a new array with the elements in reverse order.
 val rev : array:'T [] -> 'T []
@@ -874,22 +874,22 @@ val scanBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State ->
 /// Sets an element of an array.
 val set : array:'T [] -> index:int -> value:'T -> unit
 /// Builds a new array that contains the given subrange specified by
-///  starting index and length.
+/// starting index and length.
 val sub : array:'T [] -> startIndex:int -> count:int -> 'T []
 /// Sorts the elements of an array, returning a new array. Elements are compared using Operators.compare. 
 val sort : array:'T [] -> 'T [] when 'T : comparison
 /// Sorts the elements of an array, using the given projection for the keys and returning a new array. 
-///  Elements are compared using Operators.compare.
+/// Elements are compared using Operators.compare.
 val sortBy : projection:('T -> 'Key) -> array:'T [] -> 'T [] when 'Key : comparison
 /// Sorts the elements of an array, using the given comparison function as the order, returning a new array.
 val sortWith : comparer:('T -> 'T -> int) -> array:'T [] -> 'T []
 /// Sorts the elements of an array by mutating the array in-place, using the given projection for the keys. 
-///  Elements are compared using Operators.compare.
+/// Elements are compared using Operators.compare.
 val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit when 'Key : comparison
 /// Sorts the elements of an array by mutating the array in-place, using the given comparison function as the order.
 val sortInPlaceWith : comparer:('T -> 'T -> int) -> array:'T [] -> unit
 /// Sorts the elements of an array by mutating the array in-place, using the given comparison function. 
-///  Elements are compared using Operators.compare.
+/// Elements are compared using Operators.compare.
 val sortInPlace : array:'T [] -> unit when 'T : comparison
 /// Returns the sum of the elements in the array.
 val inline sum : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member Zero :  ^T)
@@ -900,48 +900,48 @@ val toList : array:'T [] -> 'T list
 /// Views the given array as a sequence.
 val toSeq : array:'T [] -> seq<'T>
 /// Returns the first element for which the given function returns true.
-///  Return None if no such element exists.
+/// Return None if no such element exists.
 val tryFind : predicate:('T -> bool) -> array:'T [] -> 'T option
 /// Returns the index of the first element in the array
-///  that satisfies the given predicate.
+/// that satisfies the given predicate.
 val tryFindIndex : predicate:('T -> bool) -> array:'T [] -> int option
 /// Splits an array of pairs into two arrays.
 val unzip : array:('T1 * 'T2) [] -> 'T1 [] * 'T2 []
 /// Splits an array of triples into three arrays.
 val unzip3 : array:('T1 * 'T2 * 'T3) [] -> 'T1 [] * 'T2 [] * 'T3 []
 /// Combines the two arrays into an array of pairs. The two arrays must have equal lengths, otherwise an ArgumentException is
-///  raised.
+/// raised.
 val zip : array1:'T1 [] -> array2:'T2 [] -> ('T1 * 'T2) []
 /// Combines three arrays into an array of pairs. The three arrays must have equal lengths, otherwise an ArgumentException is
-///  raised.
+/// raised.
 val zip3 : array1:'T1 [] -> array2:'T2 [] -> array3:'T3 [] -> ('T1 * 'T2 * 'T3) []
 
 /// Provides parallel operations on arrays 
 module Parallel = 
 
     /// Apply the given function to each element of the array. Return
-    ///  the array comprised of the results "x" for each element where
-    ///  the function returns Some(x).
+    /// the array comprised of the results "x" for each element where
+    /// the function returns Some(x).
     val choose : chooser:('T -> 'U option) -> array:'T [] -> 'U []
     /// For each element of the array, apply the given function. Concatenate all the results and return the combined array.
     val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
     /// Build a new array whose elements are the results of applying the given function
-    ///  to each of the elements of the array.
+    /// to each of the elements of the array.
     val map : mapping:('T -> 'U) -> array:'T [] -> 'U []
     /// Build a new array whose elements are the results of applying the given function
-    ///  to each of the elements of the array. The integer index passed to the
-    ///  function indicates the index of element being transformed.
+    /// to each of the elements of the array. The integer index passed to the
+    /// function indicates the index of element being transformed.
     val mapi : mapping:(int -> 'T -> 'U) -> array:'T [] -> 'U []
     /// Apply the given function to each element of the array. 
     val iter : action:('T -> unit) -> array:'T [] -> unit
     /// Apply the given function to each element of the array. The integer passed to the
-    ///  function indicates the index of element.
+    /// function indicates the index of element.
     val iteri : action:(int -> 'T -> unit) -> array:'T [] -> unit
     /// Create an array given the dimension and a generator function to compute the elements.
     val init : count:int -> initializer:(int -> 'T) -> 'T []
     /// Split the collection into two collections, containing the 
-    ///  elements for which the given predicate returns "true" and "false"
-    ///  respectively 
+    /// elements for which the given predicate returns "true" and "false"
+    /// respectively 
     val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
 
 """
@@ -1424,7 +1424,7 @@ let ``type abbreviations with generic params`` () =
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
 
 /// The type of optional values. When used from other CLI languages the
-///  empty option is the null value. 
+/// empty option is the null value. 
 type option<'T> = Option<'T>
 """
 

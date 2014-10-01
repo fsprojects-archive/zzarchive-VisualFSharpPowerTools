@@ -41,7 +41,7 @@ namespace FSharpVSPowerTools
 
         bool UnusedDeclarationsEnabled { get; set; }
 
-        bool GotoMetadataEnabled { get; set; }
+        bool GoToMetadataEnabled { get; set; }
     }
 
     [ClassInterface(ClassInterfaceType.AutoDual)]
@@ -74,7 +74,7 @@ namespace FSharpVSPowerTools
             UnionPatternMatchCaseGenerationEnabled = true;
             ResolveUnopenedNamespacesEnabled = true;
             UnusedDeclarationsEnabled = true;
-            GotoMetadataEnabled = true;
+            GoToMetadataEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -187,7 +187,7 @@ namespace FSharpVSPowerTools
         public bool UnusedDeclarationsEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool GotoMetadataEnabled { get; set; }
+        public bool GoToMetadataEnabled { get; set; }
 
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -227,7 +227,7 @@ namespace FSharpVSPowerTools
                 UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
                 ResolveUnopenedNamespacesEnabled = _optionsControl.ResolveUnopenedNamespacesEnabled;
                 UnusedDeclarationsEnabled = _optionsControl.UnusedDeclarationsEnabled;
-                GotoMetadataEnabled = _optionsControl.GotoMetadataEnabled;
+                GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
             }
 
             base.OnApply(e);

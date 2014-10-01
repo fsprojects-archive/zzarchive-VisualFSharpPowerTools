@@ -102,10 +102,10 @@ namespace FSharpVSPowerTools
         }
 
 
-        public bool GotoMetadataEnabled
+        public bool GoToMetadataEnabled
         {
-            get { return chbGotoMetadata.Checked; }
-            set { chbGotoMetadata.Checked = value; }
+            get { return chbGoToMetadata.Checked; }
+            set { chbGoToMetadata.Checked = value; }
         }
 
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
@@ -125,7 +125,7 @@ namespace FSharpVSPowerTools
             UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
             ResolveUnopenedNamespacesEnabled = _optionsPage.ResolveUnopenedNamespacesEnabled;
             UnusedDeclarationsEnabled = _optionsPage.UnusedDeclarationsEnabled;
-            GotoMetadataEnabled = _optionsPage.GotoMetadataEnabled;
+            GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
