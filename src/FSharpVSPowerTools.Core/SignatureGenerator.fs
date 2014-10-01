@@ -666,7 +666,7 @@ and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
     writeDocs ctx value.XmlDoc (fun _ -> value.XmlDocSig)
 
     let constraints = getConstraints ctx value.GenericParameters
-    let valueName = formatValueOrMemberName value.LogicalName
+    let valueName = if value.IsActivePattern then value.LogicalName else formatValueOrMemberName value.LogicalName
 
     if value.FullType.IsFunctionType then
         let inlineSpecifier = if needsInlineAnnotation value then "inline " else ""

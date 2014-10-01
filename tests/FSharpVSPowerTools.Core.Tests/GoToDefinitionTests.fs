@@ -1460,6 +1460,14 @@ let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
     |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
     |> assertEqual true
 
+[<Test>]
+let ``handle active patterns as parts of module declarations`` () =
+    """open Microsoft.FSharp.Quotations
+let f = Patterns.(|AddressOf|_|)"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 13)
+    |> fun str -> str.Contains("val |AddressSet|_| : input:Expr -> (Expr * Expr) option")
+    |> assertEqual true
+
 let generateFileNameForSymbol caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
