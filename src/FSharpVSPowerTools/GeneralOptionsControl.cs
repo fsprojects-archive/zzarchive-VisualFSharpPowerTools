@@ -101,6 +101,13 @@ namespace FSharpVSPowerTools
             set { chbUnusedDeclarations.Checked = value; }
         }
 
+
+        public bool GoToMetadataEnabled
+        {
+            get { return chbGoToMetadata.Checked; }
+            set { chbGoToMetadata.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -118,11 +125,13 @@ namespace FSharpVSPowerTools
             UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
             ResolveUnopenedNamespacesEnabled = _optionsPage.ResolveUnopenedNamespacesEnabled;
             UnusedDeclarationsEnabled = _optionsPage.UnusedDeclarationsEnabled;
+            GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             System.Diagnostics.Process.Start(lblHome.Text);
         }
+
     }
 }
