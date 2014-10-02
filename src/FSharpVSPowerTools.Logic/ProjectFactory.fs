@@ -90,6 +90,7 @@ type ProjectFactory
     do match events with
         | Some events ->
             events.SolutionEvents.add_AfterClosing (fun _ -> 
+                fsharpProjectsCache := None
                 vsLanguageService.ClearCaches()
                 cache.Clear())
             events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
@@ -107,7 +108,9 @@ type ProjectFactory
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
-    member x.CreateForProject (project: Project): IProjectProvider = 
+    abstract CreateForProject: Project -> IProjectProvider
+
+    default x.CreateForProject (project: Project): IProjectProvider = 
         cache.Get project.FullName (fun _ ->
             new ProjectProvider (project, x.CreateForProject, onProjectChanged)) :> _
 
@@ -178,7 +181,10 @@ type ProjectFactory
                     Some (SymbolDeclarationLocation.Projects [currentProject])
                 else
                     let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
-                    Debug.Assert(allProjects |> List.exists (fun p -> p.ProjectFileName = currentProject.ProjectFileName), "Current project should appear in the project list.")
+                    let allProjectFileNames =
+                        lazy (allProjects |> List.map (fun p -> Path.GetFullPathSafe(p.ProjectFileName)))
+                    Debug.Assert(allProjectFileNames.Value |> List.exists (fun projectFileName -> Path.GetFullPathSafe(currentProject.ProjectFileName) = projectFileName), 
+                        sprintf "Current project '%s' should appear in the project list '%A'." currentProject.ProjectFileName allProjectFileNames.Value)
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
                     | projects -> Some (SymbolDeclarationLocation.Projects projects)

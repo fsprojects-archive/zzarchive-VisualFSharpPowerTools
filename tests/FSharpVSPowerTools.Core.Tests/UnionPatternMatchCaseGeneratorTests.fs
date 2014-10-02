@@ -18,38 +18,21 @@ module FSharpVSPowerTools.Core.Tests.UnionPatternMatchCaseGeneratorTests
 
 open NUnit.Framework
 open System
-open System.IO
-open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
-open Microsoft.FSharp.Compiler.Ast
-
-let args = 
-    [|
-        "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll"
-        @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
-    |]
 
 let languageService = LanguageService(fun _ -> ())
 let project() =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
-    let files = [| fileName |]
     { ProjectFileName = projFileName
       ProjectFileNames = [| fileName |]
-      ProjectOptions = args
+      ProjectOptions = LanguageServiceTestHelper.args
       ReferencedProjects = Array.empty
       IsIncompleteTypeCheckEnvironment = false
       UseScriptResolutionRules = false
@@ -62,11 +45,11 @@ let tryFindUnionDefinition codeGenService (pos: pos) (document: IDocument) =
 
 let insertCasesFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
-    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
     let unionTypeDefFromPos = tryFindUnionDefinition codeGenService caretPos document
     match unionTypeDefFromPos with
     | None -> src
-    | Some(range, matchExpr, entity, insertionParams) ->
+    | Some(_range, matchExpr, entity, insertionParams) ->
         let insertionPos = insertionParams.InsertionPos
         let insertColumn = insertionPos.Column
         let caseValue = "failwith \"\""
@@ -92,7 +75,7 @@ module ClausesAnalysisTests =
 
 
     let private tryGetWrittenCases (pos: pos) (src: string) =
-        let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), args)
+        let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), LanguageServiceTestHelper.args)
         src
         |> asDocument
         |> tryFindPatternMatchExpr codeGenService pos
@@ -323,6 +306,123 @@ let f union =
     | Case1 when 1 = 2 -> ()
     | Case2 -> failwith ""
 """
+
+[<Test>]
+let ``union match case generation with single case + nested constant binding`` () =
+    """
+type Name = { First:string; Last:string }
+type Person = 
+    | Basic of Name * int
+
+let f1 x =
+    match x with
+    | Basic({First = "joe"}, _) -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 7 6)
+    |> assertSrcAreEqual """
+type Name = { First:string; Last:string }
+type Person = 
+    | Basic of Name * int
+
+let f1 x =
+    match x with
+    | Basic({First = "joe"}, _) -> ()
+    | Basic(_, _) -> failwith ""
+"""
+
+[<Test>]
+let ``union match case generation with single case + guard`` () =
+    """
+type Name = { First:string; Last:string }
+type Person = 
+    | Basic of Name * int
+
+let f1 x = 
+    match x with
+    | Basic(name, age) when age > 10 -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 7 6)
+    |> assertSrcAreEqual """
+type Name = { First:string; Last:string }
+type Person = 
+    | Basic of Name * int
+
+let f1 x = 
+    match x with
+    | Basic(name, age) when age > 10 -> ()
+    | Basic(_, _) -> failwith ""
+"""
+
+[<Test>]
+let ``handle abbreviated option types`` () =
+    """
+let f (i: int option) =
+    match i with
+    | Some _ -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 3 6)
+    |> assertSrcAreEqual """
+let f (i: int option) =
+    match i with
+    | Some _ -> ()
+    | None -> failwith ""
+"""
+
+[<Test>]
+let ``handle abbreviated option types with qualified access`` () =
+    """
+[<RequireQualifiedAccess>]
+type Union1 = Case1 | Case2
+type Abbrev = Union1
+
+let f union1 =
+    match union1 with
+    | Abbrev.Case1 -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 7 6)
+    |> assertSrcAreEqual """
+[<RequireQualifiedAccess>]
+type Union1 = Case1 | Case2
+type Abbrev = Union1
+
+let f union1 =
+    match union1 with
+    | Abbrev.Case1 -> ()
+    | Abbrev.Case2 -> failwith ""
+"""
+
+[<Test>]
+let ``handle uppercase field names`` () =
+    """
+let _ =
+    match None with
+    | None -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 3 6)
+    |> assertSrcAreEqual """
+let _ =
+    match None with
+    | None -> ()
+    | Some(value) -> failwith ""
+"""
+
+[<Test>]
+let ``handle really similar field names`` () =
+    """
+type A = Case1 | Case2 of value2: int * Value: int * value: int * value1: int
+let _ =
+    match Case1 with
+    | Case1 -> ()
+"""
+    |> insertCasesFromPos (Pos.fromZ 4 6)
+    |> assertSrcAreEqual """
+type A = Case1 | Case2 of value2: int * Value: int * value: int * value1: int
+let _ =
+    match Case1 with
+    | Case1 -> ()
+    | Case2(value2, value1, value3, value4) -> failwith ""
+"""
+    
 
 [<Test>]
 let ``nested union match case generation`` () =

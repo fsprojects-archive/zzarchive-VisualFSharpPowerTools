@@ -39,8 +39,14 @@ module internal Utils =
         let stringWriter = new StringWriter()
         let indentWriter = new IndentedTextWriter(stringWriter, " ")
 
+        member x.Write(s: string) =
+            indentWriter.Write("{0}", s)
+
         member x.Write(s: string, [<ParamArray>] objs: obj []) =
             indentWriter.Write(s, objs)
+
+        member x.WriteLine(s: string) =
+            indentWriter.WriteLine("{0}", s)
 
         member x.WriteLine(s: string, [<ParamArray>] objs: obj []) =
             indentWriter.WriteLine(s, objs)
@@ -110,3 +116,36 @@ module internal Utils =
         |> Option.map (fun (line1, tokenInfo) ->
             tokenInfo, (Pos.fromZ (int line1 - 1) tokenInfo.LeftColumn)
         )
+
+    /// Represent environment where a captured identifier should be renamed
+    type NamesWithIndices = Map<string, Set<int>>
+
+    let keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
+
+    /// Rename a given argument if the identifier has been used
+    let normalizeArgName (namesWithIndices: NamesWithIndices) nm =
+        match nm with
+        | "()" -> nm, namesWithIndices
+        | _ ->
+            let nm = String.lowerCaseFirstChar nm
+            let nm, index = String.extractTrailingIndex nm
+                
+            let index, namesWithIndices =
+                match namesWithIndices |> Map.tryFind nm, index with
+                | Some indexes, index ->
+                    let rec getAvailableIndex idx =
+                        if indexes |> Set.contains idx then 
+                            getAvailableIndex (idx + 1)
+                        else idx
+                    let index = index |> Option.getOrElse 1 |> getAvailableIndex
+                    Some index, namesWithIndices |> Map.add nm (indexes |> Set.add index)
+                | None, Some index -> Some index, namesWithIndices |> Map.add nm (Set.ofList [index])
+                | None, None -> None, namesWithIndices |> Map.add nm Set.empty
+
+            let nm = 
+                match index with
+                | Some index -> sprintf "%s%d" nm index
+                | None -> nm
+                
+            let nm = if Set.contains nm keywordSet then sprintf "``%s``" nm else nm
+            nm, namesWithIndices

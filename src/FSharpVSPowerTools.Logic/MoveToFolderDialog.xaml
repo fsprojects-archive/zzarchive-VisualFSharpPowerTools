@@ -3,6 +3,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:local="clr-namespace:FSharpVSPowerTools.Folders;assembly=FSharpVSPowerTools.Logic" 
+        xmlns:fsxaml="http://github.com/fsprojects/FsXaml"
         mc:Ignorable="d" 
         WindowStyle="ToolWindow"
         Height="305.717"
@@ -13,17 +14,22 @@
         Title="{Binding WindowTitle, Mode=OneWay}" 
         ShowInTaskbar="False">
     <Window.Resources>
-        <Style TargetType="HeaderedContentControl">
-            <Setter Property="Focusable" Value="False"/>
-        </Style>
-        <Style TargetType="Label">
-            <Setter Property="Padding" Value="0,5,0,0"/>
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-            <Setter Property="Width" Value="100"/>
-            <Setter Property="Height" Value="30"/>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/FSharpVSPowerTools.Logic;component/CommonResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style TargetType="HeaderedContentControl">
+                <Setter Property="Focusable" Value="False"/>
+            </Style>
+            <Style TargetType="Label">
+                <Setter Property="Padding" Value="0,5,0,0"/>
+            </Style>
+            <Style TargetType="Button">
+                <Setter Property="VerticalAlignment" Value="Bottom"/>
+                <Setter Property="Width" Value="100"/>
+                <Setter Property="Height" Value="30"/>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
     <DockPanel Margin="0,20,4.774,19.755" HorizontalAlignment="Right" Width="333">
         <HeaderedContentControl DockPanel.Dock="Top">
@@ -76,7 +82,7 @@
             </TreeView>
         </HeaderedContentControl>
         <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button Name="btnOk" IsDefault="True" Height="25" Width="90" IsEnabled="False">OK</Button>
+            <Button Content="OK" Style="{StaticResource DialogOkButton}"/>
             <Button Name="btnCancel" IsCancel="True" Margin="10,0,0,0" Height="25" Width="90">Cancel</Button>
         </StackPanel>
     </DockPanel>

@@ -1,4 +1,20 @@
-﻿module FSharpVSPowerTools.Core.Tests.SourceCodeClassifierTests
+﻿#if INTERACTIVE
+#r "../../bin/FSharp.Compiler.Service.dll"
+#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
+      "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/IdentifierUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs"
+      "../../src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs"
+      "TestHelpers.fs"
+#else
+module FSharpVSPowerTools.Core.Tests.SourceCodeClassifierTests
+#endif
 
 open System.IO
 open NUnit.Framework
@@ -19,7 +35,7 @@ let opts source =
 let (=>) source (expected: (int * ((Category * int * int) list)) list) = 
     let opts = opts source
     
-    let sourceLines = source.Replace("\r\n", "\n").Split([|"\n"|], System.StringSplitOptions.None)
+    let sourceLines = source.Replace("\r\n", "\n").Split('\n')
 
     let lexer = 
         { new LexerBase() with
@@ -31,8 +47,8 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
 
     let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, sourceLines, AllowStaleResults.No, true,
-                                                      (fun _ -> async { return Some [opts] }), lexer)
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true,
+                                                      (fun _ -> async { return Some [opts] }))
         |> Async.RunSynchronously
 
     let parseResults = 
@@ -42,6 +58,11 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         let entities =
             languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             |> Async.RunSynchronously
+
+//        entities |> Option.iter (fun es ->
+//            using (new StreamWriter(@"L:\_entities_.txt")) <| fun w ->
+//                es |> List.iter (fun e -> w.WriteLine (sprintf "%A" e)))
+
         let qualifyOpenDeclarations line endColumn idents = 
             let lineStr = sourceLines.[line - 1]
             languageService.GetIdentTooltip (line, endColumn, lineStr, Array.toList idents, opts, fileName, source)
@@ -1328,6 +1349,7 @@ module Module =
 """
     => [ 3, [Category.Unused, 9, 26]]
 
+[<Test>]
 let ``record fields should be taken into account``() = 
     """
 module M1 =
@@ -1337,3 +1359,58 @@ module M2 =
     let x = { Field = 0 }
 """
     => [ 5, []]
+
+[<Test>]
+let ``handle type alias``() = 
+    """
+module TypeAlias =
+    type MyInt = int
+module Usage =
+    open TypeAlias
+    let f (x:MyInt) = x
+"""
+    => [ 5, []]
+
+[<Test>]
+let ``handle override members``() = 
+    """
+type IInterface =
+    abstract Property: int
+
+type IClass() =
+    interface IInterface with
+        member __.Property = 0
+
+let f (x: IClass) = (x :> IInterface).Property
+"""
+    => [ 7, []]
+
+[<Test>]
+let ``active pattern cases should be taken into account``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let f (Pattern _) = ()
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``active patterns applied as a function should be taken into account``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let _ = (|Pattern|_|) ()
+"""
+    => [ 4, []]
+
+[<Test>]
+let ``not used active pattern does not make the module in which it's defined to not mark as unused``() =
+    """
+module M = 
+    let (|Pattern|_|) _ = Some()
+open M
+let _ = 1
+"""
+    => [ 4, [ Category.Unused, 5, 6 ]]

@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open System
+open System.IO
 open EnvDTE
 open System.Collections
 open FSharpVSPowerTools.ProjectSystem
@@ -11,14 +12,17 @@ open System.Collections.Generic
 type MockDTE() =
     let projects = Dictionary()
     let mutable filePath = Unchecked.defaultof<_>
-    member __.AddProject(projectName: string, project: IProjectProvider) =
-        match projects.TryGetValue(projectName) with
+    member __.AddProject(projectFileName: string, project: IProjectProvider) =
+        match projects.TryGetValue(projectFileName) with
         | true, _ ->
-            printfn "Project %s exists in DTE." projectName
-            projects.[projectName] <- project
+            printfn "Project %s exists in DTE." projectFileName
+            projects.[projectFileName] <- project
         | false, _ ->
-            printfn "Adding %s to DTE." projectName
-            projects.[projectName] <- project
+            printfn "Adding %s to DTE." projectFileName
+            projects.[projectFileName] <- project
+
+    member __.GetProject(projectFileName) = 
+            projects.[projectFileName]
 
     member __.SetActiveDocument(fileName) =
         filePath <- fileName
@@ -156,6 +160,8 @@ and MockSolution(projects, dte: DTE) =
         member __.FileName: string = notimpl        
         member __.FindProjectItem(fileName: string): ProjectItem = 
             let allProjects = projects |> Seq.map (|KeyValue|) |> Seq.map snd
+            // Accept relative file path as an input
+            let fileName = Path.GetFullPathSafe(fileName)
             match allProjects |> Seq.tryFind (fun project -> Array.exists ((=) fileName) project.SourceFiles) with
             | Some project ->
                 MockProjectItem(fileName, project, dte) :> _
@@ -189,7 +195,9 @@ and MockProject(project: IProjectProvider, _dte: DTE) =
         member __.ExtenderCATID: string = notimpl
         member __.ExtenderNames: obj = notimpl
         member __.FileName: string = notimpl
-        member __.FullName: string = notimpl
+        member __.FullName: string = 
+            project.ProjectFileName 
+
         member __.Globals: Globals = notimpl
         member __.IsDirty with get (): bool = notimpl and set (_v: bool): unit = notimpl
         member __.Kind: string = 
@@ -200,13 +208,11 @@ and MockProject(project: IProjectProvider, _dte: DTE) =
         member __.ParentProjectItem: ProjectItem =  notimpl
         member __.ProjectItems: ProjectItems = notimpl
         member __.Properties: Properties = notimpl
-        member __.Save(_fileName: string): unit = 
-            debug "[MockProject] Suppose to save file into disk but do nothing here"
-        
+        member __.Save(_fileName: string): unit = notimpl
         member __.SaveAs(_newFileName: string): unit = notimpl
         member __.Saved with get (): bool = notimpl and set (_v: bool): unit = notimpl
-        member __.UniqueName: string = 
-            project.ProjectFileName       
+        member __.UniqueName: string = notimpl
+                  
 
 and MockProjectItem(_fileName: string, project: IProjectProvider, dte: DTE) =
     interface ProjectItem with

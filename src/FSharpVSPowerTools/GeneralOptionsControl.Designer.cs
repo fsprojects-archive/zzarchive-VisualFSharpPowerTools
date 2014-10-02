@@ -50,11 +50,13 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
+            this.chbGoToMetadata = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbGoToMetadata);
             this.grbOptions.Controls.Add(this.chbUnusedDeclarations);
             this.grbOptions.Controls.Add(this.chbResolveUnopenedNamespaces);
             this.grbOptions.Controls.Add(this.chbUnionPatternMatchCaseGeneration);
@@ -86,7 +88,7 @@ namespace FSharpVSPowerTools
             this.chbUnusedDeclarations.AutoSize = true;
             this.chbUnusedDeclarations.Checked = true;
             this.chbUnusedDeclarations.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbUnusedDeclarations.Location = new System.Drawing.Point(203, 171);
+            this.chbUnusedDeclarations.Location = new System.Drawing.Point(204, 133);
             this.chbUnusedDeclarations.Name = "chbUnusedDeclarations";
             this.chbUnusedDeclarations.Size = new System.Drawing.Size(217, 17);
             this.chbUnusedDeclarations.TabIndex = 17;
@@ -98,7 +100,7 @@ namespace FSharpVSPowerTools
             this.chbResolveUnopenedNamespaces.AutoSize = true;
             this.chbResolveUnopenedNamespaces.Checked = true;
             this.chbResolveUnopenedNamespaces.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbResolveUnopenedNamespaces.Location = new System.Drawing.Point(203, 148);
+            this.chbResolveUnopenedNamespaces.Location = new System.Drawing.Point(204, 110);
             this.chbResolveUnopenedNamespaces.Name = "chbResolveUnopenedNamespaces";
             this.chbResolveUnopenedNamespaces.Size = new System.Drawing.Size(179, 17);
             this.chbResolveUnopenedNamespaces.TabIndex = 16;
@@ -110,7 +112,7 @@ namespace FSharpVSPowerTools
             this.chbUnionPatternMatchCaseGeneration.AutoSize = true;
             this.chbUnionPatternMatchCaseGeneration.Checked = true;
             this.chbUnionPatternMatchCaseGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(203, 124);
+            this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(204, 86);
             this.chbUnionPatternMatchCaseGeneration.Name = "chbUnionPatternMatchCaseGeneration";
             this.chbUnionPatternMatchCaseGeneration.Size = new System.Drawing.Size(201, 17);
             this.chbUnionPatternMatchCaseGeneration.TabIndex = 16;
@@ -122,7 +124,7 @@ namespace FSharpVSPowerTools
             this.chbRecordStubGeneration.AutoSize = true;
             this.chbRecordStubGeneration.Checked = true;
             this.chbRecordStubGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRecordStubGeneration.Location = new System.Drawing.Point(203, 101);
+            this.chbRecordStubGeneration.Location = new System.Drawing.Point(204, 63);
             this.chbRecordStubGeneration.Name = "chbRecordStubGeneration";
             this.chbRecordStubGeneration.Size = new System.Drawing.Size(137, 17);
             this.chbRecordStubGeneration.TabIndex = 15;
@@ -134,7 +136,7 @@ namespace FSharpVSPowerTools
             this.chbFindAllReferences.AutoSize = true;
             this.chbFindAllReferences.Checked = true;
             this.chbFindAllReferences.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbFindAllReferences.Location = new System.Drawing.Point(203, 54);
+            this.chbFindAllReferences.Location = new System.Drawing.Point(204, 16);
             this.chbFindAllReferences.Name = "chbFindAllReferences";
             this.chbFindAllReferences.Size = new System.Drawing.Size(112, 17);
             this.chbFindAllReferences.TabIndex = 14;
@@ -144,7 +146,7 @@ namespace FSharpVSPowerTools
             // lblInformation
             // 
             this.lblInformation.AutoSize = true;
-            this.lblInformation.Location = new System.Drawing.Point(13, 227);
+            this.lblInformation.Location = new System.Drawing.Point(12, 238);
             this.lblInformation.Name = "lblInformation";
             this.lblInformation.Size = new System.Drawing.Size(139, 13);
             this.lblInformation.TabIndex = 13;
@@ -155,7 +157,7 @@ namespace FSharpVSPowerTools
             this.chbInterfaceImplementation.AutoSize = true;
             this.chbInterfaceImplementation.Checked = true;
             this.chbInterfaceImplementation.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbInterfaceImplementation.Location = new System.Drawing.Point(203, 77);
+            this.chbInterfaceImplementation.Location = new System.Drawing.Point(204, 39);
             this.chbInterfaceImplementation.Name = "chbInterfaceImplementation";
             this.chbInterfaceImplementation.Size = new System.Drawing.Size(118, 17);
             this.chbInterfaceImplementation.TabIndex = 12;
@@ -165,7 +167,7 @@ namespace FSharpVSPowerTools
             // chbFolderOrganization
             // 
             this.chbFolderOrganization.AutoSize = true;
-            this.chbFolderOrganization.Location = new System.Drawing.Point(203, 30);
+            this.chbFolderOrganization.Location = new System.Drawing.Point(15, 204);
             this.chbFolderOrganization.Name = "chbFolderOrganization";
             this.chbFolderOrganization.Size = new System.Drawing.Size(115, 17);
             this.chbFolderOrganization.TabIndex = 12;
@@ -177,7 +179,7 @@ namespace FSharpVSPowerTools
             this.chbSyntaxColoring.AutoSize = true;
             this.chbSyntaxColoring.Checked = true;
             this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbSyntaxColoring.Location = new System.Drawing.Point(15, 195);
+            this.chbSyntaxColoring.Location = new System.Drawing.Point(15, 181);
             this.chbSyntaxColoring.Name = "chbSyntaxColoring";
             this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
             this.chbSyntaxColoring.TabIndex = 11;
@@ -189,7 +191,7 @@ namespace FSharpVSPowerTools
             this.chbNavigateTo.AutoSize = true;
             this.chbNavigateTo.Checked = true;
             this.chbNavigateTo.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbNavigateTo.Location = new System.Drawing.Point(16, 171);
+            this.chbNavigateTo.Location = new System.Drawing.Point(16, 157);
             this.chbNavigateTo.Name = "chbNavigateTo";
             this.chbNavigateTo.Size = new System.Drawing.Size(82, 17);
             this.chbNavigateTo.TabIndex = 10;
@@ -199,7 +201,7 @@ namespace FSharpVSPowerTools
             // chbDepthColorizer
             // 
             this.chbDepthColorizer.AutoSize = true;
-            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 148);
+            this.chbDepthColorizer.Location = new System.Drawing.Point(16, 134);
             this.chbDepthColorizer.Name = "chbDepthColorizer";
             this.chbDepthColorizer.Size = new System.Drawing.Size(166, 17);
             this.chbDepthColorizer.TabIndex = 9;
@@ -211,7 +213,7 @@ namespace FSharpVSPowerTools
             this.chbRenameRefactoring.AutoSize = true;
             this.chbRenameRefactoring.Checked = true;
             this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 124);
+            this.chbRenameRefactoring.Location = new System.Drawing.Point(16, 110);
             this.chbRenameRefactoring.Name = "chbRenameRefactoring";
             this.chbRenameRefactoring.Size = new System.Drawing.Size(119, 17);
             this.chbRenameRefactoring.TabIndex = 8;
@@ -223,7 +225,7 @@ namespace FSharpVSPowerTools
             this.chbHighlightUsage.AutoSize = true;
             this.chbHighlightUsage.Checked = true;
             this.chbHighlightUsage.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 101);
+            this.chbHighlightUsage.Location = new System.Drawing.Point(16, 87);
             this.chbHighlightUsage.Name = "chbHighlightUsage";
             this.chbHighlightUsage.Size = new System.Drawing.Size(120, 17);
             this.chbHighlightUsage.TabIndex = 7;
@@ -233,7 +235,7 @@ namespace FSharpVSPowerTools
             // chbNavBar
             // 
             this.chbNavBar.AutoSize = true;
-            this.chbNavBar.Location = new System.Drawing.Point(16, 77);
+            this.chbNavBar.Location = new System.Drawing.Point(16, 63);
             this.chbNavBar.Name = "chbNavBar";
             this.chbNavBar.Size = new System.Drawing.Size(110, 17);
             this.chbNavBar.TabIndex = 6;
@@ -262,7 +264,7 @@ namespace FSharpVSPowerTools
             // lblHome
             // 
             this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(115, 271);
+            this.lblHome.Location = new System.Drawing.Point(114, 271);
             this.lblHome.Name = "lblHome";
             this.lblHome.Size = new System.Drawing.Size(254, 13);
             this.lblHome.TabIndex = 3;
@@ -275,7 +277,7 @@ namespace FSharpVSPowerTools
             this.chbFormatting.AutoSize = true;
             this.chbFormatting.Checked = true;
             this.chbFormatting.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbFormatting.Location = new System.Drawing.Point(16, 54);
+            this.chbFormatting.Location = new System.Drawing.Point(16, 40);
             this.chbFormatting.Name = "chbFormatting";
             this.chbFormatting.Size = new System.Drawing.Size(136, 17);
             this.chbFormatting.TabIndex = 2;
@@ -287,13 +289,25 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.AutoSize = true;
             this.chbXmlDoc.Checked = true;
             this.chbXmlDoc.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbXmlDoc.Location = new System.Drawing.Point(16, 30);
+            this.chbXmlDoc.Location = new System.Drawing.Point(16, 16);
             this.chbXmlDoc.Name = "chbXmlDoc";
             this.chbXmlDoc.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.chbXmlDoc.Size = new System.Drawing.Size(141, 17);
             this.chbXmlDoc.TabIndex = 1;
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
+            // 
+            // chbGotoMetadata
+            // 
+            this.chbGoToMetadata.AutoSize = true;
+            this.chbGoToMetadata.Checked = true;
+            this.chbGoToMetadata.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbGoToMetadata.Location = new System.Drawing.Point(204, 157);
+            this.chbGoToMetadata.Name = "chbGotoMetadata";
+            this.chbGoToMetadata.Size = new System.Drawing.Size(99, 17);
+            this.chbGoToMetadata.TabIndex = 18;
+            this.chbGoToMetadata.Text = "Go to metadata";
+            this.chbGoToMetadata.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -331,5 +345,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;
         private System.Windows.Forms.CheckBox chbResolveUnopenedNamespaces;
         private System.Windows.Forms.CheckBox chbUnusedDeclarations;
+        private System.Windows.Forms.CheckBox chbGoToMetadata;
     }
 }

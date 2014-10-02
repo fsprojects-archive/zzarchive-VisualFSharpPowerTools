@@ -263,11 +263,13 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynMemberSig.Interface(t, _) -> walkType t
         | SynMemberSig.ValField(f, _) -> walkField f
         | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) -> 
-            let isTypeExtension = 
+            let isTypeExtensionOrAlias = 
                 match repr with
-                | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAugmentation, _, _) -> true
+                | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAugmentation, _, _)
+                | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAbbrev, _, _)
+                | SynTypeDefnSigRepr.Simple(SynTypeDefnSimpleRepr.TypeAbbrev _, _) -> true
                 | _ -> false
-            walkComponentInfo isTypeExtension info
+            walkComponentInfo isTypeExtensionOrAlias info
             walkTypeDefnSigRepr repr
             List.iter walkMemberSig memberSigs
 
@@ -308,11 +310,11 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType t
         | _ -> ()
 
-    and walkComponentInfo isTypeExtension (ComponentInfo(attrs, typars, constraints, longIdent, _, _, _, _)) =
+    and walkComponentInfo isTypeExtensionOrAlias (ComponentInfo(attrs, typars, constraints, longIdent, _, _, _, _)) =
         List.iter walkAttribute attrs
         List.iter walkTyparDecl typars
         List.iter walkTypeConstraint constraints
-        if isTypeExtension then
+        if isTypeExtensionOrAlias then
             addLongIdent longIdent
 
     and walkTypeDefnRepr = function
@@ -324,11 +326,13 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
 
     and walkTypeDefn (TypeDefn (info, repr, members, _)) =
-        let isTypeExtension = 
+        let isTypeExtensionOrAlias = 
             match repr with
-            | SynTypeDefnRepr.ObjectModel (SynTypeDefnKind.TyconAugmentation, _, _) -> true
+            | SynTypeDefnRepr.ObjectModel (SynTypeDefnKind.TyconAugmentation, _, _)
+            | SynTypeDefnRepr.ObjectModel (SynTypeDefnKind.TyconAbbrev, _, _)
+            | SynTypeDefnRepr.Simple (SynTypeDefnSimpleRepr.TypeAbbrev _, _) -> true
             | _ -> false
-        walkComponentInfo isTypeExtension info
+        walkComponentInfo isTypeExtensionOrAlias info
         walkTypeDefnRepr repr
         List.iter walkMember members
 
