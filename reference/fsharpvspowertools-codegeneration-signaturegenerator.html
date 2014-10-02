@@ -54,15 +54,34 @@
             formatSymbol (...)
           </code>
           <div class="tip" id="86">
-            <strong>Signature:</strong> indentation:int -&gt; displayContext:FSharpDisplayContext -&gt; symbol:FSharpSymbol -&gt; string option<br />
+            <strong>Signature:</strong> getXmlDocBySignature:(string -&gt; string list) -&gt; indentation:int -&gt; displayContext:FSharpDisplayContext -&gt; openDeclarations:string list -&gt; symbol:FSharpSymbol -&gt; string option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SignatureGenerator.fs#L517-517" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SignatureGenerator.fs#L763-763" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
           
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '87', 87)" onmouseover="showTip(event, '87', 87)">
+            getFileNameFromSymbol symbol
+          </code>
+          <div class="tip" id="87">
+            <strong>Signature:</strong> symbol:FSharpSymbol -&gt; string<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SignatureGenerator.fs#L799-799" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Get file name from symbol's full name and escape illegal characters</p>
+
         </td>
       </tr>
     </tbody>
@@ -99,6 +118,7 @@
                 <li><a href="./../recordstubgeneration.html">Record stub generation</a></li>
                 <li><a href="./../unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
+                <li><a href="./../gotometadata.html">Go to metadata</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>
