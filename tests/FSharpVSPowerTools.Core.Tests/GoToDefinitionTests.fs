@@ -60,22 +60,23 @@ let tryGenerateDefinitionFromPos caretPos src =
                     | true, xmlMemberMap ->
                         xmlMemberMap
                     | false, _ ->
-                        let doc = XDocument.Load(xmlFile)
                         let xmlMemberMap = Dictionary()
-                        for key, value in 
-                          [ for e in doc.Descendants(XName.Get "member") do
-                              let attr = e.Attribute(XName.Get "name") 
-                              if attr <> null && not (String.IsNullOrEmpty(attr.Value)) then 
-                                yield attr.Value, e ] do
-                            xmlMemberMap.Add(key, value)
-                        xmlFileCache.Add(xmlFile, xmlMemberMap)
+                        let doc = XDocument.Load(xmlFile)
+                        if doc <> null then                            
+                            for key, value in 
+                              [ for e in doc.Descendants(XName.Get "member") do
+                                  let attr = e.Attribute(XName.Get "name") 
+                                  if attr <> null && not (String.IsNullOrEmpty(attr.Value)) then 
+                                    yield attr.Value, e ] do
+                                xmlMemberMap.Add(key, value)
+                            xmlFileCache.Add(xmlFile, xmlMemberMap)
                         xmlMemberMap
                 | None -> 
                     Dictionary()
             fun signature ->
                 match xmlMemberMap.TryGetValue(signature) with
                 | true, element ->
-                    [ element.Element(XName.Get "summary").Value ]
+                    try [ element.Element(XName.Get "summary").Value ] with _ -> []
                 | false, _ ->
                     []
             
@@ -1443,6 +1444,14 @@ let ``handle operators as compiled members`` () =
     """let x: System.DateTime = failwith "" """
     |> generateDefinitionFromPos (Pos.fromZ 0 20)
     |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
+    |> assertEqual true
+
+[<Test>]
+let ``handle uninstantiated type parameters`` () =
+    """let f x = array2D x"""
+    |> generateDefinitionFromPos (Pos.fromZ 0 12)
+    // Resulting types from FCS are non-deterministic so we are not yet able to assert a specific answer.
+    |> fun str -> str.Contains("val array2D : rows:seq") && not <| str.Contains("'?")
     |> assertEqual true
 
 let ``handle generic definitions`` () =
