@@ -1,4 +1,6 @@
 #### 1.5.0 - Unreleased
+* Support more complex scenarios in VS unit tests
+* Fix various issues with union case generation
 * Implement Go to Metadata
 
 #### 1.4.5 - August 28 2014

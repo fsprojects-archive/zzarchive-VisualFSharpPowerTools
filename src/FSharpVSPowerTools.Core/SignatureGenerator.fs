@@ -113,9 +113,13 @@ let private formatType ctx (typ: FSharpType) =
                 | j when j >= 0 && j < fullyQualifiedDefinition.Length ->
                     fullyQualifiedDefinition.[0..j-1].Replace(sprintf "`%i" arity, typeParams)
                 | _ -> definition
-            | _ -> definition    
-        else
-            definition
+            | _ -> definition
+        elif definition.Contains("'?") || definition.Contains("^?") then
+            // This type consists of uninstantiated type variables.
+            // Ideally this should be amended upstream.
+            // Text replacement will not work for corner cases but we digress.
+            definition.Replace("'?", "'T").Replace("^?", "^T")    
+        else definition
 
 let private isStaticallyResolved (param: FSharpGenericParameter) =
     param.Constraints
@@ -129,8 +133,9 @@ let private formatValueOrMemberName name =
         newName
 
 let private formatGenericParam (param: FSharpGenericParameter) =
-    if isStaticallyResolved param then "^" + param.Name
-    else "'" + param.Name
+    let escapedName = param.Name.Replace("?", "T")
+    if isStaticallyResolved param then "^" + escapedName
+    else "'" + escapedName
 
 let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstraint) =
     let hasPropertyShape =
