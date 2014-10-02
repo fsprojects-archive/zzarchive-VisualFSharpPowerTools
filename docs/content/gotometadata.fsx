@@ -4,10 +4,10 @@
 #I "../../bin"
 
 (**
-Go to definition
-================
+Go to metadata
+==============
 
-Go to definition is now implemented for symbols where source code is not available (or C# code), using the usual F12 keyboard shortcut.
+Go to metadata is now implemented for symbols where source code is not available (or C# code), using the usual F12 keyboard shortcut.
 
 We currently support:
 
@@ -19,7 +19,7 @@ We currently support:
 - delegates
 - exceptions
 
-![Go to definition window](img/gotodefinition.png)
+![Go to definition window](img/gotometadata.png)
 
 Limitations
 -----------
