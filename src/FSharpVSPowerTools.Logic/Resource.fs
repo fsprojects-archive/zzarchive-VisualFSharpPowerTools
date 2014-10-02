@@ -44,3 +44,14 @@ module Resource =
     let [<Literal>] implementInterfaceCommandName = "Explicitly implement interface"
     let [<Literal>] recordGenerationCommandName = "Generate record stubs"
     let [<Literal>] unionPatternMatchCaseCommandName = "Generate union pattern match cases"
+
+    let [<Literal>] goToDefinitionStatusMessage = "Generated symbol metadata"
+    let [<Literal>] goToDefinitionInvalidSymbolMessage = "Can't generate metadata for this symbol."
+
+    let [<Literal>] languageServiceErrorMessage = """
+Internal language services have encountered some severe errors.
+Syntax coloring or other features may stop working.
+
+If you experience such issues, they could be fixed as follows: (1) Clean current solution (2) Restart Visual Studio (3) Rebuild the solution.
+We're sorry for any convenience caused.
+"""

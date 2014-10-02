@@ -153,9 +153,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         // Try to set buffer to read-only mode
                         vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
                     | _ -> ()
-                    statusBar.SetText("Generated symbol metadata") |> ignore  
+                    statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore  
             | None ->
-                statusBar.SetText("Can't generate metadata for this symbol.") |> ignore  
+                statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
