@@ -9,9 +9,44 @@ using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace FSharpVSPowerTools
 {
+    public interface IGeneralOptionsPage
+    {
+        bool XmlDocEnabled { get; set; }
+
+        bool FormattingEnabled { get; set; }
+
+        bool NavBarEnabled { get; set; }
+
+        bool HighlightUsageEnabled { get; set; }
+
+        bool RenameRefactoringEnabled { get; set; }
+
+        bool DepthColorizerEnabled { get; set; }
+
+        bool NavigateToEnabled { get; set; }
+
+        bool SyntaxColoringEnabled { get; set; }
+
+        bool InterfaceImplementationEnabled { get; set; }
+
+        bool FolderOrganizationEnabled { get; set; }
+
+        bool FindAllReferencesEnabled { get; set; }
+
+        bool GenerateRecordStubEnabled { get; set; }
+
+        bool UnionPatternMatchCaseGenerationEnabled { get; set; }
+
+        bool ResolveUnopenedNamespacesEnabled { get; set; }
+
+        bool UnusedDeclarationsEnabled { get; set; }
+
+        bool GoToMetadataEnabled { get; set; }
+    }
+
     [ClassInterface(ClassInterfaceType.AutoDual)]
     [Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")]
-    public class GeneralOptionsPage : DialogPage
+    public class GeneralOptionsPage : DialogPage, IGeneralOptionsPage
     {   
         private GeneralOptionsControl _optionsControl;
         private const string navBarConfig = "fsharp-navigationbar-enabled";
@@ -39,6 +74,7 @@ namespace FSharpVSPowerTools
             UnionPatternMatchCaseGenerationEnabled = true;
             ResolveUnopenedNamespacesEnabled = true;
             UnusedDeclarationsEnabled = true;
+            GoToMetadataEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -150,6 +186,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool UnusedDeclarationsEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool GoToMetadataEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -188,6 +227,7 @@ namespace FSharpVSPowerTools
                 UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
                 ResolveUnopenedNamespacesEnabled = _optionsControl.ResolveUnopenedNamespacesEnabled;
                 UnusedDeclarationsEnabled = _optionsControl.UnusedDeclarationsEnabled;
+                GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
             }
 
             base.OnApply(e);

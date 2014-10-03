@@ -13,7 +13,6 @@ open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tutorial.fs")
 let source = File.ReadAllText(fileName)

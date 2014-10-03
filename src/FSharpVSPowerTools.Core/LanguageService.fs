@@ -5,10 +5,8 @@ open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.FSharp.Compiler.Ast
-open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools
-open FSharp.ViewModule.Progress
+open AsyncMaybe
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing
@@ -20,7 +18,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
 
     static member Empty = ParseAndCheckResults(None)
 
-    member x.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
+    member __.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
         async {
             match infoOpt with 
             | None -> 
@@ -29,7 +27,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
         }
 
-    member x.GetUsesOfSymbolInFile(symbol) =
+    member __.GetUsesOfSymbolInFile(symbol) =
         async {
             match infoOpt with 
             | None -> 
@@ -38,7 +36,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 return! checkResults.GetUsesOfSymbolInFile(symbol)
         }
 
-    member x.GetAllUsesOfAllSymbolsInFile() =
+    member __.GetAllUsesOfAllSymbolsInFile() =
         async {
             match infoOpt with
             | None -> 
@@ -47,17 +45,17 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 return! checkResults.GetAllUsesOfAllSymbolsInFile()
         }
 
-    member x.GetUntypedAst() =
+    member __.GetUntypedAst() =
         match infoOpt with 
         | None -> None
         | Some (_, parseResults) -> parseResults.ParseTree
 
-    member x.GetErrors() =
+    member __.GetErrors() =
         match infoOpt with 
         | None -> None
         | Some (checkResults, _parseResults) -> Some checkResults.Errors
 
-    member x.GetNavigationItems() =
+    member __.GetNavigationItems() =
         match infoOpt with 
         | None -> [| |]
         | Some (_checkResults, parseResults) -> 
@@ -67,12 +65,41 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
                 Debug.Assert(false, "couldn't update navigation items, ignoring")  
                 [| |]
 
-    member x.GetPartialAssemblySignature() =
+    member __.GetPartialAssemblySignature() =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.PartialAssemblySignature)
 
-    member x.ProjectContext =
+    member __.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
+
+    member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
+        async {
+            let! result = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
+            match result with
+            | Some symbolUse ->
+                let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol)
+                return Some(symbolUse.Symbol, ident, refs)
+            | None -> 
+                return None
+        }
+
+    member __.GetDeclarationLocation(line, col, lineStr, ident, preferSignature) =
+        async {
+            match infoOpt with 
+            | None -> 
+                return FindDeclResult.DeclNotFound FindDeclFailureReason.Unknown
+            | Some (checkResults, _parseResults) -> 
+                return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)       
+        }
             
+    member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
+        Debug.Assert(not (List.isEmpty names), "The names should not be empty (for which GetToolTip raises exceptions).")
+        asyncMaybe {
+            match infoOpt with
+            | Some (checkResults, _) -> 
+                let tokenTag = Parser.tagOfToken (Parser.token.IDENT "")
+                return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
+            | None -> return! (liftMaybe None)
+        }
 
 [<RequireQualifiedAccess>]
 type AllowStaleResults = 
@@ -87,18 +114,6 @@ type AllowStaleResults =
     /// Don't allow stale results. This waits for all background changes relevant to the file to propagate, and forces a recheck of the file text
     /// regardless of whether if has been recently checked or not.
     | No
-
-type ParseAndCheckResults with
-    member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
-        async {
-            let! result = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
-            match result with
-            | Some symbolUse ->
-                let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol)
-                return Some(symbolUse.Symbol, ident, refs)
-            | None -> 
-                return None
-        }
 
 type WordSpan = 
     { Line: int
@@ -117,29 +132,13 @@ type LexerBase() =
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
 
+[<NoComparison>]
+type SymbolUse =
+    { SymbolUse: FSharpSymbolUse 
+      IsUsed: bool
+      FullNames: Idents[] }
+
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
-open System.Collections.Generic
-
-type ShortIdent = string
-type Idents = ShortIdent[]
-
-type EntityKind =
-    | Attribute
-    | Type
-    | FunctionOrValue
-    override x.ToString() = sprintf "%A" x
-
-type RawEntity = 
-    { Idents: Idents
-      Namespace: Idents option
-      IsPublic: bool
-      TopRequireQualifiedAccessParent: Idents option
-      AutoOpenParent: Idents option
-      Kind: EntityKind }
-    override x.ToString() = sprintf "%A" x  
-
-type AssemblyPath = string
-type AssemblyContentType = Public | Full
 
 // --------------------------------------------------------------------------------------
 // Language service 
@@ -148,13 +147,16 @@ type AssemblyContentType = Public | Full
 type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
   do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
+  let mutable errorHandler = None
+  let handleCriticalErrors e = 
+      errorHandler |> Option.iter (fun handle -> handle e)
 
   // Create an instance of interactive checker. The callback is called by the F# compiler service
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
   let checker = 
-    let checker = InteractiveChecker.Create(200)
+    let checker = InteractiveChecker.Create(projectCacheSize=200)
     checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
@@ -173,20 +175,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           Environment.ExpandEnvironmentVariables("%HOMEDRIVE%%HOMEPATH%")
       Path.Combine(dir, Path.GetFileName(path))
    
-  // We use an additional mailbox processor here so we can get work off the GUI 
-  // thread and timeout on synchronous requests. Note, there is already a background thread in F.C.S.
-  //
-  // Every request to the mailbox is 'PostAndReply' or 'PostAndAsyncReply'.  This means the requests are
-  // a lot like a function call, except 
-  //   (a) they may be asynchronous (reply is interleaved on the UI thread)
-  //   (b) they may be on on a timeout (to prevent blocking the UI thread)
-  //   (c) only one request is active at a time, the rest are in the queue
-
-  let mbox = MailboxProcessor.Start(fun mbox -> 
+  let parseAndCheckFileInProject(fileName, source, options) =
       async { 
-          while true do
               debug "Worker: Awaiting request"
-              let! (fileName, source, options, reply: AsyncReplyChannel<_>) = mbox.Receive()
               let fileName = fixFileName (fileName)
               debug "Worker: Parse and typecheck source..."
               let! res = 
@@ -198,33 +189,33 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                   | Choice1Of2 (parseResults, CheckFileAnswer.Succeeded(checkResults)) ->
                       // Handle errors on the GUI thread
                       debug "[LanguageService] Update typed info - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo
+                      debug "[LanguageService] Update typed info - Errors? %A" checkResults.Errors
                       ParseAndCheckResults(checkResults, parseResults)
                   | Choice1Of2 _ ->
                       debug "[LanguageService] Update typed info - failed"
                       ParseAndCheckResults.Empty
                   | Choice2Of2 e -> 
-                      debug "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
-                      fail "ParseAndCheckFileInProject fails. There is probably a bug in the language service."
+                      fail "[LanguageService] Unexpected type checking errors occurred for '%s' with %A" fileName options
+                      fail "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
+                      handleCriticalErrors e
                       ParseAndCheckResults.Empty  
-              reply.Reply results
-      })
-
-  let entityCache = Dictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
+              return results
+      }
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, targetFramework) =
     let ext = Path.GetExtension(fileName)
     let opts = 
-      if (ext = ".fsx" || ext = ".fsscript") then
-        // We are in a stand-alone file or we are in a project, but currently editing a script file
-        x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
+        if ext = ".fsx" || ext = ".fsscript" then
+           // We are in a stand-alone file or we are in a project, but currently editing a script file
+           x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
           
-      // We are in a project - construct options using current properties
-      else async { return x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) }
+        // We are in a project - construct options using current properties
+        else async { return x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
-  member x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework) =
+  member __.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework) =
       async {
         // We are in a stand-alone file or we are in a project, but currently editing a script file
         try 
@@ -257,23 +248,27 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       }
    
   /// Constructs options for the interactive checker for a project under the given configuration. 
-  member x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
-    { ProjectFileName = projFilename
-      ProjectFileNames = files
-      ProjectOptions = args
-      IsIncompleteTypeCheckEnvironment = false
-      UseScriptResolutionRules = false
-      LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
-      UnresolvedReferences = None
-      ReferencedProjects = referencedProjects }
+  member __.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
+    let opts =
+        { ProjectFileName = projFilename
+          ProjectFileNames = files
+          ProjectOptions = args
+          IsIncompleteTypeCheckEnvironment = false
+          UseScriptResolutionRules = false
+          LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
+          UnresolvedReferences = None
+          ReferencedProjects = referencedProjects }
+    Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
+                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects)
+    opts     
 
-  member x.ParseFileInProject(projectOptions, fileName: string, src) = 
+  member __.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
         Debug.WriteLine(sprintf "Parsing: Get untyped parse result (fileName=%s)" fileName)
         return! checker.ParseFileInProject(fileName, src, projectOptions)
     }
 
-  member internal x.TryGetStaleTypedParseResult(fileName:string, options, src, stale)  = 
+  member internal __.TryGetStaleTypedParseResult(fileName:string, options, src, stale)  = 
     // Try to get recent results from the F# service
     let res = 
         match stale with 
@@ -287,11 +282,11 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 (*
  // This is currently unused, but could be used in the future to ensure reactivity and analysis-responsiveness in some situations.
  // The method in the corresponding fsharpbinding code is used by Xamarin Studio.
-  member x.GetTypedParseResultWithTimeout(projectFilename, fileName:string, src, files, args, stale, timeout, targetFramework)  : ParseAndCheckResults = 
-    let opts = x.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
+  member __.GetTypedParseResultWithTimeout(projectFilename, fileName:string, src, files, args, stale, timeout, targetFramework)  : ParseAndCheckResults = 
+    let opts = __.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
     Debug.WriteLine("Parsing: Get typed parse result, fileName={0}", [|fileName|])
     // Try to get recent results from the F# service
-    match x.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
+    match __.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
     | Some results ->
         Debug.WriteLine(sprintf "Parsing: using stale results")
         results
@@ -309,7 +304,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           | Some results -> return results
           | None -> 
               Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
-              let! results = mbox.PostAndAsyncReply(fun r -> fileName, src, opts, r)
+              let! results = parseAndCheckFileInProject(fileName, src, opts)
               Debug.WriteLine(sprintf "Worker: Starting background compilations")
               checker.StartBackgroundCompile(opts)
               return results
@@ -325,9 +320,15 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           | _ -> return None
       }
 
+  member x.GetUsesOfSymbolAtLocationInFile(projectOptions, fileName, source, symbol: Symbol, line, lineStr, stale) = 
+      async { 
+          let! checkResults = x.ParseAndCheckFileInProject(projectOptions, fileName, source, stale)
+          return! checkResults.GetUsesOfSymbolInFileAtLocation(line, symbol.RightColumn, lineStr, symbol.Text)
+      }
+
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions seq, 
-                                                    fileName, source, line:int, col, lineStr, args, queryLexState, progress : (OperationState -> unit) option) =     
+                                                    fileName, source, line:int, col, lineStr, args, queryLexState, reportProgress : (string -> int -> int -> unit) option) =     
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
          | Some symbol ->
@@ -340,12 +341,10 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     
                     dependentProjects |> Async.Array.mapi (fun index opts ->
                           async {                            
-                            let projectName = System.IO.Path.GetFileNameWithoutExtension(opts.ProjectFileName)
-                            reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) dependentProjects.Length, index * 2, dependentProjects.Length * 2))
+                            let projectName = Path.GetFileNameWithoutExtension(opts.ProjectFileName)
+                            reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
                             let! projectResults = checker.ParseAndCheckProject opts
-                            reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) dependentProjects.Length, index * 2 + 1, dependentProjects.Length * 2))
                             let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
-                            debug "--> GetUsesOfSymbol: Project = %s, Opts = %A, Results = %A" opts.ProjectFileName opts refs
                             return refs })
                  let refs = Array.concat refs
                  return Some(fsSymbolUse.Symbol, symbol.Text, refs)
@@ -354,26 +353,26 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
      }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: ProjectOptions seq) =
+  member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: ProjectOptions seq) =
      async { 
-        return 
+        return! 
             projectsOptions
-            |> Seq.exists (fun opts ->
+            |> Seq.toArray
+            |> Async.Array.exists (fun opts ->
                 async {
                     let! projectResults = checker.ParseAndCheckProject opts
                     let! refs = projectResults.GetUsesOfSymbol symbol
-                    return 
+                    return
                         if opts.ProjectFileName = currentProjectName then
                             refs.Length > 1
-                        else refs.Length > 0 }
-                |> Async.RunSynchronously)
+                        else refs.Length > 0 })
      }
 
-  member x.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)
+  member __.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)
 
   // additions
 
-  member x.Checker = checker
+  member __.Checker = checker
 
   member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
       let rec loop i options = 
@@ -408,143 +407,163 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           }
       loop 0 None
 
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, src, stale) =
+    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedDeclarations, 
+                                           getSymbolDeclProjects) : SymbolUse [] Async =
+
         async {
-            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, src, stale)
-            return! results.GetAllUsesOfAllSymbolsInFile()
+            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
+            let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
+
+            let allSymbolsUses =
+                fsharpSymbolsUses
+                |> Array.map (fun symbolUse -> 
+                    let fullNames =
+                        match symbolUse.Symbol with
+                        // Make sure that unsafe manipulation isn't executed if unused declarations are disabled
+                        | _ when not checkForUnusedDeclarations -> 
+                            None
+                        | MemberFunctionOrValue func when func.IsExtensionMember ->
+                            if func.IsProperty then
+                                let fullNames =
+                                    [|
+                                        if func.HasGetterMethod then
+                                            yield func.GetterMethod.EnclosingEntity.TryGetFullName()
+                                        if func.HasSetterMethod then
+                                            yield func.SetterMethod.EnclosingEntity.TryGetFullName()
+                                    |]
+                                    |> Array.choose id
+                                match fullNames with
+                                | [||] -> None 
+                                | _ -> Some fullNames
+                            else 
+                                match func.EnclosingEntity with
+                                // C# extension method
+                                | Entity Class ->
+                                    let fullName = symbolUse.Symbol.FullName.Split '.'
+                                    if fullName.Length > 2 then
+                                        (* For C# extension methods FCS returns full name including the class name, like:
+                                            Namespace.StaticClass.ExtensionMethod
+                                            So, in order to properly detect that "open Namespace" actually opens ExtensionMethod,
+                                            we remove "StaticClass" part. This makes C# extension methods looks identically 
+                                            with F# extension members.
+                                        *)
+                                        let fullNameWithoutClassName =
+                                            Array.append fullName.[0..fullName.Length - 3] fullName.[fullName.Length - 1..]
+                                        Some [|String.Join (".", fullNameWithoutClassName)|]
+                                    else None
+                                | _ -> None
+                        // Operators
+                        | MemberFunctionOrValue func ->
+                            match func with
+                            | Constructor _ -> None
+                            | _ -> func.TryGetFullCompiledOperatorNameIdents()
+                        | Entity e ->
+                            match e with
+                            | e, TypedAstPatterns.Attribute, _ ->
+                                e.TryGetFullName()
+                                |> Option.map (fun fullName ->
+                                    [| fullName; fullName.Substring(0, fullName.Length - "Attribute".Length) |])
+                            | e, _, _ -> 
+                                e.TryGetFullName() |> Option.map (fun fullName -> [| fullName |])
+                        | RecordField _
+                        | UnionCase _ as symbol ->
+                            Some [| let fullName = symbol.FullName
+                                    yield fullName
+                                    let idents = fullName.Split '.'
+                                    // Union cases/Record fields can be accessible without mentioning the enclosing type. 
+                                    // So we add a FullName without having the type part.
+                                    if idents.Length > 1 then
+                                        yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
+                                 |]   
+                        |  _ -> None
+                        |> Option.getOrElse [|symbolUse.Symbol.FullName|]
+                        |> Array.map (fun fullName -> fullName.Split '.')
+                    
+                    { SymbolUse = symbolUse
+                      IsUsed = true
+                      FullNames = fullNames })
+
+            let singleDefs = 
+                if checkForUnusedDeclarations then
+                    allSymbolsUses
+                    |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
+                    |> Seq.choose (fun (symbol, uses) ->
+                        match symbol with
+                        | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
+                        // Determining that a record, DU or module is used anywhere requires
+                        // inspecting all their inclosed entities (fields, cases and func / vals)
+                        // for usefulness, which is too expensive to do. Hence we never gray them out.
+                        | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
+                        // FCS returns inconsistent results for override members; we're going to skip these symbols.
+                        | MemberFunctionOrValue func when func.IsOverrideOrExplicitMember -> None
+                        // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
+                        | Parameter -> None
+                        | _ ->
+                            match Seq.toList uses with
+                            | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
+                                Some symbol 
+                            | _ -> None)
+                    |> Seq.toList
+                else []
+
+            let! notUsedSymbols =
+                singleDefs 
+                |> Async.List.map (fun fsSymbol ->
+                    async {
+                        let! opts = getSymbolDeclProjects fsSymbol
+                        match opts with
+                        | Some projects ->
+                            let! isSymbolUsed = x.IsSymbolUsedInProjects (fsSymbol, projectOptions.ProjectFileName, projects) 
+                            if isSymbolUsed then return None
+                            else return Some fsSymbol
+                        | None -> return None 
+                    })
+                |> Async.map (List.choose id)
+                                    
+            return
+                match notUsedSymbols with
+                | [] -> allSymbolsUses
+                | _ ->
+                    allSymbolsUses
+                    |> Array.map (fun su -> 
+                        { su with IsUsed = notUsedSymbols |> List.forall (fun s -> s <> su.SymbolUse.Symbol) })
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
-        let unrepresentedTypes = ["nativeptr"; "ilsigptr"; "[,]"; "[,,]"; "[,,,]"; "[]"]
-        
-        let rec getFullName (entity: FSharpEntity) =
-            match entity with
-            | AbbreviatedType (TypeWithDefinition def) -> getFullName def
-            | x when x.IsArrayType || x.IsByRef -> None
-            | _ ->
-                Option.attempt (fun _ -> entity.DisplayName)
-                |> Option.bind (fun displayName ->
-                    if List.exists ((=) displayName) unrepresentedTypes then None
-                    else 
-                        try Some entity.FullName
-                        with e -> 
-                            //fail "Should add this type to the black list: %O" e
-                            None)
-                |> Option.map (fun fullName ->
-                    // remove number of arguments from generic types
-                    // e.g. System.Collections.Generic.Dictionary`2 -> System.Collections.Generic.Dictionary
-                    if Char.IsDigit fullName.[fullName.Length - 1] then
-                        match fullName.LastIndexOf '`' with
-                        | -1 -> fullName
-                        | lastBacktickIndex -> 
-                            fullName.Substring(0, lastBacktickIndex)
-                    else fullName) 
-            
-        let getFullNameAsIdents entity = entity |> getFullName |> Option.map (fun x -> x.Split '.')
-
-        let isAttribute (entity: FSharpEntity) =
-            let getBaseType (entity: FSharpEntity) =
-                try 
-                    match entity.BaseType with
-                    | Some (TypeWithDefinition def) -> Some def
-                    | _ -> None
-                with _ -> None
-
-            let rec isAttributeType (ty: FSharpEntity option) =
-                match ty with
-                | None -> false
-                | Some ty ->
-                    match getFullName ty with
-                    | None -> false
-                    | Some fullName ->
-                        fullName = "System.Attribute" || isAttributeType (getBaseType ty)
-            isAttributeType (Some entity)
-
-        let createEntity ns (topRequiresQualifiedAccessParent: FSharpEntity option) autoOpenParent (entity: FSharpEntity) =
-            getFullNameAsIdents entity
-            |> Option.map (fun fullName ->
-                 { Idents = fullName
-                   Namespace = ns
-                   IsPublic = entity.Accessibility.IsPublic
-                   TopRequireQualifiedAccessParent = topRequiresQualifiedAccessParent |> Option.bind getFullNameAsIdents
-                   AutoOpenParent = autoOpenParent |> Option.bind getFullNameAsIdents
-                   Kind = if isAttribute entity then EntityKind.Attribute else EntityKind.Type })
-
-        let rec traverseEntity contentType (parentNamespace: Idents option) (requiresQualifiedAccessParent: FSharpEntity option) 
-                               (autoOpenParent: FSharpEntity option) (entity: FSharpEntity) = 
-
-            seq { if not entity.IsProvided then
-                    match contentType, entity.Accessibility.IsPublic with
-                    | Full, _ | Public, true ->
-                        let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parentNamespace
-                        match createEntity ns requiresQualifiedAccessParent autoOpenParent entity with
-                        | Some x -> yield x
-                        | None -> ()
-                                            
-                        let requiresQualifiedAccessParent =
-                            requiresQualifiedAccessParent
-                            |> Option.orElse (
-                                if hasAttribute<RequireQualifiedAccessAttribute> entity.Attributes then Some entity
-                                else None)
-
-                        let autoOpenParent =
-                            let isAutoOpen = entity.IsFSharpModule && hasAttribute<AutoOpenAttribute> entity.Attributes
-
-                            match isAutoOpen, autoOpenParent with
-                            | true, Some parent -> Some parent // if parent is also AutoOpen, then keep the parent
-                            | true, None -> Some entity // if parent is not AutoOpen, but current entity is, peek the latter as a new AutoOpen module
-                            | false, _ -> None // if current entity is not AutoOpen, we discard whatever parent was
-
-                        if entity.IsFSharpModule then
-                            for func in entity.MembersFunctionsAndValues do
-                                yield { Idents = func.FullName.Split '.'
-                                        Namespace = ns
-                                        IsPublic = func.Accessibility.IsPublic
-                                        TopRequireQualifiedAccessParent = requiresQualifiedAccessParent |> Option.bind getFullNameAsIdents
-                                        AutoOpenParent = autoOpenParent |> Option.bind getFullNameAsIdents
-                                        Kind = EntityKind.FunctionOrValue }
-
-                        for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
-                            yield! traverseEntity contentType ns requiresQualifiedAccessParent autoOpenParent e 
-                    | _ -> () }
-
-        let traverseAssemblySignature (signature: FSharpAssemblySignature) contentType =
-             seq { for e in (try signature.Entities :> _ seq with _ -> Seq.empty) do
-                     yield! traverseEntity contentType None None None e }
-             |> Seq.distinct
-             |> Seq.toList
-
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
                 Some [ match checkResults.GetPartialAssemblySignature() with
-                       | Some signature -> yield! traverseAssemblySignature signature Full
+                       | Some signature -> 
+                           yield! AssemblyContentProvider.getAssemblySignatureContent AssemblyContentType.Full signature
                        | None -> ()
 
                        match checkResults.ProjectContext with
                        | Some ctx ->
-                           for asm in ctx.GetReferencedAssemblies() do
-                               let neededContentType = Public // it's always Public since we don't support InternalsVisibleTo attribute yet
-                               yield! 
-                                   match asm.FileName with
-                                   | Some fileName ->
-                                       let assemblyWriteTime = FileInfo(fileName).LastWriteTime
-                                       match neededContentType, entityCache.TryGetValue fileName with
-                                       | _, (true, (cacheWriteTime, Full, entities))
-                                       | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
-                                            debug "[LanguageService] Return entities from %s from cache." fileName
-                                            entities
-                                       | _ ->
-                                           debug "[LanguageService] Getting entities from %s." fileName
-                                           let entities = traverseAssemblySignature asm.Contents neededContentType
-                                           entityCache.[fileName] <- (assemblyWriteTime, neededContentType, entities)
-                                           entities
-                                   | None -> 
-                                       debug "[LanguageService] Getting entities from %s." fileName
-                                       traverseAssemblySignature asm.Contents neededContentType
-                                   |> List.filter (fun entity -> 
-                                        match neededContentType, entity.IsPublic with
-                                        | Full, _ | Public, true -> true
-                                        | _ -> false)
+                           // FCS sometimes returns several FSharpAssembly for single referenced assembly. 
+                           // For example, it returns two different ones for Swensen.Unquote; the first one 
+                           // contains no useful entities, the second one does. Our cache prevents to process
+                           // the second FSharpAssembly which results with the entities containing in it to be 
+                           // not discovered.
+                           let assembliesByFileName =
+                               ctx.GetReferencedAssemblies()
+                               |> Seq.groupBy (fun asm -> asm.FileName)
+                               |> Seq.map (fun (fileName, asms) -> fileName, List.ofSeq asms)
+                               |> Seq.toList
+                               |> List.rev // if mscorlib.dll is the first then FSC raises exception when we try to
+                                           // get Content.Entities from it.
+
+                           for fileName, signatures in assembliesByFileName do
+                               let contentType = Public // it's always Public for now since we don't support InternalsVisibleTo attribute yet
+                               yield! AssemblyContentProvider.getAssemblyContent contentType fileName signatures
                        | None -> () ]
         }
+
+    member x.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, project: ProjectOptions, file, source) =
+        async {
+            let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
+            return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)
+        }
+
+    member __.SetCriticalErrorHandler func = 
+        errorHandler <- Some func

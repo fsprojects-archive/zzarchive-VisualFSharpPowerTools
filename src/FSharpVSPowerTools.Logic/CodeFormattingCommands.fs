@@ -2,16 +2,22 @@
 
 open System
 open System.IO
-open System.Windows
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
-open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
+
+[<NoComparison>]
+type FormattingResult = {
+    OldTextStartIndex: int
+    OldTextLength: int
+    NewText: string
+}
 
 [<AbstractClass>]
 type CommandBase() =
@@ -62,20 +68,22 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
                 textUndoTransaction.Cancel()
     
     member x.ExecuteFormatCore() =
-        let text = x.TextView.TextSnapshot.GetText()
         let source = x.TextBuffer.CurrentSnapshot.GetText()
         let isSignatureFile = x.IsSignatureFile(x.TextBuffer)
 
         let config = getConfig()
-        let statusBar = Package.GetGlobalService(typedefof<SVsStatusbar>) :?> IVsStatusbar
+        let statusBar = x.Services.ServiceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
         try
-            let formatted = x.GetFormatted(isSignatureFile, source, config)
-            if isValidFSharpCode isSignatureFile formatted then
+            let formattingResult = x.GetFormatted(isSignatureFile, source, config)
+
+            if isValidFSharpCode isSignatureFile (formattingResult.NewText) then
                 use edit = x.TextBuffer.CreateEdit()
                 let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
 
-                edit.Replace(0, text.Length, formatted) |> ignore
+                edit.Replace(formattingResult.OldTextStartIndex,
+                             formattingResult.OldTextLength,
+                             formattingResult.NewText) |> ignore
                 edit.Apply() |> ignore
 
                 x.SetNewCaretPosition(caretPos, scrollBarPos, currentSnapshot)
@@ -88,7 +96,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
             statusBar.SetText(ex.Message) |> ignore 
             false
         | ex ->
-            statusBar.SetText(Resource.formattingErrorMessage + ex.Message) |> ignore
+            statusBar.SetText(sprintf "%s: %O" Resource.formattingErrorMessage ex) |> ignore
             false
 
     member x.IsSignatureFile(buffer: ITextBuffer) =
@@ -114,6 +122,6 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
             | Some scrollBarLine -> originalSnapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
         (caretPos, scrollBarPos, originalSnapshot)
 
-    abstract GetFormatted: isSignatureFile: bool * source: string * config: FormatConfig -> string
+    abstract GetFormatted: isSignatureFile: bool * source: string * config: FormatConfig -> FormattingResult
     abstract SetNewCaretPosition: caretPos: SnapshotPoint * scrollBarPos: int * originalSnapshot: ITextSnapshot -> unit
 

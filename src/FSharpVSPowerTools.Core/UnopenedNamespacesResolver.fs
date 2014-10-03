@@ -30,8 +30,8 @@ module Entity =
             | _ -> candidateNs.Length
         candidateNs.[0..nsCount - 1]
 
-    let tryCreate (targetNamespace: Idents option) (targetScope: Idents) (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option) 
-                  (autoOpenParent: Idents option) (candidateNamespace: Idents option) (candidate: Idents) =
+    let tryCreate (targetNamespace: Idents option, targetScope: Idents, ident: ShortIdent, requiresQualifiedAccessParent: Idents option, 
+                   autoOpenParent: Idents option, candidateNamespace: Idents option, candidate: Idents) =
         if candidate.Length = 0 || candidate.[candidate.Length - 1] <> ident then None
         else Some candidate
         |> Option.bind (fun candidate ->
@@ -65,13 +65,25 @@ type Pos =
     { Line: int
       Col: int }
        
-module Ast =
+type ScopeKind =
+    | Namespace
+    | TopModule
+    | NestedModule
+    | OpenDeclaration
+    | HashDirective
+    override x.ToString() = sprintf "%A" x
+
+type InsertContext =
+    { ScopeKind: ScopeKind
+      Pos: Pos }
+
+module ParsedInput =
     open Microsoft.FSharp.Compiler
     open Microsoft.FSharp.Compiler.Ast
 
-    type EndLine = int
+    type private EndLine = int
         
-    let getEntityKind (ast: ParsedInput) (pos: Range.pos) : EntityKind option =
+    let getEntityKind (input: ParsedInput) (pos: Range.pos) : EntityKind option =
         let (|ConstructorPats|) = function
             | Pats ps -> ps
             | NamePatPairs(xs, _) -> List.map snd xs
@@ -83,14 +95,15 @@ module Ast =
             else None
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
-            List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
+            List.tryPick (walkSynModuleOrNamespace true) moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, _, _, r)) =
-            ifPosInRange r (fun _ -> List.tryPick walkSynModuleDecl decls)
+        and walkSynModuleOrNamespace isTopLevel (SynModuleOrNamespace(_, isModule, decls, _, attrs, _, r)) =
+            if isModule && isTopLevel then None else List.tryPick walkAttribute attrs
+            |> Option.orElse (ifPosInRange r (fun _ -> List.tryPick (walkSynModuleDecl isTopLevel) decls))
 
         and walkAttribute (attr: SynAttribute) = 
-            if isPosInRange attr.Range then Some EntityKind.Attribute 
-            else None
+            if isPosInRange attr.Range then Some EntityKind.Attribute else None
+            |> Option.orElse (walkExprWithKind (Some EntityKind.Type) attr.ArgExpr)
 
         and walkTypar (Typar (ident, _, _)) = ifPosInRange ident.idRange (fun _ -> Some EntityKind.Type)
 
@@ -173,65 +186,74 @@ module Ast =
             |> Option.orElse (Option.bind walkExpr e1)
 
         and walkExprWithKind (parentKind: EntityKind option) = function
-            | SynExpr.LongIdent (_, _, _, r) -> 
-                if isPosInRange r then parentKind |> Option.orElse (Some FunctionOrValue) 
-                else None
-            | SynExpr.Paren (e, _, _, _) -> walkExpr e
-            | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
-            | SynExpr.Typed(e, _, _) -> walkExpr e
-            | SynExpr.Tuple(es, _, _) -> List.tryPick walkExpr es
-            | SynExpr.ArrayOrList(_, es, _) -> List.tryPick walkExpr es
+            | SynExpr.LongIdent (_, LongIdentWithDots(_, dotRanges), _, r) ->
+                match dotRanges with
+                | [] when isPosInRange r -> parentKind |> Option.orElse (Some (FunctionOrValue false)) 
+                | firstDotRange :: _  ->
+                    let firstPartRange = 
+                        Range.mkRange "" r.Start (Range.mkPos firstDotRange.StartLine (firstDotRange.StartColumn - 1))
+                    if isPosInRange firstPartRange then
+                        parentKind |> Option.orElse (Some (FunctionOrValue false))
+                    else None
+                | _ -> None
+            | SynExpr.Paren (e, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.Quote(_, _, e, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.Typed(e, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.Tuple(es, _, _) -> List.tryPick (walkExprWithKind parentKind) es
+            | SynExpr.ArrayOrList(_, es, _) -> List.tryPick (walkExprWithKind parentKind) es
             | SynExpr.Record(_, _, fields, r) -> 
                 ifPosInRange r (fun _ ->
-                    fields |> List.tryPick (fun (_, e, _) -> e |> Option.bind walkExpr))
-            | SynExpr.New(_, t, e, _) -> walkExpr e |> Option.orElse (walkType t)
-            | SynExpr.ObjExpr(_, _, bindings, ifaces, _, _) -> 
-                List.tryPick walkBinding bindings |> Option.orElse (List.tryPick walkInterfaceImpl ifaces)
-            | SynExpr.While(_, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.tryPick walkExpr [e1; e2; e3]
-            | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExpr e
-            | SynExpr.CompExpr(_, _, e, _) -> walkExpr e
-            | SynExpr.Lambda(_, _, _, e, _) -> walkExpr e
+                    fields |> List.tryPick (fun (_, e, _) -> e |> Option.bind (walkExprWithKind parentKind)))
+            | SynExpr.New(_, t, e, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
+            | SynExpr.ObjExpr(ty, _, bindings, ifaces, _, _) -> 
+                walkType ty
+                |> Option.orElse (List.tryPick walkBinding bindings)
+                |> Option.orElse (List.tryPick walkInterfaceImpl ifaces)
+            | SynExpr.While(_, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.For(_, _, e1, _, e2, e3, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2; e3]
+            | SynExpr.ForEach(_, _, _, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.CompExpr(_, _, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.Lambda(_, _, _, e, _) -> walkExprWithKind parentKind e
             | SynExpr.MatchLambda(_, _, synMatchClauseList, _, _) -> 
                 List.tryPick walkClause synMatchClauseList
             | SynExpr.Match(_, e, synMatchClauseList, _, _) -> 
-                walkExpr e |> Option.orElse (List.tryPick walkClause synMatchClauseList)
-            | SynExpr.Do(e, _) -> walkExpr e
-            | SynExpr.Assert(e, _) -> walkExpr e
-            | SynExpr.App(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
+                walkExprWithKind parentKind e |> Option.orElse (List.tryPick walkClause synMatchClauseList)
+            | SynExpr.Do(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.Assert(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.App(_, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
             | SynExpr.TypeApp(e, _, tys, _, _, _, _) -> 
                 walkExprWithKind (Some EntityKind.Type) e |> Option.orElse (List.tryPick walkType tys)
-            | SynExpr.LetOrUse(_, _, bindings, e, _) -> List.tryPick walkBinding bindings |> Option.orElse (walkExpr e)
-            | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExpr e
-            | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.Lazy(e, _) -> walkExpr e
-            | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
+            | SynExpr.LetOrUse(_, _, bindings, e, _) -> List.tryPick walkBinding bindings |> Option.orElse (walkExprWithKind parentKind e)
+            | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.Lazy(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
             | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
-                List.tryPick walkExpr [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExpr e)
-            | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some EntityKind.FunctionOrValue)
-            | SynExpr.LongIdentSet(_, e, _) -> walkExpr e
-            | SynExpr.DotGet(e, _, _, _) -> walkExpr e
-            | SynExpr.DotSet(e, _, _, _) -> walkExpr e
-            | SynExpr.DotIndexedGet(e, args, _, _) -> walkExpr e |> Option.orElse (List.tryPick walkIndexerArg args)
-            | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExpr e |> Option.orElse (List.tryPick walkIndexerArg args)
-            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.tryPick walkExpr [e1; e2; e3]
-            | SynExpr.TypeTest(e, t, _) -> walkExpr e |> Option.orElse (walkType t)
-            | SynExpr.Upcast(e, t, _) -> walkExpr e |> Option.orElse (walkType t)
-            | SynExpr.Downcast(e, t, _) -> walkExpr e |> Option.orElse (walkType t)
-            | SynExpr.InferredUpcast(e, _) -> walkExpr e
-            | SynExpr.InferredDowncast(e, _) -> walkExpr e
-            | SynExpr.AddressOf(_, e, _, _) -> walkExpr e
-            | SynExpr.JoinIn(e1, _, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.YieldOrReturn(_, e, _) -> walkExpr e
-            | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
-            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.tryPick walkExpr [e1; e2]
-            | SynExpr.DoBang(e, _) -> walkExpr e
+                List.tryPick (walkExprWithKind parentKind) [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExprWithKind parentKind e)
+            | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some (EntityKind.FunctionOrValue false))
+            | SynExpr.LongIdentSet(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.DotGet(e, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.DotSet(e, _, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.DotIndexedGet(e, args, _, _) -> walkExprWithKind parentKind e |> Option.orElse (List.tryPick walkIndexerArg args)
+            | SynExpr.DotIndexedSet(e, args, _, _, _, _) -> walkExprWithKind parentKind e |> Option.orElse (List.tryPick walkIndexerArg args)
+            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.DotNamedIndexedPropertySet(e1, _, e2, e3, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2; e3]
+            | SynExpr.TypeTest(e, t, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
+            | SynExpr.Upcast(e, t, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
+            | SynExpr.Downcast(e, t, _) -> walkExprWithKind parentKind e |> Option.orElse (walkType t)
+            | SynExpr.InferredUpcast(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.InferredDowncast(e, _) -> walkExprWithKind parentKind e
+            | SynExpr.AddressOf(_, e, _, _) -> walkExprWithKind parentKind e
+            | SynExpr.JoinIn(e1, _, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.YieldOrReturn(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExprWithKind parentKind e
+            | SynExpr.LetOrUseBang(_, _, _, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | SynExpr.DoBang(e, _) -> walkExprWithKind parentKind e
             | SynExpr.TraitCall (ts, sign, e, _) ->
                 List.tryPick walkTypar ts 
                 |> Option.orElse (walkMemberSig sign)
-                |> Option.orElse (walkExpr e)
+                |> Option.orElse (walkExprWithKind parentKind e)
             | _ -> None
 
         and walkExpr = walkExprWithKind None
@@ -254,7 +276,7 @@ module Ast =
             | SynMemberSig.Interface(t, _) -> walkType t
             | SynMemberSig.ValField(f, _) -> walkField f
             | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) -> 
-                walkComponentInfo info
+                walkComponentInfo false info
                 |> Option.orElse (walkTypeDefnSigRepr repr)
                 |> Option.orElse (List.tryPick walkMemberSig memberSigs)
 
@@ -293,10 +315,12 @@ module Ast =
             | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType t
             | _ -> None
 
-        and walkComponentInfo (ComponentInfo(attrs, typars, constraints, _, _, _, _, _)) =
-            List.tryPick walkAttribute attrs
-            |> Option.orElse (List.tryPick walkTyparDecl typars)
-            |> Option.orElse (List.tryPick walkTypeConstraint constraints)
+        and walkComponentInfo isModule (ComponentInfo(attrs, typars, constraints, _, _, _, _, r)) =
+            if isModule then None else ifPosInRange r (fun _ -> Some EntityKind.Type)
+            |> Option.orElse (
+                List.tryPick walkAttribute attrs
+                |> Option.orElse (List.tryPick walkTyparDecl typars)
+                |> Option.orElse (List.tryPick walkTypeConstraint constraints))
 
         and walkTypeDefnRepr = function
             | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.tryPick walkMember defns
@@ -307,23 +331,24 @@ module Ast =
             | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
 
         and walkTypeDefn (TypeDefn (info, repr, members, _)) =
-            walkComponentInfo info
+            walkComponentInfo false info
             |> Option.orElse (walkTypeDefnRepr repr)
             |> Option.orElse (List.tryPick walkMember members)
 
-        and walkSynModuleDecl (decl: SynModuleDecl) =
+        and walkSynModuleDecl isTopLevel (decl: SynModuleDecl) =
             match decl with
-            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(_, modules, _, range) ->
-                ifPosInRange range (fun _ -> List.tryPick walkSynModuleDecl modules)
+            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace isTopLevel fragment
+            | SynModuleDecl.NestedModule(info, modules, _, range) ->
+                walkComponentInfo true info
+                |> Option.orElse (ifPosInRange range (fun _ -> List.tryPick (walkSynModuleDecl false) modules))
             | SynModuleDecl.Open _ -> None
-            | SynModuleDecl.Let (_, bindings, r) ->
-                ifPosInRange r (fun _ -> List.tryPick walkBinding bindings)
+            | SynModuleDecl.Let (_, bindings, _) -> List.tryPick walkBinding bindings
+            | SynModuleDecl.DoExpr (_, expr, _) -> walkExpr expr
             | SynModuleDecl.Types (types, _) -> List.tryPick walkTypeDefn types
             | _ -> None
 
         let res = 
-            match ast with 
+            match input with 
             | ParsedInput.SigFile _ -> None
             | ParsedInput.ImplFile input -> walkImplFileInput input
         //debug "%A" ast
@@ -331,36 +356,51 @@ module Ast =
 
     type Col = int
 
-    let inline private longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
+    type Scope =
+        { Idents: Idents
+          Kind: ScopeKind }
 
-    let tryFindNearestOpenStatementBlock (currentLine: int) (ast: ParsedInput) = 
-        let result = ref None
-        let ns = ref None
+    let tryFindInsertionContext (currentLine: int) (ast: ParsedInput) = 
+        let result: (Scope * Pos) option ref = ref None
+        let ns: string[] option ref = ref None
         let modules = ResizeArray<Idents * EndLine * Col>()  
+
+        let inline longIdentToIdents ident = ident |> Seq.map (fun x -> string x) |> Seq.toArray
         
         let addModule (longIdent: LongIdent) endLine col =
             modules.Add(longIdent |> List.map string |> List.toArray, endLine, col)
 
-        let doRange (ns: LongIdent) line col = 
+        let doRange kind (scope: LongIdent) line col =
             if line <= currentLine then
                 match !result with
-                | None -> result := Some (ns, { Line = line; Col = col})
-                | Some (oldNs, { Line = oldLine}) when oldLine < line -> 
-                    result := Some ((match ns with [] -> oldNs | _ -> ns), { Line = line; Col = col }) 
-                | _ -> ()
+                | None -> 
+                    result := Some ({ Idents = longIdentToIdents scope; Kind = kind },
+                                    { Line = line; Col = col })
+                | Some (oldScope, oldPos) ->
+                    match kind, oldScope.Kind with
+                    | (Namespace | NestedModule | TopModule), OpenDeclaration
+                    | _ when oldPos.Line <= line ->
+                        result := 
+                            Some ({ Idents = 
+                                        match scope with 
+                                        | [] -> oldScope.Idents 
+                                        | _ -> longIdentToIdents scope
+                                    Kind = kind },
+                                  { Line = line; Col = col })
+                    | _ -> ()
 
         let getMinColumn (decls: SynModuleDecls) =
             match decls with
             | [] -> None
             | firstDecl :: _ -> 
                 match firstDecl with
-                | SynModuleDecl.NestedModule(_, _, _, r) -> Some r
-                | SynModuleDecl.Let(_, _, r) -> Some r
-                | SynModuleDecl.DoExpr(_, _, r) -> Some r
-                | SynModuleDecl.Types(_, r) -> Some r
-                | SynModuleDecl.Exception(_, r) -> Some r
-                | SynModuleDecl.Open(_, r) -> Some r
-                | SynModuleDecl.HashDirective(_, r) -> Some r
+                | SynModuleDecl.NestedModule (_, _, _, r) -> Some r
+                | SynModuleDecl.Let (_, _, r) -> Some r
+                | SynModuleDecl.DoExpr (_, _, r) -> Some r
+                | SynModuleDecl.Types (_, r) -> Some r
+                | SynModuleDecl.Exception (_, r) -> Some r
+                | SynModuleDecl.Open (_, r) -> Some r
+                | SynModuleDecl.HashDirective (_, r) -> Some r
                 | _ -> None
                 |> Option.map (fun r -> r.StartColumn)
 
@@ -384,7 +424,13 @@ module Ast =
                     if isModule then range.StartLine
                     else range.StartLine - 1
 
-                doRange fullIdent startLine range.StartColumn
+                let scopeKind =
+                    match isModule, parent with
+                    | true, [] -> TopModule
+                    | true, _ -> NestedModule
+                    | _ -> Namespace
+
+                doRange scopeKind fullIdent startLine range.StartColumn
                 addModule fullIdent range.EndLine range.StartColumn
                 List.iter (walkSynModuleDecl fullIdent) decls
 
@@ -396,9 +442,10 @@ module Ast =
                 addModule fullIdent range.EndLine range.StartColumn
                 if range.EndLine >= currentLine then
                     let moduleBodyIdentation = getMinColumn decls |> Option.getOrElse (range.StartColumn + 4)
-                    doRange fullIdent range.StartLine moduleBodyIdentation
+                    doRange NestedModule fullIdent range.StartLine moduleBodyIdentation
                     List.iter (walkSynModuleDecl fullIdent) decls
-            | SynModuleDecl.Open (_, range) -> doRange [] range.EndLine (range.StartColumn - 5)
+            | SynModuleDecl.Open (_, range) -> doRange OpenDeclaration [] range.EndLine (range.StartColumn - 5)
+            | SynModuleDecl.HashDirective (_, range) -> doRange HashDirective [] range.EndLine range.StartColumn
             | _ -> ()
 
         match ast with 
@@ -407,10 +454,9 @@ module Ast =
 
         let res =
             maybe {
-                let! parent, pos = !result
+                let! scope, pos = !result
                 let ns = !ns |> Option.map longIdentToIdents
-                let scope = longIdentToIdents parent
-                return ns, scope, { pos with Line = pos.Line + 1 } 
+                return scope, ns, { pos with Line = pos.Line + 1 }
             }
         //debug "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
         //printfn "[UnopenedNamespaceResolver] Ident, line, col = %A, AST = %A" (!result) ast
@@ -421,15 +467,78 @@ module Ast =
             |> Seq.toList
 
         fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
-                                 entityNamespace: Idents option, entityIdents: Idents) ->
+                                 entityNamespace: Idents option, entity: Idents) ->
             res 
-            |> Option.bind (fun (ns, scope, pos) -> 
-                Entity.tryCreate ns scope ident requiresQualifiedAccessParent autoOpenParent entityNamespace entityIdents 
-                |> Option.map (fun e -> e, pos))
-            |> Option.map (fun (entity, pos) ->
-                entity,
-                match modules |> List.filter (fun (m, _, _) -> entityIdents |> Array.startsWith m ) with
-                | [] -> pos
+            |> Option.bind (fun (scope, ns, pos) -> 
+                Entity.tryCreate (ns, scope.Idents, ident, requiresQualifiedAccessParent, autoOpenParent, entityNamespace, entity)
+                |> Option.map (fun entity -> entity, scope, pos))
+            |> Option.map (fun (e, scope, pos) ->
+                e,
+                match modules |> List.filter (fun (m, _, _) -> entity |> Array.startsWith m ) with
+                | [] -> { ScopeKind = scope.Kind; Pos = pos }
                 | (_, endLine, startCol) :: _ ->
                     //printfn "All modules: %A, Win module: %A" modules m
-                    { Line = endLine + 1; Col = startCol })
+                    let scopeKind =
+                        match scope.Kind with
+                        | TopModule -> NestedModule
+                        | x -> x
+                    { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
+
+type IInsertContextDocument<'T> =
+    abstract GetLineStr: 'T * line:int -> string
+    abstract Insert: 'T * line:int * lineStr:string -> 'T
+
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module InsertContext =
+    /// Corrents insertion line number based on kind of scope and text surrounding the instertion point.
+    let adjustInsertionPoint state (doc: IInsertContextDocument<_>) ctx  =
+        let getLineStr line = (doc.GetLineStr (state, line)).Trim()
+        let line =
+            match ctx.ScopeKind with
+            | ScopeKind.TopModule ->
+                if ctx.Pos.Line > 1 then
+                    // it's an implicite module without any open declarations    
+                    let line = getLineStr (ctx.Pos.Line - 2)
+                    let isImpliciteTopLevelModule = not (line.StartsWith "module" && not (line.EndsWith "="))
+                    if isImpliciteTopLevelModule then 1 else ctx.Pos.Line
+                else 1
+            | ScopeKind.Namespace ->
+                // for namespaces the start line is start line of the first nested entity
+                if ctx.Pos.Line > 1 then
+                    [0..ctx.Pos.Line - 1]
+                    |> List.mapi (fun i line -> i, getLineStr line)
+                    |> List.tryPick (fun (i, lineStr) -> 
+                        if lineStr.StartsWith "namespace" then Some i
+                        else None)
+                    |> function
+                        // move to the next line below "namespace" and convert it to F# 1-based line number
+                        | Some line -> line + 2 
+                        | None -> ctx.Pos.Line
+                else 1  
+            | _ -> ctx.Pos.Line
+
+        { ctx.Pos with Line = line }
+
+    /// <summary>
+    /// Inserts open declaration into abstract document. 
+    /// </summary>
+    /// <param name="state">Abstract state which is changed after a line is inserted into the document. 
+    /// This is ITestSnapshot for VS, for example.</param>
+    /// <param name="doc">Document.</param>
+    /// <param name="ctx">Insertion context. Typically returned from tryGetInsertionContext</param>
+    /// <param name="ns">Namespace to open.</param>
+    let insertOpenDeclaration<'T> state (doc: IInsertContextDocument<'T>) (ctx: InsertContext) (ns: string) =
+        let pos = adjustInsertionPoint state doc ctx
+        let docLine = pos.Line - 1
+        let lineStr = (String.replicate pos.Col " ") + "open " + ns
+        let state1 = doc.Insert (state, docLine, lineStr)
+        // if there's no a blank line between open declaration block and the rest of the code, we add one
+        let state2 = 
+            if doc.GetLineStr(state1, docLine + 1).Trim() <> "" then 
+                doc.Insert (state1, docLine + 1, "")
+            else state1
+        // for top level module we add a blank line between the module declaration and first open statement
+        if (pos.Col = 0 || ctx.ScopeKind = ScopeKind.Namespace) && docLine > 0
+            && not (doc.GetLineStr(state2, docLine - 1).Trim().StartsWith "open") then
+                doc.Insert (state2, docLine, "")
+        else state2

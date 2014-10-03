@@ -388,19 +388,21 @@ type NewInfrastructure2<'T> =
 
 let _ = { new NewInfrastructure2<string> with
               [<CLIEvent>]
-              member x.CLIEvent: IEvent<_> = 
+              member x.CLIEvent: IEvent<int> = 
                   raise (System.NotImplementedException())
-
+              
               member x.ReadonlyProp: int = 
                   raise (System.NotImplementedException()) }
 
 let _ = { new System.ComponentModel.INotifyPropertyChanged with
               [<CLIEvent>]
-              member x.PropertyChanged: IEvent<_, _> = 
+              member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler, _> = 
                   raise (System.NotImplementedException())
                }
-              
-              
-              
-        
-        
+
+type Base(x: System.IDisposable) = class end
+               
+type Derived() = 
+    inherit Base ({new System.IDisposable with 
+                       member x.Dispose(): unit =
+                           raise (System.NotImplementedException())})

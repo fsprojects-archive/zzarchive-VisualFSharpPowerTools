@@ -18,14 +18,14 @@ namespace FSharpVSPowerTools
 {
     static class ClassificationTypes
     {
-        public const string FSharpReferenceType = "FSharp.ReferenceType";
-        public const string FSharpValueType = "FSharp.ValueType";
-        public const string FSharpPatternCase = "FSharp.PatternCase";
-        public const string FSharpFunction = "FSharp.Function";
-        public const string FSharpMutableVar = "FSharp.MutableVar";
-        public const string FSharpQuotation = "FSharp.Quotation";
-        public const string FSharpModule = "FSharp.Module";
-        public const string FSharpUnused = "FSharp.Unused";
+        public const string FSharpReferenceType = Constants.fsharpReferenceType;
+        public const string FSharpValueType = Constants.fsharpValueType;
+        public const string FSharpPatternCase = Constants.fsharpPatternCase;
+        public const string FSharpFunction = Constants.fsharpFunction;
+        public const string FSharpMutableVar = Constants.fsharpMutableVar;
+        public const string FSharpQuotation = Constants.fsharpQuotation;
+        public const string FSharpModule = Constants.fsharpModule;
+        public const string FSharpUnused = Constants.fsharpUnused;
         public const string FSharpPrintf = "FSharp.Printf";
 
         [Export]
@@ -363,38 +363,56 @@ namespace FSharpVSPowerTools
     [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Document)]
-    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener
+    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener, IDisposable
     { 
         [Import]
-        private IClassificationTypeRegistryService classificationRegistry = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal IClassificationTypeRegistryService classificationRegistry = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import]
-        private ITextDocumentFactoryService textDocumentFactoryService = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
-        [Import(typeof(ProjectFactory))]
-        private ProjectFactory projectFactory = null;
+        [Import]
+        internal ProjectFactory projectFactory = null;
 
         private readonly Type serviceType = typeof(SyntaxConstructClassifier);
 
+        private readonly IServiceProvider serviceProvider = null;
+        private readonly ClassificationColorManager classificationColorManager = null;
+        private readonly ShellEventListener shellEventListener = null;
+
+        [ImportingConstructor]
+        public SyntaxConstructClassifierProvider([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+                ClassificationColorManager classificationColorManager)
+        {
+            this.serviceProvider = serviceProvider;
+            this.classificationColorManager = classificationColorManager;
+
+            // Receive notification for Visual Studio theme change
+            shellEventListener = new ShellEventListener(this.serviceProvider);
+            shellEventListener.Initialize();
+            shellEventListener.OnThemeChanged += UpdateTheme;
+        }
+
+        private void UpdateTheme(object sender, EventArgs e)
+        {
+            classificationColorManager.UpdateColors();
+        }
+
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
 
             bool includeUnusedDeclarations = generalOptions.UnusedDeclarationsEnabled;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return buffer.Properties.GetOrCreateSingletonProperty(serviceType, 
-                    () => new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService, 
+                return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
+                    () => new SyntaxConstructClassifier(doc, classificationRegistry, fsharpVsLanguageService,
                                     serviceProvider, projectFactory, includeUnusedDeclarations));
-
 
             return null;
         }
@@ -417,6 +435,12 @@ namespace FSharpVSPowerTools
                     classifier.Dispose();
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            shellEventListener.OnThemeChanged -= UpdateTheme;
+            shellEventListener.Dispose();
         }
     }
 }

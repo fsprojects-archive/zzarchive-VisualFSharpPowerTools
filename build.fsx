@@ -23,14 +23,13 @@ let project = "FSharpVSPowerTools"
 
 // Short summary of the project
 // (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "Visual F# Power Tools (by F# Community)"
+let summary = "A collection of additional commands for F# in Visual Studio"
 
 // Longer description of the project
 // (used as a description for NuGet package; line breaks are automatically cleaned up)
-let description = """
-  Visual F# Power Tools (by F# Community)"""
+let description = """The core project of Visual F# Power Tools includes IDE-agnostic features intended to be used in different F# IDEs and editors."""
 // List of author names (for NuGet package)
-let authors = [ "Anh-Dung Phan", "Vasily Kirichenko" ]
+let authors = [ "Anh-Dung Phan"; "Vasily Kirichenko"; "Denis Ok" ]
 // Tags for your project (for NuGet package)
 let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 
@@ -42,10 +41,14 @@ let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted 
-let gitHome = "https://github.com/fsprojects"
+let gitOwner = "fsprojects"
+let gitHome = "https://github.com/" + gitOwner
+
 // The name of the project on GitHub
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
+
+let fcsVersion = "0.0.61"
 
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
@@ -67,25 +70,23 @@ Target "AssemblyInfo" (fun _ ->
         Attribute.FileVersion release.AssemblyVersion ] 
 
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
-      (Attribute.Title "FSharpVSPowerTools" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Core/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Core" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Core.Tests" :: Attribute.Title "FSharpVSPowerTools.Core" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2013/AssemblyInfo.fs"
-      (Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
 )
 
 // --------------------------------------------------------------------------------------
-// Clean build results & restore NuGet packages
-
-Target "RestorePackages" RestorePackages
+// Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs ["bin"; "bin/vsix"; "temp"]
+    CleanDirs ["bin"; "bin/vsix"; "temp"; "nuget"]
 )
 
 Target "CleanDocs" (fun _ ->
@@ -117,37 +118,57 @@ Target "CleanVSIX" (fun _ ->
     ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
 )
 
+Target "BuildTests" (fun _ ->    
+    !! "tests/data/**/*.sln"
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
+)
+
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
 
 Target "UnitTests" (fun _ ->
     !! testAssemblies 
     |> NUnit (fun p ->
-        { p with
-            DisableShadowCopy = true
-            TimeOut = TimeSpan.FromMinutes 20.
-            Framework = "4.5"
-            Domain = NUnitDomainModel.MultipleDomainModel
-            OutputFile = "TestResults.xml" })
+        let param =
+            { p with
+                DisableShadowCopy = true
+                TimeOut = TimeSpan.FromMinutes 20.
+                Framework = "4.5"
+                Domain = NUnitDomainModel.MultipleDomainModel
+                OutputFile = "TestResults.xml" }
+        if isAppVeyorBuild then { param with ExcludeCategory = "AppVeyorLongRunning" } else param)
 )
 
 // --------------------------------------------------------------------------------------
 // Run the integration tests using test runner
 
 Target "IntegrationTests" (fun _ ->
-    !! "tests/**/bin/Release/FSharpVSPowerTools.Tests.dll"
+    !! "tests/**/bin/Release/FSharpVSPowerTools.IntegrationTests.dll" 
     |> MSTest.MSTest (fun p ->
         { p with
             TimeOut = TimeSpan.FromMinutes 20.
         })
 )
 
-Target "ExtraIntegrationTests" (fun _ ->
-    !! "tests/**/bin/Release/FSharpVSPowerTools.IntegrationTests.dll" 
-    |> MSTest.MSTest (fun p ->
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-        })
+// --------------------------------------------------------------------------------------
+// Build a NuGet package
+
+Target "NuGet" (fun _ ->
+    NuGet (fun p -> 
+        { p with   
+            Authors = authors
+            Project = project + ".Core"
+            Summary = summary
+            Description = description
+            Version = release.NugetVersion
+            ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
+            Tags = tags
+            OutputPath = "bin"
+            AccessKey = getBuildParamOrDefault "nugetkey" ""
+            Publish = true
+            Dependencies = ["FSharp.Compiler.Service", fcsVersion] })
+        (project + ".Core.nuspec")
 )
 
 // --------------------------------------------------------------------------------------
@@ -168,17 +189,27 @@ Target "ReleaseDocs" (fun _ ->
     fullclean tempDocsDir
     CopyRecursive "docs/output" tempDocsDir true |> tracefn "%A"
     StageAll tempDocsDir
-    Commit tempDocsDir (sprintf "[skip ci] Update generated documentation for version %s" release.NugetVersion)
+    Git.Commit.Commit tempDocsDir (sprintf "[skip ci] Update generated documentation for version %s" release.NugetVersion)
     Branches.push tempDocsDir
 )
 
+#load "paket-files/fsharp/FAKE/modules/Octokit/Octokit.fsx"
+open Octokit
+
 Target "Release" (fun _ ->
     StageAll ""
-    Commit "" (sprintf "Bump version to %s" release.NugetVersion)
+    Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
     Branches.push ""
 
     Branches.tag "" release.NugetVersion
     Branches.pushTag "" "origin" release.NugetVersion
+
+    // release on github
+    createClient (getBuildParamOrDefault "github-user" "") (getBuildParamOrDefault "github-pw" "")
+    |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes 
+    |> uploadFile "./bin/FSharpVSPowerTools.vsix"
+    |> releaseDraft
+    |> Async.RunSynchronously
 )
 
 // --------------------------------------------------------------------------------------
@@ -190,18 +221,20 @@ Target "All" DoNothing
 
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
-  ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
+  ==> "BuildTests"
   ==> "UnitTests"
-  ==> "IntegrationTests"
   ==> "Main"
 
 "Build"
   ==> "CleanVSIX"
 
+"Build"
+  ==> "NuGet"
+
 "Main"
-  =?> ("ExtraIntegrationTests", isLocalBuild)
+  =?> ("IntegrationTests", isLocalBuild)
   ==> "All"
 
 "Main" 

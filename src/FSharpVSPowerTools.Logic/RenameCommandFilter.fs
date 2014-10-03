@@ -5,19 +5,13 @@ open System.IO
 open System.Windows
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress
-
-module PkgCmdConst =
-    let cmdidStandardRenameCommand = uint32 VSConstants.VSStd2KCmdID.RENAME // ECMD_RENAME
-    let guidStandardCmdSet = typedefof<VSConstants.VSStd2KCmdID>.GUID
 
 [<NoEquality; NoComparison>]
 type DocumentState =
@@ -42,8 +36,9 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         state <- s
         state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
-    let rename (oldText: string) (newText: string) (foundUsages: (string * range list) list) =
+    let rename (oldText: string) (symbolKind: SymbolKind) (newText: string) (foundUsages: (string * range list) list) =
         try
+            let newText = IdentifierUtils.encapsulateIdentifier symbolKind newText
             let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
             try
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -52,17 +47,18 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
                         let spans =
-                            ranges
-                            |> Seq.choose (fun range -> maybe {
-                                let! snapshotSpan = fromFSharpRange buffer.CurrentSnapshot range
-                                let i = snapshotSpan.GetText().LastIndexOf(oldText)
-                                return
-                                    if i > 0 then 
-                                        // Subtract lengths of qualified identifiers
-                                        SnapshotSpan(buffer.CurrentSnapshot, snapshotSpan.Start.Position + i, snapshotSpan.Length - i) 
-                                    else snapshotSpan })
-                            |> Seq.toList
-
+                            match state with
+                            | Some { Word = Some (word, _); File = currentFile } when currentFile = fileName ->
+                                seq {
+                                    let spans = List.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                                    if List.forall ((<>) word) spans then
+                                        // Ensure that current word is always renamed
+                                        yield word
+                                    yield! spans
+                                }
+                            | _ -> 
+                                Seq.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                            |> fixInvalidSymbolSpans buffer.CurrentSnapshot oldText
                         spans
                         |> List.fold (fun (snapshot: ITextSnapshot) span ->
                             let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
@@ -74,7 +70,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e ->
-            logException e
+            Logging.logException e
 
     member x.HandleRename() =
         let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
@@ -98,14 +94,14 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     | Some(fsSymbolUse, fileScopedCheckResults) ->
                     
                         let symbolDeclarationLocation = 
-                            projectFactory.GetSymbolDeclarationLocation state.Project.IsForStandaloneScript fsSymbolUse.Symbol dte state.File
+                            projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol state.File state.Project
 
                         match symbolDeclarationLocation with
                         | Some scope ->
                             return Some(fileScopedCheckResults, scope, fsSymbolUse.Symbol) 
                         | _ -> 
                             cts.Cancel()
-                            messageBoxError Resource.renameErrorMessage
+                            Logging.messageBoxError Resource.renameErrorMessage
                             return None
                 } 
             
@@ -129,13 +125,13 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                             symbol, lastIdent,
                                 refs 
                                 |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                |> Seq.groupBy (fst >> Path.GetFullPath)
+                                |> Seq.groupBy (fst >> Path.GetFullPathSafe)
                                 |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
                                 |> Seq.toList)
                     match usages with
                     | Some (_, currentName, references) ->
                         reportProgress progress (Reporting("Performing Rename ..."))
-                        return rename currentName name references
+                        return rename currentName symbol.Kind name references
                     | None -> 
                         return ()
                 }
@@ -161,13 +157,13 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
-            if (pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && nCmdId = PkgCmdConst.cmdidStandardRenameCommand) && canRename() then
+            if (pguidCmdGroup = Constants.guidStandardCmdSet && nCmdId = Constants.cmdidStandardRenameCommand) && canRename() then
                 x.HandleRename()
             x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
-            if pguidCmdGroup = PkgCmdConst.guidStandardCmdSet && 
-                prgCmds |> Seq.exists (fun x -> x.cmdID = PkgCmdConst.cmdidStandardRenameCommand) then
+            if pguidCmdGroup = Constants.guidStandardCmdSet && 
+                prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdidStandardRenameCommand) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else

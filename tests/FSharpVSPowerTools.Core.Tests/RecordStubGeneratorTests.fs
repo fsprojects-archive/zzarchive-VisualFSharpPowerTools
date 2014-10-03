@@ -3,7 +3,9 @@
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
       "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
@@ -71,6 +73,36 @@ let project() =
 let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument) =
     tryFindRecordDefinitionFromPos codeGenInfra (project()) pos document
     |> Async.RunSynchronously
+
+type CodeGenDiagnostic = {
+    mutable Range: range option
+    mutable RecordExpr: RecordExpr option
+    mutable InsertionParams: RecordStubsInsertionParams option
+}
+
+let diagnoseCodeGenParams (pos: pos) src =
+    let document: IDocument = upcast MockDocument(src)
+    let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
+    let project = project()
+
+    let diagnostic = {
+        Range = None
+        RecordExpr = None
+        InsertionParams = None
+    }
+
+    asyncMaybe {
+        let! recordExpr = tryFindRecordExprInBufferAtPos codeGenService project pos document
+        diagnostic.Range <- Some recordExpr.Expr.Range
+        diagnostic.RecordExpr <- Some recordExpr
+
+        let! _, insertionParams = tryFindStubInsertionParamsAtPos codeGenService project pos document
+        diagnostic.InsertionParams <- Some insertionParams
+    }
+    |> Async.Ignore
+    |> Async.RunSynchronously
+
+    diagnostic
 
 let insertStubFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
@@ -431,6 +463,31 @@ let x = { Field1 = 0; Field2 = 0;
           Field3 = failwith "" }"""
     ]
 
+[<Test>]
+let ``doesn't trigger code gen when caret is on a field name in a field assignment expr`` () =
+    [
+        """
+type Pos = { Line: int; Col: int }
+let pos = { Line = 0; Col = 0 }
+
+let pos2: Pos =
+    { pos with Line = pos.Line }"""
+
+        """
+type Pos = { Line: int; Col: int }
+let pos = { Line = 0; Col = 0 }
+
+let pos2: Pos =
+    { pos with Line = match true with _ -> pos.Line }"""
+    ]
+    |> List.zip [
+        Pos.fromZ 5 26
+        Pos.fromZ 5 47
+    ]
+    |> List.map (fun (pos, src) ->
+        getSrcBeforeAndAfterCodeGen (insertStubFromPos pos) src
+    )
+    |> List.iter assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]
 let ``doesn't trigger code gen when record expr doesn't end by }`` () =

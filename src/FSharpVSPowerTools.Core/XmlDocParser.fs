@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools
 
+/// Represent an Xml documentation block in source code
 type XmlDocable =
     | XmlDocable of int * int * string list
 
@@ -174,7 +175,6 @@ module XmlDocComment =
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open XmlDocParsing
-open System
 
 type XmlDocParser private () =
     let checker = lazy (InteractiveChecker.Create())
@@ -183,6 +183,7 @@ type XmlDocParser private () =
 
     static member internal Instance = XmlDocParser()
 
+    /// Get the list of Xml documentation from current source code
     static member GetXmlDocables(sourceCodeOfTheFile: string, filename, ?checker) =
         let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split [|'\n'|]
         let checker = defaultArg checker XmlDocParser.Instance.Checker

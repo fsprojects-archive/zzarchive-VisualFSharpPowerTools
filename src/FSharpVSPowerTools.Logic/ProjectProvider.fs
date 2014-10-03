@@ -6,62 +6,8 @@ open System.Diagnostics
 open EnvDTE
 open FSharpVSPowerTools
 open VSLangProj
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.FSharp
-open Microsoft.VisualStudio.Shell.Interop
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
-
-[<NoComparison; NoEquality>]
-type private CacheMessage<'k, 'v> =
-    | Get of 'k * (unit -> 'v) * AsyncReplyChannel<'v>
-    | TryGet of 'k * AsyncReplyChannel<'v option>
-    | Remove of 'k
-    | Clear
-
-type private Cache<'k, 'v when 'k: comparison>() =
-    let disposeValue value =
-        match box value with
-        | :? IDisposable as d -> d.Dispose()
-        | _ -> ()
-
-    let agent = MailboxProcessor.Start(fun inbox ->
-        let rec loop (cache: Map<'k, 'v>) = 
-            async {
-                let! msg = inbox.Receive()
-                return! loop (
-                    match msg with
-                    | Get (key, creator, r) ->
-                        match cache |> Map.tryFind key with
-                        | Some value ->
-                            debug "[Project cache] Return from cache for %A" key
-                            r.Reply value
-                            cache
-                        | None ->
-                            let value = creator()
-                            debug "[Project cache] Creating new value for %A" key
-                            r.Reply value
-                            cache |> Map.add key value
-                    | TryGet (key, r) ->
-                        r.Reply (cache |> Map.tryFind key)
-                        cache
-                    | Remove key -> 
-                        match cache |> Map.tryFind key with
-                        | Some value -> 
-                            disposeValue value
-                            cache |> Map.remove key
-                        | _ -> cache
-                    | Clear -> 
-                        cache |> Map.toSeq |> Seq.iter (fun (_, value) -> disposeValue value)
-                        Map.empty) 
-            }
-        loop Map.empty)
-    do agent.Error.Add (fail "%O")
-    member x.Get key creator = agent.PostAndReply (fun r -> Get (key, creator, r))
-    member x.TryGet key = agent.PostAndReply (fun r -> TryGet (key, r))
-    member x.Remove key = agent.Post (Remove key)
-    member x.Clear() = agent.Post Clear
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 [<AutoOpen>]
 module FSharpSymbolExtensions =
@@ -83,10 +29,12 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
         | _ -> debug "[ProjectProvider] Cannot subsribe for ReferencesEvents"
     
     let getProperty (tag: string) =
-        let prop = try project.Properties.[tag] with _ -> null
-        match prop with
-        | null -> null
-        | _ -> try prop.Value.ToString() with _ -> null
+        try 
+            let prop = project.Properties.[tag]
+            prop.Value.ToString() 
+        with e -> 
+            debug "[ProjectProvider] Cannot get property '%s' due to %O" tag e
+            null
 
     let currentDir = getProperty "FullPath"
     
@@ -96,8 +44,8 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
         Path.Combine(currentDir, fileName))
     
     let getSourcesAndFlags = 
-        // Warning! this place is very brittle because of assumption it makes about the underlying structure of F# DTE project
-        // code below will work in VS2012\VS2013 but compatibility with further versions are not guaranteed
+        // Warning! This place is very brittle because of assumption it makes about the underlying structure of F# DTE project
+        // Code below will work in VS2012/VS2013 but compatibility with further versions are not guaranteed
         let underlyingProjectField = project.GetType().GetField("project", Reflection.instanceNonPublic)
         let underlyingProject = underlyingProjectField.GetValue(project)
 
@@ -117,10 +65,12 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
         | _ -> [||])
 
     let getActiveConfigProperty (tag: string) =
-        let prop = try project.ConfigurationManager.ActiveConfiguration.Properties.[tag] with _ -> null
-        match prop with
-        | null -> null
-        | _ -> try prop.Value.ToString() with _ -> null
+        try 
+            let prop = project.ConfigurationManager.ActiveConfiguration.Properties.[tag]
+            prop.Value.ToString()
+        with e -> 
+            debug "[ProjectProvider] Cannot get active config '%s' due to %O" tag e
+            null
 
     let targetFramework = lazy (
         match getProperty "TargetFrameworkMoniker" with
@@ -193,18 +143,18 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
         }
 
     interface IProjectProvider with
-        member x.IsForStandaloneScript = false
-        member x.ProjectFileName = projectFileName.Value
-        member x.TargetFramework = targetFramework.Value
-        member x.CompilerOptions = compilerOptions.Value
-        member x.SourceFiles = sourceFiles.Value
-        member x.FullOutputFilePath = fullOutputPath.Value
-        member x.GetReferencedProjects() = referencedProjects.Value
-        member x.GetAllReferencedProjectFileNames() = allReferencedProjects.Value
-        member x.GetProjectCheckerOptions languageService = getProjectCheckerOptions languageService
+        member __.IsForStandaloneScript = false
+        member __.ProjectFileName = projectFileName.Value
+        member __.TargetFramework = targetFramework.Value
+        member __.CompilerOptions = compilerOptions.Value
+        member __.SourceFiles = sourceFiles.Value
+        member __.FullOutputFilePath = fullOutputPath.Value
+        member __.GetReferencedProjects() = referencedProjects.Value
+        member __.GetAllReferencedProjectFileNames() = allReferencedProjects.Value
+        member __.GetProjectCheckerOptions languageService = getProjectCheckerOptions languageService
 
     interface IDisposable with
-        member x.Dispose() =
+        member __.Dispose() =
             project.VSProject
             |> Option.iter (fun p ->
                  p.Events.ReferencesEvents.remove_ReferenceAdded refAdded
@@ -215,144 +165,18 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
     do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
     let source = buffer.CurrentSnapshot.GetText()
     let targetFramework = FSharpTargetFramework.NET_4_5
+    let projectFileName = filePath + ".fsproj"
 
     interface IProjectProvider with
-        member x.IsForStandaloneScript = true
-        member x.ProjectFileName = null
-        member x.TargetFramework = targetFramework
-        member x.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
-        member x.SourceFiles = [| filePath |]
-        member x.FullOutputFilePath = Path.ChangeExtension(filePath, ".dll")
-        member x.GetReferencedProjects() = []
-        member x.GetAllReferencedProjectFileNames() = []
-        member x.GetProjectCheckerOptions languageService =
-            languageService.GetScriptCheckerOptions (filePath, null, source, targetFramework)
+        member __.IsForStandaloneScript = true
+        member __.ProjectFileName = projectFileName
+        member __.TargetFramework = targetFramework
+        member __.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
+        member __.SourceFiles = [| filePath |]
+        member __.FullOutputFilePath = Path.ChangeExtension(filePath, ".dll")
+        member __.GetReferencedProjects() = []
+        member __.GetAllReferencedProjectFileNames() = []
+        member __.GetProjectCheckerOptions languageService =
+            languageService.GetScriptCheckerOptions (filePath, projectFileName, source, targetFramework)
 
-type private ProjectUniqueName = string
-
-[<Export>]
-type ProjectFactory
-    [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
-     [<Import(typeof<VSLanguageService>)>] vsLanguageService: VSLanguageService) =
-    let dte = serviceProvider.GetService<DTE, SDTE>()
-    let events: EnvDTE80.Events2 option = tryCast dte.Events
-    let cache = Cache<ProjectUniqueName, ProjectProvider>()
-
-    let onProjectChanged (project: Project) = 
-        debug "[ProjectFactory] %s changed." project.Name
-        // we have to save the project otherwise SourceFiles would miss added / removed file
-        project.Save()
-        cache.Remove project.UniqueName
-
-    let onProjectItemChanged (projectItem: ProjectItem) =
-        projectItem.VSProject |> Option.iter (fun item -> 
-            cache.TryGet item.Project.UniqueName
-            |> Option.iter (vsLanguageService.InvalidateProject >> Async.RunSynchronously) 
-            onProjectChanged item.Project)
-
-    let fsharpProjectsCache = ref None
- 
-    do match events with
-        | Some events ->
-            events.SolutionEvents.add_AfterClosing (fun _ -> 
-                vsLanguageService.ClearCaches()
-                cache.Clear())
-            events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
-            events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectItemChanged p)
-            events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)
-            events.ProjectsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
-            events.ProjectsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-            events.SolutionEvents.add_ProjectAdded (fun p -> fsharpProjectsCache := None)
-            events.SolutionEvents.add_ProjectRemoved (fun p -> 
-                fsharpProjectsCache := None
-                onProjectChanged p)
-            events.SolutionEvents.add_ProjectRenamed (fun p _ -> 
-                fsharpProjectsCache := None
-                onProjectChanged p) 
-            debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
-        | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
-
-    member x.CreateForProject (project: Project): IProjectProvider = 
-        cache.Get project.UniqueName (fun _ ->
-            new ProjectProvider (project, x.CreateForProject, onProjectChanged)) :> _
-
-    member x.CreateForFileInProject (buffer: ITextBuffer) (filePath: string) project: IProjectProvider option =
-        if not (project === null) && not (filePath === null) && isFSharpProject project then
-            let projectProvider = x.CreateForProject project
-            // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files 
-            // Consequently, we should interprete it as a script
-            if Array.exists ((=) filePath) projectProvider.SourceFiles then
-                Some projectProvider
-            else
-                Some (VirtualProjectProvider(buffer, filePath) :> _)
-        elif not (filePath === null) then
-            let ext = Path.GetExtension filePath
-            if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
-                String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
-                Some (VirtualProjectProvider(buffer, filePath) :> _)
-            else
-                None
-        else 
-            None
-
-    member x.CreateForDocument buffer (doc: Document) =
-        x.CreateForFileInProject buffer doc.FullName doc.ProjectItem.ContainingProject
-
-    member x.ListFSharpProjectsInSolution (dte: DTE) =
-        let rec handleProject (p: Project) = 
-            if p === null then []
-            elif isFSharpProject p then [ p ]
-            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-            else []
         
-        and handleProjectItems (items: ProjectItems) = 
-            [ for pi in items do
-                    yield! handleProject pi.SubProject ]
-
-        match !fsharpProjectsCache with
-        | Some x -> x
-        | None ->
-            let res = [ for p in dte.Solution.Projects do
-                            yield! handleProject p ]
-            fsharpProjectsCache := Some res
-            res
-
-    member x.GetSymbolDeclarationLocation isStandalone (symbol: FSharpSymbol) (dte: DTE) (currentFile: FilePath) : SymbolDeclarationLocation option =
-        let isPrivateToFile = 
-            match symbol with 
-            | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
-            | :? FSharpEntity as m -> m.Accessibility.IsPrivate
-            | :? FSharpGenericParameter -> true
-            | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
-            | :? FSharpField as m -> m.Accessibility.IsPrivate
-            | _ -> false
-        if isPrivateToFile then 
-            Some SymbolDeclarationLocation.File 
-        else 
-            match symbol.TryGetLocation() with
-            | Some loc ->
-                let filePath = Path.GetFullPath loc.FileName
-                if isStandalone && filePath = currentFile then 
-                    Some SymbolDeclarationLocation.File
-                elif isStandalone then
-                    None
-                else
-                    let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
-                    match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
-                    | [] -> None
-                    | projects -> Some (SymbolDeclarationLocation.Projects projects)
-            | None -> None
-
-    member x.GetDependentProjects (dte: DTE) (projects: IProjectProvider list) =
-        let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLower()) |> set
-        x.ListFSharpProjectsInSolution dte
-        |> Seq.map x.CreateForProject
-        |> Seq.filter (fun p -> 
-            p.GetReferencedProjects() 
-            |> List.exists (fun p -> 
-                projectFileNames |> Set.contains (p.ProjectFileName.ToLower())))
-        |> Seq.append projects
-        |> Seq.distinctBy (fun p -> p.ProjectFileName.ToLower())
-        |> Seq.toList

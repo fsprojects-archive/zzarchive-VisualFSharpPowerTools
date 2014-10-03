@@ -2,9 +2,6 @@
 
 open System
 open System.IO
-open System.Collections.Generic
-open System.ComponentModel.Design
-open System.Runtime.InteropServices
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
@@ -13,10 +10,6 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
-
-[<RequireQualifiedAccess>]
-module Constants =
-    let [<Literal>] FindReferencesResults = 0x11223344u
 
 type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?symbolUse: FSharpSymbolUse) =
     inherit LibraryNode(name)
@@ -65,7 +58,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
         match navigationData, symbolUse with
         | Some(_, _, vsTextBuffer), Some symbolUse ->
             let range = symbolUse.RangeAlternate
-            let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPath(symbolUse.FileName)) 
+            let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPathSafe(symbolUse.FileName)) 
                             range.StartLine range.StartColumn
             let line = range.StartLine-1
             let (_, lineLength) = vsTextBuffer.GetLengthOfLine(line)
@@ -74,8 +67,11 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
             let content = lineStr.TrimStart()
             let numOfWhitespaces = lineStr.Length - content.Length
             let (_, rangeText) = vsTextBuffer.GetLineText(range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
-            // We use name since ranges might not be correct on fully qualified symbols
-            let offset = max 0 (rangeText.Length - name.Length)
+            let offset = 
+                if rangeText.LastIndexOf name > 0 then
+                    // Trim fully qualified symbols
+                    max 0 (rangeText.Length - name.Length)
+                else 0
             // Get the index of symbol in the trimmed text
             let highlightStart = prefix.Length + range.StartColumn + offset - numOfWhitespaces
             let highlightLength = name.Length
@@ -126,8 +122,14 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
             let range = symbolUse.RangeAlternate
             let (_, rangeText) = vsTextBuffer.GetLineText(range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
             // FCS may return ranges for fully-qualified symbols
-            let offset = max 0 (rangeText.Length - name.Length)
-            let (startRow, startCol, endRow, endCol) = (range.StartLine-1, range.StartColumn + offset, range.EndLine-1, range.EndColumn)
+            let startOffset, endOffset = 
+                let index = rangeText.LastIndexOf name
+                if index > 0 then
+                    // Trim fully qualified symbols
+                    max 0 (rangeText.Length - name.Length), 0
+                elif index = 0 then 0, (rangeText.Length - name.Length)
+                else 0, 0
+            let (startRow, startCol, endRow, endCol) = (range.StartLine-1, range.StartColumn + startOffset, range.EndLine-1, range.EndColumn - endOffset)
             vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, 
                 startRow, startCol, endRow, endCol)
             |> ensureSucceeded
@@ -163,7 +165,7 @@ type FSharpLibrary(guid: Guid) =
               
         member x.GetList2(listType: uint32, _flags: uint32, pobSrch: VSOBSEARCHCRITERIA2 [], 
                           ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
-            if pobSrch <> null && not (Array.isEmpty pobSrch) && pobSrch.[0].dwCustom = Constants.FindReferencesResults then
+            if pobSrch <> null && not (Array.isEmpty pobSrch) && pobSrch.[0].dwCustom = Constants.findReferencesResults then
                 // Filter duplicated results
                 // Reference at http://social.msdn.microsoft.com/Forums/en-US/267c38d3-1732-465c-82cd-c36fceb486be/find-symbol-result-window-got-double-results-when-i-search-object-use-ivssimplelibrary2?forum=vsx
                 match enum<_>(int listType) with

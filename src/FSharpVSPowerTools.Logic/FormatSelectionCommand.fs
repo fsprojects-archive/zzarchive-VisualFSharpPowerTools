@@ -1,15 +1,9 @@
 ﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
-open System.Collections.Generic
-open System.Linq
-open System.Text
-open System.Threading.Tasks
-open System.Windows
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Formatting
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 open FSharpVSPowerTools.ProjectSystem
@@ -28,7 +22,7 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
         selOffsetFromEnd <- x.TextBuffer.CurrentSnapshot.Length - x.TextView.Selection.End.Position.Position
         isReversedSelection <- x.TextView.Selection.IsReversed
 
-        use disposable = Cursor.wait()
+        use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
     override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
@@ -37,9 +31,14 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
             let pos = TextUtils.getFSharpPos(caretPos)
             let range = inferSelectionFromCursorPos pos source
             let formattedSelection = formatSelectionOnly isSignatureFile range source config
-            let startIndex = x.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(range.StartLine-1).Start.Position + range.StartColumn
-            let endIndex = x.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn + 1
-            String.Join(String.Empty, source.[0..startIndex-1], formattedSelection, source.[endIndex..])
+
+            let snapshot = x.TextBuffer.CurrentSnapshot
+            let startIndex = snapshot.GetLineFromLineNumber(range.StartLine-1).Start.Position + range.StartColumn
+            let endIndex = snapshot.GetLineFromLineNumber(range.EndLine-1).Start.Position + range.EndColumn + 1
+
+            { OldTextStartIndex = startIndex
+              OldTextLength = endIndex - startIndex
+              NewText = formattedSelection }
         else
             let startPos = TextUtils.getFSharpPos(x.TextView.Selection.Start)
             let startIndex = x.TextView.Selection.Start.Position.Position
@@ -47,7 +46,10 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
             let endPos = TextUtils.getFSharpPos(VirtualSnapshotPoint(x.TextBuffer.CurrentSnapshot, endIndex-1))
             let range = mkRange "/tmp.fsx" startPos endPos
             let formattedSelection = formatSelectionOnly isSignatureFile range source config
-            String.Join(String.Empty, source.[0..startIndex-1], formattedSelection, source.[endIndex..])
+
+            { OldTextStartIndex = startIndex
+              OldTextLength = endIndex - startIndex
+              NewText = formattedSelection }
 
     override x.SetNewCaretPosition(caretPos, scrollBarPos, _originalSnapshot) =
         let currentSnapshot = x.TextBuffer.CurrentSnapshot

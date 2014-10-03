@@ -3,16 +3,12 @@
 open System
 open System.IO
 open System.Threading
-open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools.AsyncMaybe
 
 [<NoComparison>]
 type private ClassifierState =
@@ -23,16 +19,16 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
                                 projectFactory: ProjectFactory, includeUnusedDeclarations: bool) as self =
     
-    let getClassficationType cat =
+    let getClassificationType cat =
         match cat with
-        | Category.ReferenceType -> Some "FSharp.ReferenceType"
-        | Category.ValueType -> Some "FSharp.ValueType"
-        | Category.PatternCase -> Some "FSharp.PatternCase"
-        | Category.Function -> Some "FSharp.Function"
-        | Category.MutableVar -> Some "FSharp.MutableVar"
-        | Category.Quotation -> Some "FSharp.Quotation"
-        | Category.Module -> Some "FSharp.Module"
-        | Category.Unused -> Some "FSharp.Unused"
+        | Category.ReferenceType -> Some Constants.fsharpReferenceType
+        | Category.ValueType -> Some Constants.fsharpValueType
+        | Category.PatternCase -> Some Constants.fsharpPatternCase
+        | Category.Function -> Some Constants.fsharpFunction
+        | Category.MutableVar -> Some Constants.fsharpMutableVar
+        | Category.Quotation -> Some Constants.fsharpQuotation
+        | Category.Module -> Some Constants.fsharpModule
+        | Category.Unused -> Some Constants.fsharpUnused
         | Category.Printf -> Some "FSharp.Printf"
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
@@ -45,17 +41,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
+            // If there is no backing document, an ITextDocument instance might be null
+            let! _ = Option.ofNull doc
             return! projectFactory.CreateForFileInProject doc.TextBuffer doc.FilePath projectItem.ContainingProject }
-
-    let isSymbolLocalForProject (symbol: FSharpSymbol) = 
-        match symbol with 
-        | :? FSharpParameter -> true
-        | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || not m.Accessibility.IsPublic
-        | :? FSharpEntity as m -> not m.Accessibility.IsPublic
-        | :? FSharpGenericParameter -> true
-        | :? FSharpUnionCase as m -> not m.Accessibility.IsPublic
-        | :? FSharpField as m -> not m.Accessibility.IsPublic
-        | _ -> false
 
     let updateSyntaxConstructClassifiers force =
         let cancelToken = new CancellationTokenSource() 
@@ -64,7 +52,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             oldToken.Cancel()
             oldToken.Dispose())
 
-        let snapshot = doc.TextBuffer.CurrentSnapshot
+        let snapshot = if doc <> null then doc.TextBuffer.CurrentSnapshot else null
         let currentState = state.Value
         let needUpdate =
             match force, currentState with
@@ -78,68 +66,58 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 debug "[SyntaxConstructClassifier] - Effective update"
                 let worker = 
                     async {
-                        try
-                            let! allSymbolsUses, lexer =
-                                vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No)
-                            let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
-                            let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
-                            let singleDefs = 
-                                if includeUnusedDeclarations then
-                                    allSymbolsUses
-                                    |> Seq.groupBy (fun su -> su.Symbol)
-                                    |> Seq.choose (fun (symbol, uses) -> 
-                                        match Seq.toList uses with
-                                        | [symbolUse] when symbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
-                                            Some symbol 
-                                        | _ ->
-                                            None)
-                                    |> Seq.toList
-                                else
-                                    []
-
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                                    
-                            let! notUsedSymbols =
-                                singleDefs 
-                                |> Async.List.map (fun sym ->
-                                    async {
-                                        match projectFactory.GetSymbolDeclarationLocation project.IsForStandaloneScript sym dte doc.FilePath with
-                                        | Some SymbolDeclarationLocation.File -> return Some sym
-                                        | Some (SymbolDeclarationLocation.Projects declProjects) ->
-                                            let! isSymbolUsed = vsLanguageService.IsSymbolUsedInProjects (sym, project.ProjectFileName, declProjects) 
-                                            if isSymbolUsed then return None
-                                            else return Some sym
-                                        | _ -> return None })
-                                |> Async.map (List.choose id)
-                                    
-                            let usedSymbolUses =
-                                match notUsedSymbols with
-                                | [] -> allSymbolsUses |> Array.map (fun su -> su, true)
-                                | _ ->
-                                    allSymbolsUses 
-                                    |> Array.map (fun su -> 
-                                        su, not (notUsedSymbols |> List.exists (fun s -> s = su.Symbol)))
-
-                            let spans = 
-                                getCategoriesAndLocations (usedSymbolUses, parseResults.ParseTree, lexer, getTextLine)
-                                |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                        let getSymbolDeclLocation fsSymbol =
+                            projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
                         
-                            state.Swap (fun _ -> 
-                                Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length)
-                                       Spans = spans }) |> ignore
+                        let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
+                        
+                        let! symbolsUses, lexer =
+                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
+                                                                            includeUnusedDeclarations, getSymbolDeclLocation)
 
-                            // TextBuffer is null if a solution is closed at this moment
-                            if doc.TextBuffer <> null then
-                                let currentSnapshot = doc.TextBuffer.CurrentSnapshot
-                                let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-                                classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-                        with e -> Logging.logException e
+                        let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
+                        let! entities = vsLanguageService.GetAllEntities(doc.FilePath, snapshot.GetText(), project)
+                            
+                        let entitiesMap, openDeclarations = 
+                            if includeUnusedDeclarations then
+                                let qualifyOpenDeclarations line endCol idents = 
+                                    let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
+                                    let tooltip =
+                                        vsLanguageService.GetOpenDeclarationTooltip(
+                                                        line, endCol, lineStr, Array.toList idents, project, doc.FilePath, snapshot.GetText())
+                                        |> Async.RunSynchronously
+                                    match tooltip with
+                                    | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                                    | None -> []
+
+                                entities 
+                                |> Option.map (fun entities -> 
+                                     entities 
+                                     |> Seq.groupBy (fun e -> e.FullName)
+                                     |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                                     |> Map.ofSeq),
+                                OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
+                            else None, []
+                             
+                        let spans = 
+                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLine, openDeclarations, entitiesMap)
+                            |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                        
+                        state.Swap (fun _ -> 
+                            Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length);
+                                   Spans = spans }) |> ignore
+
+                        // TextBuffer is null if a solution is closed at this moment
+                        if doc.TextBuffer <> null then
+                            let currentSnapshot = doc.TextBuffer.CurrentSnapshot
+                            let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+                            classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
                     } 
-                Async.Start (worker, cancelToken.Token) 
+                Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
             | None -> ()
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-    let events = dte.Events :?> EnvDTE80.Events2 
+    let events: EnvDTE80.Events2 option = tryCast dte.Events
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
         maybe {
             let! selfProject = getProject()
@@ -151,9 +129,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 updateSyntaxConstructClassifiers true
         } |> ignore)
 
-    do events.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler
+    do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
     
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferChangedEvent doc.TextBuffer], 200us, 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
@@ -165,11 +143,11 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
             let spans =
                 state.Spans
-                // locations are sorted, so we can safely filter them efficently
+                // locations are sorted, so we can safely filter them efficiently
                 |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
                 |> Seq.choose (fun loc -> 
                     maybe {
-                        let! clType = getClassficationType loc.Category
+                        let! clType = getClassificationType loc.Category
                         let! span = fromRange state.SnapshotSpan.Snapshot (loc.WordSpan.ToRange())
                         return clType, span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
                     })
@@ -181,17 +159,17 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
 
     interface IClassifier with
         // it's called for each visible line of code
-        member x.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
+        member __.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
             try getClassificationSpans snapshotSpan :> _
             with e -> 
                 Logging.logException e
                 upcast [||]
 
         [<CLIEvent>]
-        member x.ClassificationChanged = classificationChanged.Publish
+        member __.ClassificationChanged = classificationChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
-            events.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler
+        member __.Dispose() = 
+            events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
             (docEventListener :> IDisposable).Dispose()
          

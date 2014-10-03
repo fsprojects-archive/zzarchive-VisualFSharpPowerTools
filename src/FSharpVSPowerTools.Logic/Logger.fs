@@ -5,7 +5,6 @@ open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 
 type LogType =
     | Information
@@ -54,7 +53,7 @@ type Logger
         service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, 
             OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, result)
 
-[<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Logging =
     
     /// This is a global logger, please make sure that it is executed after the package is loaded

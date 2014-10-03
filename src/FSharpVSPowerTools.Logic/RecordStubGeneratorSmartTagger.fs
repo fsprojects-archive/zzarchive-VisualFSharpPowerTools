@@ -1,16 +1,10 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
 
-open System
-open System.Collections.Generic
-open System.Windows
-open System.Windows.Threading
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
-open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
@@ -18,8 +12,6 @@ open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.FSharp.Compiler.Ast
-open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type RecordStubGeneratorSmartTag(actionSets) =
@@ -35,7 +27,6 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
-
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     // Try to:
@@ -76,11 +67,12 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                     }
                     |> Async.map (fun result -> 
                         recordDefinition <- result
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                        buffer.TriggerTagsChanged self tagsChanged)
                     |> Async.StartImmediateSafe
                     currentWord <- Some newWord
-            | _ -> ()
+            | _ -> 
+                currentWord <- None 
+                buffer.TriggerTagsChanged self tagsChanged
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)

@@ -28,19 +28,24 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Union type pattern generation
  - Resolve unopened namespaces
  - Gray out unused declarations
+ - Gray out unused open statements
+ - Go to metadata
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 
 For user guides, please take a look at [the home page](http://fsprojects.github.io/VisualFSharpPowerTools/).
 
-### Build [![Build status](https://ci.appveyor.com/api/projects/status/9ii93nkif8hc6cdv)](https://ci.appveyor.com/project/dungpa/visualfsharppowertools)
+### Build [![Build status](https://ci.appveyor.com/api/projects/status/9ii93nkif8hc6cdv/branch/master)](https://ci.appveyor.com/project/dungpa/visualfsharppowertools)
 
 Require Visual Studio 2013 and Visual Studio SDK 2013. 
 Run the `build.cmd` script or `FSharpVSPowerTools.sln` to build the solution.
 
-You can download the latest installer [here](https://ci.appveyor.com/project/dungpa/visualfsharppowertools/build/artifacts).
+You can download the latest installer [here](https://ci.appveyor.com/project/dungpa/visualfsharppowertools/branch/master/artifacts).
 
 ### Getting involved
+
+You can ask questions regarding the project on GitHub issues or on Twitter (tweeting to [@FSPowerTools](https://twitter.com/FSPowerTools) and [#fsharp](https://twitter.com/search?f=realtime&q=%23fsharp&src=typd) hashtag).
+
 Contributions are always welcome.
 The maintainers don't have much experience with Visual Studio Extensibility; any help is much appreciated.
 

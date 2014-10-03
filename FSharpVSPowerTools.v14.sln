@@ -1,0 +1,104 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.21901.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{1F1B4F0F-2998-4D74-865B-9122611C2B14}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\NuGet.Config = .nuget\NuGet.Config
+		.nuget\NuGet.exe = .nuget\NuGet.exe
+		.nuget\NuGet.targets = .nuget\NuGet.targets
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60BC93-E09B-4E5F-9D85-95A519479D54}"
+	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
+		build.fsx = build.fsx
+		CONTRIBUTING.md = CONTRIBUTING.md
+		README.md = README.md
+		RELEASE_NOTES.md = RELEASE_NOTES.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{83F16175-43B1-4C90-A1EE-8E351C33435D}"
+	ProjectSection(SolutionItems) = preProject
+		docs\tools\generate.fsx = docs\tools\generate.fsx
+		docs\tools\packages.config = docs\tools\packages.config
+		docs\tools\templates\template.cshtml = docs\tools\templates\template.cshtml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D5255-776D-4B61-85F9-73C37AA1FB9A}"
+	ProjectSection(SolutionItems) = preProject
+		docs\content\codeformatting.fsx = docs\content\codeformatting.fsx
+		docs\content\depthcolorizer.fsx = docs\content\depthcolorizer.fsx
+		docs\content\findallreferences.fsx = docs\content\findallreferences.fsx
+		docs\content\folderorganization.fsx = docs\content\folderorganization.fsx
+		docs\content\highlightusage.fsx = docs\content\highlightusage.fsx
+		docs\content\implementinterface.fsx = docs\content\implementinterface.fsx
+		docs\content\index.fsx = docs\content\index.fsx
+		docs\content\navbar.fsx = docs\content\navbar.fsx
+		docs\content\navigateto.fsx = docs\content\navigateto.fsx
+		docs\content\recordstubgeneration.fsx = docs\content\recordstubgeneration.fsx
+		docs\content\rename.fsx = docs\content\rename.fsx
+		docs\content\resolveunopenednamespaces.fsx = docs\content\resolveunopenednamespaces.fsx
+		docs\content\syntaxcoloring.fsx = docs\content\syntaxcoloring.fsx
+		docs\content\unionpatternmatchcasegeneration.fsx = docs\content\unionpatternmatchcasegeneration.fsx
+		docs\content\xmldoc.fsx = docs\content\xmldoc.fsx
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools", "src\FSharpVSPowerTools\FSharpVSPowerTools.csproj", "{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core.Tests", "tests\FSharpVSPowerTools.Core.Tests\FSharpVSPowerTools.Core.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic", "src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj", "{70456B75-F623-41B4-8044-ED02C265F0FF}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core", "src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic.VS2013", "src\FSharpVSPowerTools.Logic.VS2013\FSharpVSPowerTools.Logic.VS2013.fsproj", "{34D33ADF-B1EC-4227-B981-13C52F28D013}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test samples", "{CDFE262B-BF3B-4B13-B3E6-859CC2A82F0D}"
+	ProjectSection(SolutionItems) = preProject
+		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
+		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
+		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D751E684-285F-494D-B402-98772A541C31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D751E684-285F-494D-B402-98772A541C31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D751E684-285F-494D-B402-98772A541C31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D751E684-285F-494D-B402-98772A541C31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{83F16175-43B1-4C90-A1EE-8E351C33435D} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
+		{8E6D5255-776D-4B61-85F9-73C37AA1FB9A} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
+		{D751E684-285F-494D-B402-98772A541C31} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+	EndGlobalSection
+EndGlobal

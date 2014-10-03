@@ -1,68 +1,271 @@
-﻿module FSharpVSPowerTools.Core.Tests.UnopenedNamespacesResolverTests
-
+﻿#if INTERACTIVE
+#r "../../bin/FSharp.Compiler.Service.dll"
+#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
+      "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+      "../../src/FSharpVSPowerTools.Core/CodeGeneration.fs"
+      "../../src/FSharpVSPowerTools.Core/UnopenedNamespacesResolver.fs"
+      "TestHelpers.fs"
+      "CodeGenerationTestInfrastructure.fs"
+#else
+module FSharpVSPowerTools.Core.Tests.UnopenedNamespacesResolverTests
+#endif
 open NUnit.Framework
 open FSharpVSPowerTools
 
-let (=>) (ns: string option, 
-          scope: string, 
-          currentIdent, 
-          requireQualifiedAccessParent: string option, 
-          autoOpenParent: string option,
-          entityNs: string option, 
-          entityFullName: string) res = 
+// Entity.TryCreate tests
 
+type EntiryCreationArgs = 
+    { ns: string option
+      scope: string 
+      currentIdent: string 
+      requireQualifiedAccessParent: string option 
+      autoOpenParent: string option
+      entityNs: string option 
+      entityFullName: string }
+
+let assertEntityCreation args res = 
     Entity.tryCreate 
-            (ns |> Option.map (fun x -> x.Split '.'))
-            (scope.Split '.') 
-            currentIdent 
-            (requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.')) 
-            (autoOpenParent |> Option.map (fun x -> x.Split '.'))
-            (entityNs |> Option.map (fun x -> x.Split '.'))
-            (entityFullName.Split '.')
-    |> assertEqual (res |> Option.map (fun (fullRelativeName, ns, name) -> 
-        { FullRelativeName = fullRelativeName; Namespace = ns; Name = name }))
+            (args.ns |> Option.map (fun x -> x.Split '.'),
+             args.scope.Split '.', 
+             args.currentIdent,
+             args.requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.'), 
+             args.autoOpenParent |> Option.map (fun x -> x.Split '.'),
+             args.entityNs |> Option.map (fun x -> x.Split '.'),
+             args.entityFullName.Split '.')
+    |> assertEqual res
+
+let (=>) args res = assertEntityCreation args (Some res)
+let (!=>) = assertEntityCreation
 
 [<Test>] 
 let ``fully qualified external entities``() =
-    (Some "TopNs", "", "Now", None, None, Some "System", "System.DateTime.Now") => Some ("System.DateTime.Now", Some "System.DateTime", "Now")
-    (Some "TopNs", "", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
-    (Some "Myns", "Myns", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
-    (Some "Myns", "Myns.Nested", "Now", None, None, None, "System.Now") => Some ("System.Now", Some "System", "Now")
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "System"
+        entityFullName = "System.DateTime.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.DateTime.Now"
+        Namespace = Some "System.DateTime"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "System.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.Now"
+        Namespace = Some "System"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "System.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.Now"
+        Namespace = Some "System"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns.Nested"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "System.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.Now"
+        Namespace = Some "System"
+        Name = "Now" 
+    }
 
 [<Test>] 
 let ``fully qualified external entities with require qualified access module``() =
-    (Some "TopNs", "", "Now", Some "System", None, Some "System", "System.DateTime.Now") => 
-        Some ("System.DateTime.Now",  None, "System.DateTime.Now")
-
-    (Some "TopNs", "", "Now", Some "System.DateTime", None, Some "System",  "System.DateTime.Now") => 
-        Some ("System.DateTime.Now", Some "System", "DateTime.Now")
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = Some "System"
+        autoOpenParent = None
+        entityNs = Some "System"
+        entityFullName = "System.DateTime.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.DateTime.Now"
+        Namespace = None
+        Name = "System.DateTime.Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = Some "System.DateTime"
+        autoOpenParent = None
+        entityNs = Some "System"
+        entityFullName = "System.DateTime.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.DateTime.Now"
+        Namespace = Some "System"
+        Name = "DateTime.Now" 
+    }
 
 [<Test>]
 let ``simple entities``() =
-    (Some "TopNs", "", "Now", None, None, None, "Now") => None
-    (Some "Myns", "Myns", "Now", None, None, None, "Now") => None
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = None
+        entityFullName = "Now" 
+    } 
+    !=> None
 
 [<Test>]
 let ``internal entities``() =
-    (Some "Myns", "Myns", "Now", None, None, Some "Myns", "Myns.Nested.Now") => Some ("Nested.Now", Some "Nested", "Now")   
-    (Some "Myns", "Myns.Nested", "Now", None, None, Some "Myns", "Myns.Nested.Nested2.Now") => Some ("Nested2.Now", Some "Nested2", "Now")
-    (Some "Myns", "Myns.Nested", "Now", None, None, Some "Myns", "") => None
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested.Now"
+        Namespace = Some "Nested"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns.Nested"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Nested2.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested2.Now"
+        Namespace = Some "Nested2"
+        Name = "Now" 
+    }
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns.Nested"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "" 
+    } 
+    !=> None
 
 [<Test>]
 let ``internal entities in different sub namespace``() =
-    (Some "Myns.Nested1", "Myns.Nested1", "Now", None, None, Some "Myns.Nested2", "Myns.Nested2.Now") => 
-        Some ("Myns.Nested2.Now", Some "Myns.Nested2", "Now")   
+    { 
+        ns = Some "Myns.Nested1"
+        scope = "Myns.Nested1"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "Myns.Nested2"
+        entityFullName = "Myns.Nested2.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Myns.Nested2.Now"
+        Namespace = Some "Myns.Nested2"
+        Name = "Now" 
+    }
 
 [<Test>] 
 let ``internal entities with require qualified access module``() =
-    (Some "Myns", "Myns", "Now", Some "Myns.Nested", None, Some "Myns", "Myns.Nested.Now") => Some ("Nested.Now", None, "Nested.Now")   
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = Some "Myns.Nested"
+        autoOpenParent = None
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested.Now"
+        Namespace = None
+        Name = "Nested.Now"
+    }
 
 [<Test>]
 let ``entities in auto open module``() =
-    (Some "Myns", "Myns", "Now", None, Some "Myns.Nested", Some "Myns", "Myns.Nested.Now") => None
-    (Some "Myns", "Myns", "Now", None, Some "Myns.Nested.AutoOpenNested", Some "Myns", "Myns.Nested.AutoOpenNested.Now") => 
-        Some ("Nested.AutoOpenNested.Now", Some "Nested", "Now")
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = Some "Myns.Nested"
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.Now" 
+    } 
+    !=> None
+    // -----------------------------------------
+    { 
+        ns = Some "Myns"
+        scope = "Myns"
+        currentIdent = "Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = Some "Myns.Nested.AutoOpenNested"
+        entityNs = Some "Myns"
+        entityFullName = "Myns.Nested.AutoOpenNested.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "Nested.AutoOpenNested.Now"
+        Namespace = Some "Nested"
+        Name = "Now"
+    }
 
+// ParsedInput.getEntityKind tests
 
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
 
@@ -81,18 +284,17 @@ let parseSource (source: Source) =
     | Some tree -> tree
 
 open Microsoft.FSharp.Compiler.Range
-open Ast
 
 type Line = int
 type Col = int
 
 let checkEntity source (points: (Line * Col * EntityKind option) list) =
     for line, col, kind in points do
-        let tree = parseSource source
+        let input = parseSource source
         try
-            Assert.That(Ast.getEntityKind tree (Pos.fromZ line col), Is.EqualTo kind, sprintf "Line = %d, Col = %d" line col)
+            Assert.That(ParsedInput.getEntityKind input (Pos.fromZ line col), Is.EqualTo kind, sprintf "Line = %d, Col = %d" line col)
         with _ ->
-            printfn "Ast: %A" tree
+            printfn "Ast: %A" input
             reraise()
 
 let (==>) = checkEntity
@@ -107,7 +309,7 @@ module Nested1 =
     let range x = x
 let _ = range()
 """ 
-    ==> [6, 9, Some FunctionOrValue ]
+    ==> [6, 9, Some (FunctionOrValue false) ]
 
 [<Test>]
 let ``return type annotation is a Type``() =
@@ -138,15 +340,15 @@ type T() =
         let a = 1
         { Field = new Task<_>() }
 """ 
-    ==> [2, 10, Some FunctionOrValue
+    ==> [2, 10, Some (FunctionOrValue false)
          3, 13, Some Type
-         5, 18, Some FunctionOrValue
-         6, 22, Some FunctionOrValue
-         7, 26, Some FunctionOrValue
+         5, 18, Some (FunctionOrValue false)
+         6, 22, Some (FunctionOrValue false)
+         7, 26, Some (FunctionOrValue false)
          10, 23, Some Type]
 
 [<Test>]
-let ``type name in interface declaration``() =
+let ``type name in interface declaration is a Type``() =
     """
 module TopLevel
 type T() =
@@ -156,6 +358,15 @@ type T() =
     ==> [3, 20, Some Type
          4, 22, Some Type
          4, 33, Some Type]
+
+[<Test>]
+let ``type name in attribute argument is a Type``() =
+    """
+module TopLevel
+[<Attribute (Type.Literal)>]
+let x = 1
+""" 
+    ==> [2, 15, Some Type]
 
 [<Test>]
 let ``argument type annotation is a Type``() =
@@ -180,7 +391,7 @@ let inline func< ^a, 'b when ^a: (member Prop: IList<Task>)> x =
          3, 30, Some Type]
 
 [<Test>]
-let ``type annotation in type constrain is a Type``() =
+let ``type annotation in type constraint is a Type``() =
     """
 module TopLevel
 type T<'a when 'a :> Task>() = class end
@@ -188,9 +399,20 @@ type T<'a when 'a :> Task>() = class end
     ==> [2, 22, Some Type]
 
 [<Test>]
-let ``attribute is an Attribute``() =
+let ``type name in type extension is a Type``() =
     """
 module TopLevel
+type DateTime with
+    member x.Foo = ()
+"""
+    ==> [2, 6, Some Type]
+
+[<Test>]
+let ``attribute is an Attribute``() =
+    """
+[<Attribute>]
+module TopLevel
+[<Attribute>]
 let f ([<Attribute>] arg: DateTime) = ()
 [<Attribute>]
 type T() =
@@ -202,15 +424,21 @@ type R = { [<Attribute>] F: int }
 type I =
     [<Attribute>]
     abstract Method: unit -> DateTime
+[<Attribute>]
+module M = 
+    let x = ()
 """ 
-    ==> [2, 11, Some Attribute
+    ==> [1, 4, None
          3, 4, Some Attribute
-         5, 8, Some Attribute
+         4, 11, Some Attribute
+         5, 4, Some Attribute
          7, 8, Some Attribute
-         7, 51, Some Attribute
-         8, 4, Some Attribute
-         9, 15, Some Attribute
-         11, 7, Some Attribute]
+         9, 8, Some Attribute
+         9, 51, Some Attribute
+         10, 4, Some Attribute
+         11, 15, Some Attribute
+         13, 7, Some Attribute
+         15, 4, Some Attribute]
 
 [<Test>]
 let ``type in an object expression method body is a FuncOrConstructor``() =
@@ -219,7 +447,7 @@ module TopLevel
 let _ = { new IMy with 
             method x.Method x = DateTime.Now }
 """ 
-    ==> [3, 34, Some FunctionOrValue]
+    ==> [3, 34, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``type in a let binging inside CE is a FuncOrConstructor``() =
@@ -231,7 +459,7 @@ let _ =
         return () 
     }
 """ 
-    ==> [4, 18, Some FunctionOrValue]
+    ==> [4, 18, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``type as a qualifier in a function application in argument position is FuncOrConstructor``() =
@@ -240,8 +468,8 @@ module TopLevel
 let _ = func (DateTime.Add 1)
 let _ = func1 1 (2, DateTime.Add 1)
 """ 
-    ==> [2, 16, Some FunctionOrValue
-         3, 22, Some FunctionOrValue]
+    ==> [2, 16, Some (FunctionOrValue false)
+         3, 22, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``constructor as argument is a FuncOrConstructor``() =
@@ -249,7 +477,7 @@ let ``constructor as argument is a FuncOrConstructor``() =
 module TopLevel
 let _ = x.func (DateTime())
 """ 
-    ==> [2, 17, Some FunctionOrValue]
+    ==> [2, 17, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``type in match is a FunctionOrConstructor``() =
@@ -259,7 +487,7 @@ let _ =
     match 1 with
     | Case1 -> DateTime.Now
 """ 
-    ==> [4, 17, Some FunctionOrValue]
+    ==> [4, 17, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``DU type in match is a Type``() =
@@ -282,7 +510,7 @@ type R = {
 let _ = new Task<_>()
 let _ = { Field = new Task<_>() }
 """ 
-    ==> [2, 9, Some FunctionOrValue
+    ==> [2, 9, Some (FunctionOrValue false)
          4, 12, Some Type
          6, 13, Some Type
          7, 23, Some Type]
@@ -296,6 +524,15 @@ let _ = Class<DateTime>()
     ==> [2, 15, Some Type]
 
 [<Test>]
+let ``type name in object expression is a Type``() =
+    """
+module TopLevel
+let _ = { new IMy with 
+    member __.Member _ = () }
+""" 
+    ==> [2, 15, Some Type]
+
+[<Test>]
 let ``upcast type is a FunctionOrValue``() =
     """
 module TopLevel
@@ -303,8 +540,8 @@ let x: IMy<_, _, _> = upcast My(arg)
 type T() =
     let x: IMy<_, _, _> = upcast My(arg)
 """ 
-    ==> [2, 30, Some FunctionOrValue
-         4, 34, Some FunctionOrValue]
+    ==> [2, 30, Some (FunctionOrValue false)
+         4, 34, Some (FunctionOrValue false)]
 
 [<Test>]
 let ``open declaration is not an entity``() =
@@ -336,14 +573,14 @@ type C() =
     ==> [3, 15, None; 4, 15, None]
 
 [<Test>]
-let ``type or module name is not an entity``() =
+let ``module name is not an entity``() =
     """
 module TopLevel
 type Class() = class end
 module Nested =
     type Record = { F: int }
 """ 
-    ==> [1, 9, None; 2, 7, None; 3, 9, None; 4, 11, None]
+    ==> [1, 9, None; 2, 7, Some EntityKind.Type; 3, 9, None; 4, 11, Some EntityKind.Type]
 
 [<Test; Ignore "Cannot extract arg name from Named">]
 let ``argument name is not an entity``() =
@@ -364,26 +601,47 @@ let _ = Class<_>()
 """ 
     ==> [2, 15, None]
 
+[<Test>]
+let ``module top level do expression is FunctionOrValue``() =
+    """
+DateTime
+""" 
+    ==> [1, 1, Some (FunctionOrValue false)]
+
+[<Test>]
+let ``second and subsequent parts in long ident is not an entity``() =
+    """
+let _ = System.empty
+let _ = System.Foo.empty
+""" 
+    ==> [1, 16, None
+         2, 16, None
+         2, 20, None ]
+
+// open declaration insertion integration tests
+
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
-let forEntity (ns: LongIdent) (entity: LongIdent) (ident, source: Source, line) =
-    let tree = parseSource source
-    match Ast.tryFindNearestOpenStatementBlock line tree ident (None, None, Some (ns.Split '.'), entity.Split '.') with
+let forEntity (ns: LongIdent) (fullName: LongIdent) (ident, source: Source, line) =
+    let ast = parseSource source
+    match ParsedInput.tryFindInsertionContext line ast ident (None, None, Some (ns.Split '.'), fullName.Split '.') with
     | None -> failwith "Cannot find nearest open statement block"
-    | Some (e, pos) -> source, e, pos
+    | Some (e, ctx) -> source, e, ctx, ast
 
-let result (expected: Source) (source: Source, entity, pos) = 
+let result (expected: Source) (source: Source, entity, ctx: InsertContext, ast) = 
     let lines = srcToLineArray source
-    let line = pos.Line - 1
-    if lines.Length < line + 1 then 
-        failwithf "Pos.Line = %d is out of bound (source contain %d lines)" pos.Line lines.Length
-    let result = 
-        Array.append (
-            Array.append 
-                lines.[0..line - 1] 
-                [| (String.replicate pos.Col " ") + "open " + entity.Namespace.Value|]) 
-            lines.[line..]
+
+    let doc =
+        { new IInsertContextDocument<string[]> with
+              member __.GetLineStr (lines, line) = lines.[line]
+              member __.Insert (lines, line, lineStr) =  
+                Array.append (
+                    Array.append lines.[0..line - 1] [| lineStr |]) 
+                    lines.[line..] }
+
+    let result = InsertContext.insertOpenDeclaration lines doc ctx entity.Namespace.Value
+
     try result |> Collection.assertEqual (srcToLineArray expected)
     with _ ->
         let withLineNumbers xs = 
@@ -392,9 +650,10 @@ let result (expected: Source) (source: Source, entity, pos) =
             |> String.concat "\r\n"
 
         printfn 
-            "Expected:\n%s\nActual:\n%s" 
+            "Expected:\n%s\nActual:\n%s\nAST:\n%A" 
             (expected |> srcToLineArray |> Array.toList |> withLineNumbers) 
             (result |> Array.toList |> withLineNumbers)
+            ast
         reraise()
 
 [<Test>]
@@ -409,6 +668,7 @@ let _ = DateTime.Now
     |> forEntity "System" "System.DateTime"
     |> result """
 module TopLevel
+
 open System
 
 let _ = DateTime.Now
@@ -474,6 +734,7 @@ module TopLevel
 
 module Nested =
     open System
+
     let _ = DateTime.Now
 """
 
@@ -495,6 +756,7 @@ module TopLevel
 module Nested =
     open Another
     open System
+
     let _ = DateTime.Now
 """
 
@@ -541,6 +803,7 @@ module TopLevel
 module Nested =
     module DoubleNested =
         open System
+
         let _ = DateTime.Now
 """
 
@@ -588,7 +851,7 @@ module Nested =
 let marker = ()
 let _ = DateTime.Now
 """
-    |> forLine 6
+    |> forLine 7
     |> forIdent "DateTime"
     |> forEntity "" "TopLevel.Nested.DateTime"
     |> result """
@@ -596,6 +859,7 @@ module TopLevel
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 let marker = ()
@@ -623,6 +887,7 @@ module TopLevel
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 let _ = DateTime.Now
@@ -650,6 +915,7 @@ namespace TopNs
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 module Another =
@@ -675,6 +941,7 @@ module TopNs.TopM
 
 module Nested =
     type DateTime() = class end
+
 open Nested
 
 module Another =
@@ -696,6 +963,7 @@ type Record =
 namespace TopNs
 
 open System
+
 type Record = 
     { F: DateTime }
 """
@@ -746,7 +1014,6 @@ namespace TopNs
       { F: DateTime }
 """
 
-
 [<Test>]
 let ``respects top level block identation in case where are no other open statements``() =
     """
@@ -755,13 +1022,14 @@ namespace TopNs
  type Record = 
    { F: DateTime }
 """
-    |> forLine 6
+    |> forLine 4
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
     |> result """
 namespace TopNs
 
  open System
+
  type Record = 
    { F: DateTime }
 """
@@ -775,7 +1043,7 @@ module M =
  type Record = 
    { F: DateTime }
 """
-    |> forLine 6
+    |> forLine 5
     |> forIdent "DateTime"
     |> forEntity "System" "System.DateTime"
     |> result """
@@ -783,7 +1051,91 @@ namespace TopNs
 
 module M =
  open System
+
  type Record = 
    { F: DateTime }
+"""
+
+[<Test>]
+let ``implicit module, no other open statements exist``() =
+    """
+type T = { F: DateTime }
+"""
+    |> forLine 2
+    |> forIdent "DateTime"
+    |> forEntity "System" "System.DateTime"
+    |> result """open System
+
+type T = { F: DateTime }
+"""
+
+[<Test>]
+let ``nested module in implicit top level module``() =
+    """
+module M =
+    let x = ()
+let _ = DateTime.Now
+"""
+    |> forLine 4
+    |> forIdent "DateTime"
+    |> forEntity "System" "System.DateTime"
+    |> result """open System
+
+module M =
+    let x = ()
+let _ = DateTime.Now
+"""
+
+[<Test>]
+let ``implicit module, no other open statements exist, references exist``() =
+    """
+#r "System.Runtime"
+type T = { F: DateTime }
+"""
+    |> forLine 3
+    |> forIdent "DateTime"
+    |> forEntity "System" "System.DateTime"
+    |> result """
+#r "System.Runtime"
+
+open System
+
+type T = { F: DateTime }
+"""
+
+[<Test>]
+let ``implicit module with other open statements``() =
+    """
+open Another
+type T = { F: DateTime }
+"""
+    |> forLine 2
+    |> forIdent "DateTime"
+    |> forEntity "System" "System.DateTime"
+    |> result """
+open Another
+open System
+
+type T = { F: DateTime }
+"""
+
+[<Test>]
+let ``open module consisting of type aliases``() =
+    """
+module TypeAlias =
+    type MyInt = int
+module Usage =
+    let f (x:MyInt) = x
+"""
+    |> forLine 5
+    |> forIdent "MyInt"
+    |> forEntity "TypeAlias" "TypeAlias.MyInt"
+    |> result """
+module TypeAlias =
+    type MyInt = int
+module Usage =
+    open TypeAlias
+
+    let f (x:MyInt) = x
 """
 

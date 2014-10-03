@@ -2,13 +2,9 @@
 
 open System
 open System.IO
-open System.Diagnostics
-open System.Windows.Threading
-open System.Collections.Generic
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
@@ -43,22 +39,15 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
-    let symbolUsesToSpans fileName (lastIdent: string) (symbolUses: FSharpSymbolUse []) =
+    let symbolUsesToSpans (word: SnapshotSpan) fileName (lastIdent: string) (symbolUses: FSharpSymbolUse []) =
         let filePath = Path.GetFullPathSafe(fileName)
         symbolUses
         |> Seq.choose (fun symbolUse -> 
             // We have to filter by full paths otherwise the range is invalid wrt current snapshot
             if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
-                fromFSharpRange view.TextSnapshot symbolUse.RangeAlternate
+                fromFSharpRange word.Snapshot symbolUse.RangeAlternate
             else None)
-        |> Seq.choose (fun span -> 
-            // Sometimes F.C.S returns a composite identifier which should be truncated
-            let index = span.GetText().LastIndexOf (lastIdent)
-            if index > 0 then 
-                Some (SnapshotSpan(view.TextSnapshot, span.Start.Position + index, span.Length - index))
-            elif index = 0 then Some span
-            else None)
-        |> Seq.toList
+        |> fixInvalidSymbolSpans word.Snapshot lastIdent
 
     let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan,
                   fileName: string, projectProvider: IProjectProvider) =
@@ -70,7 +59,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                     | Some (_, checkResults) ->
                         let! results = vsLanguageService.FindUsagesInFile (newWord, symbol, checkResults)
                         let refSpans =
-                            results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans fileName lastIdent refs)
+                            results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans newWord fileName lastIdent refs)
 
                         match refSpans with
                         | Some references -> 
@@ -82,7 +71,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                             synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                     | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
-                    logException e
+                    Logging.logException e
                     synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             }
 
@@ -136,11 +125,12 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                     if currentSnapshot = word.Snapshot then word
                     else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
                 // First, yield back the word the cursor is under (if it overlaps)
-                // Note that we'll yield back the same word again in the wordspans collection;
-                // the duplication here is expected.
                 if spans.OverlapsWith(NormalizedSnapshotSpanCollection word) then yield tagSpan word
                 // Second, yield all the other words in the file
-                for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) -> tagSpan span
+                // Note that we won't yield back the same word again in the wordspans collection;
+                // the duplication is not expected.
+                for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) do
+                    if span <> word then yield tagSpan span
             | _ -> ()
         ]
 

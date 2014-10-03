@@ -1,12 +1,8 @@
 ﻿namespace FSharpVSPowerTools.DepthColorizer
    
 open System
-open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Utilities
-open System.Windows.Threading
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
@@ -64,7 +60,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         } 
         |> Async.StartImmediateSafe
     
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferChangedEvent buffer], 500us, refreshFileImpl) 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, refreshFileImpl) 
     
     let getTags (spans: NormalizedSnapshotSpanCollection) = 
         match spans |> Seq.toList, state with

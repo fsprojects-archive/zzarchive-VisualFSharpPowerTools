@@ -1,34 +1,30 @@
 ﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
-open System.Collections.Generic
-open System.IO
-open System.Linq
-open System.Text
-open System.Threading.Tasks
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Formatting
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
-
 open FSharpVSPowerTools.ProjectSystem
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
 
     override x.Execute() =
-        use disposable = Cursor.wait()
+        use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
     override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
-        formatSourceString isSignatureFile source config
+        let formattedText = formatSourceString isSignatureFile source config
+
+        { OldTextStartIndex = 0
+          OldTextLength = source.Length
+          NewText = formattedText }
 
     override x.SetNewCaretPosition(caretPos, scrollBarPos, originalSnapshot) =
         let caretLine = originalSnapshot.GetLineFromPosition(caretPos.Position)
         let line = originalSnapshot.GetLineNumberFromPosition(int caretPos)
-        let column = caretPos - caretLine.Start
+        let column = caretPos.Position - caretLine.Start.Position
         let maxLine = originalSnapshot.LineCount
 
         let currentSnapshot = x.TextBuffer.CurrentSnapshot

@@ -1,12 +1,14 @@
 ﻿namespace System
 open System.Reflection
+open System.Runtime.CompilerServices
 
+[<assembly: InternalsVisibleToAttribute("FSharpVSPowerTools.Tests")>]
 [<assembly: AssemblyTitleAttribute("FSharpVSPowerTools.Logic")>]
 [<assembly: AssemblyProductAttribute("FSharpVSPowerTools")>]
-[<assembly: AssemblyDescriptionAttribute("Visual F# Power Tools (by F# Community)")>]
-[<assembly: AssemblyVersionAttribute("1.2.0")>]
-[<assembly: AssemblyFileVersionAttribute("1.2.0")>]
+[<assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")>]
+[<assembly: AssemblyVersionAttribute("1.5.0")>]
+[<assembly: AssemblyFileVersionAttribute("1.5.0")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "1.2.0"
+    let [<Literal>] Version = "1.5.0"

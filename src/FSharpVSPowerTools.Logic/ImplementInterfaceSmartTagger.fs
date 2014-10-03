@@ -1,22 +1,16 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
 
-open System.Windows
-open System.Windows.Threading
-open System.Collections.Generic
-open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
-open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
-open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
@@ -107,11 +101,12 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
                     } 
                     |> Async.map (fun result -> 
                         state <- result
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                        tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                        buffer.TriggerTagsChanged self tagsChanged)
                     |> Async.StartImmediateSafe
                     currentWord <- Some newWord
-            | _ -> ()
+            | _ -> 
+                currentWord <- None 
+                buffer.TriggerTagsChanged self tagsChanged
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                     500us, updateAtCaretPosition)

@@ -18,7 +18,7 @@ type Symbol =
       Text: string }
     member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
 
-type DraftToken =
+type internal DraftToken =
     { Kind: SymbolKind
       Token: TokenInformation 
       RightColumn: int }

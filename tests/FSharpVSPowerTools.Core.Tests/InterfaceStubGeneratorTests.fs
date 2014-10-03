@@ -10,30 +10,16 @@ module FSharpVSPowerTools.Core.Tests.InterfaceStubGeneratorTests
 
 open NUnit.Framework
 open System.IO
-open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.ProjectSystem
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "InterfaceSampleFile.fs")
 let source = File.ReadAllText(fileName)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
-
-let args = 
-  [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
-    @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
-
-let framework = FSharpTargetFramework.NET_4_5
 let vsLanguageService = LanguageService(fun _ -> ())
-let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], args, [||]) 
+let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], TestHelpers.LanguageServiceTestHelper.args, [||]) 
 
 #if INTERACTIVE
 let checker = InteractiveChecker.Create()
@@ -69,6 +55,40 @@ let allUsesOfAllSymbols =
             yield s.ToString(), loc, wholeProjectResults.GetUsesOfSymbol(s) ]
 allUsesOfAllSymbols |> List.iter (printfn "%A")
 #endif
+
+let private isInterfaceDeclarationAt line col =
+    let results = 
+        vsLanguageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.MatchingSource)
+        |> Async.RunSynchronously
+    
+    let ast = results.GetUntypedAst()
+    let pos = Range.Pos.fromZ (line-1) col
+    (ast |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)).IsSome
+
+[<Test>]
+let ``should find interface declaration in class interface implementation``() = 
+    isInterfaceDeclarationAt 5 14 |> assertTrue
+
+[<Test>]
+let ``should find interface declaration in object expression``() = 
+    isInterfaceDeclarationAt 9 11 |> assertTrue
+    isInterfaceDeclarationAt 82 11 |> assertTrue
+
+[<Test>]
+let ``should find second interface declaration in object expression``() = 
+    isInterfaceDeclarationAt 66 17 |> assertTrue
+
+[<Test>]
+let ``should find interface declaration in base class constructor call``() = 
+    isInterfaceDeclarationAt 406 31 |> assertTrue
+
+[<Test>]
+let ``should find abbreviated interface declaration``() = 
+    isInterfaceDeclarationAt 257 19 |> assertTrue
+
+[<Test>]
+let ``should not find interface declaration in object expression if the base type is class``() = 
+    isInterfaceDeclarationAt 51 18 |> assertFalse
 
 let getInterfaceStub typeParams line col lineStr idents =
     let results = 
@@ -353,6 +373,14 @@ member x.ReadonlyProp: int =
     raise (System.NotImplementedException())
 """
 
+[<Test>]
+let ``should ensure .NET event handlers are generated correctly``() =
+    checkInterfaceStub 397 37 "let _ = { new System.ComponentModel.INotifyPropertyChanged with" ["System"; "ComponentModel"; "INotifyPropertyChanged"] """
+[<CLIEvent>]
+member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler, _> = 
+    raise (System.NotImplementedException())
+"""
+
 open System
 open FsCheck
 
@@ -399,7 +427,7 @@ do reg()
 
 let normalizeArgs =
     List.fold (fun (acc, namesWithIndices) arg ->
-            let arg, namesWithIndices = InterfaceStubGenerator.normalizeArgName namesWithIndices arg
+            let arg, namesWithIndices = normalizeArgName namesWithIndices arg
             arg :: acc, namesWithIndices)
         ([], Map.empty)
     >> fst

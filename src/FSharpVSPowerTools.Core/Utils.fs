@@ -12,28 +12,41 @@ module Seq =
 [<RequireQualifiedAccess>]
 module Array =
     /// Returns true if one array has another as its subset from index 0.
-    let startsWith (other: _ array) (value: _ array) =
+    let startsWith (prefix: _ array) (whole: _ array) =
         let rec loop index =
-            if index > other.Length - 1 then true
-            elif index > value.Length - 1 then false
-            elif other.[index] = value.[index] then loop (index + 1)
+            if index > prefix.Length - 1 then true
+            elif index > whole.Length - 1 then false
+            elif prefix.[index] = whole.[index] then loop (index + 1)
             else false
-        other.Length = 0 || loop 0
+        prefix.Length = 0 || loop 0
+
+    /// Returns true if one array has trailing elements equal to another's.
+    let endsWith (suffix: _ array) (whole: _ array) =
+        whole 
+        |> Array.rev
+        |> startsWith (Array.rev suffix)
+
+    /// Returns a new array with an element replaced with a given value.
+    let replace index value (arr: _ array) =
+        if index >= arr.Length then raise (IndexOutOfRangeException "index")
+        let res = Array.copy arr
+        res.[index] <- value
+        res
 
 [<RequireQualifiedAccess>]
 module Option =
     let inline ofNull value =
         if obj.ReferenceEquals(value, null) then None else Some value
 
-    let inline ofNullable (value: Nullable<'a>) =
+    let inline ofNullable (value: Nullable<'T>) =
         if value.HasValue then Some value.Value else None
 
-    let inline toNullable (value: 'a option) =
+    let inline toNullable (value: 'T option) =
         match value with
         | Some x -> Nullable<_> x
         | None -> Nullable<_> ()
 
-    let inline attempt (f: unit -> 'a) = try Some <| f() with _ -> None
+    let inline attempt (f: unit -> 'T) = try Some <| f() with _ -> None
 
     /// Gets the value associated with the option or the supplied default value.
     let inline getOrElse v =
@@ -47,11 +60,23 @@ module Option =
         | Some x -> Some x
         | None -> v
 
+    /// Gets the value if Some x, otherwise try to get another value by calling a function
+    let inline getOrTry f =
+        function
+        | Some x -> x
+        | None -> f()
+
     /// Gets the option if Some x, otherwise try to get another value
     let inline orTry f =
         function
         | Some x -> Some x
         | None -> f()
+
+    /// Some(Some x) -> Some x | None -> None
+    let inline flatten x =
+        match x with
+        | Some x -> x
+        | None -> None
     
 // Async helper functions copied from https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/ControlCollections.Async.fs
 [<RequireQualifiedAccess>]
@@ -98,6 +123,22 @@ module Async =
                 return result
             }
 
+        /// Async implementation of Array.exists.
+        let exists (predicate : 'T -> Async<bool>) (array : 'T[]) : Async<bool> =
+            let len = Array.length array
+            let rec loop i =
+                async {
+                    if i >= len then
+                        return false
+                    else
+                        let! found = predicate array.[i]
+                        if found then
+                            return true
+                        else
+                            return! loop (i + 1)
+                }
+            loop 0
+
     [<RequireQualifiedAccess>]
     module List =
         let rec private mapImpl (mapping, mapped : 'U list, pending : 'T list) =
@@ -125,25 +166,25 @@ module Async =
 [<Sealed>]
 type MaybeBuilder () =
     // 'T -> M<'T>
-    member inline x.Return value: 'T option =
+    member inline __.Return value: 'T option =
         Some value
 
     // M<'T> -> M<'T>
-    member inline x.ReturnFrom value: 'T option =
+    member inline __.ReturnFrom value: 'T option =
         value
 
     // unit -> M<'T>
-    member inline x.Zero (): unit option =
+    member inline __.Zero (): unit option =
         Some ()     // TODO: Should this be None?
 
     // (unit -> M<'T>) -> M<'T>
-    member x.Delay (f: unit -> 'T option): 'T option =
+    member __.Delay (f: unit -> 'T option): 'T option =
         f ()
 
     // M<'T> -> M<'T> -> M<'T>
     // or
     // M<unit> -> M<'T> -> M<'T>
-    member inline x.Combine (r1, r2: 'T option): 'T option =
+    member inline __.Combine (r1, r2: 'T option): 'T option =
         match r1 with
         | None ->
             None
@@ -151,11 +192,11 @@ type MaybeBuilder () =
             r2
 
     // M<'T> * ('T -> M<'U>) -> M<'U>
-    member inline x.Bind (value, f: 'T -> 'U option): 'U option =
+    member inline __.Bind (value, f: 'T -> 'U option): 'U option =
         Option.bind f value
 
     // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
-    member x.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
+    member __.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
         try body resource
         finally
             if not <| obj.ReferenceEquals (null, box resource) then
@@ -183,23 +224,23 @@ type MaybeBuilder () =
 [<Sealed>]
 type AsyncMaybeBuilder () =
     // 'T -> M<'T>
-    member (*inline*) x.Return value : Async<'T option> = Some value |> async.Return
+    member (*inline*) __.Return value : Async<'T option> = Some value |> async.Return
 
     // M<'T> -> M<'T>
-    member (*inline*) x.ReturnFrom value : Async<'T option> = value
+    member (*inline*) __.ReturnFrom value : Async<'T option> = value
 
     // unit -> M<'T>
-    member (*inline*) x.Zero () : Async<unit option> =
+    member (*inline*) __.Zero () : Async<unit option> =
         Some ()     // TODO : Should this be None?
         |> async.Return
 
     // (unit -> M<'T>) -> M<'T>
-    member x.Delay (f : unit -> Async<'T option>) : Async<'T option> = f ()
+    member __.Delay (f : unit -> Async<'T option>) : Async<'T option> = f ()
 
     // M<'T> -> M<'T> -> M<'T>
     // or
     // M<unit> -> M<'T> -> M<'T>
-    member (*inline*) x.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
+    member (*inline*) __.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
         async {
             let! r1' = r1
             match r1' with
@@ -208,7 +249,7 @@ type AsyncMaybeBuilder () =
         }
 
     // M<'T> * ('T -> M<'U>) -> M<'U>
-    member (*inline*) x.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
+    member (*inline*) __.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
         async {
             let! value' = value
             match value' with
@@ -216,7 +257,7 @@ type AsyncMaybeBuilder () =
             | Some result -> return! f result
         }
     // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
-    member x.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
+    member __.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
         try body resource
         finally 
             if resource <> null then resource.Dispose ()
@@ -232,12 +273,12 @@ type AsyncMaybeBuilder () =
     // seq<'T> * ('T -> M<'U>) -> M<'U>
     // or
     // seq<'T> * ('T -> M<'U>) -> seq<M<'U>>
-    member this.For (sequence : seq<_>, body : 'T -> Async<unit option>) : Async<_ option> =
+    member x.For (sequence : seq<_>, body : 'T -> Async<unit option>) : Async<_ option> =
         // OPTIMIZE : This could be simplified so we don't need to make calls to Using, While, Delay.
-        this.Using (sequence.GetEnumerator (), fun enum ->
-            this.While (
+        x.Using (sequence.GetEnumerator (), fun enum ->
+            x.While (
                 enum.MoveNext,
-                this.Delay (fun () ->
+                x.Delay (fun () ->
                     body enum.Current)))
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -276,23 +317,33 @@ module String =
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
+    open System.Diagnostics
+    open System.Threading
+
+// Redirect debug output to F# Interactive for debugging purpose.
+// It requires adding '-d:DEBUG' setting in F# Interactive Options.
+#if INTERACTIVE
+    Debug.Listeners.Add(new TextWriterTraceListener(System.Console.Out)) |> ignore
+    Debug.AutoFlush <- true
+#endif
+
     let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
-    let inline debug msg = Printf.kprintf System.Diagnostics.Debug.WriteLine msg
-    let inline fail msg = Printf.kprintf System.Diagnostics.Debug.Fail msg
+    let inline debug msg = Printf.kprintf Debug.WriteLine msg
+    let inline fail msg = Printf.kprintf Debug.Fail msg
     let maybe = MaybeBuilder()
     let asyncMaybe = AsyncMaybeBuilder()
     
-    let tryCast<'a> (o: obj): 'a option = 
+    let tryCast<'T> (o: obj): 'T option = 
         match o with
         | null -> None
-        | :? 'a as a -> Some a
-        | _ -> fail "Cannot cast %O to %O" (o.GetType()) typeof<'a>.Name; None
+        | :? 'T as a -> Some a
+        | _ -> 
+            fail "Cannot cast %O to %O" (o.GetType()) typeof<'T>.Name
+            None
 
     /// Load times used to reset type checking properly on script/project load/unload. It just has to be unique for each project load/reload.
     /// Not yet sure if this works for scripts.
     let fakeDateTimeRepresentingTimeLoaded x = DateTime(abs (int64 (match x with null -> 0 | _ -> x.GetHashCode())) % 103231L)
-
-    open System.Threading
     
     let synchronize f = 
         let ctx = SynchronizationContext.Current
@@ -309,7 +360,7 @@ module Pervasive =
             | _ -> ctx.Post((fun _ -> g (arg)), null))
 
     type Microsoft.FSharp.Control.Async with
-        static member EitherEvent(ev1: IObservable<'a>, ev2: IObservable<'b>) = 
+        static member EitherEvent(ev1: IObservable<'T>, ev2: IObservable<'U>) = 
             synchronize (fun f -> 
                 Async.FromContinuations((fun (cont, _econt, _ccont) -> 
                     let rec callback1 = 
@@ -339,8 +390,8 @@ module Pervasive =
                 Thread.SpinWait 20
                 swap f
         
-        member x.Value = !refCell
-        member x.Swap(f: 'T -> 'T) = swap f
+        member __.Value = !refCell
+        member __.Swap(f: 'T -> 'T) = swap f
 
     open System.IO
 
