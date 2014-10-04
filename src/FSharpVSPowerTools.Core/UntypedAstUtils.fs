@@ -529,4 +529,5 @@ let getIdents ast =
             let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
             visitModulesAndNamespaces modules
         | _ -> ())
+
     List.ofSeq identRanges

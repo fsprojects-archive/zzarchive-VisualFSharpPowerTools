@@ -25,7 +25,7 @@ type CategorizedColumnSpan =
     { Category: Category
       WordSpan: WordSpan }
 
-module QuotationCategorizer =
+module private QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
         let trimWhitespaces = 
             Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace) >> Seq.toList
@@ -76,29 +76,32 @@ module QuotationCategorizer =
     let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
 
 module private PrintfCategorizer =
-    let private printfFunctions = ["printf";"printfn";"sprintf";"failwithf";"eprintf";"eprintfn"] |> set
-    let private printfTerminators = ['b';'c';'s';'d';'i';'u';'x';'X';'o';'e';'E';'f';'g';'G';'M';'O';'A';'a';'t'] |> set
-    let private printfModifiers   = ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9';'-';'+';' '] |> set
+    let private printfFunctions = set ["printf";"printfn";"sprintf";"failwithf";"eprintf";"eprintfn"]
+    let private printfTerminators = set ['b';'c';'s';'d';'i';'u';'x';'X';'o';'e';'E';'f';'g';'G';'M';'O';'A';'a';'t']
+    let private printfModifiers = set ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9';'-';'+';' ']
         
     let private categorize (lexer: LexerBase) getTextLine (idents: Ident list) =
+        let getFormatterPos (r: Range.range) = 
+            lexer.TokenizeLine (r.EndLine - 1)
+            |> Seq.skipWhile (fun t -> t.LeftColumn < r.EndColumn || t.TokenName <> "STRING_TEXT")
+            |> Seq.takeWhile (fun t -> t.TokenName = "STRING_TEXT")
+            |> Seq.fold (fun pos token ->
+                 Some(
+                    match pos with
+                    | Some (left, right) -> 
+                        min left token.LeftColumn,
+                        max right token.RightColumn
+                    | None -> token.LeftColumn, token.RightColumn)) None
+
         idents 
         |> Seq.choose (fun ident -> if printfFunctions |> Set.contains ident.idText then Some ident.idRange else None)
         |> Seq.map (fun (r: Range.range) -> seq {
-
             // TODO: Multi-line printf formats
             let line: string = getTextLine (r.EndLine - 1)
-
-            let lit = lexer.TokenizeLine (r.EndLine - 1)
-                        |> Seq.skipWhile (fun t -> t.LeftColumn < r.EndColumn || t.TokenName <> "STRING_TEXT")
-                        |> Seq.takeWhile (fun t -> t.TokenName = "STRING_TEXT")
-                        |> Seq.fold (fun (left,right) (tok) ->
-                        min left tok.LeftColumn, 
-                        max right tok.RightColumn
-                        ) (9999,0)
-
-            match lit with 
-            | (9999,_) -> ()
-            | (left, right) ->
+                         
+            match getFormatterPos r with 
+            | None -> ()
+            | Some (left, right) ->
                 let formatter = line.Substring (left + 1, right - left)
                 let findLengthAndSkip i = 
                     let rec findTerminator i = 
@@ -116,19 +119,18 @@ module private PrintfCategorizer =
                     if i >= (formatter.Length - 1) then acc else
                     match formatter.[i] with
                     | '%' -> 
-                        let skip, len = findLengthAndSkip (i + 1) 
-                        match len with 
-                        | Some l -> 
+                        let skip, length = findLengthAndSkip (i + 1) 
+                        match length with 
+                        | Some length -> 
                             let hit = { Category = Category.Printf
                                         WordSpan = { Line = r.EndLine
                                                      StartCol = left + i + 1
-                                                     EndCol = left + i + l + 1 }} 
+                                                     EndCol = left + i + length + 1 }} 
 
-                            parseFmt (hit::acc) (i + skip)
+                            parseFmt (hit :: acc) (i + skip)
                         | _ -> parseFmt acc (i + skip)
                     | _ -> parseFmt acc (i + 1)
                 yield! (parseFmt [] 0)
-            | _ -> ()
             })
         |> Seq.concat
         |> Seq.toArray

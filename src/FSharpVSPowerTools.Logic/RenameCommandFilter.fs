@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Refactoring
 
-open System
 open System.IO
 open System.Windows
 open Microsoft.VisualStudio.Text
@@ -12,20 +11,21 @@ open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress
+open FSharpVSPowerTools.AsyncMaybe
 
 [<NoEquality; NoComparison>]
-type DocumentState =
+type private DocumentState =
     { Word: (SnapshotSpan * Symbol) option
       File: string
       Project: IProjectProvider }
 
 type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
-                         projectFactory: ProjectFactory) =
+                                 projectFactory: ProjectFactory) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 
     let canRename() = 
-        let s =
+        state <-
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -33,13 +33,12 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
             }
-        state <- s
         state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
     let rename (oldText: string) (symbolKind: SymbolKind) (newText: string) (foundUsages: (string * range list) list) =
         try
             let newText = IdentifierUtils.encapsulateIdentifier symbolKind newText
-            let undo = documentUpdater.BeginGlobalUndo("Rename Refactoring")
+            let undo = documentUpdater.BeginGlobalUndo "Rename Refactoring"
             try
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 dte.GetActiveDocument()
@@ -56,8 +55,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                                         yield word
                                     yield! spans
                                 }
-                            | _ -> 
-                                Seq.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                            | _ -> Seq.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
                             |> fixInvalidSymbolSpans buffer.CurrentSnapshot oldText
                         spans
                         |> List.fold (fun (snapshot: ITextSnapshot) span ->
@@ -69,86 +67,73 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                     doc.Activate())
             finally
                 documentUpdater.EndGlobalUndo(undo)
-        with e ->
-            Logging.logException e
+        with e -> Logging.logException e
 
-    member x.HandleRename() =
-        let word = state |> Option.bind (fun s -> s.Word |> Option.map (fun (cw, sym) -> (s, cw, sym)))
-        
-        match word with
-        | Some (state, cw, symbol) ->
-            // cancellation token source used to cancel all async operations throughout the rename process
-            use cts = new System.Threading.CancellationTokenSource()
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    member x.HandleRename() = maybe {
+        let! state = state
+        let! cw, symbol = state.Word
+        // cancellation token source used to cancel all async operations throughout the rename process
+        use cts = new System.Threading.CancellationTokenSource()
+        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+        // This is the workflow used to initialize the rename operation.  It should return the appropriate scope and symbols on success, and cancel on failure
+        let initializationWorkflow = 
+            asyncMaybe {
+                let! fsSymbolUse, fileScopedCheckResults = 
+                    // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
+                    // in order to by able to make accurate symbol comparisons during renaming.
+                    vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
+                
+                let symbolDeclarationLocation = 
+                    projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol state.File state.Project
 
-            // This is the workflow used to initialize the rename operation.  It should return the appropriate scope and symbols on success, and cancel on failure
-            let initializationWorkflow = 
-                async {
-                    let! results = 
-                        // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
-                        // in order to by able to make accurate symbol comparisons during renaming.
-                        vsLanguageService.GetFSharpSymbolUse(cw, symbol, state.File, state.Project, AllowStaleResults.No)
-                    match results with
-                    | None ->
-                        return None
-                    | Some(fsSymbolUse, fileScopedCheckResults) ->
-                    
-                        let symbolDeclarationLocation = 
-                            projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol state.File state.Project
+                return! liftMaybe <|
+                    match symbolDeclarationLocation with
+                    | Some scope ->
+                        Some (fileScopedCheckResults, scope, fsSymbolUse.Symbol)
+                    | _ -> 
+                        cts.Cancel()
+                        Logging.messageBoxError Resource.renameErrorMessage
+                        None
+            } 
+         
+        // This is the actual async workflow used to rename.  It should report progress as possible
+        let renameWorkflow parseAndCheckResults symbolLocation name (prg : OperationState -> unit) = 
+            let report msg = reportProgress (Some prg) (Reporting msg)
+            asyncMaybe {
+                let! _, lastIdent, symbolUses =
+                    match symbolLocation with
+                    | SymbolDeclarationLocation.File -> 
+                        report "Renaming symbols in file..."
+                        vsLanguageService.FindUsagesInFile (cw, symbol, parseAndCheckResults)
+                    | SymbolDeclarationLocation.Projects declarationProjects -> 
+                        report "Performing Rename in projects..."
+                        let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
+                        report (sprintf "Performing Rename in %d projects..." dependentProjects.Length)
+                        vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, prg)
+                
+                let usages =
+                    symbolUses 
+                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
+                    |> Seq.groupBy (fst >> Path.GetFullPathSafe)
+                    |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
+                    |> Seq.toList
 
-                        match symbolDeclarationLocation with
-                        | Some scope ->
-                            return Some(fileScopedCheckResults, scope, fsSymbolUse.Symbol) 
-                        | _ -> 
-                            cts.Cancel()
-                            Logging.messageBoxError Resource.renameErrorMessage
-                            return None
-                } 
-            
-            // This is the actual async workflow used to rename.  It should report progress as possible
-            let renameWorkflow parseAndCheckResults symbolLocation name (prg : OperationState -> unit) = 
-                let progress = Some(prg)
-                async {
-                    let! results =
-                        match symbolLocation with
-                        | SymbolDeclarationLocation.File -> 
-                            reportProgress progress (Reporting("Renaming symbols in file..."))
-                            vsLanguageService.FindUsagesInFile (cw, symbol, parseAndCheckResults)
-                        | SymbolDeclarationLocation.Projects declarationProjects -> 
-                            reportProgress progress (Reporting("Performing Rename in projects..."))
-                            let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
-                            reportProgress progress (Reporting(sprintf "Performing Rename in %d projects..." dependentProjects.Length))
-                            vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, prg)
-                    let usages =
-                        results
-                        |> Option.map (fun (symbol, lastIdent, refs) -> 
-                            symbol, lastIdent,
-                                refs 
-                                |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse.RangeAlternate))
-                                |> Seq.groupBy (fst >> Path.GetFullPathSafe)
-                                |> Seq.map (fun (fileName, symbolUses) -> fileName, Seq.map snd symbolUses |> Seq.toList)
-                                |> Seq.toList)
-                    match usages with
-                    | Some (_, currentName, references) ->
-                        reportProgress progress (Reporting("Performing Rename ..."))
-                        return rename currentName symbol.Kind name references
-                    | None -> 
-                        return ()
-                }
+                report "Performing Rename ..."
+                rename lastIdent symbol.Kind name usages
+            } |> Async.map ignore
 
-            let hostWnd = Window.GetWindow(view.VisualElement)
-            let viewmodel = RenameDialogViewModel (cw.GetText(), symbol, initializationWorkflow, renameWorkflow, cts)
-            let wnd = UI.loadRenameDialog viewmodel hostWnd                        
-            x.ShowDialog wnd |> ignore
-        | _ -> ()
+        Window.GetWindow view.VisualElement
+        |> UI.loadRenameDialog (RenameDialogViewModel (cw.GetText(), symbol, initializationWorkflow, renameWorkflow, cts))
+        |> x.ShowDialog 
+        |> ignore 
+    }
 
-    member x.ShowDialog (wnd: Window) =
+    member __.ShowDialog (wnd: Window) =
         let vsShell = serviceProvider.GetService<IVsUIShell, SVsUIShell>()
         try
             if ErrorHandler.Failed(vsShell.EnableModeless(0)) then
                 Some false
-            else
-                wnd.ShowDialog() |> Option.ofNullable
+            else wnd.ShowDialog() |> Option.ofNullable
         finally
             vsShell.EnableModeless(1) |> ignore
 
@@ -156,12 +141,12 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
     member val NextTarget: IOleCommandTarget = null with get, set
 
     interface IOleCommandTarget with
-        member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
+        member x.Exec (pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) =
             if (pguidCmdGroup = Constants.guidStandardCmdSet && nCmdId = Constants.cmdidStandardRenameCommand) && canRename() then
-                x.HandleRename()
+                x.HandleRename() |> ignore
             x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
-        member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
+        member x.QueryStatus (pguidCmdGroup, cCmds, prgCmds, pCmdText) =
             if pguidCmdGroup = Constants.guidStandardCmdSet && 
                 prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdidStandardRenameCommand) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)

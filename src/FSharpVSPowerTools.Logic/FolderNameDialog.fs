@@ -4,30 +4,32 @@ open FSharpVSPowerTools
 open FSharp.ViewModule
 open FSharp.ViewModule.Validation
 
-type NewFolderNameDialog = FsXaml.XAML<"FolderNameDialog.xaml">
+type NewFolderNameDialog = FsXaml.XAML< "FolderNameDialog.xaml" >
 
 [<NoEquality; NoComparison>]
-type NewFolderNameDialogResources =
-    { WindowTitle : string
-      FolderNames : Set<string>
-      OriginalName : string }
+type NewFolderNameDialogResources = 
+    { WindowTitle: string
+      FolderNames: Set<string>
+      OriginalName: string }
 
-type NewFolderNameDialogModel(resources :NewFolderNameDialogResources) as self =
+type NewFolderNameDialogModel(resources: NewFolderNameDialogResources) as self = 
     inherit ViewModelBase()
-
-    let validateExists (folderName : string) =
+    
+    let validateExists (folderName: string) = 
         match folderName.Trim() with
-            | a when resources.FolderNames.Contains(a) -> Some Resource.validationFolderWithGivenNameAlreadyExists
-            | _ -> None
-
+        | a when resources.FolderNames.Contains(a) -> Some Resource.validationFolderWithGivenNameAlreadyExists
+        | _ -> None
+    
     let validateName = 
-        validate "Name" 
-            >> notNullOrWhitespace 
-            >> fixErrorsWithMessage Resource.validatingEmptyName
-            >> custom validateExists
-            >> result
-
+        validate "Name"
+        >> notNullOrWhitespace
+        >> fixErrorsWithMessage Resource.validatingEmptyName
+        >> custom validateExists
+        >> result
+    
     let name = self.Factory.Backing(<@@ self.Name @@>, resources.OriginalName, validateName)
-
-    member x.WindowTitle = resources.WindowTitle
-    member x.Name with get() = name.Value and set(v) = name.Value <- v
+    member __.WindowTitle = resources.WindowTitle
+    
+    member __.Name 
+        with get () = name.Value
+        and set (v) = name.Value <- v
