@@ -65,7 +65,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let rec getFolderNamesFromItems (items: ProjectItems) = 
         seq { 
             for item in items do
-                if VSUtils.isPhysicalFolder item then 
+                if isPhysicalFolder item then 
                     yield item.Name
                     yield! getFolderNamesFromItems item.ProjectItems
         }
@@ -74,7 +74,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     
     let rec getFoldersFromItems (items: ProjectItems) = 
         [ for item in items do
-              if VSUtils.isPhysicalFolder item then 
+              if isPhysicalFolder item then 
                   yield { Name = item.Name
                           FullPath = item.Object?Url
                           IsProject = false
@@ -89,7 +89,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let rec getFolderItems (items: ProjectItems) = 
         seq { 
             for item in items do
-                if VSUtils.isPhysicalFolder item then 
+                if isPhysicalFolder item then 
                     yield item
                     yield! getFolderItems item.ProjectItems
         }
@@ -98,14 +98,14 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         getFolderItems project.ProjectItems |> Seq.tryFind (fun i -> i.Name = name)
     
     let getActionInfo() = 
-        let items = VSUtils.getSelectedFromSolutionExplorer<ProjectItem> dte
-        let projects = VSUtils.getSelectedFromSolutionExplorer<Project> dte
+        let items = getSelectedFromSolutionExplorer<ProjectItem> dte
+        let projects = getSelectedFromSolutionExplorer<Project> dte
         match items, projects with
         | [], [ project ] -> Some { Items = []; Project = project }
         | [ item ], [] -> Some { Items = [ item ]; Project = item.ContainingProject }
         | _ :: _, [] -> 
             items
-            |> List.toSeq
+            |> List.toSeq 
             |> Seq.map (fun i -> i.ContainingProject)
             |> Seq.distinctBy (fun p -> p.FullName)
             |> Seq.toList
@@ -338,10 +338,10 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let isVerticalMoveCommandEnabled info action = 
         match info.Items with
         | [ item ] -> 
-            if not (VSUtils.isPhysicalFolder item) then false
+            if not (isPhysicalFolder item) then false
             else 
                 let checkItem item = 
-                    item <> null && VSUtils.isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString ("B"))
+                    item <> null && isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString ("B"))
                 match action with
                 | VerticalMoveAction.MoveUp -> checkItem item?Node?PreviousSibling
                 | VerticalMoveAction.MoveDown -> checkItem item?Node?NextSibling
@@ -349,7 +349,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     
     let isNameCommandEnabled info action = 
         match info.Items with
-        | [ item ] -> VSUtils.isPhysicalFolder item
+        | [ item ] -> isPhysicalFolder item
         | [] -> action = NameAction.New
         | _ -> false
     
@@ -357,14 +357,14 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         match info.Items with
         | [] -> false
         | _ -> 
-            let filesOnly = info.Items |> List.forall VSUtils.isPhysicalFile
+            let filesOnly = info.Items |> List.forall isPhysicalFile
             let distinctByName = info.Items |> Seq.distinctBy (fun i -> i.Name)
             filesOnly && (Seq.length distinctByName = List.length info.Items)
     
     let isCommandEnabled (actionInfo: ActionInfo option) (action: Action) = 
         match actionInfo with
         | Some info -> 
-            if VSUtils.isFSharpProject info.Project then 
+            if isFSharpProject info.Project then 
                 match action with
                 | Action.NameAction a -> isNameCommandEnabled info a
                 | Action.VerticalMoveAction a -> isVerticalMoveCommandEnabled info a

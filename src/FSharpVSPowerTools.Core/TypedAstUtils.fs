@@ -108,7 +108,7 @@ module TypedAstExtensionHelpers =
         member x.TryGetEntities() = try x.Entities :> _ seq with _ -> Seq.empty
 
 [<AutoOpen>]
-module internal TypedAstPatterns =
+module TypedAstPatterns =
     let (|AbbreviatedType|_|) (entity: FSharpEntity) =
         if entity.IsFSharpAbbreviation then Some entity.AbbreviatedType
         else None

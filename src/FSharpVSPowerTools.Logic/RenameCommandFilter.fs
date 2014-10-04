@@ -20,7 +20,7 @@ type private DocumentState =
       Project: IProjectProvider }
 
 type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
-                                 projectFactory: ProjectFactory) =
+                         projectFactory: ProjectFactory) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
 
@@ -76,7 +76,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
         use cts = new System.Threading.CancellationTokenSource()
         let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
         // This is the workflow used to initialize the rename operation.  It should return the appropriate scope and symbols on success, and cancel on failure
-        let initializationWorkflow = 
+        let initialContext = 
             asyncMaybe {
                 let! fsSymbolUse, fileScopedCheckResults = 
                     // We pass AllowStaleResults.No here because we really need a 100% accurate symbol w.r.t. all prior files,
@@ -88,8 +88,11 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
 
                 return! liftMaybe <|
                     match symbolDeclarationLocation with
-                    | Some scope ->
-                        Some (fileScopedCheckResults, scope, fsSymbolUse.Symbol)
+                    | Some location ->
+                        Some { Symbol = symbol
+                               FSharpSymbol = fsSymbolUse.Symbol
+                               SymbolDeclarationLocation = location
+                               ParseAndCheckResults = fileScopedCheckResults }
                     | _ -> 
                         cts.Cancel()
                         Logging.messageBoxError Resource.renameErrorMessage
@@ -97,19 +100,19 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             } 
          
         // This is the actual async workflow used to rename.  It should report progress as possible
-        let renameWorkflow parseAndCheckResults symbolLocation name (prg : OperationState -> unit) = 
-            let report msg = reportProgress (Some prg) (Reporting msg)
+        let rename context name (ShowProgress showProgress) = 
+            let report msg = reportProgress (Some showProgress) (Reporting msg)
             asyncMaybe {
                 let! _, lastIdent, symbolUses =
-                    match symbolLocation with
+                    match context.SymbolDeclarationLocation with
                     | SymbolDeclarationLocation.File -> 
                         report "Renaming symbols in file..."
-                        vsLanguageService.FindUsagesInFile (cw, symbol, parseAndCheckResults)
+                        vsLanguageService.FindUsagesInFile (cw, symbol, context.ParseAndCheckResults)
                     | SymbolDeclarationLocation.Projects declarationProjects -> 
                         report "Performing Rename in projects..."
                         let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
                         report (sprintf "Performing Rename in %d projects..." dependentProjects.Length)
-                        vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, prg)
+                        vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, showProgress)
                 
                 let usages =
                     symbolUses 
@@ -123,7 +126,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             } |> Async.map ignore
 
         Window.GetWindow view.VisualElement
-        |> UI.loadRenameDialog (RenameDialogViewModel (cw.GetText(), symbol, initializationWorkflow, renameWorkflow, cts))
+        |> UI.loadRenameDialog (RenameDialogViewModel (cw.GetText(), initialContext, rename, cts))
         |> x.ShowDialog 
         |> ignore 
     }
