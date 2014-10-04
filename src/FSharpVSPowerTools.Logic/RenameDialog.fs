@@ -20,8 +20,6 @@ type RenameContext =
       FSharpSymbol: FSharpSymbol 
       Symbol: Symbol }
 
-[<NoComparison; NoEquality>]
-type ShowProgress = ShowProgress of (OperationState -> unit)
 type SymbolName = string
 
 type RenameDialogViewModel(originalName: string, initialContext: Async<RenameContext option>, 
@@ -87,7 +85,7 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
             // If the user just accepts with the original name, just make this a no-op instead of an error
             if not (newName = originalName) then 
                 match context with
-                | Some ctx -> do! rename ctx newName (ShowProgress report.Value)
+                | Some ctx -> do! rename ctx newName report.Value
                 | _ -> ()
             renameComplete.Value <- true
             waitCursor.Restore()

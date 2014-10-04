@@ -100,7 +100,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             } 
          
         // This is the actual async workflow used to rename.  It should report progress as possible
-        let rename context name (ShowProgress showProgress) = 
+        let rename context name (showProgress: ShowProgress) = 
             let report msg = reportProgress (Some showProgress) (Reporting msg)
             asyncMaybe {
                 let! _, lastIdent, symbolUses =

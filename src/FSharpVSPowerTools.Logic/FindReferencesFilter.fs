@@ -13,7 +13,7 @@ open FSharp.ViewModule.Progress
 
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory) =
-    let getDocumentState (progress : OperationState -> unit) =
+    let getDocumentState (progress: ShowProgress) =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItems = maybe {

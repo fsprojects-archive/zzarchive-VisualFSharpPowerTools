@@ -81,27 +81,27 @@ type StatusHandler(serviceProvider: IServiceProvider, statusIcon: StatusIcon, ov
             // Handle idle calls
             | OperationState.Idle, OperationState.Idle -> () // Do nothing if we're changing from idle to idle
             // Change from executing -> Other
-            | OperationState.Executing(_,_,_), OperationState.Idle ->
+            | OperationState.Executing _, OperationState.Idle ->
                 stopAnimation()
                 stopProgress()
                 clearStatus()
                 clearWaitCursor()            
-            | OperationState.Executing(_,_,_), OperationState.Executing(status, current, total) ->
+            | OperationState.Executing _, OperationState.Executing(status, current, total) ->
                 // Stop the progress
                 setProgress status current total
                 setStatus status
-            | OperationState.Executing(_,_,_), OperationState.Reporting(status) ->
+            | OperationState.Executing _, OperationState.Reporting(status) ->
                 // Stop the progress
                 stopProgress()
                 setStatus status
             // Change from Reporting -> other
-            | OperationState.Reporting(_), OperationState.Reporting(status) ->
+            | OperationState.Reporting _, OperationState.Reporting(status) ->
                 setStatus status
-            | OperationState.Reporting(_), OperationState.Idle ->
+            | OperationState.Reporting _, OperationState.Idle ->
                 stopAnimation()
                 clearStatus()
                 clearWaitCursor()
-            | OperationState.Reporting(_), OperationState.Executing(status, current, total) ->            
+            | OperationState.Reporting _, OperationState.Executing(status, current, total) ->            
                 setStatus status
                 setProgress status current total
             // Change from Idle -> other
@@ -121,10 +121,10 @@ type StatusHandler(serviceProvider: IServiceProvider, statusIcon: StatusIcon, ov
             report(OperationState.Idle) // Set us to an idle state to cleanup
 
     /// Provides a function which matches the required syntax to use FSharp.ViewModule.Progress reporting
-    member x.Report = report
+    member __.Report = report
 
     interface IDisposable with
-        member x.Dispose() = cleanup()
+        member __.Dispose() = cleanup()
 
 [<RequireQualifiedAccess>]
 module Status =
