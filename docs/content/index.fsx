@@ -31,6 +31,7 @@ Here are currently supported features:
  * [Record stub generation](recordstubgeneration.html)
  * [Union pattern match case generation](unionpatternmatchcasegeneration.html)
  * [Resolve unopened namespaces and modules](resolveunopenednamespaces.html)
+ * [Go to metadata](gotometadata.html)
   
 Contributing and copyright
 --------------------------
