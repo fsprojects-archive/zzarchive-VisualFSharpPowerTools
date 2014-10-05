@@ -1,3 +1,5 @@
+#### 1.6.0 - Unreleased
+
 #### 1.5.0 - October 2 2014
 * Support more complex scenarios in VS unit tests
 * Fix various issues with union case generation

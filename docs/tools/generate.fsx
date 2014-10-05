@@ -92,7 +92,8 @@ let buildDocumentation () =
     Literate.ProcessDirectory
       ( dir, docTemplate, output @@ sub, replacements = ("root", docRoot)::info,
         lineNumbers = false,
-        layoutRoots = layoutRoots )
+        layoutRoots = layoutRoots,
+        generateAnchors = true )
 
 // Generate
 copyFiles()
