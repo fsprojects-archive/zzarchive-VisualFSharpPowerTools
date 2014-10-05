@@ -58,17 +58,14 @@ type FSharpProjectSystemService [<ImportingConstructor>] (dte: DTE) =
              with _ -> raise (AssemblyMissingException "FSharp.ProjectSystem.FSharp")
     
     let MSBuildUtilitiesType = lazy asm.Value.GetType("Microsoft.VisualStudio.FSharp.ProjectSystem.MSBuildUtilities")
-    member x.MoveFolderDown item next project: unit = MSBuildUtilitiesType.Value?MoveFolderDown (item, next, project)
-    member x.MoveFolderUp item next project: unit = MSBuildUtilitiesType.Value?MoveFolderUp (item, next, project)
+    member __.MoveFolderDown item next project: unit = MSBuildUtilitiesType.Value?MoveFolderDown (item, next, project)
+    member __.MoveFolderUp item next project: unit = MSBuildUtilitiesType.Value?MoveFolderUp (item, next, project)
 
 type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell) = 
-    let getSelectedItems() = VSUtils.getSelectedItemsFromSolutionExplorer dte |> Seq.toList
-    let getSelectedProjects() = VSUtils.getSelectedProjectsFromSolutionExplorer dte |> Seq.toList
-    
     let rec getFolderNamesFromItems (items: ProjectItems) = 
         seq { 
             for item in items do
-                if VSUtils.isPhysicalFolder item then 
+                if isPhysicalFolder item then 
                     yield item.Name
                     yield! getFolderNamesFromItems item.ProjectItems
         }
@@ -77,7 +74,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     
     let rec getFoldersFromItems (items: ProjectItems) = 
         [ for item in items do
-              if VSUtils.isPhysicalFolder item then 
+              if isPhysicalFolder item then 
                   yield { Name = item.Name
                           FullPath = item.Object?Url
                           IsProject = false
@@ -92,7 +89,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let rec getFolderItems (items: ProjectItems) = 
         seq { 
             for item in items do
-                if VSUtils.isPhysicalFolder item then 
+                if isPhysicalFolder item then 
                     yield item
                     yield! getFolderItems item.ProjectItems
         }
@@ -101,27 +98,20 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         getFolderItems project.ProjectItems |> Seq.tryFind (fun i -> i.Name = name)
     
     let getActionInfo() = 
-        let items = getSelectedItems()
-        let projects = getSelectedProjects()
+        let items = getSelectedFromSolutionExplorer<ProjectItem> dte
+        let projects = getSelectedFromSolutionExplorer<Project> dte
         match items, projects with
-        | [], [ project ] -> 
-            Some { Items = []
-                   Project = project }
-        | [ item ], [] -> 
-            Some { Items = [ item ]
-                   Project = item.ContainingProject }
+        | [], [ project ] -> Some { Items = []; Project = project }
+        | [ item ], [] -> Some { Items = [ item ]; Project = item.ContainingProject }
         | _ :: _, [] -> 
-            let projects = 
-                items
-                |> List.toSeq
-                |> Seq.map (fun i -> i.ContainingProject)
-                |> Seq.distinctBy (fun p -> p.FullName)
-                |> Seq.toList
-            match projects with
-            | [ project ] -> 
-                Some { Items = items
-                       Project = project } // items from the same project
-            | _ -> None // items from different projects
+            items
+            |> List.toSeq 
+            |> Seq.map (fun i -> i.ContainingProject)
+            |> Seq.distinctBy (fun p -> p.FullName)
+            |> Seq.toList
+            |> function 
+               | [ project ] -> Some { Items = items; Project = project } // items from the same project
+               | _ -> None // items from different projects
         | _, _ -> None
     
     let getNextItemImpl node parent = 
@@ -348,10 +338,10 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let isVerticalMoveCommandEnabled info action = 
         match info.Items with
         | [ item ] -> 
-            if not (VSUtils.isPhysicalFolder item) then false
+            if not (isPhysicalFolder item) then false
             else 
                 let checkItem item = 
-                    item <> null && VSUtils.isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString ("B"))
+                    item <> null && isPhysicalFileOrFolderKind (item?ItemTypeGuid?ToString ("B"))
                 match action with
                 | VerticalMoveAction.MoveUp -> checkItem item?Node?PreviousSibling
                 | VerticalMoveAction.MoveDown -> checkItem item?Node?NextSibling
@@ -359,7 +349,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     
     let isNameCommandEnabled info action = 
         match info.Items with
-        | [ item ] -> VSUtils.isPhysicalFolder item
+        | [ item ] -> isPhysicalFolder item
         | [] -> action = NameAction.New
         | _ -> false
     
@@ -367,14 +357,14 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         match info.Items with
         | [] -> false
         | _ -> 
-            let filesOnly = info.Items |> List.forall (fun i -> VSUtils.isPhysicalFile i)
+            let filesOnly = info.Items |> List.forall isPhysicalFile
             let distinctByName = info.Items |> Seq.distinctBy (fun i -> i.Name)
             filesOnly && (Seq.length distinctByName = List.length info.Items)
     
     let isCommandEnabled (actionInfo: ActionInfo option) (action: Action) = 
         match actionInfo with
         | Some info -> 
-            if VSUtils.isFSharpProject info.Project then 
+            if isFSharpProject info.Project then 
                 match action with
                 | Action.NameAction a -> isNameCommandEnabled info a
                 | Action.VerticalMoveAction a -> isVerticalMoveCommandEnabled info a
@@ -383,16 +373,16 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         | None -> false
     
     let setupCommand guid id action = 
-        let command = new CommandID(guid, id)
-        let menuCommand = new OleMenuCommand((fun s e -> executeCommand action), command)
-        menuCommand.BeforeQueryStatus.AddHandler
-            (fun s e -> (s :?> OleMenuCommand).Enabled <- (isCommandEnabled (getActionInfo()) action))
-        mcs.AddCommand(menuCommand)
+        let id = CommandID(guid, id)
+        let command = OleMenuCommand((fun _ _ -> executeCommand action), id)
+        command.BeforeQueryStatus.AddHandler
+            (fun s _ -> (s :?> OleMenuCommand).Enabled <- (isCommandEnabled (getActionInfo()) action))
+        mcs.AddCommand command
     
     let setupNewFolderCommand = setupCommand Constants.guidNewFolderCmdSet
     let setupMoveCommand = setupCommand Constants.guidMoveCmdSet
 
-    member x.SetupCommands() = 
+    member __.SetupCommands() = 
         setupNewFolderCommand Constants.cmdNewFolder (NameAction NameAction.New)
         setupNewFolderCommand Constants.cmdRenameFolder (NameAction NameAction.Rename)
         setupMoveCommand Constants.cmdMoveFolderUp (VerticalMoveAction VerticalMoveAction.MoveUp)
@@ -400,7 +390,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         setupMoveCommand Constants.cmdMoveToFolder Action.MoveToFolder
 
     interface IOleCommandTarget with
-        member x.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
+        member __.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
             if pguidCmdGroup = Constants.guidSolutionExplorerCmdSet &&
                 prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.fsPowerToolsSubMenuGroup) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
@@ -430,6 +420,6 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             else
                 int Constants.OLECMDERR_E_UNKNOWNGROUP
         
-        member x.Exec(_pguidCmdGroup: byref<Guid>, _nCmdID: uint32, _nCmdexecopt: uint32, _pvaIn: IntPtr, _pvaOut: IntPtr): int = 
+        member __.Exec(_pguidCmdGroup: byref<Guid>, _nCmdID: uint32, _nCmdexecopt: uint32, _pvaIn: IntPtr, _pvaOut: IntPtr): int = 
             // We should not return OK here because it would short-circuit the command chain
             int Constants.OLECMDERR_E_UNKNOWNGROUP

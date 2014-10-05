@@ -31,6 +31,9 @@ and IProjectProvider =
     abstract GetAllReferencedProjectFileNames: unit -> string list
     abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
 
+[<NoComparison; NoEquality>]
+type ShowProgress = OperationState -> unit
+
 [<Export>]
 type VSLanguageService
     [<ImportingConstructor>] 
@@ -113,7 +116,7 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress : OperationState -> unit) =
+    member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
         async {
             try                 
                 let (_, _, endLine, endCol) = word.ToRange()

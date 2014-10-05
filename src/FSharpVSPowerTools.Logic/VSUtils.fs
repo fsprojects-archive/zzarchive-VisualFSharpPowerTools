@@ -209,19 +209,14 @@ let inline ensureSucceeded hr =
     ErrorHandler.ThrowOnFailure hr
     |> ignore
 
-let private getSelectedFromSolutionExplorer<'T> (dte: EnvDTE80.DTE2) =
+let getSelectedFromSolutionExplorer<'T> (dte: EnvDTE80.DTE2) =
     Option.attempt (fun _ -> dte.ToolWindows.SolutionExplorer)
     |> function Some x -> x.SelectedItems :?> UIHierarchyItem[] | None -> [||]
     |> Seq.choose (fun x ->
          match x.Object with
          | :? 'T as p -> Some p
          | _ -> None)
-
-let getSelectedItemsFromSolutionExplorer dte =
-    getSelectedFromSolutionExplorer<ProjectItem> dte
-
-let getSelectedProjectsFromSolutionExplorer dte =
-    getSelectedFromSolutionExplorer<Project> dte
+    |> Seq.toList
 
 open System.Threading
 open System.Windows.Threading

@@ -19,27 +19,30 @@ type MoveToFolderDialogResources =
 
 type MoveToFolderDialogModel(resources: MoveToFolderDialogResources) as self = 
     inherit ViewModelBase()
-
-    let folderSelectedAndExists newFolder =
+    
+    let folderSelectedAndExists newFolder = 
         match newFolder with
-            | None -> Some Resource.validatingEmptyName
-            | Some f ->
-                match f.Name with
-                    | n when System.String.IsNullOrEmpty(n) -> Some Resource.validatingEmptyName
-                    | _ -> resources.FileNames
-                            |> List.map (fun fn -> Path.Combine(f.FullPath, fn))
-                            |> List.filter File.Exists
-                            |> function
-                               | [] -> None
-                               | files -> Some (files |> List.reduce (fun acc fn -> acc + (sprintf "File %s already exists.\n" fn)))
-
-    let originalFolder : Folder option = None
+        | None -> Some Resource.validatingEmptyName
+        | Some folder -> 
+            match folder.Name with
+            | n when System.String.IsNullOrEmpty(n) -> Some Resource.validatingEmptyName
+            | _ -> 
+                resources.FileNames
+                |> List.map (fun fn -> Path.Combine(folder.FullPath, fn))
+                |> List.filter File.Exists
+                |> function 
+                   | [] -> None
+                   | files -> Some (files |> List.reduce (fun acc fn -> acc + (sprintf "File %s already exists.\n" fn)))
+    
+    let originalFolder: Folder option = None
     let folder = self.Factory.Backing(<@@ self.SelectedFolder @@>, originalFolder, custom folderSelectedAndExists)
     
-    member x.WindowTitle = 
+    member __.WindowTitle = 
         let fileCount = List.length resources.FileNames
         sprintf "%s - Move %d item%s" Resource.vsPackageTitle fileCount (if fileCount = 1 then "" else "s")
     
-    member x.Root = resources.Root
+    member __.Root = resources.Root
     
-    member x.SelectedFolder with get() = folder.Value and set (v) = folder.Value <- v
+    member __.SelectedFolder 
+        with get () = folder.Value
+        and set (v) = folder.Value <- v
