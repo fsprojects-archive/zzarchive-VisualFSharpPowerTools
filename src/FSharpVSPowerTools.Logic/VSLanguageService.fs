@@ -17,7 +17,8 @@ type FilePath = string
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
     | File
-    | Projects of IProjectProvider list // Source file where a symbol is declared may be included into several projects
+    /// The case where the declared symbol may be included into several projects
+    | Projects of IProjectProvider list 
 
 and IProjectProvider =
     abstract IsForStandaloneScript: bool
@@ -30,6 +31,9 @@ and IProjectProvider =
     abstract GetAllReferencedProjectFileNames: unit -> string list
     abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
 
+[<NoComparison; NoEquality>]
+type ShowProgress = OperationState -> unit
+
 [<Export>]
 type VSLanguageService
     [<ImportingConstructor>] 
@@ -40,20 +44,16 @@ type VSLanguageService
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-    let recoverAfterFailure _e =
+    let mutable userNotified = false
+
+    let suggestRecoveryAfterFailure _ =
+        if not userNotified then
+            userNotified <- true
+            Logging.messageBoxError Resource.languageServiceErrorMessage
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-        try
-            statusBar.SetText("Trying to recover from internal errors...") |> ignore 
-            // Try to clean obsolete binaries. We can't be sure that this command is executed successfully.
-            dte.Solution.SolutionBuild.Clean(WaitForCleanToFinish=true)
-            instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
-            statusBar.SetText("Error recovery completed.") |> ignore
-        with e ->
-            statusBar.SetText(sprintf "Error recovery failed with '%O'." e) |> ignore 
-            
-    
-    do instance.SetCriticalErrorHandler(recoverAfterFailure)
+        statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
+                
+    do instance.SetCriticalErrorHandler(suggestRecoveryAfterFailure)
 
     let mutable skipLexCache = false
 
@@ -116,7 +116,7 @@ type VSLanguageService
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
-    member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress : OperationState -> unit) =
+    member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
         async {
             try                 
                 let (_, _, endLine, endCol) = word.ToRange()

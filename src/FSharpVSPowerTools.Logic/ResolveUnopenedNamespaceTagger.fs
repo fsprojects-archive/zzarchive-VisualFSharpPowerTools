@@ -76,13 +76,13 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let entities =
                                     entities |> List.filter (fun e ->
                                         match entityKind, e.Kind with
-                                        | Attribute, Attribute 
-                                        | Type, (Type | Attribute)
-                                        | FunctionOrValue _, _ -> true 
-                                        | Attribute, _
-                                        | _, Module _
-                                        | Module _, _
-                                        | Type, _ -> false)
+                                        | EntityKind.Attribute, EntityKind.Attribute 
+                                        | EntityKind.Type, (EntityKind.Type | EntityKind.Attribute)
+                                        | EntityKind.FunctionOrValue _, _ -> true 
+                                        | EntityKind.Attribute, _
+                                        | _, EntityKind.Module _
+                                        | EntityKind.Module _, _
+                                        | EntityKind.Type, _ -> false)
 
                                 let entities = 
                                     entities

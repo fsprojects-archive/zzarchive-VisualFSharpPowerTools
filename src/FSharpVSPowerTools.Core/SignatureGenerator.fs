@@ -10,13 +10,15 @@ open Microsoft.FSharp.Compiler.Lexhelp.Keywords
 open System.IO
 open System.Text.RegularExpressions
 
-[<NoComparison>]
-type internal Context = {
-    Writer: ColumnIndentedTextWriter
-    Indentation: int
-    DisplayContext: FSharpDisplayContext
-    OpenDeclarations: string list
-}
+[<NoComparison; NoEquality>]
+type internal Context = 
+    {
+        Writer: ColumnIndentedTextWriter
+        Indentation: int
+        DisplayContext: FSharpDisplayContext
+        OpenDeclarations: string list
+        GetXmlDocBySignature: string -> string list
+    }
 
 let private hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
     mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0
@@ -38,13 +40,13 @@ let private needsInlineAnnotation (mem: FSharpMemberFunctionOrValue) =
     | _ -> false
 
 [<NoComparison>]
-type private MembersPartition = {
-    Constructors: FSharpMemberFunctionOrValue[]
-    AbstractMembers: FSharpMemberFunctionOrValue[]
-    ConcreteInstanceMembers: FSharpMemberFunctionOrValue[]
-    StaticMembers: FSharpMemberFunctionOrValue[]
-}
-with
+type private MembersPartition = 
+    {
+        Constructors: FSharpMemberFunctionOrValue[]
+        AbstractMembers: FSharpMemberFunctionOrValue[]
+        ConcreteInstanceMembers: FSharpMemberFunctionOrValue[]
+        StaticMembers: FSharpMemberFunctionOrValue[]
+    }
     static member Create(members: seq<FSharpMemberFunctionOrValue>) =
         // NOTE: If we want to handle EventHandler<'T> types, we can test
         //       match mem.ReturnParameter.Type with
@@ -93,6 +95,32 @@ with
 
         res
 
+/// Work around an FCS bug where:
+///  'List<'T>.Enumerator' is formatted as 'List`1.Enumerator<'T>'
+///  'Dictionary<'TKey,'TValue>.Enumerator' is formatted as 'Dictionary`2.Enumerator<'TKey,'TValue>'
+let private formatType ctx (typ: FSharpType) =
+        let definition = typ.Format(ctx.DisplayContext)
+        if definition.Contains("`") && not (definition.Contains("``")) then
+            match definition.LastIndexOf("<") with            
+            | i when i >= 0 && i < definition.Length ->
+                let typeParams = definition.[i..]
+                let arity = (typeParams |> Seq.filter ((=) ',') |> Seq.length) + 1
+                // This type is potentially a nested type; we use the fully qualified form to bypass compiler errors.
+                let fullyQualifiedDefinition = typ.Format(FSharpDisplayContext.Empty)
+                Debug.Assert(fullyQualifiedDefinition.EndsWith(definition), 
+                    sprintf "Fully qualified identifier '%s' should be consistent with the short identifier '%s'." fullyQualifiedDefinition definition)
+                match fullyQualifiedDefinition.LastIndexOf("<") with            
+                | j when j >= 0 && j < fullyQualifiedDefinition.Length ->
+                    fullyQualifiedDefinition.[0..j-1].Replace(sprintf "`%i" arity, typeParams)
+                | _ -> definition
+            | _ -> definition
+        elif definition.Contains("'?") || definition.Contains("^?") then
+            // This type consists of uninstantiated type variables.
+            // Ideally this should be amended upstream.
+            // Text replacement will not work for corner cases but we digress.
+            definition.Replace("'?", "'T").Replace("^?", "^T")    
+        else definition
+
 let private isStaticallyResolved (param: FSharpGenericParameter) =
     param.Constraints
     |> Seq.exists (fun c -> c.IsMemberConstraint)
@@ -105,8 +133,9 @@ let private formatValueOrMemberName name =
         newName
 
 let private formatGenericParam (param: FSharpGenericParameter) =
-    if isStaticallyResolved param then "^" + param.Name
-    else "'" + param.Name
+    let escapedName = param.Name.Replace("?", "T")
+    if isStaticallyResolved param then "^" + escapedName
+    else "'" + escapedName
 
 let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstraint) =
     let hasPropertyShape =
@@ -127,7 +156,7 @@ let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstrain
         yield " : "
         
         if isProperty then
-            yield (c.MemberReturnType.Format(ctx))
+            yield (formatType ctx c.MemberReturnType)
         else
             if c.MemberArgumentTypes.Count <= 1
             then yield "unit"
@@ -135,14 +164,14 @@ let private formatMemberConstraint ctx (c: FSharpGenericParameterMemberConstrain
                 let startIdx = if c.MemberIsStatic then 0 else 1
                 yield
                     [| for i in startIdx .. c.MemberArgumentTypes.Count - 1 ->
-                        c.MemberArgumentTypes.[i].Format(ctx) |]
+                        formatType ctx c.MemberArgumentTypes.[i] |]
                     |> String.concat " * "
-            yield sprintf " -> %s" (c.MemberReturnType.Format(ctx))
+            yield sprintf " -> %s" (formatType ctx c.MemberReturnType)
         yield ")"
     |]
     |> String.concat ""
 
-let private getConstraints (ctx: FSharpDisplayContext) (genParams: IList<FSharpGenericParameter>) =
+let private getConstraints ctx (genParams: IList<FSharpGenericParameter>) =
     let supportedConstraints =
         [|
             for param in genParams do
@@ -154,7 +183,7 @@ let private getConstraints (ctx: FSharpDisplayContext) (genParams: IList<FSharpG
                     elif c.IsRequiresDefaultConstructorConstraint then
                         yield sprintf "%s : (new : unit -> %s)" paramName paramName
                     elif c.IsCoercesToConstraint then
-                        yield sprintf "%s :> %s" paramName (c.CoercesToTarget.Format(ctx))
+                        yield sprintf "%s :> %s" paramName (formatType ctx c.CoercesToTarget)
                     elif c.IsNonNullableValueTypeConstraint then
                         yield sprintf "%s : struct" paramName
                     elif c.IsReferenceTypeConstraint then
@@ -166,12 +195,12 @@ let private getConstraints (ctx: FSharpDisplayContext) (genParams: IList<FSharpG
                     elif c.IsUnmanagedConstraint then
                         yield sprintf "%s : unmanaged" paramName
                     elif c.IsEnumConstraint then
-                        yield sprintf "%s : enum<%s>" paramName (c.EnumConstraintTarget.Format(ctx))
+                        yield sprintf "%s : enum<%s>" paramName (formatType ctx c.EnumConstraintTarget)
                     elif c.IsDelegateConstraint then
                         yield sprintf "%s : delegate<%s, %s>"
                                 paramName
-                                (c.DelegateConstraintData.DelegateTupledArgumentType.Format(ctx))
-                                (c.DelegateConstraintData.DelegateReturnType.Format(ctx))
+                                (formatType ctx c.DelegateConstraintData.DelegateTupledArgumentType)
+                                (formatType ctx c.DelegateConstraintData.DelegateReturnType)
                     elif c.IsMemberConstraint then
                         yield sprintf "%s : %s" paramName (formatMemberConstraint ctx c.MemberConstraintData)
         |]
@@ -199,7 +228,7 @@ let private getTypeNameWithGenericParams ctx (typ: FSharpEntity) isInTypeName =
                 |> String.concat ", "
             yield genericParamsRepr
             if isInTypeName then
-                yield getConstraints ctx.DisplayContext typ.GenericParameters
+                yield getConstraints ctx typ.GenericParameters
             yield ">"
     |]
     |> String.concat ""
@@ -207,7 +236,7 @@ let private getTypeNameWithGenericParams ctx (typ: FSharpEntity) isInTypeName =
 let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
     let generateInputParamsPart (mem: FSharpMemberFunctionOrValue) =
         let formatParamTypeName (param: FSharpParameter) =
-            let formattedTypeName = param.Type.Format(ctx.DisplayContext)
+            let formattedTypeName = formatType ctx param.Type
             if param.IsOptionalArg then
                 let result = formattedTypeName
                 if mem.EnclosingEntity.IsFSharp && result.EndsWith(" option") then
@@ -251,12 +280,18 @@ let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
 
     | Event ->
         let returnParameterType = mem.ReturnParameter.Type
+        // TODO: replace this ugly part by upstream changes in FCS
         let invokeMember = returnParameterType.TypeDefinition.MembersFunctionsAndValues
-                           |> Seq.find (fun m -> m.DisplayName = "Invoke")
-        sprintf "IEvent<%s, %s>" (returnParameterType.Format(ctx.DisplayContext)) (invokeMember.CurriedParameterGroups.[0].[1].Type.Format(ctx.DisplayContext))
+                           |> Seq.tryFind (fun m -> m.DisplayName = "Invoke")        
+        let inferedType = 
+            try
+                formatType ctx invokeMember.Value.CurriedParameterGroups.[0].[1].Type
+            with _ ->
+                "_"
+        sprintf "IEvent<%s, %s>" (formatType ctx returnParameterType) inferedType
 
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
-        let signatureReturnTypePart = mem.ReturnParameter.Type.Format(ctx.DisplayContext)
+        let signatureReturnTypePart = formatType ctx mem.ReturnParameter.Type
 
         if mem.IsProperty then
             signatureReturnTypePart
@@ -306,7 +341,7 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
 
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
-    writeDocs ctx modul.XmlDoc
+    writeDocs ctx modul.XmlDoc (fun _ -> modul.XmlDocSig)
     writeAttributes ctx (Some modul) modul.Attributes
     if isTopLevel then
         let qualifiedModuleName = tryRemoveModuleSuffix modul modul.FullName
@@ -319,12 +354,15 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
             ctx.Writer.WriteLine("open {0}", decl))          
     else
         ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)
+
     if not isTopLevel then
         ctx.Writer.Indent ctx.Indentation
+    if modul.MembersFunctionsAndValues.Count > 0 then
+        ctx.Writer.WriteLine("")
     for value in modul.MembersFunctionsAndValues do
         writeFunctionOrValue ctx value
 
-    if modul.MembersFunctionsAndValues.Count > 0 && modul.NestedEntities.Count > 0 then
+    if modul.NestedEntities.Count > 0 then
         ctx.Writer.WriteLine("")
 
     for entity in modul.NestedEntities do
@@ -358,7 +396,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
-    writeDocs ctx typ.XmlDoc
+    writeDocs ctx typ.XmlDoc (fun _ -> typ.XmlDocSig)
     writeAttributes ctx (Some typ) typ.Attributes
 
     let neededTypeDefSyntaxDelimiter = tryGetNeededTypeDefSyntaxDelimiter typ
@@ -413,7 +451,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
         match typ.BaseType with
         | Some(TypeWithDefinition(baseTypDef) as baseTyp) when baseTypDef.DisplayName <> "obj" ->
             if not (typ.IsValueType || typ.IsEnum || typ.IsDelegate || typ.IsArrayType) then
-                ctx.Writer.WriteLine("inherit {0}", baseTyp.Format(ctx.DisplayContext))
+                ctx.Writer.WriteLine("inherit {0}", formatType ctx baseTyp)
         | _ -> ()
     with _ -> ()
 
@@ -421,7 +459,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     [
         for inter in typ.DeclaredInterfaces do
             if inter.TypeDefinition <> typ then
-                yield inter, inter.Format(ctx.DisplayContext)
+                yield inter, formatType ctx inter
     ]
     |> List.sortBy (fun (inter, _name) ->
         // Sort by name without the namespace qualifier
@@ -484,10 +522,10 @@ and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity)
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
-    writeDocs ctx abbreviatingType.XmlDoc
+    writeDocs ctx abbreviatingType.XmlDoc (fun _ -> abbreviatingType.XmlDocSig)
     ctx.Writer.WriteLine("type {0} = {1}",
         getTypeNameWithGenericParams ctx abbreviatingType true,
-        abbreviatedType.Format(ctx.DisplayContext))
+        formatType ctx abbreviatedType)
 
 and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
     if not isNestedEntity then
@@ -501,16 +539,16 @@ and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
 
-    writeDocs ctx exn.XmlDoc
+    writeDocs ctx exn.XmlDoc (fun _ -> exn.XmlDocSig)
 
     if exn.FSharpFields.Count > 0 then
         let fields =
             [|
                 for field in exn.FSharpFields ->
                     if field.FieldType.IsFunctionType || field.FieldType.IsTupleType then
-                        sprintf "(%s)" (field.FieldType.Format(ctx.DisplayContext))
+                        sprintf "(%s)" (formatType ctx field.FieldType)
                     else
-                        field.FieldType.Format(ctx.DisplayContext)
+                        formatType ctx field.FieldType
             |]
             |> String.concat " * "
 
@@ -529,7 +567,7 @@ and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
                 ctx.Writer.WriteLine("")
             ctx.Writer.WriteLine("open {0}", decl))
         ctx.Writer.WriteLine("")
-    writeDocs ctx del.XmlDoc
+    writeDocs ctx del.XmlDoc (fun _ -> del.XmlDocSig)
 
     let argsPart =
         [|
@@ -537,24 +575,24 @@ and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
                 match arg with
                 | Some name, typ ->
                     if typ.IsFunctionType || typ.IsTupleType then
-                        yield sprintf "%s:(%s)" name (typ.Format(ctx.DisplayContext))
+                        yield sprintf "%s:(%s)" name (formatType ctx typ)
                     else
-                        yield sprintf "%s:%s" name (typ.Format(ctx.DisplayContext))
+                        yield sprintf "%s:%s" name (formatType ctx typ)
                 | None, typ ->
                     if typ.IsFunctionType || typ.IsTupleType then
-                        yield sprintf "(%s)" (typ.Format(ctx.DisplayContext))
+                        yield sprintf "(%s)" (formatType ctx typ)
                     else
-                        yield sprintf "%s" (typ.Format(ctx.DisplayContext))
+                        yield sprintf "%s" (formatType ctx typ)
         |]
         |> String.concat " * "
 
     ctx.Writer.WriteLine("type {0} =", QuoteIdentifierIfNeeded del.LogicalName)
     ctx.Writer.Indent ctx.Indentation
-    ctx.Writer.WriteLine("delegate of {0} -> {1}", argsPart, del.FSharpDelegateSignature.DelegateReturnType.Format(ctx.DisplayContext))
+    ctx.Writer.WriteLine("delegate of {0} -> {1}", argsPart, formatType ctx del.FSharpDelegateSignature.DelegateReturnType)
     ctx.Writer.Unindent ctx.Indentation
 
 and internal writeUnionCase ctx (case: FSharpUnionCase) =
-    writeDocs ctx case.XmlDoc
+    writeDocs ctx case.XmlDoc (fun _ -> case.XmlDocSig)
 
     if case.Attributes.Count > 0 then
         ctx.Writer.Write("| ")
@@ -601,16 +639,16 @@ and internal writeAttributes ctx (typ: option<FSharpEntity>) (attributes: IList<
                 ctx.Writer.WriteLine(")>]")
 
 and internal writeField hasNewLine ctx (field: FSharpField) =
-    writeDocs ctx field.XmlDoc
+    writeDocs ctx field.XmlDoc (fun _ -> field.XmlDocSig)
     writeAttributes ctx None field.FieldAttributes
     writeAttributes ctx None field.PropertyAttributes
 
     let fieldName = QuoteIdentifierIfNeeded field.Name
 
     if hasNewLine then
-        ctx.Writer.WriteLine("{0}: {1}", fieldName, field.FieldType.Format(ctx.DisplayContext))
+        ctx.Writer.WriteLine("{0}: {1}", fieldName, formatType ctx field.FieldType)
     else
-        ctx.Writer.Write("{0}: {1}", fieldName, field.FieldType.Format(ctx.DisplayContext))
+        ctx.Writer.Write("{0}: {1}", fieldName, formatType ctx field.FieldType)
 
 and internal writeEnumValue ctx (field: FSharpField) =
     // NOTE: for enum values, the compiler generates a "value__" field which 
@@ -618,48 +656,52 @@ and internal writeEnumValue ctx (field: FSharpField) =
     if not field.IsCompilerGenerated then
         match field.LiteralValue with
         | Some value ->
-            writeDocs ctx field.XmlDoc
+            writeDocs ctx field.XmlDoc (fun _ -> field.XmlDocSig)
             ctx.Writer.WriteLine("| {0} = {1}", field.Name, value)
         | None -> Debug.Fail("There should be a literal value for the enum field: " + field.FullName)
 
 and internal writeUnionCaseField ctx (field: FSharpField) =
     if isUnnamedUnionCaseField field then
-        ctx.Writer.Write(field.FieldType.Format(ctx.DisplayContext))
+        ctx.Writer.Write(formatType ctx field.FieldType)
     else
-        ctx.Writer.Write("{0}: {1}", QuoteIdentifierIfNeeded field.Name, field.FieldType.Format(ctx.DisplayContext))
+        ctx.Writer.Write("{0}: {1}", QuoteIdentifierIfNeeded field.Name, formatType ctx field.FieldType)
 
 and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
     Debug.Assert(value.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a valid F# module.")
-    writeDocs ctx value.XmlDoc
+    writeDocs ctx value.XmlDoc (fun _ -> value.XmlDocSig)
 
-    let constraints = getConstraints ctx.DisplayContext value.GenericParameters
-    let valueName = formatValueOrMemberName value.LogicalName
+    let constraints = getConstraints ctx value.GenericParameters
+    let valueName = 
+        if value.IsActivePattern then 
+            sprintf "(%s)" value.LogicalName 
+        else formatValueOrMemberName value.LogicalName
 
     if value.FullType.IsFunctionType then
         let inlineSpecifier = if needsInlineAnnotation value then "inline " else ""
         ctx.Writer.WriteLine("val {0}{1} : {2}{3}", inlineSpecifier, valueName, generateSignature ctx value, constraints)
     else
-        ctx.Writer.WriteLine("val {0} : {1}{2}", valueName, value.FullType.Format(ctx.DisplayContext), constraints)
+        ctx.Writer.WriteLine("val {0} : {1}{2}", valueName, formatType ctx value.FullType, constraints)
 
 and internal writeClassOrStructField ctx (field: FSharpField) =
     Debug.Assert(field.DeclaringEntity.IsClass ||
                  (field.DeclaringEntity.IsValueType && not field.DeclaringEntity.IsEnum),
                  "The declaring entity should be a class or a struct.")
 
-    writeDocs ctx field.XmlDoc
-    ctx.Writer.WriteLine("val {0} : {1}", QuoteIdentifierIfNeeded field.DisplayName, field.FieldType.Format(ctx.DisplayContext))
+
+    writeDocs ctx field.XmlDoc (fun _ -> field.XmlDocSig)
+    ctx.Writer.WriteLine("val {0} : {1}", QuoteIdentifierIfNeeded field.DisplayName, formatType ctx field.FieldType)
 
 and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
     Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
 
     match mem with
     | Constructor _entity ->
-        writeDocs ctx mem.XmlDoc
+        writeDocs ctx mem.XmlDoc (fun _ -> mem.XmlDocSig)
         ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
     | Event -> ()
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         // Discard explicit getter/setter methods
-        writeDocs ctx mem.XmlDoc
+        writeDocs ctx mem.XmlDoc (fun _ -> mem.XmlDocSig)
         writeAttributes ctx None mem.Attributes
 
         let memberType =
@@ -682,35 +724,47 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
         let inlineAnnotation =
             if needsInlineAnnotation mem then "inline " else ""
 
-        let constraints = getConstraints ctx.DisplayContext mem.GenericParameters
+        let constraints = getConstraints ctx mem.GenericParameters
 
         ctx.Writer.WriteLine("{0} {1}{2} : {3}{4}{5}",
                              memberType,
                              inlineAnnotation,
-                             formatValueOrMemberName mem.LogicalName,
+                             // We don't need to demangle operator names since member operators should appear in their compiled forms
+                             QuoteIdentifierIfNeeded mem.LogicalName,
                              generateSignature ctx mem,
                              propertyType,
                              constraints)
     | _ -> ()
 
-and internal writeDocs ctx docs =
-    for doc in docs do
-        ctx.Writer.WriteLine("/// {0}", doc)
+and internal writeDocs ctx docs getXmlDocSig =
+    let xmlDocs =
+        if Seq.isEmpty docs then            
+            getXmlDocSig()
+            |> ctx.GetXmlDocBySignature
+            :> seq<_>
+        else docs :> seq<_>
+
+    xmlDocs
+    |> Seq.collect (fun line -> line.Replace("\r\n", "\n").Split('\r', '\n'))
+    |> Seq.iter (fun line -> ctx.Writer.WriteLine("/// {0}", line.TrimStart()))
 
 and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     let group = case.Group
-    ctx.Writer.Write("val |")
+    writeDocs ctx case.XmlDoc (fun _ -> case.XmlDocSig)
+    ctx.Writer.Write("val (|")
     for name in group.Names do
         ctx.Writer.Write("{0}|", name)
     if not group.IsTotal then
         ctx.Writer.Write("_|")
+    ctx.Writer.Write(")")
     ctx.Writer.Write(" : ")
-    ctx.Writer.WriteLine("{0}", group.OverallType.Format(ctx.DisplayContext))
+    ctx.Writer.WriteLine("{0}", formatType ctx group.OverallType)
 
-let formatSymbol indentation displayContext openDeclarations (symbol: FSharpSymbol) =
+let formatSymbol getXmlDocBySignature indentation displayContext openDeclarations (symbol: FSharpSymbol) =
     use writer = new ColumnIndentedTextWriter()
     let ctx = { Writer = writer; Indentation = indentation;
-                DisplayContext = displayContext; OpenDeclarations = openDeclarations }
+                DisplayContext = displayContext; OpenDeclarations = openDeclarations;
+                GetXmlDocBySignature = getXmlDocBySignature }
 
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with

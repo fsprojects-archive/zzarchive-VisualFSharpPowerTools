@@ -45,12 +45,12 @@ module private Utils =
         sourceTok.CreateLineTokenizer(nextLine)
 
     let isFirstToken (tokenText: string) =
-        tokenText.TrimStart([|' '; '\t'; '/'; '*'|]).TrimStart() <> ""
+        tokenText.TrimStart([| ' '; '\t'; '/'; '*' |]).TrimStart() <> ""
 
     let tokenizeFirstToken (tokText: string) =
         let rec tokenize (tokenizer: LineTokenizer) state =
             match tokenizer.ScanToken(state) with
-            | Some tok, state when tok.Text([|tokText|], 0).TrimStart([|' '; '\t'; '/'; '*'|]) = "" -> tokenize tokenizer state
+            | Some tok, state when tok.Text([|tokText|], 0).TrimStart([| ' '; '\t'; '/'; '*' |]) = "" -> tokenize tokenizer state
             | Some tok, _ -> (tok, tokText.Substring(tok.LeftColumn, tok.FullMatchedLength))
             | None, _ -> (Unchecked.defaultof<_>, "")
         let tokenizer = sourceTok.CreateLineTokenizer(tokText)

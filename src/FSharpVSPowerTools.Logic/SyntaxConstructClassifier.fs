@@ -29,6 +29,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | Category.Quotation -> Some Constants.fsharpQuotation
         | Category.Module -> Some Constants.fsharpModule
         | Category.Unused -> Some Constants.fsharpUnused
+        | Category.Printf -> Some "FSharp.Printf"
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
@@ -67,7 +68,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                     async {
                         let getSymbolDeclLocation fsSymbol =
                             projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
-
+                        
+                        let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
+                        
                         let! symbolsUses, lexer =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
                                                                             includeUnusedDeclarations, getSymbolDeclLocation)
@@ -95,9 +98,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                                      |> Map.ofSeq),
                                 OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
                             else None, []
-
+                             
                         let spans = 
-                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, entitiesMap)
+                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLine, openDeclarations, entitiesMap)
                             |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                         state.Swap (fun _ -> 

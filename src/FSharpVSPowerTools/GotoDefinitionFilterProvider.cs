@@ -38,8 +38,8 @@ namespace FSharpVSPowerTools
             var textView = editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
-            var generalOptions = serviceProvider.GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
-            //if (!generalOptions.FindAllReferencesEnabled) return;
+            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            if (generalOptions == null || !generalOptions.GoToMetadataEnabled) return;
 
             AddCommandFilter(textViewAdapter, new GoToDefinitionFilter(textView, fsharpVsLanguageService, serviceProvider,
                                                                        editorOptionsFactory, projectFactory));

@@ -1,4 +1,5 @@
 ﻿#if INTERACTIVE
+#r "System.Xml.Linq.dll"
 #r "System.Runtime.Serialization.dll"
 #r "../../bin/FSharp.Compiler.Service.dll"
 #r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
@@ -27,9 +28,14 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.SignatureGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
+open System
+open System.Xml.Linq
+open System.Collections.Generic
+open System.IO
 
 let languageService = LanguageService(fun _ -> ())
 let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
+let xmlFileCache = Dictionary()
 
 let tryGenerateDefinitionFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
@@ -45,8 +51,37 @@ let tryGenerateDefinitionFromPos caretPos src =
             codeGenService.ParseFileInProject(document, projectOptions)
             |> liftAsync
         let! parseTree = parseResults.ParseTree |> liftMaybe           
+        let getXmlDocBySignature = 
+            let xmlFile = symbolUse.Symbol.Assembly.FileName |> Option.map (fun fileName -> Path.ChangeExtension(fileName, ".xml"))
+            let xmlMemberMap =
+                match xmlFile with
+                | Some xmlFile ->
+                    match xmlFileCache.TryGetValue(xmlFile) with
+                    | true, xmlMemberMap ->
+                        xmlMemberMap
+                    | false, _ ->
+                        let xmlMemberMap = Dictionary()
+                        let doc = XDocument.Load(xmlFile)
+                        if doc <> null then                            
+                            for key, value in 
+                              [ for e in doc.Descendants(XName.Get "member") do
+                                  let attr = e.Attribute(XName.Get "name") 
+                                  if attr <> null && not (String.IsNullOrEmpty(attr.Value)) then 
+                                    yield attr.Value, e ] do
+                                xmlMemberMap.Add(key, value)
+                            xmlFileCache.Add(xmlFile, xmlMemberMap)
+                        xmlMemberMap
+                | None -> 
+                    Dictionary()
+            fun signature ->
+                match xmlMemberMap.TryGetValue(signature) with
+                | true, element ->
+                    try [ element.Element(XName.Get "summary").Value ] with _ -> []
+                | false, _ ->
+                    []
+            
         let openDeclarations = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation caretPos parseTree
-        let! generatedCode = liftMaybe <| formatSymbol 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol
+        let! generatedCode = liftMaybe <| formatSymbol getXmlDocBySignature 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol
         return generatedCode
     }
     |> Async.RunSynchronously
@@ -70,16 +105,23 @@ let x = Tuple<int, int>(1, 2)""", (Pos.fromZ 1 8)
         assertSrcAreEqual src
             """namespace System
 
+/// Represents a 2-tuple, or pair. 
 type Tuple<'T1, 'T2> =
     interface IComparable
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
     interface ITuple
+    /// Initializes a new instance of the  class.
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
+    /// Returns a value that indicates whether the current  object is equal to a specified object.
     member Equals : obj:obj -> bool
+    /// Returns the hash code for the current  object.
     member GetHashCode : unit -> int
+    /// Gets the value of the current  object's first component.
     member Item1 : 'T1
+    /// Gets the value of the current  object's second component.
     member Item2 : 'T2
+    /// Returns a string that represents the value of this  instance.
     member ToString : unit -> string
 """)
 
@@ -88,16 +130,18 @@ let ``adds necessary parenthesis to function parameters`` () =
     """open System
 let _ = Async.AwaitTask"""
     |> generateDefinitionFromPos (Pos.fromZ 1 8)
-    |> assertSrcAreEqualForFirstLines 8 """namespace Microsoft.FSharp.Control
+    |> assertSrcAreEqualForFirstLines 10 """namespace Microsoft.FSharp.Control
 
 open System
 
+/// This static class holds members for creating and manipulating asynchronous computations.
 [<Sealed>]
 [<CompiledName("FSharpAsync")>]
 [<Class>]
 type Async =
+    /// Creates three functions that can be used to implement the .NET Asynchronous 
+    /// Programming Model (APM) for a given asynchronous computation.
     static member AsBeginEnd : computation:('Arg -> Async<'T>) -> ('Arg * AsyncCallback * obj -> IAsyncResult) * (IAsyncResult -> 'T) * (IAsyncResult -> unit)
-    static member AwaitEvent : event:IEvent<'Del,'T> * ?cancelAction:(unit -> unit) -> Async<'T> when 'Del : delegate<'T, unit> and 'Del :> Delegate
 """
 
 [<Test>]
@@ -150,16 +194,23 @@ let u = t.Item1"""
     |> generateDefinitionFromPos (Pos.fromZ 3 10)
     |> assertSrcAreEqual """namespace System
 
+/// Represents a 2-tuple, or pair. 
 type Tuple<'T1, 'T2> =
     interface IComparable
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
     interface ITuple
+    /// Initializes a new instance of the  class.
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
+    /// Returns a value that indicates whether the current  object is equal to a specified object.
     member Equals : obj:obj -> bool
+    /// Returns the hash code for the current  object.
     member GetHashCode : unit -> int
+    /// Gets the value of the current  object's first component.
     member Item1 : 'T1
+    /// Gets the value of the current  object's second component.
     member Item2 : 'T2
+    /// Returns a string that represents the value of this  instance.
     member ToString : unit -> string
 """
 
@@ -171,14 +222,14 @@ do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
     |> assertSrcAreEqualForFirstLines 10 """namespace System
 
+/// Represents the standard input, output, and error streams for console applications. This class cannot be inherited.
 [<Class>]
 type Console =
     static member add_CancelKeyPress : value:ConsoleCancelEventHandler -> unit
+    /// Gets or sets the background color of the console.
     static member BackgroundColor : ConsoleColor with get, set
+    /// Plays the sound of a beep through the console speaker.
     static member Beep : unit -> unit
-    static member Beep : frequency:int * duration:int -> unit
-    static member BufferHeight : int with get, set
-    static member BufferWidth : int with get, set
 """
 
 [<Test>]
@@ -191,6 +242,7 @@ let x: List<int> = []"""
 
 open System
 
+/// The type of immutable singly-linked lists.
 [<DefaultAugmentation(false)>]
 [<StructuralEquality>]
 [<StructuralComparison>]
@@ -204,12 +256,19 @@ type List<'T> =
     interface Collections.Generic.IEnumerable<'T>
     interface Collections.IStructuralComparable
     interface Collections.IStructuralEquatable
+    /// Gets the first element of the list
     member Head : 'T
+    /// Gets a value indicating if the list contains no entries
     member IsEmpty : bool
+    /// Gets the element of the list at the given position.
     member Item : 'T
+    /// Gets the number of items contained in the list
     member Length : int
+    /// Gets the tail of the list, which is a list containing all the elements of the list, excluding the first element 
     member Tail : 'T list
+    /// Returns a list with head as its first element and tail as its subsequent elements
     static member Cons : head:'T * tail:'T list -> 'T list
+    /// Returns an empty list of a particular type
     static member Empty : 'T list
 """
 
@@ -238,11 +297,14 @@ let x: Choice<'T, 'U> = failwith "Not implemented yet" """
 
 open System
 
+/// Helper types for active patterns with 2 choices.
 [<StructuralEquality>]
 [<StructuralComparison>]
 [<CompiledName("FSharpChoice`2")>]
 type Choice<'T1, 'T2> =
+    /// Choice 1 of 2 choices
     | Choice1Of2 of 'T1
+    /// Choice 2 of 2 choices
     | Choice2Of2 of 'T2
     interface IComparable<Choice<'T1,'T2>>
     interface IComparable
@@ -260,11 +322,14 @@ let x = Choice1Of2 () """
 
 open System
 
+/// Helper types for active patterns with 2 choices.
 [<StructuralEquality>]
 [<StructuralComparison>]
 [<CompiledName("FSharpChoice`2")>]
 type Choice<'T1, 'T2> =
+    /// Choice 1 of 2 choices
     | Choice1Of2 of 'T1
+    /// Choice 2 of 2 choices
     | Choice2Of2 of 'T2
     interface IComparable<Choice<'T1,'T2>>
     interface IComparable
@@ -283,7 +348,7 @@ let testNumber i =
     | Even -> printfn "%d is even" i
     | Odd -> printfn "%d is odd" i"""
     |> generateDefinitionFromPos (Pos.fromZ 6 7)
-    |> assertSrcAreEqual """val |Even|Odd| : int -> Choice<unit,unit>
+    |> assertSrcAreEqual """val (|Even|Odd|) : int -> Choice<unit,unit>
 """
 
 [<Test; Ignore("activate when it's possible to know in which module or namespace an active pattern is defined")>]
@@ -299,7 +364,7 @@ let testNumber i =
     |> generateDefinitionFromPos (Pos.fromZ 6 7)
     |> assertSrcAreEqual """module File
 
-val |Even|Odd| : int -> Choice<unit,unit>
+val (|Even|Odd|) : int -> Choice<unit,unit>
 """
 
 [<Test>]
@@ -314,7 +379,7 @@ let fizzBuzz = function
     | DivisibleBy 5 -> "Buzz" 
     | _ -> "" """
     |> generateDefinitionFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """val |DivisibleBy|_| : int -> int -> unit option
+    |> assertSrcAreEqual """val (|DivisibleBy|_|) : int -> int -> unit option
 """
 
 [<Test; Ignore("We should not generate implicit interface member definition")>]
@@ -465,20 +530,35 @@ let f x = Option.map(x)"""
         Pos.fromZ 2 17
     ]
     |> List.map (fun pos -> generateDefinitionFromPos pos src)
-    |> List.iter (assertSrcAreEqual """[<CompilationRepresentation(4)>]
+    |> List.iter (assertSrcAreEqual """/// Basic operations on options.
+[<CompilationRepresentation(4)>]
 module Microsoft.FSharp.Core.Option
+
+/// Returns true if the option is not None.
 val isSome : option:'T option -> bool
+/// Returns true if the option is None.
 val isNone : option:'T option -> bool
+/// Gets the value associated with the option.
 val get : option:'T option -> 'T
+/// count inp evaluates to match inp with None -> 0 | Some _ -> 1.
 val count : option:'T option -> int
+/// fold f s inp evaluates to match inp with None -> s | Some x -> f s x.
 val fold : folder:('State -> 'T -> 'State) -> state:'State -> option:'T option -> 'State
+/// fold f inp s evaluates to match inp with None -> s | Some x -> f x s.
 val foldBack : folder:('T -> 'State -> 'State) -> option:'T option -> state:'State -> 'State
+/// exists p inp evaluates to match inp with None -> false | Some x -> p x.
 val exists : predicate:('T -> bool) -> option:'T option -> bool
+/// forall p inp evaluates to match inp with None -> true | Some x -> p x.
 val forall : predicate:('T -> bool) -> option:'T option -> bool
+/// iter f inp executes match inp with None -> () | Some x -> f x.
 val iter : action:('T -> unit) -> option:'T option -> unit
+/// map f inp evaluates to match inp with None -> None | Some x -> Some (f x).
 val map : mapping:('T -> 'U) -> option:'T option -> 'U option
+/// bind f inp evaluates to match inp with None -> None | Some x -> f x
 val bind : binder:('T -> 'U option) -> option:'T option -> 'U option
+/// Convert the option to an array of length 0 or 1.
 val toArray : option:'T option -> 'T []
+/// Convert the option to a list of length 0 or 1.
 val toList : option:'T option -> 'T list
 """)
         
@@ -506,6 +586,7 @@ let x: string = null"""
     |> generateDefinitionFromPos (Pos.fromZ 1 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
 
+/// An abbreviation for the CLI type System.String.
 type string = System.String
 """
 
@@ -642,86 +723,226 @@ let ``handle nested modules`` () =
 let x = Array.map
     """
     |> generateDefinitionFromPos (Pos.fromZ 1 9)
-    |> assertSrcAreEqual """[<CompilationRepresentation(4)>]
+    |> assertSrcAreEqual """/// Basic operations on arrays.
+[<CompilationRepresentation(4)>]
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
+
+/// Builds a new array that contains the elements of the first array followed by the elements of the second array.
 val append : array1:'T [] -> array2:'T [] -> 'T []
+/// Returns the average of the elements in the array.
 val inline average : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member DivideByInt :  ^T * int ->  ^T) and ^T : (static member Zero :  ^T)
+/// Returns the average of the elements generated by applying the function to each element of the array.
 val inline averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member DivideByInt :  ^U * int ->  ^U) and ^U : (static member Zero :  ^U)
+/// Reads a range of elements from the first array and write them into the second.
 val blit : source:'T [] -> sourceIndex:int -> target:'T [] -> targetIndex:int -> count:int -> unit
+/// For each element of the array, applies the given function. Concatenates all the results and return the combined array.
 val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
+/// Builds a new array that contains the elements of each of the given sequence of arrays.
 val concat : arrays:seq<'T []> -> 'T []
+/// Builds a new array that contains the elements of the given array.
 val copy : array:'T [] -> 'T []
+/// Creates an array whose elements are all initially the given value.
 val create : count:int -> value:'T -> 'T []
+/// Applies the given function to successive elements, returning the first
+/// result where function returns Some(x) for some x. If the function 
+/// never returns Some(x) then None is returned.
 val tryPick : chooser:('T -> 'U option) -> array:'T [] -> 'U option
+/// Fills a range of elements of the array with the given value.
 val fill : target:'T [] -> targetIndex:int -> count:int -> value:'T -> unit
+/// Applies the given function to successive elements, returning the first
+/// result where function returns Some(x) for some x. If the function 
+/// never returns Some(x) then KeyNotFoundException is raised.
 val pick : chooser:('T -> 'U option) -> array:'T [] -> 'U
+/// Applies the given function to each element of the array. Returns
+/// the array comprised of the results "x" for each element where
+/// the function returns Some(x)
 val choose : chooser:('T -> 'U option) -> array:'T [] -> 'U []
+/// Returns an empty array of the given type.
 val empty : 'T []
+/// Tests if any element of the array satisfies the given predicate.
 val exists : predicate:('T -> bool) -> array:'T [] -> bool
+/// Tests if any pair of corresponding elements of the arrays satisfies the given predicate.
 val exists2 : predicate:('T1 -> 'T2 -> bool) -> array1:'T1 [] -> array2:'T2 [] -> bool
+/// Returns a new collection containing only the elements of the collection
+/// for which the given predicate returns "true".
 val filter : predicate:('T -> bool) -> array:'T [] -> 'T []
+/// Returns the first element for which the given function returns 'true'.
+/// Raise KeyNotFoundException if no such element exists.
 val find : predicate:('T -> bool) -> array:'T [] -> 'T
+/// Returns the index of the first element in the array
+/// that satisfies the given predicate. Raise KeyNotFoundException if 
+/// none of the elements satisy the predicate.
 val findIndex : predicate:('T -> bool) -> array:'T [] -> int
+/// Tests if all elements of the array satisfy the given predicate.
 val forall : predicate:('T -> bool) -> array:'T [] -> bool
+/// Tests if all corresponding elements of the array satisfy the given predicate pairwise.
 val forall2 : predicate:('T1 -> 'T2 -> bool) -> array1:'T1 [] -> array2:'T2 [] -> bool
+/// Applies a function to each element of the collection, threading an accumulator argument
+/// through the computation. If the input function is f and the elements are i0...iN then computes 
+/// f (... (f s i0)...) iN
 val fold : folder:('State -> 'T -> 'State) -> state:'State -> array:'T [] -> 'State
+/// Applies a function to each element of the array, threading an accumulator argument
+/// through the computation. If the input function is f and the elements are i0...iN then computes 
+/// f i0 (...(f iN s))
 val foldBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State -> 'State
+/// Applies a function to pairs of elements drawn from the two collections, 
+/// left-to-right, threading an accumulator argument
+/// through the computation. The two input
+/// arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val fold2 : folder:('State -> 'T1 -> 'T2 -> 'State) -> state:'State -> array1:'T1 [] -> array2:'T2 [] -> 'State
+/// Apply a function to pairs of elements drawn from the two collections, right-to-left, 
+/// threading an accumulator argument through the computation. The two input
+/// arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val foldBack2 : folder:('T1 -> 'T2 -> 'State -> 'State) -> array1:'T1 [] -> array2:'T2 [] -> state:'State -> 'State
+/// Gets an element from an array.
 val get : array:'T [] -> index:int -> 'T
+/// Creates an array given the dimension and a generator function to compute the elements.
 val inline init : count:int -> initializer:(int -> 'T) -> 'T []
+/// Creates an array where the entries are initially the default value Unchecked.defaultof<'T>.
 val zeroCreate : count:int -> 'T []
+/// Returns true if the given array is empty, otherwise false.
 val isEmpty : array:'T [] -> bool
+/// Applies the given function to each element of the array.
 val inline iter : action:('T -> unit) -> array:'T [] -> unit
+/// Applies the given function to pair of elements drawn from matching indices in two arrays. The
+/// two arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val iter2 : action:('T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
+/// Applies the given function to each element of the array. The integer passed to the
+/// function indicates the index of element.
 val iteri : action:(int -> 'T -> unit) -> array:'T [] -> unit
+/// Applies the given function to pair of elements drawn from matching indices in two arrays,
+/// also passing the index of the elements. The two arrays must have the same lengths, 
+/// otherwise an ArgumentException is raised.
 val iteri2 : action:(int -> 'T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
+/// Returns the length of an array. You can also use property arr.Length.
 val length : array:'T [] -> int
+/// Builds a new array whose elements are the results of applying the given function
+/// to each of the elements of the array.
 val inline map : mapping:('T -> 'U) -> array:'T [] -> 'U []
+/// Builds a new collection whose elements are the results of applying the given function
+/// to the corresponding elements of the two collections pairwise. The two input
+/// arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val map2 : mapping:('T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
+/// Builds a new collection whose elements are the results of applying the given function
+/// to the corresponding elements of the two collections pairwise, also passing the index of 
+/// the elements. The two input arrays must have the same lengths, otherwise an ArgumentException is
+/// raised.
 val mapi2 : mapping:(int -> 'T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
+/// Builds a new array whose elements are the results of applying the given function
+/// to each of the elements of the array. The integer index passed to the
+/// function indicates the index of element being transformed.
 val mapi : mapping:(int -> 'T -> 'U) -> array:'T [] -> 'U []
+/// Returns the greatest of all elements of the array, compared via Operators.max on the function result.
 val inline max : array:'T [] -> 'T when 'T : comparison
+/// Returns the greatest of all elements of the array, compared via Operators.max on the function result.
 val inline maxBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
+/// Returns the lowest of all elements of the array, compared via Operators.min.
 val inline min : array:'T [] -> 'T when 'T : comparison
+/// Returns the lowest of all elements of the array, compared via Operators.min on the function result.
 val inline minBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparison
+/// Builds an array from the given list.
 val ofList : list:'T list -> 'T []
+/// Builds a new array from the given enumerable object.
 val ofSeq : source:seq<'T> -> 'T []
+/// Splits the collection into two collections, containing the 
+/// elements for which the given predicate returns "true" and "false"
+/// respectively.
 val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
+/// Returns an array with all elements permuted according to the
+/// specified permutation.
 val permute : indexMap:(int -> int) -> array:'T [] -> 'T []
+/// Applies a function to each element of the array, threading an accumulator argument
+/// through the computation. If the input function is f and the elements are i0...iN 
+/// then computes f (... (f i0 i1)...) iN.
+/// Raises ArgumentException if the array has size zero.
 val reduce : reduction:('T -> 'T -> 'T) -> array:'T [] -> 'T
+/// Applies a function to each element of the array, threading an accumulator argument
+/// through the computation. If the input function is f and the elements are i0...iN 
+/// then computes f i0 (...(f iN-1 iN)).
+/// Raises ArgumentException if the array has size zero.
 val reduceBack : reduction:('T -> 'T -> 'T) -> array:'T [] -> 'T
+/// Returns a new array with the elements in reverse order.
 val rev : array:'T [] -> 'T []
+/// Like fold, but return the intermediary and final results.
 val scan : folder:('State -> 'T -> 'State) -> state:'State -> array:'T [] -> 'State []
+/// Like foldBack, but return both the intermediary and final results.
 val scanBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State -> 'State []
+/// Sets an element of an array.
 val set : array:'T [] -> index:int -> value:'T -> unit
+/// Builds a new array that contains the given subrange specified by
+/// starting index and length.
 val sub : array:'T [] -> startIndex:int -> count:int -> 'T []
+/// Sorts the elements of an array, returning a new array. Elements are compared using Operators.compare. 
 val sort : array:'T [] -> 'T [] when 'T : comparison
+/// Sorts the elements of an array, using the given projection for the keys and returning a new array. 
+/// Elements are compared using Operators.compare.
 val sortBy : projection:('T -> 'Key) -> array:'T [] -> 'T [] when 'Key : comparison
+/// Sorts the elements of an array, using the given comparison function as the order, returning a new array.
 val sortWith : comparer:('T -> 'T -> int) -> array:'T [] -> 'T []
+/// Sorts the elements of an array by mutating the array in-place, using the given projection for the keys. 
+/// Elements are compared using Operators.compare.
 val sortInPlaceBy : projection:('T -> 'Key) -> array:'T [] -> unit when 'Key : comparison
+/// Sorts the elements of an array by mutating the array in-place, using the given comparison function as the order.
 val sortInPlaceWith : comparer:('T -> 'T -> int) -> array:'T [] -> unit
+/// Sorts the elements of an array by mutating the array in-place, using the given comparison function. 
+/// Elements are compared using Operators.compare.
 val sortInPlace : array:'T [] -> unit when 'T : comparison
+/// Returns the sum of the elements in the array.
 val inline sum : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member Zero :  ^T)
+/// Returns the sum of the results generated by applying the function to each element of the array.
 val inline sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member Zero :  ^U)
+/// Builds a list from the given array.
 val toList : array:'T [] -> 'T list
+/// Views the given array as a sequence.
 val toSeq : array:'T [] -> seq<'T>
+/// Returns the first element for which the given function returns true.
+/// Return None if no such element exists.
 val tryFind : predicate:('T -> bool) -> array:'T [] -> 'T option
+/// Returns the index of the first element in the array
+/// that satisfies the given predicate.
 val tryFindIndex : predicate:('T -> bool) -> array:'T [] -> int option
+/// Splits an array of pairs into two arrays.
 val unzip : array:('T1 * 'T2) [] -> 'T1 [] * 'T2 []
+/// Splits an array of triples into three arrays.
 val unzip3 : array:('T1 * 'T2 * 'T3) [] -> 'T1 [] * 'T2 [] * 'T3 []
+/// Combines the two arrays into an array of pairs. The two arrays must have equal lengths, otherwise an ArgumentException is
+/// raised.
 val zip : array1:'T1 [] -> array2:'T2 [] -> ('T1 * 'T2) []
+/// Combines three arrays into an array of pairs. The three arrays must have equal lengths, otherwise an ArgumentException is
+/// raised.
 val zip3 : array1:'T1 [] -> array2:'T2 [] -> array3:'T3 [] -> ('T1 * 'T2 * 'T3) []
 
+/// Provides parallel operations on arrays 
 module Parallel = 
+
+    /// Apply the given function to each element of the array. Return
+    /// the array comprised of the results "x" for each element where
+    /// the function returns Some(x).
     val choose : chooser:('T -> 'U option) -> array:'T [] -> 'U []
+    /// For each element of the array, apply the given function. Concatenate all the results and return the combined array.
     val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
+    /// Build a new array whose elements are the results of applying the given function
+    /// to each of the elements of the array.
     val map : mapping:('T -> 'U) -> array:'T [] -> 'U []
+    /// Build a new array whose elements are the results of applying the given function
+    /// to each of the elements of the array. The integer index passed to the
+    /// function indicates the index of element being transformed.
     val mapi : mapping:(int -> 'T -> 'U) -> array:'T [] -> 'U []
+    /// Apply the given function to each element of the array. 
     val iter : action:('T -> unit) -> array:'T [] -> unit
+    /// Apply the given function to each element of the array. The integer passed to the
+    /// function indicates the index of element.
     val iteri : action:(int -> 'T -> unit) -> array:'T [] -> unit
+    /// Create an array given the dimension and a generator function to compute the elements.
     val init : count:int -> initializer:(int -> 'T) -> 'T []
+    /// Split the collection into two collections, containing the 
+    /// elements for which the given predicate returns "true" and "false"
+    /// respectively 
     val partition : predicate:('T -> bool) -> array:'T [] -> 'T [] * 'T []
 
 """
@@ -1004,10 +1225,12 @@ let ``handle generic constraints on module functions and values`` () =
     |> List.map (generateDefinitionFromPos (Pos.fromZ 0 4))
     |> assertSrcSeqAreEqual [
         """module File
+
 val func : x:'X -> int when 'X : null and 'X : comparison
 """
 
         """module File
+
 val value : string when 'X : null and 'X : comparison
 """
     ]
@@ -1017,6 +1240,7 @@ let ``operator names are demangled`` () =
     """let inline func x = x + x"""
     |> generateDefinitionFromPos (Pos.fromZ 0 11)
     |> assertSrcAreEqual """module File
+
 val inline func : x: ^a ->  ^b when ^a : (static member ( + ) :  ^a *  ^a ->  ^b)
 """
 
@@ -1028,6 +1252,7 @@ let ``double-backtick identifiers are supported`` () =
     member __.``a method``() = ()""", Pos.fromZ 0 5
 
         """module ``My module``
+
 let ``a value`` = 0
 let f (``a param``: int) = ``a param`` * 2""", Pos.fromZ 0 9
 
@@ -1054,6 +1279,7 @@ type ``My class`` =
 """
 
         """module ``My module``
+
 val ``a value`` : int
 val f : ``a param``:int -> int
 """
@@ -1198,6 +1424,8 @@ let ``type abbreviations with generic params`` () =
     |> generateDefinitionFromPos (Pos.fromZ 0 11)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
 
+/// The type of optional values. When used from other CLI languages the
+/// empty option is the null value. 
 type option<'T> = Option<'T>
 """
 
@@ -1207,8 +1435,47 @@ let ``type abbreviations for basic types`` () =
     |> generateDefinitionFromPos (Pos.fromZ 0 8)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
 
+/// An abbreviation for the CLI type System.Collections.Generic.List<_>
 type ResizeArray<'T> = System.Collections.Generic.List<'T>
 """
+
+[<Test>]
+let ``handle operators as compiled members`` () =
+    """let x: System.DateTime = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 0 20)
+    |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
+    |> assertEqual true
+
+[<Test>]
+let ``handle uninstantiated type parameters`` () =
+    """let f x = array2D x"""
+    |> generateDefinitionFromPos (Pos.fromZ 0 12)
+    // Resulting types from FCS are non-deterministic so we are not yet able to assert a specific answer.
+    |> fun str -> str.Contains("val array2D : rows:seq") && not <| str.Contains("'?")
+    |> assertEqual true
+
+let ``handle generic definitions`` () =
+    """open System
+let x: Collections.Generic.List<'T> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 1 30)
+    |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
+    |> assertEqual true
+
+[<Test>]
+let ``handle generic definitions 2`` () =
+    """open System
+let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 1 30)
+    |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
+    |> assertEqual true
+
+[<Test>]
+let ``handle active patterns as parts of module declarations`` () =
+    """open Microsoft.FSharp.Quotations
+let f = Patterns.(|AddressOf|_|)"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 13)
+    |> fun str -> str.Contains("val (|AddressSet|_|) : input:Expr -> (Expr * Expr) option")
+    |> assertEqual true
 
 let generateFileNameForSymbol caretPos src =
     let document: IDocument = upcast MockDocument(src)

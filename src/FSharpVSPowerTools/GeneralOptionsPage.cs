@@ -42,6 +42,8 @@ namespace FSharpVSPowerTools
         bool UnusedDeclarationsEnabled { get; set; }
 
         bool TaskListCommentsEnabled { get; set; }
+
+        bool GoToMetadataEnabled { get; set; }
     }
 
     [ClassInterface(ClassInterfaceType.AutoDual)]
@@ -75,6 +77,7 @@ namespace FSharpVSPowerTools
             ResolveUnopenedNamespacesEnabled = true;
             UnusedDeclarationsEnabled = true;
             TaskListCommentsEnabled = true;
+            GoToMetadataEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -189,6 +192,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool TaskListCommentsEnabled { get; set; }
 
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool GoToMetadataEnabled { get; set; }
+
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -228,6 +234,7 @@ namespace FSharpVSPowerTools
                 ResolveUnopenedNamespacesEnabled = _optionsControl.ResolveUnopenedNamespacesEnabled;
                 UnusedDeclarationsEnabled = _optionsControl.UnusedDeclarationsEnabled;
                 TaskListCommentsEnabled = _optionsControl.TaskListCommentsEnabled;
+                GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
             }
 
             base.OnApply(e);

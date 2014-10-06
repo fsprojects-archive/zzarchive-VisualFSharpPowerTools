@@ -29,7 +29,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Resolve unopened namespaces
  - Gray out unused declarations
  - Gray out unused open statements
- - Go to Metadata
+ - Go to metadata
  - Task List comments
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 

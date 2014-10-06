@@ -14,6 +14,8 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
+open System.Collections.Generic
+open System.Security
 
 type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           editorOptionsFactory: IEditorOptionsFactoryService, projectFactory: ProjectFactory) =
@@ -39,6 +41,65 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 | _ -> return None
             | _ -> return None
         }
+
+    let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
+    let xmlIndexService = serviceProvider.GetService<IVsXMLMemberIndexService, SVsXMLMemberIndexService>()
+
+    /// If the XML comment starts with '<' not counting whitespace then treat it as a literal XML comment.
+    /// Otherwise, escape it and surround it with <summary></summary>
+    let processXml (xml: string) =
+        if String.IsNullOrEmpty(xml) then xml
+        else
+            let trimmedXml = xml.TrimStart([|' ';'\r';'\n'|])
+            if String.IsNullOrEmpty(trimmedXml) then xml
+            else
+                match trimmedXml.[0] with
+                | '<' ->
+                    String.Join("", "<root>", xml, "</root>")
+                | _ ->
+                    let escapedXml = SecurityElement.Escape(xml)
+                    String.Join("", "<summary>", escapedXml, "</summary>")
+            
+    let getXmlDocBySignature (fsSymbol: FSharpSymbol) signature =
+        match fsSymbol.Assembly.FileName with
+        | Some assemblyName ->
+            match xmlDocCache.TryGetValue(assemblyName) with
+            | true, xmlIndex -> 
+                match xmlIndex.ParseMemberSignature(signature) with
+                | _, 0u -> []
+                | _, index ->
+                    match xmlIndex.GetMemberXML(index) with
+                    | VSConstants.S_OK, xml ->
+                        let processedXml = processXml xml
+                        let xmlDocs = ResizeArray()
+                        match xmlIndexService.GetMemberDataFromXML(processedXml) with
+                        | VSConstants.S_OK, memberData ->
+                            match memberData.GetSummaryText() with
+                            | VSConstants.S_OK, xmlSummary ->
+                                xmlDocs.Add(xmlSummary)
+                            | _ -> ()
+                            match memberData.GetParamCount() with
+                            | VSConstants.S_OK, count when count > 0 ->
+                                for i in 0..count-1 do
+                                    match memberData.GetParamTextAt(i) with
+                                    | VSConstants.S_OK, name, text ->
+                                        let xmlDoc = sprintf "%s: %s" name text
+                                        xmlDocs.Add(xmlDoc)
+                                    | _ -> ()
+                            | _ -> ()
+                            xmlDocs |> Seq.toList
+                        | _ -> []                            
+                    | _ -> []
+            | false, _ -> 
+                match xmlIndexService.CreateXMLMemberIndex(assemblyName) with
+                | VSConstants.S_OK, xmlIndex ->
+                    match xmlIndex.BuildMemberIndex() with
+                    | VSConstants.S_OK ->
+                        xmlDocCache.Add(assemblyName, xmlIndex)
+                        []
+                    | _ -> []
+                | _ -> []
+        | None -> []
 
     // Now the input is an entity or a member/value.
     // We always generate the full enclosing entity signature if the symbol is a member/value
@@ -67,7 +128,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             let (startLine, startCol, _, _) = span.ToRange()
             let pos = mkPos (startLine+1) startCol
             let openDeclarations = parseTree |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) |> Option.getOrElse []
-            match SignatureGenerator.formatSymbol indentSize displayContext openDeclarations fsSymbol with
+            match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol with
             | Some signature ->
                 File.WriteAllText(filePath, signature)
                 let canShow = 
@@ -92,9 +153,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         // Try to set buffer to read-only mode
                         vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
                     | _ -> ()
-                    statusBar.SetText("Generated symbol metadata") |> ignore  
+                    statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore  
             | None ->
-                statusBar.SetText("Can't generate metadata for this symbol.") |> ignore  
+                statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set

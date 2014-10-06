@@ -63,13 +63,15 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
 //            using (new StreamWriter(@"L:\_entities_.txt")) <| fun w ->
 //                es |> List.iter (fun e -> w.WriteLine (sprintf "%A" e)))
 
+        let getLineStr line = sourceLines.[line - 1]
+
         let qualifyOpenDeclarations line endColumn idents = 
-            let lineStr = sourceLines.[line - 1]
-            languageService.GetIdentTooltip (line, endColumn, lineStr, Array.toList idents, opts, fileName, source)
+            languageService.GetIdentTooltip (line, endColumn, getLineStr line, Array.toList idents, opts, fileName, source)
             |> Async.RunSynchronously
             |> function
                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
                | None -> []
+
         let openDeclarations = OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
 
         let allEntities =
@@ -80,7 +82,8 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
                 |> Map.ofSeq)
 
-        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, openDeclarations, allEntities)
+        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, 
+                                                        (fun line -> sourceLines.[line]), openDeclarations, allEntities)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
     let actual =
@@ -1414,3 +1417,14 @@ open M
 let _ = 1
 """
     => [ 4, [ Category.Unused, 5, 6 ]]
+    
+[<Test>]
+let ``printfn formatters``() =
+    """
+let _ = printfn ""
+let _ = printfn "%s %s"
+do printfn "%6d %%  % 06d" 1 2
+"""
+ => [ 2, [ Category.Function, 8, 15 ]
+      3, [ Category.Function, 8, 15; Category.Printf, 17, 19; Category.Printf, 20, 22 ]
+      4, [ Category.Function, 3, 10; Category.Printf, 12, 15; Category.Printf, 20, 25 ]]
