@@ -79,6 +79,22 @@ type VSLanguageService
             |> Seq.distinctBy (fun s -> s.RangeAlternate))
         |> Seq.concat
         |> Seq.toArray
+
+    /// Set project load time to that of the last recent changed document
+    member __.FixProjectLoadTime opts =
+            let projectFiles = Set.ofArray opts.ProjectFileNames
+            let openDocumentsChangeTimes = 
+                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
+                |> Seq.choose (fun (file, doc) -> 
+                    if doc.Document.IsDirty && Set.contains file projectFiles then 
+                        Some doc.LastChangeTime 
+                    else None)
+                |> Seq.toList
+        
+            match openDocumentsChangeTimes with
+            | [] -> opts
+            | changeTimes -> 
+                { opts with LoadTime = List.max (opts.LoadTime::changeTimes) }        
         
     member __.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()

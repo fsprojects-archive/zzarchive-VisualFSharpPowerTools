@@ -112,7 +112,7 @@ type ProjectFactory
 
     default x.CreateForProject (project: Project): IProjectProvider = 
         cache.Get project.FullName (fun _ ->
-            new ProjectProvider (project, x.CreateForProject, onProjectChanged)) :> _
+            new ProjectProvider (project, x.CreateForProject, onProjectChanged, vsLanguageService.FixProjectLoadTime)) :> _
 
     member x.CreateForFileInProject (buffer: ITextBuffer) (filePath: string) project: IProjectProvider option =
         if not (project === null) && not (filePath === null) && isFSharpProject project then
@@ -169,7 +169,7 @@ type ProjectFactory
         if isPrivateToFile then 
             Some SymbolDeclarationLocation.File 
         else 
-            match symbol.TryGetLocation() with
+            match Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation with
             | Some loc ->
                 let filePath = Path.GetFullPathSafe loc.FileName
                 if currentProject.IsForStandaloneScript && filePath = currentFile then 
