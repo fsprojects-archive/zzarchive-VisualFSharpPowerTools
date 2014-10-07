@@ -53,5 +53,5 @@ Internal language services have encountered some severe errors.
 Syntax coloring or other features may stop working.
 
 If you experience such issues, they could be fixed as follows: (1) Clean current solution (2) Restart Visual Studio (3) Rebuild the solution.
-We're sorry for any convenience caused.
+We're sorry for any inconvenience caused.
 """
