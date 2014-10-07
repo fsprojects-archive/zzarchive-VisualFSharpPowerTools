@@ -9,12 +9,8 @@ open VSLangProj
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-[<AutoOpen>]
-module FSharpSymbolExtensions =
-    type FSharpSymbol with
-        member x.TryGetLocation() = Option.orElse x.ImplementationLocation x.DeclarationLocation
-
-type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, onChanged: Project -> unit) =
+type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, 
+                              onChanged: Project -> unit, fixProjectLoadTime: ProjectOptions -> ProjectOptions) =
     static let mutable getField = None
     do Debug.Assert(project <> null, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
@@ -118,9 +114,12 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                     |> Async.Array.map (fun p -> async {
                         let! opts = p.GetProjectCheckerOptions languageService 
                         return p.FullOutputFilePath, opts })
-                    
-                let opts = languageService.GetProjectCheckerOptions (
-                                projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects) 
+                
+                // Fix project load time to ensure each project provider instance has its correct project load time.    
+                let opts = 
+                    languageService.GetProjectCheckerOptions (
+                        projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects)
+                    |> fixProjectLoadTime 
 
                 let orphanedProjects = lazy (
                     let refProjectsOutPaths = 
@@ -129,8 +128,7 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                         |> Set.ofArray
 
                     opts.ProjectOptions 
-                    |> Seq.filter (fun x -> x.StartsWith("-r:"))
-                    |> Seq.map (fun x -> x.Substring(3).Trim())
+                    |> Seq.choose (fun x -> if x.StartsWith("-r:") then Some (x.[3..].Trim()) else None)
                     |> Set.ofSeq
                     |> Set.difference refProjectsOutPaths)
 
