@@ -26,9 +26,9 @@ and IProjectProvider =
     abstract TargetFramework: FSharpTargetFramework
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
-    abstract FullOutputFilePath: string
+    abstract FullOutputFilePath: string option
     abstract GetReferencedProjects: unit -> IProjectProvider list
-    abstract GetAllReferencedProjectFileNames: unit -> string list
+    abstract GetAllReferencedProjectFileNames: unit -> string list 
     abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
 
 [<NoComparison; NoEquality>]

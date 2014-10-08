@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
-open System.IO
 open FSharpVSPowerTools.ProjectSystem
 
 type ExternalProjectProvider(projectFileName) =    
@@ -20,14 +19,15 @@ type ExternalProjectProvider(projectFileName) =
         member __.TargetFramework = frameworkVersion
         member __.CompilerOptions = compilerOptions
         member __.SourceFiles = sourceFiles
-        member __.FullOutputFilePath = outputPath
+        member __.FullOutputFilePath = Some outputPath
         member __.GetReferencedProjects() = referencedProjects
         member __.GetAllReferencedProjectFileNames() = referencedProjectFileNames
         member __.GetProjectCheckerOptions languageService =
             async {
                 let referencedProjectOptions = 
                     referencedProjects 
-                    |> List.map (fun p -> p.FullOutputFilePath, p.GetProjectCheckerOptions languageService |> Async.RunSynchronously)
+                    |> List.choose (fun p -> 
+                        p.FullOutputFilePath |> Option.map (fun x -> x, p.GetProjectCheckerOptions languageService |> Async.RunSynchronously))
                     |> List.toArray
                 return languageService.GetProjectCheckerOptions (fullProjectFileName, sourceFiles, compilerOptions, referencedProjectOptions)
             }

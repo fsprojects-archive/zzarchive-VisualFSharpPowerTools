@@ -89,8 +89,12 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
         | _ -> [||])
 
     let fullOutputPath = lazy (
-        Path.Combine (getProperty "FullPath", getActiveConfigProperty "OutputPath", getProperty "OutputFileName")
-        |> Path.GetFullPathSafe)
+        maybe {
+            let! fullPath = Option.ofNull (getProperty "FullPath")
+            let! outputPath = Option.ofNull (getActiveConfigProperty "OutputPath")
+            let! outputFileName = Option.ofNull (getProperty "OutputFileName")
+            return Path.Combine (fullPath, outputPath, outputFileName) |> Path.GetFullPathSafe
+        })
 
     let referencedProjects = lazy (project.GetReferencedFSharpProjects() |> List.map getProjectProvider)
     let allReferencedProjects = lazy (
@@ -114,6 +118,11 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                     |> Async.Array.map (fun p -> async {
                         let! opts = p.GetProjectCheckerOptions languageService 
                         return p.FullOutputFilePath, opts })
+                
+                let referencedProjects = 
+                    referencedProjects 
+                    |> Array.choose (fun (fullPath, opts) -> 
+                        fullPath |> Option.map (fun x -> x, opts))
                 
                 // Fix project load time to ensure each project provider instance has its correct project load time.    
                 let opts = 
@@ -171,7 +180,7 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
         member __.TargetFramework = targetFramework
         member __.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
         member __.SourceFiles = [| filePath |]
-        member __.FullOutputFilePath = Path.ChangeExtension(filePath, ".dll")
+        member __.FullOutputFilePath = Some (Path.ChangeExtension(filePath, ".dll"))
         member __.GetReferencedProjects() = []
         member __.GetAllReferencedProjectFileNames() = []
         member __.GetProjectCheckerOptions languageService =
