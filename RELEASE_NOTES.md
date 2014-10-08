@@ -1,13 +1,14 @@
 #### 1.6.0 - Unreleased
 
+#### 1.5.2 - October 8 2014
+* Add syntax coloring for printf specifiers
+* Fix project load times to point to last changed files
+* Fix exceptions on FullOutputFilePath
+
 #### 1.5.0 - October 2 2014
 * Support more complex scenarios in VS unit tests
 * Fix various issues with union case generation
 * Implement Go to Metadata
-
-#### 1.4.5 - August 28 2014
-* Fix forcing saving projects when project items change
-* Fix various issues on unused open declarations
 
 #### 1.4.5 - August 28 2014
 * Fix forcing saving projects when project items change

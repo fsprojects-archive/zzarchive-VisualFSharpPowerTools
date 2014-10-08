@@ -31,7 +31,6 @@ and IProjectProvider =
     abstract GetAllReferencedProjectFileNames: unit -> string list 
     abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
 
-[<NoComparison; NoEquality>]
 type ShowProgress = OperationState -> unit
 
 [<Export>]
@@ -44,12 +43,10 @@ type VSLanguageService
 
     let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
 
-    let mutable userNotified = false
-
-    let suggestRecoveryAfterFailure _ =
-        if not userNotified then
-            userNotified <- true
-            Logging.messageBoxError Resource.languageServiceErrorMessage
+    /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
+    /// Clean up instructions are displayed on status bar.
+    let suggestRecoveryAfterFailure e =
+        Logging.logException e
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
                 
@@ -80,7 +77,10 @@ type VSLanguageService
         |> Seq.concat
         |> Seq.toArray
 
-    /// Set project load time to that of the last recent changed document
+    static let initializationTime = DateTime.Now
+
+    /// Set project load time to that of the last recently-changed open document.
+    /// If there is no open document, use initialization time as project load time.
     member __.FixProjectLoadTime opts =
             let projectFiles = Set.ofArray opts.ProjectFileNames
             let openDocumentsChangeTimes = 
@@ -92,9 +92,10 @@ type VSLanguageService
                 |> Seq.toList
         
             match openDocumentsChangeTimes with
-            | [] -> opts
+            | [] -> 
+                { opts with LoadTime = initializationTime }
             | changeTimes -> 
-                { opts with LoadTime = List.max (opts.LoadTime::changeTimes) }        
+                { opts with LoadTime = List.max changeTimes }        
         
     member __.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()
@@ -243,7 +244,7 @@ type VSLanguageService
             try 
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             with e ->
-                debug "[LanguageService] GetAllSymbols raises exception: %O" (string e)
+                debug "[Language Service] GetAllSymbols raises exception: %O" e
                 return None
         }
 
