@@ -485,11 +485,21 @@ let getIdents ast =
             visitExpr expr1
             visitExpr expr2
         | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
-        | SynExpr.Tuple (exprs, _, _) -> 
-            for expr in exprs do 
-                visitExpr expr
+        | SynExpr.Tuple (exprs, _, _) -> List.iter visitExpr exprs
         | SynExpr.Ident (ident) -> identRanges.Add ident
-        | _ -> () 
+        | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
+        | SynExpr.New(_, _, expr, _) -> visitExpr expr
+        | SynExpr.While(_, e1, e2, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.Assert(e, _) -> visitExpr e
+        | SynExpr.TryWith(e, _, clauses, _, _, _, _) -> visitExpr e; visitMatches clauses
+        | SynExpr.TryFinally(e1, e2, _, _, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.DotNamedIndexedPropertySet(_, _, e1, e2, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.TypeTest(e, _, _) -> visitExpr e
+        | SynExpr.Upcast(e, _, _) -> visitExpr e
+        | SynExpr.InferredUpcast(e, _) -> visitExpr e
+        | SynExpr.InferredDowncast(e, _) -> visitExpr e
+        | _ -> ()
 
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
     and visitBindindgs = List.iter visitBinding
