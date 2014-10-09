@@ -1419,7 +1419,7 @@ let _ = 1
     => [ 4, [ Category.Unused, 5, 6 ]]
     
 [<Test>]
-let ``printf formatters``() =
+let ``printf formatters in bindings``() =
     """
 let _ = printfn ""
 let _ = printfn "%s %s"
@@ -1445,3 +1445,33 @@ with _ ->
           5, [ Category.Function, 8, 15; Category.Printf, 21, 23 ]
           7, [ Category.Function, 8, 14; Category.Printf, 20, 22 ]
           9, [ Category.Function, 4, 13; Category.Printf, 19, 21 ]]
+
+[<Test>]
+let ``printf formatters in record / DU members``() =
+    """
+type R = { Name: string }
+    with 
+        member __.M _ = 
+            sprintf "%A"
+        override __.ToString() = 
+            sprintf "%d" 1
+type DU = DU
+    with
+        member __.M = 
+            sprintf "%A"
+        override __.ToString() = 
+            sprintf "%d" 1
+"""
+    => [ 5, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
+         7, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
+         11, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
+         13, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]]
+
+[<Test>]
+let ``printf formatters in extention members``() =
+    """
+type System.Object with
+    member __.M1 = 
+        sprintf "%A"
+"""
+    => [ 4, [ Category.Function, 8, 15; Category.Printf, 17, 19 ]]

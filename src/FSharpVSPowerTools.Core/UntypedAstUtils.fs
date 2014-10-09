@@ -513,11 +513,12 @@ let getIdents ast =
         | _ -> () 
 
     let visitType ty =
-        let (SynTypeDefn.TypeDefn (_, repr, _, _)) = ty
+        let (SynTypeDefn.TypeDefn (_, repr, memberDefns, _)) = ty
         match repr with
         | SynTypeDefnRepr.ObjectModel (_, defns, _) ->
             for d in defns do visitMember d
         | _ -> ()
+        List.iter visitMember memberDefns
 
     let rec visitDeclarations decls = 
         for declaration in decls do
