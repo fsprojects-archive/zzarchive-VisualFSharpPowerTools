@@ -9,12 +9,8 @@ open VSLangProj
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-[<AutoOpen>]
-module FSharpSymbolExtensions =
-    type FSharpSymbol with
-        member x.TryGetLocation() = Option.orElse x.ImplementationLocation x.DeclarationLocation
-
-type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, onChanged: Project -> unit) =
+type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, 
+                              onChanged: Project -> unit, fixProjectLoadTime: ProjectOptions -> ProjectOptions) =
     static let mutable getField = None
     do Debug.Assert(project <> null, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
@@ -93,8 +89,12 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
         | _ -> [||])
 
     let fullOutputPath = lazy (
-        Path.Combine (getProperty "FullPath", getActiveConfigProperty "OutputPath", getProperty "OutputFileName")
-        |> Path.GetFullPathSafe)
+        maybe {
+            let! fullPath = Option.ofNull (getProperty "FullPath")
+            let! outputPath = Option.ofNull (getActiveConfigProperty "OutputPath")
+            let! outputFileName = Option.ofNull (getProperty "OutputFileName")
+            return Path.Combine (fullPath, outputPath, outputFileName) |> Path.GetFullPathSafe
+        })
 
     let referencedProjects = lazy (project.GetReferencedFSharpProjects() |> List.map getProjectProvider)
     let allReferencedProjects = lazy (
@@ -118,9 +118,17 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                     |> Async.Array.map (fun p -> async {
                         let! opts = p.GetProjectCheckerOptions languageService 
                         return p.FullOutputFilePath, opts })
-                    
-                let opts = languageService.GetProjectCheckerOptions (
-                                projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects) 
+                
+                let referencedProjects = 
+                    referencedProjects 
+                    |> Array.choose (fun (fullPath, opts) -> 
+                        fullPath |> Option.map (fun x -> x, opts))
+                
+                // Fix project load time to ensure each project provider instance has its correct project load time.    
+                let opts = 
+                    languageService.GetProjectCheckerOptions (
+                        projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects)
+                    |> fixProjectLoadTime 
 
                 let orphanedProjects = lazy (
                     let refProjectsOutPaths = 
@@ -129,8 +137,7 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                         |> Set.ofArray
 
                     opts.ProjectOptions 
-                    |> Seq.filter (fun x -> x.StartsWith("-r:"))
-                    |> Seq.map (fun x -> x.Substring(3).Trim())
+                    |> Seq.choose (fun x -> if x.StartsWith("-r:") then Some (x.[3..].Trim()) else None)
                     |> Set.ofSeq
                     |> Set.difference refProjectsOutPaths)
 
@@ -173,7 +180,7 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
         member __.TargetFramework = targetFramework
         member __.CompilerOptions = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
         member __.SourceFiles = [| filePath |]
-        member __.FullOutputFilePath = Path.ChangeExtension(filePath, ".dll")
+        member __.FullOutputFilePath = Some (Path.ChangeExtension(filePath, ".dll"))
         member __.GetReferencedProjects() = []
         member __.GetAllReferencedProjectFileNames() = []
         member __.GetProjectCheckerOptions languageService =

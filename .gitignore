@@ -178,6 +178,7 @@ nuget/*.nupkg
 src/FSharpVSPowerTools/Properties/AssemblyInfo.cs
 *.orig
 .paket/paket.exe
+.paket/*.exe.config
 paket-files
 *.xml
 
