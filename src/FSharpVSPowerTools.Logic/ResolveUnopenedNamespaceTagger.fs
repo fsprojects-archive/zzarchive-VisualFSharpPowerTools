@@ -104,7 +104,7 @@ type ResolveUnopenedNamespaceSmartTagger
                                 
                                 let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn) |> liftMaybe
                                 let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
-                                return entities |> List.choose createEntity
+                                return entities |> Seq.map createEntity |> Seq.concat |> Seq.toList
                     }
                     |> Async.map (fun result -> 
                          state <- result

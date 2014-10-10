@@ -39,7 +39,7 @@ let assertEntityCreation args res =
              args.entityFullName.Split '.')
     |> assertEqual res
 
-let (=>) args res = assertEntityCreation args (Some res)
+let (=>) args res = assertEntityCreation args [|res|]
 let (!=>) = assertEntityCreation
 
 [<Test>] 
@@ -153,7 +153,7 @@ let ``simple entities``() =
         entityNs = None
         entityFullName = "Now" 
     } 
-    !=> None
+    !=> [||]
 
 [<Test>]
 let ``internal entities``() =
@@ -198,7 +198,7 @@ let ``internal entities``() =
         entityNs = Some "Myns"
         entityFullName = "" 
     } 
-    !=> None
+    !=> [||]
 
 [<Test>]
 let ``internal entities in different sub namespace``() =
@@ -247,7 +247,7 @@ let ``entities in auto open module``() =
         entityNs = Some "Myns"
         entityFullName = "Myns.Nested.Now" 
     } 
-    !=> None
+    !=> [||]
     // -----------------------------------------
     { 
         ns = Some "Myns"
@@ -279,7 +279,7 @@ let ``fully qualified external entities / partially qualified name``() =
     => 
     { 
         FullRelativeName = "System.DateTime.Now"
-        Namespace = Some "System.DateTime"
+        Namespace = Some "System"
         Name = "Now" 
     }
 
@@ -645,8 +645,9 @@ let forIdent ident (source, line) = ident, source, line
 let forEntity (ns: LongIdent) (fullName: LongIdent) (ident: string, source: Source, line) =
     let ast = parseSource source
     match ParsedInput.tryFindInsertionContext line ast (ident.Split '.') (None, None, Some (ns.Split '.'), fullName.Split '.') with
-    | None -> failwith "Cannot find nearest open statement block"
-    | Some (e, ctx) -> source, e, ctx, ast
+    | [||] -> failwith "Cannot find nearest open statement block"
+    | [|e, ctx|] -> source, e, ctx, ast
+    | es -> failwith "More than one entity: %A" es
 
 let result (expected: Source) (source: Source, entity, ctx: InsertContext, ast) = 
     let lines = srcToLineArray source
@@ -1158,3 +1159,20 @@ module Usage =
     let f (x:MyInt) = x
 """
 
+[<Test>]
+let ``partially qualified symbol``() =
+    """
+module TopLevel
+
+let _ = Threading.Tasks.Task.Factory.StartNew(fun _ -> ())
+"""
+    |> forLine 3
+    |> forIdent "Threading.Tasks.Task.Factory.StartNew"
+    |> forEntity "System.Threading.Tasks" "System.Threading.Tasks.Task"
+    |> result """
+module TopLevel
+
+open System
+
+let _ = Threading.Tasks.Task.Factory.StartNew(fun _ -> ())
+"""

@@ -1,7 +1,5 @@
 ﻿namespace FSharpVSPowerTools
 
-open System
-
 type LongIdent = string
 
 type Entity =
@@ -33,37 +31,47 @@ module Entity =
     let tryCreate (targetNamespace: Idents option, targetScope: Idents, partiallyQualifiedName: Idents, 
                    requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
                    candidateNamespace: Idents option, candidate: Idents) =
-        if candidate.Length = 0 then None
+        if candidate.Length = 0 then [||]
         else 
-            let tails = Array.heads partiallyQualifiedName
-            if tails |> Array.forall (fun parts -> not (candidate |> Array.endsWith parts)) then None
-            else Some candidate
-            |> Option.bind (fun candidate ->
-                let fullOpenableNs, restIdents = 
-                    let openableNsCount =
-                        match requiresQualifiedAccessParent with
-                        | Some parent -> min parent.Length candidate.Length
-                        | None -> candidate.Length
-                    candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
+            partiallyQualifiedName
+            |> Array.heads
+            |> Array.choose (fun parts -> 
+                 if candidate |> Array.endsWith parts then Some (candidate, parts.Length)
+                 else None)
+        |> Array.choose (fun (candidate, identCount) ->
+            let fullOpenableNs, restIdents = 
+                let openableNsCount =
+                    match requiresQualifiedAccessParent with
+                    | Some parent -> min parent.Length candidate.Length
+                    | None -> candidate.Length
+                candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
 
-                let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
+            let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
              
-                let getRelativeNs ns =
-                    match targetNamespace, candidateNamespace with
-                    | Some targetNs, Some candidateNs when candidateNs = targetNs ->
-                        getRelativeNamespace targetScope ns
-                    | None, _ -> getRelativeNamespace targetScope ns
-                    | _ -> ns
+            let getRelativeNs ns =
+                match targetNamespace, candidateNamespace with
+                | Some targetNs, Some candidateNs when candidateNs = targetNs ->
+                    getRelativeNamespace targetScope ns
+                | None, _ -> getRelativeNamespace targetScope ns
+                | _ -> ns
 
-                let relativeNs = getRelativeNs openableNs
+            let relativeNs = getRelativeNs openableNs
 
-                match relativeNs, restIdents with
-                | [||], [||] -> None
-                | [||], [|_|] -> None
-                | _ ->
-                    Some { FullRelativeName = String.Join (".", Array.append (getRelativeNs fullOpenableNs) restIdents)
-                           Namespace = match relativeNs with [||] -> None | _ -> Some (String.Join (".", relativeNs))
-                           Name = String.Join (".", restIdents) })
+            match relativeNs, restIdents with
+            | [||], [||] -> None
+            | [||], [|_|] -> None
+            | _ ->
+                let fullRelativeName = Array.append (getRelativeNs fullOpenableNs) restIdents |> String.concat "."
+                let ns = 
+                    match relativeNs with 
+                    | [||] -> None 
+                    | _ when identCount > 1 && relativeNs.Length >= identCount -> 
+                        Some (relativeNs.[0..relativeNs.Length - identCount] |> String.concat ".")
+                    | _ -> Some (relativeNs |> String.concat ".")
+                Some 
+                    { FullRelativeName = fullRelativeName //.[0..fullRelativeName.Length - identCount - 1]
+                      Namespace = ns
+                      Name = String.concat "." restIdents }) 
 
 type Pos = 
     { Line: int
@@ -472,21 +480,22 @@ module ParsedInput =
 
         fun (partiallyQualifiedName: Idents) (requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
                                               entityNamespace: Idents option, entity: Idents) ->
-            res 
-            |> Option.bind (fun (scope, ns, pos) -> 
-                Entity.tryCreate (ns, scope.Idents, partiallyQualifiedName, requiresQualifiedAccessParent, autoOpenParent, entityNamespace, entity)
-                |> Option.map (fun entity -> entity, scope, pos))
-            |> Option.map (fun (e, scope, pos) ->
-                e,
-                match modules |> List.filter (fun (m, _, _) -> entity |> Array.startsWith m ) with
-                | [] -> { ScopeKind = scope.Kind; Pos = pos }
-                | (_, endLine, startCol) :: _ ->
-                    //printfn "All modules: %A, Win module: %A" modules m
-                    let scopeKind =
-                        match scope.Kind with
-                        | TopModule -> NestedModule
-                        | x -> x
-                    { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
+            match res with
+            | None -> [||]
+            | Some (scope, ns, pos) -> 
+                Entity.tryCreate(ns, scope.Idents, partiallyQualifiedName, requiresQualifiedAccessParent, 
+                                 autoOpenParent, entityNamespace, entity)
+                |> Array.map (fun e ->
+                    e,
+                    match modules |> List.filter (fun (m, _, _) -> entity |> Array.startsWith m ) with
+                    | [] -> { ScopeKind = scope.Kind; Pos = pos }
+                    | (_, endLine, startCol) :: _ ->
+                        //printfn "All modules: %A, Win module: %A" modules m
+                        let scopeKind =
+                            match scope.Kind with
+                            | TopModule -> NestedModule
+                            | x -> x
+                        { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
 
 type IInsertContextDocument<'T> =
     abstract GetLineStr: 'T * line:int -> string
