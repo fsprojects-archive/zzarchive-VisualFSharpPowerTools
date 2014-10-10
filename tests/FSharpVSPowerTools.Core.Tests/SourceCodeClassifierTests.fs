@@ -1419,12 +1419,59 @@ let _ = 1
     => [ 4, [ Category.Unused, 5, 6 ]]
     
 [<Test>]
-let ``printfn formatters``() =
+let ``printf formatters in bindings``() =
     """
 let _ = printfn ""
 let _ = printfn "%s %s"
 do printfn "%6d %%  % 06d" 1 2
 """
- => [ 2, [ Category.Function, 8, 15 ]
-      3, [ Category.Function, 8, 15; Category.Printf, 17, 19; Category.Printf, 20, 22 ]
-      4, [ Category.Function, 3, 10; Category.Printf, 12, 15; Category.Printf, 20, 25 ]]
+    => [ 2, [ Category.Function, 8, 15 ]
+         3, [ Category.Function, 8, 15; Category.Printf, 17, 19; Category.Printf, 20, 22 ]
+         4, [ Category.Function, 3, 10; Category.Printf, 12, 15; Category.Printf, 20, 25 ]]
+
+[<Test>]
+let ``printf formatters in try / with / finally``() =
+    """
+try
+    let _ = sprintf "foo %A bar" 0
+    try
+        printfn "foo %b bar" true
+    finally
+        printf "foo %i bar" 0
+with _ ->
+    failwithf "foo %d bar" 0
+"""
+    =>  [ 3, [ Category.Function, 12, 19; Category.Printf, 25, 27 ]
+          5, [ Category.Function, 8, 15; Category.Printf, 21, 23 ]
+          7, [ Category.Function, 8, 14; Category.Printf, 20, 22 ]
+          9, [ Category.Function, 4, 13; Category.Printf, 19, 21 ]]
+
+[<Test>]
+let ``printf formatters in record / DU members``() =
+    """
+type R = { Name: string }
+    with 
+        member __.M _ = 
+            sprintf "%A"
+        override __.ToString() = 
+            sprintf "%d" 1
+type DU = DU
+    with
+        member __.M = 
+            sprintf "%A"
+        override __.ToString() = 
+            sprintf "%d" 1
+"""
+    => [ 5, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
+         7, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
+         11, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
+         13, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]]
+
+[<Test>]
+let ``printf formatters in extention members``() =
+    """
+type System.Object with
+    member __.M1 = 
+        sprintf "%A"
+"""
+    => [ 4, [ Category.Function, 8, 15; Category.Printf, 17, 19 ]]
