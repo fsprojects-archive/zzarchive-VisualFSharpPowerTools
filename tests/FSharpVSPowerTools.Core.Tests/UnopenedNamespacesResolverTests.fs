@@ -32,7 +32,7 @@ let assertEntityCreation args res =
     Entity.tryCreate 
             (args.ns |> Option.map (fun x -> x.Split '.'),
              args.scope.Split '.', 
-             args.currentIdent,
+             args.currentIdent.Split '.',
              args.requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.'), 
              args.autoOpenParent |> Option.map (fun x -> x.Split '.'),
              args.entityNs |> Option.map (fun x -> x.Split '.'),
@@ -623,9 +623,9 @@ let _ = System.Foo.empty
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
-let forEntity (ns: LongIdent) (fullName: LongIdent) (ident, source: Source, line) =
+let forEntity (ns: LongIdent) (fullName: LongIdent) (ident: string, source: Source, line) =
     let ast = parseSource source
-    match ParsedInput.tryFindInsertionContext line ast ident (None, None, Some (ns.Split '.'), fullName.Split '.') with
+    match ParsedInput.tryFindInsertionContext line ast (ident.Split '.') (None, None, Some (ns.Split '.'), fullName.Split '.') with
     | None -> failwith "Cannot find nearest open statement block"
     | Some (e, ctx) -> source, e, ctx, ast
 
