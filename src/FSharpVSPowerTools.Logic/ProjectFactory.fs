@@ -240,4 +240,4 @@ type BasicProjectFactory(events: EnvDTE80.Events2) =
 
     member x.CreateForProject(project: Project): IProjectProvider = 
         cache.Get project.FullName (fun _ ->
-            new ProjectProvider (project, x.CreateForProject, onProjectChanged)) :> _
+            new ProjectProvider (project, x.CreateForProject, onProjectChanged, id)) :> _
