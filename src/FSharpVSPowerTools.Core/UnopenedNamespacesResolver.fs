@@ -4,6 +4,7 @@ type LongIdent = string
 
 type Entity =
     { FullRelativeName: LongIdent
+      Qualifier: LongIdent
       Namespace: LongIdent option
       Name: LongIdent }
     override x.ToString() = sprintf "%A" x
@@ -61,17 +62,22 @@ module Entity =
             | [||], [||] -> None
             | [||], [|_|] -> None
             | _ ->
-                let fullRelativeName = Array.append (getRelativeNs fullOpenableNs) restIdents |> String.concat "."
+                let fullRelativeName = Array.append (getRelativeNs fullOpenableNs) restIdents
                 let ns = 
                     match relativeNs with 
                     | [||] -> None 
                     | _ when identCount > 1 && relativeNs.Length >= identCount -> 
                         Some (relativeNs.[0..relativeNs.Length - identCount] |> String.concat ".")
                     | _ -> Some (relativeNs |> String.concat ".")
+                let qualifier = 
+                    if fullRelativeName.Length > 1 && fullRelativeName.Length >= identCount then
+                        fullRelativeName.[0..fullRelativeName.Length - identCount]  
+                    else fullRelativeName
                 Some 
-                    { FullRelativeName = fullRelativeName //.[0..fullRelativeName.Length - identCount - 1]
+                    { FullRelativeName = String.concat "." fullRelativeName //.[0..fullRelativeName.Length - identCount - 1]
+                      Qualifier = String.concat "." qualifier
                       Namespace = ns
-                      Name = String.concat "." restIdents }) 
+                      Name = match restIdents with [|_|] -> "" | _ -> String.concat "." restIdents }) 
 
 type Pos = 
     { Line: int
