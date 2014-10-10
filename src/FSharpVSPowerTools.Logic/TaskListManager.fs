@@ -61,8 +61,7 @@ type internal TaskListManager private (serviceProvider: IServiceProvider) =
                          | 1 -> TaskPriority.Low
                          | 2 -> TaskPriority.Normal
                          | _ -> TaskPriority.High
-        task.Navigate.AddHandler(
-            new EventHandler(fun _ _ -> navigateTo task.Document task.Line task.Column))
+        task.Navigate.AddHandler(fun _ _ -> navigateTo task.Document task.Line task.Column)
         task
         
     let addToTaskList newTasks =

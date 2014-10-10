@@ -68,7 +68,6 @@
     <Compile Include="FileSystem.fs" />
     <Compile Include="VSLanguageService.fs" />
     <Compile Include="SolutionBuildEventListener.fs" />
-    <Compile Include="SolutionEventsListener.fs" />
     <Compile Include="ProjectProvider.fs" />
     <Compile Include="ProjectFactory.fs" />
     <Compile Include="ActiveViewsRegistratorListener.fs" />

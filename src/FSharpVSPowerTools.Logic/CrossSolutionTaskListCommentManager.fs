@@ -159,8 +159,7 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
         if isCompiledFSharpProjectItem projItem then
             let newFilePath = projItem.GetProperty("FullPath")
             let oldFilePath =
-                let dirName = newFilePath
-                              |> Path.GetDirectoryName
+                let dirName = Path.GetDirectoryName(newFilePath)
                 Path.Combine(dirName, oldName)
 
             let comments = (new CommentExtractor(options)).GetComments(newFilePath, File.ReadAllLines(newFilePath))

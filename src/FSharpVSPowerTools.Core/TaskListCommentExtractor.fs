@@ -1,10 +1,9 @@
 ﻿namespace FSharpVSPowerTools.TaskList
 
 open System
-open System.Text.RegularExpressions
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-[<StructuralEquality; NoComparison>]
+[<NoComparison>]
 type Comment =
     {
         Text: string
@@ -13,11 +12,10 @@ type Comment =
         Column: int
         Priority : int
     }
-with
-    override this.ToString() = sprintf "%A" this
+    override x.ToString() = sprintf "%A" x
 
 
-[<StructuralEquality; NoComparison>]
+[<NoComparison>]
 type CommentOption = { Comment : string; Priority : int } with
     static member Default = { Comment = "TODO"; Priority = 2 }
 
@@ -27,6 +25,7 @@ type private Pos = {
     Column: int
 }
 
+
 type private TaskListCommentPos =
     | OnelineTaskListCommentPos of string * Pos
     | MultilineTaskListCommentPos of string * Pos * Pos
@@ -34,25 +33,27 @@ type private TaskListCommentPos =
 
 [<AutoOpen>]
 module private Utils =
-    type Microsoft.FSharp.Compiler.SourceCodeServices.TokenInformation with
-        member this.Text(lines: string[], lineNumber: int) =
-            lines.[lineNumber].Substring(this.LeftColumn, this.FullMatchedLength)
+    type TokenInformation with
+        member x.Text(lines: string[], lineNumber: int) =
+            lines.[lineNumber].Substring(x.LeftColumn, x.FullMatchedLength)
 
     let sourceTok = SourceTokenizer([], "/tmp.fsx")
 
     let createNewLineTokenizer (lines: string[]) (lineNumber: int) =
-        let nextLine = if lines.Length <= (lineNumber + 1) then "" else lines.[lineNumber + 1]
+        let nextLine =
+            if lines.Length <= (lineNumber + 1) then String.Empty
+            else lines.[lineNumber + 1]
         sourceTok.CreateLineTokenizer(nextLine)
 
     let isFirstToken (tokenText: string) =
-        tokenText.TrimStart([| ' '; '\t'; '/'; '*' |]).TrimStart() <> ""
+        tokenText.TrimStart([| ' '; '\t'; '/'; '*' |]) <> String.Empty
 
     let tokenizeFirstToken (tokText: string) =
         let rec tokenize (tokenizer: LineTokenizer) state =
             match tokenizer.ScanToken(state) with
-            | Some tok, state when tok.Text([|tokText|], 0).TrimStart([| ' '; '\t'; '/'; '*' |]) = "" -> tokenize tokenizer state
+            | Some tok, state when not <| isFirstToken (tok.Text([| tokText |], 0)) -> tokenize tokenizer state
             | Some tok, _ -> (tok, tokText.Substring(tok.LeftColumn, tok.FullMatchedLength))
-            | None, _ -> (Unchecked.defaultof<_>, "")
+            | None, _ -> (Unchecked.defaultof<_>, String.Empty)
         let tokenizer = sourceTok.CreateLineTokenizer(tokText)
         tokenize tokenizer 0L
 
@@ -61,9 +62,9 @@ module private Utils =
         | Some tok, state ->
             let tokText = tok.Text(lines, lineNumber).ToLowerInvariant()
             let tok2, tokenizedText = tokenizeFirstToken tokText
-            if isFirstToken tokenizedText && tasks |> Array.exists ((=)tokenizedText) then
+            if isFirstToken tokenizedText && tasks |> Array.exists ((=) tokenizedText) then
                 let pos = { Line = lineNumber; Column = tok.LeftColumn + tok2.LeftColumn }
-                (Some (tokenizedText, pos)), state
+                (Some (tokenizedText, pos), state)
             else
                 tryFindLineCommentTaskToken tasks (lines, lineNumber, tokenizer, state)
         | _ -> None, state
@@ -76,9 +77,9 @@ module private Utils =
                 | TokenCharKind.Comment ->
                     match lines.[lineNumber].[tok.LeftColumn..tok.RightColumn], nestLevel with
                     | "*)", 0 -> (lineNumber, acc, tokenizer, state)
-                    | "*)", _ -> scanMultilineComments tokenizer ((lineNumber, tok)::acc) state (nestLevel - 1) lineNumber
-                    | "(*", _ -> scanMultilineComments tokenizer ((lineNumber, tok)::acc) state (nestLevel + 1) lineNumber
-                    | _ -> scanMultilineComments tokenizer ((lineNumber, tok)::acc) state nestLevel lineNumber
+                    | "*)", _ -> scanMultilineComments tokenizer ((lineNumber, tok) :: acc) state (nestLevel - 1) lineNumber
+                    | "(*", _ -> scanMultilineComments tokenizer ((lineNumber, tok) :: acc) state (nestLevel + 1) lineNumber
+                    | _ -> scanMultilineComments tokenizer ((lineNumber, tok) :: acc) state nestLevel lineNumber
                 | _ ->
                     (lineNumber, acc, tokenizer, state)
             | None, state ->
@@ -89,7 +90,7 @@ module private Utils =
         match lineNumAndTokens |> List.rev |> List.tryFind (fun (ln, tok) -> isFirstToken (tok.Text(lines, ln))) with
         | Some (lineNum, tok) ->
             let tokText = tok.Text(lines, lineNum).ToLowerInvariant()
-            if tasks |> Array.exists ((=)tokText) then
+            if tasks |> Array.exists ((=) tokText) then
                 let beginPos = { Line = lineNum; Column = tok.LeftColumn }
                 let endPos = { Line = nextLineNumber; Column = (lineNumAndTokens |> List.head |> snd).RightColumn }
                 (Some (tokText, beginPos, endPos)), nextLineNumber, tokenizer, state
