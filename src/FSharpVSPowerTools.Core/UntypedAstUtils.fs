@@ -355,6 +355,12 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
     //debug "%A" idents
     identsByEndPos :> _
 
+let getLongIdentAt ast pos =
+    let idents = getLongIdents (Some ast)
+    match idents.TryGetValue pos with
+    | true, idents -> Some idents
+    | _ -> None
+
 /// Returns ranges of all quotations found in an untyped AST
 let getQuatationRanges ast =
     let quotationRanges = ResizeArray()

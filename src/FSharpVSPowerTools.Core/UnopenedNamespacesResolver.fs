@@ -33,34 +33,37 @@ module Entity =
     let tryCreate (targetNamespace: Idents option, targetScope: Idents, partiallyQualifiedName: Idents, 
                    requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
                    candidateNamespace: Idents option, candidate: Idents) =
-        if candidate.Length = 0 || candidate |> Array.endsWith partiallyQualifiedName |> not then None
-        else Some candidate
-        |> Option.bind (fun candidate ->
-            let fullOpenableNs, restIdents = 
-                let openableNsCount =
-                    match requiresQualifiedAccessParent with
-                    | Some parent -> min parent.Length candidate.Length
-                    | None -> candidate.Length
-                candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
+        if candidate.Length = 0 then None
+        else 
+            let tails = Array.heads partiallyQualifiedName
+            if tails |> Array.forall (fun parts -> not (candidate |> Array.endsWith parts)) then None
+            else Some candidate
+            |> Option.bind (fun candidate ->
+                let fullOpenableNs, restIdents = 
+                    let openableNsCount =
+                        match requiresQualifiedAccessParent with
+                        | Some parent -> min parent.Length candidate.Length
+                        | None -> candidate.Length
+                    candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
 
-            let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
+                let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
              
-            let getRelativeNs ns =
-                match targetNamespace, candidateNamespace with
-                | Some targetNs, Some candidateNs when candidateNs = targetNs ->
-                    getRelativeNamespace targetScope ns
-                | None, _ -> getRelativeNamespace targetScope ns
-                | _ -> ns
+                let getRelativeNs ns =
+                    match targetNamespace, candidateNamespace with
+                    | Some targetNs, Some candidateNs when candidateNs = targetNs ->
+                        getRelativeNamespace targetScope ns
+                    | None, _ -> getRelativeNamespace targetScope ns
+                    | _ -> ns
 
-            let relativeNs = getRelativeNs openableNs
+                let relativeNs = getRelativeNs openableNs
 
-            match relativeNs, restIdents with
-            | [||], [||] -> None
-            | [||], [|_|] -> None
-            | _ ->
-                Some { FullRelativeName = String.Join (".", Array.append (getRelativeNs fullOpenableNs) restIdents)
-                       Namespace = match relativeNs with [||] -> None | _ -> Some (String.Join (".", relativeNs))
-                       Name = String.Join (".", restIdents) })
+                match relativeNs, restIdents with
+                | [||], [||] -> None
+                | [||], [|_|] -> None
+                | _ ->
+                    Some { FullRelativeName = String.Join (".", Array.append (getRelativeNs fullOpenableNs) restIdents)
+                           Namespace = match relativeNs with [||] -> None | _ -> Some (String.Join (".", relativeNs))
+                           Name = String.Join (".", restIdents) })
 
 type Pos = 
     { Line: int
@@ -491,7 +494,7 @@ type IInsertContextDocument<'T> =
 
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module InsertContext =
-    /// Corrents insertion line number based on kind of scope and text surrounding the instertion point.
+    /// Corrects insertion line number based on kind of scope and text surrounding the instertion point.
     let adjustInsertionPoint state (doc: IInsertContextDocument<_>) ctx  =
         let getLineStr line = (doc.GetLineStr (state, line)).Trim()
         let line =

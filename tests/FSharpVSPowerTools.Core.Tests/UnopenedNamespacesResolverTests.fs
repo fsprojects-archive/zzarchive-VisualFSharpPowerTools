@@ -265,6 +265,25 @@ let ``entities in auto open module``() =
         Name = "Now"
     }
 
+[<Test>] 
+let ``fully qualified external entities / partially qualified name``() =
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "DateTime.Now"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "System"
+        entityFullName = "System.DateTime.Now" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.DateTime.Now"
+        Namespace = Some "System.DateTime"
+        Name = "Now" 
+    }
+
+
 // ParsedInput.getEntityKind tests
 
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 

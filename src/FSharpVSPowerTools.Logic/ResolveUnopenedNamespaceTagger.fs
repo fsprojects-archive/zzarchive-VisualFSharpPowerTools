@@ -11,6 +11,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.FSharp.Compiler
 
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -100,7 +101,9 @@ type ResolveUnopenedNamespaceSmartTagger
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
-                                let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree sym.Text
+                                
+                                let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn) |> liftMaybe
+                                let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
                                 return entities |> List.choose createEntity
                     }
                     |> Async.map (fun result -> 
