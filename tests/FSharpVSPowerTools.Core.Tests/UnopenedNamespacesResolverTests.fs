@@ -40,6 +40,7 @@ let assertEntityCreation args res =
     |> assertEqual res
 
 let (=>) args res = assertEntityCreation args [|res|]
+
 let (!=>) = assertEntityCreation
 
 [<Test>] 
@@ -56,7 +57,7 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.DateTime.Now"
-        Qualifier = ""
+        Qualifier = "System.DateTime.Now"
         Namespace = Some "System.DateTime"
         Name = "" 
     }
@@ -73,7 +74,7 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.Now"
-        Qualifier = ""
+        Qualifier = "System.Now"
         Namespace = Some "System"
         Name = "" 
     }
@@ -90,7 +91,7 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.Now"
-        Qualifier = ""
+        Qualifier = "System.Now"
         Namespace = Some "System"
         Name = "" 
     }
@@ -107,7 +108,7 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.Now"
-        Qualifier = ""
+        Qualifier = "System.Now"
         Namespace = Some "System"
         Name = "" 
     }
@@ -126,7 +127,7 @@ let ``fully qualified external entities with require qualified access module``()
     => 
     { 
         FullRelativeName = "System.DateTime.Now"
-        Qualifier = ""
+        Qualifier = "System.DateTime.Now"
         Namespace = None
         Name = "System.DateTime.Now" 
     }
@@ -143,7 +144,7 @@ let ``fully qualified external entities with require qualified access module``()
     => 
     { 
         FullRelativeName = "System.DateTime.Now"
-        Qualifier = ""
+        Qualifier = "System.DateTime.Now"
         Namespace = Some "System"
         Name = "DateTime.Now" 
     }
@@ -175,7 +176,7 @@ let ``internal entities``() =
     => 
     { 
         FullRelativeName = "Nested.Now"
-        Qualifier = ""
+        Qualifier = "Nested.Now"
         Namespace = Some "Nested"
         Name = "" 
     }
@@ -192,7 +193,7 @@ let ``internal entities``() =
     => 
     { 
         FullRelativeName = "Nested2.Now"
-        Qualifier = ""
+        Qualifier = "Nested2.Now"
         Namespace = Some "Nested2"
         Name = "" 
     }
@@ -222,7 +223,7 @@ let ``internal entities in different sub namespace``() =
     => 
     { 
         FullRelativeName = "Myns.Nested2.Now"
-        Qualifier = ""
+        Qualifier = "Myns.Nested2.Now"
         Namespace = Some "Myns.Nested2"
         Name = "" 
     }
@@ -241,7 +242,7 @@ let ``internal entities with require qualified access module``() =
     => 
     { 
         FullRelativeName = "Nested.Now"
-        Qualifier = ""
+        Qualifier = "Nested.Now"
         Namespace = None
         Name = "Nested.Now"
     }
@@ -271,7 +272,7 @@ let ``entities in auto open module``() =
     => 
     { 
         FullRelativeName = "Nested.AutoOpenNested.Now"
-        Qualifier = ""
+        Qualifier = "Nested.AutoOpenNested.Now"
         Namespace = Some "Nested"
         Name = ""
     }
