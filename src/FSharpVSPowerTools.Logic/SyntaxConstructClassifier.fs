@@ -124,7 +124,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             let builtProjectFileName = Path.GetFileName project
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
-                debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers." 
+                debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers..." 
                         builtProjectFileName
                 updateSyntaxConstructClassifiers true
         } |> ignore)
@@ -137,7 +137,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
         match state.Value with
         | Some state ->
-            // we get additional 10 lines above the current snapshot in case the user inserts some line
+            // We get additional 10 lines above the current snapshot in case the user inserts some line
             // while we were getting locations from FCS. It's not as reliable though. 
             let spanStartLine = max 0 (snapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
@@ -161,7 +161,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             [||]
 
     interface IClassifier with
-        // it's called for each visible line of code
+        // It's called for each visible line of code
         member __.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
             try getClassificationSpans snapshotSpan :> _
             with e -> 
