@@ -23,6 +23,7 @@ module FSharpVSPowerTools.Core.Tests.GoToDefinitionTests
 open NUnit.Framework
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
+open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
@@ -86,7 +87,33 @@ let tryGenerateDefinitionFromPos caretPos src =
     }
     |> Async.RunSynchronously
 
+let validateSignature source signature =
+    let projFileName = @"C:\Project.fsproj"
+    let sourceFile = Path.ChangeExtension(Path.GetTempFileName(), ".fs")
+    File.WriteAllText(sourceFile, source)
+    let signatureFile = @"C:\Temp.fsi"
+    let opts =
+        { ProjectFileName = projFileName
+          ProjectFileNames = [| sourceFile; signatureFile|]
+          ProjectOptions = LanguageServiceTestHelper.args
+          ReferencedProjects = Array.empty
+          IsIncompleteTypeCheckEnvironment = false
+          UseScriptResolutionRules = true
+          LoadTime = DateTime.UtcNow
+          UnresolvedReferences = None }
+    let results =
+        languageService.ParseAndCheckFileInProject(opts, signatureFile, signature, AllowStaleResults.No)
+        |> Async.RunSynchronously
+    results.GetErrors()
+
 let generateDefinitionFromPos caretPos src =
+    let signature = Option.get (tryGenerateDefinitionFromPos caretPos src)
+    match validateSignature src signature with
+    | None | Some [||] -> ()
+    | Some errors -> failwithf "Type checking results in errors: %A" errors
+    signature
+
+let generateDefinitionFromPosNoValidation caretPos src =
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
 [<Test>]
@@ -100,16 +127,15 @@ let x = new Tuple<int, int>(1, 2)""", (Pos.fromZ 1 12)
         """open System
 let x = Tuple<int, int>(1, 2)""", (Pos.fromZ 1 8)
     ]
-    |> List.map (fun (src, pos) -> generateDefinitionFromPos pos src)
+    |> List.map (fun (src, pos) -> generateDefinitionFromPosNoValidation pos src)
     |> List.iter (fun src ->
         assertSrcAreEqual src
             """namespace System
 
+open System
+
 /// Represents a 2-tuple, or pair. 
 type Tuple<'T1, 'T2> =
-    interface IComparable
-    interface Collections.IStructuralComparable
-    interface Collections.IStructuralEquatable
     interface ITuple
     /// Initializes a new instance of the  class.
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
@@ -191,14 +217,13 @@ let ``go to property definition generate enclosing type metadata`` () =
 
 let t = Tuple<int, int>(0, 0)
 let u = t.Item1"""
-    |> generateDefinitionFromPos (Pos.fromZ 3 10)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 3 10)
     |> assertSrcAreEqual """namespace System
+
+open System
 
 /// Represents a 2-tuple, or pair. 
 type Tuple<'T1, 'T2> =
-    interface IComparable
-    interface Collections.IStructuralComparable
-    interface Collections.IStructuralEquatable
     interface ITuple
     /// Initializes a new instance of the  class.
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
@@ -221,6 +246,8 @@ let ``go to method definition generate enclosing type metadata and supports C# e
 do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
     |> assertSrcAreEqualForFirstLines 10 """namespace System
+
+open System
 
 /// Represents the standard input, output, and error streams for console applications. This class cannot be inherited.
 [<Class>]
@@ -250,12 +277,8 @@ open System
 type List<'T> =
     | ( [] )
     | ( :: ) of Head: 'T * Tail: 'T list
-    interface IComparable<List<'T>>
-    interface IComparable
     interface Collections.IEnumerable
     interface Collections.Generic.IEnumerable<'T>
-    interface Collections.IStructuralComparable
-    interface Collections.IStructuralEquatable
     /// Gets the first element of the list
     member Head : 'T
     /// Gets a value indicating if the list contains no entries
@@ -306,10 +329,6 @@ type Choice<'T1, 'T2> =
     | Choice1Of2 of 'T1
     /// Choice 2 of 2 choices
     | Choice2Of2 of 'T2
-    interface IComparable<Choice<'T1,'T2>>
-    interface IComparable
-    interface Collections.IStructuralComparable
-    interface Collections.IStructuralEquatable
 """
 
 [<Test>]
@@ -331,10 +350,6 @@ type Choice<'T1, 'T2> =
     | Choice1Of2 of 'T1
     /// Choice 2 of 2 choices
     | Choice2Of2 of 'T2
-    interface IComparable<Choice<'T1,'T2>>
-    interface IComparable
-    interface Collections.IStructuralComparable
-    interface Collections.IStructuralEquatable
 """
 
 [<Test>]
@@ -441,11 +456,6 @@ let x = new MyStruct()"""
 
 [<Struct>]
 type MyStruct =
-    interface System.IComparable<MyStruct>
-    interface System.IComparable
-    interface System.IEquatable<MyStruct>
-    interface System.Collections.IStructuralComparable
-    interface System.Collections.IStructuralEquatable
     new : x:int * y:string -> MyStruct
     val Field1 : int
     val Field2 : string
@@ -491,11 +501,6 @@ let x = new MyStruct()"""
 
 type MyStruct =
     struct
-        interface System.IComparable<MyStruct>
-        interface System.IComparable
-        interface System.IEquatable<MyStruct>
-        interface System.Collections.IStructuralComparable
-        interface System.Collections.IStructuralEquatable
     end
 """
 
@@ -529,7 +534,7 @@ let f x = Option.map(x)"""
         // From module function: 'map'
         Pos.fromZ 2 17
     ]
-    |> List.map (fun pos -> generateDefinitionFromPos pos src)
+    |> List.map (fun pos -> generateDefinitionFromPosNoValidation pos src)
     |> List.iter (assertSrcAreEqual """/// Basic operations on options.
 [<CompilationRepresentation(4)>]
 module Microsoft.FSharp.Core.Option
@@ -570,7 +575,7 @@ type T =
 
 type T2 =
     inherit T"""
-    |> generateDefinitionFromPos (Pos.fromZ 4 5)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 4 5)
     |> assertSrcAreEqual """module File
 
 type T2 =
@@ -631,7 +636,7 @@ type MyBaseClass() =
 type MyClass() =
     inherit MyBaseClass()
     override this.Method(x) = ()"""
-    |> generateDefinitionFromPos (Pos.fromZ 5 5)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 5 5)
     |> assertSrcAreEqual """module File
 
 type MyClass =
@@ -722,7 +727,7 @@ let ``handle nested modules`` () =
     """
 let x = Array.map
     """
-    |> generateDefinitionFromPos (Pos.fromZ 1 9)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 9)
     |> assertSrcAreEqual """/// Basic operations on arrays.
 [<CompilationRepresentation(4)>]
 [<RequireQualifiedAccess>]
@@ -965,11 +970,6 @@ type MyRecord =
         A: string
         B: int
     }
-    interface System.IComparable<MyRecord>
-    interface System.IComparable
-    interface System.IEquatable<MyRecord>
-    interface System.Collections.IStructuralComparable
-    interface System.Collections.IStructuralEquatable
     member Method1 : unit -> unit
     member Method2 : unit -> unit
 """
@@ -990,11 +990,6 @@ type MyUnion with
 type MyUnion =
     | A of int
     | B of float
-    interface System.IComparable<MyUnion>
-    interface System.IComparable
-    interface System.IEquatable<MyUnion>
-    interface System.Collections.IStructuralComparable
-    interface System.Collections.IStructuralEquatable
     member Method1 : unit -> unit
     member Method2 : unit -> string
 """
@@ -1051,7 +1046,7 @@ type Union =
     | [<System.Obsolete("cuir")>] Case2 of string
     | Case3
 """
-    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 5)
     |> assertSrcAreEqual """module File
 
 type Union =
@@ -1061,11 +1056,6 @@ type Union =
     | [<Obsolete("cuir")>]
       Case2 of string
     | Case3
-    interface System.IComparable<Union>
-    interface System.IComparable
-    interface System.IEquatable<Union>
-    interface System.Collections.IStructuralComparable
-    interface System.Collections.IStructuralEquatable
 """
 
 [<Test>]
@@ -1094,11 +1084,6 @@ type Record =
         [<Obsolete("Reason2")>]
         Field2: float
     }
-    interface IComparable<Record>
-    interface IComparable
-    interface IEquatable<Record>
-    interface Collections.IStructuralComparable
-    interface Collections.IStructuralEquatable
 """
 
 [<Test; Ignore("activate when method/property attributes are supported by FCS")>]
@@ -1268,7 +1253,7 @@ let f (``a param``: int) = ``a param`` * 2""", Pos.fromZ 0 9
 
         """type ``My delegate``= delegate of int -> int""", Pos.fromZ 0 5
     ]
-    |> List.map (fun (src, pos) -> generateDefinitionFromPos pos src)
+    |> List.map (fun (src, pos) -> generateDefinitionFromPosNoValidation pos src)
     |> assertSrcSeqAreEqual [
         """module File
 
@@ -1294,11 +1279,6 @@ type ``My abbrev`` = int
 type Union =
     | ``My Case`` of int
     | Case2
-    interface System.IComparable<Union>
-    interface System.IComparable
-    interface System.IEquatable<Union>
-    interface System.Collections.IStructuralComparable
-    interface System.Collections.IStructuralEquatable
 """
 
         """module File
@@ -1307,11 +1287,6 @@ type Record =
     {
         ``My Record``: string
     }
-    interface System.IComparable<Record>
-    interface System.IComparable
-    interface System.IEquatable<Record>
-    interface System.Collections.IStructuralComparable
-    interface System.Collections.IStructuralEquatable
 """
 
         """module File
@@ -1473,7 +1448,7 @@ let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
 let ``handle active patterns as parts of module declarations`` () =
     """open Microsoft.FSharp.Quotations
 let f = Patterns.(|AddressOf|_|)"""
-    |> generateDefinitionFromPos (Pos.fromZ 1 13)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 13)
     |> fun str -> str.Contains("val (|AddressSet|_|) : input:Expr -> (Expr * Expr) option")
     |> assertEqual true
 

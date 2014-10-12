@@ -54,6 +54,7 @@ type private MembersPartition =
         //       | _ -> false
         let filteredMembers = members
                               |> Seq.filter (fun mem ->
+                                  mem.Accessibility.IsPublic &&
                                   not mem.IsPropertyGetterMethod &&
                                   not mem.IsPropertySetterMethod &&
                                   not mem.IsEvent)
@@ -339,6 +340,10 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
     else
         prefixToConsider + "." + (QuoteIdentifierIfNeeded moduleNameOnly)
 
+type FSharpEntity with
+    member x.PublicNestedEntities =
+        x.NestedEntities |> Seq.filter (fun e -> e.Accessibility.IsPublic)
+
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
     writeDocs ctx modul.XmlDoc (fun _ -> modul.XmlDocSig)
@@ -347,7 +352,6 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
         let qualifiedModuleName = tryRemoveModuleSuffix modul modul.FullName
         ctx.Writer.WriteLine("module {0}", qualifiedModuleName)
         ctx.OpenDeclarations
-        |> Seq.filter ((<>) qualifiedModuleName)
         |> Seq.iteri (fun i decl ->
             if i = 0 then 
                 ctx.Writer.WriteLine("")
@@ -362,10 +366,10 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     for value in modul.MembersFunctionsAndValues do
         writeFunctionOrValue ctx value
 
-    if modul.NestedEntities.Count > 0 then
+    if not (Seq.isEmpty modul.PublicNestedEntities) then
         ctx.Writer.WriteLine("")
 
-    for entity in modul.NestedEntities do
+    for entity in modul.PublicNestedEntities do
         match entity with
         | FSharpModule -> writeModule false ctx entity
         | AbbreviatedType abbreviatedType -> writeTypeAbbrev true ctx entity abbreviatedType
@@ -389,7 +393,6 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
         let parent = getParentPath typ
         ctx.Writer.WriteLine(parent)
         ctx.OpenDeclarations
-        |> Seq.filter (not << parent.EndsWith)
         |> Seq.iteri (fun i decl ->
             if i = 0 then 
                 ctx.Writer.WriteLine("")
@@ -457,15 +460,22 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
 
     // Interfaces
     [
+        let ignoredInterfaces = set [ "IComparable"; "IComparable`1"; "IEquatable"; "IEquatable`1"; "IStructuralComparable"; "IStructuralEquatable" ]
         for inter in typ.DeclaredInterfaces do
-            if inter.TypeDefinition <> typ then
-                yield inter, formatType ctx inter
+            match inter with
+            | TypeWithDefinition entity ->
+                if entity <> typ && entity.Accessibility.IsPublic 
+                   && not (Set.contains entity.LogicalName ignoredInterfaces) then
+                    yield inter, formatType ctx inter
+            | _ -> ()
     ]
     |> List.sortBy (fun (inter, _name) ->
         // Sort by name without the namespace qualifier
-        if inter.HasTypeDefinition
-        then inter.TypeDefinition.DisplayName.ToUpperInvariant()
-        else String.Empty)
+        match inter with
+        | TypeWithDefinition entity ->
+            entity.DisplayName.ToUpperInvariant()
+        | _ ->
+            String.Empty)
     |> List.iter (fun (_, name) ->
         if typ.IsInterface then
             ctx.Writer.WriteLine("inherit {0}", name)
@@ -515,7 +525,6 @@ and internal writeTypeAbbrev isNestedEntity ctx (abbreviatingType: FSharpEntity)
         let parent = getParentPath abbreviatingType
         ctx.Writer.WriteLine(parent)
         ctx.OpenDeclarations
-        |> Seq.filter (not << parent.EndsWith)
         |> Seq.iteri (fun i decl ->
             if i = 0 then 
                 ctx.Writer.WriteLine("")
@@ -532,7 +541,6 @@ and internal writeFSharpExceptionType isNestedEntity ctx (exn: FSharpEntity) =
         let parent = getParentPath exn
         ctx.Writer.WriteLine(parent)
         ctx.OpenDeclarations
-        |> Seq.filter (not << parent.EndsWith)
         |> Seq.iteri (fun i decl ->
             if i = 0 then 
                 ctx.Writer.WriteLine("")
@@ -561,7 +569,6 @@ and internal writeDelegateType isNestedEntity ctx (del: FSharpEntity) =
         let parent = getParentPath del
         ctx.Writer.WriteLine(parent)        
         ctx.OpenDeclarations
-        |> Seq.filter (not << parent.EndsWith)
         |> Seq.iteri (fun i decl ->
             if i = 0 then 
                 ctx.Writer.WriteLine("")
