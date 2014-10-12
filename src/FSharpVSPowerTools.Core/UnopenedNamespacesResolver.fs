@@ -1,11 +1,10 @@
 ﻿namespace FSharpVSPowerTools
 
-open System
-
 type LongIdent = string
 
 type Entity =
     { FullRelativeName: LongIdent
+      Qualifier: LongIdent
       Namespace: LongIdent option
       Name: LongIdent }
     override x.ToString() = sprintf "%A" x
@@ -30,12 +29,18 @@ module Entity =
             | _ -> candidateNs.Length
         candidateNs.[0..nsCount - 1]
 
-    let tryCreate (targetNamespace: Idents option, targetScope: Idents, ident: ShortIdent, requiresQualifiedAccessParent: Idents option, 
-                   autoOpenParent: Idents option, candidateNamespace: Idents option, candidate: Idents) =
-        if candidate.Length = 0 || candidate.[candidate.Length - 1] <> ident then None
-        else Some candidate
-        |> Option.bind (fun candidate ->
-            let fullOpenableNs, restIdents =
+    let tryCreate (targetNamespace: Idents option, targetScope: Idents, partiallyQualifiedName: Idents, 
+                   requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
+                   candidateNamespace: Idents option, candidate: Idents) =
+        if candidate.Length = 0 then [||]
+        else 
+            partiallyQualifiedName
+            |> Array.heads
+            |> Array.choose (fun parts -> 
+                 if candidate |> Array.endsWith parts then Some (candidate, parts.Length)
+                 else None)
+        |> Array.choose (fun (candidate, identCount) ->
+            let fullOpenableNs, restIdents = 
                 let openableNsCount =
                     match requiresQualifiedAccessParent with
                     | Some parent -> min parent.Length candidate.Length
@@ -43,7 +48,7 @@ module Entity =
                 candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
 
             let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
-
+             
             let getRelativeNs ns =
                 match targetNamespace, candidateNamespace with
                 | Some targetNs, Some candidateNs when candidateNs = targetNs ->
@@ -57,9 +62,22 @@ module Entity =
             | [||], [||] -> None
             | [||], [|_|] -> None
             | _ ->
-                Some { FullRelativeName = String.Join (".", Array.append (getRelativeNs fullOpenableNs) restIdents)
-                       Namespace = match relativeNs with [||] -> None | _ -> Some (String.Join (".", relativeNs))
-                       Name = String.Join (".", restIdents) })
+                let fullRelativeName = Array.append (getRelativeNs fullOpenableNs) restIdents
+                let ns = 
+                    match relativeNs with 
+                    | [||] -> None 
+                    | _ when identCount > 1 && relativeNs.Length >= identCount -> 
+                        Some (relativeNs.[0..relativeNs.Length - identCount] |> String.concat ".")
+                    | _ -> Some (relativeNs |> String.concat ".")
+                let qualifier = 
+                    if fullRelativeName.Length > 1 && fullRelativeName.Length >= identCount then
+                        fullRelativeName.[0..fullRelativeName.Length - identCount]  
+                    else fullRelativeName
+                Some 
+                    { FullRelativeName = String.concat "." fullRelativeName //.[0..fullRelativeName.Length - identCount - 1]
+                      Qualifier = String.concat "." qualifier
+                      Namespace = ns
+                      Name = match restIdents with [|_|] -> "" | _ -> String.concat "." restIdents }) 
 
 type Pos = 
     { Line: int
@@ -466,23 +484,24 @@ module ParsedInput =
             |> Seq.sortBy (fun (m, _, _) -> -m.Length)
             |> Seq.toList
 
-        fun (ident: ShortIdent) (requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
-                                 entityNamespace: Idents option, entity: Idents) ->
-            res 
-            |> Option.bind (fun (scope, ns, pos) -> 
-                Entity.tryCreate (ns, scope.Idents, ident, requiresQualifiedAccessParent, autoOpenParent, entityNamespace, entity)
-                |> Option.map (fun entity -> entity, scope, pos))
-            |> Option.map (fun (e, scope, pos) ->
-                e,
-                match modules |> List.filter (fun (m, _, _) -> entity |> Array.startsWith m ) with
-                | [] -> { ScopeKind = scope.Kind; Pos = pos }
-                | (_, endLine, startCol) :: _ ->
-                    //printfn "All modules: %A, Win module: %A" modules m
-                    let scopeKind =
-                        match scope.Kind with
-                        | TopModule -> NestedModule
-                        | x -> x
-                    { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
+        fun (partiallyQualifiedName: Idents) (requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
+                                              entityNamespace: Idents option, entity: Idents) ->
+            match res with
+            | None -> [||]
+            | Some (scope, ns, pos) -> 
+                Entity.tryCreate(ns, scope.Idents, partiallyQualifiedName, requiresQualifiedAccessParent, 
+                                 autoOpenParent, entityNamespace, entity)
+                |> Array.map (fun e ->
+                    e,
+                    match modules |> List.filter (fun (m, _, _) -> entity |> Array.startsWith m ) with
+                    | [] -> { ScopeKind = scope.Kind; Pos = pos }
+                    | (_, endLine, startCol) :: _ ->
+                        //printfn "All modules: %A, Win module: %A" modules m
+                        let scopeKind =
+                            match scope.Kind with
+                            | TopModule -> NestedModule
+                            | x -> x
+                        { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
 
 type IInsertContextDocument<'T> =
     abstract GetLineStr: 'T * line:int -> string
@@ -490,7 +509,7 @@ type IInsertContextDocument<'T> =
 
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module InsertContext =
-    /// Corrents insertion line number based on kind of scope and text surrounding the instertion point.
+    /// Corrects insertion line number based on kind of scope and text surrounding the instertion point.
     let adjustInsertionPoint state (doc: IInsertContextDocument<_>) ctx  =
         let getLineStr line = (doc.GetLineStr (state, line)).Trim()
         let line =

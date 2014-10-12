@@ -11,6 +11,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.FSharp.Compiler
 
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -100,8 +101,10 @@ type ResolveUnopenedNamespaceSmartTagger
                                     |> List.concat
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
-                                let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree sym.Text
-                                return entities |> List.choose createEntity
+                                
+                                let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn) |> liftMaybe
+                                let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
+                                return entities |> Seq.map createEntity |> Seq.concat |> Seq.toList
                     }
                     |> Async.map (fun result -> 
                          state <- result
@@ -118,7 +121,9 @@ type ResolveUnopenedNamespaceSmartTagger
     let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
-        let snapshot = snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
+        let snapshot = 
+            if name <> "" then snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
+            else snapshotSpan.Snapshot
         
         let doc =
             { new IInsertContextDocument<ITextSnapshot> with
@@ -130,9 +135,9 @@ type ResolveUnopenedNamespaceSmartTagger
         InsertContext.insertOpenDeclaration snapshot doc ctx ns |> ignore
         transaction.Complete()
 
-    let replaceFullyQualifiedSymbol (snapshotSpan: SnapshotSpan) fullSymbolName = 
+    let replaceFullyQualifiedSymbol (snapshotSpan: SnapshotSpan) qualifier = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
-        snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, fullSymbolName) |> ignore
+        snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, qualifier) |> ignore
         transaction.Complete()
 
     let openNamespaceIcon = ResourceProvider.getRefactoringIcon serviceProvider RefactoringIconKind.AddUsing
@@ -148,13 +153,13 @@ type ResolveUnopenedNamespaceSmartTagger
             member __.Invoke() = openNamespace snapshot ctx ns name
         }
 
-    let qualifiedSymbolAction snapshotSpan fullName =
+    let qualifiedSymbolAction snapshotSpan (fullName, qualifier) =
         { new ISmartTagAction with
             member __.ActionSets = null
             member __.DisplayText = fullName
             member __.Icon = null
             member __.IsEnabled = true
-            member __.Invoke() = replaceFullyQualifiedSymbol snapshotSpan fullName
+            member __.Invoke() = replaceFullyQualifiedSymbol snapshotSpan qualifier
         }
 
     let getSmartTagActions snapshotSpan candidates =
@@ -178,7 +183,7 @@ type ResolveUnopenedNamespaceSmartTagger
             
         let qualifySymbolActions =
             candidates
-            |> Seq.map (fun (entity, _) -> entity.FullRelativeName)
+            |> Seq.map (fun (entity, _) -> entity.FullRelativeName, entity.Qualifier)
             |> Seq.distinct
             |> Seq.sort
             |> Seq.map (qualifiedSymbolAction snapshotSpan)

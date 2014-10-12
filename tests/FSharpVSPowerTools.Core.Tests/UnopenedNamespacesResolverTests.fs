@@ -32,14 +32,15 @@ let assertEntityCreation args res =
     Entity.tryCreate 
             (args.ns |> Option.map (fun x -> x.Split '.'),
              args.scope.Split '.', 
-             args.currentIdent,
+             args.currentIdent.Split '.',
              args.requireQualifiedAccessParent |> Option.map (fun x -> x.Split '.'), 
              args.autoOpenParent |> Option.map (fun x -> x.Split '.'),
              args.entityNs |> Option.map (fun x -> x.Split '.'),
              args.entityFullName.Split '.')
     |> assertEqual res
 
-let (=>) args res = assertEntityCreation args (Some res)
+let (=>) args res = assertEntityCreation args [|res|]
+
 let (!=>) = assertEntityCreation
 
 [<Test>] 
@@ -56,8 +57,9 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.DateTime.Now"
+        Qualifier = "System.DateTime.Now"
         Namespace = Some "System.DateTime"
-        Name = "Now" 
+        Name = "" 
     }
     // -----------------------------------------
     { 
@@ -72,8 +74,9 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.Now"
+        Qualifier = "System.Now"
         Namespace = Some "System"
-        Name = "Now" 
+        Name = "" 
     }
     // -----------------------------------------
     { 
@@ -88,8 +91,9 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.Now"
+        Qualifier = "System.Now"
         Namespace = Some "System"
-        Name = "Now" 
+        Name = "" 
     }
     // -----------------------------------------
     { 
@@ -104,8 +108,9 @@ let ``fully qualified external entities``() =
     => 
     { 
         FullRelativeName = "System.Now"
+        Qualifier = "System.Now"
         Namespace = Some "System"
-        Name = "Now" 
+        Name = "" 
     }
 
 [<Test>] 
@@ -122,6 +127,7 @@ let ``fully qualified external entities with require qualified access module``()
     => 
     { 
         FullRelativeName = "System.DateTime.Now"
+        Qualifier = "System.DateTime.Now"
         Namespace = None
         Name = "System.DateTime.Now" 
     }
@@ -138,6 +144,7 @@ let ``fully qualified external entities with require qualified access module``()
     => 
     { 
         FullRelativeName = "System.DateTime.Now"
+        Qualifier = "System.DateTime.Now"
         Namespace = Some "System"
         Name = "DateTime.Now" 
     }
@@ -153,7 +160,7 @@ let ``simple entities``() =
         entityNs = None
         entityFullName = "Now" 
     } 
-    !=> None
+    !=> [||]
 
 [<Test>]
 let ``internal entities``() =
@@ -169,8 +176,9 @@ let ``internal entities``() =
     => 
     { 
         FullRelativeName = "Nested.Now"
+        Qualifier = "Nested.Now"
         Namespace = Some "Nested"
-        Name = "Now" 
+        Name = "" 
     }
     // -----------------------------------------
     { 
@@ -185,8 +193,9 @@ let ``internal entities``() =
     => 
     { 
         FullRelativeName = "Nested2.Now"
+        Qualifier = "Nested2.Now"
         Namespace = Some "Nested2"
-        Name = "Now" 
+        Name = "" 
     }
     // -----------------------------------------
     { 
@@ -198,7 +207,7 @@ let ``internal entities``() =
         entityNs = Some "Myns"
         entityFullName = "" 
     } 
-    !=> None
+    !=> [||]
 
 [<Test>]
 let ``internal entities in different sub namespace``() =
@@ -214,8 +223,9 @@ let ``internal entities in different sub namespace``() =
     => 
     { 
         FullRelativeName = "Myns.Nested2.Now"
+        Qualifier = "Myns.Nested2.Now"
         Namespace = Some "Myns.Nested2"
-        Name = "Now" 
+        Name = "" 
     }
 
 [<Test>] 
@@ -232,6 +242,7 @@ let ``internal entities with require qualified access module``() =
     => 
     { 
         FullRelativeName = "Nested.Now"
+        Qualifier = "Nested.Now"
         Namespace = None
         Name = "Nested.Now"
     }
@@ -247,7 +258,7 @@ let ``entities in auto open module``() =
         entityNs = Some "Myns"
         entityFullName = "Myns.Nested.Now" 
     } 
-    !=> None
+    !=> [||]
     // -----------------------------------------
     { 
         ns = Some "Myns"
@@ -261,8 +272,28 @@ let ``entities in auto open module``() =
     => 
     { 
         FullRelativeName = "Nested.AutoOpenNested.Now"
+        Qualifier = "Nested.AutoOpenNested.Now"
         Namespace = Some "Nested"
-        Name = "Now"
+        Name = ""
+    }
+
+[<Test>] 
+let ``fully qualified external entities / partially qualified name``() =
+    { 
+        ns = Some "TopNs"
+        scope = ""
+        currentIdent = "Threading.Tasks.Task.Factory.StartNew"
+        requireQualifiedAccessParent = None
+        autoOpenParent = None
+        entityNs = Some "System.Threading.Tasks"
+        entityFullName = "System.Threading.Tasks.Task" 
+    } 
+    => 
+    { 
+        FullRelativeName = "System.Threading.Tasks.Task"
+        Qualifier = "System.Threading"
+        Namespace = Some "System"
+        Name = ""
     }
 
 // ParsedInput.getEntityKind tests
@@ -623,11 +654,12 @@ let _ = System.Foo.empty
 let forLine (line: Line) (source: Source) = source, line
 let forIdent ident (source, line) = ident, source, line
 
-let forEntity (ns: LongIdent) (fullName: LongIdent) (ident, source: Source, line) =
+let forEntity (ns: LongIdent) (fullName: LongIdent) (ident: string, source: Source, line) =
     let ast = parseSource source
-    match ParsedInput.tryFindInsertionContext line ast ident (None, None, Some (ns.Split '.'), fullName.Split '.') with
-    | None -> failwith "Cannot find nearest open statement block"
-    | Some (e, ctx) -> source, e, ctx, ast
+    match ParsedInput.tryFindInsertionContext line ast (ident.Split '.') (None, None, Some (ns.Split '.'), fullName.Split '.') with
+    | [||] -> failwith "Cannot find nearest open statement block"
+    | [|e, ctx|] -> source, e, ctx, ast
+    | es -> failwith "More than one entity: %A" es
 
 let result (expected: Source) (source: Source, entity, ctx: InsertContext, ast) = 
     let lines = srcToLineArray source
@@ -1139,3 +1171,20 @@ module Usage =
     let f (x:MyInt) = x
 """
 
+[<Test>]
+let ``partially qualified symbol``() =
+    """
+module TopLevel
+
+let _ = Threading.Tasks.Task.Factory.StartNew(fun _ -> ())
+"""
+    |> forLine 3
+    |> forIdent "Threading.Tasks.Task.Factory.StartNew"
+    |> forEntity "System.Threading.Tasks" "System.Threading.Tasks.Task"
+    |> result """
+module TopLevel
+
+open System
+
+let _ = Threading.Tasks.Task.Factory.StartNew(fun _ -> ())
+"""

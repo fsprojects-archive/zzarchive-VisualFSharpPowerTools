@@ -33,6 +33,18 @@ module Array =
         res.[index] <- value
         res
 
+    /// Returns all heads of a given array.
+    /// For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]
+    let heads (array: 'T[]) =
+        array 
+        //|> Array.rev
+        |> Array.fold (fun (soFar, res) x -> 
+            let soFar = x :: soFar 
+            soFar, (soFar |> List.rev |> List.toArray) :: res
+        )  ([], [])
+        |> snd 
+        |> List.toArray
+
 [<RequireQualifiedAccess>]
 module Option =
     let inline ofNull value =
