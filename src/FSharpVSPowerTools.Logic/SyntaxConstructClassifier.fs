@@ -71,6 +71,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                         
                         let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
                         
+                        let includeUnusedDeclarations = 
+                            // Don't check for unused declarations on generated signatures
+                            includeUnusedDeclarations && not (String.Equals(Path.GetExtension(doc.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) && project.IsForStandaloneScript)
                         let! symbolsUses, lexer =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
                                                                             includeUnusedDeclarations, getSymbolDeclLocation)
