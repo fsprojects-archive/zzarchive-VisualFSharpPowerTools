@@ -342,7 +342,7 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
 
 type FSharpEntity with
     member x.PublicNestedEntities =
-        x.NestedEntities |> Seq.filter (fun e -> e.Accessibility.IsPublic)
+        x.NestedEntities |> Seq.filter (fun entity -> entity.Accessibility.IsPublic)
 
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")
@@ -491,7 +491,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     // Fields
     if typ.IsClass || isStruct then
         for field in typ.FSharpFields do
-            if field.Accessibility.IsPublic || field.Accessibility.IsInternal then
+            if field.Accessibility.IsPublic then
                 writeClassOrStructField ctx field
 
     // Abstract members

@@ -85,11 +85,13 @@ type ProjectFactory
     let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
     do solutionBuildEventListener.ActiveConfigChanged.Add(fun p -> cache.Remove p.FullName)
 
+    let signatureProjectData = ref None
     let fsharpProjectsCache = ref None
  
     do match events with
         | Some events ->
             events.SolutionEvents.add_AfterClosing (fun _ -> 
+                signatureProjectData := None
                 fsharpProjectsCache := None
                 vsLanguageService.ClearCaches()
                 cache.Clear())
@@ -107,6 +109,9 @@ type ProjectFactory
                 onProjectChanged p) 
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
+
+    member __.SetSignatureProjectProvider(filePath: string, project: IProjectProvider) =
+        signatureProjectData := Some (filePath, project)
 
     abstract CreateForProject: Project -> IProjectProvider
 
@@ -129,6 +134,11 @@ type ProjectFactory
                 String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
                 String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
                 Some (VirtualProjectProvider(buffer, filePath) :> _)
+            elif String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase) then
+                match !signatureProjectData with
+                | Some(path, project) when path = filePath ->
+                    Some (SignatureProjectProvider(filePath, project) :> _)
+                | _ -> None
             else
                 None
         else 

@@ -34,10 +34,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, file, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
-                    let fsSymbol = fsSymbolUse.Symbol
                     let lineStr = span.Start.GetContainingLine().GetText()
                     let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, false)
-                    return Some (fsSymbol, fsSymbolUse.DisplayContext, span, fileScopedCheckResults.GetUntypedAst(), findDeclResult) 
+                    return Some (project, fileScopedCheckResults.GetUntypedAst(), span, fsSymbolUse, findDeclResult) 
                 | _ -> return None
             | _ -> return None
         }
@@ -103,7 +102,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
     // Now the input is an entity or a member/value.
     // We always generate the full enclosing entity signature if the symbol is a member/value
-    let navigateToMetadata displayContext (span: SnapshotSpan) parseTree (fsSymbol: FSharpSymbol) = 
+    let navigateToMetadata project (span: SnapshotSpan) parseTree (fsSymbolUse: FSharpSymbolUse) = 
+        let fsSymbol = fsSymbolUse.Symbol
+        let displayContext = fsSymbolUse.DisplayContext
         let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
@@ -153,7 +154,8 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         // Try to set buffer to read-only mode
                         vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
                     | _ -> ()
-                    statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore  
+                    projectFactory.SetSignatureProjectProvider(filePath, project)
+                    statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore
             | None ->
                 statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
 
@@ -176,9 +178,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 | None ->
                     // Declaration location might exist so let's Visual F# Tools handle it  
                     x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-                | Some (fsSymbol, displayContext, span, parseTree, FindDeclResult.DeclNotFound _) ->
-                    if shouldGenerateDefinition fsSymbol then
-                        navigateToMetadata displayContext span parseTree fsSymbol
+                | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
+                    if shouldGenerateDefinition fsSymbolUse.Symbol then
+                        navigateToMetadata project span parseTree fsSymbolUse
                     VSConstants.S_OK
             else
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)

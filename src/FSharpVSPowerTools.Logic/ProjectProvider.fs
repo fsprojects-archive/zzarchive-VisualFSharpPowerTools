@@ -186,4 +186,22 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
         member __.GetProjectCheckerOptions languageService =
             languageService.GetScriptCheckerOptions (filePath, projectFileName, source, targetFramework)
 
-        
+/// An ad-hoc project provider in order to integrate generated signatures into the project system
+type internal SignatureProjectProvider (filePath: string, attachedProject: IProjectProvider) = 
+    let projectFileName = filePath + ".fsproj"
+    let sourceFiles = Array.append attachedProject.SourceFiles [| filePath |]
+    interface IProjectProvider with
+        /// Although we inherit from another project, symbol-based features only work in the scope of current file.
+        member __.IsForStandaloneScript = true
+        member __.ProjectFileName = projectFileName
+        member __.TargetFramework = attachedProject.TargetFramework
+        member __.CompilerOptions = attachedProject.CompilerOptions
+        member __.SourceFiles = sourceFiles
+        member __.FullOutputFilePath = Some (Path.ChangeExtension(filePath, ".dll"))
+        member __.GetReferencedProjects() = attachedProject.GetReferencedProjects()
+        member __.GetAllReferencedProjectFileNames() = attachedProject.GetAllReferencedProjectFileNames()
+        member __.GetProjectCheckerOptions languageService =
+            async {
+                let! opts = attachedProject.GetProjectCheckerOptions languageService
+                return { opts with ProjectFileNames = sourceFiles }
+            }

@@ -155,7 +155,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                 |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))
                 |> Seq.toArray
             spans
-        | None -> [||]
+        | None -> 
+            // If not yet schedule an action, do it now.
+            updateSyntaxConstructClassifiers false
+            [||]
 
     interface IClassifier with
         // it's called for each visible line of code
