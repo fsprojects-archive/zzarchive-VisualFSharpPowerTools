@@ -12,13 +12,13 @@ let (=>) (options, srcFile, srcLines) (expected: (int * string * string * int * 
         expected
         |> Array.map (fun (pri, text, file, line, col) ->
             {
-                    Text = text
-                    File = file
-                    Line = line
-                    Column = col
-                    Priority = pri
+                Text = text
+                File = file
+                Line = line
+                Column = col
+                Priority = pri
             })
-    let actual = (new CommentExtractor(options)).GetComments(srcFile, srcLines)
+    let actual = getComments options srcFile srcLines
 
     assertEqual expectedRecords actual
 
@@ -94,4 +94,9 @@ let ``comments within strings are not considered``() =
                  \"".Split(newlines, StringSplitOptions.None)
 
     (defaultOptions, "File1.fs", lines)
+    => [||]
+
+[<Test>]
+let ``no content means no results``() = 
+    (defaultOptions, "File1.fs", [| |])
     => [||]

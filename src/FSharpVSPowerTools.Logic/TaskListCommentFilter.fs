@@ -11,15 +11,16 @@ type TaskListCommentFilter(view: IWpfTextView,
     let optionsReader = new OptionsReader(serviceProvider)
     do CrossSolutionTaskListCommentManager.SetOpenDocumentsTracker(openDocsTracker)
 
+    static let newLines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
     let handleTextChanged (newText: string) =
         let filePath =
             let docProperty = view.TextBuffer.Properties.PropertyList
-                              |> Seq.find (fun p -> p.Key <> null && obj.Equals(p.Key, typeof<ITextDocument>))
+                              |> Seq.find (fun p -> obj.Equals(p.Key, typeof<ITextDocument>))
             (docProperty.Value :?> ITextDocument).FilePath
 
-        let lines = newText.Split([| Environment.NewLine; "\r\n"; "\r"; "\n" |], StringSplitOptions.None)
+        let lines = newText.Split(newLines, StringSplitOptions.None)
 
-        let comments = (new CommentExtractor(optionsReader.GetOptions())).GetComments(filePath, lines)
+        let comments = getComments (optionsReader.GetOptions()) filePath lines
         TaskListManager.GetInstance().MergeTaskListComments(filePath, comments)
 
     let onTextChanged () =
@@ -29,5 +30,5 @@ type TaskListCommentFilter(view: IWpfTextView,
         new DocumentEventListener([ViewChange.bufferEvent view.TextBuffer], 1250us, onTextChanged)
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()

@@ -20,10 +20,11 @@ type CommentOption = { Comment : string; Priority : int } with
     static member Default = { Comment = "TODO"; Priority = 2 }
 
 
-type private Pos = {
-    Line: int
-    Column: int
-}
+type private Pos =
+    {
+        Line: int
+        Column: int
+    }
 
 
 type private TaskListCommentPos =
@@ -45,8 +46,9 @@ module private Utils =
             else lines.[lineNumber + 1]
         sourceTok.CreateLineTokenizer(nextLine)
 
+    let trimChars = [| ' '; '\t'; '/'; '*' |]
     let isFirstToken (tokenText: string) =
-        tokenText.TrimStart([| ' '; '\t'; '/'; '*' |]) <> String.Empty
+        tokenText.TrimStart(trimChars) <> String.Empty
 
     let tokenizeFirstToken (tokText: string) =
         let rec tokenize (tokenizer: LineTokenizer) state =
@@ -83,8 +85,11 @@ module private Utils =
                 | _ ->
                     (lineNumber, acc, tokenizer, state)
             | None, state ->
-                let tokenizer = createNewLineTokenizer lines lineNumber
-                scanMultilineComments tokenizer acc state nestLevel (lineNumber + 1)
+                if lines.Length <= (lineNumber + 1) then
+                    (lineNumber, acc, tokenizer, state)
+                else
+                    let tokenizer = sourceTok.CreateLineTokenizer(lines.[lineNumber + 1])
+                    scanMultilineComments tokenizer acc state nestLevel (lineNumber + 1)
 
         let nextLineNumber, lineNumAndTokens, tokenizer, state = scanMultilineComments tokenizer [] state 0 lineNumber
         match lineNumAndTokens |> List.rev |> List.tryFind (fun (ln, tok) -> isFirstToken (tok.Text(lines, ln))) with
@@ -128,46 +133,51 @@ module private Utils =
             if lines.Length <= lineNumber + 1 then
                 None
             else
-                nextTaskListCommentPos tasks (lines, lineNumber + 1, createNewLineTokenizer lines lineNumber, state)
+                nextTaskListCommentPos tasks (lines, lineNumber + 1, sourceTok.CreateLineTokenizer(lines.[lineNumber + 1]), state)
 
     let collectTaskListCommentPositions tasks lines = 
         let tokenizerState = 0L
         Seq.unfold (nextTaskListCommentPos tasks) (lines, 0, sourceTok.CreateLineTokenizer(lines.[0]), tokenizerState)
 
 
-type CommentExtractor(options: CommentOption[]) =
-    let priorityByComment =
-        options
-        |> Array.map (fun o -> (o.Comment.ToLowerInvariant(), o.Priority))
-        |> Map.ofArray
-    
-    let toTaskListComment filePath pos (task: string, comment: string) =
-        { Text = comment.Trim()
-          File = filePath
-          Line = pos.Line
-          Column = pos.Column
-          Priority = priorityByComment.[task] }
+[<AutoOpen>]
+module CommentExtractor =
+    let getComments options filePath fileLines =
+        let priorityByComment =
+            options
+            |> Array.map (fun o -> (o.Comment.ToLowerInvariant(), o.Priority))
+            |> Map.ofArray
+        
+        let toTaskListComment filePath pos (task: string, comment: string) =
+            { Text = comment.Trim()
+              File = filePath
+              Line = pos.Line
+              Column = pos.Column
+              Priority = priorityByComment.[task] }
 
-    let extractMultilineComment beginPos endPos (lines: string[]) =
-        if beginPos.Line = endPos.Line then
-            lines.[beginPos.Line].Substring(beginPos.Column, endPos.Column - beginPos.Column + 1)
-        else
-            lines.[beginPos.Line].Substring(beginPos.Column)
+        let extractMultilineComment beginPos endPos (lines: string[]) =
+            if beginPos.Line = endPos.Line then
+                lines.[beginPos.Line].Substring(beginPos.Column, endPos.Column - beginPos.Column + 1)
+            else
+                lines.[beginPos.Line].Substring(beginPos.Column)
 
-    let collectTaskListComments filePath lines =
-        let tasks = options |> Array.map (fun option -> option.Comment.ToLowerInvariant())
-        let positions = collectTaskListCommentPositions tasks lines
-        positions
-        |> Seq.map (function
-                    | OnelineTaskListCommentPos (task, ({ Line = line; Column = col } as pos)) ->
-                        let comment = lines.[line].Substring(col)
-                        toTaskListComment filePath pos (task, comment)
-                    | MultilineTaskListCommentPos (task, beginPos, endPos) ->
-                        let comment = extractMultilineComment beginPos endPos lines
-                        toTaskListComment filePath beginPos (task, comment))
+        let collectTaskListComments filePath lines =
+            match lines with
+            | [| |] ->
+                Seq.empty
+            | _ ->
+                let tasks = options |> Array.map (fun option -> option.Comment.ToLowerInvariant())
+                let positions = collectTaskListCommentPositions tasks lines
+                positions
+                |> Seq.map (function
+                            | OnelineTaskListCommentPos (task, ({ Line = line; Column = col } as pos)) ->
+                                let comment = lines.[line].Substring(col)
+                                toTaskListComment filePath pos (task, comment)
+                            | MultilineTaskListCommentPos (task, beginPos, endPos) ->
+                                let comment = extractMultilineComment beginPos endPos lines
+                                toTaskListComment filePath beginPos (task, comment))
 
-    member __.GetComments(filePath: string, fileLines: string[]) =
         fileLines
         |> collectTaskListComments filePath
         |> Seq.toArray
-        
+            
