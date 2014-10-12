@@ -142,42 +142,45 @@ module private Utils =
 
 [<AutoOpen>]
 module CommentExtractor =
+    let private getPriorityByTask options =
+        options
+        |> Array.map (fun o -> (o.Comment.ToLowerInvariant(), o.Priority))
+        |> Map.ofArray
+
+    let inline private toTaskListComment filePath pos comment priority =
+        { 
+            Text = comment
+            File = filePath
+            Line = pos.Line
+            Column = pos.Column
+            Priority = priority
+        }
+
+    let private extractMultilineComment beginPos endPos (lines: string[]) =
+        if beginPos.Line = endPos.Line then
+            lines.[beginPos.Line].Substring(beginPos.Column, endPos.Column - beginPos.Column + 1)
+        else
+            lines.[beginPos.Line].Substring(beginPos.Column)
+
+    let private collectTaskListComments options filePath lines =
+        match lines with
+        | [| |] ->
+            Seq.empty
+        | _ ->
+            let priorityByTask = getPriorityByTask options
+            let tasks = options |> Array.map (fun option -> option.Comment.ToLowerInvariant())
+            let positions = collectTaskListCommentPositions tasks lines
+            positions
+            |> Seq.map (function
+                        | OnelineTaskListCommentPos (task, ({ Line = line; Column = col } as pos)) ->
+                            let comment = lines.[line].Substring(col).Trim()
+                            toTaskListComment filePath pos comment priorityByTask.[task]
+                        | MultilineTaskListCommentPos (task, beginPos, endPos) ->
+                            let comment = (extractMultilineComment beginPos endPos lines).Trim()
+                            toTaskListComment filePath beginPos comment priorityByTask.[task])
+
     let getComments options filePath fileLines =
-        let priorityByComment =
-            options
-            |> Array.map (fun o -> (o.Comment.ToLowerInvariant(), o.Priority))
-            |> Map.ofArray
-        
-        let toTaskListComment filePath pos (task: string, comment: string) =
-            { Text = comment.Trim()
-              File = filePath
-              Line = pos.Line
-              Column = pos.Column
-              Priority = priorityByComment.[task] }
-
-        let extractMultilineComment beginPos endPos (lines: string[]) =
-            if beginPos.Line = endPos.Line then
-                lines.[beginPos.Line].Substring(beginPos.Column, endPos.Column - beginPos.Column + 1)
-            else
-                lines.[beginPos.Line].Substring(beginPos.Column)
-
-        let collectTaskListComments filePath lines =
-            match lines with
-            | [| |] ->
-                Seq.empty
-            | _ ->
-                let tasks = options |> Array.map (fun option -> option.Comment.ToLowerInvariant())
-                let positions = collectTaskListCommentPositions tasks lines
-                positions
-                |> Seq.map (function
-                            | OnelineTaskListCommentPos (task, ({ Line = line; Column = col } as pos)) ->
-                                let comment = lines.[line].Substring(col)
-                                toTaskListComment filePath pos (task, comment)
-                            | MultilineTaskListCommentPos (task, beginPos, endPos) ->
-                                let comment = extractMultilineComment beginPos endPos lines
-                                toTaskListComment filePath beginPos (task, comment))
-
         fileLines
-        |> collectTaskListComments filePath
+        |> collectTaskListComments options filePath
         |> Seq.toArray
             
