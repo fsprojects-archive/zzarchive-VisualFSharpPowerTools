@@ -112,7 +112,7 @@ module private Utils =
                 let tokText = tok.Text(lines, lineNumber)
                 if tokText |> String.forall (function '/' | '*' | ' ' | '\t' -> true | _ -> false) then
                     match tryFindLineCommentTaskToken tasks (lines, lineNumber, tokenizer, state) with
-                    | Some (task, pos), _state ->
+                    | Some (task, pos), _ ->
                         let pos = OnelineTaskListCommentPos (task, pos)
                         Some (pos, (lines, lineNumber + 1, createNewLineTokenizer lines lineNumber, firstState))
                     | None, state ->
