@@ -484,9 +484,15 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     // Inherited class
     try
         match typ.BaseType with
-        | Some(TypeWithDefinition(baseTypDef) as baseTyp) when baseTypDef.DisplayName <> "obj" ->
+        | Some(TypeWithDefinition(baseTypeDef) as baseType) when baseTypeDef.DisplayName <> "obj" ->
             if not (typ.IsValueType || typ.IsEnum || typ.IsDelegate || typ.IsArrayType) then
-                ctx.Writer.WriteLine("inherit {0}", formatType ctx baseTyp)
+                // There is an FCS bug where FSharpDisplayContext isn't correct wrt inheritance.                
+                let revisedContext =
+                    if baseTypeDef.AccessPath = typ.AccessPath then
+                        ctx
+                    else
+                        { ctx with DisplayContext = FSharpDisplayContext.Empty }
+                ctx.Writer.WriteLine("inherit {0}", formatType revisedContext baseType)
         | _ -> ()
     with _ -> ()
 
@@ -498,7 +504,12 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
             | TypeWithDefinition entity ->
                 if entity <> typ && entity.Accessibility.IsPublic 
                    && not (Set.contains entity.LogicalName ignoredInterfaces) then
-                    yield inter, formatType ctx inter
+                    let revisedContext =
+                        if entity.AccessPath = typ.AccessPath then
+                            ctx
+                        else
+                            { ctx with DisplayContext = FSharpDisplayContext.Empty }
+                    yield inter, formatType revisedContext inter
             | _ -> ()
     ]
     |> List.sortBy (fun (inter, _name) ->

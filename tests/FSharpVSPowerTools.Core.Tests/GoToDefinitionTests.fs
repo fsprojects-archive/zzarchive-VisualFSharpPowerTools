@@ -267,8 +267,6 @@ let x: List<int> = []"""
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
 
-open System
-
 /// The type of immutable singly-linked lists.
 [<DefaultAugmentation(false)>]
 [<StructuralEquality>]
@@ -277,8 +275,8 @@ open System
 type List<'T> =
     | ( [] )
     | ( :: ) of Head: 'T * Tail: 'T list
-    interface Collections.IEnumerable
-    interface Collections.Generic.IEnumerable<'T>
+    interface System.Collections.IEnumerable
+    interface System.Collections.Generic.IEnumerable<'T>
     /// Gets the first element of the list
     member Head : 'T
     /// Gets a value indicating if the list contains no entries

@@ -166,7 +166,8 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                  p.Events.ReferencesEvents.remove_ReferenceAdded refAdded
                  p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
                  p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
-                            
+     
+/// A standalone project provider in order to represent script files                            
 type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) = 
     do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
     let source = buffer.CurrentSnapshot.GetText()
@@ -180,7 +181,7 @@ type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) =
         member __.TargetFramework = targetFramework
         member __.CompilerOptions = flags
         member __.SourceFiles = [| filePath |]
-        member __.FullOutputFilePath = Some (Path.ChangeExtension(filePath, ".dll"))
+        member __.FullOutputFilePath = Some (Path.ChangeExtension(projectFileName, ".dll"))
         member __.GetReferencedProjects() = []
         member __.GetAllReferencedProjectFileNames() = []
         member __.GetProjectCheckerOptions languageService =
@@ -193,13 +194,13 @@ type internal SignatureProjectProvider (filePath: string, attachedProject: IProj
     let flags = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
 
     interface IProjectProvider with
-        /// Although we inherit from another project, symbol-based features only work in the scope of current file.
+        // Although we inherit from another project, symbol-based features only work in the scope of current file.
         member __.IsForStandaloneScript = true
         member __.ProjectFileName = projectFileName
         member __.TargetFramework = attachedProject.TargetFramework
         member __.CompilerOptions = flags
         member __.SourceFiles = sourceFiles
-        member __.FullOutputFilePath = Some (Path.ChangeExtension(filePath, ".dll"))
+        member __.FullOutputFilePath = Some (Path.ChangeExtension(projectFileName, ".dll"))
         member __.GetReferencedProjects() = []
         member __.GetAllReferencedProjectFileNames() = []
         member __.GetProjectCheckerOptions languageService =

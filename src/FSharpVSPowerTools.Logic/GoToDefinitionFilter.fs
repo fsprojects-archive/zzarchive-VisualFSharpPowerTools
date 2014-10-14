@@ -163,7 +163,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         // Try to set buffer to read-only mode
                         vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
                     | _ -> ()
-                    projectFactory.SetSignatureProjectProvider(filePath, project)
+                    projectFactory.AddSignatureProjectProvider(filePath, project)
                     statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore
             | None ->
                 statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  

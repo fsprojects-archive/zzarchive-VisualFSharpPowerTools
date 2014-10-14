@@ -10,6 +10,7 @@ open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text
 open System.IO
 open System.Diagnostics
+open System.Collections.Generic
 
 [<NoComparison; NoEquality>]
 type private CacheMessage<'K, 'V> =
@@ -85,13 +86,13 @@ type ProjectFactory
     let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
     do solutionBuildEventListener.ActiveConfigChanged.Add(fun p -> cache.Remove p.FullName)
 
-    let signatureProjectData = ref None
+    let signatureProjectData = Dictionary()
     let fsharpProjectsCache = ref None
  
     do match events with
         | Some events ->
             events.SolutionEvents.add_AfterClosing (fun _ -> 
-                signatureProjectData := None
+                signatureProjectData.Clear()
                 fsharpProjectsCache := None
                 vsLanguageService.ClearCaches()
                 cache.Clear())
@@ -110,8 +111,11 @@ type ProjectFactory
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
-    member __.SetSignatureProjectProvider(filePath: string, project: IProjectProvider) =
-        signatureProjectData := Some (filePath, project)
+    member __.AddSignatureProjectProvider(filePath: string, project: IProjectProvider) =
+        // We have to keep the project provider even the buffer has been close.
+        // If the buffer is reopened via Navigate Backward, we still have to colorize the text.
+        // The project provider will be discard once the solution is closed.
+        signatureProjectData.[filePath] <- project
 
     abstract CreateForProject: Project -> IProjectProvider
 
@@ -122,8 +126,8 @@ type ProjectFactory
     member x.CreateForFileInProject (buffer: ITextBuffer) (filePath: string) project: IProjectProvider option =
         if not (project === null) && not (filePath === null) && isFSharpProject project then
             let projectProvider = x.CreateForProject project
-            // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files 
-            // Consequently, we should interpret it as a script
+            // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 
+            // Consequently, we should interpret it as a script.
             if Array.exists ((=) filePath) projectProvider.SourceFiles then
                 Some projectProvider
             else
@@ -135,8 +139,8 @@ type ProjectFactory
                 String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
                 Some (VirtualProjectProvider(buffer, filePath) :> _)
             elif String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase) then
-                match !signatureProjectData with
-                | Some(path, project) when path = filePath ->
+                match signatureProjectData.TryGetValue(filePath) with
+                | true, project ->
                     Some (SignatureProjectProvider(filePath, project) :> _)
                 | _ -> None
             else
