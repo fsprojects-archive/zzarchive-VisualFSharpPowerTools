@@ -86,6 +86,17 @@ let ``empty comments``() =
     => [||]
 
 [<Test>]
+let ``empty todo comments`` () =
+    (defaultOptions, "File1.fs", [| "//todo"
+                                    "// Todo"
+                                    "(*ToDo*)"
+                                    "(* TODO *)" |])
+    => [| (2, "todo", "File1.fs", 0, 2)
+          (2, "Todo", "File1.fs", 1, 3)
+          (2, "ToDo", "File1.fs", 2, 2)
+          (2, "TODO", "File1.fs", 3, 3) |]
+
+[<Test>]
 let ``comments within strings are not considered``() = 
     let lines = "let str1 = \"// TODO something\"
                  let str2 = \"
