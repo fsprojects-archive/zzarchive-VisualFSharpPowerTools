@@ -80,6 +80,7 @@ module Module1 =
 """
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        helper.SetActiveDocument(fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             helper.ClassificationSpansOf(buffer, classifier)
@@ -114,6 +115,7 @@ let internal f() = ()
         // IsSymbolUsedForProject seems to require a file to exist on disks
         // If not, type checking fails with some weird errors
         File.WriteAllText(fileName, "")
+        helper.SetActiveDocument(fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             helper.ClassificationSpansOf(buffer, classifier)
