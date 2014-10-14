@@ -61,11 +61,11 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             | _, Some state -> state.SnapshotSpan.Snapshot <> snapshot
                  
         if needUpdate then
-            match getProject() with
-            | Some project ->
-                debug "[SyntaxConstructClassifier] - Effective update"
-                let worker = 
-                    async {
+            let worker = 
+                async {
+                    match getProject() with
+                    | Some project ->
+                        debug "[SyntaxConstructClassifier] - Effective update"
                         let getSymbolDeclLocation fsSymbol =
                             projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
                         
@@ -115,9 +115,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             let currentSnapshot = doc.TextBuffer.CurrentSnapshot
                             let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
                             classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-                    } 
-                Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
-            | None -> ()
+                    | None -> ()
+                } 
+            Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
+            
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
