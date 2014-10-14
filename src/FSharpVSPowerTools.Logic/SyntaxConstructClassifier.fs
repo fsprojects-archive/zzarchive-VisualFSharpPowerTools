@@ -15,7 +15,7 @@ type private ClassifierState =
     { SnapshotSpan: SnapshotSpan
       Spans: CategorizedColumnSpan [] }
 
-type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: IClassificationTypeRegistryService,
+type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
                                 projectFactory: ProjectFactory, includeUnusedDeclarations: bool) as self =
     
@@ -29,7 +29,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
         | Category.Quotation -> Some Constants.fsharpQuotation
         | Category.Module -> Some Constants.fsharpModule
         | Category.Unused -> Some Constants.fsharpUnused
-        | Category.Printf -> Some "FSharp.Printf"
+        | Category.Printf -> Some Constants.fsharpPrintf
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
@@ -39,11 +39,11 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
     
     let getProject() =
         maybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! projectItem = Option.attempt (fun _ -> dte.Solution.FindProjectItem doc.FilePath) |> Option.bind Option.ofNull
             // If there is no backing document, an ITextDocument instance might be null
             let! _ = Option.ofNull doc
-            return! projectFactory.CreateForFileInProject doc.TextBuffer doc.FilePath projectItem.ContainingProject }
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = dte.GetActiveDocument()
+            return! projectFactory.CreateForDocument buffer doc }
 
     let updateSyntaxConstructClassifiers force =
         let cancelToken = new CancellationTokenSource() 
@@ -61,11 +61,11 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
             | _, Some state -> state.SnapshotSpan.Snapshot <> snapshot
                  
         if needUpdate then
-            match getProject() with
-            | Some project ->
-                debug "[SyntaxConstructClassifier] - Effective update"
-                let worker = 
-                    async {
+            let worker = 
+                async {
+                    match getProject() with
+                    | Some project ->
+                        debug "[SyntaxConstructClassifier] - Effective update"
                         let getSymbolDeclLocation fsSymbol =
                             projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
                         
@@ -115,9 +115,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, classificationRegistry: ICla
                             let currentSnapshot = doc.TextBuffer.CurrentSnapshot
                             let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
                             classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-                    } 
-                Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
-            | None -> ()
+                    | None -> ()
+                } 
+            Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
+            
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events

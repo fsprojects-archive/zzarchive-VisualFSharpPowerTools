@@ -30,6 +30,7 @@ let [<Literal>] fsharpMutableVar = "FSharp.MutableVar"
 let [<Literal>] fsharpQuotation = "FSharp.Quotation"
 let [<Literal>] fsharpModule = "FSharp.Module"
 let [<Literal>] fsharpUnused = "FSharp.Unused"
+let [<Literal>] fsharpPrintf = "FSharp.Printf"
 
 let [<Literal>] depthAdornmentLayerName = "FSharpDepthFullLineAdornment"
 

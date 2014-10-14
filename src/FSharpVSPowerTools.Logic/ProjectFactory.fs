@@ -123,7 +123,9 @@ type ProjectFactory
         cache.Get project.FullName (fun _ ->
             new ProjectProvider (project, x.CreateForProject, onProjectChanged, vsLanguageService.FixProjectLoadTime)) :> _
 
-    member x.CreateForFileInProject (buffer: ITextBuffer) (filePath: string) project: IProjectProvider option =
+    member x.CreateForDocument buffer (doc: Document) =
+        let filePath = doc.FullName
+        let project = doc.ProjectItem.ContainingProject
         if not (project === null) && not (filePath === null) && isFSharpProject project then
             let projectProvider = x.CreateForProject project
             // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 
@@ -148,15 +150,12 @@ type ProjectFactory
         else 
             None
 
-    member x.CreateForDocument buffer (doc: Document) =
-        x.CreateForFileInProject buffer doc.FullName doc.ProjectItem.ContainingProject
-
     member __.ListFSharpProjectsInSolution (dte: DTE) =
         let rec handleProject (p: Project) = 
             if p === null then []
             elif isFSharpProject p then [ p ]
             elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-            else []
+            else []  
         
         and handleProjectItems (items: ProjectItems) = 
             [ for pi in items do
