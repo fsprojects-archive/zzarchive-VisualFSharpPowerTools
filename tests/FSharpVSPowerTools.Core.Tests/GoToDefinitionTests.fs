@@ -267,8 +267,6 @@ let x: List<int> = []"""
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
 
-open System
-
 /// The type of immutable singly-linked lists.
 [<DefaultAugmentation(false)>]
 [<StructuralEquality>]
@@ -277,8 +275,8 @@ open System
 type List<'T> =
     | ( [] )
     | ( :: ) of Head: 'T * Tail: 'T list
-    interface Collections.IEnumerable
-    interface Collections.Generic.IEnumerable<'T>
+    interface System.Collections.IEnumerable
+    interface System.Collections.Generic.IEnumerable<'T>
     /// Gets the first element of the list
     member Head : 'T
     /// Gets a value indicating if the list contains no entries
@@ -318,8 +316,6 @@ let x: Choice<'T, 'U> = failwith "Not implemented yet" """
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
 
-open System
-
 /// Helper types for active patterns with 2 choices.
 [<StructuralEquality>]
 [<StructuralComparison>]
@@ -338,8 +334,6 @@ let ``go to union case`` () =
 let x = Choice1Of2 () """
     |> generateDefinitionFromPos (Pos.fromZ 2 9)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
-
-open System
 
 /// Helper types for active patterns with 2 choices.
 [<StructuralEquality>]
@@ -692,8 +686,6 @@ type T() =
     """
     |> generateDefinitionFromPos (Pos.fromZ 2 5)
     |> assertSrcAreEqual """module File
-
-open System.Runtime.InteropServices
 
 type T =
     new : unit -> T
@@ -1058,7 +1050,7 @@ type Union =
     | Case3
 """
 
-[<Test>]
+[<Test; Ignore>]
 let ``handle record field attributes`` () =
     """open System
 open System.Runtime.Serialization
@@ -1138,8 +1130,6 @@ type MyClass<'T when 'T : delegate<obj * int, unit>>() =
     |> assertSrcSeqAreEqual [
         """module File
 
-open System
-
 type MyClass<'T, 'U when 'T : null and 'T : (new : unit -> 'T) and 'U : struct> =
     new : unit -> MyClass<'T, 'U>
     member Method : unit -> unit
@@ -1156,8 +1146,6 @@ type MyClass<'T, 'U when 'T :> IComparable and 'U : not struct> =
 
         """module File
 
-open System
-
 type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
     new : unit -> MyClass<'T, 'U>
     member Method : unit -> unit
@@ -1165,16 +1153,12 @@ type MyClass<'T, 'U when 'T : comparison and 'U : equality> =
 
         """module File
 
-open System
-
 type MyClass<'T, 'U when 'T : unmanaged and 'U : enum<uint32>> =
     new : unit -> MyClass<'T, 'U>
     member Method : unit -> unit
 """
 
         """module File
-
-open System
 
 type MyClass<'T when 'T : delegate<obj * int, unit>> =
     new : unit -> MyClass<'T>

@@ -149,6 +149,26 @@ module OpenDeclarationGetter =
     type Line = int
     type EndColumn = int
 
+    let private processOpenDeclaration (longIdent: Ident list) =
+        let isExactlyOne =
+            match longIdent with
+            | [_] -> true
+            | _ -> false
+        longIdent
+        |> List.mapi (fun i ident -> 
+            // Only filter out if global is a prefix of the open declaration
+            match i, ident.idText with
+            | 0, "`global`" when not isExactlyOne ->
+                let r = ident.idRange
+                // Make sure that we don't filter out ``global`` and the like
+                if r.StartLine = r.EndLine && r.EndColumn - r.StartColumn = 6 then
+                    None
+                else Some ident
+            | _ -> 
+                Some ident)
+        |> List.choose id
+        |> longIdentToArray
+
     let getOpenDeclarations (ast: ParsedInput option) (entities: RawEntity list option) 
                             (qualifyOpenDeclarations: Line -> EndColumn -> Idents -> RawOpenDeclaration list) =
         match ast, entities with
@@ -165,25 +185,7 @@ module OpenDeclarationGetter =
                         | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
                             walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
                         | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openStatementRange) ->
-                            let identArray = 
-                                let isExactlyOne =
-                                    match longIdent with
-                                    | [_] -> true
-                                    | _ -> false
-                                longIdent
-                                |> List.mapi (fun i ident -> 
-                                    // Only filter out if global is a prefix of the open declaration
-                                    match i, ident.idText with
-                                    | 0, "`global`" when not isExactlyOne ->
-                                        let r = ident.idRange
-                                        // Make sure that we don't filter out ``global`` and the like
-                                        if r.StartLine = r.EndLine && r.EndColumn - r.StartColumn = 6 then
-                                            None
-                                        else Some ident
-                                    | _ -> 
-                                        Some ident)
-                                |> List.choose id
-                                |> longIdentToArray
+                            let identArray = processOpenDeclaration longIdent
                             let rawOpenDeclarations =  
                                 identArray
                                 |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
@@ -272,25 +274,7 @@ module OpenDeclarationGetter =
                                 walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
                             else []
                         | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openDeclRange) ->
-                            let identArray = 
-                                let isExactlyOne =
-                                    match longIdent with
-                                    | [_] -> true
-                                    | _ -> false
-                                longIdent
-                                |> List.mapi (fun i ident -> 
-                                    // Only filter out if global is a prefix of the open declaration
-                                    match i, ident.idText with
-                                    | 0, "`global`" when not isExactlyOne ->
-                                        let r = ident.idRange
-                                        // Make sure that we don't filter out ``global`` and the like
-                                        if r.StartLine = r.EndLine && r.EndColumn - r.StartColumn = 6 then
-                                            None
-                                        else Some ident
-                                    | _ -> 
-                                        Some ident)
-                                |> List.choose id
-                                |> longIdentToArray
+                            let identArray = processOpenDeclaration longIdent
                             if openDeclRange.EndLine < pos.Line || (openDeclRange.EndLine = pos.Line && openDeclRange.EndColumn < pos.Column) then 
                                 String.Join(".", identArray) :: acc
                             else acc
@@ -304,5 +288,30 @@ module OpenDeclarationGetter =
                    else acc) []
             |> Seq.distinct
             |> Seq.toList
-            |> List.rev       
-        | _ -> []
+            |> List.rev      
+        | ParsedInput.SigFile(ParsedSigFileInput(_, _, _, _, modules)) -> 
+            let rec walkModuleOrNamespaceSig acc (decls, moduleRange) =
+                let openStatements =
+                    decls
+                    |> List.fold (fun acc -> 
+                        function
+                        | SynModuleSigDecl.NestedModule (_, nestedModuleDecls, nestedModuleRange) -> 
+                            if rangeContainsPos moduleRange pos then
+                                walkModuleOrNamespaceSig acc (nestedModuleDecls, nestedModuleRange)
+                            else []
+                        | SynModuleSigDecl.Open (longIdent, openDeclRange) ->
+                            let identArray = processOpenDeclaration longIdent
+                            if openDeclRange.EndLine < pos.Line || (openDeclRange.EndLine = pos.Line && openDeclRange.EndColumn < pos.Column) then 
+                                String.Join(".", identArray) :: acc
+                            else acc
+                        | _ -> acc) [] 
+                openStatements @ acc
+
+            modules
+            |> List.fold (fun acc (SynModuleOrNamespaceSig(_, _, decls, _, _, _, moduleRange)) ->
+                   if rangeContainsPos moduleRange pos then
+                       walkModuleOrNamespaceSig acc (decls, moduleRange) @ acc
+                   else acc) []
+            |> Seq.distinct
+            |> Seq.toList
+            |> List.rev     

@@ -34,10 +34,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, file, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
-                    let fsSymbol = fsSymbolUse.Symbol
                     let lineStr = span.Start.GetContainingLine().GetText()
                     let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, false)
-                    return Some (fsSymbol, fsSymbolUse.DisplayContext, span, fileScopedCheckResults.GetUntypedAst(), findDeclResult) 
+                    return Some (project, fileScopedCheckResults.GetUntypedAst(), span, fsSymbolUse, findDeclResult) 
                 | _ -> return None
             | _ -> return None
         }
@@ -101,9 +100,14 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 | _ -> []
         | None -> []
 
+    // Keep a single window frame for all text views
+    static let mutable currentWindowFrame: IVsWindowFrame option = None 
+
     // Now the input is an entity or a member/value.
     // We always generate the full enclosing entity signature if the symbol is a member/value
-    let navigateToMetadata displayContext (span: SnapshotSpan) parseTree (fsSymbol: FSharpSymbol) = 
+    let navigateToMetadata project (span: SnapshotSpan) parseTree (fsSymbolUse: FSharpSymbolUse) = 
+        let fsSymbol = fsSymbolUse.Symbol
+        let displayContext = fsSymbolUse.DisplayContext
         let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
         let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
@@ -122,7 +126,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 &windowFrame)      
         if isOpened then
             // If the buffer has been opened, we will not re-generate signatures
-            // TODO: navigate to exaction location
+            // TODO: navigate to exact location
             windowFrame.Show() |> ensureSucceeded
         else
             let (startLine, startCol, _, _) = span.ToRange()
@@ -143,7 +147,13 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         true
                     with _ -> false
                 if canShow then
+                    // Ensure that only one signature is opened at a time
+                    currentWindowFrame 
+                    |> Option.iter (fun window -> 
+                          if window <> null then
+                              window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
                     windowFrame.Show() |> ensureSucceeded
+                    currentWindowFrame <- Some windowFrame
                     let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                     let mutable vsTextLines = Unchecked.defaultof<_>
                     vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
@@ -153,7 +163,8 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         // Try to set buffer to read-only mode
                         vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
                     | _ -> ()
-                    statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore  
+                    projectFactory.AddSignatureProjectProvider(filePath, project)
+                    statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore
             | None ->
                 statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
 
@@ -174,11 +185,11 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 match symbolResult with
                 | Some (_, _, _, _, FindDeclResult.DeclFound _) 
                 | None ->
-                    // Declaration location might exist so let's Visual F# Tools handle it  
+                    // Declaration location might exist so let Visual F# Tools handle it  
                     x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-                | Some (fsSymbol, displayContext, span, parseTree, FindDeclResult.DeclNotFound _) ->
-                    if shouldGenerateDefinition fsSymbol then
-                        navigateToMetadata displayContext span parseTree fsSymbol
+                | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
+                    if shouldGenerateDefinition fsSymbolUse.Symbol then
+                        navigateToMetadata project span parseTree fsSymbolUse
                     VSConstants.S_OK
             else
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)

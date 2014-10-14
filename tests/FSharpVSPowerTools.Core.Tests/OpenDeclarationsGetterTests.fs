@@ -276,9 +276,9 @@ module M =
 """
     => [ 6, [Some "OpenDeclarationsGetterTests", ["OpenDeclarationsGetterTests.InternalModuleWithSuffix"]]]
 
-let (|->) source ((pos, expected): pos * string list) = 
+let (|->) (source, isSignature) ((pos, expected): pos * string list) = 
     let opts = opts source
-    let sourceLines = source.Replace("\r\n", "\n").Split('\n')
+    let fileName = Path.ChangeExtension(fileName, if isSignature then ".fsi" else ".fs")
     let parseResults = languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
     let actual = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos (Option.get parseResults.ParseTree)
@@ -293,18 +293,18 @@ let pos startLine startCol =
 
 [<Test>]
 let ``open declarations from nested modules``() =
-    """
+    ("""
 open System
 open System.IO
 module M =
     open InternalModuleWithSuffix
     let x = 0
-"""
+""", false)
     |-> (pos 6 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
 
 [<Test>]
 let ``open declarations with duplication``() =
-    """
+    ("""
 open System
 open System.IO
 module M =
@@ -314,12 +314,12 @@ module M =
     let x = 0
     open System.Collections.Generic
 open System.Collections.Generic
-"""
+""", false)
     |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
 
 [<Test>]
 let ``open declarations with global prefix``() =
-    """
+    ("""
 open global.System
 open System.IO
 module M =
@@ -327,5 +327,44 @@ module M =
     open InternalModuleWithSuffix
     open System
     let x = 0
-"""
+""", false)
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+
+[<Test>]
+let ``open declarations from nested modules in signatures``() =
+    ("""
+open System
+open System.IO
+module M =
+    open InternalModuleWithSuffix
+    val x: int
+""", true)
+    |-> (pos 6 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+
+[<Test>]
+let ``open declarations with duplication in signatures``() =
+    ("""
+open System
+open System.IO
+module M =
+    open System.IO
+    open InternalModuleWithSuffix
+    open System
+    val x: int
+    open System.Collections.Generic
+open System.Collections.Generic
+""", true)
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+
+[<Test>]
+let ``open declarations with global prefix in signatures``() =
+    ("""
+open global.System
+open System.IO
+module M =
+    open System.IO
+    open InternalModuleWithSuffix
+    open System
+    val x: int
+""", true)
     |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
