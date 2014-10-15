@@ -132,7 +132,10 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         else
             let (startLine, startCol, _, _) = span.ToRange()
             let pos = mkPos (startLine+1) startCol
-            let openDeclarations = parseTree |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) |> Option.getOrElse []
+            let openDeclarations = 
+                parseTree 
+                |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) 
+                |> Option.getOrElse []
             match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol with
             | Some signature ->
                 File.WriteAllText(filePath, signature)
@@ -153,7 +156,6 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     |> Option.iter (fun window -> 
                           if window <> null then
                               window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
-                    windowFrame.Show() |> ensureSucceeded
                     currentWindowFrame <- Some windowFrame
                     let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                     let mutable vsTextLines = Unchecked.defaultof<_>
@@ -165,6 +167,9 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
                     | _ -> ()
                     projectFactory.AddSignatureProjectProvider(filePath, project)
+                    // We display the window after putting the project into the project system.
+                    // Hopefully syntax coloring on generated signatures will catch up on time.
+                    windowFrame.Show() |> ensureSucceeded
                     statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore
             | None ->
                 statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  

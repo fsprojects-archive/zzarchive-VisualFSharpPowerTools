@@ -138,6 +138,8 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
+    let mutable colored = false
+
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
         match state.Value with
         | Some state ->
@@ -147,7 +149,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
             let spans =
                 state.Spans
-                // locations are sorted, so we can safely filter them efficiently
+                // Locations are sorted, so we can safely filter them efficiently
                 |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
                 |> Seq.choose (fun loc -> 
                     maybe {
@@ -160,8 +162,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
                 |> Seq.toArray
             spans
         | None -> 
-            // If not yet schedule an action, do it now.
-            updateSyntaxConstructClassifiers false
+            if not colored then
+                // If not yet schedule an action, do it now.
+                updateSyntaxConstructClassifiers false
+                colored <- true
             [||]
 
     interface IClassifier with
