@@ -104,22 +104,22 @@ module private Utils =
         | None ->
             None, nextLineNumber, tokenizer, state
 
-    let rec nextTaskListCommentPos tasks (lines: string[], lineNumber: int, tokenizer: LineTokenizer, state) =
-        match tokenizer.ScanToken(state) with
+    let rec nextTaskListCommentPos tasks (lines: string[], lineNumber: int, tokenizer: LineTokenizer, firstState) =
+        match tokenizer.ScanToken(firstState) with
         | Some tok, state ->
             match tok.CharClass with
             | TokenCharKind.LineComment ->
                 let tokText = tok.Text(lines, lineNumber)
                 if tokText |> String.forall (function '/' | '*' | ' ' | '\t' -> true | _ -> false) then
                     match tryFindLineCommentTaskToken tasks (lines, lineNumber, tokenizer, state) with
-                    | Some (task, pos), state ->
+                    | Some (task, pos), _ ->
                         let pos = OnelineTaskListCommentPos (task, pos)
-                        Some (pos, (lines, lineNumber + 1, createNewLineTokenizer lines lineNumber, state))
+                        Some (pos, (lines, lineNumber + 1, createNewLineTokenizer lines lineNumber, firstState))
                     | None, state ->
                         nextTaskListCommentPos tasks (lines, lineNumber, tokenizer, state)
                 else
                     let tokenizer = createNewLineTokenizer lines lineNumber
-                    nextTaskListCommentPos tasks (lines, lineNumber + 1, tokenizer, state)
+                    nextTaskListCommentPos tasks (lines, lineNumber + 1, tokenizer, firstState)
             | TokenCharKind.Comment ->
                 match tryFindMultilineCommentTaskToken tasks (lines, lineNumber, tokenizer, state) with
                 | Some (task, beginPos, endPos), lineNumber, tokenizer, state ->
