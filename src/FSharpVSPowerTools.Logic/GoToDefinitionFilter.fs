@@ -205,7 +205,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     if shouldGenerateDefinition fsSymbolUse.Symbol then
                         return navigateToMetadata project span parseTree fsSymbolUse  
             }
-        Async.StartInThreadPoolSafe (worker, cancelToken.Token)
+        Async.StartImmediateSafe (worker, cancelToken.Token)
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
