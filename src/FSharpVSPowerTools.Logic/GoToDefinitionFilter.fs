@@ -181,23 +181,31 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
+    let cancellationToken = Atom None
+
     let gotoDefinition continueCommandChain =
-        async {
-            let ctx = SynchronizationContext.Current
-            do! Async.SwitchToThreadPool()
-            let! symbolResult = getDocumentState()
-            match symbolResult with
-            | Some (_, _, _, _, FindDeclResult.DeclFound _) 
-            | None ->
-                // Run the operation on UI thread since continueCommandChain may access UI components.
-                do! Async.SwitchToContext ctx
-                // Declaration location might exist so let Visual F# Tools handle it. 
-                return continueCommandChain()
-            | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
-                if shouldGenerateDefinition fsSymbolUse.Symbol then
-                    return navigateToMetadata project span parseTree fsSymbolUse  
-        }      
-        |> Async.StartImmediateSafe
+        let cancelToken = new CancellationTokenSource() 
+        cancellationToken.Swap (fun _ -> Some (cancelToken))
+        |> Option.iter (fun oldToken -> 
+            oldToken.Cancel()
+            oldToken.Dispose())
+        let worker =
+            async {
+                let ctx = SynchronizationContext.Current
+                do! Async.SwitchToThreadPool()
+                let! symbolResult = getDocumentState()
+                match symbolResult with
+                | Some (_, _, _, _, FindDeclResult.DeclFound _) 
+                | None ->
+                    // Run the operation on UI thread since continueCommandChain may access UI components.
+                    do! Async.SwitchToContext ctx
+                    // Declaration location might exist so let Visual F# Tools handle it. 
+                    return continueCommandChain()
+                | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
+                    if shouldGenerateDefinition fsSymbolUse.Symbol then
+                        return navigateToMetadata project span parseTree fsSymbolUse  
+            }
+        Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set

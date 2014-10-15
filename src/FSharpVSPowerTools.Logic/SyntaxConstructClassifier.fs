@@ -182,5 +182,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
     interface IDisposable with
         member __.Dispose() = 
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
+            cancellationToken.Value
+            |> Option.iter (fun token -> 
+                token.Cancel()
+                token.Dispose())
             (docEventListener :> IDisposable).Dispose()
          
