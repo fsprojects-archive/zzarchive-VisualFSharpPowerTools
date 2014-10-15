@@ -2,6 +2,9 @@
 
 open System
 open System.IO
+open System.Threading
+open System.Security
+open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.TextManager.Interop
@@ -14,8 +17,6 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
-open System.Collections.Generic
-open System.Security
 
 type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           editorOptionsFactory: IEditorOptionsFactoryService, projectFactory: ProjectFactory) =
@@ -41,7 +42,8 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             | _ -> return None
         }
 
-    let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
+    // Use a single cache across text views
+    static let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
     let xmlIndexService = serviceProvider.GetService<IVsXMLMemberIndexService, SVsXMLMemberIndexService>()
 
     /// If the XML comment starts with '<' not counting whitespace then treat it as a literal XML comment.
@@ -176,7 +178,7 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
     let gotoDefinition continueCommandChain =
         async {
-            let ctx = System.Threading.SynchronizationContext.Current
+            let ctx = SynchronizationContext.Current
             do! Async.SwitchToThreadPool()
             let! symbolResult = getDocumentState()
             match symbolResult with
