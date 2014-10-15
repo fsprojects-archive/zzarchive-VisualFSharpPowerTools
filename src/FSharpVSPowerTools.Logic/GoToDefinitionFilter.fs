@@ -189,23 +189,22 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
         |> Option.iter (fun oldToken -> 
             oldToken.Cancel()
             oldToken.Dispose())
+        let uiContext = SynchronizationContext.Current
         let worker =
             async {
-                let ctx = SynchronizationContext.Current
-                do! Async.SwitchToThreadPool()
                 let! symbolResult = getDocumentState()
                 match symbolResult with
                 | Some (_, _, _, _, FindDeclResult.DeclFound _) 
                 | None ->
                     // Run the operation on UI thread since continueCommandChain may access UI components.
-                    do! Async.SwitchToContext ctx
+                    do! Async.SwitchToContext uiContext
                     // Declaration location might exist so let Visual F# Tools handle it. 
                     return continueCommandChain()
                 | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
                     if shouldGenerateDefinition fsSymbolUse.Symbol then
                         return navigateToMetadata project span parseTree fsSymbolUse  
             }
-        Async.StartImmediateSafe (worker, cancelToken.Token)
+        Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set

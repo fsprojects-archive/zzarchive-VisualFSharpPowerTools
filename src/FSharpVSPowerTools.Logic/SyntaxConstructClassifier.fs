@@ -138,8 +138,6 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
-    let mutable colored = false
-
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
         match state.Value with
         | Some state ->
@@ -162,10 +160,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
                 |> Seq.toArray
             spans
         | None -> 
-            if not colored then
+            // Only schedule an update on signature files
+            if String.Equals(Path.GetExtension(doc.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) then
                 // If not yet schedule an action, do it now.
                 updateSyntaxConstructClassifiers false
-                colored <- true
             [||]
 
     interface IClassifier with
