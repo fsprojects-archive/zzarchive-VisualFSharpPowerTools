@@ -126,7 +126,6 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 &windowFrame)      
         if isOpened then
             // If the buffer has been opened, we will not re-generate signatures
-            // TODO: navigate to exact location
             windowFrame.Show() |> ensureSucceeded
         else
             let (startLine, startCol, _, _) = span.ToRange()
@@ -168,29 +167,39 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             | None ->
                 statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
 
+    let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
+        match fsSymbol with
+        | :? FSharpEntity as e when e.IsNamespace -> false
+        | :? FSharpEntity as e when e.IsProvidedAndErased -> false
+        | :? FSharpEntity as e when e.IsEnum && not e.IsFSharp -> false
+        | _ -> true
+
+    let gotoDefinition continueCommandChain =
+        async {
+            let! symbolResult = getDocumentState()
+            match symbolResult with
+            | Some (_, _, _, _, FindDeclResult.DeclFound _) 
+            | None ->
+                // Declaration location might exist so let Visual F# Tools handle it. 
+                return continueCommandChain()
+            | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
+                if shouldGenerateDefinition fsSymbolUse.Symbol then
+                    return navigateToMetadata project span parseTree fsSymbolUse  
+        }      
+        // Run the operation on UI thread since continueCommandChain may access UI components.
+        |> Async.StartImmediateSafe
+
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
-                let symbolResult = getDocumentState () |> Async.RunSynchronously
-                let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
-                    match fsSymbol with
-                    | :? FSharpEntity as e when e.IsNamespace -> false
-                    | :? FSharpEntity as e when e.IsProvidedAndErased -> false
-                    | :? FSharpEntity as e when e.IsEnum && not e.IsFSharp -> false
-                    | _ -> true
-
-                match symbolResult with
-                | Some (_, _, _, _, FindDeclResult.DeclFound _) 
-                | None ->
-                    // Declaration location might exist so let Visual F# Tools handle it  
-                    x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-                | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
-                    if shouldGenerateDefinition fsSymbolUse.Symbol then
-                        navigateToMetadata project span parseTree fsSymbolUse
-                    VSConstants.S_OK
+                let nextTarget = x.NextTarget
+                let cmdGroup = ref pguidCmdGroup
+                gotoDefinition (fun _ -> nextTarget.Exec(cmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) |> ignore)
+                // We assume that the operation is going to succeed.
+                VSConstants.S_OK
             else
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
