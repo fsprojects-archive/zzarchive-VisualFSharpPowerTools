@@ -39,7 +39,6 @@ module internal TypedAstUtils =
                        | :? int32 as arg when arg = int CompilationRepresentationFlags.ModuleSuffix -> 
                            Some() 
                        | :? CompilationRepresentationFlags as arg when arg = CompilationRepresentationFlags.ModuleSuffix -> 
-
                            Some() 
                        | _ -> 
                            None
@@ -62,9 +61,7 @@ module TypedAstExtensionHelpers =
             Option.attempt (fun _ -> x.TryFullName)
             |> Option.flatten
             |> Option.orTry (fun _ ->
-                Option.attempt (fun _ -> x.DisplayName) 
-                |> Option.bind (fun displayName -> 
-                    Option.attempt (fun _ -> String.Join(".", x.AccessPath, displayName))))
+                Option.attempt (fun _ -> String.Join(".", x.AccessPath, x.DisplayName)))
 
         member x.TryGetFullDisplayName() =
             let fullName = x.TryGetFullName() |> Option.map (fun fullName -> fullName.Split '.')
@@ -80,8 +77,11 @@ module TypedAstExtensionHelpers =
             //debug "GetFullDisplayName: FullName = %A, Result = %A" fullName res
             res
 
+        member x.PublicNestedEntities =
+            x.NestedEntities |> Seq.filter (fun entity -> entity.Accessibility.IsPublic)
+
     type FSharpMemberFunctionOrValue with
-        // FullType may fail with exception (see https://github.com/fsharp/fsharp/issues/307). 
+        // FullType may raise exceptions (see https://github.com/fsharp/fsharp/issues/307). 
         member x.FullTypeSafe = Option.attempt (fun _ -> x.FullType)
 
         member x.TryGetFullDisplayName() =
@@ -180,6 +180,10 @@ module TypedAstPatterns =
     let (|ByRef|_|) (e: FSharpEntity) = if e.IsByRef then Some() else None
     let (|Array|_|) (e: FSharpEntity) = if e.IsArrayType then Some() else None
     let (|FSharpModule|_|) (entity: FSharpEntity) = if entity.IsFSharpModule then Some() else None
+
+    let (|Namespace|_|) (entity: FSharpEntity) = if entity.IsNamespace then Some() else None
+    let (|ProvidedAndErasedType|_|) (entity: FSharpEntity) = if entity.IsProvidedAndErased then Some() else None
+    let (|Enum|_|) (entity: FSharpEntity) = if entity.IsEnum then Some() else None
 
     let (|Tuple|_|) (ty: FSharpType option) = 
         ty |> Option.bind (fun ty -> if ty.IsTupleType then Some() else None)

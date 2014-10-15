@@ -169,24 +169,27 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
 
     let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
         match fsSymbol with
-        | :? FSharpEntity as e when e.IsNamespace -> false
-        | :? FSharpEntity as e when e.IsProvidedAndErased -> false
-        | :? FSharpEntity as e when e.IsEnum && not e.IsFSharp -> false
+        | Entity(TypedAstPatterns.Namespace, _, _)
+        | Entity(ProvidedAndErasedType, _, _) -> false
+        | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
     let gotoDefinition continueCommandChain =
         async {
+            let ctx = System.Threading.SynchronizationContext.Current
+            do! Async.SwitchToThreadPool()
             let! symbolResult = getDocumentState()
             match symbolResult with
             | Some (_, _, _, _, FindDeclResult.DeclFound _) 
             | None ->
+                // Run the operation on UI thread since continueCommandChain may access UI components.
+                do! Async.SwitchToContext ctx
                 // Declaration location might exist so let Visual F# Tools handle it. 
                 return continueCommandChain()
             | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
                 if shouldGenerateDefinition fsSymbolUse.Symbol then
                     return navigateToMetadata project span parseTree fsSymbolUse  
         }      
-        // Run the operation on UI thread since continueCommandChain may access UI components.
         |> Async.StartImmediateSafe
 
     member val IsAdded = false with get, set
