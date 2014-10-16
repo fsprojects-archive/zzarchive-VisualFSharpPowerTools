@@ -94,13 +94,12 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.ComponentModelHost
-open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // This is for updating documents after refactoring
 // Reference at https://pytools.codeplex.com/SourceControl/latest#Python/Product/PythonTools/PythonToolsPackage.cs
 
 type DocumentUpdater(serviceProvider: IServiceProvider) = 
-    member x.OpenDocument(fileName: string, [<Out>] viewAdapter: byref<IVsTextView>, pWindowFrame: byref<IVsWindowFrame>) = 
+    member __.OpenDocument(fileName: string, [<Out>] viewAdapter: byref<IVsTextView>, pWindowFrame: byref<IVsWindowFrame>) = 
         let hierarchy = ref null
         let itemId = ref 0u
         VsShellUtilities.OpenDocument(serviceProvider, fileName, Guid.Empty, hierarchy, itemId, &pWindowFrame, &viewAdapter)
@@ -117,12 +116,12 @@ type DocumentUpdater(serviceProvider: IServiceProvider) =
         let adapter = componentModel.GetService<IVsEditorAdaptersFactoryService>()
         adapter.GetDocumentBuffer(!lines)
 
-    member x.BeginGlobalUndo(key: string) = 
+    member __.BeginGlobalUndo(key: string) = 
         let linkedUndo = serviceProvider.GetService<IVsLinkedUndoTransactionManager, SVsLinkedUndoTransactionManager>()
         ErrorHandler.ThrowOnFailure(linkedUndo.OpenLinkedUndo(uint32 LinkedTransactionFlags2.mdtGlobal, key)) |> ignore
         linkedUndo
 
-    member x.EndGlobalUndo(linkedUndo: IVsLinkedUndoTransactionManager) = 
+    member __.EndGlobalUndo(linkedUndo: IVsLinkedUndoTransactionManager) = 
         ErrorHandler.ThrowOnFailure(linkedUndo.CloseLinkedUndo()) |> ignore
 
 /// Fix invalid symbols if they appear to have redundant suffix and prefix. 
@@ -299,7 +298,7 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
         and set v = skipTimerDelay <- v
 
     interface IDisposable with
-        member x.Dispose() =
+        member __.Dispose() =
             tokenSource.Cancel()
             tokenSource.Dispose()
             timer.Stop()
@@ -341,10 +340,10 @@ type CursorOverrideHandle(newCursor) =
 
     do Mouse.OverrideCursor <- newCursor
 
-    member x.Restore() = restore()
+    member __.Restore() = restore()
 
     interface IDisposable with 
-        member x.Dispose() = restore()
+        member __.Dispose() = restore()
 
 module internal Cursor =
     let wait() = new CursorOverrideHandle(System.Windows.Input.Cursors.Wait)

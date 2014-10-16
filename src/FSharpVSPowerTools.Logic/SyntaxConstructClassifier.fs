@@ -147,7 +147,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
             let spans =
                 state.Spans
-                // locations are sorted, so we can safely filter them efficiently
+                // Locations are sorted, so we can safely filter them efficiently
                 |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
                 |> Seq.choose (fun loc -> 
                     maybe {
@@ -160,8 +160,10 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
                 |> Seq.toArray
             spans
         | None -> 
-            // If not yet schedule an action, do it now.
-            updateSyntaxConstructClassifiers false
+            // Only schedule an update on signature files
+            if String.Equals(Path.GetExtension(doc.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) then
+                // If not yet schedule an action, do it now.
+                updateSyntaxConstructClassifiers false
             [||]
 
     interface IClassifier with
@@ -178,5 +180,9 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
     interface IDisposable with
         member __.Dispose() = 
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
+            cancellationToken.Value
+            |> Option.iter (fun token -> 
+                token.Cancel()
+                token.Dispose())
             (docEventListener :> IDisposable).Dispose()
          

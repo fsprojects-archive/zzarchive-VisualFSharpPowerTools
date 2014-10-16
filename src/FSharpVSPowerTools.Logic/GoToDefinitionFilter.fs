@@ -2,6 +2,9 @@
 
 open System
 open System.IO
+open System.Threading
+open System.Security
+open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.TextManager.Interop
@@ -14,8 +17,6 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
-open System.Collections.Generic
-open System.Security
 
 type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           editorOptionsFactory: IEditorOptionsFactoryService, projectFactory: ProjectFactory) =
@@ -41,7 +42,8 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             | _ -> return None
         }
 
-    let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
+    // Use a single cache across text views
+    static let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
     let xmlIndexService = serviceProvider.GetService<IVsXMLMemberIndexService, SVsXMLMemberIndexService>()
 
     /// If the XML comment starts with '<' not counting whitespace then treat it as a literal XML comment.
@@ -126,12 +128,14 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                 &windowFrame)      
         if isOpened then
             // If the buffer has been opened, we will not re-generate signatures
-            // TODO: navigate to exact location
             windowFrame.Show() |> ensureSucceeded
         else
             let (startLine, startCol, _, _) = span.ToRange()
             let pos = mkPos (startLine+1) startCol
-            let openDeclarations = parseTree |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) |> Option.getOrElse []
+            let openDeclarations = 
+                parseTree 
+                |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) 
+                |> Option.getOrElse []
             match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol with
             | Some signature ->
                 File.WriteAllText(filePath, signature)
@@ -152,7 +156,6 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                     |> Option.iter (fun window -> 
                           if window <> null then
                               window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
-                    windowFrame.Show() |> ensureSucceeded
                     currentWindowFrame <- Some windowFrame
                     let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                     let mutable vsTextLines = Unchecked.defaultof<_>
@@ -164,9 +167,44 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
                         vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
                     | _ -> ()
                     projectFactory.AddSignatureProjectProvider(filePath, project)
+                    // We display the window after putting the project into the project system.
+                    // Hopefully syntax coloring on generated signatures will catch up on time.
+                    windowFrame.Show() |> ensureSucceeded
                     statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore
             | None ->
                 statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
+
+    let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
+        match fsSymbol with
+        | Entity(TypedAstPatterns.Namespace, _, _)
+        | Entity(ProvidedAndErasedType, _, _) -> false
+        | Entity(Enum as e, _, _) when not e.IsFSharp -> false
+        | _ -> true
+
+    let cancellationToken = Atom None
+
+    let gotoDefinition continueCommandChain =
+        let cancelToken = new CancellationTokenSource() 
+        cancellationToken.Swap (fun _ -> Some (cancelToken))
+        |> Option.iter (fun oldToken -> 
+            oldToken.Cancel()
+            oldToken.Dispose())
+        let uiContext = SynchronizationContext.Current
+        let worker =
+            async {
+                let! symbolResult = getDocumentState()
+                match symbolResult with
+                | Some (_, _, _, _, FindDeclResult.DeclFound _) 
+                | None ->
+                    // Run the operation on UI thread since continueCommandChain may access UI components.
+                    do! Async.SwitchToContext uiContext
+                    // Declaration location might exist so let Visual F# Tools handle it. 
+                    return continueCommandChain()
+                | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
+                    if shouldGenerateDefinition fsSymbolUse.Symbol then
+                        return navigateToMetadata project span parseTree fsSymbolUse  
+            }
+        Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
@@ -174,23 +212,11 @@ type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
-                let symbolResult = getDocumentState () |> Async.RunSynchronously
-                let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
-                    match fsSymbol with
-                    | :? FSharpEntity as e when e.IsNamespace -> false
-                    | :? FSharpEntity as e when e.IsProvidedAndErased -> false
-                    | :? FSharpEntity as e when e.IsEnum && not e.IsFSharp -> false
-                    | _ -> true
-
-                match symbolResult with
-                | Some (_, _, _, _, FindDeclResult.DeclFound _) 
-                | None ->
-                    // Declaration location might exist so let Visual F# Tools handle it  
-                    x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-                | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
-                    if shouldGenerateDefinition fsSymbolUse.Symbol then
-                        navigateToMetadata project span parseTree fsSymbolUse
-                    VSConstants.S_OK
+                let nextTarget = x.NextTarget
+                let cmdGroup = ref pguidCmdGroup
+                gotoDefinition (fun _ -> nextTarget.Exec(cmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) |> ignore)
+                // We assume that the operation is going to succeed.
+                VSConstants.S_OK
             else
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 

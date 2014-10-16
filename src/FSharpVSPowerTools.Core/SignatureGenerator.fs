@@ -359,10 +359,6 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
     else
         prefixToConsider + "." + (QuoteIdentifierIfNeeded moduleNameOnly)
 
-type FSharpEntity with
-    member x.PublicNestedEntities =
-        x.NestedEntities |> Seq.filter (fun entity -> entity.Accessibility.IsPublic)
-
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")  
     if not isTopLevel then

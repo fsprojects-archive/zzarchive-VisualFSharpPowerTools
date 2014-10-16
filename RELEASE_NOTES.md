@@ -1,4 +1,6 @@
 #### 1.6.0 - Unreleased
+* Add syntax coloring for generated signatures
+* Fix various bugs on syntax coloring for printf specifiers
 
 #### 1.5.2 - October 8 2014
 * Add syntax coloring for printf specifiers

@@ -26,7 +26,7 @@ namespace FSharpVSPowerTools
         public const string FSharpQuotation = Constants.fsharpQuotation;
         public const string FSharpModule = Constants.fsharpModule;
         public const string FSharpUnused = Constants.fsharpUnused;
-        public const string FSharpPrintf = "FSharp.Printf";
+        public const string FSharpPrintf = Constants.fsharpPrintf;
 
         [Export]
         [Name(FSharpReferenceType)]
