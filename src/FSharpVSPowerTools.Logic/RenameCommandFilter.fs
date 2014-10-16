@@ -23,13 +23,13 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                          projectFactory: ProjectFactory) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
+    let document = serviceProvider.GetService<EnvDTE.DTE, SDTE>().GetActiveDocument()
 
     let canRename() = 
         state <-
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument()
+                let! doc = document
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
             }

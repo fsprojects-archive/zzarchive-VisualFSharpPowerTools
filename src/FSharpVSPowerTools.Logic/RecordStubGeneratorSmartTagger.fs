@@ -28,7 +28,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
-
+    let document = serviceProvider.GetService<EnvDTE.DTE, SDTE>().GetActiveDocument()
     // Try to:
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
@@ -39,8 +39,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             let res =
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
+                    let! doc = document
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word
@@ -101,13 +100,13 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
 
     let generateRecordStub snapshot recordExpr insertionPos entity =
         { new ISmartTagAction with
-            member x.ActionSets = null
-            member x.DisplayText = Resource.recordGenerationCommandName
-            member x.Icon = null
-            member x.IsEnabled = true
-            member x.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
+            member __.ActionSets = null
+            member __.DisplayText = Resource.recordGenerationCommandName
+            member __.Icon = null
+            member __.IsEnabled = true
+            member __.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
 
-    member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
+    member __.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
@@ -129,8 +128,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
             }
 
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()

@@ -24,7 +24,8 @@ type ResolveUnopenedNamespaceSmartTagger
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable state: (Entity * InsertContext) list option = None 
+    let mutable state: (Entity * InsertContext) list option = None
+    let document = serviceProvider.GetService<EnvDTE.DTE, SDTE>().GetActiveDocument()
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -33,8 +34,7 @@ type ResolveUnopenedNamespaceSmartTagger
             let res =
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
+                    let! doc = document
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word

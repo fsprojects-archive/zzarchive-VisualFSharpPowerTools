@@ -7,7 +7,6 @@ open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 open EnvDTE
 open FSharpVSPowerTools
-open Microsoft.VisualStudio.Text
 open System.IO
 open System.Diagnostics
 open System.Collections.Generic
