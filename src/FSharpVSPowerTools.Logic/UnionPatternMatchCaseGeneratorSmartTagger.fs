@@ -28,6 +28,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
     let mutable currentWord: SnapshotSpan option = None
     let mutable unionDefinition = None
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
+    let document = serviceProvider.GetService<EnvDTE.DTE, SDTE>().GetActiveDocument()
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -36,8 +37,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
             let res =
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
+                    let! doc = document
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word
@@ -96,13 +96,13 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
 
     let generateUnionPatternMatchCase snapshot patMatchExpr insertionPos entity =
         { new ISmartTagAction with
-            member x.ActionSets = null
-            member x.DisplayText = Resource.unionPatternMatchCaseCommandName
-            member x.Icon = null
-            member x.IsEnabled = true
-            member x.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
+            member __.ActionSets = null
+            member __.DisplayText = Resource.unionPatternMatchCaseCommandName
+            member __.Icon = null
+            member __.IsEnabled = true
+            member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
 
-    member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
+    member __.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
@@ -128,8 +128,8 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                 Seq.empty
 
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()

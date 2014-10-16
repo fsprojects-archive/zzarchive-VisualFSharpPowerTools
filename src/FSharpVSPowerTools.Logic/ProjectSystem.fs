@@ -109,7 +109,7 @@ type FSharpLanguageService [<ImportingConstructor>]
         lambda.Compile().Invoke
     )
 
-    member x.GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
+    member __.GetColorStateAtStartOfLine(vsColorState: IVsTextColorState, line: int): int =
         getColorStateAtStartOfLine.Value(vsColorState, line)
 
-    member x.LexStateOfColorState(colorState: int): int64 = lexStateOfColorState.Value colorState
+    member __.LexStateOfColorState(colorState: int): int64 = lexStateOfColorState.Value colorState

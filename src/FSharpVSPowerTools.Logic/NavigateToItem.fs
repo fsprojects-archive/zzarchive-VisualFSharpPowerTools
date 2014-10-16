@@ -53,7 +53,7 @@ type NavigateToItemProviderFactory
             instance :> _
 
     interface INavigateToItemProviderFactory with
-        member x.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
+        member __.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
             let navigateToEnabled = 
                 try
                     // If this class is in the main project, we will use a more type-safe way to get options
@@ -156,16 +156,16 @@ and
         Async.StartInThreadPoolSafe(searchValueComputations, cancellationToken = ct)
 
     interface INavigateToItemProvider with
-        member x.StartSearch(callback, searchValue) = 
+        member __.StartSearch(callback, searchValue) = 
             let token = searchCTS.Token
             let indexes = projectIndexes.Force()
             runSearch(indexes, searchValue.Trim '`', callback, token)
-        member x.StopSearch() = 
+        member __.StopSearch() = 
             searchCTS.Cancel()
             searchCTS <- CancellationTokenSource.CreateLinkedTokenSource(processProjectsCTS.Token)
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             processProjectsCTS.Cancel()
 and
     [<Export>]
@@ -217,7 +217,7 @@ and
             x.GetOrCreateIcon((glyphGroup, glyphItem))
 
         interface IDisposable with
-            member x.Dispose() = 
+            member __.Dispose() = 
                 for (KeyValue(_, (icon, bitmap))) in iconCache do
                     if not (icon === null) then
                         icon.Dispose()
@@ -240,12 +240,12 @@ and
     NavigateToItemDisplay(item: NavigateToItem, icon, serviceProvider: IServiceProvider) =
         let extraData: NavigateToItemExtraData = unbox item.Tag
         interface INavigateToItemDisplay with
-            member x.Name = item.Name
-            member x.Glyph = icon
-            member x.AdditionalInformation = extraData.FileName
-            member x.Description = extraData.Description
-            member x.DescriptionItems = Constants.EmptyReadOnlyCollection
-            member x.NavigateTo() = 
+            member __.Name = item.Name
+            member __.Glyph = icon
+            member __.AdditionalInformation = extraData.FileName
+            member __.Description = extraData.Description
+            member __.DescriptionItems = Constants.EmptyReadOnlyCollection
+            member __.NavigateTo() = 
                 let mutable hierarchy = Unchecked.defaultof<_>
                 let mutable itemId = Unchecked.defaultof<_>
                 let mutable windowFrame = Unchecked.defaultof<_>
@@ -284,4 +284,3 @@ and
                     let (startRow, startCol), (endRow, endCol) = extraData.Span
                     vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
                     |> ensureSucceeded
-

@@ -13,16 +13,19 @@ open FSharp.ViewModule.Progress
 
 type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory) =
+
+    let document = serviceProvider.GetService<EnvDTE.DTE, SDTE>().GetActiveDocument()
+
     let getDocumentState (progress: ShowProgress) =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItems = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetActiveDocument()
+                let! doc = document
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
-                return doc.FullName, project, span, symbol }
+                return doc.FullName, project, span, symbol } 
 
             match projectItems with
             | Some (file, project, span, symbol) ->

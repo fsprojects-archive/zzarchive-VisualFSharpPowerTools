@@ -20,12 +20,14 @@ open Microsoft.FSharp.Compiler.Range
 
 type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
                           editorOptionsFactory: IEditorOptionsFactoryService, projectFactory: ProjectFactory) =
+
+    let document = serviceProvider.GetService<EnvDTE.DTE, SDTE>().GetActiveDocument()
+
     let getDocumentState () =
         async {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItems = maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetActiveDocument()
+                let! doc = document
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
                 return doc.FullName, project, span, symbol }

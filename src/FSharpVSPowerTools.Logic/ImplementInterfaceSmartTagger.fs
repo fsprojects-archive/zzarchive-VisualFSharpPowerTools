@@ -33,6 +33,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable state = None
+    let document = serviceProvider.GetService<EnvDTE.DTE, SDTE>().GetActiveDocument()
 
     let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
         async {
@@ -66,8 +67,7 @@ type ImplementInterfaceSmartTagger(view: ITextView, buffer: ITextBuffer,
             let res =
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
+                    let! doc = document
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, symbol = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word, symbol
