@@ -46,7 +46,7 @@ Default Keymap
 | Formatting Selection       | Ctrl + K, Ctrl + F |
 | Formatting Cursor Position | Ctrl + K, Ctrl + F |
 
-If you are using Visual F# Power Tools along side with ReSharper, there is a [known issue](http://youtrack.jetbrains.com/issue/RSRP-409199) where some F# commands are hidden by ReSharper. Until it is fixed, you can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -> Options -> Keyboard & Menus).
+If you are using Visual F# Power Tools along side with ReSharper 8 or below, there is a [known issue](http://youtrack.jetbrains.com/issue/RSRP-409199) where some F# commands are hidden by ReSharper. You can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -> Options -> Keyboard & Menus).
   
 Contributing and copyright
 --------------------------
