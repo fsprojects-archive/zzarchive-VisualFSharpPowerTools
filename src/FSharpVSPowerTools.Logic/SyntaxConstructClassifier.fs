@@ -15,7 +15,7 @@ type private ClassifierState =
     { SnapshotSpan: SnapshotSpan
       Spans: CategorizedColumnSpan [] }
 
-type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
+type SyntaxConstructClassifier (textDocument: ITextDocument, buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
                                 vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
                                 projectFactory: ProjectFactory, includeUnusedDeclarations: bool) as self =
     
@@ -40,9 +40,17 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
     let getProject() =
         maybe {
             // If there is no backing document, an ITextDocument instance might be null
-            let! _ = Option.ofNull doc
+            let! _ = Option.ofNull textDocument
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetActiveDocument()
+            let! doc = 
+                let filePath = textDocument.FilePath
+                match dte.GetActiveDocument() with
+                | Some doc when doc.FullName = filePath -> 
+                    Some doc
+                | _ ->
+                    // If there is no current document or it refers to a different path,
+                    // we try to find the exact document from solution by path.
+                    Option.ofNull(dte.Solution.FindProjectItem(filePath).Document)
             return! projectFactory.CreateForDocument buffer doc }
 
     let updateSyntaxConstructClassifiers force =
@@ -52,7 +60,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
             oldToken.Cancel()
             oldToken.Dispose())
 
-        let snapshot = if doc <> null then doc.TextBuffer.CurrentSnapshot else null
+        let snapshot = if textDocument <> null then textDocument.TextBuffer.CurrentSnapshot else null
         let currentState = state.Value
         let needUpdate =
             match force, currentState with
@@ -67,19 +75,19 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
                     | Some project ->
                         debug "[SyntaxConstructClassifier] - Effective update"
                         let getSymbolDeclLocation fsSymbol =
-                            projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project                                  
+                            projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project                                  
                         
                         let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
                         
                         let includeUnusedDeclarations = 
                             // Don't check for unused declarations on generated signatures
-                            includeUnusedDeclarations && not (String.Equals(Path.GetExtension(doc.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) && project.IsForStandaloneScript)
+                            includeUnusedDeclarations && not (String.Equals(Path.GetExtension(textDocument.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) && project.IsForStandaloneScript)
                         let! symbolsUses, lexer =
-                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, doc.FilePath, project, AllowStaleResults.No,
+                            vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, textDocument.FilePath, project, AllowStaleResults.No,
                                                                             includeUnusedDeclarations, getSymbolDeclLocation)
 
-                        let! parseResults = vsLanguageService.ParseFileInProject(doc.FilePath, snapshot.GetText(), project)
-                        let! entities = vsLanguageService.GetAllEntities(doc.FilePath, snapshot.GetText(), project)
+                        let! parseResults = vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
+                        let! entities = vsLanguageService.GetAllEntities(textDocument.FilePath, snapshot.GetText(), project)
                             
                         let entitiesMap, openDeclarations = 
                             if includeUnusedDeclarations then
@@ -87,7 +95,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
                                     let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
                                     let tooltip =
                                         vsLanguageService.GetOpenDeclarationTooltip(
-                                                        line, endCol, lineStr, Array.toList idents, project, doc.FilePath, snapshot.GetText())
+                                                        line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, snapshot.GetText())
                                         |> Async.RunSynchronously
                                     match tooltip with
                                     | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
@@ -111,8 +119,8 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
                                    Spans = spans }) |> ignore
 
                         // TextBuffer is null if a solution is closed at this moment
-                        if doc.TextBuffer <> null then
-                            let currentSnapshot = doc.TextBuffer.CurrentSnapshot
+                        if textDocument.TextBuffer <> null then
+                            let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
                             let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
                             classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
                     | None -> ()
@@ -135,7 +143,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
 
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
     
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, 
                                     fun() -> updateSyntaxConstructClassifiers false)
 
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
@@ -161,7 +169,7 @@ type SyntaxConstructClassifier (doc: ITextDocument, buffer: ITextBuffer, classif
             spans
         | None -> 
             // Only schedule an update on signature files
-            if String.Equals(Path.GetExtension(doc.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) then
+            if String.Equals(Path.GetExtension(textDocument.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) then
                 // If not yet schedule an action, do it now.
                 updateSyntaxConstructClassifiers false
             [||]

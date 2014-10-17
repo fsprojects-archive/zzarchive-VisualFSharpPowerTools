@@ -10,6 +10,7 @@ open FSharpVSPowerTools
 open System.IO
 open System.Diagnostics
 open System.Collections.Generic
+open Microsoft.VisualStudio.Text
 
 [<NoComparison; NoEquality>]
 type private CacheMessage<'K, 'V> =
@@ -67,10 +68,17 @@ type private ProjectUniqueName = string
 type ProjectFactory
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+     openDocumentsTracker: OpenDocumentsTracker,
      vsLanguageService: VSLanguageService) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
+
+    let mayReferToSameBuffer (buffer: ITextBuffer) filePath =
+        match openDocumentsTracker.TryFindOpenDocument(filePath) with
+        | None -> true
+        | Some doc ->
+            buffer = doc.Document.TextBuffer
 
     let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
@@ -124,6 +132,8 @@ type ProjectFactory
 
     member x.CreateForDocument buffer (doc: Document) =
         let filePath = doc.FullName
+        Debug.Assert(mayReferToSameBuffer buffer filePath, 
+                sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
         let project = doc.ProjectItem.ContainingProject
         let isSourceExtension ext =
             String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
