@@ -18,6 +18,7 @@ type Category =
     | Module
     | Unused
     | Printf
+    | Escaped
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -122,11 +123,12 @@ module private PrintfCategorizer =
                         let skip, length = findLengthAndSkip (i + 1) 
                         match length with 
                         | Some length -> 
-                            let hit = { Category = Category.Printf
-                                        WordSpan = { Line = r.EndLine
-                                                     StartCol = left + i + 1
-                                                     EndCol = left + i + length + 1 }} 
-
+                            let hit = 
+                                { Category = Category.Printf
+                                  WordSpan = 
+                                    { Line = r.EndLine
+                                      StartCol = left + i + 1
+                                      EndCol = left + i + length + 1 }} 
                             parseFmt (hit :: acc) (i + skip)
                         | _ -> parseFmt acc (i + skip)
                     | _ -> parseFmt acc (i + 1)
@@ -136,6 +138,57 @@ module private PrintfCategorizer =
         |> Seq.toArray
 
     let getCategories ast lexer getTextLine = UntypedAstUtils.getIdents ast |> categorize lexer getTextLine
+
+module EscapedCharsCatecorizer =
+    open UntypedAstUtils
+    open System.Text.RegularExpressions
+
+    let private isSimpleString (r: Range.range) getTextLine =
+        let lineStr: string = getTextLine (r.StartLine - 1)
+        let origLiteral = lineStr.Substring r.StartColumn
+        not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
+
+    let escapingSymbolsRegex = Regex """\b|\n|\r|\t|\\" """
+
+    let private categorize (getTextLine: int -> string) (lit: StringLiteral) =
+        if isSimpleString lit.Range getTextLine then
+            if lit.Range.StartLine = lit.Range.EndLine then
+                [ lit.Value, lit.Range.StartLine, lit.Range.StartColumn ]
+            else
+                [lit.Range.StartLine..lit.Range.EndLine]
+                |> List.map (fun line ->
+                    if line = lit.Range.StartLine then 
+                        getTextLine (line - 1), line, lit.Range.StartColumn
+                    elif line = lit.Range.EndLine then
+                        let lineStr = getTextLine (line - 1)
+                        lineStr.Substring(0, lit.Range.EndColumn - 1), line, 1
+                    else getTextLine (line - 1), line, 0
+                )
+            |> List.map (fun (str, line, startColumn) ->
+                 let matches = escapingSymbolsRegex.Matches str |> Seq.cast<Match>
+                 matches
+                 |> Seq.fold (fun (shift, acc) (m: Match) -> 
+                      if m.Value = "" then (shift, acc)
+                      else
+                        let category =
+                            { Category = Category.Escaped
+                              WordSpan = 
+                                { Line = line
+                                  StartCol = shift + startColumn + m.Index + 1
+                                  EndCol = shift + startColumn + m.Index + m.Length + 2 }}
+                        shift + 1, category :: acc  
+                    ) (0, [])
+                  |> snd
+               )
+            |> Seq.concat 
+        else Seq.empty
+
+    let getCategories ast getTextLine = 
+        let literals = UntypedAstUtils.getStringLiterals ast 
+        literals
+        |> List.map (categorize getTextLine) 
+        |> Seq.concat
+        |> Seq.toArray
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
@@ -437,6 +490,7 @@ module SourceCodeClassifier =
             spansBasedOnSymbolsUses 
             |> Array.append (QuotationCategorizer.getCategories ast lexer)
             |> Array.append (PrintfCategorizer.getCategories ast lexer getTextLine)
+            |> Array.append (EscapedCharsCatecorizer.getCategories ast getTextLine)
             |> Array.append unusedOpenDeclarationSpans
             
     //    for span in allSpans do

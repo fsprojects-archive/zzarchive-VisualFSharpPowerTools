@@ -1472,6 +1472,24 @@ let ``printf formatters in extention members``() =
     """
 type System.Object with
     member __.M1 = 
-        sprintf "%A"
+        sprintf "%A" 
 """
     => [ 4, [ Category.Function, 8, 15; Category.Printf, 17, 19 ]]
+
+[<Test; Ignore "WIP">]
+let ``multiline printf formatters``() =
+    """
+let _ = printfn "foo %s %d
+                 %A bar
+%i"
+"""
+    => [ 2, [ Category.Function, 8, 15; Category.Printf, 21, 23; Category.Printf, 24, 26 ] 
+         3, [ Category.Printf, 17, 19 ]
+         4, [ Category.Printf, 0, 2 ] ]
+
+[<Test>]
+let ``escaped symbols in string``() =
+    """
+let _ = "foo \n bar \r baz \" "
+"""
+    => [ 2, [ Category.Escaped, 13, 15; Category.Escaped, 20, 22 ]]

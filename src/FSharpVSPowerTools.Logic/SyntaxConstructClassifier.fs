@@ -30,6 +30,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument, buffer: ITextBuffer
         | Category.Module -> Some Constants.fsharpModule
         | Category.Unused -> Some Constants.fsharpUnused
         | Category.Printf -> Some Constants.fsharpPrintf
+        | Category.Escaped -> Some Constants.fsharpEscaped
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
