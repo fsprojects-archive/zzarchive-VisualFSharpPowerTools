@@ -62,7 +62,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
            // GetNavigationItems is not 100% solid and throws occasional exceptions
             try parseResults.GetNavigationItems().Declarations
             with _ -> 
-                Debug.Assert(false, "couldn't update navigation items, ignoring")  
+                fail "Couldn't update navigation items, ignoring"
                 [| |]
 
     member __.GetPartialAssemblySignature() =
@@ -197,6 +197,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
               | Choice2Of2 e -> 
                   fail "[LanguageService] Unexpected type checking errors occurred for '%s' with %A" fileName options
                   fail "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
+                  debug "[LanguageService] Type checking fails for '%s' with content=%A and %A.\nResulting exception: %A" fileName source options e
                   handleCriticalErrors e
                   ParseAndCheckResults.Empty  
           return results
@@ -220,7 +221,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         // We are in a stand-alone file or we are in a project, but currently editing a script file
         try 
             let fileName = fixFileName(fileName)
-            Debug.WriteLine (sprintf "GetScriptCheckerOptions: Creating for stand-alone file or script: '%s'" fileName )
+            debug "GetScriptCheckerOptions: Creating for stand-alone file or script: '%s'" fileName
             let! opts = checker.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
                 
             let results =         
@@ -228,19 +229,19 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 if opts.ProjectOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then opts
                 else 
                 // Add assemblies that may be missing in the standard assembly resolution
-                Debug.WriteLine("GetScriptCheckerOptions: Adding missing core assemblies.")
+                debug "GetScriptCheckerOptions: Adding missing core assemblies."
                 let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework )
                 {opts with ProjectOptions = [|  yield! opts.ProjectOptions
                                                 match FSharpEnvironment.resolveAssembly dirs "FSharp.Core" with
                                                 | Some fn -> yield sprintf "-r:%s" fn
-                                                | None -> Debug.WriteLine("Resolution: FSharp.Core assembly resolution failed!")
+                                                | None -> debug "Resolution: FSharp.Core assembly resolution failed!"
                                                 match FSharpEnvironment.resolveAssembly dirs "FSharp.Compiler.Interactive.Settings" with
                                                 | Some fn -> yield sprintf "-r:%s" fn
-                                                | None -> Debug.WriteLine("Resolution: FSharp.Compiler.Interactive.Settings assembly resolution failed!") |]}
+                                                | None -> debug "Resolution: FSharp.Compiler.Interactive.Settings assembly resolution failed!" |]}
               
             // Print contents of check option for debugging purposes
-            Debug.WriteLine(sprintf "GetScriptCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules)
+            debug "GetScriptCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
+                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
         
             return results
         with e -> 
@@ -258,13 +259,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
           UnresolvedReferences = None
           ReferencedProjects = referencedProjects }
-    Debug.WriteLine(sprintf "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
-                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects)
+    debug "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
+                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects
     opts     
 
   member __.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
-        Debug.WriteLine(sprintf "Parsing: Get untyped parse result (fileName=%s)" fileName)
+        debug "Parsing: Get untyped parse result (fileName=%s)" fileName
         return! checker.ParseFileInProject(fileName, src, projectOptions)
     }
 
@@ -284,14 +285,14 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
  // The method in the corresponding fsharpbinding code is used by Xamarin Studio.
   member __.GetTypedParseResultWithTimeout(projectFilename, fileName:string, src, files, args, stale, timeout, targetFramework)  : ParseAndCheckResults = 
     let opts = __.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
-    Debug.WriteLine("Parsing: Get typed parse result, fileName={0}", [|fileName|])
+    debug "Parsing: Get typed parse result, fileName=%A" [|fileName|]
     // Try to get recent results from the F# service
     match __.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
     | Some results ->
-        Debug.WriteLine(sprintf "Parsing: using stale results")
+        debug "Parsing: using stale results"
         results
     | None -> 
-        Debug.WriteLine(sprintf "Worker: Not using stale results - trying typecheck with timeout")
+        debug "Worker: Not using stale results - trying typecheck with timeout"
         // If we didn't get a recent set of type checking results, we put in a request and wait for at most 'timeout' for a response
         mbox.PostAndReply((fun reply -> (fileName, src, opts, reply)), timeout = timeout)
 *)
@@ -303,9 +304,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           match x.TryGetStaleTypedParseResult(fileName, opts, src, stale) with
           | Some results -> return results
           | None -> 
-              Debug.WriteLine(sprintf "Parsing: Trigger parse (fileName=%s)" fileName)
+              debug "Parsing: Trigger parse (fileName=%s)" fileName
               let! results = parseAndCheckFileInProject(fileName, src, opts)
-              Debug.WriteLine(sprintf "Worker: Starting background compilations")
+              debug "Worker: Starting background compilations"
               checker.StartBackgroundCompile(opts)
               return results
       }

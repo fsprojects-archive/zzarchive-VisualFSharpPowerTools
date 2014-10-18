@@ -9,8 +9,8 @@ open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Operations
 
 /// Replace internal project providers by external ones for testing
-type MockProjectFactory(serviceProvider, vsLanguageService, dte: MockDTE) =
-    inherit ProjectFactory(serviceProvider, vsLanguageService)
+type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =
+    inherit ProjectFactory(serviceProvider, openDocTracker, vsLanguageService)
     override x.CreateForProject(p) = 
         dte.GetProject(p.FullName)
 
@@ -45,7 +45,7 @@ type VsTestBase() =
     static let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
     static let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
                                                      openDocumentsTracker, serviceProvider, SkipLexCache = true)
-    static let projectFactory = new MockProjectFactory(serviceProvider, vsLanguageService, dte)
+    static let projectFactory = new MockProjectFactory(serviceProvider, openDocumentsTracker, vsLanguageService, dte)
     
     member __.ServiceProvider = serviceProvider
     member __.FSharpLanguageService = fsharpLanguageService

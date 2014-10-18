@@ -7,10 +7,10 @@ open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 open EnvDTE
 open FSharpVSPowerTools
-open Microsoft.VisualStudio.Text
 open System.IO
 open System.Diagnostics
 open System.Collections.Generic
+open Microsoft.VisualStudio.Text
 
 [<NoComparison; NoEquality>]
 type private CacheMessage<'K, 'V> =
@@ -68,10 +68,17 @@ type private ProjectUniqueName = string
 type ProjectFactory
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+     openDocumentsTracker: OpenDocumentsTracker,
      vsLanguageService: VSLanguageService) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
+
+    let mayReferToSameBuffer (buffer: ITextBuffer) filePath =
+        match openDocumentsTracker.TryFindOpenDocument(filePath) with
+        | None -> true
+        | Some doc ->
+            buffer = doc.Document.TextBuffer
 
     let onProjectChanged (project: Project) = 
         debug "[ProjectFactory] %s changed." project.Name
@@ -125,7 +132,16 @@ type ProjectFactory
 
     member x.CreateForDocument buffer (doc: Document) =
         let filePath = doc.FullName
+        Debug.Assert(mayReferToSameBuffer buffer filePath, 
+                sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
         let project = doc.ProjectItem.ContainingProject
+        let isSourceExtension ext =
+            String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
+                String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
+                String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase)
+        let isSignatureExtension ext =
+            String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase)
+
         if not (project === null) && not (filePath === null) && isFSharpProject project then
             let projectProvider = x.CreateForProject project
             // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 
@@ -133,14 +149,16 @@ type ProjectFactory
             if Array.exists ((=) filePath) projectProvider.SourceFiles then
                 Some projectProvider
             else
-                Some (VirtualProjectProvider(buffer, filePath) :> _)
+                let ext = Path.GetExtension filePath
+                if isSourceExtension ext then
+                    Some (VirtualProjectProvider(buffer, filePath) :> _)
+                else
+                    None
         elif not (filePath === null) then
             let ext = Path.GetExtension filePath
-            if String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
-                String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase) then
+            if isSourceExtension ext then
                 Some (VirtualProjectProvider(buffer, filePath) :> _)
-            elif String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase) then
+            elif isSignatureExtension ext then
                 match signatureProjectData.TryGetValue(filePath) with
                 | true, project ->
                     Some (SignatureProjectProvider(filePath, project) :> _)
@@ -170,7 +188,8 @@ type ProjectFactory
             res
 
     member x.GetSymbolDeclarationLocation (symbol: FSharpSymbol) (currentFile: FilePath) (currentProject: IProjectProvider) : SymbolDeclarationLocation option =
-        Debug.Assert(currentProject.SourceFiles |> Array.exists ((=) currentFile), "Current file should be included in current project.")
+        Debug.Assert(currentProject.SourceFiles |> Array.exists ((=) currentFile), 
+            sprintf "Current file '%s' should be included in current project '%A'." currentFile currentProject.SourceFiles)
         let isPrivateToFile = 
             match symbol with 
             | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember

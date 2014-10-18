@@ -11,6 +11,7 @@ open Microsoft.VisualStudio.TextManager.Interop
 open System
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.Diagnostics
 
 type FilePath = string
 
@@ -77,6 +78,12 @@ type VSLanguageService
         |> Seq.concat
         |> Seq.toArray
 
+    let mayReferToSameBuffer (snapshot: ITextSnapshot) filePath =
+        match openDocumentsTracker.TryFindOpenDocument(filePath) with
+        | None -> true
+        | Some doc ->
+            doc.Snapshot.TextBuffer = snapshot.TextBuffer
+
     static let initializationTime = DateTime.Now
 
     /// Set project load time to that of the last recently-changed open document.
@@ -135,6 +142,8 @@ type VSLanguageService
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
         async {
+            Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
+                sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             try                 
                 let (_, _, endLine, endCol) = word.ToRange()
                 let source = word.Snapshot.GetText()
@@ -186,6 +195,8 @@ type VSLanguageService
 
     member __.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         async {
+            Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
+                sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             let (_, _, endLine, _) = word.ToRange()
             let source = word.Snapshot.GetText()
             let currentLine = word.Start.GetContainingLine().GetText()
@@ -197,8 +208,9 @@ type VSLanguageService
 
     member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
                                             checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
-
         async {
+            Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
+                sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
             let source = snapshot.GetText() 
             let args = project.CompilerOptions
             let getLineStr line =
