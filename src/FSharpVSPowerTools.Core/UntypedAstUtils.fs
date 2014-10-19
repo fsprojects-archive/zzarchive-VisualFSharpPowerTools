@@ -454,10 +454,11 @@ type StringLiteral =
     { Value: string
       Range: Range.range }
 
+let private printfFunctions = set [ "printf"; "printfn"; "sprintf"; "failwithf"; "eprintf"; "eprintfn" ]
+
 /// Returns ranges of all idents found in an untyped AST
 let getPrintfLiterals ast =
-    let printfFunctions = set [ "printf"; "printfn"; "sprintf"; "failwithf"; "eprintf"; "eprintfn" ]
-    let apps = ResizeArray()
+    let literals = ResizeArray()
 
     let rec visitExpr = function
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
@@ -472,7 +473,7 @@ let getPrintfLiterals ast =
             visitExpr body
         | SynExpr.App (_,_, SynExpr.Ident funcName, SynExpr.Const (SynConst.String (value, r), _), _) -> 
             if printfFunctions |> Set.contains funcName.idText then
-                apps.Add { Value = value; Range = r }
+                literals.Add { Value = value; Range = r }
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr
             visitExpr funcExpr
@@ -555,4 +556,4 @@ let getPrintfLiterals ast =
             visitModulesAndNamespaces modules
         | _ -> ())
 
-    List.ofSeq apps
+    List.ofSeq literals
