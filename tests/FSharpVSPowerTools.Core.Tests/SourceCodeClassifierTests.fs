@@ -1490,6 +1490,34 @@ let _ = printfn "foo %s %d
 [<Test>]
 let ``escaped symbols in string``() =
     """
-let _ = "foo \n bar \r baz \" "
+let _ = "foo \n bar \r baz"
 """
     => [ 2, [ Category.Escaped, 13, 15; Category.Escaped, 20, 22 ]]
+
+[<Test>]
+let ``escaped "" symbols in string``() =
+    """
+let _ = "foo \"bar\" baz"
+"""
+    => [ 2, [ Category.Escaped, 9, 11; Category.Escaped, 14, 16 ]]
+
+[<Test>]
+let ``escaped symbols in multiline string``() =
+    """
+let _ = "\n
+\r" """
+    => [ 2, [ Category.Escaped, 9, 11 ]
+         3, [ Category.Escaped, 0, 2 ]]
+
+[<Test>]
+let ``escaped symbols in complex multiline string``() =
+    """
+let _ = "foo \n bar \r baz
+\t
+ \r f
+\n"
+"""
+    => [ 2, [ Category.Escaped, 13, 15; Category.Escaped, 20, 22 ]
+         3, [ Category.Escaped, 0, 2 ]
+         4, [ Category.Escaped, 1, 3 ]
+         5, [ Category.Escaped, 0, 2 ]]
