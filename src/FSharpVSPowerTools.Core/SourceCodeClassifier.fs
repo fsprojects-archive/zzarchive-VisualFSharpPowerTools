@@ -71,71 +71,66 @@ module private QuotationCategorizer =
                                             StartCol = minCol
                                             EndCol = maxCol }}))
         |> Seq.concat
-        |> Seq.toArray
 
     let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
 
 module private PrintfCategorizer =
-    let private printfFunctions = set ["printf";"printfn";"sprintf";"failwithf";"eprintf";"eprintfn"]
-    let private printfTerminators = set ['b';'c';'s';'d';'i';'u';'x';'X';'o';'e';'E';'f';'g';'G';'M';'O';'A';'a';'t']
-    let private printfModifiers = set ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9';'-';'+';' ']
+    open UntypedAstUtils
+
+    let private printfTerminators = 
+        set [ 'b'; 'c'; 's'; 'd'; 'i'; 'u'; 'x'; 'X'; 'o'; 'e'; 'E'; 'f'; 'g'; 'G'; 'M'; 'O'; 'A'; 'a'; 't' ]
+    let private printfModifiers = set [ '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'; '-'; '+'; ' ' ]
         
-    let private categorize (lexer: LexerBase) getTextLine (idents: Ident list) =
-        let getFormatterPos (r: Range.range) = 
-            lexer.TokenizeLine (r.EndLine - 1)
-            |> Seq.skipWhile (fun t -> t.LeftColumn < r.EndColumn || t.TokenName <> "STRING_TEXT")
-            |> Seq.takeWhile (fun t -> t.TokenName = "STRING_TEXT")
-            |> Seq.fold (fun pos token ->
-                 Some(
-                    match pos with
-                    | Some (left, right) -> 
-                        min left token.LeftColumn,
-                        max right token.RightColumn
-                    | None -> token.LeftColumn, token.RightColumn)) None
+    let private categorize (getTextLine: int -> string) (lit: StringLiteral) =
+        let lines =
+            if lit.Range.StartLine = lit.Range.EndLine then
+                [ lit.Value, lit.Range.StartLine, lit.Range.StartColumn + 1 ]
+            else
+                [lit.Range.StartLine..lit.Range.EndLine]
+                |> List.map (fun line ->
+                    if line = lit.Range.StartLine then 
+                        (getTextLine (line - 1)).Substring(lit.Range.StartColumn + 1), line, lit.Range.StartColumn + 1
+                    elif line = lit.Range.EndLine then
+                        (getTextLine (line - 1)).Substring(0, lit.Range.EndColumn - 1), line, 0
+                    else getTextLine (line - 1), line, 0)
+        lines
+        |> List.map (fun (str, line, startColumn) ->
+            let findLengthAndSkip i = 
+                let rec findTerminator i = 
+                    if str.Length <= i then 0 else
+                    let c = str.[i]
+                    if printfTerminators.Contains c then i + 1
+                    elif printfModifiers.Contains c then findTerminator (i + 1)
+                    else 0
+                if str.[i] = '%' then 2, None else
+                match findTerminator i with
+                | 0  -> 1, None
+                | i' -> (i' + 1 - i), Some (i' + 1 - i)
 
-        idents 
-        |> Seq.choose (fun ident -> if printfFunctions |> Set.contains ident.idText then Some ident.idRange else None)
-        |> Seq.map (fun (r: Range.range) -> seq {
-            // TODO: Multi-line printf formats
-            let line: string = getTextLine (r.EndLine - 1)
-                         
-            match getFormatterPos r with 
-            | None -> ()
-            | Some (left, right) ->
-                let formatter = line.Substring (left + 1, right - left)
-                let findLengthAndSkip i = 
-                    let rec findTerminator i = 
-                        if formatter.Length <= i then 0 else
-                        let c = formatter.[i]
-                        if printfTerminators.Contains c then i + 1
-                        elif printfModifiers.Contains c then findTerminator (i + 1)
-                        else 0
-                    if formatter.[i] = '%' then 2, None else
-                    match findTerminator i with
-                    | 0  -> 1, None
-                    | i' -> (i' + 1 - i), Some (i' + 1 - i)
+            let rec parseFmt acc i =
+                if i >= (str.Length - 1) then acc else
+                match str.[i] with
+                | '%' -> 
+                    let skip, length = findLengthAndSkip (i + 1) 
+                    match length with 
+                    | Some length -> 
+                        let hit = 
+                            { Category = Category.Printf
+                              WordSpan = 
+                                { Line = line
+                                  StartCol = startColumn + i
+                                  EndCol = startColumn + i + length }} 
+                        parseFmt (hit :: acc) (i + skip)
+                    | _ -> parseFmt acc (i + skip)
+                | _ -> parseFmt acc (i + 1)
+            parseFmt [] 0)
+        |> Seq.concat 
 
-                let rec parseFmt acc i =
-                    if i >= (formatter.Length - 1) then acc else
-                    match formatter.[i] with
-                    | '%' -> 
-                        let skip, length = findLengthAndSkip (i + 1) 
-                        match length with 
-                        | Some length -> 
-                            let hit = { Category = Category.Printf
-                                        WordSpan = { Line = r.EndLine
-                                                     StartCol = left + i + 1
-                                                     EndCol = left + i + length + 1 }} 
-
-                            parseFmt (hit :: acc) (i + skip)
-                        | _ -> parseFmt acc (i + skip)
-                    | _ -> parseFmt acc (i + 1)
-                yield! (parseFmt [] 0)
-            })
+    let getCategories ast getTextLine =
+        let literals = UntypedAstUtils.getPrintfLiterals ast 
+        literals
+        |> List.map (categorize getTextLine) 
         |> Seq.concat
-        |> Seq.toArray
-
-    let getCategories ast lexer getTextLine = UntypedAstUtils.getIdents ast |> categorize lexer getTextLine
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
@@ -344,7 +339,6 @@ module SourceCodeClassifier =
                             | _ -> 0)
                         |> List.head)
             |> Seq.distinct
-            |> Seq.toArray
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
             
@@ -429,16 +423,16 @@ module SourceCodeClassifier =
                   WordSpan = { Line = decl.DeclarationRange.StartLine 
                                StartCol = decl.DeclarationRange.StartColumn
                                EndCol = decl.DeclarationRange.EndColumn }})
-            |> List.toArray
     
         //debug "[SourceCodeClassifier] AST: %A" ast
 
         let allSpans = 
             spansBasedOnSymbolsUses 
-            |> Array.append (QuotationCategorizer.getCategories ast lexer)
-            |> Array.append (PrintfCategorizer.getCategories ast lexer getTextLine)
-            |> Array.append unusedOpenDeclarationSpans
-            
+            |> Seq.append (QuotationCategorizer.getCategories ast lexer)
+            |> Seq.append (PrintfCategorizer.getCategories ast getTextLine)
+            |> Seq.append unusedOpenDeclarationSpans
+            |> Seq.toArray
+
     //    for span in allSpans do
     //       debug "-=O=- %A" span
         allSpans

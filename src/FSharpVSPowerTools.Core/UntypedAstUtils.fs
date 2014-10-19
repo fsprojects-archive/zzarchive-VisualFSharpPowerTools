@@ -449,9 +449,15 @@ let getQuatationRanges ast =
         | _ -> ())
     quotationRanges
     
+[<NoComparison>]
+type StringLiteral = 
+    { Value: string
+      Range: Range.range }
+
 /// Returns ranges of all idents found in an untyped AST
-let getIdents ast =
-    let identRanges = ResizeArray()
+let getPrintfLiterals ast =
+    let printfFunctions = set [ "printf"; "printfn"; "sprintf"; "failwithf"; "eprintf"; "eprintfn" ]
+    let apps = ResizeArray()
 
     let rec visitExpr = function
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
@@ -464,6 +470,9 @@ let getIdents ast =
         | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
             visitExpr rhsExpr
             visitExpr body
+        | SynExpr.App (_,_, SynExpr.Ident funcName, SynExpr.Const (SynConst.String (value, r), _), _) -> 
+            if printfFunctions |> Set.contains funcName.idText then
+                apps.Add { Value = value; Range = r }
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr
             visitExpr funcExpr
@@ -492,7 +501,6 @@ let getIdents ast =
             visitExpr expr2
         | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
         | SynExpr.Tuple (exprs, _, _) -> List.iter visitExpr exprs
-        | SynExpr.Ident (ident) -> identRanges.Add ident
         | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
         | SynExpr.New(_, _, expr, _) -> visitExpr expr
         | SynExpr.While(_, e1, e2, _) -> visitExpr e1; visitExpr e2
@@ -547,4 +555,4 @@ let getIdents ast =
             visitModulesAndNamespaces modules
         | _ -> ())
 
-    List.ofSeq identRanges
+    List.ofSeq apps
