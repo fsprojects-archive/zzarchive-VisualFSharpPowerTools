@@ -466,7 +466,7 @@ let getPrintfLiterals ast =
         | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
             visitExpr rhsExpr
             visitExpr body
-        | SynExpr.App (_,_, SynExpr.Ident funcName, SynExpr.Const (SynConst.String (value, r), _), _) -> 
+        | SynExpr.App (_,_, SynExpr.Ident funcName, SynExpr.Const (SynConst.String (_, r), _), _) -> 
             if printfFunctions |> Set.contains funcName.idText then
                 ranges.Add r
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
