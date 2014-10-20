@@ -449,16 +449,11 @@ let getQuatationRanges ast =
         | _ -> ())
     quotationRanges
     
-[<NoComparison>]
-type StringLiteral = 
-    { Value: string
-      Range: Range.range }
-
 let private printfFunctions = set [ "printf"; "printfn"; "sprintf"; "failwithf"; "eprintf"; "eprintfn" ]
 
-/// Returns ranges of all idents found in an untyped AST
+/// Returns ranges of all printf format string literals.
 let getPrintfLiterals ast =
-    let literals = ResizeArray()
+    let ranges = ResizeArray()
 
     let rec visitExpr = function
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
@@ -473,7 +468,7 @@ let getPrintfLiterals ast =
             visitExpr body
         | SynExpr.App (_,_, SynExpr.Ident funcName, SynExpr.Const (SynConst.String (value, r), _), _) -> 
             if printfFunctions |> Set.contains funcName.idText then
-                literals.Add { Value = value; Range = r }
+                ranges.Add r
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr
             visitExpr funcExpr
@@ -556,4 +551,4 @@ let getPrintfLiterals ast =
             visitModulesAndNamespaces modules
         | _ -> ())
 
-    List.ofSeq literals
+    List.ofSeq ranges

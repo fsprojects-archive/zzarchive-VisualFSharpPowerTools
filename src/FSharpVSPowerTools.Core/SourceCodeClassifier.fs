@@ -75,24 +75,20 @@ module private QuotationCategorizer =
     let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
 
 module private PrintfCategorizer =
-    open UntypedAstUtils
-
     let private printfTerminators = 
         set [ 'b'; 'c'; 's'; 'd'; 'i'; 'u'; 'x'; 'X'; 'o'; 'e'; 'E'; 'f'; 'g'; 'G'; 'M'; 'O'; 'A'; 'a'; 't' ]
     let private printfModifiers = set [ '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'; '-'; '+'; ' ' ]
         
-    let private categorize (getTextLine: int -> string) (lit: StringLiteral) =
+    let private categorize (getTextLine: int -> string) (ranges: Range.range) =
         let lines =
-            if lit.Range.StartLine = lit.Range.EndLine then
-                [ lit.Value, lit.Range.StartLine, lit.Range.StartColumn + 1 ]
-            else
-                [lit.Range.StartLine..lit.Range.EndLine]
-                |> List.map (fun line ->
-                    if line = lit.Range.StartLine then 
-                        (getTextLine (line - 1)).Substring(lit.Range.StartColumn + 1), line, lit.Range.StartColumn + 1
-                    elif line = lit.Range.EndLine then
-                        (getTextLine (line - 1)).Substring(0, lit.Range.EndColumn - 1), line, 0
-                    else getTextLine (line - 1), line, 0)
+            [ranges.StartLine..ranges.EndLine]
+            |> List.map (fun line ->
+                let lineStr = getTextLine (line - 1)
+                if line = ranges.StartLine then 
+                    lineStr.Substring(ranges.StartColumn + 1), line, ranges.StartColumn + 1
+                elif line = ranges.EndLine then
+                    lineStr.Substring(0, ranges.EndColumn - 1), line, 0
+                else lineStr, line, 0)
         lines
         |> List.map (fun (str, line, startColumn) ->
             let findLengthAndSkip i = 
@@ -107,7 +103,7 @@ module private PrintfCategorizer =
                 | 0  -> 1, None
                 | i' -> (i' + 1 - i), Some (i' + 1 - i)
 
-            let rec parseFmt acc i =
+            let rec parseFormatter acc i =
                 if i >= (str.Length - 1) then acc else
                 match str.[i] with
                 | '%' -> 
@@ -120,10 +116,10 @@ module private PrintfCategorizer =
                                 { Line = line
                                   StartCol = startColumn + i
                                   EndCol = startColumn + i + length }} 
-                        parseFmt (hit :: acc) (i + skip)
-                    | _ -> parseFmt acc (i + skip)
-                | _ -> parseFmt acc (i + 1)
-            parseFmt [] 0)
+                        parseFormatter (hit :: acc) (i + skip)
+                    | _ -> parseFormatter acc (i + skip)
+                | _ -> parseFormatter acc (i + 1) 
+            parseFormatter [] 0)
         |> Seq.concat 
 
     let getCategories ast getTextLine =

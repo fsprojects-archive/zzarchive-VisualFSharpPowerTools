@@ -1477,6 +1477,18 @@ type System.Object with
     => [ 4, [ Category.Function, 8, 15; Category.Printf, 17, 19 ]]
 
 [<Test>]
+let ``printf formatters in escaped string``() =
+    """
+let _ = sprintf @"%A"
+"""
+    => [ 2, [ Category.Function, 8, 15; Category.Printf, 18, 20 ]]
+
+[<Test>]
+let ``printf formatters in triple-quoted string``() =
+    "let _ = sprintf \"\"\"%A\"\"\""
+    => [ 1, [ Category.Function, 8, 15; Category.Printf, 19, 21 ]]
+
+[<Test>]
 let ``multiline printf formatters``() =
     """
 let _ = printfn "foo %s %d
