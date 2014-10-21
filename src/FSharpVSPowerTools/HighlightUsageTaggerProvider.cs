@@ -21,6 +21,9 @@ namespace FSharpVSPowerTools
         [Import]
         internal VSLanguageService fsharpVsLanguageService = null;
 
+        [Import]
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
+
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
 
@@ -35,8 +38,15 @@ namespace FSharpVSPowerTools
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return null;
 
-            return new HighlightUsageTagger(textView, buffer, fsharpVsLanguageService, 
-                                            serviceProvider, projectFactory) as ITagger<T>;
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            {
+                if (doc != null)
+                    return new HighlightUsageTagger(doc, textView, fsharpVsLanguageService,
+                                                    serviceProvider, projectFactory) as ITagger<T>;
+            }
+
+            return null;
         }
     }
 }

@@ -18,14 +18,18 @@ open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
 
-type GoToDefinitionFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
-                          editorOptionsFactory: IEditorOptionsFactoryService, projectFactory: ProjectFactory) =
+type GoToDefinitionFilter(textDocument: ITextDocument,
+                          view: IWpfTextView, 
+                          editorOptionsFactory: IEditorOptionsFactoryService, 
+                          vsLanguageService: VSLanguageService, 
+                          serviceProvider: System.IServiceProvider,                          
+                          projectFactory: ProjectFactory) =
     let getDocumentState () =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItems = maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetActiveDocument()
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
                 return doc.FullName, project, span, symbol }

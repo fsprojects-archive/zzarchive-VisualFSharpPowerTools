@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.ProjectSystem;
 using FSharpVSPowerTools.Refactoring;
+using Microsoft.VisualStudio.Text;
 
 namespace FSharpVSPowerTools
 {
@@ -19,16 +20,19 @@ namespace FSharpVSPowerTools
     internal class RenameCommandFilterProvider : IVsTextViewCreationListener
     {
         [Import]
-        private IVsEditorAdaptersFactoryService editorFactory = null;
+        internal IVsEditorAdaptersFactoryService editorFactory = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
+
+        [Import]
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private System.IServiceProvider serviceProvider = null;
+        internal System.IServiceProvider serviceProvider = null;
 
         [Import(typeof(ProjectFactory))]
-        private ProjectFactory projectFactory = null;
+        internal ProjectFactory projectFactory = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -38,8 +42,14 @@ namespace FSharpVSPowerTools
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (!generalOptions.RenameRefactoringEnabled) return;
 
-            AddCommandFilter(textViewAdapter, new RenameCommandFilter(textView, fsharpVsLanguageService, serviceProvider,
-                                                                      projectFactory));
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
+            {
+                if (doc != null)
+                    AddCommandFilter(textViewAdapter,
+                        new RenameCommandFilter(doc, textView, fsharpVsLanguageService,
+                                                serviceProvider, projectFactory));
+            }
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, RenameCommandFilter commandFilter)

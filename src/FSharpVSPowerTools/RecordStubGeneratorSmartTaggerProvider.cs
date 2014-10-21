@@ -17,16 +17,19 @@ namespace FSharpVSPowerTools
     public class RecordStubGeneratorSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import]
-        private ITextUndoHistoryRegistry undoHistoryRegistry = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
+
+        [Import(typeof(SVsServiceProvider))]
+        internal IServiceProvider serviceProvider = null;
+
+        [Import]
+        internal ITextUndoHistoryRegistry undoHistoryRegistry = null;
 
         [Import(typeof(ProjectFactory))]
-        private ProjectFactory projectFactory = null;
+        internal ProjectFactory projectFactory = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
@@ -34,15 +37,19 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
-            if (generalOptions != null && generalOptions.GenerateRecordStubEnabled)
+            if (generalOptions == null || !generalOptions.GenerateRecordStubEnabled) return null;
+
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new RecordStubGeneratorSmartTagger(textView, buffer,
-                    undoHistoryRegistry.RegisterHistory(buffer),
-                    fsharpVsLanguageService, serviceProvider,
-                    projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
+                if (doc != null)
+                    return new RecordStubGeneratorSmartTagger(doc, textView,
+                                undoHistoryRegistry.RegisterHistory(buffer),
+                                fsharpVsLanguageService, serviceProvider,
+                                projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
             }
-            else
-                return null;
+            
+            return null;
         }
     }
 }

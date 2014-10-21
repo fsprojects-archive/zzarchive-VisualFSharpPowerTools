@@ -91,10 +91,10 @@ and MockDocument(filePath: string, dte: DTE) =
         member __.Activate(): unit = notimpl
         member __.ActiveWindow: Window = notimpl
         member __.ClearBookmarks(): unit = notimpl
-        member __.Close(save: vsSaveChanges): unit = notimpl
+        member __.Close(_save: vsSaveChanges): unit = notimpl
         member __.Collection: Documents = notimpl
         member __.DTE: DTE = notimpl
-        member __.Extender with get (extenderName: string): obj = notimpl
+        member __.Extender with get (_extenderName: string): obj = notimpl
         member __.ExtenderCATID: string = notimpl
         member __.ExtenderNames: obj = notimpl
         member __.FullName: string = 
@@ -102,21 +102,21 @@ and MockDocument(filePath: string, dte: DTE) =
 
         member __.IndentSize: int = notimpl
         member __.Kind: string = notimpl
-        member __.Language with get (): string = notimpl and set (v: string): unit = notimpl
-        member __.MarkText(pattern: string, flags: int): bool = notimpl
+        member __.Language with get (): string = notimpl and set (_v: string): unit = notimpl
+        member __.MarkText(_pattern: string, _flags: int): bool = notimpl
         member __.Name: string = notimpl
         member __.NewWindow(): Window = notimpl
-        member __.Object(modelKind: string): obj = notimpl
+        member __.Object(_modelKind: string): obj = notimpl
         member __.Path: string = notimpl
         member __.PrintOut(): unit = notimpl
         member __.ProjectItem: ProjectItem = 
             dte.Solution.FindProjectItem filePath
 
-        member __.ReadOnly with get (): bool = notimpl and set (v: bool): unit = notimpl
+        member __.ReadOnly with get (): bool = notimpl and set (_v: bool): unit = notimpl
         member __.Redo(): bool = notimpl
-        member __.ReplaceText(findText: string, replaceText: string, flags: int): bool = notimpl
-        member __.Save(fileName: string): vsSaveStatus = notimpl
-        member __.Saved with get (): bool = notimpl and set (v: bool): unit = notimpl
+        member __.ReplaceText(_findText: string, _replaceText: string, _flags: int): bool = notimpl
+        member __.Save(_fileName: string): vsSaveStatus = notimpl
+        member __.Saved with get (): bool = notimpl and set (_v: bool): unit = notimpl
         member __.Selection: obj = notimpl
         member __.TabSize: int = notimpl
         member __.Type: string = notimpl
@@ -214,7 +214,7 @@ and MockProject(project: IProjectProvider, _dte: DTE) =
         member __.UniqueName: string = notimpl
                   
 
-and MockProjectItem(_fileName: string, project: IProjectProvider, dte: DTE) =
+and MockProjectItem(filePath: string, project: IProjectProvider, dte: DTE) =
     interface ProjectItem with
         member __.Collection: ProjectItems = notimpl
         member __.ConfigurationManager: ConfigurationManager = notimpl
@@ -224,7 +224,9 @@ and MockProjectItem(_fileName: string, project: IProjectProvider, dte: DTE) =
 
         member __.DTE: DTE = notimpl
         member __.Delete(): unit = notimpl
-        member __.Document: Document = notimpl
+        member __.Document: Document = 
+            MockDocument(filePath, dte) :> _
+
         member __.ExpandView(): unit = notimpl
         member __.Extender with get (_extenderName: string): obj = notimpl
         member __.ExtenderCATID: string = notimpl
