@@ -129,7 +129,7 @@ module private PrintfCategorizer =
         |> List.map (categorize getTextLine) 
         |> Seq.concat
 
-module EscapedCharsCatecorizer =
+module private EscapedCharsCatecorizer =
     open UntypedAstUtils
     open System.Text.RegularExpressions
 
@@ -138,22 +138,24 @@ module EscapedCharsCatecorizer =
         let origLiteral = lineStr.Substring r.StartColumn
         not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
 
-    let escapingSymbolsRegex = Regex @"\b|\n|\r|\t|\\"""
+    let escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
+
+    (* "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
+       "a\rb" => [|'"'; 'a'; '\\'; 'r'; 'b'; '"'|] *)
 
     let private categorize (getTextLine: int -> string) (lit: StringLiteral) =
         if isSimpleString lit.Range getTextLine then
-            if lit.Range.StartLine = lit.Range.EndLine then
-                [ lit.Value, lit.Range.StartLine, lit.Range.StartColumn ]
-            else
-                [lit.Range.StartLine..lit.Range.EndLine]
-                |> List.map (fun line ->
-                    if line = lit.Range.StartLine then 
-                        getTextLine (line - 1), line, lit.Range.StartColumn
-                    elif line = lit.Range.EndLine then
-                        let lineStr = getTextLine (line - 1)
-                        lineStr.Substring(0, lit.Range.EndColumn - 1), line, 1
-                    else getTextLine (line - 1), line, 0
-                )
+            [lit.Range.StartLine..lit.Range.EndLine]
+            |> List.map (fun line ->
+                let lineStr = getTextLine (line - 1)
+                let lineChars = lineStr.ToCharArray()
+                debug "[EscapedCharsCatecorizer] line = %s, chars = %A" lineStr lineChars
+                if line = lit.Range.StartLine then 
+                    lineStr.Substring(lit.Range.StartColumn), line, lit.Range.StartColumn
+                elif line = lit.Range.EndLine then
+                    lineStr.Substring(0, lit.Range.EndColumn - 1), line, 0
+                else lineStr, line, 0
+            )
             |> List.map (fun (str, line, startColumn) ->
                  let matches = 
                     escapingSymbolsRegex.Matches str 
@@ -172,9 +174,9 @@ module EscapedCharsCatecorizer =
                           { Category = Category.Escaped
                             WordSpan = 
                               { Line = line
-                                StartCol = shift + startColumn + m.Index + 1
-                                EndCol = shift + startColumn + m.Index + m.Length + 2 }}
-                      shift + 1, category :: acc  
+                                StartCol = shift + startColumn + m.Index
+                                EndCol = shift + startColumn + m.Index + m.Length }}
+                      shift, category :: acc  
                     ) (0, [])
                   |> snd
                )

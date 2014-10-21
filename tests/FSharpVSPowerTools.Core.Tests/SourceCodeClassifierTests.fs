@@ -1499,7 +1499,20 @@ let _ = printfn "foo %s %d
          3, [ Category.Printf, 17, 19 ]
          4, [ Category.Printf, 0, 2 ] ]
 
-    => [ 2, [ Category.Escaped, 9, 11; Category.Escaped, 14, 16 ]]
+[<Test>]
+let ``all escaped symbols in string``() =
+    """
+let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"
+"""
+    => [ 2, [ Category.Escaped, 9, 11
+              Category.Escaped, 11, 13
+              Category.Escaped, 14, 16
+              Category.Escaped, 16, 18
+              Category.Escaped, 23, 25
+              Category.Escaped, 26, 28
+              Category.Escaped, 29, 31
+              Category.Escaped, 32, 38
+              Category.Escaped, 39, 49 ]]
 
 [<Test>]
 let ``escaped symbols in multiline string``() =
@@ -1514,10 +1527,10 @@ let ``escaped symbols in complex multiline string``() =
     """
 let _ = "foo \n bar \r baz
 \t
- \r f
+ \r f \t\b \\ 
 \n"
 """
     => [ 2, [ Category.Escaped, 13, 15; Category.Escaped, 20, 22 ]
          3, [ Category.Escaped, 0, 2 ]
-         4, [ Category.Escaped, 1, 3 ]
+         4, [ Category.Escaped, 1, 3; Category.Escaped, 6, 8; Category.Escaped, 8, 10; Category.Escaped, 11, 13 ]
          5, [ Category.Escaped, 0, 2 ]]
