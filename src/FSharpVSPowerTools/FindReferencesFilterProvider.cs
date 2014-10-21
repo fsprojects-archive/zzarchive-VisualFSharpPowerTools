@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         internal System.IServiceProvider serviceProvider = null;
 
+        [Import]
         internal ProjectFactory projectFactory = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
