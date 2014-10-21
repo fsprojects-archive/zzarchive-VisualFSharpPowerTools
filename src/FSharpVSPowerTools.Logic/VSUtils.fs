@@ -156,6 +156,13 @@ type DTE with
         | None -> debug "Should be able to find an active document."
         | _ -> ()
         doc
+        
+    member x.TryGetProperty(category, page, name) : obj option = 
+        x.get_Properties(category, page)
+        |> Seq.cast
+        |> Seq.tryPick (fun (prop: Property) ->
+            if prop.Name = name then Some (prop.Value)
+            else None)
 
 type ProjectItem with
     member x.VSProject =
@@ -255,8 +262,8 @@ module ViewChange =
         classifier.ClassificationChanged |> Event.map (fun _ -> ())
 
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
-    // Start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
-    do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
+    // Start an async loop on the UI thread that will execute the update action after the delay
+    do if List.isEmpty events then invalidArg "events" "Events must be a non-empty list"
     let events = events |> List.reduce Event.merge
     let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))

@@ -31,6 +31,8 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbTaskListComments = new System.Windows.Forms.CheckBox();
+            this.chbGoToMetadata = new System.Windows.Forms.CheckBox();
             this.chbUnusedDeclarations = new System.Windows.Forms.CheckBox();
             this.chbResolveUnopenedNamespaces = new System.Windows.Forms.CheckBox();
             this.chbUnionPatternMatchCaseGeneration = new System.Windows.Forms.CheckBox();
@@ -50,12 +52,12 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbGoToMetadata = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbTaskListComments);
             this.grbOptions.Controls.Add(this.chbGoToMetadata);
             this.grbOptions.Controls.Add(this.chbUnusedDeclarations);
             this.grbOptions.Controls.Add(this.chbResolveUnopenedNamespaces);
@@ -82,6 +84,30 @@ namespace FSharpVSPowerTools
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbTaskListComments
+            // 
+            this.chbTaskListComments.AutoSize = true;
+            this.chbTaskListComments.Checked = true;
+            this.chbTaskListComments.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbTaskListComments.Location = new System.Drawing.Point(204, 181);
+            this.chbTaskListComments.Name = "chbTaskListComments";
+            this.chbTaskListComments.Size = new System.Drawing.Size(120, 17);
+            this.chbTaskListComments.TabIndex = 18;
+            this.chbTaskListComments.Text = "Task List comments";
+            this.chbTaskListComments.UseVisualStyleBackColor = true;
+            // 
+            // chbGoToMetadata
+            // 
+            this.chbGoToMetadata.AutoSize = true;
+            this.chbGoToMetadata.Checked = true;
+            this.chbGoToMetadata.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbGoToMetadata.Location = new System.Drawing.Point(204, 157);
+            this.chbGoToMetadata.Name = "chbGoToMetadata";
+            this.chbGoToMetadata.Size = new System.Drawing.Size(99, 17);
+            this.chbGoToMetadata.TabIndex = 18;
+            this.chbGoToMetadata.Text = "Go to metadata";
+            this.chbGoToMetadata.UseVisualStyleBackColor = true;
             // 
             // chbUnusedDeclarations
             // 
@@ -297,18 +323,6 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
-            // chbGotoMetadata
-            // 
-            this.chbGoToMetadata.AutoSize = true;
-            this.chbGoToMetadata.Checked = true;
-            this.chbGoToMetadata.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGoToMetadata.Location = new System.Drawing.Point(204, 157);
-            this.chbGoToMetadata.Name = "chbGotoMetadata";
-            this.chbGoToMetadata.Size = new System.Drawing.Size(99, 17);
-            this.chbGoToMetadata.TabIndex = 18;
-            this.chbGoToMetadata.Text = "Go to metadata";
-            this.chbGoToMetadata.UseVisualStyleBackColor = true;
-            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -345,6 +359,7 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;
         private System.Windows.Forms.CheckBox chbResolveUnopenedNamespaces;
         private System.Windows.Forms.CheckBox chbUnusedDeclarations;
+        private System.Windows.Forms.CheckBox chbTaskListComments;
         private System.Windows.Forms.CheckBox chbGoToMetadata;
     }
 }

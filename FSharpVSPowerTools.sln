@@ -39,6 +39,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\rename.fsx = docs\content\rename.fsx
 		docs\content\resolveunopenednamespaces.fsx = docs\content\resolveunopenednamespaces.fsx
 		docs\content\syntaxcoloring.fsx = docs\content\syntaxcoloring.fsx
+		docs\content\tasklistcomments.fsx = docs\content\tasklistcomments.fsx
 		docs\content\unionpatternmatchcasegeneration.fsx = docs\content\unionpatternmatchcasegeneration.fsx
 		docs\content\xmldoc.fsx = docs\content\xmldoc.fsx
 	EndProjectSection
@@ -56,6 +57,13 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic.VS2013", "src\FSharpVSPowerTools.Logic.VS2013\FSharpVSPowerTools.Logic.VS2013.fsproj", "{34D33ADF-B1EC-4227-B981-13C52F28D013}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.IntegrationTests", "tests\FSharpVSPowerTools.IntegrationTests\FSharpVSPowerTools.IntegrationTests.csproj", "{697E3311-F98F-4063-B20C-D59D44CB4FA8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test samples", "{CDFE262B-BF3B-4B13-B3E6-859CC2A82F0D}"
+	ProjectSection(SolutionItems) = preProject
+		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
+		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
+		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUtilities", "tests\TestUtilities\TestUtilities.csproj", "{C6800510-FCD0-4301-9890-36E41DFB29BB}"
 EndProject
