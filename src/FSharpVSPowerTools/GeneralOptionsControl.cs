@@ -101,6 +101,11 @@ namespace FSharpVSPowerTools
             set { chbUnusedDeclarations.Checked = value; }
         }
 
+        public bool TaskListCommentsEnabled
+        {
+            get { return chbTaskListComments.Checked; }
+            set { chbTaskListComments.Checked = value; }
+        }
 
         public bool GoToMetadataEnabled
         {
@@ -125,6 +130,7 @@ namespace FSharpVSPowerTools
             UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
             ResolveUnopenedNamespacesEnabled = _optionsPage.ResolveUnopenedNamespacesEnabled;
             UnusedDeclarationsEnabled = _optionsPage.UnusedDeclarationsEnabled;
+            TaskListCommentsEnabled = _optionsPage.TaskListCommentsEnabled;
             GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
         }
 

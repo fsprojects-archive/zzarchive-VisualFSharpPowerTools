@@ -238,3 +238,38 @@ type ProjectFactory
         member __.Dispose() = 
             (solutionBuildEventListener :> IDisposable).Dispose()
 
+
+type BasicProjectFactory(events: EnvDTE80.Events2) =
+    let fsharpProjectsCache = ref None
+    let cache = Cache<ProjectUniqueName, ProjectProvider>()
+
+    let onProjectChanged (project: Project) = 
+        debug "[ProjectFactory] %s changed." project.Name
+        cache.Remove project.FullName
+
+    do events.SolutionEvents.add_AfterClosing (fun _ -> 
+        fsharpProjectsCache := None
+        cache.Clear())
+
+    member __.ListFSharpProjectsInSolution(dte: DTE) =
+        let rec handleProject (p: Project) =
+            if p === null then []
+            elif isFSharpProject p then [ p ]
+            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
+            else []
+        
+        and handleProjectItems (items: ProjectItems) = 
+            [ for pi in items do
+                    yield! handleProject pi.SubProject ]
+
+        match !fsharpProjectsCache with
+        | Some x -> x
+        | None ->
+            let res = [ for p in dte.Solution.Projects do
+                            yield! handleProject p ]
+            fsharpProjectsCache := Some res
+            res
+
+    member x.CreateForProject(project: Project): IProjectProvider = 
+        cache.Get project.FullName (fun _ ->
+            new ProjectProvider (project, x.CreateForProject, onProjectChanged, id)) :> _

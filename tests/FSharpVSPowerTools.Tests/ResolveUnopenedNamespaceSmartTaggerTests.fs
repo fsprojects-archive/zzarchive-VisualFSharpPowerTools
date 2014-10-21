@@ -14,7 +14,8 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
                             fsharpVsLanguageService = base.VsLanguageService,
                             serviceProvider = base.ServiceProvider,
                             undoHistoryRegistry = base.UndoHistoryRegistry,
-                            projectFactory = base.ProjectFactory)
+                            projectFactory = base.ProjectFactory,
+                            textDocumentFactoryService = base.DocumentFactoryService)
 
     member __.GetView(buffer) =
         createMockTextView buffer

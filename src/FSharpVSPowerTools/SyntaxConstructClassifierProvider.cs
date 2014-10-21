@@ -434,9 +434,12 @@ namespace FSharpVSPowerTools
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            {
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
                     () => new SyntaxConstructClassifier(doc, buffer, classificationRegistry, fsharpVsLanguageService,
                                     serviceProvider, projectFactory, includeUnusedDeclarations));
+            }
 
             return null;
         }

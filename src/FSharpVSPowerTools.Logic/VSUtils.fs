@@ -153,9 +153,27 @@ type DTE with
                 let! _ = Option.ofNull doc.ProjectItem
                 return doc }
         match doc with
-        | None -> debug "Should be able to find an active document."
+        | None -> debug "There is no active document or its project item is null."
         | _ -> ()
         doc
+
+    member x.GetCurrentDocument(filePath) =
+        match x.GetActiveDocument() with
+        | Some doc when doc.FullName = filePath -> 
+            Some doc
+        | _ ->
+            // If there is no current document or it refers to a different path,
+            // we try to find the exact document from solution by path.
+            x.Solution.FindProjectItem(filePath)
+            |> Option.ofNull
+            |> Option.bind (fun item -> Option.ofNull item.Document)
+
+    member x.TryGetProperty(category, page, name) = 
+        x.Properties(category, page)
+        |> Seq.cast
+        |> Seq.tryPick (fun (prop: Property) ->
+            if prop.Name = name then Some (prop.Value)
+            else None)
 
 type ProjectItem with
     member x.VSProject =
@@ -255,8 +273,8 @@ module ViewChange =
         classifier.ClassificationChanged |> Event.map (fun _ -> ())
 
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
-    // Start an async loop on the UI thread that will re-parse the file and compute tags after idle time after a source change
-    do if List.isEmpty events then invalidArg "changes" "Changes must be a non-empty list"
+    // Start an async loop on the UI thread that will execute the update action after the delay
+    do if List.isEmpty events then invalidArg "events" "Events must be a non-empty list"
     let events = events |> List.reduce Event.merge
     let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))

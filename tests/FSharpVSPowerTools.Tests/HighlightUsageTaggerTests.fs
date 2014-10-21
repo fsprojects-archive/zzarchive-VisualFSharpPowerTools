@@ -13,7 +13,8 @@ type HighlightUsageTaggerHelper() =
     let taggerProvider = HighlightUsageTaggerProvider(
                             fsharpVsLanguageService = base.VsLanguageService,
                             serviceProvider = base.ServiceProvider,
-                            projectFactory = base.ProjectFactory)
+                            projectFactory = base.ProjectFactory,
+                            textDocumentFactoryService = base.DocumentFactoryService)
 
     member __.GetView(buffer) =
         createMockTextView buffer

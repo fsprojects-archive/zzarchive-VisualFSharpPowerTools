@@ -15,9 +15,13 @@ type private ClassifierState =
     { SnapshotSpan: SnapshotSpan
       Spans: CategorizedColumnSpan [] }
 
-type SyntaxConstructClassifier (textDocument: ITextDocument, buffer: ITextBuffer, classificationRegistry: IClassificationTypeRegistryService,
-                                vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
-                                projectFactory: ProjectFactory, includeUnusedDeclarations: bool) as self =
+type SyntaxConstructClassifier (textDocument: ITextDocument, 
+                                buffer: ITextBuffer, 
+                                classificationRegistry: IClassificationTypeRegistryService,
+                                vsLanguageService: VSLanguageService, 
+                                serviceProvider: IServiceProvider,
+                                projectFactory: ProjectFactory, 
+                                includeUnusedDeclarations: bool) as self =
     
     let getClassificationType cat =
         match cat with
@@ -43,15 +47,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument, buffer: ITextBuffer
             // If there is no backing document, an ITextDocument instance might be null
             let! _ = Option.ofNull textDocument
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = 
-                let filePath = textDocument.FilePath
-                match dte.GetActiveDocument() with
-                | Some doc when doc.FullName = filePath -> 
-                    Some doc
-                | _ ->
-                    // If there is no current document or it refers to a different path,
-                    // we try to find the exact document from solution by path.
-                    Option.ofNull(dte.Solution.FindProjectItem(filePath).Document)
+            let! doc = dte.GetCurrentDocument(textDocument.FilePath)
             return! projectFactory.CreateForDocument buffer doc }
 
     let updateSyntaxConstructClassifiers force =

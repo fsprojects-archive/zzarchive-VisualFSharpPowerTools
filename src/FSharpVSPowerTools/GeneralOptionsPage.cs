@@ -41,6 +41,8 @@ namespace FSharpVSPowerTools
 
         bool UnusedDeclarationsEnabled { get; set; }
 
+        bool TaskListCommentsEnabled { get; set; }
+
         bool GoToMetadataEnabled { get; set; }
     }
 
@@ -74,6 +76,7 @@ namespace FSharpVSPowerTools
             UnionPatternMatchCaseGenerationEnabled = true;
             ResolveUnopenedNamespacesEnabled = true;
             UnusedDeclarationsEnabled = true;
+            TaskListCommentsEnabled = true;
             GoToMetadataEnabled = true;
         }
 
@@ -187,6 +190,9 @@ namespace FSharpVSPowerTools
         public bool UnusedDeclarationsEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool TaskListCommentsEnabled { get; set; }
+
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GoToMetadataEnabled { get; set; }
 
 
@@ -227,6 +233,7 @@ namespace FSharpVSPowerTools
                 UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
                 ResolveUnopenedNamespacesEnabled = _optionsControl.ResolveUnopenedNamespacesEnabled;
                 UnusedDeclarationsEnabled = _optionsControl.UnusedDeclarationsEnabled;
+                TaskListCommentsEnabled = _optionsControl.TaskListCommentsEnabled;
                 GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
             }
 

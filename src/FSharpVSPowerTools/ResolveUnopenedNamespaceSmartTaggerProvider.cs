@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
+using System.Diagnostics;
 
 namespace FSharpVSPowerTools
 {
@@ -18,6 +19,9 @@ namespace FSharpVSPowerTools
     {
         [Import]
         internal VSLanguageService fsharpVsLanguageService = null;
+
+        [Import]
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
@@ -34,13 +38,18 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
-            if (generalOptions != null && generalOptions.ResolveUnopenedNamespacesEnabled)
+            if (generalOptions == null || !generalOptions.ResolveUnopenedNamespacesEnabled) return null;
+
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new ResolveUnopenedNamespaceSmartTagger(textView, buffer,
-                    undoHistoryRegistry.RegisterHistory(buffer),
-                    fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                return new ResolveUnopenedNamespaceSmartTagger(doc, textView,
+                            undoHistoryRegistry.RegisterHistory(buffer),
+                            fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
             }
-            else return null;
+            
+            return null;
         }
     }
 }

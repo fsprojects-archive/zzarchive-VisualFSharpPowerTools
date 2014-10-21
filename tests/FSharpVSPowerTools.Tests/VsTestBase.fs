@@ -11,41 +11,39 @@ open Microsoft.VisualStudio.Text.Operations
 /// Replace internal project providers by external ones for testing
 type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =
     inherit ProjectFactory(serviceProvider, openDocTracker, vsLanguageService)
-    override x.CreateForProject(p) = 
+    override __.CreateForProject(p) = 
         dte.GetProject(p.FullName)
 
 /// A base class for initializing necessary VS services
 type VsTestBase() =
-    // We mark required services as static fields in order that only one language service is used for all tests.
-    // The idea is to reduce overheads of creating language service for testing.
-    static let serviceProvider = MockServiceProvider()        
+    let serviceProvider = MockServiceProvider()        
     
-    static do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
-    static do serviceProvider.Services.["SVsShell"] <- MockVsShell()
-    static do serviceProvider.Services.["SVsStatusbar"] <- Mocks.createSVsStatusbar()
-    static do serviceProvider.Services.["SVsSolutionBuildManager"] <- Mocks.createVsSolutionBuildManager2()
-    static do serviceProvider.Services.["GeneralOptionsPage"] <- Mocks.createGeneralOptionsPage()
-    static do serviceProvider.Services.["FantomasOptionsPage"] <- new FantomasOptionsPage()
+    do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
+    do serviceProvider.Services.["SVsShell"] <- MockVsShell()
+    do serviceProvider.Services.["SVsStatusbar"] <- Mocks.createSVsStatusbar()
+    do serviceProvider.Services.["SVsSolutionBuildManager"] <- Mocks.createVsSolutionBuildManager2()
+    do serviceProvider.Services.["GeneralOptionsPage"] <- Mocks.createGeneralOptionsPage()
+    do serviceProvider.Services.["FantomasOptionsPage"] <- new FantomasOptionsPage()
 
-    static let dte = MockDTE()
-    static do serviceProvider.Services.["DTE"] <- dte
-    static do serviceProvider.Services.["SDTE"] <- dte
-    static do serviceProvider.Services.["SVsResourceManager"] <- Mocks.createSVsResourceManager()
+    let dte = MockDTE()
+    do serviceProvider.Services.["DTE"] <- dte
+    do serviceProvider.Services.["SDTE"] <- dte
+    do serviceProvider.Services.["SVsResourceManager"] <- Mocks.createSVsResourceManager()
 
-    static let vsEditorAdaptersFactoryService = Mocks.createVsEditorAdaptersFactoryService()
-    static let classificationRegistry = Mocks.createClassificationTypeRegistryService()
-    static let documentFactoryService = Mocks.createDocumentFactoryService()
-    static let undoHistoryRegistry = Mocks.createTextUndoHistoryRegistry()
+    let vsEditorAdaptersFactoryService = Mocks.createVsEditorAdaptersFactoryService()
+    let classificationRegistry = Mocks.createClassificationTypeRegistryService()
+    let documentFactoryService = Mocks.createDocumentFactoryService()
+    let undoHistoryRegistry = Mocks.createTextUndoHistoryRegistry()
 
-    static let editorOptionsFactoryService = Mocks.createEditorOptionsFactoryService()
-    static let editorOperationsFactoryService = Mocks.createEditorOperationsFactoryService()
-    static let textBufferUndoManagerProvider = Mocks.createTextBufferUndoManagerProvider()
+    let editorOptionsFactoryService = Mocks.createEditorOptionsFactoryService()
+    let editorOperationsFactoryService = Mocks.createEditorOperationsFactoryService()
+    let textBufferUndoManagerProvider = Mocks.createTextBufferUndoManagerProvider()
 
-    static let fsharpLanguageService = FSharpLanguageService(serviceProvider)
-    static let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
-    static let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
+    let fsharpLanguageService = FSharpLanguageService(serviceProvider)
+    let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
+    let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
                                                      openDocumentsTracker, serviceProvider, SkipLexCache = true)
-    static let projectFactory = new MockProjectFactory(serviceProvider, openDocumentsTracker, vsLanguageService, dte)
+    let projectFactory = new MockProjectFactory(serviceProvider, openDocumentsTracker, vsLanguageService, dte)
     
     member __.ServiceProvider = serviceProvider
     member __.FSharpLanguageService = fsharpLanguageService

@@ -17,16 +17,19 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type UnionPatternMatchCaseGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
-                                               buffer: ITextBuffer,
-                                               textUndoHistory: ITextUndoHistory,
-                                               vsLanguageService: VSLanguageService,
-                                               serviceProvider: IServiceProvider,
-                                               projectFactory: ProjectFactory,
-                                               defaultBody: string) as self =
+type UnionPatternMatchCaseGeneratorSmartTagger
+        (textDocument: ITextDocument,
+         view: ITextView,
+         textUndoHistory: ITextUndoHistory,
+         vsLanguageService: VSLanguageService,
+         serviceProvider: IServiceProvider,
+         projectFactory: ProjectFactory,
+         defaultBody: string) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable unionDefinition = None
+
+    let buffer = view.TextBuffer
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     let updateAtCaretPosition() =
@@ -37,7 +40,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger(view: ITextView,
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
+                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word

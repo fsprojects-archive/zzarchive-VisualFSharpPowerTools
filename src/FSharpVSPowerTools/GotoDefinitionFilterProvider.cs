@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.ProjectSystem;
 using FSharpVSPowerTools.Navigation;
+using Microsoft.VisualStudio.Text;
 
 namespace FSharpVSPowerTools
 {
@@ -20,6 +21,9 @@ namespace FSharpVSPowerTools
     {
         [Import]
         internal IVsEditorAdaptersFactoryService editorFactory = null;
+
+        [Import]
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
         internal VSLanguageService fsharpVsLanguageService = null;
@@ -41,8 +45,14 @@ namespace FSharpVSPowerTools
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (generalOptions == null || !generalOptions.GoToMetadataEnabled) return;
 
-            AddCommandFilter(textViewAdapter, new GoToDefinitionFilter(textView, fsharpVsLanguageService, serviceProvider,
-                                                                       editorOptionsFactory, projectFactory));
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
+            {
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                AddCommandFilter(textViewAdapter, 
+                    new GoToDefinitionFilter(doc, textView, editorOptionsFactory,
+                                                fsharpVsLanguageService, serviceProvider, projectFactory));
+            }
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, GoToDefinitionFilter commandFilter)

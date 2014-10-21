@@ -17,8 +17,8 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type RecordStubGeneratorSmartTagger(view: ITextView,
-                                    buffer: ITextBuffer,
+type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
+                                    view: ITextView,
                                     textUndoHistory: ITextUndoHistory,
                                     vsLanguageService: VSLanguageService,
                                     serviceProvider: IServiceProvider,
@@ -27,6 +27,8 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable recordDefinition = None
+    
+    let buffer = view.TextBuffer
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
 
     // Try to:
@@ -40,7 +42,7 @@ type RecordStubGeneratorSmartTagger(view: ITextView,
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
+                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word

@@ -1,6 +1,9 @@
 #### 1.6.0 - Unreleased
 * Add syntax coloring for generated signatures
 * Fix various bugs on syntax coloring for printf specifiers
+* Support multiline strings in printf formatting
+* Implement Task List Comments
+* Fix issues with retrieving wrong active documents
 
 #### 1.5.2 - October 8 2014
 * Add syntax coloring for printf specifiers
