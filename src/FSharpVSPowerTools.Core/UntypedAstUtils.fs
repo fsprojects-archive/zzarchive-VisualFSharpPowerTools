@@ -407,7 +407,29 @@ let getQuatationRanges ast =
         | SynExpr.Tuple (exprs, _, _) -> 
             for expr in exprs do 
                 visitExpr expr
-        | _ -> () 
+        | SynExpr.TryFinally (expr1, expr2, _, _, _) ->
+            visitExpr expr1
+            visitExpr expr2
+        | SynExpr.TryWith (expr, _, clauses, _, _, _, _) ->
+            visitExpr expr
+            visitMatches clauses
+        | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
+        | SynExpr.New(_, _, expr, _) -> visitExpr expr
+        | SynExpr.While(_, expr1, expr2, _) -> 
+            visitExpr expr1
+            visitExpr expr2
+        | SynExpr.Assert(expr, _) -> visitExpr expr
+        | SynExpr.TypeApp(expr, _, _, _, _, _, _) -> visitExpr expr
+        | SynExpr.DotSet(_, _, expr, _) -> visitExpr expr
+        | SynExpr.DotIndexedSet(_, _, expr, _, _, _) -> visitExpr expr
+        | SynExpr.NamedIndexedPropertySet(_, _, expr, _) -> visitExpr expr
+        | SynExpr.DotNamedIndexedPropertySet(_, _, _, expr, _) -> visitExpr expr
+        | SynExpr.TypeTest(expr, _, _) -> visitExpr expr
+        | SynExpr.Upcast(expr, _, _) -> visitExpr expr
+        | SynExpr.InferredUpcast(expr, _) -> visitExpr expr
+        | SynExpr.InferredDowncast(expr, _) -> visitExpr expr
+        | SynExpr.AddressOf(_, expr, _, _) -> visitExpr expr
+        | _ -> ()
 
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
     and visitBindindgs = List.iter visitBinding
