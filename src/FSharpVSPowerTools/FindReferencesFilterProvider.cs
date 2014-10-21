@@ -44,10 +44,10 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                if (doc != null) 
-                    AddCommandFilter(textViewAdapter, 
-                        new FindReferencesFilter(doc, textView, fsharpVsLanguageService, 
-                                                 serviceProvider, projectFactory));
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                AddCommandFilter(textViewAdapter, 
+                    new FindReferencesFilter(doc, textView, fsharpVsLanguageService, 
+                                                serviceProvider, projectFactory));
             }
         }
 

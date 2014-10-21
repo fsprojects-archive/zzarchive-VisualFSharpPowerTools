@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
+using System.Diagnostics;
 
 namespace FSharpVSPowerTools
 {
@@ -42,10 +43,10 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                if (doc != null)
-                    return new ResolveUnopenedNamespaceSmartTagger(doc, textView,
-                                undoHistoryRegistry.RegisterHistory(buffer),
-                                fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                return new ResolveUnopenedNamespaceSmartTagger(doc, textView,
+                            undoHistoryRegistry.RegisterHistory(buffer),
+                            fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>;
             }
             
             return null;

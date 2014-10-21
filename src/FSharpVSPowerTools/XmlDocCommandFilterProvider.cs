@@ -22,16 +22,16 @@ namespace FSharpVSPowerTools
     public class XmlDocCommandFilterProvider : IVsTextViewCreationListener
     {
         [Import]
-        private ITextDocumentFactoryService textDocumentFactoryService = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
-        private IVsEditorAdaptersFactoryService editorFactory = null;
+        internal IVsEditorAdaptersFactoryService editorFactory = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private System.IServiceProvider serviceProvider = null;
+        internal System.IServiceProvider serviceProvider = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -39,11 +39,12 @@ namespace FSharpVSPowerTools
             if (wpfTextView == null) return;
 
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
-            if (!generalOptions.XmlDocEnabled) return;
+            if (generalOptions == null || !generalOptions.XmlDocEnabled) return;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, fsharpVsLanguageService);
             }
         }

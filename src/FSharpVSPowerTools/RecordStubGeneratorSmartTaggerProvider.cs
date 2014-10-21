@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
+using System.Diagnostics;
 
 namespace FSharpVSPowerTools
 {
@@ -28,7 +29,7 @@ namespace FSharpVSPowerTools
         [Import]
         internal ITextUndoHistoryRegistry undoHistoryRegistry = null;
 
-        [Import(typeof(ProjectFactory))]
+        [Import]
         internal ProjectFactory projectFactory = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -42,11 +43,11 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                if (doc != null)
-                    return new RecordStubGeneratorSmartTagger(doc, textView,
-                                undoHistoryRegistry.RegisterHistory(buffer),
-                                fsharpVsLanguageService, serviceProvider,
-                                projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                return new RecordStubGeneratorSmartTagger(doc, textView,
+                            undoHistoryRegistry.RegisterHistory(buffer),
+                            fsharpVsLanguageService, serviceProvider,
+                            projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
             }
             
             return null;

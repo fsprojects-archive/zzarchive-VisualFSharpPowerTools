@@ -39,6 +39,7 @@ namespace FSharpVSPowerTools
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 return new DepthTagger(buffer, doc.FilePath, fsharpVsLanguageService) as ITagger<T>;
             }
 
@@ -54,13 +55,13 @@ namespace FSharpVSPowerTools
         [Export]
         [Name(Constants.depthAdornmentLayerName)]
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
-        private AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
+        internal AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
         [Import]
-        private IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
+        internal IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal IServiceProvider serviceProvider = null;
 
         public void TextViewCreated(IWpfTextView textView)
         {

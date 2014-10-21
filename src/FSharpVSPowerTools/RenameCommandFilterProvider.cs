@@ -31,7 +31,7 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         internal System.IServiceProvider serviceProvider = null;
 
-        [Import(typeof(ProjectFactory))]
+        [Import]
         internal ProjectFactory projectFactory = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
@@ -45,10 +45,10 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                if (doc != null)
-                    AddCommandFilter(textViewAdapter,
-                        new RenameCommandFilter(doc, textView, fsharpVsLanguageService,
-                                                serviceProvider, projectFactory));
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                AddCommandFilter(textViewAdapter,
+                    new RenameCommandFilter(doc, textView, fsharpVsLanguageService,
+                                            serviceProvider, projectFactory));
             }
         }
 
