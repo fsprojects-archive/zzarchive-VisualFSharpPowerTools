@@ -19,7 +19,10 @@ type private DocumentState =
       File: string
       Project: IProjectProvider }
 
-type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
+type RenameCommandFilter(textDocument: ITextDocument,
+                         view: IWpfTextView, 
+                         vsLanguageService: VSLanguageService, 
+                         serviceProvider: System.IServiceProvider,
                          projectFactory: ProjectFactory) =
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
@@ -29,7 +32,7 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument()
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
             }
@@ -63,11 +66,12 @@ type RenameCommandFilter(view: IWpfTextView, vsLanguageService: VSLanguageServic
                             snapshot.TextBuffer.Replace(span.Span, newText)) buffer.CurrentSnapshot
                         |> ignore
 
-                    // Refocus to the current document
+                    // Refocus to the active document
                     doc.Activate())
             finally
                 documentUpdater.EndGlobalUndo(undo)
-        with e -> Logging.logException e
+        with e -> 
+            Logging.logException e
 
     member x.HandleRename() = maybe {
         let! state = state

@@ -9,9 +9,13 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress
+open Microsoft.VisualStudio.Text
 
 
-type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageService, serviceProvider: System.IServiceProvider,
+type FindReferencesFilter(textDocument: ITextDocument, 
+                          view: IWpfTextView, 
+                          vsLanguageService: VSLanguageService, 
+                          serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory) =
     let getDocumentState (progress: ShowProgress) =
         async {
@@ -19,7 +23,7 @@ type FindReferencesFilter(view: IWpfTextView, vsLanguageService: VSLanguageServi
             let projectItems = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetActiveDocument()
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
                 return doc.FullName, project, span, symbol }

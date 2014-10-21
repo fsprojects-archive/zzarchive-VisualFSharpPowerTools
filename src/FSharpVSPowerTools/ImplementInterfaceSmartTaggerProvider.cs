@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
+using System.Diagnostics;
 
 namespace FSharpVSPowerTools
 {
@@ -17,19 +18,22 @@ namespace FSharpVSPowerTools
     public class ImplementInterfaceSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService fsharpVsLanguageService = null;
+
+        [Import]
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private IServiceProvider serviceProvider = null;
+        internal IServiceProvider serviceProvider = null;
 
         [Import]
-        private IEditorOptionsFactoryService editorOptionsFactory = null;
+        internal IEditorOptionsFactoryService editorOptionsFactory = null;
 
         [Import]
-        private ITextUndoHistoryRegistry undoHistoryRegistry = null;
+        internal ITextUndoHistoryRegistry undoHistoryRegistry = null;
 
-        [Import(typeof(ProjectFactory))]
-        private ProjectFactory projectFactory = null;
+        [Import]
+        internal ProjectFactory projectFactory = null;
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
@@ -39,10 +43,17 @@ namespace FSharpVSPowerTools
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (generalOptions == null || !generalOptions.InterfaceImplementationEnabled) return null;
 
-            return new ImplementInterfaceSmartTagger(textView, buffer, 
-                        editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer), 
-                        fsharpVsLanguageService, serviceProvider, projectFactory,
-                        Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            {
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                return new ImplementInterfaceSmartTagger(doc, textView,
+                            editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer),
+                            fsharpVsLanguageService, serviceProvider, projectFactory,
+                            Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
+            }
+
+            return null;
         }
     }
 }

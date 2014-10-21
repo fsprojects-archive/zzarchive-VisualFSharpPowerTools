@@ -15,16 +15,16 @@ namespace FSharpVSPowerTools
     internal class TaskListCommentFilterProvider : IVsTextViewCreationListener
     {
         [Import]
-        private IVsEditorAdaptersFactoryService editorFactory = null;
+        internal IVsEditorAdaptersFactoryService editorFactory = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private System.IServiceProvider serviceProvider = null;
+        internal System.IServiceProvider serviceProvider = null;
 
         [Import(typeof(OpenDocumentsTracker))]
-        private OpenDocumentsTracker openDocsTracker = null;
+        internal OpenDocumentsTracker openDocsTracker = null;
 
-        private IWpfTextView textView;
-        private TaskListCommentFilter taskCommentFilter;
+        internal IWpfTextView textView;
+        internal TaskListCommentFilter taskCommentFilter;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -32,7 +32,7 @@ namespace FSharpVSPowerTools
             if (textView == null) return;
 
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
-            if (!generalOptions.TaskListCommentsEnabled) return;
+            if (generalOptions == null || !generalOptions.TaskListCommentsEnabled) return;
 
             taskCommentFilter = new TaskListCommentFilter(textView, serviceProvider, openDocsTracker);
         }

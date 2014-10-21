@@ -153,12 +153,23 @@ type DTE with
                 let! _ = Option.ofNull doc.ProjectItem
                 return doc }
         match doc with
-        | None -> debug "Should be able to find an active document."
+        | None -> debug "There is no active document or its project item is null."
         | _ -> ()
         doc
-        
-    member x.TryGetProperty(category, page, name) : obj option = 
-        x.get_Properties(category, page)
+
+    member x.GetCurrentDocument(filePath) =
+        match x.GetActiveDocument() with
+        | Some doc when doc.FullName = filePath -> 
+            Some doc
+        | _ ->
+            // If there is no current document or it refers to a different path,
+            // we try to find the exact document from solution by path.
+            x.Solution.FindProjectItem(filePath)
+            |> Option.ofNull
+            |> Option.bind (fun item -> Option.ofNull item.Document)
+
+    member x.TryGetProperty(category, page, name) = 
+        x.Properties(category, page)
         |> Seq.cast
         |> Seq.tryPick (fun (prop: Property) ->
             if prop.Name = name then Some (prop.Value)

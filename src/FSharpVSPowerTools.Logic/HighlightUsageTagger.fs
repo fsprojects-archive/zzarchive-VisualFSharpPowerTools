@@ -20,7 +20,8 @@ type HighlightUsageTag() =
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
-type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
+type HighlightUsageTagger(textDocument: ITextDocument,
+                          view: ITextView, 
                           vsLanguageService: VSLanguageService, 
                           serviceProvider: IServiceProvider,
                           projectFactory: ProjectFactory) as self =
@@ -29,6 +30,8 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
     let mutable wordSpans = NormalizedSnapshotSpanCollection()
     let mutable currentWord = None
     let mutable requestedPoint = SnapshotPoint()
+
+    let buffer = view.TextBuffer
 
     // Perform a synchronous update, in case multiple background threads are running
     let synchronousUpdate(currentRequest: SnapshotPoint, newSpans: NormalizedSnapshotSpanCollection, newWord: SnapshotSpan option) =
@@ -85,7 +88,7 @@ type HighlightUsageTagger(view: ITextView, buffer: ITextBuffer,
                 requestedPoint <- point
                 let currentRequest = requestedPoint
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetActiveDocument() |> liftMaybe
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath) |> liftMaybe
                 let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
                 match vsLanguageService.GetSymbol(currentRequest, project) with
                 | Some (newWord, symbol) ->

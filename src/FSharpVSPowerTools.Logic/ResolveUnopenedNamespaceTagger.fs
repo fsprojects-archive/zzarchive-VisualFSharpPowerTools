@@ -17,11 +17,16 @@ type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
 type ResolveUnopenedNamespaceSmartTagger
-         (view: ITextView, buffer: ITextBuffer, textUndoHistory: ITextUndoHistory,
-          vsLanguageService: VSLanguageService, serviceProvider: IServiceProvider,
+         (textDocument: ITextDocument,
+          view: ITextView, 
+          textUndoHistory: ITextUndoHistory,
+          vsLanguageService: VSLanguageService, 
+          serviceProvider: IServiceProvider,
           projectFactory: ProjectFactory) as self =
     
+    let buffer = view.TextBuffer
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
+
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable state: (Entity * InsertContext) list option = None 
@@ -34,7 +39,7 @@ type ResolveUnopenedNamespaceSmartTagger
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetActiveDocument()
+                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol(point, project) 
                     return point, doc, project, word

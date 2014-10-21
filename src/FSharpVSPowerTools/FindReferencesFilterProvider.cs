@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.ProjectSystem;
 using FSharpVSPowerTools.Navigation;
+using Microsoft.VisualStudio.Text;
 
 namespace FSharpVSPowerTools
 {
@@ -19,16 +20,19 @@ namespace FSharpVSPowerTools
     internal class FindReferencesFilterProvider : IVsTextViewCreationListener
     {
         [Import]
-        private IVsEditorAdaptersFactoryService editorFactory = null;
+        internal IVsEditorAdaptersFactoryService editorFactory = null;
 
         [Import]
-        private VSLanguageService fsharpVsLanguageService = null;
+        internal ITextDocumentFactoryService textDocumentFactoryService = null;
+
+        [Import]
+        internal VSLanguageService fsharpVsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
-        private System.IServiceProvider serviceProvider = null;
+        internal System.IServiceProvider serviceProvider = null;
 
-        [Import(typeof(ProjectFactory))]
-        private ProjectFactory projectFactory = null;
+        [Import]
+        internal ProjectFactory projectFactory = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -38,8 +42,14 @@ namespace FSharpVSPowerTools
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
             if (!generalOptions.FindAllReferencesEnabled) return;
 
-            AddCommandFilter(textViewAdapter, new FindReferencesFilter(textView, fsharpVsLanguageService, serviceProvider,
-                                                                       projectFactory));
+            ITextDocument doc;
+            if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
+            {
+                Debug.Assert(doc != null, "Text document shouldn't be null.");
+                AddCommandFilter(textViewAdapter, 
+                    new FindReferencesFilter(doc, textView, fsharpVsLanguageService, 
+                                                serviceProvider, projectFactory));
+            }
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, FindReferencesFilter commandFilter)

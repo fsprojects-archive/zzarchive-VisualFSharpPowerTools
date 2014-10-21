@@ -29,7 +29,7 @@ namespace FSharpVSPowerTools
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
         {
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
-            if (!generalOptions.UnusedDeclarationsEnabled) return null;
+            if (generalOptions == null || !generalOptions.UnusedDeclarationsEnabled) return null;
 
  	        var textView = wpfTextViewHost.TextView;
             return new UnusedDeclarationMargin(textView, marginContainer,
