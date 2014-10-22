@@ -20,7 +20,7 @@ namespace FSharpVSPowerTools
         public static StandardCommandDispatcher Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
             var generalOptions = Utils.GetGeneralOptionsPage(services.ServiceProvider);
-            if (!generalOptions.FormattingEnabled) return null;
+            if (generalOptions == null || !generalOptions.FormattingEnabled) return null;
 
             var dispatcher = new StandardCommandDispatcher();
             dispatcher._textView = textView;

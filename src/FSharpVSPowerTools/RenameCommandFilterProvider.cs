@@ -40,7 +40,7 @@ namespace FSharpVSPowerTools
             if (textView == null) return;
 
             var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
-            if (!generalOptions.RenameRefactoringEnabled) return;
+            if (generalOptions == null || !generalOptions.RenameRefactoringEnabled) return;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
