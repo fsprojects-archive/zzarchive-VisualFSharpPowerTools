@@ -114,7 +114,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(43, 145, 175)) },
                 { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(157, 157, 157)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(43, 145, 175)) },
-                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(233, 84, 84)) }
+                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(255, 0, 128)) }
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -133,7 +133,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(78, 201, 176)) },
                 { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(155, 155, 155)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(78, 220, 176)) },
-                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(233, 84, 84)) }
+                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(255, 0, 128)) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
