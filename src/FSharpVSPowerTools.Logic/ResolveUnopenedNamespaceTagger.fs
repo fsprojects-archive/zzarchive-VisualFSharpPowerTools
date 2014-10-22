@@ -199,16 +199,18 @@ type ResolveUnopenedNamespaceSmartTagger
 
     interface ITagger<ResolveUnopenedNamespaceSmartTag> with
         member __.GetTags _ =
-            seq {
-                match currentWord, state with
-                | Some word, Some candidates ->
-                    let span =
-                        if buffer.CurrentSnapshot = word.Snapshot then word
-                        else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive)
+            protectOrDefault (fun _ ->
+                seq {
+                    match currentWord, state with
+                    | Some word, Some candidates ->
+                        let span =
+                            if buffer.CurrentSnapshot = word.Snapshot then word
+                            else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive)
 
-                    yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates)) :> _
-                | _ -> ()
-            }
+                        yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates)) :> _
+                    | _ -> ()
+                })
+                Seq.empty
              
         [<CLIEvent>]
         member __.TagsChanged = tagsChanged.Publish

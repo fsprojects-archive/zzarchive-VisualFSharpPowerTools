@@ -99,11 +99,11 @@ type UnionPatternMatchCaseGeneratorSmartTagger
 
     let generateUnionPatternMatchCase snapshot patMatchExpr insertionPos entity =
         { new ISmartTagAction with
-            member x.ActionSets = null
-            member x.DisplayText = Resource.unionPatternMatchCaseCommandName
-            member x.Icon = null
-            member x.IsEnabled = true
-            member x.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
+            member __.ActionSets = null
+            member __.DisplayText = Resource.unionPatternMatchCaseCommandName
+            member __.Icon = null
+            member __.IsEnabled = true
+            member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
 
     member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
@@ -116,8 +116,8 @@ type UnionPatternMatchCaseGeneratorSmartTagger
 
     interface ITagger<UnionPatternMatchCaseGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<UnionPatternMatchCaseGeneratorSmartTag> seq =
-            try
-                seq [|
+            protectOrDefault (fun _ ->
+                seq {
                     match currentWord, unionDefinition with
                     | Some word, Some (expression, entity, insertionPos) when shouldGenerateUnionPatternMatchCases expression entity ->
                         let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
@@ -125,9 +125,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                                          UnionPatternMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
                               :> ITagSpan<_>
                     | _ -> ()
-                |]
-            with e ->
-                Logging.logException e
+                }) 
                 Seq.empty
 
         [<CLIEvent>]

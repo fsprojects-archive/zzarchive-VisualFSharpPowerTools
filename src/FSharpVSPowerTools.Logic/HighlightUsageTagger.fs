@@ -138,16 +138,12 @@ type HighlightUsageTagger(textDocument: ITextDocument,
         ]
 
     interface ITagger<HighlightUsageTag> with
-        member x.GetTags spans =
-            upcast (
-                try getTags spans
-                with e -> 
-                    Logging.logException e
-                    [])
+        member __.GetTags spans =
+            upcast (protectOrDefault (fun _ -> getTags spans) [])
         
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
