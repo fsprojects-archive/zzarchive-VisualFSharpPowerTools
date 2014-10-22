@@ -636,6 +636,30 @@ let _ =
          19, [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]]
 
 [<Test>]
+let ``quotation in try / with / finally blocks``() =
+    """
+try
+    try <@ 1 @>
+    with _ -> <@ 2 @>
+finally ignore <@ 3 @>
+
+async {
+    try
+        try <@ 1 @>
+        with _ -> <@ 2 @>
+    finally ignore <@ 3 @> 
+    return ()
+}
+"""
+    => [3, [ Category.Quotation, 8, 15]
+        4, [ Category.Quotation, 14, 21]
+        5, [ Category.Function, 8, 14; Category.Quotation, 15, 22]
+        9, [ Category.Quotation, 12, 19]
+        10, [ Category.Quotation, 18, 25]
+        11, [ Category.Function, 12, 18; Category.Quotation, 19, 26]
+       ]
+
+[<Test>]
 let ``tuple alias``() = 
     """
 type Tuple = int * string
