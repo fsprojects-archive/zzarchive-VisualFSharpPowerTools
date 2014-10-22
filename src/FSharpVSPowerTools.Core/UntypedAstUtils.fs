@@ -494,33 +494,37 @@ let getPrintfLiterals ast =
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr
             visitExpr funcExpr
-        | SynExpr.Lambda (_, _, _, expr, _) -> visitExpr expr
+        | SynExpr.Lambda (_, _, _, e, _) -> visitExpr e
         | SynExpr.Record (_, _, fields, _) ->
-            fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpr
-        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) -> visitExpr expr
-        | SynExpr.CompExpr (_, _, expr, _) -> visitExpr expr
-        | SynExpr.ForEach (_, _, _, _, _, body, _) -> visitExpr body
-        | SynExpr.YieldOrReturn (_, expr, _) -> visitExpr expr
-        | SynExpr.YieldOrReturnFrom (_, expr, _) -> visitExpr expr
-        | SynExpr.Do (expr, _) -> visitExpr expr
-        | SynExpr.DoBang (expr, _) -> visitExpr expr
-        | SynExpr.Downcast (expr, _, _) -> visitExpr expr
-        | SynExpr.For (_, _, _, _, _, expr, _) -> visitExpr expr
-        | SynExpr.Lazy (expr, _) -> visitExpr expr
-        | SynExpr.Match (_, expr, clauses, _, _) -> 
-            visitExpr expr
+            fields |> List.choose (fun (_, e, _) -> e) |> List.iter visitExpr
+        | SynExpr.ArrayOrListOfSeqExpr (_, e, _) -> visitExpr e
+        | SynExpr.CompExpr (_, _, e, _) -> visitExpr e
+        | SynExpr.ForEach (_, _, _, _, e, body, _) -> 
+            visitExpr e
+            visitExpr body
+        | SynExpr.YieldOrReturn (_, e, _) -> visitExpr e
+        | SynExpr.YieldOrReturnFrom (_, e, _) -> visitExpr e
+        | SynExpr.Do (e, _) -> visitExpr e
+        | SynExpr.DoBang (e, _) -> visitExpr e
+        | SynExpr.Downcast (e, _, _) -> visitExpr e
+        | SynExpr.For (_, _, _, _, e1, e2, _) -> 
+            visitExpr e1
+            visitExpr e2
+        | SynExpr.Lazy (e, _) -> visitExpr e
+        | SynExpr.Match (_, e, clauses, _, _) -> 
+            visitExpr e
             visitMatches clauses 
         | SynExpr.MatchLambda (_, _, clauses, _, _) -> visitMatches clauses
         | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> visitBindindgs bindings
-        | SynExpr.Typed (expr, _, _) -> visitExpr expr
-        | SynExpr.Paren (expr, _, _, _) -> visitExpr expr
-        | SynExpr.Sequential (_, _, expr1, expr2, _) ->
-            visitExpr expr1
-            visitExpr expr2
-        | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
-        | SynExpr.Tuple (exprs, _, _) -> List.iter visitExpr exprs
-        | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
-        | SynExpr.New(_, _, expr, _) -> visitExpr expr
+        | SynExpr.Typed (e, _, _) -> visitExpr e
+        | SynExpr.Paren (e, _, _, _) -> visitExpr e
+        | SynExpr.Sequential (_, _, e1, e2, _) ->
+            visitExpr e1
+            visitExpr e2
+        | SynExpr.LongIdentSet (_, e, _) -> visitExpr e
+        | SynExpr.Tuple (es, _, _) -> List.iter visitExpr es
+        | SynExpr.ArrayOrList(_, es, _) -> List.iter visitExpr es
+        | SynExpr.New(_, _, e, _) -> visitExpr e
         | SynExpr.While(_, e1, e2, _) -> visitExpr e1; visitExpr e2
         | SynExpr.Assert(e, _) -> visitExpr e
         | SynExpr.TryWith(e, _, clauses, _, _, _, _) -> visitExpr e; visitMatches clauses
@@ -531,6 +535,14 @@ let getPrintfLiterals ast =
         | SynExpr.Upcast(e, _, _) -> visitExpr e
         | SynExpr.InferredUpcast(e, _) -> visitExpr e
         | SynExpr.InferredDowncast(e, _) -> visitExpr e
+        | SynExpr.DotGet(e, _, _, _) -> visitExpr e
+        | SynExpr.Quote(_, _, e, _, _) -> visitExpr e
+        | SynExpr.TypeApp(e, _, _, _, _, _, _) -> visitExpr e
+        | SynExpr.DotSet(_, _, e, _) -> visitExpr e
+        | SynExpr.DotIndexedGet(e, _, _, _) -> visitExpr e
+        | SynExpr.DotIndexedSet(e1, _, e2, _, _, _) -> 
+            visitExpr e1
+            visitExpr e2
         | _ -> ()
 
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
