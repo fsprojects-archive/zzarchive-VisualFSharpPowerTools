@@ -17,7 +17,7 @@ namespace FSharpVSPowerTools
     [ContentType("F#")]
     [Order(After = PredefinedMarginNames.VerticalScrollBar)]
     [MarginContainer(PredefinedMarginNames.VerticalScrollBarContainer)]
-    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class UnusedDeclarationMarginProvider : IWpfTextViewMarginProvider
     {
         [Import]

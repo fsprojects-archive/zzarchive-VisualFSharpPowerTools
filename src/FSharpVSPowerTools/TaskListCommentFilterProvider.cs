@@ -20,7 +20,7 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         internal System.IServiceProvider serviceProvider = null;
 
-        [Import(typeof(OpenDocumentsTracker))]
+        [Import]
         internal OpenDocumentsTracker openDocsTracker = null;
 
         internal IWpfTextView textView;

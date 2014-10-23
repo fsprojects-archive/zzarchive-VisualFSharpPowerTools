@@ -166,11 +166,11 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
 
     let implementInterface snapshot (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
         { new ISmartTagAction with
-            member x.ActionSets = null
-            member x.DisplayText = Resource.implementInterfaceCommandName
-            member x.Icon = null
-            member x.IsEnabled = true
-            member x.Invoke() = 
+            member __.ActionSets = null
+            member __.DisplayText = Resource.implementInterfaceCommandName
+            member __.Icon = null
+            member __.IsEnabled = true
+            member __.Invoke() = 
                 if shouldImplementInterface state entity then
                     async {
                         let getMemberByLocation(name, range: range) =
@@ -188,7 +188,7 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                     let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                     statusBar.SetText(Resource.interfaceEmptyStatusMessage) |> ignore }
 
-    member x.GetSmartTagActions(snapshot, interfaceDefinition) =
+    member __.GetSmartTagActions(snapshot, interfaceDefinition) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
@@ -199,19 +199,21 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
 
     interface ITagger<ImplementInterfaceSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<ImplementInterfaceSmartTag> seq =
-            seq {
-                match currentWord, state with
-                | Some word, Some interfaceDefinition ->
-                    let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<ImplementInterfaceSmartTag>(span, 
-                            ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
-                            :> ITagSpan<_>
-                | _ -> ()
-            }
+            protectOrDefault (fun _ ->
+                seq {
+                    match currentWord, state with
+                    | Some word, Some interfaceDefinition ->
+                        let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
+                        yield TagSpan<ImplementInterfaceSmartTag>(span, 
+                                ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
+                                :> ITagSpan<_>
+                    | _ -> ()
+                })
+                Seq.empty
 
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
