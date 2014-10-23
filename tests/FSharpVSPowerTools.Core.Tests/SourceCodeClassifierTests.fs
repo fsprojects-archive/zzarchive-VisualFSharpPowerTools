@@ -1524,8 +1524,32 @@ let _ = printfn "foo %s %d
          4, [ Category.Printf, 0, 2 ] ]
 
 [<Test>]
-let ``all escaped symbols in string``() =
+let ``printf formatters in for expressions``() =
     """
+for _ in (sprintf "%d" 1).ToCharArray() do
+    sprintf "%d" 1 
+    |> ignore
+[ for _ in (sprintf "%d" 1).ToCharArray() do
+    yield sprintf "%s" ]
+|> ignore
+
+    """
+    => [ 2, [ Category.Function, 10, 17; Category.Printf, 19, 21; Category.Function, 26, 37 ]
+         3, [ Category.Function, 4, 11; Category.Printf, 13, 15]
+         5, [ Category.Function, 12, 19; Category.Printf, 21, 23; Category.Function, 28, 39 ]
+         6, [ Category.Function, 10, 17; Category.Printf, 19, 21]
+    ]
+
+[<Test>]
+let ``printf formatters in quoted expressions``() =
+    """
+let _ = <@ sprintf "%A" @>
+"""
+    => [ 2, [Category.Function, 11, 18; Category.Printf, 20, 22; Category.Quotation, 8, 26 ]]
+
+[<Test>]
+let ``all escaped symbols in string``() =
+    """    
 let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"
 """
     => [ 2, [ Category.Escaped, 9, 11
