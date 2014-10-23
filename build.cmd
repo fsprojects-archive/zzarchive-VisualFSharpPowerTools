@@ -1,12 +1,12 @@
 @echo off
 cls
 
-.paket\paket.bootstrapper.exe 0.8.6
+.paket\paket.bootstrapper.exe
 if errorlevel 1 (
   exit /b %errorlevel%
 )
 
-.paket\paket.exe install -v
+.paket\paket.exe restore
 if errorlevel 1 (
   exit /b %errorlevel%
 )
