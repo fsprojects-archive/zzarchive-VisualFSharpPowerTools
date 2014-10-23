@@ -18,6 +18,7 @@ type Category =
     | Module
     | Unused
     | Printf
+    | Escaped
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -127,6 +128,67 @@ module private PrintfCategorizer =
         literals
         |> List.map (categorize getTextLine) 
         |> Seq.concat
+
+module private EscapedCharsCategorizer =
+    open UntypedAstUtils
+    open System.Text.RegularExpressions
+
+    let private isRegularString (r: Range.range) getTextLine =
+        let lineStr: string = getTextLine (r.StartLine - 1) 
+        let origLiteral = lineStr.Substring r.StartColumn
+        not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
+
+    let escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
+
+    (* "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
+       "a\rb" => [|'"'; 'a'; '\\'; 'r'; 'b'; '"'|] *)
+
+    let private categorize (getTextLine: int -> string) (lit: StringLiteral) =
+        if isRegularString lit.Range getTextLine then
+            [lit.Range.StartLine..lit.Range.EndLine]
+            |> List.map (fun line ->
+                let lineStr = getTextLine (line - 1)
+                let lineChars = lineStr.ToCharArray()
+                debug "[EscapedCharsCatecorizer] line = %s, chars = %A" lineStr lineChars
+                if line = lit.Range.StartLine then 
+                    lineStr.Substring(lit.Range.StartColumn), line, lit.Range.StartColumn
+                elif line = lit.Range.EndLine then
+                    lineStr.Substring(0, lit.Range.EndColumn - 1), line, 0
+                else lineStr, line, 0
+            )
+            |> List.map (fun (str, line, startColumn) ->
+                 let matches = 
+                    escapingSymbolsRegex.Matches str 
+                    |> Seq.cast<Match> 
+                    |> Seq.filter (fun m -> m.Value <> "")
+                    |> Seq.toArray
+
+                 debug "[Escaped] (line = %d, lineStr = %s) => Matches %A" 
+                       line str (matches |> Array.map (fun m -> 
+                           sprintf "(idx = %d, len = %d, value = %s, value chars = %A" 
+                                   m.Index m.Length m.Value (m.Value.ToCharArray())))
+
+                 matches
+                 |> Seq.fold (fun (shift, acc) (m: Match) -> 
+                      let category =
+                          { Category = Category.Escaped
+                            WordSpan = 
+                              { Line = line
+                                StartCol = shift + startColumn + m.Index
+                                EndCol = shift + startColumn + m.Index + m.Length }}
+                      shift, category :: acc  
+                    ) (0, [])
+                  |> snd
+               )
+            |> Seq.concat 
+        else Seq.empty
+
+    let getCategories ast getTextLine = 
+        let literals = UntypedAstUtils.getStringLiterals ast 
+        literals
+        |> List.map (categorize getTextLine) 
+        |> Seq.concat
+        |> Seq.toArray
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
@@ -426,6 +488,7 @@ module SourceCodeClassifier =
             spansBasedOnSymbolsUses 
             |> Seq.append (QuotationCategorizer.getCategories ast lexer)
             |> Seq.append (PrintfCategorizer.getCategories ast getTextLine)
+            |> Seq.append (EscapedCharsCategorizer.getCategories ast getTextLine)
             |> Seq.append unusedOpenDeclarationSpans
             |> Seq.toArray
 

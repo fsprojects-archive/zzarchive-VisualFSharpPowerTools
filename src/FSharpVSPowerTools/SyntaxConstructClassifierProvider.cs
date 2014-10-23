@@ -27,6 +27,7 @@ namespace FSharpVSPowerTools
         public const string FSharpModule = Constants.fsharpModule;
         public const string FSharpUnused = Constants.fsharpUnused;
         public const string FSharpPrintf = Constants.fsharpPrintf;
+        public const string FSharpEscaped = Constants.fsharpEscaped;
 
         [Export]
         [Name(FSharpReferenceType)]
@@ -72,6 +73,11 @@ namespace FSharpVSPowerTools
         [Name(FSharpPrintf)]
         [BaseDefinition("identifier")]
         internal static ClassificationTypeDefinition FSharpPrintfClassificationType = null;
+
+        [Export]
+        [Name(FSharpEscaped)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpEscapedClassificationType = null;
     }
 
     public class FontColor
@@ -108,6 +114,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(43, 145, 175)) },
                 { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(157, 157, 157)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(43, 145, 175)) },
+                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(255, 0, 128)) }
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -126,6 +133,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(78, 201, 176)) },
                 { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(155, 155, 155)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(78, 220, 176)) },
+                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(190, 0, 94)) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
@@ -351,8 +359,24 @@ namespace FSharpVSPowerTools
              [ImportingConstructor]
              public FSharpPrintfFormat(ClassificationColorManager colorManager)
              {
-                 this.DisplayName = "F# Printf format";
+                 this.DisplayName = "F# Printf Format";
                  var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpPrintf);
+                 this.ForegroundColor = colors.Foreground;
+                 this.BackgroundColor = colors.Background;
+             }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpEscaped)]
+        [Name(ClassificationTypes.FSharpEscaped)]
+        [UserVisible(true)]
+        internal sealed class FSharpEscapedFormat : ClassificationFormatDefinition
+        {
+             [ImportingConstructor]
+             public FSharpEscapedFormat(ClassificationColorManager colorManager)
+             {
+                 this.DisplayName = "F# Escaped Characters";
+                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpEscaped);
                  this.ForegroundColor = colors.Foreground;
                  this.BackgroundColor = colors.Background;
              }

@@ -586,3 +586,108 @@ let getPrintfLiterals ast =
         | _ -> ())
 
     List.ofSeq ranges
+    
+[<NoComparison>]
+type internal StringLiteral = 
+    { Value: string
+      Range: Range.range }
+
+/// Returns all string literals
+let internal getStringLiterals ast : StringLiteral list =
+    let result = ResizeArray()
+     
+    let rec visitExpr = function 
+        | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
+            visitExpr cond
+            visitExpr trueBranch
+            falseBranchOpt |> Option.iter visitExpr 
+        | SynExpr.LetOrUse (_, _, bindings, body, _) -> 
+            visitBindindgs bindings
+            visitExpr body
+        | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
+            visitExpr rhsExpr
+            visitExpr body
+        | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
+            visitExpr argExpr
+            visitExpr funcExpr
+        | SynExpr.Lambda (_, _, _, expr, _) -> visitExpr expr
+        | SynExpr.Record (_, _, fields, _) ->
+            fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpr
+        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) -> visitExpr expr
+        | SynExpr.CompExpr (_, _, expr, _) -> visitExpr expr
+        | SynExpr.ForEach (_, _, _, _, _, body, _) -> visitExpr body
+        | SynExpr.YieldOrReturn (_, expr, _) -> visitExpr expr
+        | SynExpr.YieldOrReturnFrom (_, expr, _) -> visitExpr expr
+        | SynExpr.Do (expr, _) -> visitExpr expr
+        | SynExpr.DoBang (expr, _) -> visitExpr expr
+        | SynExpr.Downcast (expr, _, _) -> visitExpr expr
+        | SynExpr.For (_, _, _, _, _, expr, _) -> visitExpr expr
+        | SynExpr.Lazy (expr, _) -> visitExpr expr
+        | SynExpr.Match (_, expr, clauses, _, _) -> 
+            visitExpr expr
+            visitMatches clauses 
+        | SynExpr.MatchLambda (_, _, clauses, _, _) -> visitMatches clauses
+        | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> visitBindindgs bindings
+        | SynExpr.Typed (expr, _, _) -> visitExpr expr
+        | SynExpr.Paren (expr, _, _, _) -> visitExpr expr
+        | SynExpr.Sequential (_, _, expr1, expr2, _) ->
+            visitExpr expr1
+            visitExpr expr2
+        | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
+        | SynExpr.Tuple (exprs, _, _) -> List.iter visitExpr exprs
+        | SynExpr.Const (SynConst.String (value, r), _) -> result.Add { Value = value; Range = r }
+        | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
+        | SynExpr.New(_, _, expr, _) -> visitExpr expr
+        | SynExpr.While(_, e1, e2, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.Assert(e, _) -> visitExpr e
+        | SynExpr.TryWith(e, _, clauses, _, _, _, _) -> visitExpr e; visitMatches clauses
+        | SynExpr.TryFinally(e1, e2, _, _, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.DotNamedIndexedPropertySet(_, _, e1, e2, _) -> visitExpr e1; visitExpr e2
+        | SynExpr.TypeTest(e, _, _) -> visitExpr e
+        | SynExpr.Upcast(e, _, _) -> visitExpr e
+        | SynExpr.InferredUpcast(e, _) -> visitExpr e
+        | SynExpr.InferredDowncast(e, _) -> visitExpr e
+        | _ -> ()
+
+    and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
+    and visitBindindgs = List.iter visitBinding
+    and visitMatch (SynMatchClause.Clause (_, _, expr, _, _)) = visitExpr expr
+    and visitMatches = List.iter visitMatch
+    
+    let visitMember = function
+        | SynMemberDefn.LetBindings (bindings, _, _, _) -> visitBindindgs bindings
+        | SynMemberDefn.Member (binding, _) -> visitBinding binding
+        | SynMemberDefn.AutoProperty (_, _, _, _, _, _, _, _, expr, _, _) -> visitExpr expr
+        | _ -> () 
+
+    let visitType ty =
+        let (SynTypeDefn.TypeDefn (_, repr, memberDefns, _)) = ty
+        match repr with
+        | SynTypeDefnRepr.ObjectModel (_, defns, _) ->
+            for d in defns do visitMember d
+        | _ -> ()
+        List.iter visitMember memberDefns
+
+    let rec visitDeclarations decls = 
+        for declaration in decls do
+            match declaration with
+            | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
+            | SynModuleDecl.DoExpr (_, expr, _) -> visitExpr expr
+            | SynModuleDecl.Types (types, _) -> for ty in types do visitType ty
+            | SynModuleDecl.NestedModule (_, decls, _, _) -> visitDeclarations decls
+            | _ -> ()
+
+    let visitModulesAndNamespaces modulesOrNss =
+        for moduleOrNs in modulesOrNss do
+            let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
+            visitDeclarations decls
+
+    ast 
+    |> Option.iter (function
+        | ParsedInput.ImplFile implFile ->
+            let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
+            visitModulesAndNamespaces modules
+        | _ -> ())
+
+    List.ofSeq result
