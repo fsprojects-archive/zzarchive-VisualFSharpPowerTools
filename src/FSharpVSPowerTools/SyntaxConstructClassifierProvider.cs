@@ -375,7 +375,7 @@ namespace FSharpVSPowerTools
              [ImportingConstructor]
              public FSharpEscapedFormat(ClassificationColorManager colorManager)
              {
-                 this.DisplayName = "F# Escaped characters";
+                 this.DisplayName = "F# Escaped Characters";
                  var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpEscaped);
                  this.ForegroundColor = colors.Foreground;
                  this.BackgroundColor = colors.Background;
