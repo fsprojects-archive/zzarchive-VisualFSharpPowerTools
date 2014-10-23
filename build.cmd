@@ -1,7 +1,7 @@
 @echo off
 cls
 
-.paket\paket.bootstrapper.exe
+.paket\paket.bootstrapper.exe 0.8.6
 if errorlevel 1 (
   exit /b %errorlevel%
 )

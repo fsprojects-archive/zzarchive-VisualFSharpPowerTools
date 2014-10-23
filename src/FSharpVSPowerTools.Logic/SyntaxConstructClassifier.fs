@@ -174,10 +174,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
     interface IClassifier with
         // It's called for each visible line of code
         member __.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
-            try getClassificationSpans snapshotSpan :> _
-            with e -> 
-                Logging.logException e
-                upcast [||]
+            upcast (protectOrDefault (fun _ -> getClassificationSpans snapshotSpan) [||])
 
         [<CLIEvent>]
         member __.ClassificationChanged = classificationChanged.Publish

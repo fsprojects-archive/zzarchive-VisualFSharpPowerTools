@@ -365,3 +365,14 @@ type CursorOverrideHandle(newCursor) =
 
 module internal Cursor =
     let wait() = new CursorOverrideHandle(System.Windows.Input.Cursors.Wait)
+
+/// Try to run a given function, resorting to a default value if it throws exceptions
+let protectOrDefault f defaultVal =
+    try
+        f()
+    with e ->
+        Logging.logException e
+        defaultVal
+
+/// Try to run a given function and catch its exceptions
+let protect f = protectOrDefault f ()

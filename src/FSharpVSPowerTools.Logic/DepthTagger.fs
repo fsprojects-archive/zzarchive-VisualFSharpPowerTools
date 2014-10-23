@@ -78,16 +78,13 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
             tags
 
     interface ITagger<DepthRegionTag> with
-        member x.GetTags spans = 
-            try getTags spans :> _
-            with e -> 
-                Logging.logException e
-                Seq.empty
+        member __.GetTags spans = 
+            protectOrDefault (fun _ -> getTags spans :> _) Seq.empty
         
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
          

@@ -103,13 +103,13 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
 
     let generateRecordStub snapshot recordExpr insertionPos entity =
         { new ISmartTagAction with
-            member x.ActionSets = null
-            member x.DisplayText = Resource.recordGenerationCommandName
-            member x.Icon = null
-            member x.IsEnabled = true
-            member x.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
+            member __.ActionSets = null
+            member __.DisplayText = Resource.recordGenerationCommandName
+            member __.Icon = null
+            member __.IsEnabled = true
+            member __.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
 
-    member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
+    member __.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
         let actionList = ResizeArray<ISmartTagAction>()
 
@@ -120,19 +120,21 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
 
     interface ITagger<RecordStubGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
-            seq {
-                match currentWord, recordDefinition with
-                | Some word, Some (expression, entity, insertionPos) when shouldGenerateRecordStub expression entity ->
-                    let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                    yield TagSpan<_>(span, 
-                                     RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
-                          :> ITagSpan<_>
-                | _ -> ()
-            }
+            protectOrDefault (fun _ ->
+                seq {
+                    match currentWord, recordDefinition with
+                    | Some word, Some (expression, entity, insertionPos) when shouldGenerateRecordStub expression entity ->
+                        let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
+                        yield TagSpan<_>(span, 
+                                         RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
+                              :> ITagSpan<_>
+                    | _ -> ()
+                })
+                Seq.empty
 
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
