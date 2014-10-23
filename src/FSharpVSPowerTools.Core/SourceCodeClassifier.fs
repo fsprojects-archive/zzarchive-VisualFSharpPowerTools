@@ -129,12 +129,12 @@ module private PrintfCategorizer =
         |> List.map (categorize getTextLine) 
         |> Seq.concat
 
-module private EscapedCharsCatecorizer =
+module private EscapedCharsCategorizer =
     open UntypedAstUtils
     open System.Text.RegularExpressions
 
-    let private isSimpleString (r: Range.range) getTextLine =
-        let lineStr: string = getTextLine (r.StartLine - 1)
+    let private isRegularString (r: Range.range) getTextLine =
+        let lineStr: string = getTextLine (r.StartLine - 1) 
         let origLiteral = lineStr.Substring r.StartColumn
         not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
 
@@ -144,7 +144,7 @@ module private EscapedCharsCatecorizer =
        "a\rb" => [|'"'; 'a'; '\\'; 'r'; 'b'; '"'|] *)
 
     let private categorize (getTextLine: int -> string) (lit: StringLiteral) =
-        if isSimpleString lit.Range getTextLine then
+        if isRegularString lit.Range getTextLine then
             [lit.Range.StartLine..lit.Range.EndLine]
             |> List.map (fun line ->
                 let lineStr = getTextLine (line - 1)
@@ -488,7 +488,7 @@ module SourceCodeClassifier =
             spansBasedOnSymbolsUses 
             |> Seq.append (QuotationCategorizer.getCategories ast lexer)
             |> Seq.append (PrintfCategorizer.getCategories ast getTextLine)
-            |> Seq.append (EscapedCharsCatecorizer.getCategories ast getTextLine)
+            |> Seq.append (EscapedCharsCategorizer.getCategories ast getTextLine)
             |> Seq.append unusedOpenDeclarationSpans
             |> Seq.toArray
 

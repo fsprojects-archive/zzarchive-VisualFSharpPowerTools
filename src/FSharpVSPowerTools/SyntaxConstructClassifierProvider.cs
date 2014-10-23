@@ -133,7 +133,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(78, 201, 176)) },
                 { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(155, 155, 155)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(78, 220, 176)) },
-                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(255, 0, 128)) }
+                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(190, 0, 94)) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
@@ -359,7 +359,7 @@ namespace FSharpVSPowerTools
              [ImportingConstructor]
              public FSharpPrintfFormat(ClassificationColorManager colorManager)
              {
-                 this.DisplayName = "F# Printf format";
+                 this.DisplayName = "F# Printf Format";
                  var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpPrintf);
                  this.ForegroundColor = colors.Foreground;
                  this.BackgroundColor = colors.Background;

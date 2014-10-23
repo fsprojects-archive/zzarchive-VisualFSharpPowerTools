@@ -587,7 +587,7 @@ let getPrintfLiterals ast =
 
     List.ofSeq ranges
     
-[<NoComparisonAttribute>]
+[<NoComparison>]
 type internal StringLiteral = 
     { Value: string
       Range: Range.range }
