@@ -9,46 +9,9 @@ using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace FSharpVSPowerTools
 {
-    public interface IGeneralOptionsPage
-    {
-        bool XmlDocEnabled { get; set; }
-
-        bool FormattingEnabled { get; set; }
-
-        bool NavBarEnabled { get; set; }
-
-        bool HighlightUsageEnabled { get; set; }
-
-        bool RenameRefactoringEnabled { get; set; }
-
-        bool DepthColorizerEnabled { get; set; }
-
-        bool NavigateToEnabled { get; set; }
-
-        bool SyntaxColoringEnabled { get; set; }
-
-        bool InterfaceImplementationEnabled { get; set; }
-
-        bool FolderOrganizationEnabled { get; set; }
-
-        bool FindAllReferencesEnabled { get; set; }
-
-        bool GenerateRecordStubEnabled { get; set; }
-
-        bool UnionPatternMatchCaseGenerationEnabled { get; set; }
-
-        bool ResolveUnopenedNamespacesEnabled { get; set; }
-
-        bool UnusedDeclarationsEnabled { get; set; }
-
-        bool TaskListCommentsEnabled { get; set; }
-
-        bool GoToMetadataEnabled { get; set; }
-    }
-
     [ClassInterface(ClassInterfaceType.AutoDual)]
     [Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")]
-    public class GeneralOptionsPage : DialogPage, IGeneralOptionsPage
+    public class GeneralOptionsPage : DialogPage, IGeneralOptions
     {   
         private GeneralOptionsControl _optionsControl;
         private const string navBarConfig = "fsharp-navigationbar-enabled";

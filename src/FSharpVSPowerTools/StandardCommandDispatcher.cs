@@ -19,7 +19,7 @@ namespace FSharpVSPowerTools
 
         public static StandardCommandDispatcher Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
-            var generalOptions = Utils.GetGeneralOptionsPage(services.ServiceProvider);
+            var generalOptions = Setting.getGeneralOptions(services.ServiceProvider);
             if (generalOptions == null || !generalOptions.FormattingEnabled) return null;
 
             var dispatcher = new StandardCommandDispatcher();
@@ -50,7 +50,7 @@ namespace FSharpVSPowerTools
         {
             IEditorOptions editorOptions = _services.EditorOptionsFactory.GetOptions(_textView.TextBuffer);
             int indentSize = editorOptions.GetOptionValue((new IndentSize()).Key);
-            var customOptions = _services.ServiceProvider.GetService(typeof (FantomasOptionsPage)) as FantomasOptionsPage;
+            var customOptions = Setting.getFormattingOptions(_services.ServiceProvider);
 
             var config =
                 FormatConfig.FormatConfig.create(

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace FSharpVSPowerTools
 {
     [Guid("30829e04-262b-4af7-89e3-d4bf7a1d0c23")]
-    public class FantomasOptionsPage : DialogPage
+    public class FantomasOptionsPage : DialogPage, IFormattingOptions
     {
         public FantomasOptionsPage()
         {

@@ -15,7 +15,7 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 
 let createGeneralOptionsPage() =
-    Mock<IGeneralOptionsPage>.With(fun page ->
+    Mock<IGeneralOptions>.With(fun page ->
         <@
             page.DepthColorizerEnabled --> true
             page.FindAllReferencesEnabled --> true
