@@ -40,6 +40,10 @@ type ICodeGenerationOptions =
     abstract DefaultBody: string with get, set
     abstract CodeGenerationOptions: CodeGenerationKinds with get, set
 
+type IGlobalOptions =
+    abstract StrictMode: bool with get, set
+    abstract DiagnosticMode: bool with get, set
+
 [<RequireQualifiedAccess>]
 module Setting =
     open System
@@ -60,4 +64,7 @@ module Setting =
         | CodeGenerationKinds.NotImplementedYet -> "raise (System.NotImplementedException())"
         | CodeGenerationKinds.DefaultValue -> "Unchecked.defaultof<_>"
         | _ -> codeGenOptions.DefaultBody
+
+    let getGlobalOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.GetService<IGlobalOptions>()
 

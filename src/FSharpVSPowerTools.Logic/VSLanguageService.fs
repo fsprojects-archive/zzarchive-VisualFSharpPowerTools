@@ -86,23 +86,30 @@ type VSLanguageService
 
     static let initializationTime = DateTime.Now
 
-    /// Set project load time to that of the last recently-changed open document.
-    /// If there is no open document, use initialization time as project load time.
-    member __.FixProjectLoadTime opts =
-            let projectFiles = Set.ofArray opts.ProjectFileNames
-            let openDocumentsChangeTimes = 
-                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
-                |> Seq.choose (fun (file, doc) -> 
-                    if doc.Document.IsDirty && Set.contains file projectFiles then 
-                        Some doc.LastChangeTime 
-                    else None)
-                |> Seq.toList
+    /// If we are on the strict mode, set project load time to that of the last recently-changed open document.
+    /// When there is no open document, use initialization time as project load time.
+    let fixProjectLoadTime =
+        let globalOptions = Setting.getGlobalOptions(serviceProvider)
+        if globalOptions.StrictMode then
+            fun opts ->
+                let projectFiles = Set.ofArray opts.ProjectFileNames
+                let openDocumentsChangeTimes = 
+                    openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
+                    |> Seq.choose (fun (file, doc) -> 
+                        if doc.Document.IsDirty && Set.contains file projectFiles then 
+                            Some doc.LastChangeTime 
+                        else None)
+                    |> Seq.toList
         
-            match openDocumentsChangeTimes with
-            | [] -> 
-                { opts with LoadTime = initializationTime }
-            | changeTimes -> 
-                { opts with LoadTime = List.max changeTimes }        
+                match openDocumentsChangeTimes with
+                | [] -> 
+                    { opts with LoadTime = initializationTime }
+                | changeTimes -> 
+                    { opts with LoadTime = List.max changeTimes }  
+        else
+            id
+
+    member __.FixProjectLoadTime opts = fixProjectLoadTime opts
         
     member __.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
         let source = point.Snapshot.GetText()

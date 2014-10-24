@@ -130,6 +130,9 @@
     <Compile Include="CodeGenerationOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="GlobalOptionsPage.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
