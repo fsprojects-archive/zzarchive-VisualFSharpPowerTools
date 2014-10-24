@@ -164,7 +164,6 @@
     <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="SyntaxConstructClassifierProvider.cs" />
     <Compile Include="UnionPatternMatchCaseGeneratorSmartTaggerProvider.cs" />
-    <Compile Include="Utils.cs" />
     <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>
   <ItemGroup>

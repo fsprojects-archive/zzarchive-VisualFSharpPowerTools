@@ -12,21 +12,21 @@ namespace FSharpVSPowerTools
 {
     [ClassInterface(ClassInterfaceType.AutoDual)]
     [Guid("1023983E-7F9C-4DB5-AF81-2A1546B209A6")]
-    public class CodeGenerationOptionsPage : DialogPage
+    public class CodeGenerationOptionsPage : DialogPage, ICodeGenerationOptions
     {
         private CodeGenerationOptionsControl _optionsControl;
 
         public CodeGenerationOptionsPage()
         {
             DefaultBody = "??";
-            CodeGenerationOptions = CodeGenerationOptions.Failwith;
+            CodeGenerationOptions = CodeGenerationKinds.Failwith;
         }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public string DefaultBody { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public CodeGenerationOptions CodeGenerationOptions { get; set; }
+        public CodeGenerationKinds CodeGenerationOptions { get; set; }
 
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]

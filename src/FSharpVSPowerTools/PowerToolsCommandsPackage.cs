@@ -22,7 +22,7 @@ namespace FSharpVSPowerTools
     [ProvideOptionPage(typeof(CodeGenerationOptionsPage), Resource.vsPackageTitle, "Code Generation", 0, 0, true, 0)]
     [ProvideService(typeof(IGeneralOptions))]   
     [ProvideService(typeof(IFormattingOptions))]
-    [ProvideService(typeof(CodeGenerationOptionsPage))]
+    [ProvideService(typeof(ICodeGenerationOptions))]
     [Guid("f152487e-9a22-4cf9-bee6-a8f7c77f828d")]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
@@ -50,6 +50,9 @@ namespace FSharpVSPowerTools
 
             serviceContainer.AddService(typeof(IFormattingOptions),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote: true);
+
+            serviceContainer.AddService(typeof(ICodeGenerationOptions),
+                delegate { return GetDialogPage(typeof(CodeGenerationOptionsPage)); }, promote: true);
 
             var generalOptions = GetService(typeof(IGeneralOptions)) as IGeneralOptions;
             PerformRegistrations(generalOptions);

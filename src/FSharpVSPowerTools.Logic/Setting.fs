@@ -30,6 +30,16 @@ type IFormattingOptions =
     abstract IndentOnTryWith: bool with get, set
     abstract ReorderOpenDeclaration: bool with get, set
 
+type CodeGenerationKinds =
+    | Failwith = 0
+    | NotImplementedYet = 1
+    | DefaultValue = 2
+    | Uncompilable = 3
+
+type ICodeGenerationOptions =
+    abstract DefaultBody: string with get, set
+    abstract CodeGenerationOptions: CodeGenerationKinds with get, set
+
 [<RequireQualifiedAccess>]
 module Setting =
     open System
@@ -40,4 +50,14 @@ module Setting =
 
     let getFormattingOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IFormattingOptions>()
+
+    let getCodeGenerationOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.GetService<ICodeGenerationOptions>()
+
+    let getDefaultMemberBody (codeGenOptions: ICodeGenerationOptions) =
+        match codeGenOptions.CodeGenerationOptions with
+        | CodeGenerationKinds.Failwith -> "failwith \"Not implemented yet\""
+        | CodeGenerationKinds.NotImplementedYet -> "raise (System.NotImplementedException())"
+        | CodeGenerationKinds.DefaultValue -> "Unchecked.defaultof<_>"
+        | _ -> codeGenOptions.DefaultBody
 

@@ -39,6 +39,8 @@ namespace FSharpVSPowerTools
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.UnionPatternMatchCaseGenerationEnabled) return null;
+            var codeGenOptions = Setting.getCodeGenerationOptions(serviceProvider);
+            if (codeGenOptions == null) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
@@ -47,7 +49,7 @@ namespace FSharpVSPowerTools
                 return new UnionPatternMatchCaseGeneratorSmartTagger(doc, textView,
                             undoHistoryRegistry.RegisterHistory(buffer),
                             fsharpVsLanguageService, serviceProvider,
-                            projectFactory, Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
+                            projectFactory, Setting.getDefaultMemberBody(codeGenOptions)) as ITagger<T>;
             }
             
             return null;
