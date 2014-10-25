@@ -40,8 +40,10 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.InterfaceImplementationEnabled) return null;
+            var codeGenOptions = Setting.getCodeGenerationOptions(serviceProvider);
+            if (codeGenOptions == null) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
@@ -50,7 +52,7 @@ namespace FSharpVSPowerTools
                 return new ImplementInterfaceSmartTagger(doc, textView,
                             editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer),
                             fsharpVsLanguageService, serviceProvider, projectFactory,
-                            Utils.GetDefaultMemberBody(serviceProvider)) as ITagger<T>;
+                            Setting.getDefaultMemberBody(codeGenOptions)) as ITagger<T>;
             }
 
             return null;

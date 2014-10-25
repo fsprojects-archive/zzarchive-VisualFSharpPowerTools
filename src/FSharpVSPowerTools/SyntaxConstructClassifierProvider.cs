@@ -427,7 +427,7 @@ namespace FSharpVSPowerTools
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
-            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
 
             bool includeUnusedDeclarations = generalOptions.UnusedDeclarationsEnabled;

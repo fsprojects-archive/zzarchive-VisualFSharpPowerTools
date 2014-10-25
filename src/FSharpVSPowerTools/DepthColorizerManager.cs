@@ -34,7 +34,7 @@ namespace FSharpVSPowerTools
         {
             ITextDocument doc;
 
-            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return null;
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
@@ -67,7 +67,7 @@ namespace FSharpVSPowerTools
         {
             if (textView == null) return;
 
-            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return;
 
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);

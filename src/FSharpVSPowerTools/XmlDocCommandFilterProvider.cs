@@ -38,7 +38,7 @@ namespace FSharpVSPowerTools
             var wpfTextView = editorFactory.GetWpfTextView(textViewAdapter);
             if (wpfTextView == null) return;
 
-            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.XmlDocEnabled) return;
 
             ITextDocument doc;

@@ -130,6 +130,9 @@
     <Compile Include="CodeGenerationOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="GlobalOptionsPage.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="FantomasOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -164,7 +167,6 @@
     <Compile Include="DepthColorizerManager.cs" />
     <Compile Include="SyntaxConstructClassifierProvider.cs" />
     <Compile Include="UnionPatternMatchCaseGeneratorSmartTaggerProvider.cs" />
-    <Compile Include="Utils.cs" />
     <Compile Include="XmlDocCommandFilterProvider.cs" />
   </ItemGroup>
   <ItemGroup>

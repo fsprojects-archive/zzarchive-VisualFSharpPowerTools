@@ -22,8 +22,10 @@ type VsTestBase() =
     do serviceProvider.Services.["SVsShell"] <- MockVsShell()
     do serviceProvider.Services.["SVsStatusbar"] <- Mocks.createSVsStatusbar()
     do serviceProvider.Services.["SVsSolutionBuildManager"] <- Mocks.createVsSolutionBuildManager2()
-    do serviceProvider.Services.["GeneralOptionsPage"] <- Mocks.createGeneralOptionsPage()
-    do serviceProvider.Services.["FantomasOptionsPage"] <- new FantomasOptionsPage()
+    do serviceProvider.Services.["IGeneralOptions"] <- Mocks.createGeneralOptionsPage()
+    do serviceProvider.Services.["IFormattingOptions"] <- new FantomasOptionsPage()
+    do serviceProvider.Services.["ICodeGenerationOptions"] <- new CodeGenerationOptionsPage()
+    do serviceProvider.Services.["IGlobalOptions"] <- new GlobalOptionsPage()
 
     let dte = MockDTE()
     do serviceProvider.Services.["DTE"] <- dte

@@ -3,13 +3,6 @@ using System.Windows.Forms;
 
 namespace FSharpVSPowerTools
 {
-    public enum CodeGenerationOptions
-    {
-        Failwith,
-        NotImplementedYet,
-        DefaultValue,
-        Uncompilable
-    }
     public partial class CodeGenerationOptionsControl : UserControl
     {
         private CodeGenerationOptionsPage _optionsPage;
@@ -28,27 +21,27 @@ namespace FSharpVSPowerTools
             set { tbxSourceCode.Text = value; }
         }
 
-        public CodeGenerationOptions CodeGenerationOptions
+        public CodeGenerationKinds CodeGenerationOptions
         {
             get
             {
-                if (rdbFailwith.Checked) return CodeGenerationOptions.Failwith;
-                if (rdbNotImplementedYet.Checked) return CodeGenerationOptions.NotImplementedYet;
-                if (rdbDefaultValue.Checked) return CodeGenerationOptions.DefaultValue;
-                return CodeGenerationOptions.Uncompilable;
+                if (rdbFailwith.Checked) return CodeGenerationKinds.Failwith;
+                if (rdbNotImplementedYet.Checked) return CodeGenerationKinds.NotImplementedYet;
+                if (rdbDefaultValue.Checked) return CodeGenerationKinds.DefaultValue;
+                return CodeGenerationKinds.Uncompilable;
             }
 
             set
             {
                 switch (value)
                 {
-                    case CodeGenerationOptions.Failwith:
+                    case CodeGenerationKinds.Failwith:
                         rdbFailwith.Checked = true;
                         break;
-                    case CodeGenerationOptions.NotImplementedYet:
+                    case CodeGenerationKinds.NotImplementedYet:
                         rdbNotImplementedYet.Checked = true;
                         break;
-                    case CodeGenerationOptions.DefaultValue:
+                    case CodeGenerationKinds.DefaultValue:
                         rdbDefaultValue.Checked = true;
                         break;
                     default:

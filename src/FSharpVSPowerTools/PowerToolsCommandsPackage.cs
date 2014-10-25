@@ -20,9 +20,11 @@ namespace FSharpVSPowerTools
     [ProvideOptionPage(typeof(GeneralOptionsPage), Resource.vsPackageTitle, "General", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(CodeGenerationOptionsPage), Resource.vsPackageTitle, "Code Generation", 0, 0, true, 0)]
-    [ProvideService(typeof(GeneralOptionsPage))]   
-    [ProvideService(typeof(FantomasOptionsPage))]
-    [ProvideService(typeof(CodeGenerationOptionsPage))]
+    [ProvideOptionPage(typeof(GlobalOptionsPage), Resource.vsPackageTitle, "Configuration", 0, 0, true, 0)]
+    [ProvideService(typeof(IGeneralOptions))]   
+    [ProvideService(typeof(IFormattingOptions))]
+    [ProvideService(typeof(ICodeGenerationOptions))]
+    [ProvideService(typeof(IGlobalOptions))]
     [Guid("f152487e-9a22-4cf9-bee6-a8f7c77f828d")]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
@@ -45,12 +47,19 @@ namespace FSharpVSPowerTools
             VSUtils.ForegroundThreadGuard.BindThread();
 
             IServiceContainer serviceContainer = this;
-            serviceContainer.AddService(typeof(GeneralOptionsPage),
+            serviceContainer.AddService(typeof(IGeneralOptions),
                 delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote: true);
-            serviceContainer.AddService(typeof(FantomasOptionsPage),
+
+            serviceContainer.AddService(typeof(IFormattingOptions),
                 delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote: true);
 
-            var generalOptions = GetService(typeof(GeneralOptionsPage)) as GeneralOptionsPage;
+            serviceContainer.AddService(typeof(ICodeGenerationOptions),
+                delegate { return GetDialogPage(typeof(CodeGenerationOptionsPage)); }, promote: true);
+
+            serviceContainer.AddService(typeof(IGlobalOptions),
+                delegate { return GetDialogPage(typeof(GlobalOptionsPage)); }, promote: true);
+
+            var generalOptions = GetService(typeof(IGeneralOptions)) as IGeneralOptions;
             PerformRegistrations(generalOptions);
 
             library = new FSharpLibrary(Constants.guidSymbolLibrary);
@@ -59,7 +68,7 @@ namespace FSharpVSPowerTools
             RegisterLibrary();
         }
 
-        private void PerformRegistrations(GeneralOptionsPage generalOptions)
+        private void PerformRegistrations(IGeneralOptions generalOptions)
         {
             if (generalOptions.FolderOrganizationEnabled)
             {
@@ -88,7 +97,7 @@ namespace FSharpVSPowerTools
 
         private void RegisterPriorityCommandTarget()
         {
-            var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+            var rpct = GetService(typeof(SVsRegisterPriorityCommandTarget)) as IVsRegisterPriorityCommandTarget;
             rpct.RegisterPriorityCommandTarget(0, newFolderMenu, out pctCookie);
         }
 
@@ -96,7 +105,7 @@ namespace FSharpVSPowerTools
         {
             if (pctCookie != 0)
             {
-                var rpct = (IVsRegisterPriorityCommandTarget)GetService(typeof(SVsRegisterPriorityCommandTarget));
+                var rpct = GetService(typeof(SVsRegisterPriorityCommandTarget)) as IVsRegisterPriorityCommandTarget;
                 if (rpct != null)
                 {
                     rpct.UnregisterPriorityCommandTarget(pctCookie);

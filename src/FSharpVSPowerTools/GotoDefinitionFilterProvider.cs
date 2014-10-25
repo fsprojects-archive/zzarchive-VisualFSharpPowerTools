@@ -42,7 +42,7 @@ namespace FSharpVSPowerTools
             var textView = editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
-            var generalOptions = Utils.GetGeneralOptionsPage(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.GoToMetadataEnabled) return;
 
             ITextDocument doc;
