@@ -110,9 +110,9 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
         populateTaskList ()
 
     let onOptionsChanged =
-        new Handler<OptionsChangedEventArgs>(fun _ e -> options <- e.NewOptions; repopulateTaskList ())
+        Handler<OptionsChangedEventArgs>(fun _ e -> options <- e.NewOptions; repopulateTaskList ())
     let onFilesChanged =
-        new Handler<FilesChangedEventArgs>(fun _ e -> handleFilesChanged e.Files)
+        Handler<FilesChangedEventArgs>(fun _ e -> handleFilesChanged e.Files)
 
     let isCompiledFSharpProjectItem (pi: ProjectItem) =
         isFSharpProject pi.ContainingProject &&

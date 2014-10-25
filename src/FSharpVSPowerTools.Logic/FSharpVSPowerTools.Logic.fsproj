@@ -56,58 +56,170 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
     <None Include="paket.references" />
-    <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Resource.fs" />
-    <Compile Include="Constants.fs" />
-    <Compile Include="Logger.fs" />
-    <Compile Include="VSUtils.fs" />
-    <Compile Include="Setting.fs" />
-    <Compile Include="VisualStudioVersion.fs" />
-    <Compile Include="ThemeManager.fs" />
-    <Compile Include="ProjectSystem.fs" />
-    <Compile Include="OpenDocumentsTracker.fs" />
-    <Compile Include="FileSystem.fs" />
-    <Compile Include="VSLanguageService.fs" />
-    <Compile Include="SolutionBuildEventListener.fs" />
-    <Compile Include="ProjectProvider.fs" />
-    <Compile Include="ProjectFactory.fs" />
-    <Compile Include="ActiveViewsRegistratorListener.fs" />
-    <Compile Include="NavigateToItem.fs" />
-    <Compile Include="CodeFormattingServices.fs" />
-    <Compile Include="Status.fs" />
-    <Compile Include="CodeFormattingCommands.fs" />
-    <Compile Include="FormatDocumentCommand.fs" />
-    <Compile Include="FormatSelectionCommand.fs" />
-    <Compile Include="XmlDocFilter.fs" />
-    <Compile Include="DepthTagger.fs" />
-    <Compile Include="DepthAdornmentManager.fs" />
-    <Compile Include="SyntaxConstructClassifier.fs" />
-    <Compile Include="HighlightUsageTagger.fs" />
-    <Resource Include="CommonResources.xaml" />
-    <Compile Include="CommonResources.xaml.fs" />
-    <Resource Include="RenameDialog.xaml" />
-    <Compile Include="RenameDialog.fs" />
-    <Compile Include="RenameCommandFilter.fs" />
-    <Resource Include="FolderNameDialog.xaml" />
-    <Compile Include="FolderNameDialog.fs" />
-    <Resource Include="MoveToFolderDialog.xaml" />
-    <Compile Include="MoveToFolderDialog.fs" />
-    <Compile Include="FolderMenuUI.fs" />
-    <Compile Include="FolderMenuCommands.fs" />
-    <Compile Include="CodeGenerationService.fs" />
-    <Compile Include="ImplementInterfaceSmartTagger.fs" />
-    <Compile Include="RecordStubGeneratorSmartTagger.fs" />
-    <Compile Include="UnionPatternMatchCaseGeneratorSmartTagger.fs" />
-    <Compile Include="LibraryNode.fs" />
-    <Compile Include="Library.fs" />
-    <Compile Include="FindReferencesFilter.fs" />
-    <Compile Include="ResolveUnopenedNamespaceTagger.fs" />
-    <Compile Include="UnusedDeclarationMargin.fs" />
-    <Compile Include="GoToDefinitionFilter.fs" />
-    <Compile Include="TaskListCommentOptions.fs" />
-    <Compile Include="TaskListManager.fs" />
-    <Compile Include="CrossSolutionTaskListCommentManager.fs" />
-    <Compile Include="TaskListCommentFilter.fs" />
+    <Compile Include="AssemblyInfo.fs" >
+    	<Link>Common/AssemblyInfo.fs</Link>
+    </Compile>
+    <Compile Include="Resource.fs" >
+    	<Link>Common/Resource.fs</Link>
+    </Compile>
+    <Compile Include="Constants.fs" >
+    	<Link>Common/Constants.fs</Link>
+    </Compile>
+    <Compile Include="Logger.fs" >
+    	<Link>Common/Logger.fs</Link>
+    </Compile>
+    <Compile Include="VSUtils.fs" >
+    	<Link>Common/VSUtils.fs</Link>
+    </Compile>
+    <Compile Include="Setting.fs" >
+    	<Link>Common/Setting.fs</Link>
+    </Compile>
+    <Compile Include="VisualStudioVersion.fs">
+    	<Link>Common/VisualStudioVersion.fs</Link>
+    </Compile>
+    <Compile Include="ThemeManager.fs" >
+    	<Link>Common/ThemeManager.fs</Link>
+    </Compile>
+    <Compile Include="Status.fs" >
+    	<Link>Common/Status.fs</Link>
+    </Compile>
+    <Resource Include="CommonResources.xaml" >
+    	<Link>Common/CommonResources.xaml</Link>
+    </Resource>
+    <Compile Include="CommonResources.xaml.fs" >
+    	<Link>Common/CommonResources.xaml.fs</Link>
+    </Compile>
+
+    <Compile Include="ProjectSystem.fs" >
+    	<Link>ProjectSystem/ProjectSystem.fs</Link>
+    </Compile>
+    <Compile Include="OpenDocumentsTracker.fs" >
+    	<Link>ProjectSystem/OpenDocumentsTracker.fs</Link>
+    </Compile>
+    <Compile Include="FileSystem.fs" >
+    	<Link>ProjectSystem/FileSystem.fs</Link>
+    </Compile>
+    <Compile Include="VSLanguageService.fs" >
+    	<Link>ProjectSystem/VSLanguageService.fs</Link>
+    </Compile>
+    <Compile Include="SolutionBuildEventListener.fs" >
+    	<Link>ProjectSystem/SolutionBuildEventListener.fs</Link>
+    </Compile>
+    <Compile Include="ProjectProvider.fs" >
+    	<Link>ProjectSystem/ProjectProvider.fs</Link>
+    </Compile>
+    <Compile Include="ProjectFactory.fs">
+    	<Link>ProjectSystem/ProjectFactory.fs</Link>
+    </Compile>
+    <Compile Include="ActiveViewsRegistratorListener.fs" >
+    	<Link>Navigation/ActiveViewsRegistratorListener.fs</Link>
+    </Compile>
+    <Compile Include="NavigateToItem.fs" >
+    	<Link>Navigation/NavigateToItem.fs</Link>
+    </Compile>
+	<Compile Include="GoToDefinitionFilter.fs" >
+		<Link>Navigation/GoToDefinitionFilter.fs</Link>
+	</Compile>
+
+    <Compile Include="CodeFormattingServices.fs" >
+    	<Link>Formatting/CodeFormattingServices.fs</Link>
+    </Compile>
+    <Compile Include="CodeFormattingCommands.fs" >
+    	<Link>Formatting/CodeFormattingCommands.fs</Link>
+    </Compile>
+    <Compile Include="FormatDocumentCommand.fs" >
+    	<Link>Formatting/FormatDocumentCommand.fs</Link>
+    </Compile>
+    <Compile Include="FormatSelectionCommand.fs" >
+    	<Link>Formatting/FormatSelectionCommand.fs</Link>
+    </Compile>
+
+    <Compile Include="DepthTagger.fs" >
+    	<Link>Coloring/DepthTagger.fs</Link>
+    </Compile>
+    <Compile Include="DepthAdornmentManager.fs" >
+    	<Link>Coloring/DepthAdornmentManager.fs</Link>
+    </Compile>
+    <Compile Include="SyntaxConstructClassifier.fs" >
+    	<Link>Coloring/SyntaxConstructClassifier.fs</Link>
+    </Compile>
+    <Compile Include="UnusedDeclarationMargin.fs" >
+    	<Link>Coloring/UnusedDeclarationMargin.fs</Link>
+    </Compile>
+
+    <Compile Include="HighlightUsageTagger.fs" >
+    	<Link>Symbol/HighlightUsageTagger.fs</Link>
+    </Compile>
+    <Resource Include="RenameDialog.xaml" >
+    	<Link>Symbol/RenameDialog.xaml</Link>
+    </Resource>
+    <Compile Include="RenameDialog.fs" >
+    	<Link>Symbol/RenameDialog.fs</Link>
+    </Compile>
+    <Compile Include="RenameCommandFilter.fs" >
+    	<Link>Symbol/RenameCommandFilter.fs</Link>
+    </Compile>
+    <Compile Include="LibraryNode.fs" >
+    	<Link>Symbol/LibraryNode.fs</Link>
+    </Compile>
+    <Compile Include="Library.fs" >
+    	<Link>Symbol/Library.fs</Link>
+    </Compile>
+    <Compile Include="FindReferencesFilter.fs" >
+    	<Link>Symbol/FindReferencesFilter.fs</Link>
+    </Compile>
+
+    <Resource Include="FolderNameDialog.xaml" >
+    	<Link>FolderCommand/FolderNameDialog.xaml</Link>
+    </Resource>
+    <Compile Include="FolderNameDialog.fs" >
+    	<Link>FolderCommand/FolderNameDialog.fs</Link>
+    </Compile>
+    <Resource Include="MoveToFolderDialog.xaml" >
+    	<Link>FolderCommand/MoveToFolderDialog.xaml</Link>
+    </Resource>
+    <Compile Include="MoveToFolderDialog.fs" >
+    	<Link>FolderCommand/MoveToFolderDialog.fs</Link>
+    </Compile>
+    <Compile Include="FolderMenuUI.fs" >
+    	<Link>FolderCommand/FolderMenuUI.fs</Link>
+    </Compile>
+    <Compile Include="FolderMenuCommands.fs" >
+    	<Link>FolderCommand/FolderMenuCommands.fs</Link>
+    </Compile>
+
+    <Compile Include="CodeGenerationService.fs" >
+    	<Link>CodeGeneration/CodeGenerationService.fs</Link>
+    </Compile>
+    <Compile Include="XmlDocFilter.fs" >
+    	<Link>CodeGeneration/XmlDocFilter.fs</Link>
+    </Compile>
+    <Compile Include="ImplementInterfaceSmartTagger.fs" >
+    	<Link>CodeGeneration/ImplementInterfaceSmartTagger.fs</Link>
+    </Compile>
+    <Compile Include="RecordStubGeneratorSmartTagger.fs" >
+    	<Link>CodeGeneration/RecordStubGeneratorSmartTagger.fs</Link>
+    </Compile>
+    <Compile Include="UnionPatternMatchCaseGeneratorSmartTagger.fs" >
+    	<Link>CodeGeneration/UnionPatternMatchCaseGeneratorSmartTagger.fs</Link>
+    </Compile>
+    <Compile Include="ResolveUnopenedNamespaceTagger.fs" >
+    	<Link>CodeGeneration/ResolveUnopenedNamespaceTagger.fs</Link>
+    </Compile>
+    
+    <Compile Include="TaskListCommentOptions.fs" >
+    	<Link>TaskList/TaskListCommentOptions.fs</Link>
+    </Compile>
+    <Compile Include="TaskListManager.fs" >
+    	<Link>TaskList/TaskListManager.fs</Link>
+    </Compile>
+    <Compile Include="CrossSolutionTaskListCommentManager.fs" >
+    	<Link>TaskList/CrossSolutionTaskListCommentManager.fs</Link>
+    </Compile>
+    <Compile Include="TaskListCommentFilter.fs" >
+    	<Link>TaskList/TaskListCommentFilter.fs</Link>
+    </Compile>
+
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

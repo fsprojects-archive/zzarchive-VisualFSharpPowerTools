@@ -13,13 +13,21 @@ type internal OptionsReader(serviceProvider: IServiceProvider) =
         dte.TryGetProperty("Environment", "TaskList", "CommentTokens")
         |> function
            | Some ct ->
-                ct :?> obj[]
-                |> Array.map (fun o -> o :?> string)
-                |> Array.choose (fun s -> 
-                    match s.Split(':') with
-                    | [| comment; priority |] -> Some { Comment = comment; Priority = Int32.Parse priority } 
-                    | _ -> None)
-           | None -> [| CommentOption.Default |]
+                match ct with
+                | :? (string []) as ss ->
+                    ss
+                    |> Array.choose (fun s -> 
+                        match s.Split(':') with
+                        | [| comment; priority |] -> 
+                            match Int32.TryParse priority with
+                            | true, priorityVal ->
+                                Some { Comment = comment; Priority = priorityVal } 
+                            | _ -> None
+                        | _ -> None)
+                | _ -> 
+                    [| CommentOption.Default |]
+           | None -> 
+                [| CommentOption.Default |]
 
 
 type internal OptionsChangedEventArgs(newOptions: CommentOption[]) =
@@ -34,14 +42,14 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
     let mutable currentOptions = optionsReader.GetOptions()
     let haveOptionsChanged newOptions =
         let sortByText = fun o -> o.Comment
-
-        (newOptions |> Array.sortBy sortByText)
-        <>
-        (currentOptions |> Array.sortBy sortByText)
+        let sortedNewOptions = newOptions |> Array.sortBy sortByText
+        let sortedCurrentOption = currentOptions |> Array.sortBy sortByText
+        sortedNewOptions <> sortedCurrentOption
 
     let optionsChanged = new Event<OptionsChangedEventArgs>()
     let onElapsed =
-        new EventHandler(fun _ _ ->
+        EventHandler(fun _ _ ->
+            protect <| fun _ ->
                             let newOptions = optionsReader.GetOptions()
                             if haveOptionsChanged newOptions then
                                 optionsChanged.Trigger(new OptionsChangedEventArgs(newOptions))
