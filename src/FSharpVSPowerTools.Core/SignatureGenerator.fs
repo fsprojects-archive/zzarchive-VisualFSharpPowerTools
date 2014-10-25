@@ -301,15 +301,7 @@ let private generateSignature ctx (mem: FSharpMemberOrFunctionOrValue) =
 
     | Event ->
         let returnParameterType = mem.ReturnParameter.Type
-        // TODO: replace this ugly part by upstream changes in FCS
-        let invokeMember = returnParameterType.TypeDefinition.MembersFunctionsAndValues
-                           |> Seq.tryFind (fun m -> m.DisplayName = "Invoke")        
-        let inferedType = 
-            try
-                formatType ctx invokeMember.Value.CurriedParameterGroups.[0].[1].Type
-            with _ ->
-                "_"
-        sprintf "IEvent<%s, %s>" (formatType ctx returnParameterType) inferedType
+        formatType ctx returnParameterType
 
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         let signatureReturnTypePart = formatType ctx mem.ReturnParameter.Type

@@ -261,6 +261,23 @@ type Console =
 """
 
 [<Test>]
+let ``go to type definition that contains C# events`` () =
+    """open System.ComponentModel
+
+let f (x: INotifyPropertyChanged) = failwith "" """
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 2 11)
+    |> assertSrcAreEqual """namespace System.ComponentModel
+
+open System.ComponentModel
+
+/// Notifies clients that a property value has changed.
+[<Interface>]
+type INotifyPropertyChanged =
+    abstract member add_PropertyChanged : value:PropertyChangedEventHandler -> unit
+    abstract member remove_PropertyChanged : value:PropertyChangedEventHandler -> unit
+"""
+
+[<Test>]
 let ``go to F# List<'T> definition`` () =
     """open System
 
@@ -1053,7 +1070,7 @@ type Union =
     | Case3
 """
 
-[<Test; Ignore>]
+[<Test>]
 let ``handle record field attributes`` () =
     """open System
 open System.Runtime.Serialization
@@ -1065,11 +1082,8 @@ type Record = {
     [<Obsolete("Reason2")>]
     Field2: float
 }"""
-    |> generateDefinitionFromPos (Pos.fromZ 2 5)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 2 5)
     |> assertSrcAreEqual """module File
-
-open System
-open System.Runtime.Serialization
 
 type Record =
     {
@@ -1081,16 +1095,16 @@ type Record =
     }
 """
 
-[<Test; Ignore("activate when method/property attributes are supported by FCS")>]
+[<Test>]
 let ``handle property/method attributes``() =
     """
 type MyClass() =
-    [<Obsolete("Prop is obsolete")>]
+    [<System.Obsolete("Prop is obsolete")>]
     member __.Prop = 0
-    [<Obsolete("Method is obsolete")>]
+    [<System.Obsolete("Method is obsolete")>]
     member __.Method() = ()
 """
-    |> generateDefinitionFromPos (Pos.fromZ 1 5)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 5)
     |> assertSrcAreEqual """module File
 
 type MyClass =
