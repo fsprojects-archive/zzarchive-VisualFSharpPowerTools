@@ -62,6 +62,7 @@ type private MembersPartition =
         let filteredMembers = members
                               |> Seq.filter (fun mem ->
                                   mem.Accessibility.IsPublic &&
+                                  not mem.IsExplicitInterfaceImplementation &&
                                   not mem.IsPropertyGetterMethod &&
                                   not mem.IsPropertySetterMethod &&
                                   not mem.IsEvent)
@@ -660,7 +661,7 @@ and internal writeAttributes writer (typ: option<FSharpEntity>) (attributes: ILi
             if attr.ConstructorArguments.Count = 0 then
                 writer.WriteLine("[<{0}>]", name)
             else
-                let argumentsStringRepr = [| for arg in attr.ConstructorArguments -> sprintf "%A" arg |]
+                let argumentsStringRepr = [| for (_, arg) in attr.ConstructorArguments -> sprintf "%A" arg |]
                                           |> String.concat ", "
 
                 writer.Write("[<{0}(", name)

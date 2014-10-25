@@ -2,7 +2,7 @@
 #r "System.Xml.Linq.dll"
 #r "System.Runtime.Serialization.dll"
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
@@ -244,14 +244,15 @@ let ``go to method definition generate enclosing type metadata and supports C# e
     """open System
 
 do Console.WriteLine("xxx")"""
-    |> generateDefinitionFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqualForFirstLines 10 """namespace System
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 2 11)
+    |> assertSrcAreEqualForFirstLines 11 """namespace System
 
 open System
 
 /// Represents the standard input, output, and error streams for console applications. This class cannot be inherited.
 [<Class>]
 type Console =
+    [<SecuritySafeCritical>]
     static member add_CancelKeyPress : value:ConsoleCancelEventHandler -> unit
     /// Gets or sets the background color of the console.
     static member BackgroundColor : ConsoleColor with get, set
@@ -391,29 +392,31 @@ let fizzBuzz = function
     |> assertSrcAreEqual """val (|DivisibleBy|_|) : int -> int -> unit option
 """
 
-[<Test; Ignore("We should not generate implicit interface member definition")>]
+[<Test>]
 let ``go to record type definition`` () =
     """
+[<CustomComparison>]
 [<CustomEquality>]
 type MyRecord =
     {
         Field1: int
         Field2: string -> unit
     }
-    interface ICloneable with
+    interface System.ICloneable with
         member x.Clone(): obj = null
 
 let r: MyRecord = Unchecked.defaultof<_>"""
-    |> generateDefinitionFromPos (Pos.fromZ 10 7)
+    |> generateDefinitionFromPos (Pos.fromZ 11 7)
     |> assertSrcAreEqual """module File
 
+[<CustomComparison>]
 [<CustomEquality>]
 type MyRecord =
     {
         Field1: int
         Field2: string -> unit
     }
-    interface ICloneable
+    interface System.ICloneable
 """
 
 let ``go to record field`` () =
@@ -1401,7 +1404,7 @@ type ResizeArray<'T> = System.Collections.Generic.List<'T>
 [<Test>]
 let ``handle operators as compiled members`` () =
     """let x: System.DateTime = failwith "" """
-    |> generateDefinitionFromPos (Pos.fromZ 0 20)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 0 20)
     |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
     |> assertEqual true
 
@@ -1420,7 +1423,7 @@ let x: Collections.Generic.List<'T> = failwith "" """
     |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
     |> assertEqual true
 
-[<Test>]
+[<Test; Ignore>]
 let ``handle generic definitions 2`` () =
     """open System
 let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
