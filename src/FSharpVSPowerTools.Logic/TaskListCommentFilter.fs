@@ -13,18 +13,21 @@ type TaskListCommentFilter(view: IWpfTextView,
 
     static let newLines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
     let handleTextChanged (newText: string) =
-        let filePath =
-            let docProperty = view.TextBuffer.Properties.PropertyList
-                              |> Seq.find (fun p -> obj.Equals(p.Key, typeof<ITextDocument>))
-            (docProperty.Value :?> ITextDocument).FilePath
+        match view.TextBuffer.Properties.TryGetProperty(typeof<ITextDocument>) with
+        | true, x ->
+            match box x with
+            | :? ITextDocument as textDocument ->
+                let filePath = textDocument.FilePath
+                let lines = newText.Split(newLines, StringSplitOptions.None)
 
-        let lines = newText.Split(newLines, StringSplitOptions.None)
-
-        let comments = getComments (optionsReader.GetOptions()) filePath lines
-        TaskListManager.GetInstance().MergeTaskListComments(filePath, comments)
+                let comments = getComments (optionsReader.GetOptions()) filePath lines
+                TaskListManager.GetInstance().MergeTaskListComments(filePath, comments)
+            | _ -> ()
+        | _ -> ()
 
     let onTextChanged () =
-        view.TextBuffer.CurrentSnapshot.GetText() |> handleTextChanged
+        protect (fun _ ->
+            view.TextBuffer.CurrentSnapshot.GetText() |> handleTextChanged)
 
     let docEventListener =
         new DocumentEventListener([ViewChange.bufferEvent view.TextBuffer], 1250us, onTextChanged)

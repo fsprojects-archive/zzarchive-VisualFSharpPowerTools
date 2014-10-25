@@ -89,9 +89,11 @@ type VSLanguageService
     /// If we are on the strict mode, set project load time to that of the last recently-changed open document.
     /// When there is no open document, use initialization time as project load time.
     let fixProjectLoadTime =
-        let globalOptions = Setting.getGlobalOptions(serviceProvider)
-        if globalOptions.StrictMode then
-            fun opts ->
+        // Make sure that the options are retrieved after options dialogs have been initialized.
+        // Otherwise, the calls will throw exceptions.
+        let globalOptions = lazy (Setting.getGlobalOptions(serviceProvider))
+        fun opts ->
+            if globalOptions.Value.StrictMode then
                 let projectFiles = Set.ofArray opts.ProjectFileNames
                 let openDocumentsChangeTimes = 
                     openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
@@ -106,8 +108,8 @@ type VSLanguageService
                     { opts with LoadTime = initializationTime }
                 | changeTimes -> 
                     { opts with LoadTime = List.max changeTimes }  
-        else
-            id
+            else
+                opts
 
     member __.FixProjectLoadTime opts = fixProjectLoadTime opts
         
