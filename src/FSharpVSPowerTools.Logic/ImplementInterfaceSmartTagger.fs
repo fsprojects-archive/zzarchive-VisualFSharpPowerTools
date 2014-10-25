@@ -21,7 +21,7 @@ type ImplementInterfaceSmartTag(actionSets) =
 type InterfaceState =
     { InterfaceData: InterfaceData 
       EndPosOfWith: pos option
-      Tokens: TokenInformation list }
+      Tokens: FSharpTokenInfo list }
 
 type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                                    view: ITextView, 
@@ -51,8 +51,8 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                     let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
                     let endPosOfWidth =
                         tokens 
-                        |> List.tryPick (fun (t: TokenInformation) ->
-                                if t.CharClass = TokenCharKind.Keyword && t.LeftColumn >= column && t.TokenName = "WITH" then
+                        |> List.tryPick (fun (t: FSharpTokenInfo) ->
+                                if t.CharClass = FSharpTokenCharKind.Keyword && t.LeftColumn >= column && t.TokenName = "WITH" then
                                     Some (Pos.fromZ line (t.RightColumn + 1))
                                 else None)
                     { InterfaceData = iface; EndPosOfWith = endPosOfWidth; Tokens = tokens })
@@ -130,8 +130,8 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                 getLineIdent lineStr + indentSize
             | InterfaceData.ObjExpr _ as iface ->
                 state.Tokens 
-                |> List.tryPick (fun (t: TokenInformation) ->
-                            if t.CharClass = TokenCharKind.Keyword && t.TokenName = "NEW" then
+                |> List.tryPick (fun (t: FSharpTokenInfo) ->
+                            if t.CharClass = FSharpTokenCharKind.Keyword && t.TokenName = "NEW" then
                                 Some (t.LeftColumn + indentSize)
                             else None)
                 // There is no reference point, we indent the content at the start column of the interface

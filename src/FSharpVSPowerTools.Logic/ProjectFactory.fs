@@ -192,7 +192,7 @@ type ProjectFactory
             sprintf "Current file '%s' should be included in current project '%A'." currentFile currentProject.SourceFiles)
         let isPrivateToFile = 
             match symbol with 
-            | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember
+            | :? FSharpMemberOrFunctionOrValue as m -> not m.IsModuleValueOrMember
             | :? FSharpEntity as m -> m.Accessibility.IsPrivate
             | :? FSharpGenericParameter -> true
             | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate

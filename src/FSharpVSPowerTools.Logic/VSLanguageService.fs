@@ -30,7 +30,7 @@ and IProjectProvider =
     abstract FullOutputFilePath: string option
     abstract GetReferencedProjects: unit -> IProjectProvider list
     abstract GetAllReferencedProjectFileNames: unit -> string list 
-    abstract GetProjectCheckerOptions: LanguageService -> Async<ProjectOptions>
+    abstract GetProjectCheckerOptions: LanguageService -> Async<FSharpProjectOptions>
 
 type ShowProgress = OperationState -> unit
 

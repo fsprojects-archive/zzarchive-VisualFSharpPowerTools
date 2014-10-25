@@ -29,7 +29,7 @@ type CategorizedColumnSpan =
 module private QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
         let trimWhitespaces = 
-            Seq.skipWhile (fun t -> t.CharClass = TokenCharKind.WhiteSpace) >> Seq.toList
+            Seq.skipWhile (fun t -> t.CharClass = FSharpTokenCharKind.WhiteSpace) >> Seq.toList
 
         ranges
         |> Seq.map (fun (r: Range.range) -> 

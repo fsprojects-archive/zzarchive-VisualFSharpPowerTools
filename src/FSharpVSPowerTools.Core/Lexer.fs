@@ -20,7 +20,7 @@ type Symbol =
 
 type internal DraftToken =
     { Kind: SymbolKind
-      Token: TokenInformation 
+      Token: FSharpTokenInfo 
       RightColumn: int }
     static member Create kind token = 
         { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
@@ -30,7 +30,7 @@ module Lexer =
     let internal getLexStates defines (source: string) =
         [|
             /// Iterate through the whole line to get the final lex state
-            let rec loop (lineTokenizer: LineTokenizer) lexState =
+            let rec loop (lineTokenizer: FSharpLineTokenizer) lexState =
                 match lineTokenizer.ScanToken lexState with
                 | None, newLexState -> newLexState
                 | Some _, newLexState ->
@@ -78,9 +78,9 @@ module Lexer =
         loop (queryLexState source defines line) []
 
     // Returns symbol at a given position.
-    let getSymbolFromTokens (tokens: TokenInformation list) line col (lineStr: string): Symbol option =
-        let isIdentifier t = t.CharClass = TokenCharKind.Identifier
-        let isOperator t = t.ColorClass = TokenColorKind.Operator
+    let getSymbolFromTokens (tokens: FSharpTokenInfo list) line col (lineStr: string): Symbol option =
+        let isIdentifier t = t.CharClass = FSharpTokenCharKind.Identifier
+        let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
     
         let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) token =
             match token.TokenName with

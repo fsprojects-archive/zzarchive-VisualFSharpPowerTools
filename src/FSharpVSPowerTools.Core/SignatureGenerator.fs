@@ -27,10 +27,10 @@ type internal Context =
         GetXmlDocBySignature: XmlDocSig -> XmlDoc
     }
 
-let private hasUnitOnlyParameter (mem: FSharpMemberFunctionOrValue) =
+let private hasUnitOnlyParameter (mem: FSharpMemberOrFunctionOrValue) =
     mem.CurriedParameterGroups.Count = 1 && mem.CurriedParameterGroups.[0].Count = 0
 
-let private mustAppearAsAbstractMember (mem: FSharpMemberFunctionOrValue) =
+let private mustAppearAsAbstractMember (mem: FSharpMemberOrFunctionOrValue) =
     let enclosingEntityIsFSharpClass = mem.EnclosingEntity.IsClass && mem.EnclosingEntity.IsFSharp
 
     if mem.IsDispatchSlot then
@@ -40,7 +40,7 @@ let private mustAppearAsAbstractMember (mem: FSharpMemberFunctionOrValue) =
     else
         false
 
-let private needsInlineAnnotation (mem: FSharpMemberFunctionOrValue) =
+let private needsInlineAnnotation (mem: FSharpMemberOrFunctionOrValue) =
     match mem.InlineAnnotation with
     | FSharpInlineAnnotation.AlwaysInline
     | FSharpInlineAnnotation.PseudoValue -> true
@@ -49,12 +49,12 @@ let private needsInlineAnnotation (mem: FSharpMemberFunctionOrValue) =
 [<NoComparison>]
 type private MembersPartition = 
     {
-        Constructors: FSharpMemberFunctionOrValue[]
-        AbstractMembers: FSharpMemberFunctionOrValue[]
-        ConcreteInstanceMembers: FSharpMemberFunctionOrValue[]
-        StaticMembers: FSharpMemberFunctionOrValue[]
+        Constructors: FSharpMemberOrFunctionOrValue[]
+        AbstractMembers: FSharpMemberOrFunctionOrValue[]
+        ConcreteInstanceMembers: FSharpMemberOrFunctionOrValue[]
+        StaticMembers: FSharpMemberOrFunctionOrValue[]
     }
-    static member Create(members: seq<FSharpMemberFunctionOrValue>) =
+    static member Create(members: seq<FSharpMemberOrFunctionOrValue>) =
         // NOTE: If we want to handle EventHandler<'T> types, we can test
         //       match mem.ReturnParameter.Type with
         //       | TypeWithDefinition -> mem.ReturnParameter.Type.TypeWithDefinition.FullName = "System.EventHandler`1"
@@ -83,7 +83,7 @@ type private MembersPartition =
                     concreteInstanceMembers.Add(mem)
 
         let sortByNameAndArgCount =
-            Array.sortInPlaceBy (fun (mem: FSharpMemberFunctionOrValue) ->
+            Array.sortInPlaceBy (fun (mem: FSharpMemberOrFunctionOrValue) ->
                 let paramCount =
                     if hasUnitOnlyParameter mem
                     then 0 
@@ -253,8 +253,8 @@ let private getTypeNameWithGenericParams ctx (typ: FSharpEntity) isInTypeName =
     |]
     |> String.concat ""
 
-let private generateSignature ctx (mem: FSharpMemberFunctionOrValue) =
-    let generateInputParamsPart (mem: FSharpMemberFunctionOrValue) =
+let private generateSignature ctx (mem: FSharpMemberOrFunctionOrValue) =
+    let generateInputParamsPart (mem: FSharpMemberOrFunctionOrValue) =
         let formatParamTypeName (param: FSharpParameter) =
             let formattedTypeName = formatType ctx param.Type
             if param.IsOptionalArg then
@@ -695,7 +695,7 @@ and internal writeUnionCaseField ctx (field: FSharpField) =
     else
         ctx.Writer.Write("{0}: {1}", QuoteIdentifierIfNeeded field.Name, formatType ctx field.FieldType)
 
-and internal writeFunctionOrValue ctx (value: FSharpMemberFunctionOrValue) =
+and internal writeFunctionOrValue ctx (value: FSharpMemberOrFunctionOrValue) =
     Debug.Assert(value.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a valid F# module.")
     writeDocs ctx.Writer value.XmlDoc (fun _ -> value.XmlDocSig) ctx.GetXmlDocBySignature
 
@@ -720,7 +720,7 @@ and internal writeClassOrStructField ctx (field: FSharpField) =
     writeDocs ctx.Writer field.XmlDoc (fun _ -> field.XmlDocSig) ctx.GetXmlDocBySignature
     ctx.Writer.WriteLine("val {0} : {1}", QuoteIdentifierIfNeeded field.DisplayName, formatType ctx field.FieldType)
 
-and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
+and internal writeMember ctx (mem: FSharpMemberOrFunctionOrValue) =
     Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
 
     match mem with
@@ -740,7 +740,7 @@ and internal writeMember ctx (mem: FSharpMemberFunctionOrValue) =
             // Is abstract && enclosing type is interface/abstract?
             elif mustAppearAsAbstractMember mem then
                 "abstract member"
-            elif mem.IsOverrideOrExplicitMember then
+            elif mem.IsOverrideOrExplicitInterfaceImplementation then
                 "override"
             else
                 "member"
@@ -799,7 +799,7 @@ let formatSymbol getXmlDocBySignature indentation displayContext openDeclaration
     
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with
-        | Entity(entity, _, _) ->
+        | TypedAstPatterns.Entity(entity, _, _) ->
             match entity with
             | FSharpModule -> writeModule true ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev false ctx entity abbreviatedType

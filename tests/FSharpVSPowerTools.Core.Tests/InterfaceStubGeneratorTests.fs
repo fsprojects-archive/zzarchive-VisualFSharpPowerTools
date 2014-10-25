@@ -22,7 +22,7 @@ let vsLanguageService = LanguageService(fun _ -> ())
 let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], TestHelpers.LanguageServiceTestHelper.args, [||]) 
 
 #if INTERACTIVE
-let checker = InteractiveChecker.Create()
+let checker = FSharpChecker.Create()
 
 let projectOptions = 
     checker.GetProjectOptionsFromCommandLineArgs
