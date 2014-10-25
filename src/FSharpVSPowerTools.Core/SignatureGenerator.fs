@@ -356,7 +356,7 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")  
     if not isTopLevel then
         writeDocs ctx.Writer modul.XmlDoc (fun _ -> modul.XmlDocSig) ctx.GetXmlDocBySignature
-        writeAttributes ctx.Writer (Some modul) modul.Attributes
+        writeAttributes ctx ctx.Writer (Some modul) modul.Attributes
         ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)   
         ctx.Writer.Indent ctx.Indentation
 
@@ -388,7 +388,7 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
 and internal writeModuleHeader ctx (modul: FSharpEntity) =
     let writer = ctx.OpenDeclWriter
     writeDocs writer modul.XmlDoc (fun _ -> modul.XmlDocSig) ctx.GetXmlDocBySignature
-    writeAttributes writer (Some modul) modul.Attributes
+    writeAttributes ctx writer (Some modul) modul.Attributes
     let qualifiedModuleName = tryRemoveModuleSuffix modul modul.FullName
     writer.WriteLine("module {0}", qualifiedModuleName)
     ctx.ResolvingOpenDeclarations
@@ -421,7 +421,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
 
     writeDocs ctx.Writer typ.XmlDoc (fun _ -> typ.XmlDocSig) ctx.GetXmlDocBySignature
-    writeAttributes ctx.Writer (Some typ) typ.Attributes
+    writeAttributes ctx ctx.Writer (Some typ) typ.Attributes
 
     let neededTypeDefSyntaxDelimiter = tryGetNeededTypeDefSyntaxDelimiter typ
     let classAttributeHasToBeAdded =
@@ -619,7 +619,7 @@ and internal writeUnionCase ctx (case: FSharpUnionCase) =
     if case.Attributes.Count > 0 then
         ctx.Writer.Write("| ")
         ctx.Writer.Indent(2)
-        writeAttributes ctx.Writer None case.Attributes
+        writeAttributes ctx ctx.Writer None case.Attributes
         ctx.Writer.Write(formatValueOrMemberName case.Name)
         ctx.Writer.Unindent(2)
     else
@@ -636,34 +636,35 @@ and internal writeUnionCase ctx (case: FSharpUnionCase) =
 
     ctx.Writer.WriteLine("")
 
-and internal writeAttributes writer (typ: option<FSharpEntity>) (attributes: IList<FSharpAttribute>) =
+and internal formatAttribute ctx (attribute: FSharpAttribute) =
+    let definition = attribute.Format(ctx.DisplayContext)
+    let fullyQualifiedDefinition = attribute.Format(FSharpDisplayContext.Empty)
+    ctx.ResolvingOpenDeclarations
+    |> Array.iteri (fun i (openDecl, isUsed) ->
+        if not isUsed then
+            // Try to check whether openDecl has been used in the type signature
+            match fullyQualifiedDefinition.IndexOf(openDecl) with
+            | j when j >= 0 && j < fullyQualifiedDefinition.Length && not (definition.Contains(openDecl)) ->
+                // openDecl should be a real open statement, not an accidental match
+                if j = 0 || (j > 0 && fullyQualifiedDefinition.[j-1] <> '.') then
+                    ctx.ResolvingOpenDeclarations.[i] <- (openDecl, true)
+            | _ -> ())
+    // Try to shorten the attributes. Hopefully they are still well-formed.
+    definition.Replace("Attribute ()", "").Replace("Attribute (", "(")
+
+and internal writeAttributes ctx writer (typ: option<FSharpEntity>) (attributes: IList<FSharpAttribute>) =
     let typeDefSyntaxDelimOpt = Option.bind tryGetNeededTypeDefSyntaxDelimiter typ
     let bypassAttribute (attrib: FSharpAttribute) =
         typeDefSyntaxDelimOpt = Some "struct" && isAttribute<StructAttribute> attrib
 
     for (attr: FSharpAttribute) in attributes do
         if not (bypassAttribute attr) then
-            let name = 
-                let displayName = attr.AttributeType.DisplayName
-
-                // We only remove the "Attribute" suffix when the identifier need not to be quoted
-                if displayName.EndsWith "Attribute" && displayName.Length > "Attribute".Length then
-                    displayName.Substring(0, displayName.Length - "Attribute".Length)
-                else QuoteIdentifierIfNeeded attr.AttributeType.LogicalName
-            if attr.ConstructorArguments.Count = 0 then
-                writer.WriteLine("[<{0}>]", name)
-            else
-                let argumentsStringRepr = [| for (_, arg) in attr.ConstructorArguments -> sprintf "%A" arg |]
-                                          |> String.concat ", "
-
-                writer.Write("[<{0}(", name)
-                writer.Write(argumentsStringRepr)
-                writer.WriteLine(")>]")
+            writer.WriteLine(formatAttribute ctx attr)  
 
 and internal writeField hasNewLine ctx (field: FSharpField) =
     writeDocs ctx.Writer field.XmlDoc (fun _ -> field.XmlDocSig) ctx.GetXmlDocBySignature
-    writeAttributes ctx.Writer None field.FieldAttributes
-    writeAttributes ctx.Writer None field.PropertyAttributes
+    writeAttributes ctx ctx.Writer None field.FieldAttributes
+    writeAttributes ctx ctx.Writer None field.PropertyAttributes
 
     let fieldName = QuoteIdentifierIfNeeded field.Name
 
@@ -724,7 +725,7 @@ and internal writeMember ctx (mem: FSharpMemberOrFunctionOrValue) =
     | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
         // Discard explicit getter/setter methods
         writeDocs ctx.Writer mem.XmlDoc (fun _ -> mem.XmlDocSig) ctx.GetXmlDocBySignature
-        writeAttributes ctx.Writer None mem.Attributes
+        writeAttributes ctx ctx.Writer None mem.Attributes
 
         let memberType =
             // Is static?
