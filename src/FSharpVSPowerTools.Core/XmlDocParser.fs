@@ -35,7 +35,7 @@ module internal XmlDocParsing =
         | SynPat.InstanceMember _
         | SynPat.FromParseError _ -> []
 
-    let getXmlDocablesImpl(sourceCodeLinesOfTheFile: string [], sourceCodeOfTheFile, filename, checker: InteractiveChecker) =
+    let getXmlDocablesImpl(sourceCodeLinesOfTheFile: string [], sourceCodeOfTheFile, filename, checker: FSharpChecker) =
         let indentOf (lineNum: int) =
             let mutable i = 0
             let line = sourceCodeLinesOfTheFile.[lineNum-1] // -1 because lineNum reported by xmldocs are 1-based, but array is 0-based
@@ -177,7 +177,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open XmlDocParsing
 
 type XmlDocParser private () =
-    let checker = lazy (InteractiveChecker.Create())
+    let checker = lazy (FSharpChecker.Create())
 
     member internal x.Checker = checker.Value
 

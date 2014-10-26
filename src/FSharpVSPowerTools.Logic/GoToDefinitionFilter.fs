@@ -198,13 +198,13 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             async {
                 let! symbolResult = getDocumentState()
                 match symbolResult with
-                | Some (_, _, _, _, FindDeclResult.DeclFound _) 
+                | Some (_, _, _, _, FSharpFindDeclResult.DeclFound _) 
                 | None ->
                     // Run the operation on UI thread since continueCommandChain may access UI components.
                     do! Async.SwitchToContext uiContext
                     // Declaration location might exist so let Visual F# Tools handle it. 
                     return continueCommandChain()
-                | Some (project, parseTree, span, fsSymbolUse, FindDeclResult.DeclNotFound _) ->
+                | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
                     if shouldGenerateDefinition fsSymbolUse.Symbol then
                         return navigateToMetadata project span parseTree fsSymbolUse  
             }

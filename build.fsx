@@ -48,8 +48,6 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
-let fcsVersion = "0.0.61"
-
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
@@ -167,7 +165,7 @@ Target "NuGet" (fun _ ->
             OutputPath = "bin"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = true
-            Dependencies = ["FSharp.Compiler.Service", fcsVersion] })
+            Dependencies = [ "FSharp.Compiler.Service", GetPackageVersion "packages" "FSharp.Compiler.Service" |> RequireExactly ] })
         (project + ".Core.nuspec")
 )
 

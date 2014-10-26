@@ -1,7 +1,7 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
-#r "../../packages/FsCheck.0.9.2.0/lib/net40-Client/FsCheck.dll"
+#r "../../packages/NUnit/lib/nunit.framework.dll"
+#r "../../packages/FsCheck/lib/net40-Client/FsCheck.dll"
 #load "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
 #load "TestHelpers.fs"
 #else
@@ -22,7 +22,7 @@ let vsLanguageService = LanguageService(fun _ -> ())
 let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], TestHelpers.LanguageServiceTestHelper.args, [||]) 
 
 #if INTERACTIVE
-let checker = InteractiveChecker.Create()
+let checker = FSharpChecker.Create()
 
 let projectOptions = 
     checker.GetProjectOptionsFromCommandLineArgs
@@ -377,7 +377,7 @@ member x.ReadonlyProp: int =
 let ``should ensure .NET event handlers are generated correctly``() =
     checkInterfaceStub 397 37 "let _ = { new System.ComponentModel.INotifyPropertyChanged with" ["System"; "ComponentModel"; "INotifyPropertyChanged"] """
 [<CLIEvent>]
-member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler, _> = 
+member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler,System.ComponentModel.PropertyChangedEventArgs> = 
     raise (System.NotImplementedException())
 """
 

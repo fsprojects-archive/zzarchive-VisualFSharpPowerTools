@@ -39,8 +39,8 @@ with
           EndColumn = endColumn }
 
 type CodeGenerationTestService(languageService: LanguageService, compilerOptions: string[]) =
-    interface ICodeGenerationService<ProjectOptions, pos, Range> with
-        member x.TokenizeLine(_project, document: IDocument, line1: int<Line1>): TokenInformation list = 
+    interface ICodeGenerationService<FSharpProjectOptions, pos, Range> with
+        member x.TokenizeLine(_project, document: IDocument, line1: int<Line1>): FSharpTokenInfo list = 
                 let line0 = int line1 - 1 
                 let line = document.GetLineText1(line1)
                 Lexer.tokenizeLine (document.GetText()) compilerOptions line0 line Lexer.queryLexState

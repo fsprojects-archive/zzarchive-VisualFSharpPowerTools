@@ -60,13 +60,13 @@ module OpenDeclarationGetter =
              | _ -> false)
         |> List.map (fun e -> e.CleanedIdents)
 
-    let parseTooltip (ToolTipText elems): RawOpenDeclaration list =
+    let parseTooltip (FSharpToolTipText elems): RawOpenDeclaration list =
         elems
         |> List.map (fun e -> 
             let rawStrings =
                 match e with
-                | ToolTipElement.ToolTipElement (s, _) -> [s]
-                | ToolTipElement.ToolTipElementGroup elems -> 
+                | FSharpToolTipElement.Single (s, _) -> [s]
+                | FSharpToolTipElement.Group elems -> 
                     elems |> List.map fst
                 | _ -> []
             

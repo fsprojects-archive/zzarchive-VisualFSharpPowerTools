@@ -1,7 +1,7 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
 #r "../../bin/FSharpVSPowerTools.Core.dll"
-#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
 module FSharpVSPowerTools.Core.Tests.LanguageServiceTests
@@ -33,7 +33,7 @@ let framework = FSharpTargetFramework.NET_4_5
 let languageService = new LanguageService(fun _ -> ())
 let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, [||])
 #if INTERACTIVE
-let checker = InteractiveChecker.Create()
+let checker = FSharpChecker.Create()
 
 let projectOptions = 
     checker.GetProjectOptionsFromCommandLineArgs
@@ -299,13 +299,13 @@ let getFirstSymbol line col lineStr symbolText =
 [<Test; Ignore>]
 let ``should instantiate types correctly``() =
     let symbolUse = getFirstSymbol 810 26 "              member x.Add(item: KeyValuePair<'K, 'V>): unit = " "Add"
-    let symbol = symbolUse.Value.Symbol :?> FSharpMemberFunctionOrValue
+    let symbol = symbolUse.Value.Symbol :?> FSharpMemberOrFunctionOrValue
     let genericType = symbol.FullType.GenericArguments.[0]
     let genericSymbolUse = getFirstSymbol 779 15 "        { new IDictionary<'K, 'V> with" "IDictionary"
     let genericParams = (genericSymbolUse.Value.Symbol :?> FSharpEntity).GenericParameters
     let context = genericSymbolUse.Value.DisplayContext
     let specificSymbolUse = getFirstSymbol 777 9 "    let x: KeyValuePair<string, int> = failwith \"\"" "x"
-    let specificType = (specificSymbolUse.Value.Symbol :?> FSharpMemberFunctionOrValue).FullType
+    let specificType = (specificSymbolUse.Value.Symbol :?> FSharpMemberOrFunctionOrValue).FullType
     let specificParams = specificType.GenericArguments
     let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
 //    printfn "Generic type: %A" genericType

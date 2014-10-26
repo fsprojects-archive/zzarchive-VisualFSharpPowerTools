@@ -34,7 +34,7 @@ type private TaskListCommentPos =
 
 [<AutoOpen>]
 module private Utils =
-    type TokenInformation with
+    type FSharpTokenInfo with
         member x.Text(lines: string[], lineNumber: int) =
             lines.[lineNumber].Substring(x.LeftColumn, x.FullMatchedLength)
 
@@ -51,7 +51,7 @@ module private Utils =
         tokenText.TrimStart(trimChars) <> String.Empty
 
     let tryTokenizeFirstToken (tokText: string) =
-        let rec tryTokenize (tokenizer: LineTokenizer) state =
+        let rec tryTokenize (tokenizer: FSharpLineTokenizer) state =
             match tokenizer.ScanToken(state) with
             | Some tok, state when not <| isFirstToken (tok.Text([| tokText |], 0)) -> tryTokenize tokenizer state
             | Some tok, _ -> Some (tok, tokText.Substring(tok.LeftColumn, tok.FullMatchedLength))
@@ -59,7 +59,7 @@ module private Utils =
         let tokenizer = sourceTok.CreateLineTokenizer(tokText)
         tryTokenize tokenizer 0L
 
-    let tryFindLineCommentTaskToken tasks (lines: string[], lineNumber: int, tokenizer: LineTokenizer, state) =
+    let tryFindLineCommentTaskToken tasks (lines: string[], lineNumber: int, tokenizer: FSharpLineTokenizer, state) =
         let rec tryFindLineCommentTaskToken' state =
             match tokenizer.ScanToken(state) with
             | Some tok, state ->
@@ -69,7 +69,7 @@ module private Utils =
                     if isFirstToken tokenizedText && tasks |> Array.exists ((=) tokenizedText) then
                         let pos = { Line = lineNumber; Column = tok.LeftColumn + tok2.LeftColumn }
                         (Some (tokenizedText, pos), state)
-                    elif tok2.CharClass = TokenCharKind.Identifier then
+                    elif tok2.CharClass = FSharpTokenCharKind.Identifier then
                         None, state
                     else
                         tryFindLineCommentTaskToken' state
@@ -77,12 +77,12 @@ module private Utils =
             | _ -> None, state
         tryFindLineCommentTaskToken' state |> fst
 
-    let rec tryFindMultilineCommentTaskToken tasks (lines: string[], lineNumber: int, tokenizer: LineTokenizer, state) =
-        let rec scanMultilineComments (tokenizer: LineTokenizer) acc state nestLevel lineNumber =
+    let rec tryFindMultilineCommentTaskToken tasks (lines: string[], lineNumber: int, tokenizer: FSharpLineTokenizer, state) =
+        let rec scanMultilineComments (tokenizer: FSharpLineTokenizer) acc state nestLevel lineNumber =
             match tokenizer.ScanToken(state) with
             | Some tok, state ->
                 match tok.CharClass with
-                | TokenCharKind.Comment ->
+                | FSharpTokenCharKind.Comment ->
                     match lines.[lineNumber].[tok.LeftColumn..tok.RightColumn], nestLevel with
                     | "*)", 0 -> (lineNumber, acc, tokenizer, state)
                     | "*)", _ -> scanMultilineComments tokenizer ((lineNumber, tok) :: acc) state (nestLevel - 1) lineNumber
@@ -110,11 +110,11 @@ module private Utils =
         | None ->
             None, nextLineNumber, tokenizer, state
 
-    let rec nextTaskListCommentPos tasks (lines: string[], lineNumber: int, tokenizer: LineTokenizer, firstState) =
+    let rec nextTaskListCommentPos tasks (lines: string[], lineNumber: int, tokenizer: FSharpLineTokenizer, firstState) =
         match tokenizer.ScanToken(firstState) with
         | Some tok, state ->
             match tok.CharClass with
-            | TokenCharKind.LineComment ->
+            | FSharpTokenCharKind.LineComment ->
                 let tokText = tok.Text(lines, lineNumber)
                 if tokText |> String.forall (function '/' | '(' | ')' | '*' | ' ' | '\t' -> true | _ -> false) then
                     match tryFindLineCommentTaskToken tasks (lines, lineNumber, tokenizer, state) with
@@ -126,7 +126,7 @@ module private Utils =
                 else
                     let tokenizer = createNewLineTokenizer lines lineNumber
                     nextTaskListCommentPos tasks (lines, lineNumber + 1, tokenizer, firstState)
-            | TokenCharKind.Comment ->
+            | FSharpTokenCharKind.Comment ->
                 match tryFindMultilineCommentTaskToken tasks (lines, lineNumber, tokenizer, state) with
                 | Some (task, beginPos, endPos), lineNumber, tokenizer, state ->
                     let pos = MultilineTaskListCommentPos (task, beginPos, endPos)

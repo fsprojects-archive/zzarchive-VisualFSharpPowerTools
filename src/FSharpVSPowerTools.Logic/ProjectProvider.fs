@@ -10,7 +10,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, 
-                              onChanged: Project -> unit, fixProjectLoadTime: ProjectOptions -> ProjectOptions) =
+                              onChanged: Project -> unit, fixProjectLoadTime: FSharpProjectOptions -> FSharpProjectOptions) =
     static let mutable getField = None
     do Debug.Assert(project <> null, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
@@ -136,7 +136,7 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                         |> Array.map fst
                         |> Set.ofArray
 
-                    opts.ProjectOptions 
+                    opts.OtherOptions 
                     |> Seq.choose (fun x -> if x.StartsWith("-r:") then Some (x.[3..].Trim()) else None)
                     |> Set.ofSeq
                     |> Set.difference refProjectsOutPaths)
@@ -211,7 +211,7 @@ type internal SignatureProjectProvider (filePath: string, attachedProject: IProj
                     |> Array.map fst
                     |> Set.ofArray
                 let references = 
-                    opts.ProjectOptions
+                    opts.OtherOptions
                     |> Array.choose (fun arg -> 
                             // Filter out project references, which aren't necessary for the scenario
                             if arg.StartsWith("-r:") && not (Set.contains (arg.[3..].Trim()) refProjectsOutPaths) then 

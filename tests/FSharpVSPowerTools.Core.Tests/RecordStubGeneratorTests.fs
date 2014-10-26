@@ -1,6 +1,6 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
@@ -49,7 +49,7 @@ let project() =
     let files = [| fileName |]
     { ProjectFileName = projFileName
       ProjectFileNames = [| fileName |]
-      ProjectOptions = args
+      OtherOptions = args
       ReferencedProjects = Array.empty
       IsIncompleteTypeCheckEnvironment = false
       UseScriptResolutionRules = false

@@ -25,10 +25,10 @@ type IRange =
     abstract EndColumn: int
 
 type ICodeGenerationService<'Project, 'Pos, 'Range> =
-    abstract TokenizeLine: 'Project * IDocument * int<Line1> -> TokenInformation list
+    abstract TokenizeLine: 'Project * IDocument * int<Line1> -> FSharpTokenInfo list
     abstract GetSymbolAtPosition: 'Project * IDocument * pos:'Pos -> option<'Range * Symbol>
     abstract GetSymbolAndUseAtPositionOfKind: 'Project * IDocument * 'Pos * SymbolKind -> Async<option<'Range * Symbol * FSharpSymbolUse>>
-    abstract ParseFileInProject: IDocument * 'Project -> Async<ParseFileResults>
+    abstract ParseFileInProject: IDocument * 'Project -> Async<FSharpParseFileResults>
     // TODO: enhance this clumsy design
     abstract ExtractFSharpPos: 'Pos -> pos
 
@@ -77,7 +77,7 @@ module internal Utils =
 
     let tryFindTokenLPosInRange
         (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project
-        (range: range) (document: IDocument) (predicate: TokenInformation -> bool) =
+        (range: range) (document: IDocument) (predicate: FSharpTokenInfo -> bool) =
         // Normalize range
         // NOTE: FCS compiler sometimes returns an invalid range. In particular, the
         // range end limit can exceed the end limit of the document

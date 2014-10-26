@@ -2,7 +2,7 @@
 #r "System.Xml.Linq.dll"
 #r "System.Runtime.Serialization.dll"
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../packages/NUnit.2.6.3/lib/nunit.framework.dll"
+#r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
@@ -95,7 +95,7 @@ let validateSignature source signature =
     let opts =
         { ProjectFileName = projFileName
           ProjectFileNames = [| sourceFile; signatureFile|]
-          ProjectOptions = LanguageServiceTestHelper.args
+          OtherOptions = LanguageServiceTestHelper.args
           ReferencedProjects = Array.empty
           IsIncompleteTypeCheckEnvironment = false
           UseScriptResolutionRules = true
@@ -113,7 +113,7 @@ let generateDefinitionFromPos caretPos src =
     | Some errors -> failwithf "Type checking results in errors: %A" errors
     signature
 
-let generateDefinitionFromPosNoValidation caretPos src =
+let generateDefinitionFromPosNoValidation caretPos src = 
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
 [<Test>]
@@ -245,18 +245,36 @@ let ``go to method definition generate enclosing type metadata and supports C# e
 
 do Console.WriteLine("xxx")"""
     |> generateDefinitionFromPos (Pos.fromZ 2 11)
-    |> assertSrcAreEqualForFirstLines 10 """namespace System
+    |> assertSrcAreEqualForFirstLines 11 """namespace System
 
 open System
 
 /// Represents the standard input, output, and error streams for console applications. This class cannot be inherited.
 [<Class>]
 type Console =
+    [<Security.SecuritySafeCritical>]
     static member add_CancelKeyPress : value:ConsoleCancelEventHandler -> unit
     /// Gets or sets the background color of the console.
     static member BackgroundColor : ConsoleColor with get, set
     /// Plays the sound of a beep through the console speaker.
     static member Beep : unit -> unit
+"""
+
+[<Test>]
+let ``go to type definition that contains C# events`` () =
+    """open System.ComponentModel
+
+let f (x: INotifyPropertyChanged) = failwith "" """
+    |> generateDefinitionFromPos (Pos.fromZ 2 11)
+    |> assertSrcAreEqual """namespace System.ComponentModel
+
+open System.ComponentModel
+
+/// Notifies clients that a property value has changed.
+[<Interface>]
+type INotifyPropertyChanged =
+    abstract member add_PropertyChanged : value:PropertyChangedEventHandler -> unit
+    abstract member remove_PropertyChanged : value:PropertyChangedEventHandler -> unit
 """
 
 [<Test>]
@@ -391,29 +409,31 @@ let fizzBuzz = function
     |> assertSrcAreEqual """val (|DivisibleBy|_|) : int -> int -> unit option
 """
 
-[<Test; Ignore("We should not generate implicit interface member definition")>]
+[<Test>]
 let ``go to record type definition`` () =
     """
+[<CustomComparison>]
 [<CustomEquality>]
 type MyRecord =
     {
         Field1: int
         Field2: string -> unit
     }
-    interface ICloneable with
+    interface System.ICloneable with
         member x.Clone(): obj = null
 
 let r: MyRecord = Unchecked.defaultof<_>"""
-    |> generateDefinitionFromPos (Pos.fromZ 10 7)
+    |> generateDefinitionFromPos (Pos.fromZ 11 7)
     |> assertSrcAreEqual """module File
 
+[<CustomComparison>]
 [<CustomEquality>]
 type MyRecord =
     {
         Field1: int
         Field2: string -> unit
     }
-    interface ICloneable
+    interface System.ICloneable
 """
 
 let ``go to record field`` () =
@@ -528,9 +548,9 @@ let f x = Option.map(x)"""
         // From module function: 'map'
         Pos.fromZ 2 17
     ]
-    |> List.map (fun pos -> generateDefinitionFromPosNoValidation pos src)
+    |> List.map (fun pos -> generateDefinitionFromPos pos src)
     |> List.iter (assertSrcAreEqual """/// Basic operations on options.
-[<CompilationRepresentation(4)>]
+[<CompilationRepresentation(enum<CompilationRepresentationFlags> (4))>]
 module Microsoft.FSharp.Core.Option
 
 /// Returns true if the option is not None.
@@ -719,9 +739,9 @@ let ``handle nested modules`` () =
     """
 let x = Array.map
     """
-    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 9)
+    |> generateDefinitionFromPos (Pos.fromZ 1 9)
     |> assertSrcAreEqual """/// Basic operations on arrays.
-[<CompilationRepresentation(4)>]
+[<CompilationRepresentation(enum<CompilationRepresentationFlags> (4))>]
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
 
@@ -1038,19 +1058,19 @@ type Union =
     | [<System.Obsolete("cuir")>] Case2 of string
     | Case3
 """
-    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 5)
+    |> generateDefinitionFromPos (Pos.fromZ 1 5)
     |> assertSrcAreEqual """module File
 
 type Union =
-    | [<Conditional("MyConditional")>]
-      [<Obsolete("hello")>]
+    | [<System.Diagnostics.Conditional ("MyConditional")>]
+      [<System.Obsolete ("hello")>]
       Case1 of int
-    | [<Obsolete("cuir")>]
+    | [<System.Obsolete ("cuir")>]
       Case2 of string
     | Case3
 """
 
-[<Test; Ignore>]
+[<Test>]
 let ``handle record field attributes`` () =
     """open System
 open System.Runtime.Serialization
@@ -1062,29 +1082,28 @@ type Record = {
     [<Obsolete("Reason2")>]
     Field2: float
 }"""
-    |> generateDefinitionFromPos (Pos.fromZ 2 5)
+    |> generateDefinitionFromPos(Pos.fromZ 2 5)
     |> assertSrcAreEqual """module File
 
 open System
-open System.Runtime.Serialization
 
 type Record =
     {
         [<DefaultValue>]
-        [<Obsolete("Reason1")>]
+        [<Obsolete ("Reason1")>]
         Field1: int
-        [<Obsolete("Reason2")>]
+        [<Obsolete ("Reason2")>]
         Field2: float
     }
 """
 
-[<Test; Ignore("activate when method/property attributes are supported by FCS")>]
+[<Test>]
 let ``handle property/method attributes``() =
     """
 type MyClass() =
-    [<Obsolete("Prop is obsolete")>]
+    [<System.Obsolete("Prop is obsolete")>]
     member __.Prop = 0
-    [<Obsolete("Method is obsolete")>]
+    [<System.Obsolete("Method is obsolete")>]
     member __.Method() = ()
 """
     |> generateDefinitionFromPos (Pos.fromZ 1 5)
@@ -1092,9 +1111,9 @@ type MyClass() =
 
 type MyClass =
     new : unit -> MyClass
-    [<Obsolete("Method is obsolete")>]
+    [<System.Obsolete ("Method is obsolete")>]
     member Method : unit -> unit
-    [<Obsolete("Prop is obsolete")>]
+    [<System.Obsolete ("Prop is obsolete")>]
     member Prop : int
 """
 
@@ -1401,7 +1420,7 @@ type ResizeArray<'T> = System.Collections.Generic.List<'T>
 [<Test>]
 let ``handle operators as compiled members`` () =
     """let x: System.DateTime = failwith "" """
-    |> generateDefinitionFromPos (Pos.fromZ 0 20)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 0 20)
     |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
     |> assertEqual true
 
@@ -1420,7 +1439,7 @@ let x: Collections.Generic.List<'T> = failwith "" """
     |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
     |> assertEqual true
 
-[<Test>]
+[<Test; Ignore>]
 let ``handle generic definitions 2`` () =
     """open System
 let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
@@ -1478,11 +1497,6 @@ let _ = Async.AwaitTask"""
     |> generateFileNameForSymbol (Pos.fromZ 1 16)
     |> assertSrcAreEqual "Microsoft.FSharp.Control.FSharpAsync.fsi"
 
-// TODO: fix abbreviation metadata generation (it should be put inside a module or a namespace)
-
 // Tests to add:
-// TODO: class method arguments attributes
-// ENHANCEMENT: special formatting for Events?
-// TODO: syntax coloring is deactivated on generated metadata file
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
 // TODO: set cursor on method/... when symbol is a method/union case/enum value/record field

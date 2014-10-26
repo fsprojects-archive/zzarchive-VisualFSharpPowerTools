@@ -12,7 +12,7 @@ open AsyncMaybe
 /// Wraps the result of type-checking and provides methods for implementing
 /// various IntelliSense functions (such as completion & tool tips). Provides default
 /// empty/negative results if information is missing.
-type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults) option) =
+type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpParseFileResults) option) =
 
     new (checkResults, parseResults) = ParseAndCheckResults(Some (checkResults, parseResults))
 
@@ -86,7 +86,7 @@ type ParseAndCheckResults private (infoOpt: (CheckFileResults * ParseFileResults
         async {
             match infoOpt with 
             | None -> 
-                return FindDeclResult.DeclNotFound FindDeclFailureReason.Unknown
+                return FSharpFindDeclResult.DeclNotFound FSharpFindDeclFailureReason.Unknown
             | Some (checkResults, _parseResults) -> 
                 return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)       
         }
@@ -127,8 +127,8 @@ type WordSpan =
 
 [<AbstractClass>]
 type LexerBase() = 
-    abstract GetSymbolFromTokensAtLocation: TokenInformation list * line: int * col: int -> Symbol option
-    abstract TokenizeLine: line: int -> TokenInformation list
+    abstract GetSymbolFromTokensAtLocation: FSharpTokenInfo list * line: int * col: int -> Symbol option
+    abstract TokenizeLine: line: int -> FSharpTokenInfo list
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
 
@@ -156,7 +156,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
   let checker = 
-    let checker = InteractiveChecker.Create(projectCacheSize=200)
+    let checker = FSharpChecker.Create(projectCacheSize=200)
     checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
@@ -186,7 +186,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           // Construct new typed parse result if the task succeeded
           let results = 
               match res with
-              | Choice1Of2 (parseResults, CheckFileAnswer.Succeeded(checkResults)) ->
+              | Choice1Of2 (parseResults, FSharpCheckFileAnswer.Succeeded(checkResults)) ->
                   // Handle errors on the GUI thread
                   debug "[LanguageService] Update typed info - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo
                   debug "[LanguageService] Update typed info - Errors? %A" checkResults.Errors
@@ -225,13 +225,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! opts = checker.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
                 
             let results =         
-                // The InteractiveChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
-                if opts.ProjectOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then opts
+                // The FSharpChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
+                if opts.OtherOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then opts
                 else 
                 // Add assemblies that may be missing in the standard assembly resolution
                 debug "GetScriptCheckerOptions: Adding missing core assemblies."
                 let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework )
-                {opts with ProjectOptions = [|  yield! opts.ProjectOptions
+                {opts with OtherOptions =   [|  yield! opts.OtherOptions
                                                 match FSharpEnvironment.resolveAssembly dirs "FSharp.Core" with
                                                 | Some fn -> yield sprintf "-r:%s" fn
                                                 | None -> debug "Resolution: FSharp.Core assembly resolution failed!"
@@ -240,8 +240,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                                 | None -> debug "Resolution: FSharp.Compiler.Interactive.Settings assembly resolution failed!" |]}
               
             // Print contents of check option for debugging purposes
-            debug "GetScriptCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
+            debug "GetScriptCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
+                                    opts.ProjectFileName opts.ProjectFileNames opts.OtherOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
         
             return results
         with e -> 
@@ -253,14 +253,14 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
     let opts =
         { ProjectFileName = projFilename
           ProjectFileNames = files
-          ProjectOptions = args
+          OtherOptions = args
           IsIncompleteTypeCheckEnvironment = false
           UseScriptResolutionRules = false
           LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
           UnresolvedReferences = None
           ReferencedProjects = referencedProjects }
-    debug "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, ProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
-                                    opts.ProjectFileName opts.ProjectFileNames opts.ProjectOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects
+    debug "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
+                                    opts.ProjectFileName opts.ProjectFileNames opts.OtherOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects
     opts     
 
   member __.ParseFileInProject(projectOptions, fileName: string, src) = 
@@ -328,7 +328,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: ProjectOptions, dependentProjectsOptions: ProjectOptions seq, 
+  member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: FSharpProjectOptions, dependentProjectsOptions: FSharpProjectOptions seq, 
                                                     fileName, source, line:int, col, lineStr, args, queryLexState, reportProgress : (string -> int -> int -> unit) option) =     
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
@@ -354,7 +354,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
      }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: ProjectOptions seq) =
+  member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq) =
      async { 
         return! 
             projectsOptions
@@ -496,7 +496,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         // for usefulness, which is too expensive to do. Hence we never gray them out.
                         | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
                         // FCS returns inconsistent results for override members; we're going to skip these symbols.
-                        | MemberFunctionOrValue func when func.IsOverrideOrExplicitMember -> None
+                        | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
                         // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
                         | Parameter -> None
                         | _ ->
@@ -530,7 +530,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                         { su with IsUsed = notUsedSymbols |> List.forall (fun s -> s <> su.SymbolUse.Symbol) })
         }
 
-    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: ProjectOptions, fileName, source) =
+    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source) =
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
@@ -560,7 +560,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                        | None -> () ]
         }
 
-    member x.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, project: ProjectOptions, file, source) =
+    member x.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, project: FSharpProjectOptions, file, source) =
         async {
             let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
             return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)

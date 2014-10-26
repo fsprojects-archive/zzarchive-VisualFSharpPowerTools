@@ -4,6 +4,7 @@
 * Support multiline strings in printf formatting
 * Implement Task List Comments
 * Fix issues with retrieving wrong active documents
+* Add syntax coloring for escaped characters in strings
 
 #### 1.5.2 - October 8 2014
 * Add syntax coloring for printf specifiers

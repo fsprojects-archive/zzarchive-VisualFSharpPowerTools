@@ -9,7 +9,7 @@ module internal TypedAstUtils =
     let isSymbolLocalForProject (symbol: FSharpSymbol) = 
         match symbol with 
         | :? FSharpParameter -> true
-        | :? FSharpMemberFunctionOrValue as m -> not m.IsModuleValueOrMember || not m.Accessibility.IsPublic
+        | :? FSharpMemberOrFunctionOrValue as m -> not m.IsModuleValueOrMember || not m.Accessibility.IsPublic
         | :? FSharpEntity as m -> not m.Accessibility.IsPublic
         | :? FSharpGenericParameter -> true
         | :? FSharpUnionCase as m -> not m.Accessibility.IsPublic
@@ -33,7 +33,7 @@ module internal TypedAstUtils =
          |> tryGetAttribute<CompilationRepresentationAttribute>
          |> Option.bind (fun a -> 
               a.ConstructorArguments 
-              |> Seq.tryPick (fun arg ->
+              |> Seq.tryPick (fun (_, arg) ->
                    let res =
                        match arg with
                        | :? int32 as arg when arg = int CompilationRepresentationFlags.ModuleSuffix -> 
@@ -80,7 +80,7 @@ module TypedAstExtensionHelpers =
         member x.PublicNestedEntities =
             x.NestedEntities |> Seq.filter (fun entity -> entity.Accessibility.IsPublic)
 
-    type FSharpMemberFunctionOrValue with
+    type FSharpMemberOrFunctionOrValue with
         // FullType may raise exceptions (see https://github.com/fsharp/fsharp/issues/307). 
         member x.FullTypeSafe = Option.attempt (fun _ -> x.FullType)
 
@@ -210,7 +210,7 @@ module TypedAstPatterns =
         let isMutable = 
             match symbol with
             | :? FSharpField as field -> field.IsMutable
-            | :? FSharpMemberFunctionOrValue as func -> func.IsMutable
+            | :? FSharpMemberOrFunctionOrValue as func -> func.IsMutable
             | _ -> false
         if isMutable then Some() else None   
 
@@ -246,15 +246,15 @@ module TypedAstPatterns =
     /// Func (memberFunctionOrValue, fullType)
     let (|MemberFunctionOrValue|_|) (symbol: FSharpSymbol) =
         match symbol with
-        | :? FSharpMemberFunctionOrValue as func -> Some func
+        | :? FSharpMemberOrFunctionOrValue as func -> Some func
         | _ -> None
 
     /// Constructor (enclosingEntity)
-    let (|Constructor|_|) (func: FSharpMemberFunctionOrValue) =
+    let (|Constructor|_|) (func: FSharpMemberOrFunctionOrValue) =
         if func.CompiledName = ".ctor" then Some func.EnclosingEntity
         else None
 
-    let (|Function|_|) excluded (func: FSharpMemberFunctionOrValue) =
+    let (|Function|_|) excluded (func: FSharpMemberOrFunctionOrValue) =
         match func.FullTypeSafe with
         | Some typ when typ.IsFunctionType
                        && not func.IsPropertyGetterMethod 
@@ -263,8 +263,8 @@ module TypedAstPatterns =
                        && not (isOperator func.DisplayName) -> Some()
         | _ -> None
 
-    let (|ExtensionMember|_|) (func: FSharpMemberFunctionOrValue) =
+    let (|ExtensionMember|_|) (func: FSharpMemberOrFunctionOrValue) =
         if func.IsExtensionMember then Some() else None
 
-    let (|Event|_|) (func: FSharpMemberFunctionOrValue) =
+    let (|Event|_|) (func: FSharpMemberOrFunctionOrValue) =
         if func.IsEvent then Some () else None
