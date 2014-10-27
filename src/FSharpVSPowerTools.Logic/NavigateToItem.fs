@@ -14,8 +14,7 @@ open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 
 module Constants = 
-    let LogicalViewTextGuid = Guid(LogicalViewID.TextView)
-    let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||]); 
+    let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||])
 
 type NavigateToItemExtraData = 
     {
@@ -243,42 +242,6 @@ and
             member __.Description = extraData.Description
             member __.DescriptionItems = Constants.EmptyReadOnlyCollection
             member __.NavigateTo() = 
-                let mutable hierarchy = Unchecked.defaultof<_>
-                let mutable itemId = Unchecked.defaultof<_>
-                let mutable windowFrame = Unchecked.defaultof<_>
-                let isOpened = 
-                    VsShellUtilities.IsDocumentOpen(
-                        serviceProvider, 
-                        extraData.FileName, 
-                        Constants.LogicalViewTextGuid,
-                        &hierarchy,
-                        &itemId,
-                        &windowFrame)
-                let canShow = 
-                    if isOpened then true
-                    else
-                        // TODO: track the project that contains document and open document in project context
-                        try
-                            VsShellUtilities.OpenDocument(
-                                serviceProvider, 
-                                extraData.FileName, 
-                                Constants.LogicalViewTextGuid, 
-                                &hierarchy,
-                                &itemId,
-                                &windowFrame)
-                            true
-                        with _ -> false
-                if canShow then
-                    windowFrame.Show()
-                    |> ensureSucceeded
-
-                    let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-                    let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
-                    let mutable vsTextBuffer = Unchecked.defaultof<_>
-                    vsTextView.GetBuffer(&vsTextBuffer)
-                    |> ensureSucceeded
-
-                    let (startRow, startCol), (endRow, endCol) = extraData.Span
-                    vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
-                    |> ensureSucceeded
+                let (startRow, startCol), (endRow, endCol) = extraData.Span
+                serviceProvider.NavigateTo(extraData.FileName, startRow, startCol, endRow, endCol)
 

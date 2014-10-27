@@ -10,6 +10,9 @@ using FSharpVSPowerTools.Navigation;
 using FSharpVSPowerTools.Folders;
 using FSharpVSPowerTools.ProjectSystem;
 using FSharpVSPowerTools.TaskList;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
+using Microsoft.VisualStudio.ComponentModelHost;
 
 namespace FSharpVSPowerTools
 {
@@ -31,7 +34,6 @@ namespace FSharpVSPowerTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package, IDisposable
     {
-        private CrossSolutionTaskListCommentManager taskListCommentManager;
         private FolderMenuCommands newFolderMenu;
         private FSharpLibrary library;
 
@@ -40,6 +42,8 @@ namespace FSharpVSPowerTools
         
         internal static Lazy<DTE2> DTE
             = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
+
+        internal CrossSolutionTaskListCommentManager taskListCommentManager;
 
         protected override void Initialize()
         {
@@ -78,8 +82,17 @@ namespace FSharpVSPowerTools
 
             if (generalOptions.TaskListCommentsEnabled)
             {
-                taskListCommentManager = new CrossSolutionTaskListCommentManager(this);
-                taskListCommentManager.Activate();
+                try
+                {
+                    var componentModel = GetService(typeof(SComponentModel)) as IComponentModel;
+                    taskListCommentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>();
+                    Debug.Assert(taskListCommentManager != null, "This instance should have been MEF exported.");
+                    taskListCommentManager.Activate();
+                }
+                catch (Exception ex)
+                {
+                    LoggingModule.logException(ex);
+                }
             }
         }
 
@@ -138,6 +151,8 @@ namespace FSharpVSPowerTools
         {
             UnregisterPriorityCommandTarget();
             UnregisterLibrary();
+            if (taskListCommentManager != null)
+                (taskListCommentManager as IDisposable).Dispose();
         }
     }
 }

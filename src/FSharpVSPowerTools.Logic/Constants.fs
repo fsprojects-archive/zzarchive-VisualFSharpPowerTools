@@ -2,7 +2,10 @@
 module FSharpVSPowerTools.Constants
 
 open Microsoft.VisualStudio
+open Microsoft.VisualStudio.Shell.Interop
 open System
+
+let LogicalViewTextGuid = Guid(LogicalViewID.TextView)
 
 let guidNewFolderCmdSet = Guid "{9EDC1279-C317-43A6-B554-3A4D7853D55E}"
 let cmdNewFolder = 0x1071

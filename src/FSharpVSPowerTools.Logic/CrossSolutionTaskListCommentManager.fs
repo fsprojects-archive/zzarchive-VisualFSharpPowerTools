@@ -6,15 +6,17 @@ open EnvDTE
 open Microsoft.VisualStudio.Shell.Interop
 open System.IO
 open EnvDTE80
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Shell
+open System.Collections.Generic
 
-type internal FilesChangedEventArgs(files: string[]) =
+type internal FilesChangedEventArgs(files: string []) =
     inherit EventArgs()
 
     member __.Files = files
 
-
 type internal FileChangeMonitor() =
-    let filesChanged = new Event<FilesChangedEventArgs>()
+    let filesChanged = Event<FilesChangedEventArgs>()
     [<CLIEvent>]
     member __.FilesChanged = filesChanged.Publish
 
@@ -26,44 +28,45 @@ type internal FileChangeMonitor() =
             filesChanged.Trigger(new FilesChangedEventArgs(rgpszFile))
             Microsoft.VisualStudio.VSConstants.S_OK
         
-
-type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
+[<Export>]
+type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+     openDocsTracker: OpenDocumentsTracker,
+     taskListManager: TaskListManager,
+     projectFactory: ProjectFactory) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events = dte.Events :?> Events2
     let projectItemsEvents = events.ProjectItemsEvents
     let solutionEvents = events.SolutionEvents
 
-    let optionsReader = new OptionsReader(serviceProvider)
+    let optionsReader = OptionsReader(serviceProvider)
     let optionsMonitor = new OptionsMonitor(serviceProvider)
     let mutable options = optionsReader.GetOptions()
 
     let fileChangeService = serviceProvider.GetService<IVsFileChangeEx, SVsFileChangeEx>()
-    let fileChangeMonitor = new FileChangeMonitor()
+    let fileChangeMonitor = FileChangeMonitor()
     
-    do TaskListManager.Initialize(serviceProvider)
-    let taskListManager = TaskListManager.GetInstance()
-    let projectFactory = new BasicProjectFactory(events)
+    let fileChangeCookies = Dictionary()
+    let trackedChange = uint32 _VSFILECHANGEFLAGS.VSFILECHG_Time
 
-    let mutable fileChangeCookies = Map.empty<string, uint32>
-    let trackedChange = uint32 (LanguagePrimitives.EnumToValue(_VSFILECHANGEFLAGS.VSFILECHG_Time))
-
-    static let mutable openDocsTracker: OpenDocumentsTracker option = None
+    let readAllLinesSafe filePath =
+        protectOrDefault 
+            (fun _ -> File.ReadAllLines(filePath))
+            [||]
 
     let newLines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
     let getTaskListCommentsFromFiles () =
         let preferOpenDocOverDiskContent filePath =
-            (filePath, match openDocsTracker.Value.TryFindOpenDocument(filePath) with
+            (filePath, match openDocsTracker.TryFindOpenDocument(filePath) with
                        | Some(doc) -> doc.Snapshot.GetText().Split(newLines, StringSplitOptions.None)
-                       | None -> File.ReadAllLines(filePath))
+                       | None -> readAllLinesSafe(filePath))
         
         let sources =
             projectFactory.ListFSharpProjectsInSolution(dte)
             |> List.map projectFactory.CreateForProject
             |> List.toArray
             |> Array.collect (fun projProvider -> projProvider.SourceFiles)
-            |> Array.map (fun filePath -> match openDocsTracker with
-                                          | Some(_) -> preferOpenDocOverDiskContent filePath
-                                          | None -> (filePath, File.ReadAllLines(filePath)))
+            |> Array.map preferOpenDocOverDiskContent
 
         sources
         |> Array.map (fun (file, lines) -> (file, getComments options file lines))
@@ -78,41 +81,47 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
     let handleFilesChanged files =
         let handleFilesChangedOutsideVS files =
             files
-            |> Array.map (fun file -> (file, getComments options file (File.ReadAllLines(file))))
+            |> Array.map (fun file -> (file, getComments options file (readAllLinesSafe(file))))
             |> Array.iter taskListManager.MergeTaskListComments
-
-        match openDocsTracker with
-        | Some(tracker) ->
-            files
-            |> Array.map (fun f -> (f, tracker.TryFindOpenDocument(f)))
-            |> Array.filter (fun (_, doc) -> doc.IsNone)
-            |> Array.map (fun (f, _) -> f)
-            |> handleFilesChangedOutsideVS
-        | None -> handleFilesChangedOutsideVS files
+        
+        files
+        |> Array.map (fun f -> (f, openDocsTracker.TryFindOpenDocument(f)))
+        |> Array.filter (fun (_, doc) -> doc.IsNone)
+        |> Array.map (fun (f, _) -> f)
+        |> handleFilesChangedOutsideVS
 
     let onSolutionClosed () =
         fileChangeCookies
-        |> Map.iter (fun _ cookie -> fileChangeService.UnadviseFileChange(cookie) |> ignore)
+        |> Seq.iter (fun (KeyValue(_, cookie)) -> fileChangeService.UnadviseFileChange(cookie) |> ignore)
 
         taskListManager.ClearTaskList()
 
     let onSolutionOpened () =
-        fileChangeCookies <-
+        // Move the main computation off the UI thread.
+        async {
+          time "[Populate task list when opening solution]" <| fun _ ->
+            fileChangeCookies.Clear()
             projectFactory.ListFSharpProjectsInSolution(dte)
-            |> List.map projectFactory.CreateForProject
-            |> List.collect (fun projProvider -> projProvider.SourceFiles |> Array.toList)
-            |> List.map (fun file ->
+            |> Seq.map projectFactory.CreateForProject
+            |> Seq.collect (fun projProvider -> projProvider.SourceFiles)
+            |> Seq.iter (fun file ->
                             let cookie = ref 0u
                             fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
-                            (file, !cookie))
-            |> Map.ofList
+                            fileChangeCookies.[file] <- !cookie)
 
-        populateTaskList ()
+            populateTaskList ()
+        } |> Async.StartInThreadPoolSafe
 
-    let onOptionsChanged =
-        Handler<OptionsChangedEventArgs>(fun _ e -> options <- e.NewOptions; repopulateTaskList ())
-    let onFilesChanged =
-        Handler<FilesChangedEventArgs>(fun _ e -> handleFilesChanged e.Files)
+    let onOptionsChanged (arg: OptionsChangedEventArgs) =
+        options <- arg.NewOptions
+        // Move the main computation off the UI thread.
+        async { 
+            repopulateTaskList () 
+        }
+        |> Async.StartInThreadPoolSafe
+
+    let onFilesChanged (arg: FilesChangedEventArgs) =
+        handleFilesChanged arg.Files
 
     let isCompiledFSharpProjectItem (pi: ProjectItem) =
         isFSharpProject pi.ContainingProject &&
@@ -121,35 +130,40 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
     let onProjectAdded (proj: Project) =
         if isFSharpProject proj then
             projectFactory.CreateForProject(proj).SourceFiles
-            |> Array.iter (fun file -> taskListManager.MergeTaskListComments(file, getComments options file (File.ReadAllLines(file)))
+            |> Array.iter (fun file -> taskListManager.MergeTaskListComments(file, getComments options file (readAllLinesSafe(file)))
                                        let cookie = ref 0u
                                        fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
-                                       fileChangeCookies <- fileChangeCookies.Add(file, !cookie))
+                                       fileChangeCookies.[file] <- !cookie)
+
+    let tryRemoveFileCookie filePath =
+        match fileChangeCookies.TryGetValue(filePath) with
+        | true, cookie ->
+            fileChangeService.UnadviseFileChange(cookie) |> ignore
+            fileChangeCookies.Remove(filePath) |> ignore
+        | _ -> ()
 
     let onProjectRemoved (proj: Project) =
         if isFSharpProject proj then
             projectFactory.CreateForProject(proj).SourceFiles
-            |> Array.iter (fun file ->
-                               taskListManager.MergeTaskListComments(file, [||])
-                               fileChangeService.UnadviseFileChange(fileChangeCookies.[file]) |> ignore
-                               fileChangeCookies <- fileChangeCookies.Remove(file))
+            |> Array.iter (fun filePath ->
+                               taskListManager.MergeTaskListComments(filePath, [||])
+                               tryRemoveFileCookie filePath)
 
     let onProjectItemAdded (projItem: ProjectItem) =
         if isCompiledFSharpProjectItem projItem then
             let filePath = projItem.GetProperty("FullPath")
-            let comments = getComments options filePath (File.ReadAllLines(filePath))
+            let comments = getComments options filePath (readAllLinesSafe(filePath))
             taskListManager.AddToTaskList(comments)
 
             let cookie = ref 0u
             fileChangeService.AdviseFileChange(filePath, trackedChange, fileChangeMonitor, cookie) |> ignore
-            fileChangeCookies <- fileChangeCookies.Add(filePath, !cookie)
+            fileChangeCookies.[filePath] <- !cookie
 
     let onProjectItemRemoved (projItem: ProjectItem) =
         if isCompiledFSharpProjectItem projItem then
             let filePath = projItem.GetProperty("FullPath")
             taskListManager.MergeTaskListComments(filePath, [||])
-            fileChangeService.UnadviseFileChange(fileChangeCookies.[filePath]) |> ignore
-            fileChangeCookies <- fileChangeCookies.Remove(filePath)
+            tryRemoveFileCookie filePath
 
     let onProjectItemRenamed (projItem: ProjectItem) (oldName: string) =
         if isCompiledFSharpProjectItem projItem then
@@ -158,22 +172,19 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
                 let dirName = Path.GetDirectoryName(newFilePath)
                 Path.Combine(dirName, oldName)
 
-            let comments = getComments options newFilePath (File.ReadAllLines(newFilePath))
+            let comments = getComments options newFilePath (readAllLinesSafe(newFilePath))
             taskListManager.AddToTaskList(comments)
             taskListManager.MergeTaskListComments(oldFilePath, [||])
 
             let cookie = ref 0u
             fileChangeService.AdviseFileChange(newFilePath, trackedChange, fileChangeMonitor, cookie) |> ignore
-            fileChangeCookies <- fileChangeCookies.Add(newFilePath, !cookie)
-            fileChangeService.UnadviseFileChange(fileChangeCookies.[oldFilePath]) |> ignore
-            fileChangeCookies <- fileChangeCookies.Remove(oldFilePath)
+            fileChangeCookies.[newFilePath] <- !cookie
+            tryRemoveFileCookie oldFilePath
 
-    static member SetOpenDocumentsTracker(tracker) =
-        openDocsTracker <- Some(tracker)
+    let fileChangeSubscription = fileChangeMonitor.FilesChanged.Subscribe(onFilesChanged)
+    let optionsChangeSubscription = optionsMonitor.OptionsChanged.Subscribe(onOptionsChanged)
 
     member __.Activate() =
-        fileChangeMonitor.FilesChanged.AddHandler(onFilesChanged)
-        optionsMonitor.OptionsChanged.AddHandler(onOptionsChanged)
         optionsMonitor.Start()
         projectItemsEvents.add_ItemAdded(fun pi -> onProjectItemAdded pi)
         projectItemsEvents.add_ItemRemoved(fun pi -> onProjectItemRemoved pi)
@@ -182,3 +193,10 @@ type CrossSolutionTaskListCommentManager(serviceProvider: IServiceProvider) =
         solutionEvents.add_ProjectRemoved(fun p -> onProjectRemoved p)
         solutionEvents.add_Opened(fun () -> onSolutionOpened ())
         solutionEvents.add_AfterClosing(fun () -> onSolutionClosed ())
+
+    interface IDisposable with
+        member __.Dispose(): unit = 
+            fileChangeSubscription.Dispose()
+            optionsChangeSubscription.Dispose()
+            (optionsMonitor :> IDisposable).Dispose()
+        

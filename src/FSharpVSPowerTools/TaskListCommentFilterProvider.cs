@@ -21,7 +21,7 @@ namespace FSharpVSPowerTools
         internal System.IServiceProvider serviceProvider = null;
 
         [Import]
-        internal OpenDocumentsTracker openDocsTracker = null;
+        internal TaskListManager taskListManager = null;
 
         internal IWpfTextView textView;
         internal TaskListCommentFilter taskCommentFilter;
@@ -34,7 +34,7 @@ namespace FSharpVSPowerTools
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.TaskListCommentsEnabled) return;
 
-            taskCommentFilter = new TaskListCommentFilter(textView, serviceProvider, openDocsTracker);
+            taskCommentFilter = new TaskListCommentFilter(textView, serviceProvider, taskListManager);
         }
     }
 }
