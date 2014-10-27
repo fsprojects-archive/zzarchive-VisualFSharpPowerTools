@@ -7,6 +7,7 @@ open Microsoft.VisualStudio.Language.NavigateTo.Interfaces
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.TextManager.Interop
 open FSharpVSPowerTools.ProjectSystem
+open FSharpVSPowerTools
 
 type
     [<ExportWithMinimalVisualStudioVersion(typeof<INavigateToItemDisplayFactory>, Version = VisualStudioVersion.VS2013)>]
@@ -25,14 +26,14 @@ and
     NavigateToItemDisplay(item: NavigateToItem, icon, navigator: DocumentNavigator) =
         let extraData: NavigateToItemExtraData = unbox item.Tag
         interface INavigateToItemDisplay2 with
-            member x.Name = item.Name
-            member x.Glyph = icon
-            member x.AdditionalInformation = extraData.FileName
-            member x.Description = extraData.Description
-            member x.DescriptionItems = Constants.EmptyReadOnlyCollection
-            member x.NavigateTo() = navigator.NavigateTo(extraData)
-            member x.GetProvisionalViewingStatus() = navigator.GetProvisionalViewingStatus(extraData)
-            member x.PreviewItem() = navigator.PreviewItem(extraData)
+            member __.Name = item.Name
+            member __.Glyph = icon
+            member __.AdditionalInformation = extraData.FileName
+            member __.Description = extraData.Description
+            member __.DescriptionItems = Constants.EmptyReadOnlyCollection
+            member __.NavigateTo() = navigator.NavigateTo(extraData)
+            member __.GetProvisionalViewingStatus() = navigator.GetProvisionalViewingStatus(extraData)
+            member __.PreviewItem() = navigator.PreviewItem(extraData)
 and
     [<Export>]
     DocumentNavigator() =
@@ -79,7 +80,7 @@ and
                 let (startRow, startCol), (endRow, endCol) = position.Span
                 vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
                 |> ensureSucceeded
-        member internal x.GetProvisionalViewingStatus(position: NavigateToItemExtraData) =
+        member internal __.GetProvisionalViewingStatus(position: NavigateToItemExtraData) =
             int (VsShellUtilities.GetProvisionalViewingStatus(position.FileName))
         member internal x.PreviewItem(position: NavigateToItemExtraData) =
             x.NavigateTo(position)

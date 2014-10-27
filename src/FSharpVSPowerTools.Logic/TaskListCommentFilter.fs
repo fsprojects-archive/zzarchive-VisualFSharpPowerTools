@@ -8,7 +8,7 @@ open FSharpVSPowerTools.ProjectSystem
 type TaskListCommentFilter(view: IWpfTextView,
                            serviceProvider: IServiceProvider,
                            taskListManager: TaskListManager) =
-    let optionsReader = new OptionsReader(serviceProvider)
+    let optionsReader = OptionsReader(serviceProvider)
 
     static let newLines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
     let handleTextChanged (newText: string) =

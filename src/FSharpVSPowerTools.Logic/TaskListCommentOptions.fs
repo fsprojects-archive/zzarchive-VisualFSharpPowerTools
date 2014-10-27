@@ -15,9 +15,10 @@ type internal OptionsReader(serviceProvider: IServiceProvider) =
         |> function
            | Some ct ->
                 match ct with
-                | :? (string []) as ss ->
+                | :? (obj []) as ss ->
                     ss
-                    |> Array.choose (fun s -> 
+                    |> Array.choose (fun o -> 
+                        let s = string o
                         match s.Split(':') with
                         | [| comment; priority |] -> 
                             match Int32.TryParse priority with
@@ -51,6 +52,7 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
     let onElapsed =
         EventHandler(fun _ _ ->
             protect <| fun _ ->
+                            // TODO: find a better way to read option changes rather than periodically check for it.
                             let newOptions = optionsReader.GetOptions()
                             if haveOptionsChanged newOptions then
                                 optionsChanged.Trigger(new OptionsChangedEventArgs(newOptions))
@@ -78,3 +80,8 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
         else
             timer.Tick.RemoveHandler(onElapsed)
             timer.Stop()
+
+    interface IDisposable with
+        member x.Dispose() = 
+            x.Stop()
+        

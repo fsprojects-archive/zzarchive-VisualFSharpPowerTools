@@ -13,44 +13,7 @@ type TaskListManager [<ImportingConstructor>]
     let taskProvider = new TaskProvider(serviceProvider)
 
     let navigateTo file line column =
-        let mutable hierarchy = Unchecked.defaultof<_>
-        let mutable itemId = Unchecked.defaultof<_>
-        let mutable windowFrame = Unchecked.defaultof<_>
-        let isOpened = 
-            VsShellUtilities.IsDocumentOpen(
-                serviceProvider, 
-                file, 
-                Constants.LogicalViewTextGuid,
-                &hierarchy,
-                &itemId,
-                &windowFrame)
-        let canShow = 
-            if isOpened then true
-            else
-                // TODO: track the project that contains document and open document in project context
-                try
-                    VsShellUtilities.OpenDocument(
-                        serviceProvider, 
-                        file, 
-                        Constants.LogicalViewTextGuid, 
-                        &hierarchy,
-                        &itemId,
-                        &windowFrame)
-                    true
-                with _ -> false
-        if canShow then
-            windowFrame.Show()
-            |> ensureSucceeded
-
-            let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-            let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
-            let mutable vsTextBuffer = Unchecked.defaultof<_>
-            vsTextView.GetBuffer(&vsTextBuffer)
-            |> ensureSucceeded
-
-            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid,
-                                                  line, column, line, column)
-            |> ensureSucceeded
+        serviceProvider.NavigateTo(file, line, column, line, column)
 
     let convertCommentToTask (taskListComment: Comment) =
         let task = new Task()

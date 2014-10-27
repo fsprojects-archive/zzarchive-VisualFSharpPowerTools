@@ -387,3 +387,44 @@ let time label f =
     sw.Stop()
     debug "%s took: %i ms" label sw.ElapsedMilliseconds
     result
+
+type IServiceProvider with
+    /// Go to exact location in a given file.
+    member serviceProvider.NavigateTo (fileName, startRow, startCol, endRow, endCol) =
+        let mutable hierarchy = Unchecked.defaultof<_>
+        let mutable itemId = Unchecked.defaultof<_>
+        let mutable windowFrame = Unchecked.defaultof<_>
+        let isOpened = 
+            VsShellUtilities.IsDocumentOpen(
+                serviceProvider, 
+                fileName, 
+                Constants.LogicalViewTextGuid,
+                &hierarchy,
+                &itemId,
+                &windowFrame)
+        let canShow = 
+            if isOpened then true
+            else
+                // TODO: track the project that contains document and open document in project context
+                try
+                    VsShellUtilities.OpenDocument(
+                        serviceProvider, 
+                        fileName, 
+                        Constants.LogicalViewTextGuid, 
+                        &hierarchy,
+                        &itemId,
+                        &windowFrame)
+                    true
+                with _ -> false
+        if canShow then
+            windowFrame.Show()
+            |> ensureSucceeded
+
+            let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+            let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+            let mutable vsTextBuffer = Unchecked.defaultof<_>
+            vsTextView.GetBuffer(&vsTextBuffer)
+            |> ensureSucceeded
+
+            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
+            |> ensureSucceeded

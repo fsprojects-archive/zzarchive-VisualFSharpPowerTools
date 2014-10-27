@@ -151,6 +151,8 @@ namespace FSharpVSPowerTools
         {
             UnregisterPriorityCommandTarget();
             UnregisterLibrary();
+            if (taskListCommentManager != null)
+                (taskListCommentManager as IDisposable).Dispose();
         }
     }
 }

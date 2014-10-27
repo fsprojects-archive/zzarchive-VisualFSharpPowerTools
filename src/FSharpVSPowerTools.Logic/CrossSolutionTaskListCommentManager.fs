@@ -8,6 +8,7 @@ open System.IO
 open EnvDTE80
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
+open System.Collections.Generic
 
 type internal FilesChangedEventArgs(files: string []) =
     inherit EventArgs()
@@ -39,13 +40,13 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
     let solutionEvents = events.SolutionEvents
 
     let optionsReader = OptionsReader(serviceProvider)
-    let optionsMonitor = OptionsMonitor(serviceProvider)
+    let optionsMonitor = new OptionsMonitor(serviceProvider)
     let mutable options = optionsReader.GetOptions()
 
     let fileChangeService = serviceProvider.GetService<IVsFileChangeEx, SVsFileChangeEx>()
     let fileChangeMonitor = FileChangeMonitor()
     
-    let mutable fileChangeCookies = Map.empty<string, uint32>
+    let fileChangeCookies = Dictionary()
     let trackedChange = uint32 _VSFILECHANGEFLAGS.VSFILECHG_Time
 
     let readAllLinesSafe filePath =
@@ -91,28 +92,29 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
 
     let onSolutionClosed () =
         fileChangeCookies
-        |> Map.iter (fun _ cookie -> fileChangeService.UnadviseFileChange(cookie) |> ignore)
+        |> Seq.iter (fun (KeyValue(_, cookie)) -> fileChangeService.UnadviseFileChange(cookie) |> ignore)
 
         taskListManager.ClearTaskList()
 
     let onSolutionOpened () =
+        // Move the main computation off the UI thread.
         async {
           time "[Populate task list when opening solution]" <| fun _ ->
-            fileChangeCookies <-
-                projectFactory.ListFSharpProjectsInSolution(dte)
-                |> Seq.map projectFactory.CreateForProject
-                |> Seq.collect (fun projProvider -> projProvider.SourceFiles)
-                |> Seq.map (fun file ->
-                                let cookie = ref 0u
-                                fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
-                                (file, !cookie))
-                |> Map.ofSeq
+            fileChangeCookies.Clear()
+            projectFactory.ListFSharpProjectsInSolution(dte)
+            |> Seq.map projectFactory.CreateForProject
+            |> Seq.collect (fun projProvider -> projProvider.SourceFiles)
+            |> Seq.iter (fun file ->
+                            let cookie = ref 0u
+                            fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
+                            fileChangeCookies.[file] <- !cookie)
 
             populateTaskList ()
         } |> Async.StartInThreadPoolSafe
 
     let onOptionsChanged (arg: OptionsChangedEventArgs) =
         options <- arg.NewOptions
+        // Move the main computation off the UI thread.
         async { 
             repopulateTaskList () 
         }
@@ -131,15 +133,21 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
             |> Array.iter (fun file -> taskListManager.MergeTaskListComments(file, getComments options file (readAllLinesSafe(file)))
                                        let cookie = ref 0u
                                        fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
-                                       fileChangeCookies <- fileChangeCookies.Add(file, !cookie))
+                                       fileChangeCookies.[file] <- !cookie)
+
+    let tryRemoveFileCookie filePath =
+        match fileChangeCookies.TryGetValue(filePath) with
+        | true, cookie ->
+            fileChangeService.UnadviseFileChange(cookie) |> ignore
+            fileChangeCookies.Remove(filePath) |> ignore
+        | _ -> ()
 
     let onProjectRemoved (proj: Project) =
         if isFSharpProject proj then
             projectFactory.CreateForProject(proj).SourceFiles
-            |> Array.iter (fun file ->
-                               taskListManager.MergeTaskListComments(file, [||])
-                               fileChangeService.UnadviseFileChange(fileChangeCookies.[file]) |> ignore
-                               fileChangeCookies <- fileChangeCookies.Remove(file))
+            |> Array.iter (fun filePath ->
+                               taskListManager.MergeTaskListComments(filePath, [||])
+                               tryRemoveFileCookie filePath)
 
     let onProjectItemAdded (projItem: ProjectItem) =
         if isCompiledFSharpProjectItem projItem then
@@ -149,14 +157,13 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
 
             let cookie = ref 0u
             fileChangeService.AdviseFileChange(filePath, trackedChange, fileChangeMonitor, cookie) |> ignore
-            fileChangeCookies <- fileChangeCookies.Add(filePath, !cookie)
+            fileChangeCookies.[filePath] <- !cookie
 
     let onProjectItemRemoved (projItem: ProjectItem) =
         if isCompiledFSharpProjectItem projItem then
             let filePath = projItem.GetProperty("FullPath")
             taskListManager.MergeTaskListComments(filePath, [||])
-            fileChangeService.UnadviseFileChange(fileChangeCookies.[filePath]) |> ignore
-            fileChangeCookies <- fileChangeCookies.Remove(filePath)
+            tryRemoveFileCookie filePath
 
     let onProjectItemRenamed (projItem: ProjectItem) (oldName: string) =
         if isCompiledFSharpProjectItem projItem then
@@ -171,9 +178,8 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
 
             let cookie = ref 0u
             fileChangeService.AdviseFileChange(newFilePath, trackedChange, fileChangeMonitor, cookie) |> ignore
-            fileChangeCookies <- fileChangeCookies.Add(newFilePath, !cookie)
-            fileChangeService.UnadviseFileChange(fileChangeCookies.[oldFilePath]) |> ignore
-            fileChangeCookies <- fileChangeCookies.Remove(oldFilePath)
+            fileChangeCookies.[newFilePath] <- !cookie
+            tryRemoveFileCookie oldFilePath
 
     let fileChangeSubscription = fileChangeMonitor.FilesChanged.Subscribe(onFilesChanged)
     let optionsChangeSubscription = optionsMonitor.OptionsChanged.Subscribe(onOptionsChanged)
@@ -192,4 +198,5 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
         member __.Dispose(): unit = 
             fileChangeSubscription.Dispose()
             optionsChangeSubscription.Dispose()
+            (optionsMonitor :> IDisposable).Dispose()
         
