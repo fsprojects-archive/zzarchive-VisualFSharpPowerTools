@@ -21,7 +21,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
     let getDocumentState (progress: ShowProgress) =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let projectItems = maybe {
+            let projectItem = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
@@ -29,7 +29,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
                 return doc.FullName, project, span, symbol }
 
-            match projectItems with
+            match projectItem with
             | Some (file, project, span, symbol) ->
                 let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, file, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
@@ -56,40 +56,46 @@ type FindReferencesFilter(textDocument: ITextDocument,
                                     else project :: allProjects
                             progress(OperationState.Reporting(Resource.findAllReferencesFindInProjectsMessage))
                             vsLanguageService.FindUsages (span, file, project, projectsToCheck, progress) 
-                    return results |> Option.map (fun (_, _, references) -> references, symbol)
-                | _ -> return None
-            | _ -> return None
+                    return (results |> Option.map (fun (_, _, references) -> references), symbol) |> Choice1Of2
+                | _ -> return Choice2Of2 Resource.findAllReferencesIllformedExpressionMessage
+            | _ -> return Choice2Of2 Resource.findAllReferencesInvalidExpressionMessage
         }
 
-    let status = 
-        if showProgress then Some (new StatusHandler(serviceProvider, StatusIcon.Find, true))
-        else None
-
-    let findReferences progress = 
+    let findReferences () = 
         async {
+            use status = new StatusHandler(serviceProvider, StatusIcon.Find, true)
+            let progress = 
+                if showProgress then status.Report
+                else (fun _ -> ())
             let! references = getDocumentState progress
             match references with
-            | Some (references, symbol) ->
-                let references = 
-                    references
-                    |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
-                    |> Seq.groupBy (fst >> Path.GetFullPathSafe)
-                    |> Seq.map (fun (_, symbolUses) -> 
-                        // Sort symbols by positions
-                        symbolUses 
-                        |> Seq.map snd 
-                        |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
-                    |> Seq.concat
+            | Choice1Of2 (refs, symbol) ->
+                let findResults =
+                    match refs with
+                    | Some references ->
+                        let references = 
+                            references
+                            |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
+                            |> Seq.groupBy (fst >> Path.GetFullPathSafe)
+                            |> Seq.map (fun (_, symbolUses) -> 
+                                // Sort symbols by positions
+                                symbolUses 
+                                |> Seq.map snd 
+                                |> Seq.sortBy (fun s -> s.RangeAlternate.StartLine, s.RangeAlternate.StartColumn))
+                            |> Seq.concat
             
-                let nodes =
-                    // There are duplications from FCS, we remove duplications by checking text representation
-                    references 
-                    |> Seq.map (fun reference -> FSharpLibraryNode(symbol.Text, serviceProvider, reference))
-                    |> Seq.distinctBy (fun node -> node.GetTextWithOwnership(VSTREETEXTOPTIONS.TTO_DEFAULT))
+                        let nodes =
+                            // There are duplications from FCS, we remove duplications by checking text representation
+                            references 
+                            |> Seq.map (fun reference -> FSharpLibraryNode(symbol.Text, serviceProvider, reference))
+                            |> Seq.distinctBy (fun node -> node.GetTextWithOwnership(VSTREETEXTOPTIONS.TTO_DEFAULT))
 
-                let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
-                for node in nodes do
-                    findResults.AddNode(node)
+                        let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
+                        for node in nodes do
+                            findResults.AddNode(node)
+                        findResults
+                    | None ->
+                        FSharpLibraryNode("Find Symbol Results", serviceProvider)
 
                 let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
                 let searchCriteria = 
@@ -102,10 +108,11 @@ type FindReferencesFilter(textDocument: ITextDocument,
 
                 let guid = ref Constants.guidSymbolLibrary
                 ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
-            | _ -> 
+            | Choice2Of2 msg -> 
+                // Clear cursor after finishing
                 progress(OperationState.Idle)
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                statusBar.SetText(Resource.findAllReferencesInvalidExpressionMessage) |> ignore 
+                statusBar.SetText(msg) |> ignore 
         } |> Async.StartImmediateSafe
 
     member val IsAdded = false with get, set
@@ -114,10 +121,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if (pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidFindReferences) then
-                status
-                |> Option.map (fun status -> status.Report)
-                |> Option.getOrElse (fun _ -> ())
-                |> findReferences
+                findReferences ()
             let nextTarget = x.NextTarget
             if nextTarget <> null then
                 nextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
@@ -135,9 +139,4 @@ type FindReferencesFilter(textDocument: ITextDocument,
                     nextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
                 else
                     VSConstants.S_OK
-
-    interface IDisposable with
-        member __.Dispose() = 
-            status |> Option.iter (fun status -> (status :> IDisposable).Dispose())
-        
                 

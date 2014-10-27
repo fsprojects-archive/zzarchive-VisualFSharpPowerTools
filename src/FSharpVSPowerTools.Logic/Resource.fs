@@ -39,8 +39,10 @@ module Resource =
     let [<Literal>] findAllReferencesInitializingMessage = "Initializing Find All References..."
     let [<Literal>] findAllReferencesFindInFileMessage = "Finding symbol usages in file..."
     let [<Literal>] findAllReferencesFindInProjectsMessage = "Finding symbol usages in projects..."
+    
     let [<Literal>] findAllReferencesInvalidExpressionMessage = "The caret must be on a valid expression to find all references."
-
+    let [<Literal>] findAllReferencesIllformedExpressionMessage = "Can't find a symbol under cursor. Please make sure that the code is typechecked."
+ 
     let [<Literal>] implementInterfaceCommandName = "Explicitly implement interface"
     let [<Literal>] recordGenerationCommandName = "Generate record stubs"
     let [<Literal>] unionPatternMatchCaseCommandName = "Generate union pattern match cases"
