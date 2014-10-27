@@ -5,9 +5,11 @@ open Microsoft.VisualStudio
 open System
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.TextManager.Interop
+open System.ComponentModel.Composition
 
-[<AllowNullLiteral>]
-type internal TaskListManager private (serviceProvider: IServiceProvider) =
+[<Export>]
+type TaskListManager [<ImportingConstructor>]
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
     let taskProvider = new TaskProvider(serviceProvider)
 
     let navigateTo file line column =
@@ -67,16 +69,6 @@ type internal TaskListManager private (serviceProvider: IServiceProvider) =
     let addToTaskList newTasks =
         for t in newTasks do
             ErrorHandler.ThrowOnFailure(taskProvider.Tasks.Add(t)) |> ignore
-
-    static let mutable instance = null
-
-    static member Initialize(serviceProvider: IServiceProvider) =
-        instance <- new TaskListManager(serviceProvider)
-
-    static member GetInstance() =
-        if instance = null then
-            invalidOp "Please ensure the Initialize method is called before attempting to obtain the TaskListManager instance"
-        instance
 
     member x.MergeTaskListComments(filePath, newComments) =
         let currentComments =

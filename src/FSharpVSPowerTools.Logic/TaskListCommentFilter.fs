@@ -7,9 +7,8 @@ open FSharpVSPowerTools.ProjectSystem
 
 type TaskListCommentFilter(view: IWpfTextView,
                            serviceProvider: IServiceProvider,
-                           openDocsTracker: OpenDocumentsTracker) =
+                           taskListManager: TaskListManager) =
     let optionsReader = new OptionsReader(serviceProvider)
-    do CrossSolutionTaskListCommentManager.SetOpenDocumentsTracker(openDocsTracker)
 
     static let newLines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
     let handleTextChanged (newText: string) =
@@ -21,7 +20,7 @@ type TaskListCommentFilter(view: IWpfTextView,
                 let lines = newText.Split(newLines, StringSplitOptions.None)
 
                 let comments = getComments (optionsReader.GetOptions()) filePath lines
-                TaskListManager.GetInstance().MergeTaskListComments(filePath, comments)
+                taskListManager.MergeTaskListComments(filePath, comments)
             | _ -> ()
         | _ -> ()
 

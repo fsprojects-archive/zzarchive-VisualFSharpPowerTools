@@ -5,6 +5,7 @@ open EnvDTE
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open System.Windows.Threading
+open FSharpVSPowerTools
 
 type internal OptionsReader(serviceProvider: IServiceProvider) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
@@ -37,16 +38,16 @@ type internal OptionsChangedEventArgs(newOptions: CommentOption[]) =
 
 
 type internal OptionsMonitor(serviceProvider: IServiceProvider) =
-    let optionsReader = new OptionsReader(serviceProvider)
+    let optionsReader = OptionsReader(serviceProvider)
 
     let mutable currentOptions = optionsReader.GetOptions()
     let haveOptionsChanged newOptions =
         let sortByText = fun o -> o.Comment
         let sortedNewOptions = newOptions |> Array.sortBy sortByText
-        let sortedCurrentOption = currentOptions |> Array.sortBy sortByText
-        sortedNewOptions <> sortedCurrentOption
+        let sortedCurrentOptions = currentOptions |> Array.sortBy sortByText
+        sortedNewOptions <> sortedCurrentOptions
 
-    let optionsChanged = new Event<OptionsChangedEventArgs>()
+    let optionsChanged = Event<OptionsChangedEventArgs>()
     let onElapsed =
         EventHandler(fun _ _ ->
             protect <| fun _ ->
@@ -56,22 +57,24 @@ type internal OptionsMonitor(serviceProvider: IServiceProvider) =
                             currentOptions <- newOptions
         )
 
-    let timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle,      
-                                    Interval = TimeSpan.FromMilliseconds(3000.0))
+    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
+                                Interval = TimeSpan.FromMilliseconds(3000.0))
     
     [<CLIEvent>]
     member __.OptionsChanged = optionsChanged.Publish
 
     /// Starts listening for option changes
     member __.Start() =
-        if timer.IsEnabled then invalidOp "Already listening for option changes"
+        if timer.IsEnabled then 
+            debug "Already listening for option changes"
         else
             timer.Tick.AddHandler(onElapsed)
             timer.Start()
 
     /// Stops listening for option changes
     member __.Stop() =
-        if not timer.IsEnabled then invalidOp "Not currently listening for option changes"
+        if not timer.IsEnabled then 
+            debug "Not currently listening for option changes"
         else
             timer.Tick.RemoveHandler(onElapsed)
             timer.Stop()
