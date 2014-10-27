@@ -105,3 +105,33 @@ x
                 |> assertEqual 
                     [| sprintf "%s - (%i, %i) : val x" prefix 2 4;
                        sprintf "%s - (%i, %i) : val x" prefix 3 0 |])
+
+    [<Test>]
+    let ``should be able to find all references in multiple documents``() = 
+        let content = """
+module Sample
+
+val func : int -> int
+"""
+        // Use absolute path just to be sure
+        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/FSharpSignature/FSharpSignature.fsproj"))
+        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/FSharpSignature/Sample.fsi"))
+        let buffer = createMockTextBuffer content fileName
+        helper.AddProject(ExternalProjectProvider(projectFileName))
+        helper.SetActiveDocument(fileName)
+        let textView = createMockTextView buffer
+        let command = helper.GetCommand(textView)
+
+        let prefix = Path.GetFullPath(fileName)
+        
+        testEventTrigger helper.ReferencesChanged "Timed out before being able to find all references" timeout
+            (fun () -> 
+                textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 6) |> ignore
+                command.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidFindReferences, 
+                    0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
+            (fun () -> 
+                helper.ReferencesResults 
+                |> assertEqual 
+                    [| sprintf "%s - (%i, %i) : val func" prefix 4 4;
+                       sprintf "%s - (%i, %i) : val func" (prefix.Replace("Sample.fsi", "Sample.fs")) 3 4;
+                       sprintf "%s - (%i, %i) : val func" (prefix.Replace("Sample.fsi", "Program.fs")) 5 4; |])

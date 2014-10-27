@@ -176,7 +176,37 @@ and MockSolution(projects, dte: DTE) =
         member __.Open(_fileName: string): unit = notimpl        
         member __.Parent: DTE = notimpl        
         member __.ProjectItemsTemplatePath(_projectKind: string): string = notimpl        
-        member __.Projects: Projects = notimpl        
+        member __.Projects: Projects = 
+            let projs =
+                projects 
+                |> Seq.map (|KeyValue|) 
+                |> Seq.map snd
+                |> Seq.map (fun p -> MockProject(p, dte) :> Project)
+            { new Projects with
+                  member x.Count: int = 
+                      notimpl
+                  
+                  member x.DTE: DTE = 
+                      notimpl
+                  
+                  member x.GetEnumerator(): IEnumerator = 
+                      projs.GetEnumerator() :> IEnumerator
+                  
+                  member x.Item(index: obj): Project = 
+                      notimpl
+                  
+                  member x.Kind: string = 
+                      notimpl
+                  
+                  member x.Parent: DTE = 
+                      notimpl
+                  
+                  member x.Properties: Properties = 
+                      notimpl
+              interface IEnumerable with
+                    member x.GetEnumerator(): IEnumerator = 
+                        projs.GetEnumerator() :> IEnumerator }
+                
         member __.Properties: Properties = notimpl        
         member __.Remove(_proj: Project): unit = notimpl        
         member __.SaveAs(_fileName: string): unit = notimpl        
