@@ -162,7 +162,9 @@ and MockSolution(projects, dte: DTE) =
             let allProjects = projects |> Seq.map (|KeyValue|) |> Seq.map snd
             // Accept relative file path as an input
             let fileName = Path.GetFullPathSafe(fileName)
-            match allProjects |> Seq.tryFind (fun project -> Array.exists ((=) fileName) project.SourceFiles) with
+            match allProjects |> Seq.tryFind (fun project -> 
+                    // Should compare and ignore cases since MsBuild can resolve differently.
+                    Array.exists (fun path -> String.Equals(fileName, path, StringComparison.OrdinalIgnoreCase)) project.SourceFiles) with
             | Some project ->
                 MockProjectItem(fileName, project, dte) :> _
             | None -> null

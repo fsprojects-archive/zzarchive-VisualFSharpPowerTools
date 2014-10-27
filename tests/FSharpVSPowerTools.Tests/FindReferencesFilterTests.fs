@@ -106,7 +106,7 @@ x
                     [| sprintf "%s - (%i, %i) : val x" prefix 2 4;
                        sprintf "%s - (%i, %i) : val x" prefix 3 0 |])
 
-    [<Test>]
+    [<Test; Category "AppVeyorLongRunning">]
     let ``should be able to find all references in multiple documents``() = 
         let content = """
 module Sample

@@ -152,7 +152,7 @@ let _ = Project.GetSample()
                 |> assertEqual
                      [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
 
-    [<Test; Ignore; Category "AppVeyorLongRunning"; Description "Not yet know why it fails on CI">]
+    [<Test; Ignore>]
     let ``should generate highlight usage tags for multi-project symbols``() = 
         let content = """
 namespace Project2

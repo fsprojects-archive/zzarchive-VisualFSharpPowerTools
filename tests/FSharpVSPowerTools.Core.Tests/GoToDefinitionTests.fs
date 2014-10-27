@@ -1439,11 +1439,11 @@ let x: Collections.Generic.List<'T> = failwith "" """
     |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
     |> assertEqual true
 
-[<Test; Ignore>]
+[<Test>]
 let ``handle generic definitions 2`` () =
     """open System
 let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
-    |> generateDefinitionFromPos (Pos.fromZ 1 30)
+    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
     |> assertEqual true
 
