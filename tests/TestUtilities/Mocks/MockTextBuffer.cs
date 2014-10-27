@@ -144,7 +144,7 @@ namespace TestUtilities.Mocks {
             var oldText = _snapshot.GetText();
             string newText = oldText.Remove(replaceSpan.Start, replaceSpan.Length);
             newText  = newText.Insert(replaceSpan.Start, replaceWith);
-
+            var oldSnapshot = _snapshot;
             _snapshot = new MockTextSnapshot(
                 this, 
                 newText, 
@@ -155,6 +155,8 @@ namespace TestUtilities.Mocks {
                     replaceWith
                 )
             );
+            if (Changed != null)
+                Changed(this, new TextContentChangedEventArgs(oldSnapshot, _snapshot, EditOptions.None, null));
             return _snapshot;
         }
 

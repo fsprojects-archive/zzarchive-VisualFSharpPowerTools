@@ -111,7 +111,14 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
             // returned text determines the order of results in 'Find Symbol Results' window
             match textData with
             | Some(_, _, text) -> text
-            | None -> String.Empty
+            | None -> 
+                // This part supposes to turn up on unit testing only
+                symbolUse
+                |> Option.map (fun symbolUse ->
+                    let range = symbolUse.RangeAlternate
+                    sprintf "%s - (%i, %i) : %O" (Path.GetFullPathSafe(symbolUse.FileName)) 
+                                range.StartLine range.StartColumn symbolUse.Symbol)
+                |> Option.getOrElse String.Empty
         | _ -> String.Empty
 
     override x.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = 

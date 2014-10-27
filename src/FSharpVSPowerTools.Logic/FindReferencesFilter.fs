@@ -16,7 +16,8 @@ type FindReferencesFilter(textDocument: ITextDocument,
                           view: IWpfTextView, 
                           vsLanguageService: VSLanguageService, 
                           serviceProvider: System.IServiceProvider,
-                          projectFactory: ProjectFactory) =
+                          projectFactory: ProjectFactory,
+                          showProgress: bool) =    
     let getDocumentState (progress: ShowProgress) =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -60,11 +61,13 @@ type FindReferencesFilter(textDocument: ITextDocument,
             | _ -> return None
         }
 
-    let findReferences() = 
-        async {
-            use status = new StatusHandler(serviceProvider, StatusIcon.Find, true)
+    let status = 
+        if showProgress then Some (new StatusHandler(serviceProvider, StatusIcon.Find, true))
+        else None
 
-            let! references = getDocumentState status.Report
+    let findReferences progress = 
+        async {
+            let! references = getDocumentState progress
             match references with
             | Some (references, symbol) ->
                 let references = 
@@ -100,19 +103,26 @@ type FindReferencesFilter(textDocument: ITextDocument,
                 let guid = ref Constants.guidSymbolLibrary
                 ErrorHandler.ThrowOnFailure(findService.DoSearch(guid, [| searchCriteria |])) |> ignore
             | _ -> 
-                status.Report(OperationState.Idle)
+                progress(OperationState.Idle)
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                 statusBar.SetText(Resource.findAllReferencesInvalidExpressionMessage) |> ignore 
         } |> Async.StartImmediateSafe
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
-
+    
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if (pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidFindReferences) then
-                findReferences()
-            x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
+                status
+                |> Option.map (fun status -> status.Report)
+                |> Option.getOrElse (fun _ -> ())
+                |> findReferences
+            let nextTarget = x.NextTarget
+            if nextTarget <> null then
+                nextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
+            else
+                VSConstants.S_OK
 
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && 
@@ -120,4 +130,14 @@ type FindReferencesFilter(textDocument: ITextDocument,
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
-                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
+                let nextTarget = x.NextTarget
+                if nextTarget <> null then
+                    nextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
+                else
+                    VSConstants.S_OK
+
+    interface IDisposable with
+        member __.Dispose() = 
+            status |> Option.iter (fun status -> (status :> IDisposable).Dispose())
+        
+                
