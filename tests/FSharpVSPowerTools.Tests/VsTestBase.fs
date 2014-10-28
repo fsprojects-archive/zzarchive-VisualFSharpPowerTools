@@ -7,6 +7,7 @@ open Foq
 open Microsoft.VisualStudio.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Operations
+open Microsoft.VisualStudio.Shell.Interop
 
 /// Replace internal project providers by external ones for testing
 type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =
@@ -18,19 +19,19 @@ type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte:
 type VsTestBase() =
     let serviceProvider = MockServiceProvider()        
     
-    do serviceProvider.Services.["SVsActivityLog"] <- MockActivityLog()
-    do serviceProvider.Services.["SVsShell"] <- MockVsShell()
-    do serviceProvider.Services.["SVsStatusbar"] <- Mocks.createSVsStatusbar()
-    do serviceProvider.Services.["SVsSolutionBuildManager"] <- Mocks.createVsSolutionBuildManager2()
-    do serviceProvider.Services.["IGeneralOptions"] <- Mocks.createGeneralOptionsPage()
-    do serviceProvider.Services.["IFormattingOptions"] <- new FantomasOptionsPage()
-    do serviceProvider.Services.["ICodeGenerationOptions"] <- new CodeGenerationOptionsPage()
-    do serviceProvider.Services.["IGlobalOptions"] <- new GlobalOptionsPage()
+    do serviceProvider.Services.[nameOf<SVsActivityLog>] <- MockActivityLog()
+    do serviceProvider.Services.[nameOf<SVsShell>] <- MockVsShell()
+    do serviceProvider.Services.[nameOf<SVsStatusbar>] <- Mocks.createSVsStatusbar()
+    do serviceProvider.Services.[nameOf<SVsSolutionBuildManager>] <- Mocks.createVsSolutionBuildManager2()
+    do serviceProvider.Services.[nameOf<IGeneralOptions>] <- Mocks.createGeneralOptionsPage()
+    do serviceProvider.Services.[nameOf<IFormattingOptions>] <- new FantomasOptionsPage()
+    do serviceProvider.Services.[nameOf<ICodeGenerationOptions>] <- new CodeGenerationOptionsPage()
+    do serviceProvider.Services.[nameOf<IGlobalOptions>] <- new GlobalOptionsPage()
 
     let dte = MockDTE()
-    do serviceProvider.Services.["DTE"] <- dte
-    do serviceProvider.Services.["SDTE"] <- dte
-    do serviceProvider.Services.["SVsResourceManager"] <- Mocks.createSVsResourceManager()
+    do serviceProvider.Services.[nameOf<EnvDTE.DTE>] <- dte
+    do serviceProvider.Services.[nameOf<SDTE>] <- dte
+    do serviceProvider.Services.[nameOf<SVsResourceManager>] <- Mocks.createSVsResourceManager()
 
     let vsEditorAdaptersFactoryService = Mocks.createVsEditorAdaptersFactoryService()
     let classificationRegistry = Mocks.createClassificationTypeRegistryService()

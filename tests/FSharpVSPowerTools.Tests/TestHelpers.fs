@@ -88,3 +88,4 @@ let inline assertEquivString (expected: string) (actual: string) =
 let inline prependNewLine str = Environment.NewLine + str
 let inline appendNewLine str = str + Environment.NewLine
 
+let nameOf<'T> = typeof<'T>.Name

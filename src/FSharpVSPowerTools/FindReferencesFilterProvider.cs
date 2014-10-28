@@ -14,10 +14,10 @@ using Microsoft.VisualStudio.Text;
 
 namespace FSharpVSPowerTools
 {
-    [Export(typeof(IVsTextViewCreationListener))]
+    [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
-    internal class FindReferencesFilterProvider : IVsTextViewCreationListener
+    internal class FindReferencesFilterProvider : IWpfTextViewCreationListener
     {
         [Import]
         internal IVsEditorAdaptersFactoryService editorFactory = null;
@@ -34,22 +34,29 @@ namespace FSharpVSPowerTools
         [Import]
         internal ProjectFactory projectFactory = null;
 
-        public void VsTextViewCreated(IVsTextView textViewAdapter)
+        internal FindReferencesFilter RegisterCommandFilter(IWpfTextView textView, bool showProgress)
         {
-            var textView = editorFactory.GetWpfTextView(textViewAdapter);
-            if (textView == null) return;
+            var textViewAdapter = editorFactory.GetViewAdapter(textView);
+            if (textViewAdapter == null) return null;
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
-            if (generalOptions == null || !generalOptions.FindAllReferencesEnabled) return;
+            if (generalOptions == null || !generalOptions.FindAllReferencesEnabled) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
                 Debug.Assert(doc != null, "Text document shouldn't be null.");
-                AddCommandFilter(textViewAdapter, 
-                    new FindReferencesFilter(doc, textView, fsharpVsLanguageService, 
-                                                serviceProvider, projectFactory));
+                var filter = new FindReferencesFilter(doc, textView, fsharpVsLanguageService,
+                                                serviceProvider, projectFactory, showProgress);
+                AddCommandFilter(textViewAdapter, filter);
+                return filter;
             }
+            return null;
+        }
+
+        public void TextViewCreated(IWpfTextView textView)
+        {
+            RegisterCommandFilter(textView, showProgress: true);
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, FindReferencesFilter commandFilter)
@@ -69,5 +76,7 @@ namespace FSharpVSPowerTools
             }
         }
 
+
+ 
     }
 }
