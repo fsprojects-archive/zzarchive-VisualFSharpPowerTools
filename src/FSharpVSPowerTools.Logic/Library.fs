@@ -26,7 +26,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
                 VsShellUtilities.IsDocumentOpen(
                     serviceProvider, 
                     symbolUse.FileName, 
-                    Constants.LogicalViewTextGuid,
+                    Constants.guidLogicalTextView,
                     &hierarchy,
                     &itemId,
                     &windowFrame)
@@ -37,7 +37,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
                         VsShellUtilities.OpenDocument(
                             serviceProvider, 
                             symbolUse.FileName, 
-                            Constants.LogicalViewTextGuid, 
+                            Constants.guidLogicalTextView, 
                             &hierarchy,
                             &itemId,
                             &windowFrame)
@@ -137,7 +137,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
                 elif index = 0 then 0, (rangeText.Length - name.Length)
                 else 0, 0
             let (startRow, startCol, endRow, endCol) = (range.StartLine-1, range.StartColumn + startOffset, range.EndLine-1, range.EndColumn - endOffset)
-            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, 
+            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, 
                 startRow, startCol, endRow, endCol)
             |> ensureSucceeded
         | _ -> ()

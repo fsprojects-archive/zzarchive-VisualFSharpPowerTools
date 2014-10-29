@@ -74,7 +74,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                             synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                     | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
-                    Logging.logException e
+                    Logging.logExceptionWithMessage e "Failed to update highlight references."
                     synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
             }
 

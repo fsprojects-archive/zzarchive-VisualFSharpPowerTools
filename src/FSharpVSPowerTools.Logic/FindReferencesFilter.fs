@@ -10,6 +10,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Text
+open System.Diagnostics
 
 
 type FindReferencesFilter(textDocument: ITextDocument, 
@@ -51,9 +52,10 @@ type FindReferencesFilter(textDocument: ITextDocument,
                                         projectFactory.ListFSharpProjectsInSolution dte  
                                         |> List.map projectFactory.CreateForProject
                                     
-                                    if allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName) 
-                                    then allProjects 
-                                    else project :: allProjects
+                                    Debug.Assert(allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName),
+                                        sprintf "Project '%O' should appear in the list of checked projects '%A'." project.ProjectFileName 
+                                            (allProjects |> List.map (fun p -> p.ProjectFileName)))
+                                    allProjects
                             progress(OperationState.Reporting(Resource.findAllReferencesFindInProjectsMessage))
                             vsLanguageService.FindUsages (span, file, project, projectsToCheck, progress) 
                     return (results |> Option.map (fun (_, _, references) -> references), symbol) |> Choice1Of2

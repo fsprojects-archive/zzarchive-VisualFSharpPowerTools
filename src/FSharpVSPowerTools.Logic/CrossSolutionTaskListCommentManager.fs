@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.TaskList
 
 open System
+open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open EnvDTE
 open Microsoft.VisualStudio.Shell.Interop

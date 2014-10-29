@@ -44,10 +44,15 @@ type IGlobalOptions =
     abstract StrictMode: bool with get, set
     abstract DiagnosticMode: bool with get, set
 
+[<AutoOpen>]
+module Utils =
+    type System.IServiceProvider with
+        member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
+        member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
+
 [<RequireQualifiedAccess>]
 module Setting =
     open System
-    open FSharpVSPowerTools.ProjectSystem
 
     let getGeneralOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGeneralOptions>()

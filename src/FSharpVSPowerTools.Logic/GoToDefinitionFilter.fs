@@ -126,7 +126,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             VsShellUtilities.IsDocumentOpen(
                 serviceProvider, 
                 filePath, 
-                Constants.LogicalViewTextGuid,
+                Constants.guidLogicalTextView,
                 &hierarchy,
                 &itemId,
                 &windowFrame)      
@@ -148,7 +148,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                         VsShellUtilities.OpenDocument(
                             serviceProvider, 
                             filePath, 
-                            Constants.LogicalViewTextGuid, 
+                            Constants.guidLogicalTextView, 
                             &hierarchy,
                             &itemId,
                             &windowFrame)

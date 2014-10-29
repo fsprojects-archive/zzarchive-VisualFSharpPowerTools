@@ -71,7 +71,7 @@ type RenameCommandFilter(textDocument: ITextDocument,
             finally
                 documentUpdater.EndGlobalUndo(undo)
         with e -> 
-            Logging.logException e
+            Logging.logExceptionWithMessage e "Failed to rename references."
 
     member x.HandleRename() = maybe {
         let! state = state

@@ -50,7 +50,7 @@ and
                 VsShellUtilities.IsDocumentOpen(
                     x.serviceProvider, 
                     position.FileName, 
-                    Constants.LogicalViewTextGuid,
+                    Constants.guidLogicalTextView,
                     &hierarchy,
                     &itemId,
                     &windowFrame)
@@ -62,7 +62,7 @@ and
                         VsShellUtilities.TryOpenDocument(
                             x.serviceProvider, 
                             position.FileName, 
-                            Constants.LogicalViewTextGuid, 
+                            Constants.guidLogicalTextView, 
                             &hierarchy,
                             &itemId,
                             &windowFrame)
@@ -78,7 +78,7 @@ and
                 |> ensureSucceeded
 
                 let (startRow, startCol), (endRow, endCol) = position.Span
-                vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
+                vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, endRow, endCol)
                 |> ensureSucceeded
         member internal __.GetProvisionalViewingStatus(position: NavigateToItemExtraData) =
             int (VsShellUtilities.GetProvisionalViewingStatus(position.FileName))

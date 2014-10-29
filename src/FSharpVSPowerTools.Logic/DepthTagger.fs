@@ -49,7 +49,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
                                 (SnapshotSpan(startPoint, endPoint).Span, SpanTrackingMode.EdgeExclusive)
                         (trackingSpan, info) :: res
                     with e -> 
-                        debug "%O" e
+                        Logging.logException e
                         if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
                         res) []
                 |> List.rev

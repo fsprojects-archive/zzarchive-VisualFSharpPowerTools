@@ -57,22 +57,29 @@
   <ItemGroup>
     <None Include="paket.references" />
     <Compile Include="AssemblyInfo.fs">
-      <Link>Common/AssemblyInfo.fs</Link>
     </Compile>
+    <Resource Include="CommonResources.xaml">
+    </Resource>
+    <Resource Include="RenameDialog.xaml">
+    </Resource>
+    <Resource Include="FolderNameDialog.xaml">
+    </Resource>
+    <Resource Include="MoveToFolderDialog.xaml">
+    </Resource>
     <Compile Include="Resource.fs">
       <Link>Common/Resource.fs</Link>
     </Compile>
     <Compile Include="Constants.fs">
       <Link>Common/Constants.fs</Link>
     </Compile>
+    <Compile Include="Setting.fs">
+      <Link>Common/Setting.fs</Link>
+    </Compile>
     <Compile Include="Logger.fs">
       <Link>Common/Logger.fs</Link>
     </Compile>
     <Compile Include="VSUtils.fs">
       <Link>Common/VSUtils.fs</Link>
-    </Compile>
-    <Compile Include="Setting.fs">
-      <Link>Common/Setting.fs</Link>
     </Compile>
     <Compile Include="VisualStudioVersion.fs">
       <Link>Common/VisualStudioVersion.fs</Link>
@@ -83,9 +90,6 @@
     <Compile Include="Status.fs">
       <Link>Common/Status.fs</Link>
     </Compile>
-    <Resource Include="CommonResources.xaml">
-      <Link>Common/CommonResources.xaml</Link>
-    </Resource>
     <Compile Include="CommonResources.xaml.fs">
       <Link>Common/CommonResources.xaml.fs</Link>
     </Compile>
@@ -146,9 +150,6 @@
     <Compile Include="HighlightUsageTagger.fs">
       <Link>Symbol/HighlightUsageTagger.fs</Link>
     </Compile>
-    <Resource Include="RenameDialog.xaml">
-      <Link>Symbol/RenameDialog.xaml</Link>
-    </Resource>
     <Compile Include="RenameDialog.fs">
       <Link>Symbol/RenameDialog.fs</Link>
     </Compile>
@@ -164,15 +165,9 @@
     <Compile Include="FindReferencesFilter.fs">
       <Link>Symbol/FindReferencesFilter.fs</Link>
     </Compile>
-    <Resource Include="FolderNameDialog.xaml">
-      <Link>FolderCommand/FolderNameDialog.xaml</Link>
-    </Resource>
     <Compile Include="FolderNameDialog.fs">
       <Link>FolderCommand/FolderNameDialog.fs</Link>
     </Compile>
-    <Resource Include="MoveToFolderDialog.xaml">
-      <Link>FolderCommand/MoveToFolderDialog.xaml</Link>
-    </Resource>
     <Compile Include="MoveToFolderDialog.fs">
       <Link>FolderCommand/MoveToFolderDialog.fs</Link>
     </Compile>
@@ -651,7 +646,7 @@
       </ItemGroup>
     </Otherwise>
   </Choose>
-<Choose>
+  <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework'">
       <Choose>
         <When Condition="$(TargetFrameworkVersion) == 'v1.0'">
@@ -673,12 +668,12 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
-
             <Reference Include="FsXaml.Wpf">
               <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
-            </Reference>          </ItemGroup>
+            </Reference>
+          </ItemGroup>
         </Otherwise>
       </Choose>
     </When>
@@ -689,7 +684,7 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
-  <Reference Include="FsXaml.Wpf">
+        <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\FsXaml.Wpf.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
@@ -703,7 +698,7 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
-<Reference Include="FsXaml.Wpf">
+        <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
@@ -717,7 +712,7 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
-    <Reference Include="FsXaml.Wpf">
+        <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
@@ -731,7 +726,7 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
-      <Reference Include="FsXaml.Wpf">
+        <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
@@ -745,7 +740,7 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
-   <Reference Include="FsXaml.Wpf">
+        <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
@@ -761,7 +756,7 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
-   	<Reference Include="FsXaml.Wpf">
+            <Reference Include="FsXaml.Wpf">
               <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
@@ -775,7 +770,7 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
-	<Reference Include="FsXaml.Wpf">
+            <Reference Include="FsXaml.Wpf">
               <HintPath>..\..\packages\FsXaml.Wpf\lib\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\FsXaml.Wpf.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
@@ -791,7 +786,7 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
-      <Reference Include="FsXaml.Wpf">
+        <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
