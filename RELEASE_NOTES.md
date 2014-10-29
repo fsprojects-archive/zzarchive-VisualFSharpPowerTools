@@ -5,6 +5,8 @@
 * Implement Task List Comments
 * Fix issues with retrieving wrong active documents
 * Add syntax coloring for escaped characters in strings
+* Add Strict mode to control granularity of caching
+* Add Diagnostic mode to dump logging information to VS Output window
 
 #### 1.5.2 - October 8 2014
 * Add syntax coloring for printf specifiers

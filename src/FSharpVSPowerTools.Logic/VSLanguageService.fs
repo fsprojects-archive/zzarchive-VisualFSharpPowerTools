@@ -46,8 +46,8 @@ type VSLanguageService
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
     /// Clean up instructions are displayed on status bar.
-    let suggestRecoveryAfterFailure e =
-        Logging.logException e
+    let suggestRecoveryAfterFailure ex _fileName source opts =
+        Logging.logError "The following exception: %A occurs for file '%O' and options '%A'." ex source opts
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
                 
@@ -65,6 +65,7 @@ type VSLanguageService
                 fsharpLanguageService.LexStateOfColorState(colorState)
         with e ->
             debug "[Language Service] %O exception occurs while querying lexing states." e
+            Logging.logExceptionWithMessage e "Exception occurs while querying lexing states."
             Lexer.queryLexState source defines line
 
     let filterSymbolUsesDuplicates (uses: FSharpSymbolUse[]) =
@@ -185,7 +186,8 @@ type VSLanguageService
                     |> Option.map (fun (symbol, lastIdent, refs) -> 
                         symbol, lastIdent, filterSymbolUsesDuplicates refs)
             with e ->
-                debug "[Language Service] %O exception occurs while updating." e
+                debug "[Language Service] %O exception occurs while finding usages." e
+                Logging.logExceptionWithMessage e "Exception occurs while finding usages."
                 return None }
 
     member __.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
@@ -199,6 +201,7 @@ type VSLanguageService
                 return res |> Option.map (fun (symbol, ident, refs) -> symbol, ident, filterSymbolUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while finding usages in file." e
+                Logging.logExceptionWithMessage e "Exception occurs while finding usages in file."
                 return None
         }
 
@@ -266,6 +269,7 @@ type VSLanguageService
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             with e ->
                 debug "[Language Service] GetAllSymbols raises exception: %O" e
+                Logging.logExceptionWithMessage e "GetAllSymbols raises exception."
                 return None
         }
 
