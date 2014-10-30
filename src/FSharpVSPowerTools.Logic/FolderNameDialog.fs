@@ -4,7 +4,7 @@ open FSharpVSPowerTools
 open FSharp.ViewModule
 open FSharp.ViewModule.Validation
 
-type NewFolderNameDialog = FsXaml.XAML< "FolderNameDialog.xaml" >
+type NewFolderNameDialog = FsXaml.XAML<"FolderNameDialog.xaml">
 
 [<NoEquality; NoComparison>]
 type NewFolderNameDialogResources = 
