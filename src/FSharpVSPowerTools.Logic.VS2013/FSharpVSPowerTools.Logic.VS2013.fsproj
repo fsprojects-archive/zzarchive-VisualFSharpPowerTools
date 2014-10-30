@@ -198,82 +198,6 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
-          </ItemGroup>
-        </Otherwise>
-      </Choose>
-    </When>
-    <When Condition="$(TargetFrameworkIdentifier) == 'MonoAndroid'">
-      <ItemGroup>
-        <Reference Include="FSharp.Compiler.Service">
-          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="$(TargetFrameworkIdentifier) == 'MonoTouch'">
-      <ItemGroup>
-        <Reference Include="FSharp.Compiler.Service">
-          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="$(TargetFrameworkIdentifier) == 'Silverlight'">
-      <ItemGroup>
-        <Reference Include="FSharp.Compiler.Service">
-          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="$(TargetFrameworkIdentifier) == 'Windows'">
-      <ItemGroup>
-        <Reference Include="FSharp.Compiler.Service">
-          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="$(TargetFrameworkIdentifier) == 'WindowsPhoneApp'">
-      <ItemGroup>
-        <Reference Include="FSharp.Compiler.Service">
-          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <Otherwise>
-      <ItemGroup>
-        <Reference Include="FSharp.Compiler.Service">
-          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </Otherwise>
-  </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework'">
-      <Choose>
-        <When Condition="$(TargetFrameworkVersion) == 'v1.0'">
-        </When>
-        <When Condition="$(TargetFrameworkVersion) == 'v1.1'">
-        </When>
-        <When Condition="$(TargetFrameworkVersion) == 'v2.0'">
-        </When>
-        <When Condition="$(TargetFrameworkVersion) == 'v3.5'">
-        </When>
-        <When Condition="$(TargetFrameworkVersion) == 'v4.0' And $(TargetFrameworkProfile) == 'Client'">
-        </When>
-        <When Condition="$(TargetFrameworkVersion) == 'v4.0'">
-        </When>
-        <Otherwise>
-          <ItemGroup>
             <Reference Include="FSharp.ViewModule.Core.Wpf">
               <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
               <Private>True</Private>
@@ -294,6 +218,11 @@
     </When>
     <When Condition="$(TargetFrameworkIdentifier) == 'MonoAndroid'">
       <ItemGroup>
+        <Reference Include="FSharp.Compiler.Service">
+          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.ViewModule.Core.Wpf">
           <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
           <Private>True</Private>
@@ -303,6 +232,11 @@
     </When>
     <When Condition="$(TargetFrameworkIdentifier) == 'MonoTouch'">
       <ItemGroup>
+        <Reference Include="FSharp.Compiler.Service">
+          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.ViewModule.Core.Wpf">
           <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
           <Private>True</Private>
@@ -312,6 +246,11 @@
     </When>
     <When Condition="$(TargetFrameworkIdentifier) == 'Silverlight'">
       <ItemGroup>
+        <Reference Include="FSharp.Compiler.Service">
+          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.ViewModule.Core.Wpf">
           <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
           <Private>True</Private>
@@ -321,6 +260,11 @@
     </When>
     <When Condition="$(TargetFrameworkIdentifier) == 'Windows'">
       <ItemGroup>
+        <Reference Include="FSharp.Compiler.Service">
+          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.ViewModule.Core.Wpf">
           <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
           <Private>True</Private>
@@ -332,6 +276,11 @@
       <Choose>
         <When Condition="$(TargetPlatformVersion) == '7.1'">
           <ItemGroup>
+            <Reference Include="FSharp.Compiler.Service">
+              <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="FSharp.ViewModule.Core.Wpf">
               <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
               <Private>True</Private>
@@ -341,6 +290,11 @@
         </When>
         <Otherwise>
           <ItemGroup>
+            <Reference Include="FSharp.Compiler.Service">
+              <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="FSharp.ViewModule.Core">
               <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\FSharp.ViewModule.Core.dll</HintPath>
               <Private>True</Private>
@@ -352,6 +306,11 @@
     </When>
     <Otherwise>
       <ItemGroup>
+        <Reference Include="FSharp.Compiler.Service">
+          <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.ViewModule.Core.Wpf">
           <HintPath>..\..\packages\FSharp.ViewModule.Core\lib\net45\FSharp.ViewModule.Core.Wpf.dll</HintPath>
           <Private>True</Private>
