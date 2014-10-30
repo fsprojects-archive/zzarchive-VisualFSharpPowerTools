@@ -11,7 +11,7 @@ open FSharp.ViewModule.Progress
 open FSharp.ViewModule.Validation
 open System.Threading
 
-type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
+type RenameDialog = FsXaml.XAML<"RenameDialog.xaml", true>
 
 [<NoComparison>]
 type RenameContext =
@@ -164,10 +164,8 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
 
 // This handles "code behind", ie: pure view logic for our dialog
 type RenameDialogViewController() = 
-    interface FsXaml.IViewController with
-        member __.Attach fe = 
-            // Use the TypeProvider's Accessor sub-type to gain access to named members
-            let window = RenameDialog.Accessor fe
+    inherit FsXaml.WindowViewController<RenameDialog>()
+        override __.OnLoaded window =
             let model = window.Root.DataContext :?> INotifyPropertyChanged
             // Once the model is initialized, focus and select txtName so the user can just type "F2 / new_name / Enter"
             model.PropertyChanged.Add(fun e -> 
@@ -181,7 +179,7 @@ type RenameDialogViewController() =
 [<RequireQualifiedAccess>]
 module UI = 
     let loadRenameDialog (viewModel: RenameDialogViewModel) owner = 
-        let window = RenameDialog().CreateRoot()
-        window.Owner <- owner
-        window.DataContext <- viewModel
-        window
+        let window = RenameDialog()
+        window.Root.Owner <- owner
+        window.Root.DataContext <- viewModel
+        window.Root

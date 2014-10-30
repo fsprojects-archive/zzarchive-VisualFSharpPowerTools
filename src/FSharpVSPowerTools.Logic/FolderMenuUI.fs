@@ -7,19 +7,16 @@ open FSharpVSPowerTools
 [<RequireQualifiedAccess>]
 module FolderMenuUI =
     let loadNewFolderDialog (viewModel: NewFolderNameDialogModel) =
-        let window = NewFolderNameDialog().CreateRoot()
-        window.DataContext <- viewModel
-        window
+        let window = NewFolderNameDialog()
+        window.Root.DataContext <- viewModel
+        window.Root
         
     let loadMoveToFolderDialog (viewModel: MoveToFolderDialogModel) =
-        let window = MoveToFolderDialog().CreateRoot()
+        let window = MoveToFolderDialog()
 
-        // Provides access to "code behind" style work
-        let accessor = MoveToFolderDialog.Accessor(window)
-
-        accessor.FoldersTree.SelectedItemChanged.Add(fun _ -> 
-            viewModel.SelectedFolder <- Some (accessor.FoldersTree.SelectedItem :?> Folder)
+        window.FoldersTree.SelectedItemChanged.Add(fun _ -> 
+            viewModel.SelectedFolder <- Some (window.FoldersTree.SelectedItem :?> Folder)
         )
 
-        window.DataContext <- viewModel
-        window
+        window.Root.DataContext <- viewModel
+        window.Root

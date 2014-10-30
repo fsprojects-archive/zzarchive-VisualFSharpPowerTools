@@ -5,7 +5,7 @@ open FSharpVSPowerTools
 open FSharp.ViewModule
 open FSharp.ViewModule.Validation
 
-type MoveToFolderDialog = FsXaml.XAML< "MoveToFolderDialog.xaml" >
+type MoveToFolderDialog = FsXaml.XAML<"MoveToFolderDialog.xaml", true>
 
 type Folder = 
     { Name: string
