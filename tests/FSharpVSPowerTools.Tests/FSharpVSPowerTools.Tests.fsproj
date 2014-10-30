@@ -77,7 +77,6 @@
     <Content Include="app.config" />
     <Content Include="paket.references" />
     <None Include="Foq.Usage.fsx" />
-    <Compile Include="ProjectParser.fs" />
     <Compile Include="ExternalProjectProvider.fs" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="MockDTE.fs" />

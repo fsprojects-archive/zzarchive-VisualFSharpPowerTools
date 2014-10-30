@@ -66,3 +66,14 @@ type VsTestBase() =
 
     member __.SetActiveDocument(filePath: string) = 
         dte.SetActiveDocument(filePath)
+
+    member x.SetUpProjectAndCurrentDocument(project: IProjectProvider, filePath: string) =
+        match project with
+        | :? ExternalProjectProvider as p ->
+            x.AddProject(p)
+            for p' in p.ReferencedProjects do x.AddProject(p')
+        | _ ->
+            // Assume that this kind of project provider doesn't have referenced projects
+            x.AddProject(project)
+        x.SetActiveDocument(filePath)
+        

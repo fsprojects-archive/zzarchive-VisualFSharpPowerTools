@@ -88,8 +88,7 @@ let x = 0
 x
 """
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
-        helper.SetActiveDocument(fileName)                
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)            
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
 
@@ -106,7 +105,7 @@ x
                     [| sprintf "%s - (%i, %i) : val x" prefix 2 4;
                        sprintf "%s - (%i, %i) : val x" prefix 3 0 |])
 
-    [<Test; Category "AppVeyorLongRunning">]
+    [<Test>]
     let ``should be able to find all references in multiple documents``() = 
         let content = """
 module Sample
@@ -117,8 +116,7 @@ val func : int -> int
         let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/FSharpSignature/FSharpSignature.fsproj"))
         let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/FSharpSignature/Sample.fsi"))
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(ExternalProjectProvider(projectFileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)         
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
 
