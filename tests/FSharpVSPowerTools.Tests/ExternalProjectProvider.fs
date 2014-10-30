@@ -6,7 +6,8 @@ open FSharpVSPowerTools
 open Microsoft.Build
 
 type ExternalProjectProvider(projectFileName) =    
-    let projectResolver = FSharpProjectFileInfo.Parse(projectFileName)
+    // We use Debug mode since test assemblies are created in Debug mode in BuildTests target
+    let projectResolver = FSharpProjectFileInfo.Parse(projectFileName,properties = [("Configuration", "Debug")])
     let fullProjectFileName = projectResolver.FullPath
     let frameworkVersion = 
         projectResolver.FrameworkVersion 
@@ -41,6 +42,7 @@ type ExternalProjectProvider(projectFileName) =
                     |> List.choose (fun p -> 
                         p.FullOutputFilePath |> Option.map (fun x -> x, p.GetProjectCheckerOptions languageService |> Async.RunSynchronously))
                     |> List.toArray
-                return languageService.GetProjectCheckerOptions (fullProjectFileName, sourceFiles, compilerOptions, referencedProjectOptions)
+                let opts = languageService.GetProjectCheckerOptions (fullProjectFileName, sourceFiles, compilerOptions, referencedProjectOptions)
+                //printfn "Current project options: %A" opts
+                return opts
             }
-

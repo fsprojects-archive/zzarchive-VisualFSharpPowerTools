@@ -38,6 +38,13 @@ type Logger [<ImportingConstructor>]
         let service = serviceProvider.GetService<IVsActivityLog, SVsActivityLog>() 
         Option.ofNull service
 
+    static let mutable globalServiceProvider: IServiceProvider option = None
+
+    /// Quick and dirty global service provider for testing purpose.
+    static member internal GlobalServiceProvider 
+        with get () = globalServiceProvider |> Option.getOrElse (ServiceProvider.GlobalProvider :> _)
+        and set v = globalServiceProvider <- Some v
+
     member __.Log logType message =
         getActivityLogService()
         |> Option.iter (fun s -> s.LogEntry(uint32 (getEntryTypeInt logType), Resource.vsPackageTitle, message) |> ignore)
@@ -79,8 +86,8 @@ module OutputWindowHelper =
         window.OutputString(outputMessage) |> ignore
     
     /// This global output window is initialized once for each Visual Studio session.
-    let outputWindowPane = lazy(tryGetPowerToolsWindowPane(ServiceProvider.GlobalProvider))
-    let globalOptions = lazy(Setting.getGlobalOptions(ServiceProvider.GlobalProvider))
+    let outputWindowPane = lazy(tryGetPowerToolsWindowPane(Logger.GlobalServiceProvider))
+    let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
 
     let diagnose logType msg =
         // Guard against exceptions since it's not entirely clear that GlobalProvider will be populated correctly.
@@ -93,7 +100,7 @@ module Logging =
     open OutputWindowHelper
 
     /// This is a global logger, please make sure that it is executed after the package is loaded.
-    let logger = lazy (Logger(ServiceProvider.GlobalProvider))
+    let logger = lazy (Logger(Logger.GlobalServiceProvider))
 
     let log logType (msg: Printf.StringFormat<'T, unit>) = 
         let format msg = 

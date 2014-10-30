@@ -80,6 +80,7 @@ module FindReferencesCommandTests =
     let setUp() =
         TestUtilities.AssertListener.Initialize()
         DocumentEventListener.SkipTimerDelay <- true
+        Logger.GlobalServiceProvider <- helper.ServiceProvider
 
     [<Test>]
     let ``should be able to find all references in a single document``() =
@@ -105,7 +106,7 @@ x
                     [| sprintf "%s - (%i, %i) : val x" prefix 2 4;
                        sprintf "%s - (%i, %i) : val x" prefix 3 0 |])
 
-    [<Test>]
+    [<Test; Ignore "Activate when upstream bug is fixed">]
     let ``should be able to find all references in multiple documents``() = 
         let content = """
 module Sample

@@ -50,6 +50,7 @@ module HighlightUsageTaggerTaggerTests =
     let setUp() =
         TestUtilities.AssertListener.Initialize()
         DocumentEventListener.SkipTimerDelay <- true
+        Logger.GlobalServiceProvider <- helper.ServiceProvider
 
     [<Test>]
     let ``should not display tags if moving to a place without symbol``() = 
@@ -149,7 +150,7 @@ let _ = Project.GetSample()
                 |> assertEqual
                      [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
 
-    [<Test>]
+    [<Test; Ignore "Activate when upstream bug is fixed">]
     let ``should generate highlight usage tags for multi-project symbols``() = 
         let content = """
 namespace Project2
