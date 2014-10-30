@@ -11,7 +11,7 @@ open FSharp.ViewModule.Progress
 open FSharp.ViewModule.Validation
 open System.Threading
 
-type RenameDialog = FsXaml.XAML<"RenameDialog.xaml", true>
+type RenameDialog = FsXaml.XAML<"RenameDialog.xaml", ExposeNamedProperties=true>
 
 [<NoComparison>]
 type RenameContext =
