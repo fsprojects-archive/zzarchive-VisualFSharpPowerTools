@@ -82,10 +82,6 @@ type ITextBuffer with
     member x.TriggerTagsChanged (sender: obj) (event: Event<_,_>) =
         let span = SnapshotSpan(x.CurrentSnapshot, 0, x.CurrentSnapshot.Length)
         event.Trigger(sender, SnapshotSpanEventArgs(span))
-        
-type IServiceProvider with
-    member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
-    member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
 
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
@@ -161,12 +157,18 @@ type DTE with
         match x.GetActiveDocument() with
         | Some doc when doc.FullName = filePath -> 
             Some doc
-        | _ ->
-            // If there is no current document or it refers to a different path,
-            // we try to find the exact document from solution by path.
-            x.Solution.FindProjectItem(filePath)
-            |> Option.ofNull
-            |> Option.bind (fun item -> Option.ofNull item.Document)
+        | docOpt ->
+            let result =
+                // If there is no current document or it refers to a different path,
+                // we try to find the exact document from solution by path.
+                x.Solution.FindProjectItem(filePath)
+                |> Option.ofNull
+                |> Option.bind (fun item -> Option.ofNull item.Document)
+            match docOpt, result with
+            | Some doc, None ->
+                Logging.logWarning "Can't match paths between '%O' and '%O' in current solution." filePath doc.FullName
+            | _ -> ()
+            result
 
     member x.TryGetProperty(category, page, name) = 
         x.Properties(category, page)
@@ -398,7 +400,7 @@ type IServiceProvider with
             VsShellUtilities.IsDocumentOpen(
                 serviceProvider, 
                 fileName, 
-                Constants.LogicalViewTextGuid,
+                Constants.guidLogicalTextView,
                 &hierarchy,
                 &itemId,
                 &windowFrame)
@@ -410,7 +412,7 @@ type IServiceProvider with
                     VsShellUtilities.OpenDocument(
                         serviceProvider, 
                         fileName, 
-                        Constants.LogicalViewTextGuid, 
+                        Constants.guidLogicalTextView, 
                         &hierarchy,
                         &itemId,
                         &windowFrame)
@@ -426,5 +428,5 @@ type IServiceProvider with
             vsTextView.GetBuffer(&vsTextBuffer)
             |> ensureSucceeded
 
-            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.LogicalViewTextGuid, startRow, startCol, endRow, endCol)
+            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, endRow, endCol)
             |> ensureSucceeded

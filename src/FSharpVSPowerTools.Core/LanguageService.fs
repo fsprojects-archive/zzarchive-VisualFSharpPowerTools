@@ -148,8 +148,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
   do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
   let mutable errorHandler = None
-  let handleCriticalErrors e = 
-      errorHandler |> Option.iter (fun handle -> handle e)
+  let handleCriticalErrors e file source opts = 
+      errorHandler |> Option.iter (fun handle -> handle e file source opts)
 
   // Create an instance of interactive checker. The callback is called by the F# compiler service
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
@@ -198,7 +198,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                   fail "[LanguageService] Unexpected type checking errors occurred for '%s' with %A" fileName options
                   fail "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
                   debug "[LanguageService] Type checking fails for '%s' with content=%A and %A.\nResulting exception: %A" fileName source options e
-                  handleCriticalErrors e
+                  handleCriticalErrors e fileName source options
                   ParseAndCheckResults.Empty  
           return results
       }
@@ -333,20 +333,25 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
      async { 
          match Lexer.getSymbol source line col lineStr args queryLexState with
          | Some symbol ->
-             let! projectCheckResults = x.ParseAndCheckFileInProject(currentProjectOptions, fileName, source, AllowStaleResults.MatchingSource)
-             let! result = projectCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
+             let! fileCheckResults = x.ParseAndCheckFileInProject(currentProjectOptions, fileName, source, AllowStaleResults.MatchingSource)
+             let! result = fileCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
              match result with
              | Some fsSymbolUse ->
                  let! refs =                    
                     let dependentProjects = dependentProjectsOptions |> Seq.toArray
                     
                     dependentProjects |> Async.Array.mapi (fun index opts ->
-                          async {                            
-                            let projectName = Path.GetFileNameWithoutExtension(opts.ProjectFileName)
-                            reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
-                            let! projectResults = checker.ParseAndCheckProject opts
-                            let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
-                            return refs })
+                          async {   
+                            try                         
+                                let projectName = Path.GetFileNameWithoutExtension(opts.ProjectFileName)
+                                reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
+                                let! projectResults = checker.ParseAndCheckProject opts
+                                let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
+                                return refs 
+                            with e ->
+                                handleCriticalErrors e fileName source opts
+                                return [||]
+                          })
                  let refs = Array.concat refs
                  return Some(fsSymbolUse.Symbol, symbol.Text, refs)
              | None -> return None

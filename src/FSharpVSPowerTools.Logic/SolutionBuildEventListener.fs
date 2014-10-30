@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
+open FSharpVSPowerTools
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
 open System

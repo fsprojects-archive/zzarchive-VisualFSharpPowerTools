@@ -130,6 +130,8 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
                         projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects)
                     |> fixProjectLoadTime 
 
+                (*
+                // Disable due to a bug in Visual F# Tools' project system (https://visualfsharp.codeplex.com/workitem/164)
                 let orphanedProjects = lazy (
                     let refProjectsOutPaths = 
                         opts.ReferencedProjects 
@@ -143,6 +145,7 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
 
                 Debug.Assert (Set.isEmpty orphanedProjects.Value, 
                     sprintf "Not all referenced projects are in the compiler options: %A" orphanedProjects.Value)
+                *)
 
                 cache := Some opts
                 return opts
