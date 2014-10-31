@@ -16,15 +16,28 @@ We currently support coloring:
 - quotations
 - patterns (off by default)
 - mutable variables / reference cells (off by default)
+- printf formatter
+- escaped characters in string literals
 - unused non public types, methods, functions and values declarations
 - unused open statements
 
-There is a special user setting for enabling graying out unused declarations and open statements.
+Graying out unused declarations
+-----------------------
+Currently unused non public types, methods, functions and values declarations are checked.
+Beware that this feature is only 100% reliable when the code has no type error.
+This setting is available in General options.
+It is disabled by default because there might be performance issues on large files.
+
+Graying out unused opens
+-----------------------
+If an open declaration hasn't been used anywhere in the current file, it will be marked as unused.
+This setting is available in General options. 
+It is disabled by default because there might be performance issues on large files.
 
 Unused declaration markers
 -----------------------
 
-If unused declarations and open statements are found in current file, orange markers will appear on top of vertical scroll bar.
+If unused declarations and open statements are found in the current file, orange markers will appear on top of vertical scroll bar.
 You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).
 ![Syntax coloring](img/syntax_coloring_unused_decl.png)
 
