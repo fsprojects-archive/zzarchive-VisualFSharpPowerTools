@@ -62,7 +62,7 @@ module SyntaxConstructClassifierTests =
     let ``should not return anything if the code doesn't contain semantic symbol``() = 
         let content = "let x = 0"
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
             (fun () -> helper.ClassificationSpansOf(buffer, classifier) |> Seq.isEmpty |> assertTrue)
@@ -79,8 +79,7 @@ module Module1 =
     let x = ()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             helper.ClassificationSpansOf(buffer, classifier)
@@ -110,12 +109,11 @@ open System
 open System.Collections.Generic
 let internal f() = ()
 """
-        let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        let buffer = createMockTextBuffer content fileName        
         // IsSymbolUsedForProject seems to require a file to exist on disks
         // If not, type checking fails with some weird errors
         File.WriteAllText(fileName, "")
-        helper.SetActiveDocument(fileName)
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             helper.ClassificationSpansOf(buffer, classifier)
@@ -141,9 +139,8 @@ let _ = Project.GetSample()
         // Use absolute path just to be sure
         let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fsproj"))
         let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fs"))
-        let buffer = createMockTextBuffer content fileName
-        helper.AddProject(ExternalProjectProvider(projectFileName))
-        helper.SetActiveDocument(fileName)
+        let buffer = createMockTextBuffer content fileName        
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ -> 
             helper.ClassificationSpansOf(buffer, classifier)

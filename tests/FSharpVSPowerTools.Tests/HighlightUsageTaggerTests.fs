@@ -50,6 +50,7 @@ module HighlightUsageTaggerTaggerTests =
     let setUp() =
         TestUtilities.AssertListener.Initialize()
         DocumentEventListener.SkipTimerDelay <- true
+        Logger.GlobalServiceProvider <- helper.ServiceProvider
 
     [<Test>]
     let ``should not display tags if moving to a place without symbol``() = 
@@ -98,8 +99,7 @@ module GenericClass =
     let _ = Type1<_,_>.Member1()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -117,8 +117,7 @@ module GenericClass =
 do printfn "Hello world!"
 """
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)        
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -140,8 +139,7 @@ let _ = Project.GetSample()
         let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fsproj"))
         let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fs"))
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(ExternalProjectProvider(projectFileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)        
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -152,7 +150,7 @@ let _ = Project.GetSample()
                 |> assertEqual
                      [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
 
-    [<Test; Ignore>]
+    [<Test; Ignore "Activate when upstream bug is fixed">]
     let ``should generate highlight usage tags for multi-project symbols``() = 
         let content = """
 namespace Project2
@@ -165,8 +163,7 @@ module Test =
         let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/MultiProjects/Project2/Project2.fsproj"))
         let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/MultiProjects/Project2/Project21.fs"))
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(ExternalProjectProvider(projectFileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)        
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout

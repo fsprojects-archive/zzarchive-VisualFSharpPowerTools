@@ -116,9 +116,10 @@ Target "CleanVSIX" (fun _ ->
     ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
 )
 
+// Build test projects in Debug mode in order to provide correct paths for multi-project scenarios
 Target "BuildTests" (fun _ ->    
     !! "tests/data/**/*.sln"
-    |> MSBuildRelease "" "Rebuild"
+    |> MSBuildDebug "" "Rebuild"
     |> ignore
 )
 
