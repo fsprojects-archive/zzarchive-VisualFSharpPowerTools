@@ -95,10 +95,16 @@ namespace FSharpVSPowerTools
             set { chbResolveUnopenedNamespaces.Checked = value;  }
         }
 
-        public bool UnusedDeclarationsEnabled
+        public bool UnusedReferencesEnabled
         {
-            get { return chbUnusedDeclarations.Checked; }
-            set { chbUnusedDeclarations.Checked = value; }
+            get { return chbUnusedReferences.Checked; }
+            set { chbUnusedReferences.Checked = value; }
+        }
+
+        public bool UnusedOpensEnabled 
+        {
+            get { return chbUnusedOpens.Checked; }
+            set { chbUnusedOpens.Checked = value; }
         }
 
         public bool TaskListCommentsEnabled
@@ -129,7 +135,8 @@ namespace FSharpVSPowerTools
             GenerateRecordStubEnabled = _optionsPage.GenerateRecordStubEnabled;
             UnionPatternMatchCaseGenerationEnabled = _optionsPage.UnionPatternMatchCaseGenerationEnabled;
             ResolveUnopenedNamespacesEnabled = _optionsPage.ResolveUnopenedNamespacesEnabled;
-            UnusedDeclarationsEnabled = _optionsPage.UnusedDeclarationsEnabled;
+            UnusedReferencesEnabled = _optionsPage.UnusedReferencesEnabled;
+            UnusedOpensEnabled = _optionsPage.UnusedOpensEnabled;
             TaskListCommentsEnabled = _optionsPage.TaskListCommentsEnabled;
             GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
         }

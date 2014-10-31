@@ -21,7 +21,8 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                                 vsLanguageService: VSLanguageService, 
                                 serviceProvider: IServiceProvider,
                                 projectFactory: ProjectFactory, 
-                                includeUnusedDeclarations: bool) as self =
+                                includeUnusedReferences: bool,
+                                includeUnusedOpens: bool) as self =
     
     let getClassificationType cat =
         match cat with
@@ -76,18 +77,18 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         
                         let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
                         
-                        let includeUnusedDeclarations = 
+                        let includeUnusedReferences = 
                             // Don't check for unused declarations on generated signatures
-                            includeUnusedDeclarations && not (String.Equals(Path.GetExtension(textDocument.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) && project.IsForStandaloneScript)
+                            includeUnusedReferences && not (String.Equals(Path.GetExtension(textDocument.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) && project.IsForStandaloneScript)
                         let! symbolsUses, lexer =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, textDocument.FilePath, project, AllowStaleResults.No,
-                                                                            includeUnusedDeclarations, getSymbolDeclLocation)
+                                                                            includeUnusedReferences, includeUnusedOpens, getSymbolDeclLocation)
 
                         let! parseResults = vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
                         let! entities = vsLanguageService.GetAllEntities(textDocument.FilePath, snapshot.GetText(), project)
                             
                         let entitiesMap, openDeclarations = 
-                            if includeUnusedDeclarations then
+                            if includeUnusedReferences then
                                 let qualifyOpenDeclarations line endCol idents = 
                                     let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
                                     let tooltip =
