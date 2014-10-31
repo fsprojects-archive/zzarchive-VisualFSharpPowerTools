@@ -206,7 +206,12 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             for item in info.Items do
                 Debug.Assert(item.FileCount = 1s, "Item should be unique.")
                 let filePath = item.FileNames(0s)
-                destination.AddFromFileCopy(filePath) |> ignore
+                let buildAction = item.TryGetProperty("ItemType")
+                let newItem = destination.AddFromFileCopy(filePath)
+                // The new item may lose ItemType; we try to recover it.
+                buildAction |> Option.iter (fun buildAction -> 
+                    let property = newItem.Properties.["ItemType"]
+                    property.Value <- buildAction)
                 item.Delete()
             info.Project.IsDirty <- true
         | _ ->
