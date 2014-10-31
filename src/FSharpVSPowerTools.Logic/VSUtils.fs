@@ -166,7 +166,7 @@ type DTE with
                 |> Option.bind (fun item -> Option.ofNull item.Document)
             match docOpt, result with
             | Some doc, None ->
-                Logging.logWarning "Can't match paths between '%O' and '%O' in current solution." filePath doc.FullName
+                Logging.logWarning "Can't match between active document '%O' and current path '%O' in current solution." doc.FullName filePath
             | _ -> ()
             result
 

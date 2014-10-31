@@ -52,50 +52,58 @@ namespace TestUtilities.Mocks {
         }
 
         public int LogEntry(uint actType, string pszSource, string pszDescription) {
-            Items.Add(string.Format("{0}//{1}//{2}", ActivityType[actType], pszSource, pszDescription));
-            Console.WriteLine("{0}//{1}//{2}", ActivityType[actType], pszSource, pszDescription);
+            var message = string.Format("{0}//{1}//{2}", ActivityType[actType], pszSource, pszDescription);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
 
         public int LogEntryGuid(uint actType, string pszSource, string pszDescription, Guid guid) {
-            Items.Add(string.Format("{0}//{1}//{2}//{3:B}", ActivityType[actType], pszSource, pszDescription, guid));
-            Console.WriteLine("{0}//{1}//{2}//{3:B}", ActivityType[actType], pszSource, pszDescription, guid);
+            var message = string.Format("{0}//{1}//{2}//{3:B}", ActivityType[actType], pszSource, pszDescription, guid);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
 
         public int LogEntryGuidHr(uint actType, string pszSource, string pszDescription, Guid guid, int hr) {
-            Items.Add(string.Format("{0}//{1}//{2}//{3:B}//{4:X8}", ActivityType[actType], pszSource, pszDescription, guid, hr));
-            Console.WriteLine("{0}//{1}//{2}//{3:B}//{4:X8}", ActivityType[actType], pszSource, pszDescription, guid, hr);
+            var message = string.Format("{0}//{1}//{2}//{3:B}//{4:X8}", ActivityType[actType], pszSource, pszDescription, guid, hr);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
 
         public int LogEntryGuidHrPath(uint actType, string pszSource, string pszDescription, Guid guid, int hr, string pszPath) {
-            Items.Add(string.Format("{0}//{1}//{2}//{3:B}//{4:X8}//{5}", ActivityType[actType], pszSource, pszDescription, guid, hr, pszPath));
-            Console.WriteLine("{0}//{1}//{2}//{3:B}//{4:X8}//{5}", ActivityType[actType], pszSource, pszDescription, guid, hr, pszPath);
+            var message = string.Format("{0}//{1}//{2}//{3:B}//{4:X8}//{5}", ActivityType[actType], pszSource, pszDescription, guid, hr, pszPath);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
 
         public int LogEntryGuidPath(uint actType, string pszSource, string pszDescription, Guid guid, string pszPath) {
-            Items.Add(string.Format("{0}//{1}//{2}//{3:B}//{4}", ActivityType[actType], pszSource, pszDescription, guid, pszPath));
-            Console.WriteLine("{0}//{1}//{2}//{3:B}//{4}", ActivityType[actType], pszSource, pszDescription, guid, pszPath);
+            var message = string.Format("{0}//{1}//{2}//{3:B}//{4}", ActivityType[actType], pszSource, pszDescription, guid, pszPath);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
 
         public int LogEntryHr(uint actType, string pszSource, string pszDescription, int hr) {
-            Items.Add(string.Format("{0}//{1}//{2}//{3:X8}", ActivityType[actType], pszSource, pszDescription, hr));
-            Console.WriteLine("{0}//{1}//{2}//{3:X8}", ActivityType[actType], pszSource, pszDescription, hr);
+            var message = string.Format("{0}//{1}//{2}//{3:X8}", ActivityType[actType], pszSource, pszDescription, hr);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
 
         public int LogEntryHrPath(uint actType, string pszSource, string pszDescription, int hr, string pszPath) {
-            Items.Add(string.Format("{0}//{1}//{2}//{3:X8}//{4}", ActivityType[actType], pszSource, pszDescription, hr, pszPath));
-            Console.WriteLine("{0}//{1}//{2}//{3:X8}//{4}", ActivityType[actType], pszSource, pszDescription, hr, pszPath);
+            var message = string.Format("{0}//{1}//{2}//{3:X8}//{4}", ActivityType[actType], pszSource, pszDescription, hr, pszPath);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
 
         public int LogEntryPath(uint actType, string pszSource, string pszDescription, string pszPath) {
-            Items.Add(string.Format("{0}//{1}//{2}//{3}", ActivityType[actType], pszSource, pszDescription, pszPath));
-            Console.WriteLine("{0}//{1}//{2}//{3}", ActivityType[actType], pszSource, pszDescription, pszPath);
+            var message = string.Format("{0}//{1}//{2}//{3}", ActivityType[actType], pszSource, pszDescription, pszPath);
+            Items.Add(message);
+            Console.WriteLine(message);
             return VSConstants.S_OK;
         }
     }
