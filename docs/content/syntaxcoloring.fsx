@@ -39,6 +39,7 @@ Unused declaration markers
 
 If unused declarations and open statements are found in the current file, orange markers will appear on top of vertical scroll bar.
 You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).
+
 ![Syntax coloring](img/syntax_coloring_unused_decl.png)
 
 Here is how the editor looks like in blue & dark theme:
@@ -53,10 +54,12 @@ How to customize colors
 
 Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:
 
+- F# Escaped Characters
 - F# Functions / Methods
 - F# Modules
 - F# Mutable Variables / Reference Cells
 - F# Patterns
+- F# Printf Format
 - F# Quotations
 - F# Types
 - F# Value Types
