@@ -135,13 +135,6 @@ type ProjectFactory
         Debug.Assert(mayReferToSameBuffer buffer filePath, 
                 sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
         let project = doc.ProjectItem.ContainingProject
-        let isSourceExtension ext =
-            String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
-                String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase)
-        let isSignatureExtension ext =
-            String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase)
-
         if not (project === null) && not (filePath === null) && isFSharpProject project then
             let projectProvider = x.CreateForProject project
             // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 

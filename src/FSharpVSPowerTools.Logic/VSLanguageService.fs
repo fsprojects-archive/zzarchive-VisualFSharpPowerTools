@@ -219,7 +219,7 @@ type VSLanguageService
         }
 
     member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
-                                            checkForUnusedDeclarations: bool, getSymbolDeclLocation) = 
+                                            checkForUnusedReferences: bool, checkForUnusedOpens: bool, getSymbolDeclLocation) = 
         async {
             Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
@@ -257,8 +257,8 @@ type VSLanguageService
                 }
 
             let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(
-                                                opts, currentFile, source, stale, checkForUnusedDeclarations,
-                                                getSymbolDeclProjects)
+                                                opts, currentFile, source, stale,
+                                                checkForUnusedReferences, checkForUnusedOpens, getSymbolDeclProjects)
             return allSymbolsUses, lexer
         }
 

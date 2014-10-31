@@ -33,7 +33,7 @@ namespace FSharpVSPowerTools
             this.grbOptions = new System.Windows.Forms.GroupBox();
             this.chbTaskListComments = new System.Windows.Forms.CheckBox();
             this.chbGoToMetadata = new System.Windows.Forms.CheckBox();
-            this.chbUnusedDeclarations = new System.Windows.Forms.CheckBox();
+            this.chbUnusedReferences = new System.Windows.Forms.CheckBox();
             this.chbResolveUnopenedNamespaces = new System.Windows.Forms.CheckBox();
             this.chbUnionPatternMatchCaseGeneration = new System.Windows.Forms.CheckBox();
             this.chbRecordStubGeneration = new System.Windows.Forms.CheckBox();
@@ -52,14 +52,16 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
+            this.chbUnusedOpens = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbUnusedOpens);
             this.grbOptions.Controls.Add(this.chbTaskListComments);
             this.grbOptions.Controls.Add(this.chbGoToMetadata);
-            this.grbOptions.Controls.Add(this.chbUnusedDeclarations);
+            this.grbOptions.Controls.Add(this.chbUnusedReferences);
             this.grbOptions.Controls.Add(this.chbResolveUnopenedNamespaces);
             this.grbOptions.Controls.Add(this.chbUnionPatternMatchCaseGeneration);
             this.grbOptions.Controls.Add(this.chbRecordStubGeneration);
@@ -90,7 +92,7 @@ namespace FSharpVSPowerTools
             this.chbTaskListComments.AutoSize = true;
             this.chbTaskListComments.Checked = true;
             this.chbTaskListComments.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbTaskListComments.Location = new System.Drawing.Point(204, 181);
+            this.chbTaskListComments.Location = new System.Drawing.Point(204, 205);
             this.chbTaskListComments.Name = "chbTaskListComments";
             this.chbTaskListComments.Size = new System.Drawing.Size(120, 17);
             this.chbTaskListComments.TabIndex = 18;
@@ -102,24 +104,24 @@ namespace FSharpVSPowerTools
             this.chbGoToMetadata.AutoSize = true;
             this.chbGoToMetadata.Checked = true;
             this.chbGoToMetadata.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGoToMetadata.Location = new System.Drawing.Point(204, 157);
+            this.chbGoToMetadata.Location = new System.Drawing.Point(204, 181);
             this.chbGoToMetadata.Name = "chbGoToMetadata";
             this.chbGoToMetadata.Size = new System.Drawing.Size(99, 17);
             this.chbGoToMetadata.TabIndex = 18;
             this.chbGoToMetadata.Text = "Go to metadata";
             this.chbGoToMetadata.UseVisualStyleBackColor = true;
             // 
-            // chbUnusedDeclarations
+            // chbUnusedReferences
             // 
-            this.chbUnusedDeclarations.AutoSize = true;
-            this.chbUnusedDeclarations.Checked = true;
-            this.chbUnusedDeclarations.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbUnusedDeclarations.Location = new System.Drawing.Point(204, 133);
-            this.chbUnusedDeclarations.Name = "chbUnusedDeclarations";
-            this.chbUnusedDeclarations.Size = new System.Drawing.Size(217, 17);
-            this.chbUnusedDeclarations.TabIndex = 17;
-            this.chbUnusedDeclarations.Text = "Gray out unused declarations and opens";
-            this.chbUnusedDeclarations.UseVisualStyleBackColor = true;
+            this.chbUnusedReferences.AutoSize = true;
+            this.chbUnusedReferences.Checked = true;
+            this.chbUnusedReferences.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbUnusedReferences.Location = new System.Drawing.Point(204, 133);
+            this.chbUnusedReferences.Name = "chbUnusedReferences";
+            this.chbUnusedReferences.Size = new System.Drawing.Size(164, 17);
+            this.chbUnusedReferences.TabIndex = 17;
+            this.chbUnusedReferences.Text = "Gray out unused declarations";
+            this.chbUnusedReferences.UseVisualStyleBackColor = true;
             // 
             // chbResolveUnopenedNamespaces
             // 
@@ -323,6 +325,18 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
+            // chbUnusedOpens
+            // 
+            this.chbUnusedOpens.AutoSize = true;
+            this.chbUnusedOpens.Checked = true;
+            this.chbUnusedOpens.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbUnusedOpens.Location = new System.Drawing.Point(204, 156);
+            this.chbUnusedOpens.Name = "chbUnusedOpens";
+            this.chbUnusedOpens.Size = new System.Drawing.Size(136, 17);
+            this.chbUnusedOpens.TabIndex = 19;
+            this.chbUnusedOpens.Text = "Gray out unused opens";
+            this.chbUnusedOpens.UseVisualStyleBackColor = true;
+            // 
             // GeneralOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -358,8 +372,9 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbRecordStubGeneration;
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;
         private System.Windows.Forms.CheckBox chbResolveUnopenedNamespaces;
-        private System.Windows.Forms.CheckBox chbUnusedDeclarations;
+        private System.Windows.Forms.CheckBox chbUnusedReferences;
         private System.Windows.Forms.CheckBox chbTaskListComments;
         private System.Windows.Forms.CheckBox chbGoToMetadata;
+        private System.Windows.Forms.CheckBox chbUnusedOpens;
     }
 }

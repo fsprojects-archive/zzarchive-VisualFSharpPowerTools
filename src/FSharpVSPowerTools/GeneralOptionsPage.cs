@@ -21,7 +21,7 @@ namespace FSharpVSPowerTools
 
         public GeneralOptionsPage()
         {
-            var componentModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
+            var componentModel = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
             logger = componentModel.DefaultExportProvider.GetExportedValue<Logger>();
 
             XmlDocEnabled = true;
@@ -38,7 +38,8 @@ namespace FSharpVSPowerTools
             GenerateRecordStubEnabled = true;
             UnionPatternMatchCaseGenerationEnabled = true;
             ResolveUnopenedNamespacesEnabled = true;
-            UnusedDeclarationsEnabled = true;
+            UnusedReferencesEnabled = false;
+            UnusedOpensEnabled = false;
             TaskListCommentsEnabled = true;
             GoToMetadataEnabled = true;
         }
@@ -150,12 +151,15 @@ namespace FSharpVSPowerTools
         public bool ResolveUnopenedNamespacesEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool UnusedDeclarationsEnabled { get; set; }
+        public bool UnusedReferencesEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool UnusedOpensEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool TaskListCommentsEnabled { get; set; }
 
-	[DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+	    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GoToMetadataEnabled { get; set; }
 
 
@@ -195,7 +199,8 @@ namespace FSharpVSPowerTools
                 GenerateRecordStubEnabled = _optionsControl.GenerateRecordStubEnabled;
                 UnionPatternMatchCaseGenerationEnabled = _optionsControl.UnionPatternMatchCaseGenerationEnabled;
                 ResolveUnopenedNamespacesEnabled = _optionsControl.ResolveUnopenedNamespacesEnabled;
-                UnusedDeclarationsEnabled = _optionsControl.UnusedDeclarationsEnabled;
+                UnusedReferencesEnabled = _optionsControl.UnusedReferencesEnabled;
+                UnusedOpensEnabled = _optionsControl.UnusedOpensEnabled;
                 TaskListCommentsEnabled = _optionsControl.TaskListCommentsEnabled;
                 GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
             }

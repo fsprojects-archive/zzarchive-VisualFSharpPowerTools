@@ -15,6 +15,8 @@ The extension comes with independent commands which can be toggled on/off in "To
 
 ![General options](img/general_options.png)
 
+More information is available on [Frequently Asked Questions](faq.html).
+
 Here are currently supported features:
 
  * [Auto-generating XmlDoc](xmldoc.html)
@@ -32,6 +34,7 @@ Here are currently supported features:
  * [Union pattern match case generation](unionpatternmatchcasegeneration.html)
  * [Resolve unopened namespaces and modules](resolveunopenednamespaces.html)
  * [Go to metadata](gotometadata.html)
+ * [Task List comments](tasklistcomments.html)
   
 Default Keymap
 --------------

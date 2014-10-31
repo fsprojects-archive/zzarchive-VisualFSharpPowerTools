@@ -15,7 +15,8 @@ type IGeneralOptions =
     abstract GenerateRecordStubEnabled: bool with get, set
     abstract UnionPatternMatchCaseGenerationEnabled: bool with get, set
     abstract ResolveUnopenedNamespacesEnabled: bool with get, set
-    abstract UnusedDeclarationsEnabled: bool with get, set
+    abstract UnusedReferencesEnabled: bool with get, set
+    abstract UnusedOpensEnabled: bool with get, set
     abstract TaskListCommentsEnabled: bool with get, set
     abstract GoToMetadataEnabled: bool with get, set
 

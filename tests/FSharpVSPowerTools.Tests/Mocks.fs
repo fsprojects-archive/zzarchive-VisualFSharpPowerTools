@@ -30,7 +30,8 @@ let createGeneralOptionsPage() =
             page.ResolveUnopenedNamespacesEnabled --> true
             page.SyntaxColoringEnabled --> true
             page.UnionPatternMatchCaseGenerationEnabled --> true
-            page.UnusedDeclarationsEnabled --> true
+            page.UnusedReferencesEnabled --> true
+            page.UnusedOpensEnabled --> true
             page.XmlDocEnabled --> true
         @>)
 

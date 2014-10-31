@@ -430,7 +430,8 @@ namespace FSharpVSPowerTools
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
 
-            bool includeUnusedDeclarations = generalOptions.UnusedDeclarationsEnabled;
+            bool includeUnusedReferences = generalOptions.UnusedReferencesEnabled;
+            bool includeUnusedOpens = generalOptions.UnusedOpensEnabled;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
@@ -438,7 +439,7 @@ namespace FSharpVSPowerTools
                 Debug.Assert(doc != null, "Text document shouldn't be null.");
                 return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
                     () => new SyntaxConstructClassifier(doc, buffer, classificationRegistry, fsharpVsLanguageService,
-                                    serviceProvider, projectFactory, includeUnusedDeclarations));
+                                    serviceProvider, projectFactory, includeUnusedReferences, includeUnusedOpens));
             }
 
             return null;

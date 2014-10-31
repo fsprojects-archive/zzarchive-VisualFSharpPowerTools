@@ -430,3 +430,11 @@ type IServiceProvider with
 
             vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, endRow, endCol)
             |> ensureSucceeded
+
+let isSourceExtension ext =
+    String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
+        String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
+        String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase)
+
+let isSignatureExtension ext =
+    String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase)

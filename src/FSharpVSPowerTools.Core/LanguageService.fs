@@ -413,7 +413,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
           }
       loop 0 None
 
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedDeclarations, 
+    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
+                                           checkForUnusedReferences, checkForUnusedOpens, 
                                            getSymbolDeclProjects) : SymbolUse [] Async =
 
         async {
@@ -425,8 +426,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                 |> Array.map (fun symbolUse -> 
                     let fullNames =
                         match symbolUse.Symbol with
-                        // Make sure that unsafe manipulation isn't executed if unused declarations are disabled
-                        | _ when not checkForUnusedDeclarations -> 
+                        // Make sure that unsafe manipulation isn't executed if unused opens are disabled
+                        | _ when not checkForUnusedOpens -> 
                             None
                         | MemberFunctionOrValue func when func.IsExtensionMember ->
                             if func.IsProperty then
@@ -490,7 +491,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       FullNames = fullNames })
 
             let singleDefs = 
-                if checkForUnusedDeclarations then
+                if checkForUnusedReferences then
                     allSymbolsUses
                     |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
                     |> Seq.choose (fun (symbol, uses) ->
