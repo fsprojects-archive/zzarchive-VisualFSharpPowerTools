@@ -75,11 +75,13 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         let getSymbolDeclLocation fsSymbol =
                             projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project                                  
                         
-                        let getTextLine i = snapshot.GetLineFromLineNumber(i).GetText()
+                        let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
                         
+                        // Don't check for unused declarations on generated signatures
                         let includeUnusedReferences = 
-                            // Don't check for unused declarations on generated signatures
-                            includeUnusedReferences && not (String.Equals(Path.GetExtension(textDocument.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) && project.IsForStandaloneScript)
+                            includeUnusedReferences && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) && project.IsForStandaloneScript)
+                        let includeUnusedOpens = 
+                            includeUnusedOpens && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) && project.IsForStandaloneScript)
                         let! symbolsUses, lexer =
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile (snapshot, textDocument.FilePath, project, AllowStaleResults.No,
                                                                             includeUnusedReferences, includeUnusedOpens, getSymbolDeclLocation)
@@ -90,7 +92,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         let entitiesMap, openDeclarations = 
                             if includeUnusedReferences then
                                 let qualifyOpenDeclarations line endCol idents = 
-                                    let lineStr = snapshot.GetLineFromLineNumber(line - 1).GetText()
+                                    let lineStr = getTextLineOneBased (line - 1)
                                     let tooltip =
                                         vsLanguageService.GetOpenDeclarationTooltip(
                                                         line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, snapshot.GetText())
@@ -109,7 +111,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                             else None, []
                              
                         let spans = 
-                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLine, openDeclarations, entitiesMap)
+                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
                             |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
                         state.Swap (fun _ -> 
@@ -167,7 +169,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
             spans
         | None -> 
             // Only schedule an update on signature files
-            if String.Equals(Path.GetExtension(textDocument.FilePath), ".fsi", StringComparison.OrdinalIgnoreCase) then
+            if isSignatureExtension(Path.GetExtension(textDocument.FilePath)) then
                 // If not yet schedule an action, do it now.
                 updateSyntaxConstructClassifiers false
             [||]
