@@ -37,7 +37,7 @@ It is disabled by default because there might be performance issues on large fil
 Unused declaration markers
 -----------------------
 
-If unused declarations and open statements are found in the current file, orange markers will appear on top of vertical scroll bar.
+If unused declarations or open statements are found in the current file, orange markers will appear on top of vertical scroll bar.
 You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).
 
 ![Syntax coloring](img/syntax_coloring_unused_decl.png)
