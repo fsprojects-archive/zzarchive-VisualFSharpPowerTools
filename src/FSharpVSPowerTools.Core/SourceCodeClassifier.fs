@@ -130,7 +130,6 @@ module private PrintfCategorizer =
         |> Seq.concat
 
 module private EscapedCharsCategorizer =
-    open UntypedAstUtils
     open System.Text.RegularExpressions
 
     let private isRegularString (r: Range.range) getTextLine =
@@ -143,17 +142,20 @@ module private EscapedCharsCategorizer =
     (* "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
        "a\rb" => [|'"'; 'a'; '\\'; 'r'; 'b'; '"'|] *)
 
-    let private categorize (getTextLine: int -> string) (lit: StringLiteral) =
-        if isRegularString lit.Range getTextLine then
-            [lit.Range.StartLine..lit.Range.EndLine]
+    let private categorize (getTextLine: int -> string) (litRange: Range.range) =
+        if isRegularString litRange getTextLine then
+            [litRange.StartLine..litRange.EndLine]
             |> List.map (fun line ->
                 let lineStr = getTextLine (line - 1)
-                let lineChars = lineStr.ToCharArray()
-                debug "[EscapedCharsCatecorizer] line = %s, chars = %A" lineStr lineChars
-                if line = lit.Range.StartLine then 
-                    lineStr.Substring(lit.Range.StartColumn), line, lit.Range.StartColumn
-                elif line = lit.Range.EndLine then
-                    lineStr.Substring(0, lit.Range.EndColumn - 1), line, 0
+                //let lineChars = lineStr.ToCharArray()
+                //debug "[EscapedCharsCatecorizer] line = %s, chars = %A" lineStr lineChars
+                if line = litRange.StartLine && line = litRange.EndLine then
+                    lineStr.Substring(litRange.StartColumn, litRange.EndColumn - litRange.StartColumn), 
+                    line, litRange.StartColumn
+                elif line = litRange.StartLine then 
+                    lineStr.Substring(litRange.StartColumn), line, litRange.StartColumn
+                elif line = litRange.EndLine then
+                    lineStr.Substring(0, litRange.EndColumn - 1), line, 0
                 else lineStr, line, 0
             )
             |> List.map (fun (str, line, startColumn) ->
@@ -169,16 +171,15 @@ module private EscapedCharsCategorizer =
                                    m.Index m.Length m.Value (m.Value.ToCharArray())))
 
                  matches
-                 |> Seq.fold (fun (shift, acc) (m: Match) -> 
+                 |> Seq.fold (fun acc (m: Match) -> 
                       let category =
                           { Category = Category.Escaped
                             WordSpan = 
                               { Line = line
-                                StartCol = shift + startColumn + m.Index
-                                EndCol = shift + startColumn + m.Index + m.Length }}
-                      shift, category :: acc  
-                    ) (0, [])
-                  |> snd
+                                StartCol = startColumn + m.Index
+                                EndCol = startColumn + m.Index + m.Length }}
+                      category :: acc  
+                    ) []
                )
             |> Seq.concat 
         else Seq.empty
