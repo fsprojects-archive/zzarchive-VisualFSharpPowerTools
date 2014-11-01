@@ -16,6 +16,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Reflection
 
+[<RequireQualifiedAccess>]
 type VerticalMoveAction = 
     | MoveUp
     | MoveDown
@@ -264,11 +265,10 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             let rec createRenameItem path (item: ProjectItem) =
                 if isPhysicalFolder item then
                     let subItems = 
-                        seq {
+                        [
                             for subItem in item.ProjectItems -> 
                                 createRenameItem (Path.Combine(path, item.Name)) subItem 
-                        }
-                        |> Seq.toList
+                        ]
                     RenameItem.Folder(item.Name, subItems)                
                 elif isPhysicalFile item then
                     RenameItem.File(Path.Combine(path, item.Name))
@@ -283,7 +283,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 Logging.messageBoxError Resource.validationRenameFolderAlreadyExistsOnDisk
             else
                 // F# project system can't rename folders with any item in it.
-                // We remove all items in the folder and add it back later       
+                // We remove all items in the folder and add them back later       
                 let items = ResizeArray()        
                 for it in folder.ProjectItems do
                     items.Add(createRenameItem newPath it)            
