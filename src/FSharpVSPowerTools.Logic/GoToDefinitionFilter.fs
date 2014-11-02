@@ -181,7 +181,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
         match fsSymbol with
         | Entity(TypedAstPatterns.Namespace, _, _)
-        | Entity(ProvidedAndErasedType, _, _) -> false
+        | Entity(ProvidedAndErasedType, _, _)
+        | Entity(ByRef, _, _) -> false
         | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
