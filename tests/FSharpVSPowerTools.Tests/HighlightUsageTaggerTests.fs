@@ -150,7 +150,7 @@ let _ = Project.GetSample()
                 |> assertEqual
                      [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
 
-    [<Test; Ignore "Activate when upstream bug is fixed">]
+    [<Test; Category "AppVeyorLongRunning">]
     let ``should generate highlight usage tags for multi-project symbols``() = 
         let content = """
 namespace Project2
