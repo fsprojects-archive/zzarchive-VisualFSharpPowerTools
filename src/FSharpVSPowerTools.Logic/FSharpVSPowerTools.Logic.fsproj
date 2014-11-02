@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -66,6 +66,29 @@
     </Resource>
     <Resource Include="MoveToFolderDialog.xaml">
     </Resource>
+    <Content Include="..\..\lib\SpellChecker\en_US.aff">
+      <Link>en_US.aff</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\lib\SpellChecker\en_US.dic">
+      <Link>en_US.dic</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\lib\SpellChecker\th_en_US_new.dat">
+      <Link>th_en_US_new.dat</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\packages\NHunspell\content\Hunspellx64.dll">
+      <Link>Hunspellx64.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\packages\NHunspell\content\Hunspellx86.dll">
+      <Link>Hunspellx86.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Compile Include="Observable.fs" />
+    <Compile Include="Pluralizer.fs" />
+    <Compile Include="RenameSuggestions.fs" />
     <Compile Include="Resource.fs">
       <Link>Common/Resource.fs</Link>
     </Compile>
@@ -325,12 +348,22 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
           </ItemGroup>
         </When>
         <When Condition="$(TargetFrameworkVersion) == 'v3.5'">
           <ItemGroup>
             <Reference Include="FantomasLib">
               <HintPath>..\..\packages\Fantomas\lib\FantomasLib.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -353,6 +386,11 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
           </ItemGroup>
         </When>
         <When Condition="$(TargetFrameworkVersion) == 'v4.0'">
@@ -369,6 +407,11 @@
             </Reference>
             <Reference Include="FantomasLib">
               <HintPath>..\..\packages\Fantomas\lib\FantomasLib.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -403,6 +446,11 @@
             </Reference>
             <Reference Include="FsXaml.Wpf">
               <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -466,6 +514,11 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
+        <Reference Include="NHunspell">
+          <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="PresentationCore">
           <Paket>True</Paket>
         </Reference>
@@ -512,6 +565,11 @@
         </Reference>
         <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="NHunspell">
+          <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -566,6 +624,11 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="PresentationCore">
               <Paket>True</Paket>
             </Reference>
@@ -615,6 +678,11 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="PresentationCore">
               <Paket>True</Paket>
             </Reference>
@@ -661,6 +729,11 @@
             </Reference>
             <Reference Include="FsXaml.Wpf">
               <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -715,6 +788,11 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
+        <Reference Include="NHunspell">
+          <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="PresentationCore">
           <Paket>True</Paket>
         </Reference>
@@ -763,6 +841,11 @@
             </Reference>
             <Reference Include="FsXaml.Wpf">
               <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -815,6 +898,11 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="PresentationCore">
               <Paket>True</Paket>
             </Reference>
@@ -861,6 +949,11 @@
             </Reference>
             <Reference Include="FsXaml.Wpf">
               <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="NHunspell">
+              <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -912,6 +1005,11 @@
         </Reference>
         <Reference Include="FsXaml.Wpf">
           <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="NHunspell">
+          <HintPath>..\..\packages\NHunspell\lib\net\NHunspell.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

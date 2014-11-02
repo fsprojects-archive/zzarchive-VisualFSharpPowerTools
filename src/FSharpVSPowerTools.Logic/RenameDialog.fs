@@ -10,6 +10,9 @@ open FSharp.ViewModule
 open FSharp.ViewModule.Progress
 open FSharp.ViewModule.Validation
 open System.Threading
+open FSharp.Control
+open FSharpVSPowerTools.Refactoring.RenameSuggestions
+open System.Windows.Input
 
 type RenameDialog = FsXaml.XAML<"RenameDialog.xaml", ExposeNamedProperties=true>
 
@@ -137,7 +140,27 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
                         else fullName
                     symbolLocation <- location
                     updateFullName originalName
+
+                    // Start our suggestions   
+                    let kind = 
+                        match SourceCodeClassifier.getIdentifierCategory fsSymbol with
+                        | Category.Function -> Kind.Function
+                        | Category.ReferenceType -> Kind.Type
+                        | Category.ValueType -> Kind.Type
+                        | Category.Module -> Kind.Type
+                        | Category.PatternCase -> Kind.Type
+                        | Category.Other -> Kind.Type
+                        | _ -> Kind.Variable                         
+                                        
+                    // Mark initialized and bind collection now
                     initialized.Value <- true
+
+                    suggest kind originalName
+                    |> Seq.map (fun s -> s.Term)                    
+                    |> Observable.ofSeq
+                    |> CollectionHelpers.bindObservableToCollectionOnContext syncCtx self.Suggestions
+                    |> ignore
+
                 | None -> cts.Cancel()
                 waitCursor.Restore()
             }, cts.Token)
@@ -152,6 +175,8 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
     member __.FullName 
         with get () = fullName.Value
         and set (v) = fullName.Value <- v
+
+    member val Suggestions = System.Collections.ObjectModel.ObservableCollection<string>()
     
     // Related to progress / status reporting
     member __.Progress = progress
@@ -166,14 +191,49 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
 type RenameDialogViewController() = 
     inherit FsXaml.WindowViewController<RenameDialog>()
         override __.OnLoaded window =
-            let model = window.Root.DataContext :?> INotifyPropertyChanged
+            let model = window.Root.DataContext :?> RenameDialogViewModel
+            let modelInpc = window.Root.DataContext :?> INotifyPropertyChanged
+
+            // Custom view specific logic to handle keyboard up/down arrow events
+            let handler (_: obj) (e: KeyEventArgs) =
+                match e.Key with
+                | System.Windows.Input.Key.Down ->
+                    let current = window.listSuggestions.SelectedIndex
+                    window.listSuggestions.SelectedIndex <-
+                        match current with
+                        | last when last = window.listSuggestions.Items.Count - 1 ->
+                            0
+                        | other -> 
+                            other + 1
+                    window.listSuggestions.ScrollIntoView(window.listSuggestions.SelectedItem)
+                    e.Handled <- true
+                | System.Windows.Input.Key.Up ->
+                    let current = window.listSuggestions.SelectedIndex
+                    window.listSuggestions.SelectedIndex <-
+                        match current with
+                        | first when first <= 0  ->
+                            window.listSuggestions.Items.Count - 1
+                        | other -> 
+                            other - 1                    
+                    window.listSuggestions.ScrollIntoView(window.listSuggestions.SelectedItem)
+                    e.Handled <- true
+                | _ -> 
+                    ()
+            Keyboard.AddPreviewKeyDownHandler(window.Root, KeyEventHandler(handler))
+
             // Once the model is initialized, focus and select txtName so the user can just type "F2 / new_name / Enter"
-            model.PropertyChanged.Add(fun e -> 
+            modelInpc.PropertyChanged.Add(fun e -> 
                 if e.PropertyName = "Initialized" then 
                     window.Root.Activate() |> ignore
                     window.txtName.IsEnabled <- true
                     window.txtName.SelectAll()
                     window.txtName.Focus() |> ignore)
+
+            // Map list box suggestion change events to model
+            window.listSuggestions.SelectionChanged.Add(fun _ ->
+                    if window.listSuggestions.SelectedIndex > -1 then
+                        model.Name <- window.listSuggestions.SelectedItem.ToString()
+                )
                      
 // Module for loading the rename dialog with a viewModel + owner
 [<RequireQualifiedAccess>]
