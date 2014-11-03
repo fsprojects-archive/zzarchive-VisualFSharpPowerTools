@@ -424,7 +424,7 @@ let ``indexer``() =
 let arr = [|1|]
 let _ = arr.[0]
 """
-    => [ 3, [ Category.Module, 11, 12 ]]
+    => [ 3, [ Category.Function, 11, 12 ]]
 
 [<Test>]
 let ``mutable value``() = 
