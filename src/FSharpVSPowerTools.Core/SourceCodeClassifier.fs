@@ -139,7 +139,8 @@ module private EscapedCharsCategorizer =
 
     let escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
 
-    (* "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
+    (* VisualStudio return the following strings (presented here as char arrays):
+       "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
        "a\rb" => [|'"'; 'a'; '\\'; 'r'; 'b'; '"'|] *)
 
     let private categorize (getTextLine: int -> string) (litRange: Range.range) =
@@ -147,8 +148,7 @@ module private EscapedCharsCategorizer =
             [litRange.StartLine..litRange.EndLine]
             |> List.map (fun line ->
                 let lineStr = getTextLine (line - 1)
-                //let lineChars = lineStr.ToCharArray()
-                //debug "[EscapedCharsCatecorizer] line = %s, chars = %A" lineStr lineChars
+
                 if line = litRange.StartLine && line = litRange.EndLine then
                     lineStr.Substring(litRange.StartColumn, litRange.EndColumn - litRange.StartColumn), 
                     line, litRange.StartColumn
@@ -165,7 +165,7 @@ module private EscapedCharsCategorizer =
                     |> Seq.filter (fun m -> m.Value <> "")
                     |> Seq.toArray
 
-                 debug "[Escaped] (line = %d, lineStr = %s) => Matches %A" 
+                 debug "[SourceCodeClassifier] Escaped character (line = %d, lineStr = %s) => Matches %A" 
                        line str (matches |> Array.map (fun m -> 
                            sprintf "(idx = %d, len = %d, value = %s, value chars = %A" 
                                    m.Index m.Length m.Value (m.Value.ToCharArray())))
