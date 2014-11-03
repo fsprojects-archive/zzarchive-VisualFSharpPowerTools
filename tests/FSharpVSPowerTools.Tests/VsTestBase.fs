@@ -44,8 +44,9 @@ type VsTestBase() =
 
     let fsharpLanguageService = FSharpLanguageService(serviceProvider)
     let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
+    let fileSystem = FileSystem(openDocumentsTracker)
     let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
-                                                     openDocumentsTracker, serviceProvider, SkipLexCache = true)
+                                              openDocumentsTracker, fileSystem, serviceProvider, SkipLexCache = true)
     let projectFactory = new MockProjectFactory(serviceProvider, openDocumentsTracker, vsLanguageService, dte)
     
     member __.ServiceProvider = serviceProvider
@@ -53,6 +54,7 @@ type VsTestBase() =
     member __.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService
     member __.DocumentFactoryService = documentFactoryService
     member __.OpenDocumentsTracker = openDocumentsTracker
+    member __.FileSystem = fileSystem
     member __.VsLanguageService = vsLanguageService
     member __.ProjectFactory = projectFactory
     member __.ClassificationTypeRegistryService = classificationRegistry
