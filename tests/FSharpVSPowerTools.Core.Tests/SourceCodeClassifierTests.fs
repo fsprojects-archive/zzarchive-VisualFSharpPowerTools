@@ -101,8 +101,13 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 |> Seq.toList
             | None -> line, [])
         |> List.sortBy (fun (line, _) -> line)
-    let expected = expected |> List.map (fun (line, spans) -> line, spans |> List.sortBy (fun (_, startCol, _) -> startCol))
-    try actual |> Collection.assertEquiv (expected |> List.sortBy (fun (line, _) -> line))
+    
+    let expected = 
+        expected 
+        |> List.map (fun (line, spans) -> line, spans |> List.sortBy (fun (_, startCol, _) -> startCol))
+        |> List.sortBy (fun (line, _) -> line)
+    
+    try actual |> Collection.assertEquiv expected
     with _ -> 
         debug "AST: %A" parseResults.ParseTree; 
         reraise()
@@ -1582,3 +1587,12 @@ let _ = "foo \n bar \r baz
          3, [ Category.Escaped, 0, 2 ]
          4, [ Category.Escaped, 1, 3; Category.Escaped, 6, 8; Category.Escaped, 8, 10; Category.Escaped, 11, 13 ]
          5, [ Category.Escaped, 0, 2 ]]
+
+[<Test>]
+let ``escaped symbols in method chains``() =
+    """
+let _ = "a\r\n".Replace("\r\n", "\n").Split('\r')
+"""
+    => [ 2, [ Category.Escaped, 10, 12; Category.Escaped, 12, 14; Category.Function, 16, 23
+              Category.Escaped, 25, 27; Category.Escaped, 27, 29
+              Category.Escaped, 33, 35; Category.Function, 38, 43 ]]
