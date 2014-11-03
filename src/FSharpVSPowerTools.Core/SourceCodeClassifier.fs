@@ -392,16 +392,15 @@ module SourceCodeClassifier =
                         spans 
                         |> List.sortBy (fun span -> 
                             match span.Category with
-                            | Category.Unused -> 1
-                            | Category.Other -> 2
-                            | _ -> 0)
+                            | Category.Other -> 3
+                            | Category.Unused -> 2
+                            | Category.Function -> 0 // we prefer Function to hide ReferenceType on some methods in signature files
+                            | _ -> 1)
                         |> List.head)
             |> Seq.distinct
 
         let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
             
-        //| SynExpr.Ident (ident) -> if printfFunctions.Contains ident.idText then (!printfRanges).Add ident.idRange
-
 //        debug "LongIdents by line:" 
 //        longIdentsByEndPos 
 //        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
@@ -417,18 +416,18 @@ module SourceCodeClassifier =
                         |> Array.map (fun fullName ->
                             match entities |> Map.tryFind (String.Join (".", fullName)) with
                             | Some [cleanIdents] ->
-                                debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
+                                //debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
                                 cleanIdents
                             | Some (firstCleanIdents :: _ as cleanIdentsList) ->
                                 if cleanIdentsList |> List.exists ((=) fullName) then
-                                    debug "[SourceCodeClassifier] An exact match found among several clean idents: %A" fullName
+                                    //debug "[SourceCodeClassifier] An exact match found among several clean idents: %A" fullName
                                     fullName
                                 else
-                                    debug "[SourceCodeClassifier] No match found among several clean idents, return the first one FullName %A -> %A" 
-                                          fullName firstCleanIdents
+                                    //debug "[SourceCodeClassifier] No match found among several clean idents, return the first one FullName %A -> %A" 
+                                      //    fullName firstCleanIdents
                                     firstCleanIdents
                             | _ -> 
-                                debug "[SourceCodeClassifier] NOT Cleaned FullName %A" fullName
+                                //debug "[SourceCodeClassifier] NOT Cleaned FullName %A" fullName
                                 fullName)
                     { symbolUse with FullNames = fullNames })
             | None -> symbolUses
@@ -458,7 +457,7 @@ module SourceCodeClassifier =
                          | prefix -> Some (sUseRange, prefix)))) 
             |> Array.concat
 
-        debug "[SourceCodeClassifier] Symbols prefixes:\n%A,\nOpen declarations:\n%A" symbolPrefixes openDeclarations
+        //debug "[SourceCodeClassifier] Symbols prefixes:\n%A,\nOpen declarations:\n%A" symbolPrefixes openDeclarations
         
         let openDeclarations = 
             Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->
