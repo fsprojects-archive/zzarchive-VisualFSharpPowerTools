@@ -16,6 +16,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Reflection
 
+[<RequireQualifiedAccess>]
 type VerticalMoveAction = 
     | MoveUp
     | MoveDown
@@ -190,31 +191,31 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     
     let performMoveToFolder (info: ActionInfo) (folder: Folder) = 
         let destination = 
-            if folder.IsProject then info.Project.ProjectItems
+            if folder.IsProject then Some info.Project.ProjectItems
             else 
-                let item = getFolderItemByName info.Project folder.Name
-                match item with
-                | Some x -> x.ProjectItems
-                | None -> 
-                    let ex = ArgumentException(sprintf "folder named %s not found." folder.Name)
-                    Logging.logException ex
-                    raise ex
+                getFolderItemByName info.Project folder.Name
+                |> Option.map (fun x -> x.ProjectItems)
         
         let folderExists =
             if Directory.Exists(folder.FullPath) then true
             else
-                try 
-                    Directory.CreateDirectory(folder.FullPath) |> ignore
-                    true 
-                with _ -> false
-        if folderExists then
+                protectOrDefault (fun _ -> 
+                    Directory.CreateDirectory(folder.FullPath) |> ignore; true) 
+                    false
+        match folderExists, destination with
+        | true, Some destination ->
             for item in info.Items do
                 Debug.Assert(item.FileCount = 1s, "Item should be unique.")
                 let filePath = item.FileNames(0s)
-                destination.AddFromFileCopy(filePath) |> ignore
+                let buildAction = item.TryGetProperty("ItemType")
+                let newItem = destination.AddFromFileCopy(filePath)
+                // The new item may lose ItemType; we try to recover it.
+                buildAction |> Option.iter (fun buildAction -> 
+                    let property = newItem.Properties.["ItemType"]
+                    property.Value <- buildAction)
                 item.Delete()
             info.Project.IsDirty <- true
-        else
+        | _ ->
             Logging.messageBoxError Resource.validationDestinationFolderDoesNotExist
     
     let askForFolderName resources = 
@@ -251,58 +252,65 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
 
         let folder = 
             match info.Items with
-            | [ item ] -> item
-            | _ -> info.Project.ProjectItems.[0]
-        /// ProjectItem will be disposed once we remove them from the parent node
-        /// We capture required information for renaming i.e. replacing paths by those in new folder names
-        let rec createRenameItem path (item: ProjectItem) =
-            if isPhysicalFolder item then
-                let subItems = 
-                    seq {
-                        for subItem in item.ProjectItems -> 
-                            createRenameItem (Path.Combine(path, item.Name)) subItem 
-                    }
-                    |> Seq.toList
-                RenameItem.Folder(item.Name, subItems)                
-            elif isPhysicalFile item then
-                RenameItem.File(Path.Combine(path, item.Name))
+            | [ item ] -> Some item
+            | _ -> 
+                if info.Project.ProjectItems.Count > 0 then
+                    Some info.Project.ProjectItems.[0]
+                else None
+
+        match folder with
+        | Some folder ->
+            /// ProjectItem will be disposed once we remove them from the parent node
+            /// We capture required information for renaming i.e. replacing paths by those in new folder names
+            let rec createRenameItem path (item: ProjectItem) =
+                if isPhysicalFolder item then
+                    let subItems = 
+                        [
+                            for subItem in item.ProjectItems -> 
+                                createRenameItem (Path.Combine(path, item.Name)) subItem 
+                        ]
+                    RenameItem.Folder(item.Name, subItems)                
+                elif isPhysicalFile item then
+                    RenameItem.File(Path.Combine(path, item.Name))
+                else
+                    RenameItem.Unsupported
+
+            let path: string = folder.Object?Url
+            let parentPath = Directory.GetParent(path.TrimEnd('\\')).FullName
+            let newPath = Path.Combine(parentPath, name)
+
+            if Directory.Exists(newPath) then
+                Logging.messageBoxError Resource.validationRenameFolderAlreadyExistsOnDisk
             else
-                RenameItem.Unsupported
+                // F# project system can't rename folders with any item in it.
+                // We remove all items in the folder and add them back later       
+                let items = ResizeArray()        
+                for it in folder.ProjectItems do
+                    items.Add(createRenameItem newPath it)            
+                    it.Remove()
 
-        let path: string = folder.Object?Url
-        let parentPath = Directory.GetParent(path.TrimEnd('\\')).FullName
-        let newPath = Path.Combine(parentPath, name)
+                // Rename the empty folder (on Solution Explorer and on disk)
+                folder.Name <- name
 
-        if Directory.Exists(newPath) then
-            Logging.messageBoxError Resource.validationRenameFolderAlreadyExistsOnDisk
-        else
-            // F# project system can't rename folders with any item in it.
-            // We remove all items in the folder and add it back later       
-            let items = ResizeArray()        
-            for it in folder.ProjectItems do
-                items.Add(createRenameItem newPath it)            
-                it.Remove()
+                let rec addToFolder (folder: ProjectItem) (item: RenameItem) =
+                    match item with
+                    | RenameItem.Folder(name, subItems) ->
+                        let subFolder = folder.ProjectItems.AddFolder(name)
+                        for subItem in subItems do
+                            addToFolder subFolder subItem
+                    | RenameItem.File path ->
+                        folder.ProjectItems.AddFromFile(path) |> ignore
+                    | RenameItem.Unsupported -> ()
 
-            // Rename the empty folder (on Solution Explorer and on disk)
-            folder.Name <- name
+                // Add back all children recursively
+                for item in items do
+                    addToFolder folder item
 
-            let rec addToFolder (folder: ProjectItem) (item: RenameItem) =
-                match item with
-                | RenameItem.Folder(name, subItems) ->
-                    let subFolder = folder.ProjectItems.AddFolder(name)
-                    for subItem in subItems do
-                        addToFolder subFolder subItem
-                | RenameItem.File path ->
-                    folder.ProjectItems.AddFromFile(path) |> ignore
-                | RenameItem.Unsupported -> ()
-
-            // Add back all children recursively
-            for item in items do
-                addToFolder folder item
-
-            // Synchronize between external changes and internal representation of F# project system        
-            project?SetProjectFileDirty true
-            project?ComputeSourcesAndFlags()
+                // Synchronize between external changes and internal representation of F# project system        
+                project?SetProjectFileDirty true
+                project?ComputeSourcesAndFlags()
+            | _ -> 
+                Logging.logWarning "Can't find folder '%s'for renaming." name
 
     let performNameAction (info: ActionInfo) action name =
         match action with
