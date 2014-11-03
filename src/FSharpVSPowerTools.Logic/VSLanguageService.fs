@@ -10,8 +10,9 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open System
 open System.IO
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Diagnostics
+open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 type FilePath = string
 
@@ -40,9 +41,10 @@ type VSLanguageService
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: OpenDocumentsTracker,
+     [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    let instance = LanguageService (ignore, FileSystem openDocumentsTracker)
+    let instance = LanguageService (ignore, fileSystem)
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
     /// Clean up instructions are displayed on status bar.

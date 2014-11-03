@@ -12,8 +12,9 @@ open FSharpVSPowerTools.ProjectSystem
 
 [<NoComparison>]
 type private ClassifierState =
-    { SnapshotSpan: SnapshotSpan
-      Spans: CategorizedColumnSpan [] }
+    | NoData
+    | Updating of snapshotSpan: SnapshotSpan
+    | Data of snapshotSpan: SnapshotSpan * spans: CategorizedColumnSpan []
 
 type SyntaxConstructClassifier (textDocument: ITextDocument, 
                                 buffer: ITextBuffer, 
@@ -40,7 +41,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
         |> Option.map classificationRegistry.GetClassificationType
 
     let classificationChanged = Event<_,_>()
-    let state = Atom None
+    let state = Atom NoData
     let cancellationToken = Atom None
     
     let getProject() =
@@ -63,9 +64,12 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
         let needUpdate =
             match force, currentState with
             | true, _ -> true
-            | _, None -> true
-            | _, Some state -> state.SnapshotSpan.Snapshot <> snapshot
-                 
+            | _, NoData -> true
+            | _, Updating oldSnapshot -> oldSnapshot.Snapshot <> snapshot
+            | _, Data (oldSnapshot, _) -> oldSnapshot.Snapshot <> snapshot
+
+        state.Swap (fun _ -> Updating (SnapshotSpan (snapshot, 0, snapshot.Length))) |> ignore
+                
         if needUpdate then
             let worker = 
                 async {
@@ -114,9 +118,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                             getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
                             |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         
-                        state.Swap (fun _ -> 
-                            Some { SnapshotSpan = SnapshotSpan (snapshot, 0, snapshot.Length);
-                                   Spans = spans }) |> ignore
+                        state.Swap (fun _ -> Data (SnapshotSpan (snapshot, 0, snapshot.Length), spans)) |> ignore
 
                         // TextBuffer is null if a solution is closed at this moment
                         if textDocument.TextBuffer <> null then
@@ -148,31 +150,32 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
 
     let getClassificationSpans (snapshotSpan: SnapshotSpan) =
         match state.Value with
-        | Some state ->
+        | Data (snapshot, spans) ->
             // We get additional 10 lines above the current snapshot in case the user inserts some line
             // while we were getting locations from FCS. It's not as reliable though. 
             let spanStartLine = max 0 (snapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
             let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
             let spans =
-                state.Spans
+                spans
                 // Locations are sorted, so we can safely filter them efficiently
                 |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
                 |> Seq.choose (fun loc -> 
                     maybe {
                         let! clType = getClassificationType loc.Category
-                        let! span = fromRange state.SnapshotSpan.Snapshot (loc.WordSpan.ToRange())
-                        return clType, span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
+                        let! span = fromRange snapshot.Snapshot (loc.WordSpan.ToRange())
+                        return clType, span.TranslateTo(snapshot.Snapshot, SpanTrackingMode.EdgeExclusive) 
                     })
                 |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
                 |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))
                 |> Seq.toArray
             spans
-        | None -> 
+        | NoData -> 
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(textDocument.FilePath)) then
                 // If not yet schedule an action, do it now.
                 updateSyntaxConstructClassifiers false
             [||]
+        | Updating _ -> [||]
 
     interface IClassifier with
         // It's called for each visible line of code
