@@ -2,6 +2,7 @@
 
 open System
 open System.ComponentModel
+open System.Threading
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
@@ -9,7 +10,6 @@ open FSharpVSPowerTools.IdentifierUtils
 open FSharp.ViewModule
 open FSharp.ViewModule.Progress
 open FSharp.ViewModule.Validation
-open System.Threading
 
 type RenameDialog = FsXaml.XAML<"RenameDialog.xaml", ExposeNamedProperties=true>
 
@@ -30,7 +30,7 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
     // This will hold the actual rename workflow arguments after the initialization async workflow completes    
     let mutable context: RenameContext option = None
     // Grab our synchronization context for use in async workflows as necessary
-    let syncCtx = System.Threading.SynchronizationContext.Current
+    let syncCtx = SynchronizationContext.Current
      
     // Custom validation for the name property
     let validateSymbols newName = 
@@ -161,25 +161,22 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
     // The actual commands for the buttons
     member __.ExecuteCommand = execute
     member __.CancelCommand = cancelCommand
-
-// This handles "code behind", ie: pure view logic for our dialog
-type RenameDialogViewController() = 
-    inherit FsXaml.WindowViewController<RenameDialog>()
-        override __.OnLoaded window =
-            let model = window.Root.DataContext :?> INotifyPropertyChanged
-            // Once the model is initialized, focus and select txtName so the user can just type "F2 / new_name / Enter"
-            model.PropertyChanged.Add(fun e -> 
-                if e.PropertyName = "Initialized" then 
-                    window.Root.Activate() |> ignore
-                    window.txtName.IsEnabled <- true
-                    window.txtName.SelectAll()
-                    window.txtName.Focus() |> ignore)
                      
 // Module for loading the rename dialog with a viewModel + owner
 [<RequireQualifiedAccess>]
 module UI = 
     let loadRenameDialog (viewModel: RenameDialogViewModel) owner = 
         let window = RenameDialog()
+
+        // Once the view model is initialized, focus and select txtName so the user can just type "F2 / new_name / Enter"
+        let inpc = viewModel :> INotifyPropertyChanged
+        inpc.PropertyChanged.Add(fun e -> 
+            if e.PropertyName = "Initialized" then 
+                window.txtName.IsEnabled <- true
+                window.txtName.SelectAll()
+                window.Root.Activate() |> ignore
+                // Schedule activation to happen after bindings enable and make controls visible
+                window.Root.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, ThreadStart(fun _ -> ignore(window.txtName.Focus()))) |> ignore)
         window.Root.Owner <- owner
         window.Root.DataContext <- viewModel
         window.Root
