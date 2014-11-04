@@ -630,7 +630,7 @@ let internal getStringLiterals ast : Range.range list =
             visitExpr expr2
         | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
         | SynExpr.Tuple (exprs, _, _) -> List.iter visitExpr exprs
-        | SynExpr.Const (SynConst.String (value, r), _) -> result.Add r
+        | SynExpr.Const (SynConst.String (_, r), _) -> result.Add r
         | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
         | SynExpr.New(_, _, expr, _) -> visitExpr expr
         | SynExpr.While(_, e1, e2, _) -> visitExpr e1; visitExpr e2
