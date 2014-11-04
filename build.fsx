@@ -202,7 +202,9 @@ Target "Release" (fun _ ->
 
     Branches.tag "" release.NugetVersion
     Branches.pushTag "" "origin" release.NugetVersion
+)
 
+Target "ReleaseOnGitHub" (fun _ ->
     // release on github
     createClient (getBuildParamOrDefault "github-user" "") (getBuildParamOrDefault "github-pw" "")
     |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes 
@@ -231,6 +233,7 @@ Target "All" DoNothing
 
 "Build"
   ==> "NuGet"
+  ==> "ReleaseOnGitHub"
 
 "Main"
   =?> ("IntegrationTests", isLocalBuild)
