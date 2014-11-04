@@ -44,17 +44,31 @@
 <li>quotations</li>
 <li>patterns (off by default)</li>
 <li>mutable variables / reference cells (off by default)</li>
+<li>printf formatter</li>
+<li>escaped characters in string literals</li>
 <li>unused non public types, methods, functions and values declarations</li>
 <li>unused open statements</li>
 </ul>
 
-<p>There is a special user setting for enabling graying out unused declarations and open statements.</p>
+<h2><a name="Graying-out-unused-declarations" class="anchor" href="#Graying-out-unused-declarations">Graying out unused declarations</a></h2>
+
+<p>Currently unused non public types, methods, functions and values declarations are checked.
+Beware that this feature is only 100% reliable when the code has no type error.
+This setting is available in General options.
+It is disabled by default because there might be performance issues on large files.</p>
+
+<h2><a name="Graying-out-unused-opens" class="anchor" href="#Graying-out-unused-opens">Graying out unused opens</a></h2>
+
+<p>If an open declaration hasn't been used anywhere in the current file, it will be marked as unused.
+This setting is available in General options. 
+It is disabled by default because there might be performance issues on large files.</p>
 
 <h2><a name="Unused-declaration-markers" class="anchor" href="#Unused-declaration-markers">Unused declaration markers</a></h2>
 
-<p>If unused declarations and open statements are found in current file, orange markers will appear on top of vertical scroll bar.
-You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).
-<img src="img/syntax_coloring_unused_decl.png" alt="Syntax coloring" /></p>
+<p>If unused declarations or open statements are found in the current file, orange markers will appear on top of vertical scroll bar.
+You can navigate to lines consisting of unused items by clicking on these markers (see the screenshot below).</p>
+
+<p><img src="img/syntax_coloring_unused_decl.png" alt="Syntax coloring" /></p>
 
 <p>Here is how the editor looks like in blue &amp; dark theme:</p>
 
@@ -67,10 +81,12 @@ You can navigate to lines consisting of unused items by clicking on these marker
 <p>Colors of syntax constructs can be customized in "Tools --> Options --> Environment --> Fonts and Colors --> Display items" via:</p>
 
 <ul>
+<li>F# Escaped Characters</li>
 <li>F# Functions / Methods</li>
 <li>F# Modules</li>
 <li>F# Mutable Variables / Reference Cells</li>
 <li>F# Patterns</li>
+<li>F# Printf Format</li>
 <li>F# Quotations</li>
 <li>F# Types</li>
 <li>F# Value Types</li>
@@ -97,6 +113,7 @@ You can navigate to lines consisting of unused items by clicking on these marker
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="./faq.html">FAQ</a></li>
 
                 <li class="nav-header">Supported Features</li>
                 <li><a href="./xmldoc.html">Auto-generating XmlDoc</a></li>
@@ -114,6 +131,7 @@ You can navigate to lines consisting of unused items by clicking on these marker
                 <li><a href="./unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
                 <li><a href="./resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./gotometadata.html">Go to metadata</a></li>
+                <li><a href="./tasklistcomments.html">Task List comments</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./reference/index.html">API Reference</a></li>

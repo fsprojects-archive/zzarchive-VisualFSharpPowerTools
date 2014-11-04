@@ -50,34 +50,52 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '72', 72)" onmouseover="showTip(event, '72', 72)">
-            getIdents ast
+          <code onmouseout="hideTip(event, '108', 108)" onmouseover="showTip(event, '108', 108)">
+            getLongIdentAt ast pos
           </code>
-          <div class="tip" id="72">
-            <strong>Signature:</strong> ast:ParsedInput option -&gt; Ident list<br />
+          <div class="tip" id="108">
+            <strong>Signature:</strong> ast:ParsedInput -&gt; pos:pos -&gt; Idents option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L447-447" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L358-358" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
-          <p>Returns ranges of all idents found in an untyped AST</p>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '109', 109)" onmouseover="showTip(event, '109', 109)">
+            getPrintfLiterals ast
+          </code>
+          <div class="tip" id="109">
+            <strong>Signature:</strong> ast:ParsedInput option -&gt; range list<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L477-477" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Returns ranges of all printf format string literals.</p>
 
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '73', 73)" onmouseover="showTip(event, '73', 73)">
+          <code onmouseout="hideTip(event, '110', 110)" onmouseover="showTip(event, '110', 110)">
             getQuatationRanges ast
           </code>
-          <div class="tip" id="73">
+          <div class="tip" id="110">
             <strong>Signature:</strong> ast:ParsedInput option -&gt; List&lt;range&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L359-359" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L365-365" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -103,6 +121,7 @@
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="./../faq.html">FAQ</a></li>
 
                 <li class="nav-header">Supported Features</li>
                 <li><a href="./../xmldoc.html">Auto-generating XmlDoc</a></li>
@@ -120,6 +139,7 @@
                 <li><a href="./../unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./../gotometadata.html">Go to metadata</a></li>
+                <li><a href="./../tasklistcomments.html">Task List comments</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>
