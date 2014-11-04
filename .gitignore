@@ -182,3 +182,4 @@ src/FSharpVSPowerTools/Properties/AssemblyInfo.cs
 paket-files
 *.xml
 
+release.cmd

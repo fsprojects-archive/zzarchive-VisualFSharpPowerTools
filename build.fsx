@@ -153,7 +153,7 @@ Target "IntegrationTests" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
 
-Target "NuGet" (fun _ ->
+Target "PublishNuGet" (fun _ ->
     NuGet (fun p -> 
         { p with   
             Authors = authors
@@ -166,7 +166,7 @@ Target "NuGet" (fun _ ->
             OutputPath = "bin"
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = true
-            Dependencies = [ "FSharp.Compiler.Service", GetPackageVersion "packages" "FSharp.Compiler.Service" |> RequireExactly ] })
+            Dependencies = [ "FSharp.Compiler.Service", GetPackageVersion "packages" "FSharp.Compiler.Service" ] })
         (project + ".Core.nuspec")
 )
 
@@ -202,9 +202,7 @@ Target "Release" (fun _ ->
 
     Branches.tag "" release.NugetVersion
     Branches.pushTag "" "origin" release.NugetVersion
-)
 
-Target "ReleaseOnGitHub" (fun _ ->
     // release on github
     createClient (getBuildParamOrDefault "github-user" "") (getBuildParamOrDefault "github-pw" "")
     |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes 
@@ -212,6 +210,8 @@ Target "ReleaseOnGitHub" (fun _ ->
     |> releaseDraft
     |> Async.RunSynchronously
 )
+
+Target "ReleaseAll"  DoNothing
 
 // --------------------------------------------------------------------------------------
 // Run main targets by default. Invoke 'build <Target>' to override
@@ -231,9 +231,9 @@ Target "All" DoNothing
 "Build"
   ==> "CleanVSIX"
 
-"Build"
-  ==> "NuGet"
-  ==> "ReleaseOnGitHub"
+"Release"
+  ==> "PublishNuGet"
+  ==> "ReleaseAll"
 
 "Main"
   =?> ("IntegrationTests", isLocalBuild)
