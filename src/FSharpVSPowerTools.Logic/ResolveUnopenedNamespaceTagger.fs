@@ -146,13 +146,14 @@ type ResolveUnopenedNamespaceSmartTagger
         transaction.Complete()
 
     let openNamespaceIcon = ResourceProvider.getRefactoringIcon serviceProvider RefactoringIconKind.AddUsing
+    let fixUnderscoresInMenuText (text: string) = text.Replace("_", "__")
 
     let openNamespaceAction snapshot ctx name ns multipleNames =
         let displayText = "open " + ns + if multipleNames then " (" + name + ")" else ""
 
         { new ISmartTagAction with
             member __.ActionSets = null
-            member __.DisplayText = displayText
+            member __.DisplayText = fixUnderscoresInMenuText displayText
             member __.Icon = openNamespaceIcon
             member __.IsEnabled = true
             member __.Invoke() = openNamespace snapshot ctx ns name
@@ -161,7 +162,7 @@ type ResolveUnopenedNamespaceSmartTagger
     let qualifiedSymbolAction snapshotSpan (fullName, qualifier) =
         { new ISmartTagAction with
             member __.ActionSets = null
-            member __.DisplayText = fullName
+            member __.DisplayText = fixUnderscoresInMenuText fullName
             member __.Icon = null
             member __.IsEnabled = true
             member __.Invoke() = replaceFullyQualifiedSymbol snapshotSpan qualifier
