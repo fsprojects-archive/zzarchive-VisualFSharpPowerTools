@@ -1,4 +1,6 @@
-#### 1.7.0 - Unreleased
+#### 1.6.1 - November 6 2014
+* Fix a concurrency bug ([issue](https://github.com/fsprojects/VisualFSharpPowerTools/issues/822) & [fix](https://github.com/fsharp/FSharp.Compiler.Service/pull/252))
+* Fix displaying underscores in resolving unopened namespaces ([fix](https://github.com/fsprojects/VisualFSharpPowerTools/pull/826))
 
 #### 1.6.0 - November 4 2014
 * Add syntax coloring for generated signatures

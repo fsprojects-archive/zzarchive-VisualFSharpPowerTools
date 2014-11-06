@@ -7,7 +7,7 @@ NUGET
       FSharp.Compiler.Service (>= 0.0.73)
     Foq (1.6)
     FsCheck (1.0.2)
-    FSharp.Compiler.Service (0.0.74)
+    FSharp.Compiler.Service (0.0.76)
     FSharp.Formatting (2.4.33)
       FSharp.Compiler.Service (>= 0.0.62)
       Microsoft.AspNet.Razor (2.0.30506.0)
