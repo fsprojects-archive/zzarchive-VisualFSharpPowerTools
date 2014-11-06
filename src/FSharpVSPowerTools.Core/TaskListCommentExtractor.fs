@@ -46,7 +46,7 @@ module private Utils =
             else lines.[lineNumber + 1]
         sourceTok.CreateLineTokenizer(nextLine)
 
-    let trimChars = [| ' '; '\t'; '/'; '('; ')'; '*' |]
+    let trimChars = [| ' '; '　'; '\t'; '/'; '('; ')'; '*' |]
     let isFirstToken (tokenText: string) =
         tokenText.TrimStart(trimChars) <> String.Empty
 
@@ -63,11 +63,12 @@ module private Utils =
         let rec tryFindLineCommentTaskToken' state =
             match tokenizer.ScanToken(state) with
             | Some tok, state ->
-                let tokText = tok.Text(lines, lineNumber).ToLowerInvariant()
-                match tryTokenizeFirstToken tokText with
+                let tokText = tok.Text(lines, lineNumber)
+                let trimedTokText = tokText.Trim(trimChars).ToLowerInvariant()
+                match tryTokenizeFirstToken trimedTokText with
                 | Some (tok2, tokenizedText) ->
                     if isFirstToken tokenizedText && tasks |> Array.exists ((=) tokenizedText) then
-                        let pos = { Line = lineNumber; Column = tok.LeftColumn + tok2.LeftColumn }
+                        let pos = { Line = lineNumber; Column = tok.LeftColumn + tok2.LeftColumn + (tokText.Length - trimedTokText.Length) }
                         (Some (tokenizedText, pos), state)
                     elif tok2.CharClass = FSharpTokenCharKind.Identifier then
                         None, state
@@ -117,7 +118,7 @@ module private Utils =
             match tok.CharClass with
             | FSharpTokenCharKind.LineComment ->
                 let tokText = tok.Text(lines, lineNumber)
-                if tokText |> String.forall (function '/' | '(' | ')' | '*' | ' ' | '\t' -> true | _ -> false) then
+                if tokText |> String.forall (function '/' | '(' | ')' | '*' | ' ' | '　' | '\t' -> true | _ -> false) then
                     match tryFindLineCommentTaskToken tasks (lines, lineNumber, tokenizer, state) with
                     | Some (task, pos) ->
                         let pos = OnelineTaskListCommentPos (task, pos)

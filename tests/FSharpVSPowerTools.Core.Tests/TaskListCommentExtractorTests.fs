@@ -56,8 +56,9 @@ let ``line comments only allow asterisk, slash, parenthesis, or whitespace betwe
     (defaultOptions, "File1.fs", [| "//*) // (* TODO stuff"
                                     "//+ TODO something else"
                                     "// *TODO other"
-                                    "// another TODO xxx" |])
-    => [| (2, "TODO stuff", "File1.fs", 0, 11); (2, "TODO other", "File1.fs", 2, 4) |]
+                                    "// another TODO xxx"
+                                    "//　TODO full width space" |])
+    => [| (2, "TODO stuff", "File1.fs", 0, 11); (2, "TODO other", "File1.fs", 2, 4); (2, "TODO full width space", "File1.fs", 4, 3) |]
 
 [<Test>]
 let ``multiline comments only allow asterisk, slash, parenthesis, or whitespace between line head and first other token``() =
