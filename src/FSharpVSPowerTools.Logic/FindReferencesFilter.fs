@@ -11,6 +11,7 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Text
 open System.Diagnostics
+open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 
 type FindReferencesFilter(textDocument: ITextDocument, 
@@ -18,7 +19,8 @@ type FindReferencesFilter(textDocument: ITextDocument,
                           vsLanguageService: VSLanguageService, 
                           serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory,
-                          showProgress: bool) =    
+                          showProgress: bool,
+                          fileSystem: IFileSystem) =    
     let getDocumentState (progress: ShowProgress) =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -89,15 +91,15 @@ type FindReferencesFilter(textDocument: ITextDocument,
                         let nodes =
                             // There are duplications from FCS, we remove duplications by checking text representation
                             references 
-                            |> Seq.map (fun reference -> FSharpLibraryNode(symbol.Text, serviceProvider, reference))
+                            |> Seq.map (fun reference -> FSharpLibraryNode(symbol.Text, serviceProvider, fileSystem, reference))
                             |> Seq.distinctBy (fun node -> node.GetTextWithOwnership(VSTREETEXTOPTIONS.TTO_DEFAULT))
 
-                        let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider)
+                        let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider, fileSystem)
                         for node in nodes do
                             findResults.AddNode(node)
                         findResults
                     | None ->
-                        FSharpLibraryNode("Find Symbol Results", serviceProvider)
+                        FSharpLibraryNode("Find Symbol Results", serviceProvider, fileSystem)
 
                 let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
                 let searchCriteria = 

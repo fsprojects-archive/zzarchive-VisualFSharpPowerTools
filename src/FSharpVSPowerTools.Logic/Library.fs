@@ -10,14 +10,16 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
+open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
-type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?symbolUse: FSharpSymbolUse) =
+type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, fileSystem: IFileSystem, 
+                       ?symbolUse: FSharpSymbolUse) =
     inherit LibraryNode(name)
     do
         base.CanGoToSource <- true
 
-    let navigationData =
-        match symbolUse with
+    let navigationData() =
+        match symbolUse with 
         | Some symbolUse ->
             let mutable hierarchy = Unchecked.defaultof<_>
             let mutable itemId = Unchecked.defaultof<_>
@@ -54,30 +56,40 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
             else None
         | _ -> None
     
-    let textData =
-        match navigationData, symbolUse with
-        | Some(_, _, vsTextBuffer), Some symbolUse ->
-            let range = symbolUse.RangeAlternate
-            let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPathSafe(symbolUse.FileName)) 
-                            range.StartLine range.StartColumn
-            let line = range.StartLine-1
-            let (_, lineLength) = vsTextBuffer.GetLengthOfLine(line)
-            let (_, lineStr) = vsTextBuffer.GetLineText(line, 0, line, lineLength)
-            // Trimming for display purpose, but we should not touch the trailing spaces.
-            let content = lineStr.TrimStart()
-            let numOfWhitespaces = lineStr.Length - content.Length
-            let (_, rangeText) = vsTextBuffer.GetLineText(range.StartLine-1, range.StartColumn, range.EndLine-1, range.EndColumn)
-            let offset = 
-                if rangeText.LastIndexOf name > 0 then
-                    // Trim fully qualified symbols
-                    max 0 (rangeText.Length - name.Length)
-                else 0
-            // Get the index of symbol in the trimmed text
-            let highlightStart = prefix.Length + range.StartColumn + offset - numOfWhitespaces
-            let highlightLength = name.Length
-            let text = prefix + content.Trim()
-            Some (highlightStart, highlightLength, text)
-        | _ -> None
+    let readLine (reader: StreamReader) line = 
+        let rec loop n =
+            match n, reader.EndOfStream with
+            | _, true -> None
+            | _ when n = line -> Some (reader.ReadLine())
+            | _ -> 
+                reader.ReadLine() |> ignore
+                loop (n + 1)
+        loop 0
+
+    let textData = maybe {
+        let! symbolUse = symbolUse
+        use! file = Option.attempt (fun _ -> fileSystem.FileStreamReadShim symbolUse.FileName)
+        use reader = new StreamReader(file)
+        let range = symbolUse.RangeAlternate
+        let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPathSafe(symbolUse.FileName)) 
+                        range.StartLine range.StartColumn
+        let line = range.StartLine-1
+        let! lineStr = readLine reader line
+        // Trimming for display purpose, but we should not touch the trailing spaces.
+        let content = lineStr.TrimStart()
+        let numOfWhitespaces = lineStr.Length - content.Length
+        let rangeText = lineStr.Substring(range.StartColumn, range.EndColumn - range.StartColumn)
+        let offset = 
+            if rangeText.LastIndexOf name > 0 then
+                // Trim fully qualified symbols
+                max 0 (rangeText.Length - name.Length)
+            else 0
+        // Get the index of symbol in the trimmed text
+        let highlightStart = prefix.Length + range.StartColumn + offset - numOfWhitespaces
+        let highlightLength = name.Length
+        let text = prefix + content.Trim()
+        return highlightStart, highlightLength, text
+    }
 
     override x.DisplayData: VSTREEDISPLAYDATA = 
         let glyphType =
@@ -122,7 +134,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, ?
         | _ -> String.Empty
 
     override x.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = 
-        match navigationData, symbolUse with
+        match navigationData(), symbolUse with
         | Some(windowFrame, vsTextManager, vsTextBuffer), Some symbolUse ->
             // Only show windows when going to source
             windowFrame.Show() |> ensureSucceeded

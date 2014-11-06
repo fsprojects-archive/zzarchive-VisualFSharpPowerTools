@@ -34,6 +34,9 @@ namespace FSharpVSPowerTools
         [Import]
         internal ProjectFactory projectFactory = null;
 
+        [Import]
+        internal Microsoft.FSharp.Compiler.AbstractIL.Internal.Library.Shim.IFileSystem fileSystem = null; 
+
         internal FindReferencesFilter RegisterCommandFilter(IWpfTextView textView, bool showProgress)
         {
             var textViewAdapter = editorFactory.GetViewAdapter(textView);
@@ -47,7 +50,7 @@ namespace FSharpVSPowerTools
             {
                 Debug.Assert(doc != null, "Text document shouldn't be null.");
                 var filter = new FindReferencesFilter(doc, textView, fsharpVsLanguageService,
-                                                serviceProvider, projectFactory, showProgress);
+                                                serviceProvider, projectFactory, showProgress, fileSystem);
                 AddCommandFilter(textViewAdapter, filter);
                 return filter;
             }
