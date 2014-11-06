@@ -64,8 +64,9 @@ let ``multiline comments only allow asterisk, slash, parenthesis, or whitespace 
     (defaultOptions, "File1.fs", [| "(*(* // *) TODO stuff*)"
                                     "(*+ TODO something else *)"
                                     "(* *TODO other *)"
-                                    "(* another TODO xxx *)" |])
-    => [| (2, "TODO stuff", "File1.fs", 0, 11); (2, "TODO other", "File1.fs", 2, 4) |]
+                                    "(* another TODO xxx *)"
+                                    "(* //TODO more *)" |])
+    => [| (2, "TODO stuff", "File1.fs", 0, 11); (2, "TODO other", "File1.fs", 2, 4); (2, "TODO more", "File1.fs", 4, 5) |]
 
 [<Test>]
 let ``tokens can only be immediately followed by chars other than space that aren't alphanumeric or underscore``() = 

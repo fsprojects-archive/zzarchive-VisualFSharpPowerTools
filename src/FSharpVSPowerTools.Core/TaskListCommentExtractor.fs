@@ -100,11 +100,12 @@ module private Utils =
         let nextLineNumber, lineNumAndTokens, tokenizer, state = scanMultilineComments tokenizer [] state 0 lineNumber
         match lineNumAndTokens |> List.rev |> List.tryFind (fun (ln, tok) -> isFirstToken (tok.Text(lines, ln))) with
         | Some (lineNum, tok) ->
-            let tokText = tok.Text(lines, lineNum).ToLowerInvariant()
-            if tasks |> Array.exists ((=) tokText) then
-                let beginPos = { Line = lineNum; Column = tok.LeftColumn }
+            let tokText = tok.Text(lines, lineNum)
+            let trimedTokText = tokText.TrimStart(trimChars).ToLowerInvariant()
+            if tasks |> Array.exists ((=) trimedTokText) then
+                let beginPos = { Line = lineNum; Column = tok.LeftColumn + (tokText.Length - trimedTokText.Length) }
                 let endPos = { Line = nextLineNumber; Column = (lineNumAndTokens |> List.head |> snd).RightColumn }
-                (Some (tokText, beginPos, endPos)), nextLineNumber, tokenizer, state
+                (Some (trimedTokText, beginPos, endPos)), nextLineNumber, tokenizer, state
             else
                 tryFindMultilineCommentTaskToken tasks (lines, nextLineNumber, tokenizer, state)
         | None ->
