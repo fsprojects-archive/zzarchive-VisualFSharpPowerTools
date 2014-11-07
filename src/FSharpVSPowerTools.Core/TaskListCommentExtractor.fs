@@ -118,7 +118,7 @@ module private Utils =
             match tok.CharClass with
             | FSharpTokenCharKind.LineComment ->
                 let tokText = tok.Text(lines, lineNumber)
-                if tokText |> String.forall (function '/' | '(' | ')' | '*' | ' ' | '　' | '\t' -> true | _ -> false) then
+                if tokText |> String.forall (fun c -> trimChars |> Array.exists ((=)c)) then
                     match tryFindLineCommentTaskToken tasks (lines, lineNumber, tokenizer, state) with
                     | Some (task, pos) ->
                         let pos = OnelineTaskListCommentPos (task, pos)
