@@ -14,8 +14,7 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, fileSystem: IFileSystem, ?symbolUse: FSharpSymbolUse) =
     inherit LibraryNode(name)
-    do
-        base.CanGoToSource <- true
+    do base.CanGoToSource <- true
 
     let navigationData = lazy (
         match symbolUse with 
@@ -72,12 +71,17 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
         let range = symbolUse.RangeAlternate
         let prefix = sprintf "%s - (%i, %i) : " (Path.GetFullPathSafe(symbolUse.FileName)) 
                         range.StartLine range.StartColumn
-        let line = range.StartLine-1
+        let line = range.StartLine - 1
         let! lineStr = readLine reader line
         // Trimming for display purpose, but we should not touch the trailing spaces.
         let content = lineStr.TrimStart()
         let numOfWhitespaces = lineStr.Length - content.Length
-        let rangeText = lineStr.Substring(range.StartColumn, range.EndColumn - range.StartColumn)
+        let rangeText = 
+            // if it's a multi-line range, we take characters starting from StartColumn to the end of the start line
+            if range.EndLine <> range.StartLine then
+                lineStr.Substring(range.StartColumn)
+            else
+                lineStr.Substring(range.StartColumn, range.EndColumn - range.StartColumn)
         let offset = 
             if rangeText.LastIndexOf name > 0 then
                 // Trim fully qualified symbols
@@ -90,13 +94,12 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
         return highlightStart, highlightLength, text
     }
 
-    override x.DisplayData: VSTREEDISPLAYDATA = 
+    override __.DisplayData: VSTREEDISPLAYDATA = 
         let glyphType =
             match symbolUse with
-            | Some symbolUse when symbolUse.IsFromDefinition ->
-                uint16 StandardGlyphGroup.GlyphLibrary
-            | _ ->
-                uint16 StandardGlyphGroup.GlyphForwardType
+            | Some symbolUse when symbolUse.IsFromDefinition -> StandardGlyphGroup.GlyphLibrary
+            | _ -> StandardGlyphGroup.GlyphForwardType
+            |> uint16
 
         match textData with
         | Some(start, length, _) ->
@@ -112,10 +115,10 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
                 Image = glyphType,
                 SelectedImage = glyphType)
 
-    override x.CategoryField(_category: LIB_CATEGORY) =
+    override __.CategoryField(_category: LIB_CATEGORY) =
         uint32 LibraryNodeType.None
 
-    override x.GetTextWithOwnership(tto: VSTREETEXTOPTIONS) = 
+    override __.GetTextWithOwnership(tto: VSTREETEXTOPTIONS) = 
         match tto with
         | VSTREETEXTOPTIONS.TTO_DEFAULT ->
             // Although symbols have been sorted outside,
@@ -132,7 +135,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
                 |> Option.getOrElse String.Empty
         | _ -> String.Empty
 
-    override x.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = 
+    override __.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = 
         match navigationData.Value, symbolUse with
         | Some(windowFrame, vsTextManager, vsTextBuffer), Some symbolUse ->
             // Only show windows when going to source
@@ -156,33 +159,30 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
     // This class implement 'IVSNavInfo' in order to be attached in search criteria
     // The interface implementation isn't used for another purpose for now
     interface IVsNavInfo with
-        member x.GetLibGuid(_pGuid: byref<Guid>): int = 
+        member __.GetLibGuid(_pGuid: byref<Guid>): int = raise (NotImplementedException())
+        member __.GetSymbolType(_pdwType: byref<uint32>): int = raise (NotImplementedException())
+              
+        member __.EnumPresentationNodes(_dwFlags: uint32, _ppEnum: byref<IVsEnumNavInfoNodes>): int = 
             raise (NotImplementedException())
               
-        member x.GetSymbolType(_pdwType: byref<uint32>): int = 
-            raise (NotImplementedException())
-              
-        member x.EnumPresentationNodes(_dwFlags: uint32, _ppEnum: byref<IVsEnumNavInfoNodes>): int = 
-            raise (NotImplementedException())
-              
-        member x.EnumCanonicalNodes(ppEnum: byref<IVsEnumNavInfoNodes>): int = 
+        member __.EnumCanonicalNodes(_ppEnum: byref<IVsEnumNavInfoNodes>): int = 
             raise (NotImplementedException())
 
 type FSharpLibrary(guid: Guid) =
     let mutable capabilities: _LIB_FLAGS2 = Unchecked.defaultof<_>
     let mutable root = LibraryNode("", LibraryNodeType.Package)
 
-    member x.LibraryCapabilities
+    member __.LibraryCapabilities
         with get () = capabilities
         and set v = capabilities <- v
     
     interface IVsSimpleLibrary2 with
-        member x.GetSupportedCategoryFields2(_category: int, pgrfCatField: byref<uint32>): int = 
+        member __.GetSupportedCategoryFields2(_category: int, pgrfCatField: byref<uint32>): int = 
             pgrfCatField <- uint32 _LIB_CATEGORY2.LC_HIERARCHYTYPE ||| uint32 _LIB_CATEGORY2.LC_PHYSICALCONTAINERTYPE
             VSConstants.S_OK
               
-        member x.GetList2(listType: uint32, _flags: uint32, pobSrch: VSOBSEARCHCRITERIA2 [], 
-                          ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
+        member __.GetList2(listType: uint32, _flags: uint32, pobSrch: VSOBSEARCHCRITERIA2 [], 
+                           ppIVsSimpleObjectList2: byref<IVsSimpleObjectList2>): int = 
             if pobSrch <> null && not (Array.isEmpty pobSrch) && pobSrch.[0].dwCustom = Constants.findReferencesResults then
                 // Filter duplicated results
                 // Reference at http://social.msdn.microsoft.com/Forums/en-US/267c38d3-1732-465c-82cd-c36fceb486be/find-symbol-result-window-got-double-results-when-i-search-object-use-ivssimplelibrary2?forum=vsx
@@ -202,37 +202,32 @@ type FSharpLibrary(guid: Guid) =
             pgrfFlags <- uint32 x.LibraryCapabilities
             VSConstants.S_OK
               
-        member x.UpdateCounter(pCurUpdate: byref<uint32>): int = 
+        member __.UpdateCounter(pCurUpdate: byref<uint32>): int = 
             (root :> IVsSimpleObjectList2).UpdateCounter(&pCurUpdate)
               
-        member x.GetGuid(pguidLib: byref<Guid>): int = 
+        member __.GetGuid(pguidLib: byref<Guid>): int = 
             pguidLib <- guid
             VSConstants.S_OK
               
-        member x.GetSeparatorStringWithOwnership(pbstrSeparator: byref<string>): int = 
+        member __.GetSeparatorStringWithOwnership(pbstrSeparator: byref<string>): int = 
             pbstrSeparator <- "."
             VSConstants.S_OK
               
-        member x.LoadState(_pIStream: IStream, _lptType: LIB_PERSISTTYPE): int = 
-            VSConstants.S_OK
+        member __.LoadState(_pIStream: IStream, _lptType: LIB_PERSISTTYPE): int = VSConstants.S_OK
+        member __.SaveState(_pIStream: IStream, _lptType: LIB_PERSISTTYPE): int = VSConstants.S_OK
               
-        member x.SaveState(_pIStream: IStream, _lptType: LIB_PERSISTTYPE): int = 
-            VSConstants.S_OK
-              
-        member x.GetBrowseContainersForHierarchy(_pHierarchy: IVsHierarchy, _celt: uint32, 
-                                                 _rgBrowseContainers: VSBROWSECONTAINER [], _pcActual: uint32 []): int = 
+        member __.GetBrowseContainersForHierarchy(_pHierarchy: IVsHierarchy, _celt: uint32, 
+                                                  _rgBrowseContainers: VSBROWSECONTAINER [], _pcActual: uint32 []): int = 
             VSConstants.E_NOTIMPL
               
-        member x.AddBrowseContainer(_pcdComponent: VSCOMPONENTSELECTORDATA [], _pgrfOptions: byref<uint32>, 
-                                    pbstrComponentAdded: byref<string>): int = 
+        member __.AddBrowseContainer(_pcdComponent: VSCOMPONENTSELECTORDATA [], _pgrfOptions: byref<uint32>, 
+                                     pbstrComponentAdded: byref<string>): int = 
             pbstrComponentAdded <- null
             VSConstants.E_NOTIMPL
               
-        member x.RemoveBrowseContainer(_dwReserved: uint32, _pszLibName: string): int = 
-            VSConstants.E_NOTIMPL
+        member __.RemoveBrowseContainer(_dwReserved: uint32, _pszLibName: string): int = VSConstants.E_NOTIMPL
               
-        member x.CreateNavInfo(_rgSymbolNodes: SYMBOL_DESCRIPTION_NODE [], _ulcNodes: uint32, 
-                               ppNavInfo: byref<IVsNavInfo>): int = 
+        member __.CreateNavInfo(_rgSymbolNodes: SYMBOL_DESCRIPTION_NODE [], _ulcNodes: uint32, ppNavInfo: byref<IVsNavInfo>): int = 
             ppNavInfo <- null
             VSConstants.E_NOTIMPL
 
