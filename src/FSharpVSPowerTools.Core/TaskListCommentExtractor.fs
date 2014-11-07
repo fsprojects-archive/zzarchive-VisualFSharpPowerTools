@@ -64,11 +64,11 @@ module private Utils =
             match tokenizer.ScanToken(state) with
             | Some tok, state ->
                 let tokText = tok.Text(lines, lineNumber)
-                let trimedTokText = tokText.Trim(trimChars).ToLowerInvariant()
-                match tryTokenizeFirstToken trimedTokText with
+                let trimmedTokText = tokText.Trim(trimChars).ToLowerInvariant()
+                match tryTokenizeFirstToken trimmedTokText with
                 | Some (tok2, tokenizedText) ->
                     if isFirstToken tokenizedText && tasks |> Array.exists ((=) tokenizedText) then
-                        let pos = { Line = lineNumber; Column = tok.LeftColumn + tok2.LeftColumn + (tokText.Length - trimedTokText.Length) }
+                        let pos = { Line = lineNumber; Column = tok.LeftColumn + tok2.LeftColumn + (tokText.Length - trimmedTokText.Length) }
                         (Some (tokenizedText, pos), state)
                     elif tok2.CharClass = FSharpTokenCharKind.Identifier then
                         None, state
@@ -102,11 +102,11 @@ module private Utils =
         match lineNumAndTokens |> List.rev |> List.tryFind (fun (ln, tok) -> isFirstToken (tok.Text(lines, ln))) with
         | Some (lineNum, tok) ->
             let tokText = tok.Text(lines, lineNum)
-            let trimedTokText = tokText.TrimStart(trimChars).ToLowerInvariant()
-            if tasks |> Array.exists ((=) trimedTokText) then
-                let beginPos = { Line = lineNum; Column = tok.LeftColumn + (tokText.Length - trimedTokText.Length) }
+            let trimmedTokText = tokText.TrimStart(trimChars).ToLowerInvariant()
+            if tasks |> Array.exists ((=) trimmedTokText) then
+                let beginPos = { Line = lineNum; Column = tok.LeftColumn + (tokText.Length - trimmedTokText.Length) }
                 let endPos = { Line = nextLineNumber; Column = (lineNumAndTokens |> List.head |> snd).RightColumn }
-                (Some (trimedTokText, beginPos, endPos)), nextLineNumber, tokenizer, state
+                (Some (trimmedTokText, beginPos, endPos)), nextLineNumber, tokenizer, state
             else
                 tryFindMultilineCommentTaskToken tasks (lines, nextLineNumber, tokenizer, state)
         | None ->
