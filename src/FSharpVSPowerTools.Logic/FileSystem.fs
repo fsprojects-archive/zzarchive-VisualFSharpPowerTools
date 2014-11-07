@@ -8,8 +8,7 @@ open System.ComponentModel.Composition
 type Version = int
 
 [<Export>]
-type FileSystem [<ImportingConstructor>] 
-    (openDocumentsTracker: OpenDocumentsTracker) =
+type FileSystem [<ImportingConstructor>] (openDocumentsTracker: OpenDocumentsTracker) =
     static let defaultFileSystem = Shim.FileSystem
 
     let getOpenDocContent (fileName: string) =

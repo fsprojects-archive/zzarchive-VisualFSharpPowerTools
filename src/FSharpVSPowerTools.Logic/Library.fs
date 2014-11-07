@@ -12,13 +12,12 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
-type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, fileSystem: IFileSystem, 
-                       ?symbolUse: FSharpSymbolUse) =
+type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, fileSystem: IFileSystem, ?symbolUse: FSharpSymbolUse) =
     inherit LibraryNode(name)
     do
         base.CanGoToSource <- true
 
-    let navigationData() =
+    let navigationData = lazy (
         match symbolUse with 
         | Some symbolUse ->
             let mutable hierarchy = Unchecked.defaultof<_>
@@ -54,7 +53,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
                 vsTextView.GetBuffer(&vsTextBuffer) |> ensureSucceeded
                 Some (windowFrame, vsTextManager, vsTextBuffer)
             else None
-        | _ -> None
+        | _ -> None)
     
     let readLine (reader: StreamReader) line = 
         let rec loop n =
@@ -134,7 +133,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
         | _ -> String.Empty
 
     override x.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = 
-        match navigationData(), symbolUse with
+        match navigationData.Value, symbolUse with
         | Some(windowFrame, vsTextManager, vsTextBuffer), Some symbolUse ->
             // Only show windows when going to source
             windowFrame.Show() |> ensureSucceeded

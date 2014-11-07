@@ -35,7 +35,7 @@ namespace FSharpVSPowerTools
         internal ProjectFactory projectFactory = null;
 
         [Import]
-        internal Microsoft.FSharp.Compiler.AbstractIL.Internal.Library.Shim.IFileSystem fileSystem = null; 
+        internal FileSystem fileSystem = null; 
 
         internal FindReferencesFilter RegisterCommandFilter(IWpfTextView textView, bool showProgress)
         {
