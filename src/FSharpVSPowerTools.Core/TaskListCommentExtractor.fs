@@ -46,7 +46,7 @@ module private Utils =
             else lines.[lineNumber + 1]
         sourceTok.CreateLineTokenizer(nextLine)
 
-    let trimChars = [| ' '; '　'; '\t'; '/'; '('; ')'; '*' |]
+    let trimChars = [| ' '; '\u3000'; '\t'; '/'; '('; ')'; '*' |]
     let isFirstToken (tokenText: string) =
         tokenText.TrimStart(trimChars) <> String.Empty
 
