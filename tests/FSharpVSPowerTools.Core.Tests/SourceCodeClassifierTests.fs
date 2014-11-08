@@ -1563,6 +1563,13 @@ let _ = Printf.printf "%A" 0
          4, [ Category.Module, 8, 14; Category.Function, 15, 21; Category.Printf, 23, 25 ]]
 
 [<Test>]
+let ``printf formatters are not colorized in plane strings``() =
+    """
+let _ = sprintf "foo", "%A"
+"""
+    => [ 2, [Category.Function, 8, 15 ]]
+
+[<Test>]
 let ``all escaped symbols in string``() =
     """    
 let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"
