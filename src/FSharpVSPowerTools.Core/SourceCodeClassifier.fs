@@ -75,12 +75,10 @@ module private QuotationCategorizer =
 
     let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
 
-module private PrintfCategorizer =
-    let private printfTerminators = 
-        set [ 'b'; 'c'; 's'; 'd'; 'i'; 'u'; 'x'; 'X'; 'o'; 'e'; 'E'; 'f'; 'g'; 'G'; 'M'; 'O'; 'A'; 'a'; 't' ]
-    let private printfModifiers = set [ '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'; '-'; '+'; ' '; '*'; '.' ]
-        
-    let private categorize (getTextLine: int -> string) (ranges: Range.range) =
+module private StringCategorizers =
+    open System.Text.RegularExpressions
+
+    let categorize category (regex: Regex) (getTextLine: int -> string) (ranges: Range.range) =
         let lines =
             [ranges.StartLine..ranges.EndLine]
             |> List.map (fun line ->
@@ -93,106 +91,58 @@ module private PrintfCategorizer =
                 elif line = ranges.EndLine then
                     lineStr.Substring(0, ranges.EndColumn - 1), line, 0
                 else lineStr, line, 0)
+
         lines
         |> List.map (fun (str, line, startColumn) ->
-            let findLengthAndSkip i = 
-                let rec findTerminator i = 
-                    if str.Length <= i then 0 else
-                    let c = str.[i]
-                    if printfTerminators.Contains c then i + 1
-                    elif printfModifiers.Contains c then findTerminator (i + 1)
-                    else 0
-                if str.[i] = '%' then 2, None else
-                match findTerminator i with
-                | 0  -> 1, None
-                | i' -> (i' + 1 - i), Some (i' + 1 - i)
+             let matches = 
+                regex.Matches str 
+                |> Seq.cast<Match> 
+                |> Seq.filter (fun m -> m.Value <> "")
+                |> Seq.toArray
 
-            let rec parseFormatter acc i =
-                if i >= (str.Length - 1) then acc else
-                match str.[i] with
-                | '%' -> 
-                    let skip, length = findLengthAndSkip (i + 1) 
-                    match length with 
-                    | Some length -> 
-                        let hit = 
-                            { Category = Category.Printf
-                              WordSpan = 
-                                { Line = line
-                                  StartCol = startColumn + i
-                                  EndCol = startColumn + i + length }} 
-                        parseFormatter (hit :: acc) (i + skip)
-                    | _ -> parseFormatter acc (i + skip)
-                | _ -> parseFormatter acc (i + 1) 
-            parseFormatter [] 0)
+             matches
+             |> Seq.fold (fun acc (m: Match) -> 
+                  let category =
+                      { Category = category
+                        WordSpan = 
+                          { Line = line
+                            StartCol = startColumn + m.Index
+                            EndCol = startColumn + m.Index + m.Length }}
+                  category :: acc  
+                ) [])
         |> Seq.concat 
-
-    let getCategories ast getTextLine =
-        let literals = UntypedAstUtils.getPrintfLiterals ast 
-        literals
-        |> List.map (categorize getTextLine) 
+         
+    let private getCategories category regex ast getTextLine =
+        UntypedAstUtils.getPrintfLiterals ast
+        |> List.map (categorize category regex getTextLine) 
         |> Seq.concat
 
-module private EscapedCharsCategorizer =
-    open System.Text.RegularExpressions
+    module Printf =
+        let private formattersRegex = 
+            Regex @"%\s*(([-]?\d+(\.\d+)?[eE][+-]\d{3})|([-+]?\d+(\.\d+)?[fFeEgG])|((\*|\d+)?[bcsdiuxXoeEfgGMOAat]))"
+        
+        let getCategories ast getTextLine = 
+            UntypedAstUtils.getPrintfLiterals ast
+            |> List.map (categorize Category.Printf formattersRegex getTextLine) 
+            |> Seq.concat
 
-    let private isRegularString (r: Range.range) getTextLine =
-        let lineStr: string = getTextLine (r.StartLine - 1) 
-        let origLiteral = lineStr.Substring r.StartColumn
-        not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
+    module EscapedChars =
+        let private escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
 
-    let escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
+        let private isRegularString (r: Range.range) getTextLine =
+            let lineStr: string = getTextLine (r.StartLine - 1) 
+            let origLiteral = lineStr.Substring r.StartColumn
+            not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
 
-    (* VisualStudio return the following strings (presented here as char arrays):
-       "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
-       "a\rb" => [|'"'; 'a'; '\\'; 'r'; 'b'; '"'|] *)
+        (* VisualStudio return the following strings (presented here as char arrays):
+           "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
+           "a\rb" => [|'"'; 'a'; '\\'; 'r'; 'b'; '"'|] *)
 
-    let private categorize (getTextLine: int -> string) (litRange: Range.range) =
-        if isRegularString litRange getTextLine then
-            [litRange.StartLine..litRange.EndLine]
-            |> List.map (fun line ->
-                let lineStr = getTextLine (line - 1)
-
-                if line = litRange.StartLine && line = litRange.EndLine then
-                    lineStr.Substring(litRange.StartColumn, litRange.EndColumn - litRange.StartColumn), 
-                    line, litRange.StartColumn
-                elif line = litRange.StartLine then 
-                    lineStr.Substring(litRange.StartColumn), line, litRange.StartColumn
-                elif line = litRange.EndLine then
-                    lineStr.Substring(0, litRange.EndColumn - 1), line, 0
-                else lineStr, line, 0
-            )
-            |> List.map (fun (str, line, startColumn) ->
-                 let matches = 
-                    escapingSymbolsRegex.Matches str 
-                    |> Seq.cast<Match> 
-                    |> Seq.filter (fun m -> m.Value <> "")
-                    |> Seq.toArray
-
-                 debug "[SourceCodeClassifier] Escaped character (line = %d, lineStr = %s) => Matches %A" 
-                       line str (matches |> Array.map (fun m -> 
-                           sprintf "(idx = %d, len = %d, value = %s, value chars = %A" 
-                                   m.Index m.Length m.Value (m.Value.ToCharArray())))
-
-                 matches
-                 |> Seq.fold (fun acc (m: Match) -> 
-                      let category =
-                          { Category = Category.Escaped
-                            WordSpan = 
-                              { Line = line
-                                StartCol = startColumn + m.Index
-                                EndCol = startColumn + m.Index + m.Length }}
-                      category :: acc  
-                    ) []
-               )
-            |> Seq.concat 
-        else Seq.empty
-
-    let getCategories ast getTextLine = 
-        let literals = UntypedAstUtils.getStringLiterals ast 
-        literals
-        |> List.map (categorize getTextLine) 
-        |> Seq.concat
-        |> Seq.toArray
+        let getCategories ast getTextLine = 
+            UntypedAstUtils.getStringLiterals ast 
+            |> List.filter (fun r -> isRegularString r getTextLine)
+            |> List.map (categorize Category.Escaped escapingSymbolsRegex getTextLine) 
+            |> Seq.concat
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
@@ -490,8 +440,8 @@ module SourceCodeClassifier =
         let allSpans = 
             spansBasedOnSymbolsUses 
             |> Seq.append (QuotationCategorizer.getCategories ast lexer)
-            |> Seq.append (PrintfCategorizer.getCategories ast getTextLine)
-            |> Seq.append (EscapedCharsCategorizer.getCategories ast getTextLine)
+            |> Seq.append (StringCategorizers.Printf.getCategories ast getTextLine)
+            |> Seq.append (StringCategorizers.EscapedChars.getCategories ast getTextLine)
             |> Seq.append unusedOpenDeclarationSpans
             |> Seq.toArray
 

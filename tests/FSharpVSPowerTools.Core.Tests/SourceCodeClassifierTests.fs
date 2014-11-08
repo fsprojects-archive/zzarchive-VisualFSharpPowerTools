@@ -1589,8 +1589,17 @@ let _ = sprintf "%*d" 1
 let ``float printf formatters``() =
     """
 let _ = sprintf "%7.1f" 1.0
+let _ = sprintf "%-8.1e+567" 1.0
 """
-    => [ 2, [Category.Function, 8, 15; Category.Printf, 17, 22 ]]
+    => [ 2, [Category.Function, 8, 15; Category.Printf, 17, 22]
+         3, [Category.Function, 8, 15; Category.Printf, 17, 27]]
+
+[<Test>]
+let ``malformed printf formatters``() =
+    """
+let _ = sprintf "%.7f %7.1A %7.f %--8.1f"
+"""
+    => [ 2, [Category.Function, 8, 15]]
 
 [<Test>]
 let ``all escaped symbols in string``() =
