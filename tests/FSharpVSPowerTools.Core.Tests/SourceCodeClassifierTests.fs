@@ -1553,6 +1553,16 @@ let _ = <@ sprintf "%A" @>
     => [ 2, [Category.Function, 11, 18; Category.Printf, 20, 22; Category.Quotation, 8, 26 ]]
 
 [<Test>]
+let ``printf formatters if printf function is namespace qualified``() =
+    """
+let _ = Microsoft.FSharp.Core.Printf.printf "%A" 0
+open Microsoft.FSharp.Core
+let _ = Printf.printf "%A" 0
+"""
+    => [ 2, [ Category.Module, 30, 36; Category.Function, 37, 43; Category.Printf, 45, 47 ]
+         4, [ Category.Module, 8, 14; Category.Function, 15, 21; Category.Printf, 23, 25 ]]
+
+[<Test>]
 let ``all escaped symbols in string``() =
     """    
 let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"
