@@ -78,7 +78,7 @@ module private QuotationCategorizer =
 module private PrintfCategorizer =
     let private printfTerminators = 
         set [ 'b'; 'c'; 's'; 'd'; 'i'; 'u'; 'x'; 'X'; 'o'; 'e'; 'E'; 'f'; 'g'; 'G'; 'M'; 'O'; 'A'; 'a'; 't' ]
-    let private printfModifiers = set [ '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'; '-'; '+'; ' ' ]
+    let private printfModifiers = set [ '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'; '-'; '+'; ' '; '*'; '.' ]
         
     let private categorize (getTextLine: int -> string) (ranges: Range.range) =
         let lines =
