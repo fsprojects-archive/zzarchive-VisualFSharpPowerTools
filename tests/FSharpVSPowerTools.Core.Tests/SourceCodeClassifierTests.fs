@@ -1570,6 +1570,15 @@ let _ = sprintf "foo", "%A"
     => [ 2, [Category.Function, 8, 15 ]]
 
 [<Test>]
+let ``fprintf formatters``() =
+    """
+let _ = fprintf null "%A" 0
+let _ = Microsoft.FSharp.Core.Printf.fprintf null "%A" 0
+"""
+    => [ 2, [Category.Function, 8, 15; Category.Printf, 22, 24 ]
+         3, [Category.Module, 30, 36; Category.Function, 37, 44; Category.Printf, 51, 53 ]]
+
+[<Test>]
 let ``all escaped symbols in string``() =
     """    
 let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"

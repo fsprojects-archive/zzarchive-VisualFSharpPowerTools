@@ -495,6 +495,14 @@ let getPrintfLiterals ast =
             let funcIdent = idents |> List.rev |> List.head
             if printfFunctions |> Set.contains funcIdent.idText then
                 ranges.Add r
+        | SynExpr.App (_,_, SynExpr.App (_, _, SynExpr.Ident funcIdent, _, _), SynExpr.Const (SynConst.String (_, r), _), _) -> 
+            if funcIdent.idText = "fprintf" then
+                ranges.Add r
+        | SynExpr.App (_,_, SynExpr.App (_, _, SynExpr.LongIdent(_, LongIdentWithDots(idents, _), _, _), _, _), 
+                       SynExpr.Const (SynConst.String (_, r), _), _) -> 
+            let funcIdent = idents |> List.rev |> List.head
+            if funcIdent.idText = "fprintf" then
+                ranges.Add r
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr
             visitExpr funcExpr
