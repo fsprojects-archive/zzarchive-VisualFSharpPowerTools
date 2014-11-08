@@ -112,11 +112,6 @@ module private StringCategorizers =
                 ) [])
         |> Seq.concat 
          
-    let private getCategories category regex ast getTextLine =
-        UntypedAstUtils.getPrintfLiterals ast
-        |> List.map (categorize category regex getTextLine) 
-        |> Seq.concat
-
     module Printf =
         let private formattersRegex = 
             Regex @"%\s*(([-]?\d+(\.\d+)?[eE][+-]\d{3})|([-+]?\d+(\.\d+)?[fFeEgG])|((\*|\d+)?[bcsdiuxXoeEfgGMOAat]))"
