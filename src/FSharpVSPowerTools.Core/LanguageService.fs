@@ -416,8 +416,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
       loop 0 None
 
     member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
-                                           checkForUnusedReferences, checkForUnusedOpens, 
-                                           getSymbolDeclProjects, pf: Profiler) : SymbolUse [] Async =
+                                           checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =
 
         async {
             let! results = pf.Atc "LS ParseAndCheckFileInProject" <| fun _ ->
@@ -426,15 +425,15 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! fsharpSymbolsUses = pf.Atc "LS GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                 results.GetAllUsesOfAllSymbolsInFile()
 
-            using (new StreamWriter(sprintf @"L:\vfpt_logs\vfpt_symbolUses_%d_%s.txt"
-                                            System.DateTime.Now.Ticks 
-                                            (System.DateTime.Now.ToString("HH_mm_ss_fff")))) (fun w ->
-                for su in fsharpSymbolsUses do w.WriteLine (sprintf "%s %A" su.Symbol.DisplayName su.RangeAlternate)
-            )
-
-            File.WriteAllText (sprintf @"L:\vfpt_logs\source_%d_%s.txt" 
-                                       System.DateTime.Now.Ticks 
-                                       (System.DateTime.Now.ToString("HH_mm_ss_fff")), source)
+//            using (new StreamWriter(sprintf @"L:\vfpt_logs\vfpt_symbolUses_%d_%s.txt"
+//                                            System.DateTime.Now.Ticks 
+//                                            (System.DateTime.Now.ToString("HH_mm_ss_fff")))) (fun w ->
+//                for su in fsharpSymbolsUses do w.WriteLine (sprintf "%s %A" su.Symbol.DisplayName su.RangeAlternate)
+//            )
+//
+//            File.WriteAllText (sprintf @"L:\vfpt_logs\source_%d_%s.txt" 
+//                                       System.DateTime.Now.Ticks 
+//                                       (System.DateTime.Now.ToString("HH_mm_ss_fff")), source)
 
             let allSymbolsUses = pf.Tc "LS allSymbolsUses" <| fun _ ->
                 fsharpSymbolsUses
@@ -504,29 +503,30 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     { SymbolUse = symbolUse
                       IsUsed = true
                       FullNames = fullNames })
+            return allSymbolsUses }
 
+    member x.GetUnusedDeclarations (symbolsUses, projectOptions, getSymbolDeclProjects, pf: Profiler) : SymbolUse[] Async =
+        async {
             let singleDefs = pf.Tc "LS singleDefs" <| fun _ ->
-                if checkForUnusedReferences then
-                    allSymbolsUses
-                    |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
-                    |> Seq.choose (fun (symbol, uses) ->
-                        match symbol with
-                        | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
-                        // Determining that a record, DU or module is used anywhere requires
-                        // inspecting all their inclosed entities (fields, cases and func / vals)
-                        // for usefulness, which is too expensive to do. Hence we never gray them out.
-                        | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
-                        // FCS returns inconsistent results for override members; we're going to skip these symbols.
-                        | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
-                        // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
-                        | Parameter -> None
-                        | _ ->
-                            match Seq.toList uses with
-                            | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
-                                Some symbol 
-                            | _ -> None)
-                    |> Seq.toList
-                else []
+                symbolsUses
+                |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
+                |> Seq.choose (fun (symbol, uses) ->
+                    match symbol with
+                    | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
+                    // Determining that a record, DU or module is used anywhere requires
+                    // inspecting all their inclosed entities (fields, cases and func / vals)
+                    // for usefulness, which is too expensive to do. Hence we never gray them out.
+                    | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
+                    // FCS returns inconsistent results for override members; we're going to skip these symbols.
+                    | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
+                    // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
+                    | Parameter -> None
+                    | _ ->
+                        match Seq.toList uses with
+                        | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
+                            Some symbol 
+                        | _ -> None)
+                |> Seq.toList
 
             let! notUsedSymbols =
                 singleDefs 
@@ -544,9 +544,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
             return pf.Tc "LS return" <| fun _ ->
                 match notUsedSymbols with
-                | [] -> allSymbolsUses
+                | [] -> symbolsUses
                 | _ ->
-                    allSymbolsUses
+                    symbolsUses
                     |> Array.map (fun su -> 
                         { su with IsUsed = notUsedSymbols |> List.forall (fun s -> not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
         }

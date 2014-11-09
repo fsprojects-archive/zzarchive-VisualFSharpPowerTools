@@ -46,10 +46,12 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 let lineStr = sourceLines.[line]
                 Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
 
-    let symbolsUses =
-        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, true,
-                                                      (fun _ -> async { return Some [opts] }), Profiler())
-        |> Async.RunSynchronously
+    let symbolsUses = 
+        async {
+            let! symbolUses = 
+                languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, Profiler())
+            return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }), Profiler())
+        } |> Async.RunSynchronously
 
     let parseResults = 
         languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously

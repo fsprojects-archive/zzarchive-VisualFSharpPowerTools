@@ -221,7 +221,7 @@ type VSLanguageService
         }
 
     member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
-                                            checkForUnusedReferences: bool, checkForUnusedOpens: bool, getSymbolDeclLocation, pf: Profiler) = 
+                                            checkForUnusedOpens: bool, pf: Profiler) = 
         async {
             Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
@@ -239,7 +239,15 @@ type VSLanguageService
                         Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
             let! opts = project.GetProjectCheckerOptions instance
-            
+
+            let! allSymbolsUses = pf.Atc "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+                instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, pf)
+
+            return allSymbolsUses, lexer
+        }
+
+     member __.GetUnusedDeclarations (symbolUses, project: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
+        async {
             let getSymbolDeclProjects symbol = pf.Atc "getSymbolDeclProjects" <| fun _ ->
                 async {
                     let projects =
@@ -258,11 +266,8 @@ type VSLanguageService
                     | None -> return None
                 }
 
-            let! allSymbolsUses = pf.Atc "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                instance.GetAllUsesOfAllSymbolsInFile(
-                    opts, currentFile, source, stale, checkForUnusedReferences, checkForUnusedOpens, getSymbolDeclProjects, pf)
-
-            return allSymbolsUses, lexer
+            let! opts = project.GetProjectCheckerOptions instance
+            return! instance.GetUnusedDeclarations(symbolUses, opts, getSymbolDeclProjects, pf)
         }
 
      member __.GetAllEntities (fileName, source, project: IProjectProvider) =

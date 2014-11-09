@@ -54,6 +54,16 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
 
     let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
 
+    let setNewSpans snapshot spans =
+        state.Swap (fun _ -> Data (SnapshotSpan (snapshot, 0, snapshot.Length), spans)) |> ignore
+    
+        // TextBuffer is null if a solution is closed at this moment
+        if textDocument.TextBuffer <> null then
+            let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
+            let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
+            classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
+
+
     let updateSyntaxConstructClassifiers force =
         let cancelToken = new CancellationTokenSource() 
         cancellationToken.Swap (fun _ -> Some (cancelToken))
@@ -89,28 +99,6 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         let! parseResults = pf.Atc "ParseFileInProject" <| fun _ ->
                             vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
 
-                        // NO UNUSED
-
-                        let! symbolsUses, lexer = pf.Atc "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
-                            vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                                snapshot, textDocument.FilePath, project, AllowStaleResults.No,
-                                false, false, getSymbolDeclLocation, pf)
-
-                        let spans = pf.Tc "getCategoriesAndLocations [NO UNUSED]" <| fun _ ->
-                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, [], None)
-                            |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-
-
-                        state.Swap (fun _ -> Data (SnapshotSpan (snapshot, 0, snapshot.Length), spans)) |> ignore
-
-                        // TextBuffer is null if a solution is closed at this moment
-                        if textDocument.TextBuffer <> null then
-                            let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
-                            let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-                            classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-
-                        // WITH UNUSED
-
                         // Don't check for unused declarations on generated signatures
                         let includeUnusedReferences = 
                             includeUnusedReferences 
@@ -121,19 +109,28 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                             includeUnusedOpens 
                             && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
                             && project.IsForStandaloneScript)
-                        
-                        let! symbolsUses, lexer = pf.Atc "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+
+                        let! symbolsUses, lexer = pf.Atc "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                                snapshot, textDocument.FilePath, project, AllowStaleResults.No,
-                                includeUnusedReferences, includeUnusedOpens, getSymbolDeclLocation, pf)
+                                snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens, pf)
+
+                        let spans = pf.Tc "getCategoriesAndLocations [NO UNUSED]" <| fun _ ->
+                            getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, [], None)
+                            |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+
+                        setNewSpans snapshot spans
+ 
+                        let! symbolsUses = 
+                            if includeUnusedReferences then 
+                                pf.Atc "GetUnusedDeclarations" <| fun _ ->
+                                    vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf)
+                            else async { return symbolsUses }
 
                         //let! parseResults = pf.Atc "ParseFileInProject" <| fun _ ->
                           //  vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
-
-                        
                             
                         let! entitiesMap, openDeclarations = async {
-                            if includeUnusedReferences then
+                            if includeUnusedOpens then
                                 let! entities = pf.Atc "GetAllEntities" <| fun _ ->
                                     vsLanguageService.GetAllEntities(textDocument.FilePath, snapshot.GetText(), project)    
 
@@ -165,14 +162,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         
                         pf.Stop()
                         Logging.logInfo "[SyntaxConstructClassifier] %s" pf.Result
-
-                        state.Swap (fun _ -> Data (SnapshotSpan (snapshot, 0, snapshot.Length), spans)) |> ignore
-
-                        // TextBuffer is null if a solution is closed at this moment
-                        if textDocument.TextBuffer <> null then
-                            let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
-                            let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-                            classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
+                        setNewSpans snapshot spans
                     | _ -> ()
                 } 
             Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
