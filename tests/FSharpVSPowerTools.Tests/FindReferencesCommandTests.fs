@@ -5,10 +5,8 @@ open NUnit.Framework
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Navigation
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 

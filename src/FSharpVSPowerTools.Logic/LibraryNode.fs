@@ -52,19 +52,16 @@ type LibraryNodeType =
     | DeferExpansion = 1048576 // _LIB_LISTTYPE.LLT_DEFEREXPANSION
 
 /// Single node inside the tree of the libraries in the object browser or class view.
-type LibraryNode(name: string, ?nodeType: LibraryNodeType, 
-                 ?capabilities: LibraryNodeCapabilities, ?contextMenuID: CommandID) =
+type LibraryNode(name: string, ?nodeType: LibraryNodeType, ?capabilities: LibraryNodeCapabilities, ?contextMenuID: CommandID) =
     static let NullIndex = uint32 0xFFFFFFFF
 
     let mutable name = name
     let mutable nodeType = defaultArg nodeType LibraryNodeType.None
     let mutable capabilities = defaultArg capabilities LibraryNodeCapabilities.None
     let mutable contextMenuID = defaultArg contextMenuID null
-
     let mutable children = ResizeArray<LibraryNode>()
     let mutable clipboardFormats = ResizeArray<VSOBJCLIPFORMAT>()
     let mutable displayData: VSTREEDISPLAYDATA = Unchecked.defaultof<_>
-
     let mutable flags: _VSTREEFLAGS = Unchecked.defaultof<_>
     let mutable tooltip: string = null
     let updateCount = ref 0
@@ -76,71 +73,71 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
         else
             capabilities <- capabilities &&& ~~~flag
 
-    member internal x.ContextMenuID
+    member internal __.ContextMenuID
         with get () = contextMenuID
         and set value = contextMenuID <- value
   
-    member internal x.Children
+    member internal __.Children
         with get () = children
         and set value = children <- value
 
-    member internal x.ClipboardFormats
+    member internal __.ClipboardFormats
         with get () = clipboardFormats
         and set value = clipboardFormats <- value
 
-    member internal x.UpdateCount 
+    member internal __.UpdateCount 
         with get () = !updateCount
         and set value = updateCount := value
 
-    member internal x.FilteredView 
+    member internal __.FilteredView 
         with get () = filteredView
         and set value = filteredView <- value
 
-    member x.AddNode(node: LibraryNode) =
+    member __.AddNode(node: LibraryNode) =
         lock children (fun () -> children.Add(node))
         incr updateCount
 
-    member x.RemoveNode(node: LibraryNode) =
+    member __.RemoveNode(node: LibraryNode) =
         lock children (fun () -> children.Remove(node) |> ignore)
         incr updateCount
 
     /// Get or Set if the node can be deleted.
-    member x.CanDelete
+    member __.CanDelete
         with get () = (capabilities &&& LibraryNodeCapabilities.AllowDelete) <> LibraryNodeCapabilities.None
         and set value = setCapabilityFlag(LibraryNodeCapabilities.AllowDelete, value)
 
     /// Get or Set if the node can be associated with some source code.
-    member x.CanGoToSource
+    member __.CanGoToSource
         with get () = (capabilities &&& LibraryNodeCapabilities.HasSourceContext) <> LibraryNodeCapabilities.None
         and set value = setCapabilityFlag(LibraryNodeCapabilities.HasSourceContext, value)
 
     /// Get or Set if the node can be renamed.
-    member x.CanRename
+    member __.CanRename
         with get () = (capabilities &&& LibraryNodeCapabilities.AllowRename) <> LibraryNodeCapabilities.None
         and set value = setCapabilityFlag(LibraryNodeCapabilities.AllowRename, value)
 
-    member x.Capabilities
+    member __.Capabilities
         with get () = capabilities
         and set value = capabilities <- value
 
-    member x.Flags
+    member __.Flags
         with get () = flags
         and set value = flags <- value
 
-    member x.TooltipText
+    member __.TooltipText
         with get () = tooltip
         and set value = tooltip <- value
 
-    member x.Name
+    member __.Name
         with get () = name
         and set value = name <- value
 
-    member x.NodeType
+    member __.NodeType
         with get () = nodeType
         and set value = nodeType <- value
 
     abstract DisplayData: VSTREEDISPLAYDATA
-    default x.DisplayData = displayData
+    default __.DisplayData = displayData
 
     abstract UniqueName: string
     default x.UniqueName = x.Name
@@ -152,25 +149,25 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
     /// <param name="itemId">The item id of the item.</param>
     /// <param name="itemsCount">Number of items.</param>
     abstract SourceItems: byref<IVsHierarchy> * byref<uint32> * byref<uint32> -> unit
-    default x.SourceItems([<Out>] hierarchy: byref<IVsHierarchy>, [<Out>] itemId: byref<uint32>, 
-                          [<Out>] itemsCount: byref<uint32>) =
+    default __.SourceItems([<Out>] hierarchy: byref<IVsHierarchy>, [<Out>] itemId: byref<uint32>, 
+                           [<Out>] itemsCount: byref<uint32>) =
         hierarchy <- null
         itemId <- 0u
         itemsCount <- 0u
 
     /// Performs the operations needed to delete this node.
     abstract Delete: unit -> unit
-    default x.Delete() = ()
+    default __.Delete() = ()
 
     abstract Rename: string * uint32 -> unit
-    default x.Rename(_, _) = ()
+    default __.Rename(_, _) = ()
 
     /// Perform a Drag and Drop operation on this node.
     abstract DoDragDrop: OleDataObject * uint32 * uint32 -> unit
-    default x.DoDragDrop(_dataObject: OleDataObject, _keyState: uint32, _effect: uint32) = ()
+    default __.DoDragDrop(_dataObject: OleDataObject, _keyState: uint32, _effect: uint32) = ()
  
     abstract EnumClipboardFormats: _VSOBJCFFLAGS * VSOBJCLIPFORMAT [] -> uint32
-    default x.EnumClipboardFormats(_flags: _VSOBJCFFLAGS, formats: VSOBJCLIPFORMAT []) =
+    default __.EnumClipboardFormats(_flags: _VSOBJCFFLAGS, formats: VSOBJCLIPFORMAT []) =
         if formats = null || formats.Length = 0 then
             uint32 clipboardFormats.Count
         else
@@ -181,7 +178,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             itemsToCopy
 
     abstract FillDescription: _VSOBJDESCOPTIONS * IVsObjectBrowserDescription3 -> unit
-    default x.FillDescription(_flags: _VSOBJDESCOPTIONS, description: IVsObjectBrowserDescription3) =
+    default __.FillDescription(_flags: _VSOBJDESCOPTIONS, description: IVsObjectBrowserDescription3) =
         description.ClearDescriptionText() |> ignore
         description.AddDescriptionText3(name, VSOBDESCRIPTIONSECTION.OBDS_NAME, null) |> ignore
 
@@ -201,10 +198,10 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             filtered
 
     abstract BrowseObject: obj
-    default x.BrowseObject = null
+    default __.BrowseObject = null
 
     abstract CategoryField: LIB_CATEGORY -> uint32
-    default x.CategoryField(category: LIB_CATEGORY) =
+    default __.CategoryField(category: LIB_CATEGORY) =
         match category with
         | LIB_CATEGORY.LC_LISTTYPE ->
             let mutable subTypes = LibraryNodeType.None
@@ -217,12 +214,12 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             raise (NotImplementedException())
 
     abstract GotoSource: VSOBJGOTOSRCTYPE -> unit
-    default x.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = ()
+    default __.GotoSource(_gotoType: VSOBJGOTOSRCTYPE) = ()
 
     abstract GetTextWithOwnership: VSTREETEXTOPTIONS -> string
     default x.GetTextWithOwnership(_tto: VSTREETEXTOPTIONS) = x.Name
 
-    member x.GetSourceContextWithOwnership([<Out>] fileName: byref<string>, [<Out>] pulLineNum: byref<uint32>) =
+    member __.GetSourceContextWithOwnership([<Out>] fileName: byref<string>, [<Out>] pulLineNum: byref<uint32>) =
         fileName <- null
         pulLineNum <- 0u
 
@@ -234,7 +231,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
         node.UpdateCount <- x.UpdateCount
         node
 
-    member internal x.CheckIndexOutOfRange(index) =
+    member internal __.CheckIndexOutOfRange(index) =
         if index >= uint32 children.Count then
            let ex = ArgumentOutOfRangeException("index")
            Logging.logException ex
@@ -245,11 +242,11 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             pFlags <- uint32 x.Flags
             VSConstants.S_OK
         
-        member x.GetCapabilities2(pgrfCapabilities: byref<uint32>): int = 
+        member __.GetCapabilities2(pgrfCapabilities: byref<uint32>): int = 
             pgrfCapabilities <- uint32 capabilities
             VSConstants.S_OK
         
-        member x.GetItemCount(pCount: byref<uint32>): int = 
+        member __.GetItemCount(pCount: byref<uint32>): int = 
             pCount <- uint32 children.Count
             VSConstants.S_OK
         
@@ -345,15 +342,15 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                 pcActual.[0] <- copied
             VSConstants.S_OK
         
-        member x.GetClipboardFormat(_index: uint32, _grfFlags: uint32, _pFormatetc: FORMATETC [], _pMedium: STGMEDIUM []): int = 
+        member __.GetClipboardFormat(_index: uint32, _grfFlags: uint32, _pFormatetc: FORMATETC [], _pMedium: STGMEDIUM []): int = 
             VSConstants.E_NOTIMPL
         
-        member x.GetExtendedClipboardVariant(_index: uint32, _grfFlags: uint32, _pcfFormat: VSOBJCLIPFORMAT [], 
-                                             pvarFormat: byref<obj>): int = 
+        member __.GetExtendedClipboardVariant(_index: uint32, _grfFlags: uint32, _pcfFormat: VSOBJCLIPFORMAT [], 
+                                              pvarFormat: byref<obj>): int = 
             pvarFormat <- null
             VSConstants.E_NOTIMPL
         
-        member x.GetExpandable3(_index: uint32, _listTypeExcluded: uint32, pfExpandable: byref<int>): int = 
+        member __.GetExpandable3(_index: uint32, _listTypeExcluded: uint32, pfExpandable: byref<int>): int = 
             // There is a not empty implementation of GetCategoryField2, so this method should
             // return E_NOTIMPL.
             pfExpandable <- 0
@@ -366,10 +363,10 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             ppIVsSimpleObjectList2 <- children.[int index].FilterView(enum<LibraryNodeType> (int listType))
             VSConstants.S_OK
  
-        member x.GetMultipleSourceItems(_index: uint32, _grfGSI: uint32, _cItems: uint32, _rgItemSel: VSITEMSELECTION []) =
+        member __.GetMultipleSourceItems(_index: uint32, _grfGSI: uint32, _cItems: uint32, _rgItemSel: VSITEMSELECTION []) =
             VSConstants.E_NOTIMPL
 
-        member x.GetNavInfo(_index: uint32, [<Out>] ppNavInfo: byref<IVsNavInfo>) =
+        member __.GetNavInfo(_index: uint32, [<Out>] ppNavInfo: byref<IVsNavInfo>) =
             ppNavInfo <- null
             VSConstants.E_NOTIMPL
 
@@ -378,7 +375,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             ppNavInfoNode <- children.[int index] :> IVsNavInfoNode
             VSConstants.S_OK
 
-        member x.GetProperty(_index: uint32, _propid: int, [<Out>] pvar) =
+        member __.GetProperty(_index: uint32, _propid: int, [<Out>] pvar) =
             pvar <- null
             VSConstants.E_NOTIMPL
 
@@ -402,7 +399,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             pbstrText <- children.[int index].TooltipText
             VSConstants.S_OK
 
-        member x.GetUserContext(_index: uint32, [<Out>] ppunkUserCtx) =
+        member __.GetUserContext(_index: uint32, [<Out>] ppunkUserCtx) =
             ppunkUserCtx <- null
             VSConstants.E_NOTIMPL
 
@@ -411,7 +408,7 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             children.[int index].GotoSource(srcType)
             VSConstants.S_OK
 
-        member x.LocateNavInfoNode(pNavInfoNode: IVsNavInfoNode, [<Out>] pulIndex: byref<uint32>) =
+        member __.LocateNavInfoNode(pNavInfoNode: IVsNavInfoNode, [<Out>] pulIndex: byref<uint32>) =
             match pNavInfoNode with
             | null ->
                 raise (ArgumentNullException("pNavInfoNode"))
@@ -427,16 +424,14 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
                     else loop (i + 1)
                 loop 0
 
-        member x.OnClose(_ptca: VSTREECLOSEACTIONS []) = 
-            VSConstants.S_OK
+        member __.OnClose(_ptca: VSTREECLOSEACTIONS []) = VSConstants.S_OK
 
-        member x.QueryDragDrop(_index: uint32, _pDataObject: IDataObject, _grfKeyState: uint32, pdwEffect: byref<uint32>) =
+        member __.QueryDragDrop(_index: uint32, _pDataObject: IDataObject, _grfKeyState: uint32, _pdwEffect: byref<uint32>) =
             VSConstants.E_NOTIMPL
 
-        member x.ShowHelp(_index: uint32) =
-            VSConstants.E_NOTIMPL
+        member __.ShowHelp(_index: uint32) = VSConstants.E_NOTIMPL
 
-        member x.UpdateCounter([<Out>] pCurUpdate: byref<uint32>) =
+        member __.UpdateCounter([<Out>] pCurUpdate: byref<uint32>) =
             pCurUpdate <- uint32 !updateCount
             VSConstants.S_OK
 
@@ -445,7 +440,6 @@ type LibraryNode(name: string, ?nodeType: LibraryNodeType,
             pbstrName <- x.UniqueName
             VSConstants.S_OK
 
-        member x.get_Type([<Out>] pllt: byref<uint32>) =
+        member __.get_Type([<Out>] pllt: byref<uint32>) =
             pllt <- uint32 nodeType
-            VSConstants.S_OK
-
+            VSConstants.S_OK 
