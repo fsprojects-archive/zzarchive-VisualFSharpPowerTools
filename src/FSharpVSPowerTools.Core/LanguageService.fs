@@ -528,44 +528,20 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     |> Seq.toList
                 else []
 
-            let! notUsedSymbols = pf.Atc "LS notUsedSymbols" <| fun _ ->
-                async {
-                    let! allProjectsOpts = pf.Atc "LS notUsedSymbols.getAllProjectsOpts" <| fun _ ->
-                        singleDefs
-                        |> Async.List.map getSymbolDeclProjects
-                    
-                    let allProjectsOpts = 
-                        allProjectsOpts 
-                        |> Seq.choose id 
-                        |> Seq.concat 
-                        |> Seq.distinctBy (fun opts -> opts.ProjectFileName) 
-                        |> Seq.toList
+            let! notUsedSymbols =
+                singleDefs 
+                |> Async.List.map (fun fsSymbol ->
+                    async {
+                        let! opts = getSymbolDeclProjects fsSymbol
+                        match opts with
+                        | Some projects ->
+                            let! isSymbolUsed = x.IsSymbolUsedInProjects (fsSymbol, projectOptions.ProjectFileName, projects, pf) 
+                            if isSymbolUsed then return None
+                            else return Some fsSymbol
+                        | None -> return None 
+                    })
+                |> Async.map (List.choose id)
 
-                    let! allSymbols =
-                        allProjectsOpts
-                        |> Async.List.map (fun opts -> async {
-                                let! results = pf.Atc "LS notUsedSymbols.ParseAndCheckProject" <| fun _ ->
-                                    checker.ParseAndCheckProject opts
-                                let! symbolUses = pf.Atc "LS notUsedSymbols.GetAllUsesOfAllSymbols" <| fun _ ->
-                                    results.GetAllUsesOfAllSymbols()
-                                let isFromCurrentProject = opts.ProjectFileName = projectOptions.ProjectFileName
-                                
-                                return pf.Tc "LS notUsedSymbols.countByAndFilter" <| fun _ ->
-                                    symbolUses 
-                                    |> Seq.countBy (fun su -> su.Symbol)
-                                    |> Seq.filter (fun (_, count) -> 
-                                        not (isFromCurrentProject && count = 1)) 
-                                    |> Seq.map fst
-                                    |> Seq.toList })
-
-                    let allSymbols = List.concat allSymbols 
-
-                    return pf.Tc "LS notUsedSymbols.filterSyngleDefs" <| fun _ ->
-                        singleDefs
-                        |> List.filter (fun singleDef -> 
-                            allSymbols |> List.exists (fun s -> singleDef.IsEffectivelySameAs s) |> not)
-                }
-                                    
             return pf.Tc "LS return" <| fun _ ->
                 match notUsedSymbols with
                 | [] -> allSymbolsUses
