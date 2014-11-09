@@ -247,7 +247,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
         with e -> 
             return failwithf "Exception when getting check options for '%s'\n.Details: %A" fileName e
       }
-   
+  
   /// Constructs options for the interactive checker for a project under the given configuration. 
   member __.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) =
     let opts =
@@ -359,15 +359,17 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
      }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq) =
+  member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq, pf: Profiler) =
      async { 
         return! 
             projectsOptions
             |> Seq.toArray
             |> Async.Array.exists (fun opts ->
                 async {
-                    let! projectResults = checker.ParseAndCheckProject opts
-                    let! refs = projectResults.GetUsesOfSymbol symbol
+                    let! projectResults = pf.Atc "IsSymbolUsedInProjects :: ParseAndCheckProject" <| fun _ ->
+                         checker.ParseAndCheckProject opts
+                    let! refs = pf.Atc "IsSymbolUsedInProjects :: GetUsesOfSymbol" <| fun _ ->
+                         projectResults.GetUsesOfSymbol symbol
                     return
                         if opts.ProjectFileName = currentProjectName then
                             refs.Length > 1
@@ -415,16 +417,29 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
     member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
                                            checkForUnusedReferences, checkForUnusedOpens, 
-                                           getSymbolDeclProjects) : SymbolUse [] Async =
+                                           getSymbolDeclProjects, pf: Profiler) : SymbolUse [] Async =
 
         async {
-            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
-            let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
+            let! results = pf.Atc "LS ParseAndCheckFileInProject" <| fun _ ->
+                x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
 
-            let allSymbolsUses =
+            let! fsharpSymbolsUses = pf.Atc "LS GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+                results.GetAllUsesOfAllSymbolsInFile()
+
+            using (new StreamWriter(sprintf @"L:\vfpt_logs\vfpt_symbolUses_%d_%s.txt"
+                                            System.DateTime.Now.Ticks 
+                                            (System.DateTime.Now.ToString("HH_mm_ss_fff")))) (fun w ->
+                for su in fsharpSymbolsUses do w.WriteLine (sprintf "%s %A" su.Symbol.DisplayName su.RangeAlternate)
+            )
+
+            File.WriteAllText (sprintf @"L:\vfpt_logs\source_%d_%s.txt" 
+                                       System.DateTime.Now.Ticks 
+                                       (System.DateTime.Now.ToString("HH_mm_ss_fff")), source)
+
+            let allSymbolsUses = pf.Tc "LS allSymbolsUses" <| fun _ ->
                 fsharpSymbolsUses
                 |> Array.map (fun symbolUse -> 
-                    let fullNames =
+                    let fullNames = 
                         match symbolUse.Symbol with
                         // Make sure that unsafe manipulation isn't executed if unused opens are disabled
                         | _ when not checkForUnusedOpens -> 
@@ -490,7 +505,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       IsUsed = true
                       FullNames = fullNames })
 
-            let singleDefs = 
+            let singleDefs = pf.Tc "LS singleDefs" <| fun _ ->
                 if checkForUnusedReferences then
                     allSymbolsUses
                     |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
@@ -513,27 +528,51 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     |> Seq.toList
                 else []
 
-            let! notUsedSymbols =
-                singleDefs 
-                |> Async.List.map (fun fsSymbol ->
-                    async {
-                        let! opts = getSymbolDeclProjects fsSymbol
-                        match opts with
-                        | Some projects ->
-                            let! isSymbolUsed = x.IsSymbolUsedInProjects (fsSymbol, projectOptions.ProjectFileName, projects) 
-                            if isSymbolUsed then return None
-                            else return Some fsSymbol
-                        | None -> return None 
-                    })
-                |> Async.map (List.choose id)
+            let! notUsedSymbols = pf.Atc "LS notUsedSymbols" <| fun _ ->
+                async {
+                    let! allProjectsOpts = pf.Atc "LS notUsedSymbols.getAllProjectsOpts" <| fun _ ->
+                        singleDefs
+                        |> Async.List.map getSymbolDeclProjects
+                    
+                    let allProjectsOpts = 
+                        allProjectsOpts 
+                        |> Seq.choose id 
+                        |> Seq.concat 
+                        |> Seq.distinctBy (fun opts -> opts.ProjectFileName) 
+                        |> Seq.toList
+
+                    let! allSymbols =
+                        allProjectsOpts
+                        |> Async.List.map (fun opts -> async {
+                                let! results = pf.Atc "LS notUsedSymbols.ParseAndCheckProject" <| fun _ ->
+                                    checker.ParseAndCheckProject opts
+                                let! symbolUses = pf.Atc "LS notUsedSymbols.GetAllUsesOfAllSymbols" <| fun _ ->
+                                    results.GetAllUsesOfAllSymbols()
+                                let isFromCurrentProject = opts.ProjectFileName = projectOptions.ProjectFileName
+                                
+                                return pf.Tc "LS notUsedSymbols.countByAndFilter" <| fun _ ->
+                                    symbolUses 
+                                    |> Seq.countBy (fun su -> su.Symbol)
+                                    |> Seq.filter (fun (_, count) -> 
+                                        not (isFromCurrentProject && count = 1)) 
+                                    |> Seq.map fst
+                                    |> Seq.toList })
+
+                    let allSymbols = List.concat allSymbols 
+
+                    return pf.Tc "LS notUsedSymbols.filterSyngleDefs" <| fun _ ->
+                        singleDefs
+                        |> List.filter (fun singleDef -> 
+                            allSymbols |> List.exists (fun s -> singleDef.IsEffectivelySameAs s) |> not)
+                }
                                     
-            return
+            return pf.Tc "LS return" <| fun _ ->
                 match notUsedSymbols with
                 | [] -> allSymbolsUses
                 | _ ->
                     allSymbolsUses
                     |> Array.map (fun su -> 
-                        { su with IsUsed = notUsedSymbols |> List.forall (fun s -> s <> su.SymbolUse.Symbol) })
+                        { su with IsUsed = notUsedSymbols |> List.forall (fun s -> not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source) =

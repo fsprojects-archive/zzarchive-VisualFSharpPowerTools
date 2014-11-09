@@ -272,7 +272,7 @@ module ViewChange =
         view.Caret.PositionChanged |> Event.map (fun _ -> ())
 
     let bufferEvent (buffer: ITextBuffer) = 
-        buffer.Changed |> Event.map (fun _ -> ())
+        buffer.ChangedLowPriority |> Event.map (fun _ -> ())
 
     let classificationEvent (classifier: IClassifier) = 
         classifier.ClassificationChanged |> Event.map (fun _ -> ())

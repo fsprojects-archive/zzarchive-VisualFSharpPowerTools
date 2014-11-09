@@ -48,7 +48,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
 
     let symbolsUses =
         languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, true,
-                                                      (fun _ -> async { return Some [opts] }))
+                                                      (fun _ -> async { return Some [opts] }), Profiler())
         |> Async.RunSynchronously
 
     let parseResults = 
