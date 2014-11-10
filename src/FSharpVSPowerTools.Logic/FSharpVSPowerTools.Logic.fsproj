@@ -207,6 +207,8 @@
     <Compile Include="TaskListCommentFilter.fs">
       <Link>TaskList/TaskListCommentFilter.fs</Link>
     </Compile>
+    <Compile Include="Outlining\Lens.fs" />
+    <Compile Include="Outlining\DocumentationOutlining.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
