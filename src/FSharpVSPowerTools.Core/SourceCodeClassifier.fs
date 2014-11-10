@@ -84,12 +84,12 @@ module private StringCategorizers =
             |> List.map (fun line ->
                 let lineStr = getTextLine (line - 1)
                 if line = ranges.StartLine && line = ranges.EndLine then
-                    lineStr.Substring(ranges.StartColumn + 1, ranges.EndColumn - (ranges.StartColumn + 1)),
+                    lineStr.[ranges.StartColumn + 1 .. ranges.EndColumn - 1],
                     line, ranges.StartColumn + 1
                 elif line = ranges.StartLine then 
-                    lineStr.Substring(ranges.StartColumn + 1), line, ranges.StartColumn + 1
+                    lineStr.[ranges.StartColumn + 1 ..], line, ranges.StartColumn + 1
                 elif line = ranges.EndLine then
-                    lineStr.Substring(0, ranges.EndColumn - 1), line, 0
+                    lineStr.[..ranges.EndColumn - 1], line, 0
                 else lineStr, line, 0)
 
         lines

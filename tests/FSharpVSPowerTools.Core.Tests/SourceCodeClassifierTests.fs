@@ -1574,9 +1574,20 @@ let ``fprintf formatters``() =
     """
 let _ = fprintf null "%A" 0
 let _ = Microsoft.FSharp.Core.Printf.fprintf null "%A" 0
+let _ = fprintfn null "%A" 0
 """
     => [ 2, [Category.Function, 8, 15; Category.Printf, 22, 24 ]
-         3, [Category.Module, 30, 36; Category.Function, 37, 44; Category.Printf, 51, 53 ]]
+         3, [Category.Module, 30, 36; Category.Function, 37, 44; Category.Printf, 51, 53 ]
+         4, [Category.Function, 8, 16; Category.Printf, 23, 25 ]]
+
+[<Test>]
+let ``kprintf and bprintf formatters``() =
+    """
+let _ = Printf.kprintf (fun _ -> ()) "%A" 1
+let _ = Printf.bprintf null "%A" 1
+"""
+    => [ 2, [Category.Module, 8, 14; Category.Function, 15, 22; Category.Printf, 38, 40]
+         3, [Category.Module, 8, 14; Category.Function, 15, 22; Category.Printf, 29, 31]]
 
 [<Test>]
 let ``wildcards in printf formatters``() =
