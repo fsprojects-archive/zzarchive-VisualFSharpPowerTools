@@ -20,7 +20,7 @@ type Lens<'Struct ,'Prop> =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Lens =
 
-    
+
 
     let inline lens   get set = Lens( get, set )
     let inline create get set = lens get set

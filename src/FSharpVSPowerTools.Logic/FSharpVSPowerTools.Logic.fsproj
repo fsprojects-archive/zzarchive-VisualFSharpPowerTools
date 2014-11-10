@@ -208,6 +208,7 @@
       <Link>TaskList/TaskListCommentFilter.fs</Link>
     </Compile>
     <Compile Include="Outlining\Lens.fs" />
+    <Compile Include="Outlining\IAsyncTagger.fs" />
     <Compile Include="Outlining\DocumentationOutlining.fs" />
   </ItemGroup>
   <ItemGroup>

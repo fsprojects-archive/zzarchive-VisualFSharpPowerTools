@@ -7,7 +7,9 @@
 Implement interface
 -----------------------
 
-The feature is activated via a smart tagger on an interface identifier. 
+The feature is activated via a smart 
+
+ on an interface identifier. 
 When the cursor is placed on an identifier of interface declaration or object expression, the smart tagger will hint users at generating relevant interfaces.
 
 Note that if the current line is `interface ISomeInterface with` or `new ISomeInterface with`, the code might not be parsable (i.e. no semantic highlighting for the current line).

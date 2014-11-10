@@ -7,7 +7,8 @@
 Record stub generation
 -----------------------
 
-The feature is activated via a smart tagger on a record type or a record field identifier. 
+The feature is activated via a smart 
+ on a record type or a record field identifier. 
 When the cursor is placed on one of these identifiers, the smart tagger will hint users at generating record field definitions.
 
 Note that if the current line is `let x = {` or `let x: Record = {`, the code might not be parseable (i.e. no semantic highlighting for the current line).
