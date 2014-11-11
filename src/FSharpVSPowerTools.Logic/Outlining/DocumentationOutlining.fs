@@ -20,6 +20,34 @@ open Lens.Operators
 
 module DocumentationOutlining =
     
+    [<Struct; CustomComparison >]
+    type SnapshotLineRange =
+        val Snapshot        : ITextSnapshot
+        val StartLineNumber : int
+        val Count           : int
+
+        new ( snapshot, startline, count ) =
+            {   Snapshot        = snapshot
+                StartLineNumber = startline 
+                Count           = count      }
+
+        member x.Startline 
+            with get() = x.Snapshot.GetLineFromLineNumber x.StartLineNumber
+
+        member x.Start 
+            with get() = x.Startline.Start
+
+        member x.LastLineNumber 
+            with get() = x.StartLineNumber + x.Count - 1 
+
+        member x.LastLine
+            with get() = x.Snapshot.GetLineFromLineNumber x.LastLineNumber
+
+        member x.LineRange 
+            with get() = LineRange()
+
+
+
 
     let startDoc = "///"
     let collapsed = "...."
@@ -49,28 +77,32 @@ module DocumentationOutlining =
         List.fold( fun acc start -> 
                        acc || lineMatch line start ) false ls
 
-    let rec takeBlock ( lines:seq<ITextSnapshotLine> ) = 
-        seq {   if Seq.isEmpty lines then () else 
+    let takeBlocks ( lines:seq<ITextSnapshotLine> ) = 
+        let rec loop lines =
+            seq{if Seq.isEmpty lines then () else 
                 let block = lines
                             |> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc )
                             |> Seq.takeWhile ( fun ln -> lineMatch ln startDoc )
                 let rest = lines |> Seq.skip ( Seq.length block )
                 yield block
-                yield! takeBlock rest
-            }
+                yield! loop rest}
+        loop lines |> Seq.map(List.ofSeq) |> List.ofSeq
 
 
-
-
-    let buildRegions (regls:seq<seq<ITextSnapshotLine>>) =
+    let buildRegions (regls:ITextSnapshotLine list list) =
         let build (ls:ITextSnapshotLine list) =
-            let fstline = ls.[0]
-            let lstline = ls.[ls.Length-1]
-            Region( fstline.LineNumber, lstline.LineNumber)
-        regls |> List.map build
+            match ls with 
+            | [] -> None
+            | _  -> let fstline = ls.[0].LineNumber
+                    let lstline = ls.[ls.Length-1].LineNumber
+                    Some <| Region( fstline, lstline)
+        match regls with
+        | [] -> []
+        | _  -> regls |> List.map build 
+                      |> List.filter ( fun x -> x <> None ) 
+                      |> List.map Option.get 
 
-
-    let docRegions = filterLines >> groupRegionLines >> reorderRegionLines >> buildRegions
+    let docRegions = takeBlocks >> buildRegions
 
 
     let asSnapshotSpan (region:Region) (snapshot:ITextSnapshot) =
@@ -79,6 +111,7 @@ module DocumentationOutlining =
                             then startLine 
                             else snapshot.GetLineFromLineNumber(region.EndLine)
         SnapshotSpan(startLine.Start, endLine.End)
+
 
     type taggerDel<'T when 'T :> ITag> = delegate of unit -> ITagger<'T>
 
@@ -113,43 +146,43 @@ module DocumentationOutlining =
         //member val Regions  = List<Region>()
 
         member __.Reparse() =
+            let newSnapshot  = buffer.CurrentSnapshot
             
-            ( takeBlock buffer.CurrentSnapshot.Lines
-                |> Seq.map( fun ln ->
-                ln  |> Seq.map string
-                    |> Seq.reduce ( fun a b -> a + ", " + b )))
-                |> Seq.iter( fun x -> debug "Block -- %A"  x  )    
-            ()
-//            debug "Attempting to reparse"
-//            let newRegions = docRegions <| List.ofSeq newSnapshot.Lines
-//            debug "Found >>> %A Regions <<<" newRegions.Length
-//
-//            let oldSpans = self.Regions.Select(fun r -> 
-//                    (asSnapshotSpan r self.Snapshot).TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive).Span)
-//
-//            let newSpans = newRegions.Select(fun r -> 
-//                    (asSnapshotSpan r newSnapshot).Span)
-//
-//            let oldSpanCollection = NormalizedSpanCollection oldSpans
-//            let newSpanCollection = NormalizedSpanCollection newSpans
-//            let removed = NormalizedSpanCollection.Difference( oldSpanCollection, newSpanCollection )
-//
-//            let changeStart = if removed.Count  > 0 then removed.[0].Start               else Int32.MaxValue
-//            let changeEnd   = if removed.Count  > 0 then removed.[removed.Count-1].End   else -1
-//
-//            let changeStart'= if newSpans.Count() > 0 then 
-//                                Math.Min(changeStart, newSpans.ElementAt(0).Start ) else changeStart
-//            let changeEnd'  = if newSpans.Count() > 0 then 
-//                                Math.Max(changeEnd  , newSpans.ElementAt(newSpans.Count()-1).End ) else changeEnd
-//
-//            self.Snapshot <- newSnapshot
-//            self.Regions  <- newRegions
-//
-//            if changeStart' <= changeEnd' then
-//                tagsChanged.Trigger(self, SnapshotSpanEventArgs
-//                                            (   SnapshotSpan(  self.Snapshot,
-//                                                                Span.FromBounds(changeStart',changeEnd'))))                             
-//
+//            ( takeBlocks buffer.CurrentSnapshot.Lines
+//                |> Seq.map( fun ln ->
+//                ln  |> Seq.map string
+//                    |> Seq.reduce ( fun a b -> a + ", " + b )))
+//                |> Seq.iter( fun x -> debug "Block -- %A"  x  )    
+//            
+            debug "Attempting to reparse"
+            let newRegions = if newSnapshot <> null then docRegions  newSnapshot.Lines else []
+            debug "Found >>> %A Regions <<<" newRegions.Length
+
+            let oldSpans = self.Regions.Select(fun r -> 
+                    (asSnapshotSpan r self.Snapshot).TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive).Span)
+
+            let newSpans = newRegions.Select(fun r -> 
+                    (asSnapshotSpan r newSnapshot).Span)
+
+            let oldSpanCollection = NormalizedSpanCollection oldSpans
+            let newSpanCollection = NormalizedSpanCollection newSpans
+            let removed = NormalizedSpanCollection.Difference( oldSpanCollection, newSpanCollection )
+
+            let changeStart = if removed.Count  > 0 then removed.[0].Start               else Int32.MaxValue
+            let changeEnd   = if removed.Count  > 0 then removed.[removed.Count-1].End   else -1
+
+            let changeStart'= if newSpans.Count() > 0 then 
+                                Math.Min(changeStart, newSpans.ElementAt(0).Start ) else changeStart
+            let changeEnd'  = if newSpans.Count() > 0 then 
+                                Math.Max(changeEnd  , newSpans.ElementAt(newSpans.Count()-1).End ) else changeEnd
+
+            self.Snapshot <- newSnapshot
+            self.Regions  <- newRegions
+            let eventSpan = SnapshotSpan( self.Snapshot, Span.FromBounds(changeStart',changeEnd'))
+
+            if changeStart' <= changeEnd' then
+                tagsChanged.Trigger(self, SnapshotSpanEventArgs eventSpan )
+
 
         member __.BufferChanged( args:TextContentChangedEventArgs  ) =
             if args.After <> self.Snapshot then 
