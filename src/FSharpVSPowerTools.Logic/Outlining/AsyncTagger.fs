@@ -29,23 +29,5 @@ type IAsyncTaggerSource<'Data,'Tag when 'Tag :> ITag> =
     abstract Changed            : IEvent<'Data>
 
 
-[<Struct; NoComparison>]
-type OutliningRegion =
-    val Tag     : OutliningRegionTag
-    val Span    : SnapshotSpan
-    val Cookie  : int
-
-    new ( tag, span, cookie ) =
-        {   Tag     = tag
-            Span    = span
-            Cookie  = cookie    }
 
 
-type IAdhocOutliner=
-    abstract TextBuffer             : ITextBuffer with get
-    abstract GetOutliningRegions    : SnapshotSpan -> IReadOnlyCollection<OutliningRegion>
-    abstract CreateOutliningRegion  : span:SnapshotSpan -> spanTrackingMode:SpanTrackingMode 
-                                        -> text:string -> hint:string -> OutliningRegion
-    abstract DeleteOutliningRegion  : cookie:int -> bool
-    [<CLIEvent>]
-    abstract Changed            : IEvent<unit>

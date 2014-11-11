@@ -96,27 +96,3 @@ module Lens =
         let inline ( &&&= ) l v      = update ( (&&&) v ) l
         let inline ( &&=  ) l v      = update ( (&&)  v ) l
         let inline ( <=!  ) l v      = fun a -> set  v a l
-
-
-    [<Struct>]
-    type Car = 
-        val Make    : string 
-        val Model   : string 
-        val Mileage : int 
-
-        new ( make, model, mileage ) =
-            {   Make    = make 
-                Model   = model
-                Mileage = mileage   }
-
-        static member Mileage_ =
-            lens  ( fun   (c:Car) -> c.Mileage )            
-                  ( fun v (c:Car) -> Car(c.Make,c.Model,v)) 
-        
-        static member Make_ =
-            lens  ( fun   (c:Car) -> c.Make )               
-                  ( fun v (c:Car) -> Car(v,c.Model,c.Mileage))
-
-        static member Model_ =
-            lens  ( fun   (c:Car) -> c.Model )              
-                  ( fun v (c:Car) -> Car(c.Make,v,c.Mileage))
