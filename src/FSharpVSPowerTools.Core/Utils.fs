@@ -427,20 +427,23 @@ module Reflection =
         let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
         lambda.Compile().Invoke
 
-type Profiler() =
-    let times = ResizeArray()
-    let total = System.Diagnostics.Stopwatch.StartNew()
+open System.Text
+open System.Diagnostics
 
-    member __.Tc msg f = 
-        let sw = System.Diagnostics.Stopwatch.StartNew()
+type Profiler() =
+    let measures = ResizeArray()
+    let total = Stopwatch.StartNew()
+
+    member __.Time msg f = 
+        let sw = Stopwatch.StartNew()
         let res = f()
-        times.Add(msg, sw.Elapsed)
+        measures.Add(msg, sw.Elapsed)
         res
 
-    member __.Atc msg f = async {
-        let sw = System.Diagnostics.Stopwatch.StartNew()
+    member __.TimeAsync msg f = async {
+        let sw = Stopwatch.StartNew()
         let! res = f()
-        times.Add(msg, sw.Elapsed)
+        measures.Add(msg, sw.Elapsed)
         return res }
 
     member __.Stop() = total.Stop()
@@ -449,13 +452,13 @@ type Profiler() =
         sprintf
             "\nTotal = %O\n%s" 
             total.Elapsed
-            (times 
+            (measures 
              |> Seq.groupBy (fun (msg, _) -> msg)
              |> Seq.map (fun (msg, ts) -> 
                  msg, TimeSpan.FromTicks (ts |> Seq.sumBy (fun (_, t) -> t.Ticks)))
              |> Seq.sortBy (fun (_, t) -> -t)
-             |> Seq.fold (fun (acc: System.Text.StringBuilder) (msg, t) -> 
-                 acc.AppendLine (sprintf "%s, %O" msg t)) (System.Text.StringBuilder())
+             |> Seq.fold (fun (acc: StringBuilder) (msg, t) -> 
+                 acc.AppendLine (sprintf "%s, %O" msg t)) (StringBuilder())
              |> fun sb -> string sb)
 
     

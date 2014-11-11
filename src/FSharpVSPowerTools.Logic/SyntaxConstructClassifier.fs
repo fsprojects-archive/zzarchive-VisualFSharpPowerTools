@@ -91,12 +91,12 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                     | Some project, Some snapshot ->
                         debug "[SyntaxConstructClassifier] - Effective update"
                         let pf = Profiler()
-                        let getSymbolDeclLocation fsSymbol = pf.Tc "GetSymbolDeclarationLocation" <| fun _ ->
+                        let getSymbolDeclLocation fsSymbol = pf.Time "GetSymbolDeclarationLocation" <| fun _ ->
                             projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project                                  
                         
                         let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
                         
-                        let! parseResults = pf.Atc "ParseFileInProject" <| fun _ ->
+                        let! parseResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
                             vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
 
                         // Don't check for unused declarations on generated signatures
@@ -110,11 +110,11 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                             && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
                             && project.IsForStandaloneScript)
 
-                        let! allSymbolsUses, lexer = pf.Atc "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
+                        let! allSymbolsUses, lexer = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
                             vsLanguageService.GetAllUsesOfAllSymbolsInFile(
                                 snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens, pf)
 
-                        let spans = pf.Tc "getCategoriesAndLocations [NO UNUSED]" <| fun _ ->
+                        let spans = pf.Time "getCategoriesAndLocations [NO UNUSED]" <| fun _ ->
                             getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, [], None)
 
                         let spans, oldUnusedSpans = 
@@ -133,7 +133,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         if includeUnusedOpens || includeUnusedReferences then    
                             let! symbolsUses = 
                                 if includeUnusedReferences then 
-                                    pf.Atc "GetUnusedDeclarations" <| fun _ ->
+                                    pf.TimeAsync "GetUnusedDeclarations" <| fun _ ->
                                         vsLanguageService.GetUnusedDeclarations(allSymbolsUses, project, getSymbolDeclLocation, pf)
                                 else async { return allSymbolsUses }
 
@@ -142,10 +142,10 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                             
                             let! entitiesMap, openDeclarations = async {
                                 if includeUnusedOpens then
-                                    let! entities = pf.Atc "GetAllEntities" <| fun _ ->
+                                    let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
                                         vsLanguageService.GetAllEntities(textDocument.FilePath, snapshot.GetText(), project)    
 
-                                    return pf.Tc "getOpenDeclarations" <| fun _ ->
+                                    return pf.Time "getOpenDeclarations" <| fun _ ->
                                         let qualifyOpenDeclarations line endCol idents = 
                                             let lineStr = getTextLineOneBased (line - 1)
                                             let tooltip =
@@ -167,7 +167,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                                 else return None, [] }
                           
                           
-                            let spans = pf.Tc "getCategoriesAndLocations" <| fun _ ->
+                            let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                                 getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
                                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                         

@@ -160,6 +160,8 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
     checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
+  do checker.ProjectChecked.Add(fun projectFileName -> debug "[LanguageService] Project \"%s\" checked" projectFileName)
+
   /// When creating new script file on Mac, the filename we get sometimes 
   /// has a name //foo.fsx, and as a result 'Path.GetFullPath' throws in the F#
   /// language service - this fixes the issue by inventing nicer file name.
@@ -366,9 +368,9 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             |> Seq.toArray
             |> Async.Array.exists (fun opts ->
                 async {
-                    let! projectResults = pf.Atc "IsSymbolUsedInProjects :: ParseAndCheckProject" <| fun _ ->
+                    let! projectResults = pf.TimeAsync "IsSymbolUsedInProjects :: ParseAndCheckProject" <| fun _ ->
                          checker.ParseAndCheckProject opts
-                    let! refs = pf.Atc "IsSymbolUsedInProjects :: GetUsesOfSymbol" <| fun _ ->
+                    let! refs = pf.TimeAsync "IsSymbolUsedInProjects :: GetUsesOfSymbol" <| fun _ ->
                          projectResults.GetUsesOfSymbol symbol
                     return
                         if opts.ProjectFileName = currentProjectName then
@@ -419,13 +421,13 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                                            checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =
 
         async {
-            let! results = pf.Atc "LS ParseAndCheckFileInProject" <| fun _ ->
+            let! results = pf.TimeAsync "LS ParseAndCheckFileInProject" <| fun _ ->
                 x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
 
-            let! fsharpSymbolsUses = pf.Atc "LS GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+            let! fsharpSymbolsUses = pf.TimeAsync "LS GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                 results.GetAllUsesOfAllSymbolsInFile()
 
-            let allSymbolsUses = pf.Tc "LS allSymbolsUses" <| fun _ ->
+            let allSymbolsUses = pf.Time "LS allSymbolsUses" <| fun _ ->
                 fsharpSymbolsUses
                 |> Array.map (fun symbolUse -> 
                     let fullNames = 
@@ -497,7 +499,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
     member x.GetUnusedDeclarations (symbolsUses, projectOptions, getSymbolDeclProjects, pf: Profiler) : SymbolUse[] Async =
         async {
-            let singleDefs = pf.Tc "LS singleDefs" <| fun _ ->
+            let singleDefs = pf.Time "LS singleDefs" <| fun _ ->
                 symbolsUses
                 |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
                 |> Seq.choose (fun (symbol, uses) ->
@@ -532,7 +534,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                     })
                 |> Async.map (List.choose id)
 
-            return pf.Tc "LS return" <| fun _ ->
+            return pf.Time "LS return" <| fun _ ->
                 match notUsedSymbols with
                 | [] -> symbolsUses
                 | _ ->

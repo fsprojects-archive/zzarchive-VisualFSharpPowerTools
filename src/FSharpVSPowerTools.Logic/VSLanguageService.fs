@@ -240,7 +240,7 @@ type VSLanguageService
 
             let! opts = project.GetProjectCheckerOptions instance
 
-            let! allSymbolsUses = pf.Atc "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+            let! allSymbolsUses = pf.TimeAsync "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                 instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, pf)
 
             return allSymbolsUses, lexer
@@ -248,7 +248,7 @@ type VSLanguageService
 
      member __.GetUnusedDeclarations (symbolUses, project: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
         async {
-            let getSymbolDeclProjects symbol = pf.Atc "getSymbolDeclProjects" <| fun _ ->
+            let getSymbolDeclProjects symbol = pf.TimeAsync "getSymbolDeclProjects" <| fun _ ->
                 async {
                     let projects =
                         match getSymbolDeclLocation symbol with
