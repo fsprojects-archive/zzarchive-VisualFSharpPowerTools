@@ -35,6 +35,27 @@ module Extensions =
 
 
 
+    
+
+
+    type SnapshotSpan with 
+        
+        member x.GetStartLine() =  x.Start.GetContainingLine()
+        member x.GetLastLine () =  x.End.GetContainingLine()
+
+        
+//        static member CreateOverarching (left:SnapshotSpan) (right:SnapshotSpan) =
+//            //Contract.
+//  
+    
+    type ITrackingSpan with
+        // TODO in editorUtils this is nullable, so this might not work        
+        member x.GetSpanSafe (snapshot:ITextSnapshot) =
+            try x.GetSpan(snapshot) |> Some
+            with
+            | :? ArgumentException -> None
+
+
     type  ITextSnapshotLine with
 
         static member  GetStartLine (span:SnapshotSpan) =
@@ -46,13 +67,12 @@ module Extensions =
             else ITextSnapshotLine.GetStartLine(span)
 
 
-    type SnapshotSpan with 
+    type IEnumerable<'T> with
         
-        member x.GetStartLine() =  x.Start.GetContainingLine()
-        member x.GetLastLine()  =  x.End.GetContainingLine()
+        member x.ToReadOnlyCollection<'T>() =
+            ReadOnlyCollection<'T>( x.ToList() )
 
-        
-        static member CreateOverarching (left:SnapshotSpan) (right:SnapshotSpan) =
-            //Contract.
-            ()
 
+    type List<'T> with
+        member x.ToReadOnlyCollectionShallow<'T>() =
+            ReadOnlyCollection<'T>(x)
