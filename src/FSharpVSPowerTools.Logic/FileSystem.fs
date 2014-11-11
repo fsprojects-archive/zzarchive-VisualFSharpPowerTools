@@ -15,9 +15,6 @@ type FileSystem [<ImportingConstructor>] (openDocumentsTracker: OpenDocumentsTra
         openDocumentsTracker.TryFindOpenDocument fileName
         |> Option.map (fun doc -> 
             let content = doc.Snapshot.GetText() 
-//            File.WriteAllText (sprintf @"L:\vfpt_logs\source_snapshot_FS_%d_%s.txt"
-//                                       System.DateTime.Now.Ticks 
-//                                       (System.DateTime.Now.ToString("HH_mm_ss_fff")), content)
             content |> doc.Encoding.GetBytes)
 
     interface IFileSystem with
@@ -34,8 +31,6 @@ type FileSystem [<ImportingConstructor>] (openDocumentsTracker: OpenDocumentsTra
             openDocumentsTracker.TryFindOpenDocument fileName
             |> Option.bind (fun doc ->
                 if doc.Document.IsDirty then
-//                    Logging.logInfo "[FileSystem] GetLastWriteTimeShim (fileName = %s): %s" fileName 
-//                                    (doc.LastChangeTime.ToString("HH_mm_ss_fff"))
                     Some doc.LastChangeTime
                 else None)
             |> Option.getOrTry (fun () -> defaultFileSystem.GetLastWriteTimeShim fileName)

@@ -425,16 +425,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
             let! fsharpSymbolsUses = pf.Atc "LS GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                 results.GetAllUsesOfAllSymbolsInFile()
 
-//            using (new StreamWriter(sprintf @"L:\vfpt_logs\vfpt_symbolUses_%d_%s.txt"
-//                                            System.DateTime.Now.Ticks 
-//                                            (System.DateTime.Now.ToString("HH_mm_ss_fff")))) (fun w ->
-//                for su in fsharpSymbolsUses do w.WriteLine (sprintf "%s %A" su.Symbol.DisplayName su.RangeAlternate)
-//            )
-//
-//            File.WriteAllText (sprintf @"L:\vfpt_logs\source_%d_%s.txt" 
-//                                       System.DateTime.Now.Ticks 
-//                                       (System.DateTime.Now.ToString("HH_mm_ss_fff")), source)
-
             let allSymbolsUses = pf.Tc "LS allSymbolsUses" <| fun _ ->
                 fsharpSymbolsUses
                 |> Array.map (fun symbolUse -> 
