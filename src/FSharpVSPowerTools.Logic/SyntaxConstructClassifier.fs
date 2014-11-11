@@ -146,15 +146,15 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
     
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, 
-                                    fun() -> updateSyntaxConstructClassifiers false)
+                                    fun _ -> updateSyntaxConstructClassifiers false)
 
-    let getClassificationSpans (snapshotSpan: SnapshotSpan) =
+    let getClassificationSpans (newSnapshotSpan: SnapshotSpan) =
         match state.Value with
         | Data (snapshot, spans) ->
             // We get additional 10 lines above the current snapshot in case the user inserts some line
             // while we were getting locations from FCS. It's not as reliable though. 
-            let spanStartLine = max 0 (snapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
-            let spanEndLine = (snapshotSpan.End - 1).GetContainingLine().LineNumber + 1
+            let spanStartLine = max 0 (newSnapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
+            let spanEndLine = (newSnapshotSpan.End - 1).GetContainingLine().LineNumber + 1
             let spans =
                 spans
                 // Locations are sorted, so we can safely filter them efficiently
@@ -164,8 +164,8 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         let! clType = getClassificationType loc.Category
                         // Create a span on the original snapshot
                         let! span = fromRange snapshot (loc.WordSpan.ToRange())
-                        // Translat the span to the new snapshot
-                        return clType, span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
+                        // Translate the span to the new snapshot
+                        return clType, span.TranslateTo(newSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
                     })
                 |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
                 |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))

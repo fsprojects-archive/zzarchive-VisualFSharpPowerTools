@@ -66,11 +66,9 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
             true
         
         member x.GetTextViewMargin(marginName: string): ITextViewMargin = 
-            match marginName with
-            | Constants.fsharpUnusedDeclarationMargin -> 
+            if marginName = Constants.fsharpUnusedDeclarationMargin then
                 x :> _
-             | _ -> 
-                null
+            else null
         
         member x.MarginSize: float = 
             x.ActualHeight
