@@ -207,12 +207,13 @@
     <Compile Include="TaskListCommentFilter.fs">
       <Link>TaskList/TaskListCommentFilter.fs</Link>
     </Compile>
-    <Compile Include="Outlining\IAsyncTagger.fs" />
-    <Compile Include="Outlining\AdhocOutliner.fs" />
-    <Compile Include="Outlining\DocumentationOutlining.fs" />
     <Compile Include="Outlining\OutliningExtensions.fs" />
-    <Compile Include="Outlining\LineRanges.fs" />
+    <Compile Include="Outlining\OutliningUtilities.fs" />
     <Compile Include="Outlining\Lens.fs" />
+    <Compile Include="Outlining\LineRanges.fs" />
+    <Compile Include="Outlining\AdhocOutliner.fs" />
+    <Compile Include="Outlining\AsyncTagger.fs" />
+    <Compile Include="Outlining\DocumentationOutlining.fs" />
     <None Include="Outlining\OutliningTest.fsx" />
   </ItemGroup>
   <ItemGroup>
