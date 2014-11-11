@@ -16,8 +16,6 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open System.Windows.Threading
 open FSharpVSPowerTools
-open Lens
-open Lens.Operators
 open System.Threading
 
 type IAsyncTaggerSource<'Data,'Tag when 'Tag :> ITag> =

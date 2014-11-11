@@ -15,7 +15,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open System.Windows.Threading
 open FSharpVSPowerTools
-open OutliningExtensions
+open Extensions
 
 
 [<Struct>]

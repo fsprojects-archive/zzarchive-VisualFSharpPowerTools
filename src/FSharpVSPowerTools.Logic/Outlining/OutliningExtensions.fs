@@ -24,7 +24,7 @@ open FSharpVSPowerTools
 // 
 
 
-module OutliningExtensions =
+module Extensions =
 
     type Span with
 

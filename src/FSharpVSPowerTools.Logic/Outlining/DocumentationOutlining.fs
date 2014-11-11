@@ -15,36 +15,34 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open System.Windows.Threading
 open FSharpVSPowerTools
-open Lens
-open Lens.Operators
 
 module DocumentationOutlining =
     
-    [<Struct; CustomComparison >]
-    type SnapshotLineRange =
-        val Snapshot        : ITextSnapshot
-        val StartLineNumber : int
-        val Count           : int
-
-        new ( snapshot, startline, count ) =
-            {   Snapshot        = snapshot
-                StartLineNumber = startline 
-                Count           = count      }
-
-        member x.Startline 
-            with get() = x.Snapshot.GetLineFromLineNumber x.StartLineNumber
-
-        member x.Start 
-            with get() = x.Startline.Start
-
-        member x.LastLineNumber 
-            with get() = x.StartLineNumber + x.Count - 1 
-
-        member x.LastLine
-            with get() = x.Snapshot.GetLineFromLineNumber x.LastLineNumber
-
-        member x.LineRange 
-            with get() = LineRange()
+//    [<Struct; CustomComparison >]
+//    type SnapshotLineRange =
+//        val Snapshot        : ITextSnapshot
+//        val StartLineNumber : int
+//        val Count           : int
+//
+//        new ( snapshot, startline, count ) =
+//            {   Snapshot        = snapshot
+//                StartLineNumber = startline 
+//                Count           = count      }
+//
+//        member x.Startline 
+//            with get() = x.Snapshot.GetLineFromLineNumber x.StartLineNumber
+//
+//        member x.Start 
+//            with get() = x.Startline.Start
+//
+//        member x.LastLineNumber 
+//            with get() = x.StartLineNumber + x.Count - 1 
+//
+//        member x.LastLine
+//            with get() = x.Snapshot.GetLineFromLineNumber x.LastLineNumber
+//
+//        member x.LineRange 
+//            with get() = LineRange()
 
 
 
