@@ -1553,6 +1553,66 @@ let _ = <@ sprintf "%A" @>
     => [ 2, [Category.Function, 11, 18; Category.Printf, 20, 22; Category.Quotation, 8, 26 ]]
 
 [<Test>]
+let ``printf formatters if printf function is namespace qualified``() =
+    """
+let _ = Microsoft.FSharp.Core.Printf.printf "%A" 0
+open Microsoft.FSharp.Core
+let _ = Printf.printf "%A" 0
+"""
+    => [ 2, [ Category.Module, 30, 36; Category.Function, 37, 43; Category.Printf, 45, 47 ]
+         4, [ Category.Module, 8, 14; Category.Function, 15, 21; Category.Printf, 23, 25 ]]
+
+[<Test>]
+let ``printf formatters are not colorized in plane strings``() =
+    """
+let _ = sprintf "foo", "%A"
+"""
+    => [ 2, [Category.Function, 8, 15 ]]
+
+[<Test>]
+let ``fprintf formatters``() =
+    """
+let _ = fprintf null "%A" 0
+let _ = Microsoft.FSharp.Core.Printf.fprintf null "%A" 0
+let _ = fprintfn null "%A" 0
+"""
+    => [ 2, [Category.Function, 8, 15; Category.Printf, 22, 24 ]
+         3, [Category.Module, 30, 36; Category.Function, 37, 44; Category.Printf, 51, 53 ]
+         4, [Category.Function, 8, 16; Category.Printf, 23, 25 ]]
+
+[<Test>]
+let ``kprintf and bprintf formatters``() =
+    """
+let _ = Printf.kprintf (fun _ -> ()) "%A" 1
+let _ = Printf.bprintf null "%A" 1
+"""
+    => [ 2, [Category.Module, 8, 14; Category.Function, 15, 22; Category.Printf, 38, 40]
+         3, [Category.Module, 8, 14; Category.Function, 15, 22; Category.Printf, 29, 31]]
+
+[<Test>]
+let ``wildcards in printf formatters``() =
+    """
+let _ = sprintf "%*d" 1
+"""
+    => [ 2, [Category.Function, 8, 15; Category.Printf, 17, 20 ]]
+
+[<Test>]
+let ``float printf formatters``() =
+    """
+let _ = sprintf "%7.1f" 1.0
+let _ = sprintf "%-8.1e+567" 1.0
+"""
+    => [ 2, [Category.Function, 8, 15; Category.Printf, 17, 22]
+         3, [Category.Function, 8, 15; Category.Printf, 17, 27]]
+
+[<Test>]
+let ``malformed printf formatters``() =
+    """
+let _ = sprintf "%.7f %7.1A %7.f %--8.1f"
+"""
+    => [ 2, [Category.Function, 8, 15]]
+
+[<Test>]
 let ``all escaped symbols in string``() =
     """    
 let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"

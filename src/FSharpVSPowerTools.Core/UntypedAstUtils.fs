@@ -471,7 +471,8 @@ let getQuatationRanges ast =
         | _ -> ())
     quotationRanges
     
-let private printfFunctions = set [ "printf"; "printfn"; "sprintf"; "failwithf"; "eprintf"; "eprintfn" ]
+let private singleArgumentPrintfFunctions = set [ "printf"; "printfn"; "sprintf"; "failwithf"; "eprintf"; "eprintfn" ]
+let private twoArgumentsPrintfFunctions = set [ "fprintf"; "fprintfn"; "kprintf"; "ksprintf"; "bprintf" ]
 
 /// Returns ranges of all printf format string literals.
 let getPrintfLiterals ast =
@@ -488,9 +489,21 @@ let getPrintfLiterals ast =
         | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
             visitExpr rhsExpr
             visitExpr body
-        | SynExpr.App (_,_, SynExpr.Ident funcName, SynExpr.Const (SynConst.String (_, r), _), _) -> 
-            if printfFunctions |> Set.contains funcName.idText then
+        | SynExpr.App (_,_, SynExpr.Ident funcIdent, SynExpr.Const (SynConst.String (_, r), _), _) -> 
+            if singleArgumentPrintfFunctions |> Set.contains funcIdent.idText then
                 ranges.Add r
+        | SynExpr.App (_,_, SynExpr.LongIdent(_, LongIdentWithDots(idents, _), _, _), SynExpr.Const (SynConst.String (_, r), _), _) -> 
+            idents |> List.rev |> Seq.tryHead |> Option.iter (fun funcIdent ->
+                if singleArgumentPrintfFunctions |> Set.contains funcIdent.idText then
+                    ranges.Add r)
+        | SynExpr.App (_,_, SynExpr.App (_, _, SynExpr.Ident funcIdent, _, _), SynExpr.Const (SynConst.String (_, r), _), _) -> 
+            if twoArgumentsPrintfFunctions |> Set.contains funcIdent.idText then
+                ranges.Add r
+        | SynExpr.App (_,_, SynExpr.App (_, _, SynExpr.LongIdent(_, LongIdentWithDots(idents, _), _, _), _, _), 
+                       SynExpr.Const (SynConst.String (_, r), _), _) -> 
+            idents |> List.rev |> Seq.tryHead |> Option.iter (fun funcIdent ->
+                if twoArgumentsPrintfFunctions |> Set.contains funcIdent.idText then
+                    ranges.Add r)
         | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
             visitExpr argExpr
             visitExpr funcExpr
