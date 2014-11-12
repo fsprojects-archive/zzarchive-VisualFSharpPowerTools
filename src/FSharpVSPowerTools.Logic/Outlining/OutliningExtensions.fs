@@ -62,6 +62,10 @@ module Extensions =
     type ReadOnlyCollection<'T> with
 
         static member concat<'a>  arg  (roc:ReadOnlyCollection<'a>) = roc.Concat<'a>    arg 
+
+        static member select<'source,'result>   ( func:'source->'result)  
+                                                ( roc:ReadOnlyCollection<'source>) = 
+            roc.Select    func
      
     
     type ITrackingSpan with
@@ -89,6 +93,11 @@ module Extensions =
             ReadOnlyCollection<'T>( x.ToList() )
         
         static member distinct<'a>  arg (ienum:IEnumerable<'a>) = ienum.Distinct  arg 
+
+        static member where<'source>    (func:'source -> bool) 
+                                        (ienum:IEnumerable<'source>) = 
+            ienum.Where  func
+
 
         static member toReadOnlyCollection<'a> (ienum:IEnumerable<'a>) =
             ReadOnlyCollection<'a>( ienum.ToList() )
