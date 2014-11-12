@@ -19,6 +19,8 @@ open FSharpVSPowerTools
 open System.Data
 
 
+
+
 type IBasicTaggerSource<'Tag when 'Tag :> ITag> =
     abstract GetTags : span:SnapshotSpan -> ReadOnlyCollection<ITagSpan<'Tag>>
 
@@ -67,4 +69,7 @@ type ReadOnlyStack<'T>(lineRange:'T, next: ReadOnlyStack<'T> option) =
 
         member x.GetEnumerator(): Collections.IEnumerator = 
             x.GetEnumerator()  :> Collections.IEnumerator
-       
+
+module Constants =
+    [<Literal>]
+    let DefaultAsyncDelay = 100       

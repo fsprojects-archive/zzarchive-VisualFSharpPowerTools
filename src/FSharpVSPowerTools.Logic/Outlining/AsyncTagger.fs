@@ -18,16 +18,16 @@ open System.Windows.Threading
 open FSharpVSPowerTools
 open System.Threading
 
-type IAsyncTaggerSource<'Data,'Tag when 'Tag :> ITag> =
-    abstract Delay              : int option        with get
-    abstract TextSnapshot       : ITextSnapshot     with get
-    abstract TextViewOptional   : ITextView
-    abstract GetDataForSnapshot : snapshot:ITextSnapshot -> 'Data
-    abstract GetTagsInBackground: data:'Data -> span:SnapshotSpan -> cancellationToken:CancellationToken -> IReadOnlyCollection<ITagSpan<'Tag>>
-    abstract TryGetTagsPrompt   : span:SnapshotSpan -> seq<ITagSpan<'Tag>>
-    [<CLIEvent>]
-    abstract Changed            : IEvent<'Data>
+
+type CompleteReason =
+    | Finished
+    | Cancelled
+    | Error
 
 
-
-
+[<Struct>]
+type BackgroundCacheData =
+    val Snapshot : ITextSnapshot
+    val VisitedCollection : NormalizedLineRangeCollection
+    val TagList
+    

@@ -212,6 +212,7 @@
     <Compile Include="Outlining\Lens.fs" />
     <Compile Include="Outlining\LineRanges.fs" />
     <Compile Include="Outlining\AdhocOutliner.fs" />
+    <Compile Include="Outlining\AsyncTaggerSource.fs" />
     <Compile Include="Outlining\AsyncTagger.fs" />
     <Compile Include="Outlining\DocumentationOutlining.fs" />
     <None Include="Outlining\OutliningTest.fsx" />
