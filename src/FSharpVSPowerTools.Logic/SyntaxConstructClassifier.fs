@@ -9,20 +9,27 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 [<NoComparison>]
-type private UnusedSymbolsContext =
-    { UnusedSpansSnapshot: ITextSnapshot option 
-      AllSymbolUses: SymbolUse[] }
+type private CheckingProject =
+    { Options: FSharpProjectOptions
+      Checked: bool }
 
 [<NoComparison>]
-type private ClassifierState =
+type private FastStage =
     | NoData
     | Updating of snapshot: ITextSnapshot
     | Data of snapshot: ITextSnapshot
-              * spans: CategorizedColumnSpan[] 
-              * unusedSymbols: Map<WordSpan, CategorizedColumnSpan>
-              * unusedSymbolsContext: UnusedSymbolsContext option
+              * spans: CategorizedColumnSpan[]
+              * symbolUses: SymbolUse[]
+              * singleSymbolsProjects: CheckingProject list
+
+[<NoComparison>]
+type private SlowStage =
+    | NoData
+    | Data of snapshot: ITextSnapshot 
+              * unusedSpans: Map<WordSpan, CategorizedColumnSpan>
 
 type SyntaxConstructClassifier (textDocument: ITextDocument, 
                                 buffer: ITextBuffer, 
@@ -49,7 +56,8 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
         |> Option.map classificationRegistry.GetClassificationType
 
     let classificationChanged = Event<_,_>()
-    let state = Atom NoData
+    let fastState = Atom FastStage.NoData
+    let slowState = Atom SlowStage.NoData
     let cancellationToken = Atom None
     
     let getProject() =
@@ -68,9 +76,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
 
     let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
 
-    let setNewState snapshot spans unusedSymbols getUnusedSymbolsCtx =
-        state.Swap (fun _ -> Data (snapshot, spans, unusedSymbols, getUnusedSymbolsCtx)) |> ignore
-    
+    let triggerClassificationChanged() =
         // TextBuffer is null if a solution is closed at this moment
         if textDocument.TextBuffer <> null then
             let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
@@ -110,17 +116,16 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
             oldToken.Dispose())
 
         let snapshot = getCurrentSnapshot()
-        let currentState = state.Value
         let needUpdate =
-            match snapshot, force, currentState with
+            match snapshot, force, fastState.Value with
             | None, _, _ -> false
             | _, true, _ -> true
-            | _, _, NoData -> true
-            | Some snapshot, _, Updating oldSnapshot -> oldSnapshot <> snapshot
-            | Some snapshot, _, Data (oldSnapshot, _, _, _) -> oldSnapshot <> snapshot
+            | _, _, FastStage.NoData -> true
+            | Some snapshot, _, FastStage.Updating oldSnapshot -> oldSnapshot <> snapshot
+            | Some snapshot, _, FastStage.Data (oldSnapshot, _, _, _) -> oldSnapshot <> snapshot
 
         snapshot |> Option.iter (fun snapshot -> 
-            state.Swap (fun _ -> Updating snapshot) |> ignore)
+            fastState.Swap (fun _ -> Updating snapshot) |> ignore)
                 
         if needUpdate then
             let worker = async {
@@ -151,22 +156,37 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
                         getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
                         |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
 
-                    let spans, oldUnusedSpans, oldUnusedSymbolsCtx = 
-                        match currentState with
-                        | Data (_, _, oldUnusedSpans, oldUnusedSymbolsCtx) ->
+                    let spans = 
+                        match slowState.Value with
+                        | SlowStage.Data (_, oldUnusedSpans) ->
                             spans
                             |> Array.filter (fun s ->
                                 not (oldUnusedSpans |> Map.containsKey s.WordSpan))
-                            |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd),
-                            oldUnusedSpans, oldUnusedSymbolsCtx
-                        | _ -> spans, Map.empty, None
+                            |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd)
+                        | _ -> spans
 
                     let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-                    setNewState snapshot spans oldUnusedSpans oldUnusedSymbolsCtx
-
-                    if includeUnusedReferences() then
-                        do! vsLanguageService.StartBackgroundCompile project
-
+                    
+                    let! singleSymbolsProjects = async {
+                        if includeUnusedReferences() then
+                            let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
+                            let singleDefs = UnusedDeclarations.getSingleDeclarations allSymbolsUses
+                            return!
+                                singleDefs
+                                |> Async.Array.map (fun symbol ->
+                                    vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation project symbol)
+                                |> Async.map (
+                                       Array.choose id 
+                                    >> Array.concat 
+                                    >> Seq.distinct 
+                                    >> Seq.map (fun opts -> { Options = opts; Checked = false })
+                                    >> Seq.toList)
+                        else return [] }
+                    
+                    fastState.Swap (fun _ -> FastStage.Data (snapshot, spans, allSymbolsUses, singleSymbolsProjects)) |> ignore  
+                    triggerClassificationChanged() 
+                        
+                    singleSymbolsProjects |> List.iter (fun p -> vsLanguageService.StartBackgroundCompile p.Options)
                     pf.Stop()
                     Logging.logInfo "[SyntaxConstructClassifier] %s" pf.Result
                     
@@ -176,12 +196,12 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
     let updateUnusedDeclarations = async {
         let snapshot = getCurrentSnapshot()
         let ctx =
-            match snapshot, state.Value with
-            | None, _ -> None
-            | _, NoData -> None
-            | Some _, Data (_, _, _, None) -> None
-            | Some snapshot, Data (_, _, _, Some ({ UnusedSpansSnapshot = Some oldUnusedSpansSnapshot} as ctx)) ->
-                if oldUnusedSpansSnapshot <> snapshot then Some ctx
+            match snapshot, fastState.Value, slowState.Value with
+            | None, _, _ -> None
+            | _, (FastStage.NoData | FastStage.Updating _), _ -> None
+            | Some snapshot, FastStage.Data (_, _, symbolUses, singleSymbolsProjects), SlowStage.Data(oldSnapshot, _) -> 
+                if oldSnapshot <> snapshot && singleSymbolsProjects |> List.forall (fun p -> p.Checked) then 
+                    Some (symbolUses, singleSymbolsProjects |> List.map (fun p -> p.Options))
                 else None
             | _ -> None
 
@@ -190,6 +210,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
             match getProject(), getCurrentSnapshot() with
             | Some project, Some snapshot ->
                 let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
+                let pf = Profiler()
                 let! symbolsUses = vsLanguageService.GetUnusedDeclarations(ctx.AllSymbolUses, project, getSymbolDeclLocation, pf)
                                 
                 let spans =
@@ -236,7 +257,7 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
         )
 
     let getClassificationSpans (newSnapshotSpan: SnapshotSpan) =
-        match state.Value with
+        match fastState.Value with
         | Data (snapshot, spans, _, _) ->
             // We get additional 10 lines above the current snapshot in case the user inserts some line
             // while we were getting locations from FCS. It's not as reliable though. 

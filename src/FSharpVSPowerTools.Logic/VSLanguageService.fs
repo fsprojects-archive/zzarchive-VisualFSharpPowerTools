@@ -246,26 +246,26 @@ type VSLanguageService
             return allSymbolsUses, lexer
         }
 
+     member __.GetSymbolDeclProjects getSymbolDeclLocation currentProject (symbol: FSharpSymbol) =
+         async {
+             let projects =
+                 match getSymbolDeclLocation symbol with
+                 | Some SymbolDeclarationLocation.File -> Some [currentProject]
+                 | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
+                 | None -> None
+         
+             match projects with
+             | Some projects ->
+                 return! 
+                     projects
+                     |> List.toArray
+                     |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
+                     |> Async.map Some
+             | None -> return None
+         }
+
      member __.GetUnusedDeclarations (symbolUses, project: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
         async {
-            let getSymbolDeclProjects symbol = pf.TimeAsync "getSymbolDeclProjects" <| fun _ ->
-                async {
-                    let projects =
-                        match getSymbolDeclLocation symbol with
-                        | Some SymbolDeclarationLocation.File -> Some [project]
-                        | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
-                        | None -> None
-
-                    match projects with
-                    | Some projects ->
-                        return! 
-                            projects
-                            |> List.toArray
-                            |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
-                            |> Async.map Some
-                    | None -> return None
-                }
-
             let! opts = project.GetProjectCheckerOptions instance
             return! instance.GetUnusedDeclarations(symbolUses, opts, getSymbolDeclProjects, pf)
         }
@@ -298,10 +298,8 @@ type VSLanguageService
         debug "[Language Service] Clearing FCS caches."
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
-    member __.StartBackgroundCompile (projectProvider: IProjectProvider) =
-        async {
-            let! opts = projectProvider.GetProjectCheckerOptions instance
-            instance.Checker.StartBackgroundCompile opts }
+    member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
+        instance.Checker.StartBackgroundCompile opts
 
     member __.Checker = instance.Checker
 

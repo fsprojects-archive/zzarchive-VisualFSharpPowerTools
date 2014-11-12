@@ -132,12 +132,6 @@ type LexerBase() =
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
 
-[<NoComparison>]
-type SymbolUse =
-    { SymbolUse: FSharpSymbolUse 
-      IsUsed: bool
-      FullNames: Idents[] }
-
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 // --------------------------------------------------------------------------------------
@@ -499,30 +493,10 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
 
     member x.GetUnusedDeclarations (symbolsUses, projectOptions, getSymbolDeclProjects, pf: Profiler) : SymbolUse[] Async =
         async {
-            let singleDefs = pf.Time "LS singleDefs" <| fun _ ->
-                symbolsUses
-                |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
-                |> Seq.choose (fun (symbol, uses) ->
-                    match symbol with
-                    | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
-                    // Determining that a record, DU or module is used anywhere requires
-                    // inspecting all their inclosed entities (fields, cases and func / vals)
-                    // for usefulness, which is too expensive to do. Hence we never gray them out.
-                    | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
-                    // FCS returns inconsistent results for override members; we're going to skip these symbols.
-                    | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
-                    // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
-                    | Parameter -> None
-                    | _ ->
-                        match Seq.toList uses with
-                        | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
-                            Some symbol 
-                        | _ -> None)
-                |> Seq.toList
-
+            let singleDefs = UnusedDeclarations.getSingleDeclarations symbolsUses
             let! notUsedSymbols =
                 singleDefs 
-                |> Async.List.map (fun fsSymbol ->
+                |> Async.Array.map (fun fsSymbol ->
                     async {
                         let! opts = getSymbolDeclProjects fsSymbol
                         match opts with
@@ -532,15 +506,15 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                             else return Some fsSymbol
                         | None -> return None 
                     })
-                |> Async.map (List.choose id)
+                |> Async.map (Array.choose id)
 
             return pf.Time "LS return" <| fun _ ->
                 match notUsedSymbols with
-                | [] -> symbolsUses
+                | [||] -> symbolsUses
                 | _ ->
                     symbolsUses
                     |> Array.map (fun su -> 
-                        { su with IsUsed = notUsedSymbols |> List.forall (fun s -> not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
+                        { su with IsUsed = notUsedSymbols |> Array.forall (fun s -> not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source) =
