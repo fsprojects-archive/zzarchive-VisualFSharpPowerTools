@@ -298,6 +298,11 @@ type VSLanguageService
         debug "[Language Service] Clearing FCS caches."
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
+    member __.StartBackgroundCompile (projectProvider: IProjectProvider) =
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            instance.Checker.StartBackgroundCompile opts }
+
     member __.Checker = instance.Checker
 
     /// This value is used for testing when VS lex cache isn't available

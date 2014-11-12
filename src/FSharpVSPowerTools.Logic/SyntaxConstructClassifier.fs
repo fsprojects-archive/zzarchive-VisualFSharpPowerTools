@@ -11,10 +11,18 @@ open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 
 [<NoComparison>]
+type private UnusedSymbolsContext =
+    { UnusedSpansSnapshot: ITextSnapshot option 
+      AllSymbolUses: SymbolUse[] }
+
+[<NoComparison>]
 type private ClassifierState =
     | NoData
     | Updating of snapshot: ITextSnapshot
-    | Data of snapshot: ITextSnapshot * spans: CategorizedColumnSpan [] * unusedSymbols: Map<WordSpan, CategorizedColumnSpan>
+    | Data of snapshot: ITextSnapshot
+              * spans: CategorizedColumnSpan[] 
+              * unusedSymbols: Map<WordSpan, CategorizedColumnSpan>
+              * unusedSymbolsContext: UnusedSymbolsContext option
 
 type SyntaxConstructClassifier (textDocument: ITextDocument, 
                                 buffer: ITextBuffer, 
@@ -52,10 +60,16 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
             return! projectFactory.CreateForDocument buffer doc }
 
+    // Don't check for unused declarations on generated signatures
+    let includeUnusedReferences() = 
+        includeUnusedReferences 
+        && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
+                && getProject() |> Option.map (fun p -> p.IsForStandaloneScript) |> function Some x -> x | None -> false)
+
     let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
 
-    let setNewState snapshot spans unusedSymbols =
-        state.Swap (fun _ -> Data (snapshot, spans, unusedSymbols)) |> ignore
+    let setNewState snapshot spans unusedSymbols getUnusedSymbolsCtx =
+        state.Swap (fun _ -> Data (snapshot, spans, unusedSymbols, getUnusedSymbolsCtx)) |> ignore
     
         // TextBuffer is null if a solution is closed at this moment
         if textDocument.TextBuffer <> null then
@@ -63,6 +77,30 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
             let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
             classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
 
+    let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
+        let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
+            vsLanguageService.GetAllEntities(textDocument.FilePath, source, project)    
+
+        return pf.Time "getOpenDeclarations" <| fun _ ->
+            let qualifyOpenDeclarations line endCol idents = 
+                let lineStr = getTextLineOneBased (line - 1)
+                let tooltip =
+                    vsLanguageService.GetOpenDeclarationTooltip(
+                        line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, source)
+                    |> Async.RunSynchronously
+                match tooltip with
+                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                | None -> []
+
+            entities
+            |> Option.map (fun entities -> 
+                 entities 
+                 |> Seq.groupBy (fun e -> e.FullName)
+                 |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                 |> Map.ofSeq),
+
+            OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
+    }
 
     let updateSyntaxConstructClassifiers force =
         let cancelToken = new CancellationTokenSource() 
@@ -79,113 +117,97 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
             | _, true, _ -> true
             | _, _, NoData -> true
             | Some snapshot, _, Updating oldSnapshot -> oldSnapshot <> snapshot
-            | Some snapshot, _, Data (oldSnapshot, _, _) -> oldSnapshot <> snapshot
+            | Some snapshot, _, Data (oldSnapshot, _, _, _) -> oldSnapshot <> snapshot
 
         snapshot |> Option.iter (fun snapshot -> 
             state.Swap (fun _ -> Updating snapshot) |> ignore)
                 
         if needUpdate then
-            let worker = 
-                async {
-                    match getProject(), getCurrentSnapshot() with
-                    | Some project, Some snapshot ->
-                        debug "[SyntaxConstructClassifier] - Effective update"
-                        let pf = Profiler()
-                        let getSymbolDeclLocation fsSymbol = pf.Time "GetSymbolDeclarationLocation" <| fun _ ->
-                            projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project                                  
-                        
-                        let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
-                        
-                        let! parseResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
-                            vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
+            let worker = async {
+                match getProject(), getCurrentSnapshot() with
+                | Some project, Some snapshot ->
+                    debug "[SyntaxConstructClassifier] - Effective update"
+                    let pf = Profiler()
+                    let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
+                    
+                    let! parseResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
+                        vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
 
-                        // Don't check for unused declarations on generated signatures
-                        let includeUnusedReferences = 
-                            includeUnusedReferences 
-                            && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
-                            && project.IsForStandaloneScript)
-                        
-                        let includeUnusedOpens = 
-                            includeUnusedOpens 
-                            && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
-                            && project.IsForStandaloneScript)
+                    let includeUnusedOpens = 
+                        includeUnusedOpens 
+                        && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
+                        && project.IsForStandaloneScript)
 
-                        let! allSymbolsUses, lexer = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
-                            vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                                snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens, pf)
+                    let! allSymbolsUses, lexer = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
+                        vsLanguageService.GetAllUsesOfAllSymbolsInFile(
+                            snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens, pf)
 
-                        let spans = pf.Time "getCategoriesAndLocations [NO UNUSED]" <| fun _ ->
-                            getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, [], None)
+                    let! entitiesMap, openDeclarations = 
+                        if includeUnusedOpens then
+                            getOpenDeclarations (snapshot.GetText()) project parseResults.ParseTree getTextLineOneBased pf
+                        else async { return None, [] }
+                      
+                    let spans = pf.Time "getCategoriesAndLocations [FAST STAGE]" <| fun _ ->
+                        getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
+                        |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
 
-                        let spans, oldUnusedSpans = 
-                            match currentState with
-                            | Data (_, _, oldUnusedSpans) ->
-                                spans
-                                |> Array.filter (fun s ->
-                                    not (oldUnusedSpans |> Map.containsKey s.WordSpan))
-                                |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd),
-                                oldUnusedSpans
-                            | _ -> spans, Map.empty
+                    let spans, oldUnusedSpans, oldUnusedSymbolsCtx = 
+                        match currentState with
+                        | Data (_, _, oldUnusedSpans, oldUnusedSymbolsCtx) ->
+                            spans
+                            |> Array.filter (fun s ->
+                                not (oldUnusedSpans |> Map.containsKey s.WordSpan))
+                            |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd),
+                            oldUnusedSpans, oldUnusedSymbolsCtx
+                        | _ -> spans, Map.empty, None
 
-                        let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-                        setNewState snapshot spans oldUnusedSpans
- 
-                        if includeUnusedOpens || includeUnusedReferences then    
-                            let! symbolsUses = 
-                                if includeUnusedReferences then 
-                                    pf.TimeAsync "GetUnusedDeclarations" <| fun _ ->
-                                        vsLanguageService.GetUnusedDeclarations(allSymbolsUses, project, getSymbolDeclLocation, pf)
-                                else async { return allSymbolsUses }
+                    let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                    setNewState snapshot spans oldUnusedSpans oldUnusedSymbolsCtx
 
-                            //let! parseResults = pf.Atc "ParseFileInProject" <| fun _ ->
-                              //  vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
-                            
-                            let! entitiesMap, openDeclarations = async {
-                                if includeUnusedOpens then
-                                    let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
-                                        vsLanguageService.GetAllEntities(textDocument.FilePath, snapshot.GetText(), project)    
+                    if includeUnusedReferences() then
+                        do! vsLanguageService.StartBackgroundCompile project
 
-                                    return pf.Time "getOpenDeclarations" <| fun _ ->
-                                        let qualifyOpenDeclarations line endCol idents = 
-                                            let lineStr = getTextLineOneBased (line - 1)
-                                            let tooltip =
-                                                vsLanguageService.GetOpenDeclarationTooltip(
-                                                    line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, snapshot.GetText())
-                                                |> Async.RunSynchronously
-                                            match tooltip with
-                                            | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                                            | None -> []
-
-                                        entities 
-                                        |> Option.map (fun entities -> 
-                                             entities 
-                                             |> Seq.groupBy (fun e -> e.FullName)
-                                             |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                                             |> Map.ofSeq),
-
-                                        OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
-                                else return None, [] }
-                          
-                          
-                            let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
-                                getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
-                                |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-                        
-                            let notUsedSpans =
-                                spans
-                                |> Array.filter (fun s -> s.Category = Category.Unused)
-                                |> Array.map (fun s -> s.WordSpan, s)
-                                |> Map.ofArray
-                            
-                            setNewState snapshot spans notUsedSpans
-
-                        pf.Stop()
-                        Logging.logInfo "[SyntaxConstructClassifier] %s" pf.Result
-                        
-                    | _ -> ()
-                } 
+                    pf.Stop()
+                    Logging.logInfo "[SyntaxConstructClassifier] %s" pf.Result
+                    
+                | _ -> () } 
             Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
             
+    let updateUnusedDeclarations = async {
+        let snapshot = getCurrentSnapshot()
+        let ctx =
+            match snapshot, state.Value with
+            | None, _ -> None
+            | _, NoData -> None
+            | Some _, Data (_, _, _, None) -> None
+            | Some snapshot, Data (_, _, _, Some ({ UnusedSpansSnapshot = Some oldUnusedSpansSnapshot} as ctx)) ->
+                if oldUnusedSpansSnapshot <> snapshot then Some ctx
+                else None
+            | _ -> None
+
+        match ctx with
+        | Some ctx ->
+            match getProject(), getCurrentSnapshot() with
+            | Some project, Some snapshot ->
+                let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
+                let! symbolsUses = vsLanguageService.GetUnusedDeclarations(ctx.AllSymbolUses, project, getSymbolDeclLocation, pf)
+                                
+                let spans =
+                    // toto add all these stuff to UnusedSymbolsContext (name it Context?)
+                    getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
+                    |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+            
+                let notUsedSpans =
+                    spans
+                    |> Array.filter (fun s -> s.Category = Category.Unused)
+                    |> Array.map (fun s -> s.WordSpan, s)
+                    |> Map.ofArray
+                               
+                setNewState snapshot spans notUsedSpans
+            | _ -> ()
+        | None -> ()
+    }
+
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
@@ -202,12 +224,20 @@ type SyntaxConstructClassifier (textDocument: ITextDocument,
 
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
     
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, 
-                                    fun _ -> updateSyntaxConstructClassifiers false)
+    let docEventListener = 
+        new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, fun _ -> updateSyntaxConstructClassifiers false)
+
+    do if includeUnusedReferences() then
+        vsLanguageService.Checker.ProjectChecked.Add(fun projectFileName ->
+            match includeUnusedReferences(), getProject() with
+            | true, Some project when project.ProjectFileName = projectFileName ->
+                Async.StartInThreadPoolSafe updateUnusedDeclarations
+            | _ -> ()
+        )
 
     let getClassificationSpans (newSnapshotSpan: SnapshotSpan) =
         match state.Value with
-        | Data (snapshot, spans, _) ->
+        | Data (snapshot, spans, _, _) ->
             // We get additional 10 lines above the current snapshot in case the user inserts some line
             // while we were getting locations from FCS. It's not as reliable though. 
             let spanStartLine = max 0 (newSnapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
