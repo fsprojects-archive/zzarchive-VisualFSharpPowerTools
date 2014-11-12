@@ -27,8 +27,13 @@ open FSharpVSPowerTools
 module Extensions =
 
     type Span with
+        
+//        member left.CreateOverarching (right:Span) =
+//            let start   = Math.Min( left.Start, right.Start )
+//            let finish  = Math.Max( left.End  , right.End   )
+//            Span.FromBounds ( start, finish ) 
 
-        static member CreateOverarching (left:Span) (right:Span) =
+        static member CreateOverarching ( left:Span) (right:Span) =
             let start   = Math.Min( left.Start, right.Start )
             let finish  = Math.Max( left.End  , right.End   )
             Span.FromBounds ( start, finish )
@@ -43,10 +48,21 @@ module Extensions =
         member x.GetStartLine() =  x.Start.GetContainingLine()
         member x.GetLastLine () =  x.End.GetContainingLine()
 
-        
+        static member CreateOverarching (left:SnapshotSpan)(right:SnapshotSpan) =
+            if left.Snapshot <> right.Snapshot then
+                failwithf "left Snapshot %A does not equal right Snapshot %A"
+                            left                        right
+            else
+                let span = Span.CreateOverarching (left.Span) (right.Span)
+                SnapshotSpan(left.Snapshot, span);
+
 //        static member CreateOverarching (left:SnapshotSpan) (right:SnapshotSpan) =
 //            //Contract.
 //  
+    type ReadOnlyCollection<'T> with
+
+        static member concat<'a>  arg  (roc:ReadOnlyCollection<'a>) = roc.Concat<'a>    arg 
+     
     
     type ITrackingSpan with
         // TODO in editorUtils this is nullable, so this might not work        
@@ -71,7 +87,11 @@ module Extensions =
         
         member x.ToReadOnlyCollection<'T>() =
             ReadOnlyCollection<'T>( x.ToList() )
+        
+        static member distinct<'a>  arg (ienum:IEnumerable<'a>) = ienum.Distinct  arg 
 
+        static member toReadOnlyCollection<'a> (ienum:IEnumerable<'a>) =
+            ReadOnlyCollection<'a>( ienum.ToList() )
 
     type List<'T> with
         member x.ToReadOnlyCollectionShallow<'T>() =

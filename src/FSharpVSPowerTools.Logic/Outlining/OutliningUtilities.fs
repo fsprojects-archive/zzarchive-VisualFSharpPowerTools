@@ -37,8 +37,6 @@ type ReadOnlyStack<'T>(lineRange:'T, next: ReadOnlyStack<'T> option) =
 
     static member Empty = ReadOnlyStack<'T>()
 
-  //  member x.Next  = next
-
     member x.Value with get() = x.ThrowIfEmpty(); lineRange
 
     member x.Count with get() = if next <> None then next.Value.Count + 1 else 0
@@ -69,6 +67,25 @@ type ReadOnlyStack<'T>(lineRange:'T, next: ReadOnlyStack<'T> option) =
 
         member x.GetEnumerator(): Collections.IEnumerator = 
             x.GetEnumerator()  :> Collections.IEnumerator
+
+
+
+ type EqualityUtility<'T> ( equalsFunc      : 'T -> 'T -> bool  ,
+                            getHashCodeFunc : 'T -> int         ) as self =
+
+    member __.Equals ( x, y )   = equalsFunc x y
+    member __.GetHashCode x     = getHashCodeFunc x
+
+    static member Create<'T> ( equalsFunc      : 'T -> 'T -> bool )
+                             ( getHashCodeFunc : 'T -> int        ) =
+        EqualityUtility<'T>  ( equalsFunc, getHashCodeFunc )
+
+    interface IEqualityComparer<'T> with
+
+        member __.Equals(x:'T, y:'T): bool  = self.Equals(x, y)
+        member __.GetHashCode(x: 'T): int   = self.GetHashCode x     
+
+
 
 module Constants =
     [<Literal>]
