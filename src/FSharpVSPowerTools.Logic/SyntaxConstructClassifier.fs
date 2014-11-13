@@ -20,8 +20,6 @@ type private CheckingProject =
 [<NoComparison>]
 type private FastStageData =
     { Snapshot: ITextSnapshot
-      OpenDeclarations: OpenDeclaration list  
-      AllEntities: Map<string, Idents list> option
       Spans: CategorizedColumnSpan[]
       SymbolUses: SymbolUse[]
       SingleSymbolsProjects: CheckingProject list }
@@ -35,11 +33,12 @@ type private FastStage =
 [<NoComparison>]
 type private SlowStageData =
     { Snapshot: ITextSnapshot 
-      UnusedSpans: Map<WordSpan, CategorizedColumnSpan> }
+      UnusedSpans: Map<WordSpan, CategorizedColumnSpan>
+      IsUpdating: bool }
 
 [<NoComparison>]
 type private SlowStage =
-    | NoData
+    | NoData of isUpdating: bool
     | Data of SlowStageData
 
 type SyntaxConstructClassifier
@@ -71,9 +70,19 @@ type SyntaxConstructClassifier
 
     let classificationChanged = Event<_,_>()
     let fastState = Atom FastStage.NoData
-    let slowState = Atom SlowStage.NoData
-    let cancellationToken = Atom None
+    let slowState = Atom (SlowStage.NoData false)
+    let fastStageCancellationToken = Atom None
+    let slowStageCancellationToken = Atom None
     
+    let newCancellationToken (currentToken: Atom<CancellationTokenSource option>) = 
+        let newToken = new CancellationTokenSource() 
+        currentToken.Swap (fun _ -> Some (newToken))
+        |> Option.iter (fun oldToken -> 
+            oldToken.Cancel()
+            oldToken.Dispose())
+        |> ignore
+        newToken
+
     let getCurrentProject() =
         maybe {
             // If there is no backing document, an ITextDocument instance might be null
@@ -124,12 +133,7 @@ type SyntaxConstructClassifier
     }
 
     let updateSyntaxConstructClassifiers force =
-        let cancelToken = new CancellationTokenSource() 
-        cancellationToken.Swap (fun _ -> Some (cancelToken))
-        |> Option.iter (fun oldToken -> 
-            oldToken.Cancel()
-            oldToken.Dispose())
-
+        let cancelToken = newCancellationToken fastStageCancellationToken
         let snapshot = getCurrentSnapshot()
         let needUpdate =
             match snapshot, force, fastState.Value with
@@ -152,26 +156,16 @@ type SyntaxConstructClassifier
                     let! parseResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
                         vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
 
-                    let includeUnusedOpens = 
-                        includeUnusedOpens 
-                        && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
-                        && currentProject.IsForStandaloneScript)
-
                     let lexer = vsLanguageService.CreateLexer(snapshot, currentProject.CompilerOptions)
 
-                    let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
+                    let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                         vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                            snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, includeUnusedOpens, pf)
+                            snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, false, pf)
 
                     let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
-                    let! entitiesMap, openDeclarations = 
-                        if includeUnusedOpens then
-                            getOpenDeclarations (snapshot.GetText()) currentProject parseResults.ParseTree getTextLineOneBased pf
-                        else async { return None, [] }
-                      
-                    let spans = pf.Time "getCategoriesAndLocations [FAST STAGE]" <| fun _ ->
-                        getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDeclarations, entitiesMap)
+                    let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
+                        getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, [], None)
                         |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
 
                     let spans = 
@@ -206,61 +200,82 @@ type SyntaxConstructClassifier
                             { Snapshot = snapshot
                               Spans = spans
                               SymbolUses = allSymbolsUses
-                              SingleSymbolsProjects = singleSymbolsProjects
-                              OpenDeclarations = openDeclarations
-                              AllEntities = entitiesMap }) |> ignore  
+                              SingleSymbolsProjects = singleSymbolsProjects }) |> ignore  
 
                     triggerClassificationChanged "UpdateSyntaxConstructClassifiers"
                     let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject
                     vsLanguageService.StartBackgroundCompile currentProjectOpts
                     pf.Stop()
-                    Logging.logInfo "[SyntaxConstructClassifier] %s" pf.Result
+                    Logging.logInfo "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result
                     
                 | _ -> () } 
             Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
             
-    let updateUnusedDeclarations = 
-        asyncMaybe {
-            let! project = getCurrentProject() |> liftMaybe
-            let! snapshot = getCurrentSnapshot() |> liftMaybe
-            let! symbolsUses, openDecls, entities =
-                match fastState.Value, slowState.Value with
-                | (FastStage.NoData | FastStage.Updating _), _ -> None
-                | FastStage.Data fastData, slowStage ->
-                    match slowStage with
-                    | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> None
-                    | _ -> Some (fastData.SymbolUses, fastData.OpenDeclarations, fastData.AllEntities)
-                |> liftMaybe
-            
-            debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
-            let pf = Profiler()
-            let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
-            let! symbolsUses = vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf) |> liftAsync
-            let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)     
-            let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
-            let! parseResults = vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
-            let spans =
-                getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDecls, entities)
-                |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-           
-            let notUsedSpans =
-                spans
-                |> Array.filter (fun s -> s.Category = Category.Unused)
-                |> Array.map (fun s -> s.WordSpan, s)
-                |> Map.ofArray
-                           
-            fastState.Swap (function
-                | FastStage.Data data -> FastStage.Data { data with Spans = spans; SingleSymbolsProjects = [] }
-                | state -> state)
-                |> ignore
-            
-            debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: fastState swapped"
+    let updateUnusedDeclarations() = 
+        let worker (symbolsUses, project, snapshot) =
+            asyncMaybe {    
+                let pf = Profiler()
+                debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
+                let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
+                let! symbolsUses = vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf) |> liftAsync
+                let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)     
+                let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
+                let! parseResults = pf.Time "parseFileInProject" <| fun _ ->
+                    vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
+                
+                let includeUnusedOpens = 
+                    includeUnusedOpens 
+                    && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
+                    && project.IsForStandaloneScript)
 
-            slowState.Swap (fun _ -> SlowStage.Data { Snapshot = snapshot; UnusedSpans = notUsedSpans }) |> ignore
-            debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
+                let! entities, openDecls = 
+                    if includeUnusedOpens then
+                        getOpenDeclarations (snapshot.GetText()) project parseResults.ParseTree getTextLineOneBased pf 
+                    else async { return None, [] }
+                    |> liftAsync
 
-            triggerClassificationChanged "UpdateUnusedDeclarations"
-        } |> Async.map ignore
+                let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
+                    getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDecls, entities)
+                    |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+               
+                let notUsedSpans =
+                    spans
+                    |> Array.filter (fun s -> s.Category = Category.Unused)
+                    |> Array.map (fun s -> s.WordSpan, s)
+                    |> Map.ofArray
+                               
+                fastState.Swap (function
+                    | FastStage.Data data -> FastStage.Data { data with Spans = spans; SingleSymbolsProjects = [] }
+                    | state -> state)
+                    |> ignore
+                
+                debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: fastState swapped"
+                slowState.Swap (fun _ -> SlowStage.Data { Snapshot = snapshot; UnusedSpans = notUsedSpans; IsUpdating = false }) |> ignore
+                debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
+                pf.Stop()
+                Logging.logInfo "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result
+                triggerClassificationChanged "UpdateUnusedDeclarations"
+            } |> Async.map ignore
+
+        match getCurrentProject(), getCurrentSnapshot() with
+        | Some project, Some snapshot ->
+            match fastState.Value, slowState.Value with
+            | (FastStage.NoData | FastStage.Updating _), _ -> ()
+            | _, SlowStage.NoData (isUpdating = true) -> ()
+            | FastStage.Data fastData, slowStage ->
+                match slowStage with
+                | SlowStage.Data { IsUpdating = true } -> ()
+                | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> ()
+                | SlowStage.NoData (isUpdating = true) -> ()
+                | _ -> 
+                    slowState.Swap (function
+                        | SlowStage.Data data ->
+                             SlowStage.Data { data with IsUpdating = true } 
+                        | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
+
+                    let cancelToken = newCancellationToken slowStageCancellationToken
+                    Async.StartInThreadPoolSafe(worker (fastData.SymbolUses, project, snapshot), cancelToken.Token)
+        | _ -> ()
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
@@ -293,7 +308,7 @@ type SyntaxConstructClassifier
                 fastState.Swap (fun _ -> FastStage.Data { fastData with SingleSymbolsProjects = projects }) |> ignore
                 match projects |> List.tryFind (fun p -> not p.Checked) with
                 | Some { Options = opts } -> vsLanguageService.StartBackgroundCompile opts
-                | None -> Async.StartInThreadPoolSafe updateUnusedDeclarations 
+                | None -> updateUnusedDeclarations()
             | _ -> ()
         )
 
@@ -339,7 +354,7 @@ type SyntaxConstructClassifier
     interface IDisposable with
         member __.Dispose() = 
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
-            cancellationToken.Value
+            fastStageCancellationToken.Value
             |> Option.iter (fun token -> 
                 token.Cancel()
                 token.Dispose())
