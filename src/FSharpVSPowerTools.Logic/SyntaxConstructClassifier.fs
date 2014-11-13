@@ -90,12 +90,13 @@ type SyntaxConstructClassifier
 
     let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
 
-    let triggerClassificationChanged() =
+    let triggerClassificationChanged reason =
         // TextBuffer is null if a solution is closed at this moment
         if textDocument.TextBuffer <> null then
             let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
             let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
             classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
+            debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
 
     let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
         let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
@@ -209,7 +210,7 @@ type SyntaxConstructClassifier
                               OpenDeclarations = openDeclarations
                               AllEntities = entitiesMap }) |> ignore  
 
-                    triggerClassificationChanged() 
+                    triggerClassificationChanged "UpdateSyntaxConstructClassifiers" 
                         
                     singleSymbolsProjects |> List.iter (fun p -> vsLanguageService.StartBackgroundCompile p.Options)
                     pf.Stop()
@@ -222,7 +223,7 @@ type SyntaxConstructClassifier
         asyncMaybe {
             let! project = getProject() |> liftMaybe
             let! snapshot = getCurrentSnapshot() |> liftMaybe
-            let! symbolUses, openDecls, entities =
+            let! symbolsUses, openDecls, entities =
                 match fastState.Value, slowState.Value with
                 | (FastStage.NoData | FastStage.Updating _), _ -> None
                 | FastStage.Data fastData, slowStage ->
@@ -231,9 +232,10 @@ type SyntaxConstructClassifier
                     | _ -> Some (fastData.SymbolUses, fastData.OpenDeclarations, fastData.AllEntities)
                 |> liftMaybe
             
+            debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
             let pf = Profiler()
             let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
-            let! symbolsUses = vsLanguageService.GetUnusedDeclarations(symbolUses, project, getSymbolDeclLocation, pf) |> liftAsync
+            let! symbolsUses = vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf) |> liftAsync
             let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)     
             let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
             let! parseResults = vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
@@ -247,16 +249,17 @@ type SyntaxConstructClassifier
                 |> Array.map (fun s -> s.WordSpan, s)
                 |> Map.ofArray
                            
-            fastState.Swap (fun _ -> 
-                FastStage.Data 
-                    { Snapshot = snapshot
-                      Spans = spans
-                      SymbolUses = symbolUses
-                      SingleSymbolsProjects = []
-                      OpenDeclarations = openDecls
-                      AllEntities = entities }) |> ignore
+            fastState.Swap (function
+                | FastStage.Data data -> FastStage.Data { data with SingleSymbolsProjects = [] }
+                | state -> state) 
+                |> ignore
             
+            debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: fastState swapped"
+
             slowState.Swap (fun _ -> SlowStage.Data { Snapshot = snapshot; UnusedSpans = notUsedSpans }) |> ignore
+            debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
+
+            triggerClassificationChanged "UpdateUnusedDeclarations"
         } |> Async.map ignore
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -280,6 +283,7 @@ type SyntaxConstructClassifier
     do if includeUnusedReferences() then
         vsLanguageService.Checker.ProjectChecked.Add(fun projectFileName ->
             match includeUnusedReferences(), fastState.Value with
+            | true, FastStage.Data { SingleSymbolsProjects = [] } -> ()
             | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->
                 let projects =
                     match projects |> List.partition (fun p -> p.Options.ProjectFileName = projectFileName) with

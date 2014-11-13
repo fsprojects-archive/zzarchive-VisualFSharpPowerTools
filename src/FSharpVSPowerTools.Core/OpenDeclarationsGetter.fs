@@ -25,7 +25,7 @@ type OpenDeclaration =
 module OpenDeclWithAutoOpens =
     let updateBySymbolPrefix (symbolPrefix: Idents) (decl: OpenDeclWithAutoOpens) =
         let matched = decl.Declarations |> List.exists ((=) symbolPrefix)
-        if not decl.IsUsed && matched then debug "OpenDeclarationWithAutoOpens %A is used by %A" decl symbolPrefix
+        //if not decl.IsUsed && matched then debug "OpenDeclarationWithAutoOpens %A is used by %A" decl symbolPrefix
         matched, { decl with IsUsed = decl.IsUsed || matched }
 
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
@@ -36,7 +36,7 @@ module OpenDeclaration =
             |> List.map (OpenDeclWithAutoOpens.updateBySymbolPrefix symbolPrefix)
         let matched = decls |> List.exists fst
         let isUsed = decls |> List.exists (fun (_, decl) -> decl.IsUsed)
-        if not decl.IsUsed && isUsed then debug "OpenDeclaration %A is used by %A" decl symbolPrefix
+        //if not decl.IsUsed && isUsed then debug "OpenDeclaration %A is used by %A" decl symbolPrefix
         matched, { decl with Declarations = decls |> List.map snd; IsUsed = isUsed }
 
 module OpenDeclarationGetter =
@@ -143,7 +143,7 @@ module OpenDeclarationGetter =
                     |> List.fold (fun res parent -> res |> setOpenDeclsIsUsedFlag parent)
                        res
                ) openDecls
-        debug "[OpenDeclarationsGetter] spreadIsUsedFlagToParents: Before = %A, After = %A" openDecls res
+        //debug "[OpenDeclarationsGetter] spreadIsUsedFlagToParents: Before = %A, After = %A" openDecls res
         res
 
     type Line = int

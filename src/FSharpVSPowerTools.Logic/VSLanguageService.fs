@@ -297,6 +297,7 @@ type VSLanguageService
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
     member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
+        debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
         instance.Checker.StartBackgroundCompile opts
 
     member __.Checker = instance.Checker
