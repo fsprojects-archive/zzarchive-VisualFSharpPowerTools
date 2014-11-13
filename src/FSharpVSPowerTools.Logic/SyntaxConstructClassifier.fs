@@ -74,7 +74,7 @@ type SyntaxConstructClassifier
     let slowState = Atom SlowStage.NoData
     let cancellationToken = Atom None
     
-    let getProject() =
+    let getCurrentProject() =
         maybe {
             // If there is no backing document, an ITextDocument instance might be null
             let! _ = Option.ofNull textDocument
@@ -86,7 +86,7 @@ type SyntaxConstructClassifier
     let includeUnusedReferences() = 
         includeUnusedReferences 
         && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
-                && getProject() |> Option.map (fun p -> p.IsForStandaloneScript) |> function Some x -> x | None -> false)
+                && getCurrentProject() |> Option.map (fun p -> p.IsForStandaloneScript) |> function Some x -> x | None -> false)
 
     let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
 
@@ -144,30 +144,30 @@ type SyntaxConstructClassifier
                 
         if needUpdate then
             let worker = async {
-                match getProject(), getCurrentSnapshot() with
-                | Some project, Some snapshot ->
+                match getCurrentProject(), getCurrentSnapshot() with
+                | Some currentProject, Some snapshot ->
                     debug "[SyntaxConstructClassifier] - Effective update"
                     let pf = Profiler()
                                         
                     let! parseResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
-                        vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project)
+                        vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
 
                     let includeUnusedOpens = 
                         includeUnusedOpens 
                         && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath)) 
-                        && project.IsForStandaloneScript)
+                        && currentProject.IsForStandaloneScript)
 
-                    let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)
+                    let lexer = vsLanguageService.CreateLexer(snapshot, currentProject.CompilerOptions)
 
                     let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile [NO UNUSED]" <| fun _ ->
                         vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                            snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens, pf)
+                            snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, includeUnusedOpens, pf)
 
                     let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
                     let! entitiesMap, openDeclarations = 
                         if includeUnusedOpens then
-                            getOpenDeclarations (snapshot.GetText()) project parseResults.ParseTree getTextLineOneBased pf
+                            getOpenDeclarations (snapshot.GetText()) currentProject parseResults.ParseTree getTextLineOneBased pf
                         else async { return None, [] }
                       
                     let spans = pf.Time "getCategoriesAndLocations [FAST STAGE]" <| fun _ ->
@@ -187,12 +187,12 @@ type SyntaxConstructClassifier
                     
                     let! singleSymbolsProjects = async {
                         if includeUnusedReferences() then
-                            let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
+                            let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath currentProject
                             let singleDefs = UnusedDeclarations.getSingleDeclarations allSymbolsUses
                             return!
                                 singleDefs
                                 |> Async.Array.map (fun symbol ->
-                                    vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation project symbol)
+                                    vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation currentProject symbol)
                                 |> Async.map (
                                        Array.choose id 
                                     >> Array.concat 
@@ -210,9 +210,9 @@ type SyntaxConstructClassifier
                               OpenDeclarations = openDeclarations
                               AllEntities = entitiesMap }) |> ignore  
 
-                    triggerClassificationChanged "UpdateSyntaxConstructClassifiers" 
-                        
-                    singleSymbolsProjects |> List.iter (fun p -> vsLanguageService.StartBackgroundCompile p.Options)
+                    triggerClassificationChanged "UpdateSyntaxConstructClassifiers"
+                    let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject
+                    vsLanguageService.StartBackgroundCompile currentProjectOpts
                     pf.Stop()
                     Logging.logInfo "[SyntaxConstructClassifier] %s" pf.Result
                     
@@ -221,7 +221,7 @@ type SyntaxConstructClassifier
             
     let updateUnusedDeclarations = 
         asyncMaybe {
-            let! project = getProject() |> liftMaybe
+            let! project = getCurrentProject() |> liftMaybe
             let! snapshot = getCurrentSnapshot() |> liftMaybe
             let! symbolsUses, openDecls, entities =
                 match fastState.Value, slowState.Value with
@@ -242,7 +242,7 @@ type SyntaxConstructClassifier
             let spans =
                 getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDecls, entities)
                 |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-            
+           
             let notUsedSpans =
                 spans
                 |> Array.filter (fun s -> s.Category = Category.Unused)
@@ -266,7 +266,7 @@ type SyntaxConstructClassifier
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
         maybe {
-            let! selfProject = getProject()
+            let! selfProject = getCurrentProject()
             let builtProjectFileName = Path.GetFileName project
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
@@ -291,8 +291,9 @@ type SyntaxConstructClassifier
                     | matched, rest ->
                         (matched |> List.map (fun p -> { p with Checked = true })) @ rest
                 fastState.Swap (fun _ -> FastStage.Data { fastData with SingleSymbolsProjects = projects }) |> ignore
-                if projects |> List.forall (fun p -> p.Checked) then
-                    Async.StartInThreadPoolSafe updateUnusedDeclarations
+                match projects |> List.tryFind (fun p -> not p.Checked) with
+                | Some { Options = opts } -> vsLanguageService.StartBackgroundCompile opts
+                | None -> Async.StartInThreadPoolSafe updateUnusedDeclarations 
             | _ -> ()
         )
 

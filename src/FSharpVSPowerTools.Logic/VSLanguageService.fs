@@ -262,6 +262,8 @@ type VSLanguageService
              | None -> return None
          }
 
+     member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
+
      member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
         async {
             let! opts = currentProject.GetProjectCheckerOptions instance
