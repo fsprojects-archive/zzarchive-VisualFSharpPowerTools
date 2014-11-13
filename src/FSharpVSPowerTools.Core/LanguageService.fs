@@ -354,24 +354,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
          | _ -> return None 
      }
 
-  /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq, pf: Profiler) =
-     async { 
-        return! 
-            projectsOptions
-            |> Seq.toArray
-            |> Async.Array.exists (fun opts ->
-                async {
-                    let! projectResults = pf.TimeAsync "IsSymbolUsedInProjects :: ParseAndCheckProject" <| fun _ ->
-                         checker.ParseAndCheckProject opts
-                    let! refs = pf.TimeAsync "IsSymbolUsedInProjects :: GetUsesOfSymbol" <| fun _ ->
-                         projectResults.GetUsesOfSymbol symbol
-                    return
-                        if opts.ProjectFileName = currentProjectName then
-                            refs.Length > 1
-                        else refs.Length > 0 })
-     }
-
   member __.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)
 
   // additions
@@ -490,6 +472,22 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
                       IsUsed = true
                       FullNames = fullNames })
             return allSymbolsUses }
+
+    /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
+    member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq, pf: Profiler) =
+        projectsOptions
+        |> Seq.toArray
+        |> Async.Array.exists (fun opts ->
+            async {
+                let! projectResults = pf.TimeAsync "IsSymbolUsedInProjects :: ParseAndCheckProject" <| fun _ ->
+                     checker.ParseAndCheckProject opts
+                let! refs = pf.TimeAsync "IsSymbolUsedInProjects :: GetUsesOfSymbol" <| fun _ ->
+                     projectResults.GetUsesOfSymbol symbol
+                return
+                    if opts.ProjectFileName = currentProjectName then
+                        refs.Length > 1
+                    else refs.Length > 0 })
+    
 
     member x.GetUnusedDeclarations (symbolsUses, projectOptions, getSymbolDeclProjects, pf: Profiler) : SymbolUse[] Async =
         async {

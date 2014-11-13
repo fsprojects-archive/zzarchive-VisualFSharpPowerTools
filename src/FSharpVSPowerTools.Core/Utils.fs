@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
+open System.Diagnostics
 
 [<RequireQualifiedAccess>]
 module Seq =
@@ -178,24 +179,29 @@ module Async =
 [<Sealed>]
 type MaybeBuilder () =
     // 'T -> M<'T>
+    [<DebuggerStepThrough>]
     member inline __.Return value: 'T option =
         Some value
 
     // M<'T> -> M<'T>
+    [<DebuggerStepThrough>]
     member inline __.ReturnFrom value: 'T option =
         value
 
     // unit -> M<'T>
+    [<DebuggerStepThrough>]
     member inline __.Zero (): unit option =
         Some ()     // TODO: Should this be None?
 
     // (unit -> M<'T>) -> M<'T>
+    [<DebuggerStepThrough>]
     member __.Delay (f: unit -> 'T option): 'T option =
         f ()
 
     // M<'T> -> M<'T> -> M<'T>
     // or
     // M<unit> -> M<'T> -> M<'T>
+    [<DebuggerStepThrough>]
     member inline __.Combine (r1, r2: 'T option): 'T option =
         match r1 with
         | None ->
@@ -204,10 +210,12 @@ type MaybeBuilder () =
             r2
 
     // M<'T> * ('T -> M<'U>) -> M<'U>
+    [<DebuggerStepThrough>]
     member inline __.Bind (value, f: 'T -> 'U option): 'U option =
         Option.bind f value
 
     // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
+    [<DebuggerStepThrough>]
     member __.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
         try body resource
         finally
@@ -215,6 +223,7 @@ type MaybeBuilder () =
                 resource.Dispose ()
 
     // (unit -> bool) * M<'T> -> M<'T>
+    [<DebuggerStepThrough>]
     member x.While (guard, body: _ option): _ option =
         if guard () then
             // OPTIMIZE: This could be simplified so we don't need to make calls to Bind and While.
@@ -225,6 +234,7 @@ type MaybeBuilder () =
     // seq<'T> * ('T -> M<'U>) -> M<'U>
     // or
     // seq<'T> * ('T -> M<'U>) -> seq<M<'U>>
+    [<DebuggerStepThrough>]
     member x.For (sequence: seq<_>, body: 'T -> unit option): _ option =
         // OPTIMIZE: This could be simplified so we don't need to make calls to Using, While, Delay.
         x.Using (sequence.GetEnumerator (), fun enum ->
@@ -236,22 +246,27 @@ type MaybeBuilder () =
 [<Sealed>]
 type AsyncMaybeBuilder () =
     // 'T -> M<'T>
+    [<DebuggerStepThrough>]
     member (*inline*) __.Return value : Async<'T option> = Some value |> async.Return
 
     // M<'T> -> M<'T>
+    [<DebuggerStepThrough>]
     member (*inline*) __.ReturnFrom value : Async<'T option> = value
 
     // unit -> M<'T>
+    [<DebuggerStepThrough>]
     member (*inline*) __.Zero () : Async<unit option> =
         Some ()     // TODO : Should this be None?
         |> async.Return
 
     // (unit -> M<'T>) -> M<'T>
+    [<DebuggerStepThrough>]
     member __.Delay (f : unit -> Async<'T option>) : Async<'T option> = f ()
 
     // M<'T> -> M<'T> -> M<'T>
     // or
     // M<unit> -> M<'T> -> M<'T>
+    [<DebuggerStepThrough>]
     member (*inline*) __.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
         async {
             let! r1' = r1
@@ -261,6 +276,7 @@ type AsyncMaybeBuilder () =
         }
 
     // M<'T> * ('T -> M<'U>) -> M<'U>
+    [<DebuggerStepThrough>]
     member (*inline*) __.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
         async {
             let! value' = value
@@ -269,12 +285,14 @@ type AsyncMaybeBuilder () =
             | Some result -> return! f result
         }
     // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
+    [<DebuggerStepThrough>]
     member __.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
         try body resource
         finally 
             if resource <> null then resource.Dispose ()
 
     // (unit -> bool) * M<'T> -> M<'T>
+    [<DebuggerStepThrough>]
     member x.While (guard, body : Async<_ option>) : Async<_ option> =
         if guard () then
             // OPTIMIZE : This could be simplified so we don't need to make calls to Bind and While.
@@ -285,6 +303,7 @@ type AsyncMaybeBuilder () =
     // seq<'T> * ('T -> M<'U>) -> M<'U>
     // or
     // seq<'T> * ('T -> M<'U>) -> seq<M<'U>>
+    [<DebuggerStepThrough>]
     member x.For (sequence : seq<_>, body : 'T -> Async<unit option>) : Async<_ option> =
         // OPTIMIZE : This could be simplified so we don't need to make calls to Using, While, Delay.
         x.Using (sequence.GetEnumerator (), fun enum ->

@@ -220,30 +220,28 @@ type VSLanguageService
             return symbol |> Option.map (fun s -> s, results)
         }
 
+    member __.CreateLexer (snapshot, args) =
+        let getLineStr line =
+            let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+            let lineNumber = line - lineStart
+            snapshot.GetLineFromLineNumber(lineNumber).GetText() 
+        let source = snapshot.GetText()
+        { new LexerBase() with
+            member __.GetSymbolFromTokensAtLocation (tokens, line, col) =
+                Lexer.getSymbolFromTokens tokens line col (getLineStr line)
+            member __.TokenizeLine line =
+                Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
+
     member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
                                             checkForUnusedOpens: bool, pf: Profiler) = 
         async {
             Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
             let source = snapshot.GetText() 
-            let args = project.CompilerOptions
-            let getLineStr line =
-                let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-                let lineNumber = line - lineStart
-                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-            let lexer = 
-                { new LexerBase() with
-                    member __.GetSymbolFromTokensAtLocation (tokens, line, col) =
-                        Lexer.getSymbolFromTokens tokens line col (getLineStr line)
-                    member __.TokenizeLine line =
-                        Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
-
             let! opts = project.GetProjectCheckerOptions instance
-
             let! allSymbolsUses = pf.TimeAsync "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                 instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, pf)
-
-            return allSymbolsUses, lexer
+            return allSymbolsUses
         }
 
      member __.GetSymbolDeclProjects getSymbolDeclLocation currentProject (symbol: FSharpSymbol) =
@@ -264,10 +262,10 @@ type VSLanguageService
              | None -> return None
          }
 
-     member __.GetUnusedDeclarations (symbolUses, project: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
+     member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
         async {
-            let! opts = project.GetProjectCheckerOptions instance
-            return! instance.GetUnusedDeclarations(symbolUses, opts, getSymbolDeclProjects, pf)
+            let! opts = currentProject.GetProjectCheckerOptions instance
+            return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject, pf)
         }
 
      member __.GetAllEntities (fileName, source, project: IProjectProvider) =
