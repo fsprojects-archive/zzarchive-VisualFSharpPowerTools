@@ -251,7 +251,7 @@ type SyntaxConstructClassifier
                            
             fastState.Swap (function
                 | FastStage.Data data -> FastStage.Data { data with Spans = spans; SingleSymbolsProjects = [] }
-                | state -> state) 
+                | state -> state)
                 |> ignore
             
             debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: fastState swapped"

@@ -116,12 +116,16 @@ let internal f() = ()
         helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
 
-        // first event is raised when "fast calculatable" spans (without Unused) are ready
+        // first event is raised when "fast calculatable" spans (without Unused symbols, but with Ununed opens) are ready
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             helper.ClassificationSpansOf(buffer, classifier)
             |> Seq.toList
             |> assertEqual
-                [ { Classification = "FSharp.Function"
+                [ { Classification = "FSharp.Unused"
+                    Span = (2, 6) => (2, 11) }
+                  { Classification = "FSharp.Unused"
+                    Span = (3, 6) => (3, 31) } 
+                  { Classification = "FSharp.Function"
                     Span = (4, 14) => (4, 14) } ]
 
         // second event is raised when all spans, including Unused are ready
