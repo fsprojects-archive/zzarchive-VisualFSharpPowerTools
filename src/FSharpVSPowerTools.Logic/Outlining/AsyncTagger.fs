@@ -491,37 +491,6 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
         _asyncBackgroundRequest.Value.CancellationTokenSource = cancellationTokenSource
 
 
-
-
-    /// <summary>
-    /// Try and get the tags promptly from the IAsyncTaggerSource
-    /// </summary>
-    member __.TryGetTagsPrompt (span:SnapshotSpan)( tagList:IEnumerable<ITagSpan<'Tag>> ref ) =
-        _asyncTaggerSource.TryGetTagsPrompt span tagList
-
-    member __.TryGetTagsFromBackgroundDataCache (span:SnapshotSpan) (tagList:IEnumerable<ITagSpan<'Tag>> ref ) =
-        if _tagCache.BackgroundCacheData.IsNone || 
-            _tagCache.BackgroundCacheData.Value.Snapshot <> span.Snapshot then
-            tagList := EmptyTagList :> IEnumerable<ITagSpan<'Tag>>
-            false
-        else
-            let backgroundCacheData = _tagCache.BackgroundCacheData.Value
-            match backgroundCacheData.GetTagCacheState(span) with
-            | TagCacheState.Complete -> tagList := backgroundCacheData.TagList :> IEnumerable<ITagSpan<'Tag>>
-                                        true
-            | TagCacheState.Partial  -> tagList := backgroundCacheData.TagList :> IEnumerable<ITagSpan<'Tag>>
-                                        false
-            | TagCacheState.Empty    -> tagList := EmptyTagList :> IEnumerable<ITagSpan<'Tag>>
-                                        false
-
-    member __.GetTagsFromTrackingDataCache( snapshot:ITextSnapshot ) =
-        if _tagCache.TrackingCacheData.IsNone then
-            EmptyTagList
-        else
-            let trackingCacheData = _tagCache.TrackingCacheData.Value
-            trackingCacheData.GetCachedTags(snapshot)
-
-
     [<UsedInBackgroundThread>]
     static member GetTagsInBackgroundCore
             ( asyncTaggerSource  : IAsyncTaggerSource<'Data, 'Tag>             )
@@ -640,11 +609,6 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
 
 
 
-
-
-
-
-
     // <summary>
     /// Called on the main thread when the request for tags has processed at least a small 
     /// section of the file.  This funtion may be called many times for a single background 
@@ -679,14 +643,47 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
         if self.DidTagsChange span tagList then self.RaiseTagsChanged(span)
 
 
-                
-    member __.AdjustRequestSpan( col:NormalizedSnapshotSpanCollection) =
-        if col.Count > 0 then
-            // Note that we only use the overarching span to track what data we are responsible 
-            // for in a
-            let requestSpan = col.GetOverarchingSpan()
-            _cachedOverarchingRequestSpan <- TaggerUtil.AdjustRequestedSpan (Some _cachedOverarchingRequestSpan)  
-                                                                                requestSpan
+    /// <summary>
+    /// Called when the background request is completed
+    ///
+    /// Called on the main thread
+    /// </summary>
+    member __.OnGetTagsInBackgroundComplete ( reason  : CompleteReason  ) 
+                                            ( channel : Channel         )
+                                            ( cancellationTokenSource : CancellationTokenSource ) =
+
+        if self.IsActiveBackgroundRequest(cancellationTokenSource) = false then () else
+
+        // The request is complete.  Reset the active request information
+        self.CancelAsyncBackgroundRequest()
+
+        // Update the tag cache to indicate we are no longer doing any tracking edits
+        _tagCache <- TagCache( _tagCache.BackgroundCacheData, None )
+
+        // There is one race condition we must deal with here.  It is possible to get requests in the following
+        // order 
+        //
+        //  - F GetTags span1
+        //  - B Process span1 
+        //  - B Complete span1
+        //  - F GetTags span2 (adds to existing queue)
+        //  - F Get notified that background complete
+        //
+        // The good news is any data that is missed will still be in threadedLineRangeStack.  So we just need to
+        // drain this value and re-request the data 
+        //
+        // We own the stack at this point so just access it directly
+        let stack = channel.CurrentStack
+        if stack.IsEmpty = false && reason = CompleteReason.Finished then
+            let list = new List<SnapshotSpan>()
+
+            let rec stackLoop ( stack : ReadOnlyStack<SnapshotLineRange> ) =
+                if stack.IsEmpty then () else
+                self.GetTagsInBackground stack.Value.ExtentIncludingLineBreak
+                stackLoop <| stack.Pop()
+            
+            stackLoop stack
+                        
 
 
     /// <summary>
@@ -710,6 +707,150 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
         if  _asyncBackgroundRequest.IsSome && 
             _asyncBackgroundRequest.Value.Snapshot <> snapshot then
             self.CancelAsyncBackgroundRequest()
+
+
+    member __.GetTagsInBackground( span:SnapshotSpan ) =
+        let synchronizationContext = SynchronizationContext.Current
+        if  synchronizationContext = null then () else
+
+        // The background processing should now be focussed on the specified ITextSnapshot 
+        let snapshot = span.Snapshot
+
+        // In the majority case GetTags(NormalizedSnapshotCollection) drives this function and 
+        // AdjustToSnapshot is already called.  There are other code paths though within AsyncTagger
+        // which call this method.  We need to guard against them here.  
+        self.AdjustToSnapshot(snapshot)
+
+        // Our caching and partitioning of data is all done on a line range
+        // basis.  Just expand the requested SnapshotSpan to the encompassing
+        // SnaphotlineRange
+        let lineRange = SnapshotLineRange.CreateForSpan(span)
+        span' = lineRange.ExtentIncludingLineBreak
+
+        // If we already have a background task running for this ITextSnapshot then just enqueue this 
+        // request onto that existing one.  By this point if the request exists it must be tuned to 
+        // this ITextSnapshot
+        if _asyncBackgroundRequest.IsSome then
+            let asyncBackgroundRequest = _asyncBackgroundRequest.Value
+            if asyncBackgroundRequest.Snapshot = snapshot then
+                
+                //Contract.Requires(asyncBackgroundRequest.Snapshot == snapshot);
+                //    EditorUtilsTrace.TraceInfo("AsyncTagger Background Existing {0} - {1}", lineRange.StartLineNumber, lineRange.LastLineNumber);
+                asyncBackgroundRequest.Channel.WriteNormal(lineRange)
+            else  CancelAsyncBackgroundRequest()
+
+//            Contract.Assert(!_asyncBackgroundRequest.HasValue);
+//            EditorUtilsTrace.TraceInfo("AsyncTagger Background New {0} - {1}", lineRange.StartLineNumber, lineRange.LastLineNumber);
+
+            // Create the data which is needed by the background request
+        let data = _asyncTaggerSource.GetDataForSnapshot(snapshot)
+        let cancellationTokenSource = new CancellationTokenSource()
+        let cancellationToken = cancellationTokenSource.Token
+        let channel = new Channel()
+        channel.WriteNormal(lineRange)
+
+        // If there is an ITextView then make sure it is requested as well.  If the source provides an 
+        // ITextView then it is always prioritized on requests for a new snapshot
+        if _asyncTaggerSource.TextViewOptional.IsSome then
+            let visibleLineRange = _asyncTaggerSource.TextViewOptional.Value.GetVisibleSnapshotLineRange()
+            if visibleLineRange.IsSome then
+                channel.WriteVisibleLines(visibleLineRange.Value)
+
+        // The background thread needs to know the set of values we have already queried 
+        // for.  Send a copy since this data will be mutated from a background thread
+        let localVisited : NormalizedLineRangeCollection =
+            if _tagCache.BackgroundCacheData.IsSome then
+                let backgroundCacheData = _tagCache.BackgroundCacheData.Value
+                // TODO Investigate the necessity of this Contract
+                //Contract.Requires(backgroundCacheData.Snapshot == snapshot);
+                backgroundCacheData.VisitedCollection.Copy()
+            else
+                NormalizedLineRangeCollection()
+
+        // Function which finally gets the tags.  This is run on a background thread and can
+        // throw as the implementor is encouraged to use CancellationToken::ThrowIfCancelled
+        let localAsyncTaggerSource = _asyncTaggerSource
+        let localChunkCount = _chunkCount
+
+        let onComplete (completeReason:CompleteReason) =
+            synchronizationContext.Post 
+                ( ( fun _ -> self.OnGetTagsInBackgroundComplete 
+                                completeReason   channel    cancellationTokenSource ) , None )
+
+        let onProgress (processedLineRane:SnapshotLineRange, tagList:ReadOnlyCollection<ITagSpan<'Tag>>) =
+             synchronizationContext.Post 
+                ( ( fun _ -> self.OnGetTagsInBackgroundProgress
+                                cancellationTokenSource processedLineRane tagList) , None )
+            
+        let getTags() =
+            AsyncTagger.GetTagsInBackgroundCore localAsyncTaggerSource  data
+                                                localChunkCount         channel
+                                                localVisited            cancellationToken
+                                                onComplete              onProgress
+        
+
+                    
+
+        // Create the Task which will handle the actual gathering of data.  If there is a delay
+        // specified use it
+        let localDelay = _asyncTaggerSource.Delay
+
+        let taskAction() =
+                if localDelay.IsSome then Thread.Sleep(localDelay.Value)
+                getTags()
+
+        let task = new Task(taskAction, cancellationToken)
+        _asyncBackgroundRequest <- 
+            Some <| AsyncBackgroundRequest( span.Snapshot           ,
+                                            channel                 ,
+                                            task                    ,
+                                            cancellationTokenSource )
+
+        task.Start();
+    }
+
+
+    /// <summary>
+    /// Try and get the tags promptly from the IAsyncTaggerSource
+    /// </summary>
+    member __.TryGetTagsPrompt (span:SnapshotSpan)( tagList:IEnumerable<ITagSpan<'Tag>> ref ) =
+        _asyncTaggerSource.TryGetTagsPrompt span tagList
+
+    member __.TryGetTagsFromBackgroundDataCache (span:SnapshotSpan) (tagList:IEnumerable<ITagSpan<'Tag>> ref ) =
+        if _tagCache.BackgroundCacheData.IsNone || 
+            _tagCache.BackgroundCacheData.Value.Snapshot <> span.Snapshot then
+            tagList := EmptyTagList :> IEnumerable<ITagSpan<'Tag>>
+            false
+        else
+            let backgroundCacheData = _tagCache.BackgroundCacheData.Value
+            match backgroundCacheData.GetTagCacheState(span) with
+            | TagCacheState.Complete -> tagList := backgroundCacheData.TagList :> IEnumerable<ITagSpan<'Tag>>
+                                        true
+            | TagCacheState.Partial  -> tagList := backgroundCacheData.TagList :> IEnumerable<ITagSpan<'Tag>>
+                                        false
+            | TagCacheState.Empty    -> tagList := EmptyTagList :> IEnumerable<ITagSpan<'Tag>>
+                                        false
+
+    member __.GetTagsFromTrackingDataCache( snapshot:ITextSnapshot ) =
+        if _tagCache.TrackingCacheData.IsNone then
+            EmptyTagList
+        else
+            let trackingCacheData = _tagCache.TrackingCacheData.Value
+            trackingCacheData.GetCachedTags(snapshot)
+
+
+
+
+
+                
+    member __.AdjustRequestSpan( col:NormalizedSnapshotSpanCollection) =
+        if col.Count > 0 then
+            // Note that we only use the overarching span to track what data we are responsible 
+            // for in a
+            let requestSpan = col.GetOverarchingSpan()
+            _cachedOverarchingRequestSpan <- TaggerUtil.AdjustRequestedSpan (Some _cachedOverarchingRequestSpan)  
+                                                                                requestSpan
+
 
 
 
