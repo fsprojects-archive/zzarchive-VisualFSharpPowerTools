@@ -39,10 +39,6 @@ module Extensions =
             Span.FromBounds ( start, finish )
 
 
-
-    
-
-
     type SnapshotSpan with 
         
         member x.GetStartLine() =  x.Start.GetContainingLine()
@@ -59,15 +55,16 @@ module Extensions =
 //        static member CreateOverarching (left:SnapshotSpan) (right:SnapshotSpan) =
 //            //Contract.
 //  
-    type ReadOnlyCollection<'T> with
+//    type ReadOnlyCollection<'T> with
 
-        static member concat<'a>  arg  (roc:ReadOnlyCollection<'a>) = roc.Concat<'a>    arg 
+    type NormalizedSnapshotSpanCollection with
+        
+        member self.GetOverarchingSpan() =
+            let start  = self.[0]
+            let finish = self.[self.Count - 1]
+            SnapshotSpan(start.Start, finish.End)
 
-        static member select<'source,'result>   ( func:'source->'result)  
-                                                ( roc:ReadOnlyCollection<'source>) = 
-            roc.Select    func
-     
-    
+ 
     type ITrackingSpan with
         // TODO in editorUtils this is nullable, so this might not work        
         member x.GetSpanSafe (snapshot:ITextSnapshot) =
@@ -87,20 +84,40 @@ module Extensions =
             else ITextSnapshotLine.GetStartLine(span)
 
 
+    type ITextSnapshot with
+
+        member self.GetExtent ()=
+            SnapshotSpan(self, 0, self.Length)
+
+
+
     type IEnumerable<'T> with
         
         member x.ToReadOnlyCollection<'T>() =
             ReadOnlyCollection<'T>( x.ToList() )
         
-        static member distinct<'a>  arg (ienum:IEnumerable<'a>) = ienum.Distinct  arg 
+        static member distinct<'source>  arg (ienum:IEnumerable<'source>) = ienum.Distinct  arg 
 
-        static member where<'source>    (func:'source -> bool) 
+        static member filter<'source>    (func:'source -> bool) 
                                         (ienum:IEnumerable<'source>) = 
             ienum.Where  func
 
 
-        static member toReadOnlyCollection<'a> (ienum:IEnumerable<'a>) =
-            ReadOnlyCollection<'a>( ienum.ToList() )
+        static member concat<'source>  arg  (ienum:IEnumerable<'source>) = ienum.Concat<'source>    arg 
+
+        static member map<'source,'result>   ( func:'source->'result)  
+                                                (ienum:IEnumerable<'source>)= 
+            ienum.Select    func
+     
+
+
+        static member toHashSet<'source>() (ienum:IEnumerable<'source>) =
+            HashSet<'source> ienum
+
+    
+
+        static member toReadOnlyCollection<'source> (ienum:IEnumerable<'source>) =
+            ReadOnlyCollection<'source>( ienum.ToList() )
 
     type List<'T> with
         member x.ToReadOnlyCollectionShallow<'T>() =
