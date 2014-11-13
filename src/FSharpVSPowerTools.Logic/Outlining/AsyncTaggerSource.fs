@@ -35,7 +35,7 @@ type IAsyncTaggerSource<'Data,'Tag when 'Tag :> ITag> =
 
 [<AbstractClass>]
 type AsyncTaggerSource<'Data, 'Tag when 'Tag :> ITag>
-            (textBuffer:ITextBuffer, ?textView:ITextView) as self =
+            (textBuffer:ITextBuffer, ?textView:ITextView)  =
     
     let changed = Event<EventArgs>()
     

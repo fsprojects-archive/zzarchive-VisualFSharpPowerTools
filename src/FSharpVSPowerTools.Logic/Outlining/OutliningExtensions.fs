@@ -9,6 +9,7 @@ open System.ComponentModel.Composition
 
 open EnvDTE
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Projection
 open Microsoft.VisualStudio.Text.Outlining
 open Microsoft.VisualStudio.Text.Tagging
@@ -26,31 +27,7 @@ open FSharpVSPowerTools
 
 module Extensions =
 
-    type Span with
-        
-//        member left.CreateOverarching (right:Span) =
-//            let start   = Math.Min( left.Start, right.Start )
-//            let finish  = Math.Max( left.End  , right.End   )
-//            Span.FromBounds ( start, finish ) 
 
-        static member CreateOverarching ( left:Span) (right:Span) =
-            let start   = Math.Min( left.Start, right.Start )
-            let finish  = Math.Max( left.End  , right.End   )
-            Span.FromBounds ( start, finish )
-
-
-    type SnapshotSpan with 
-        
-        member x.GetStartLine() =  x.Start.GetContainingLine()
-        member x.GetLastLine () =  x.End.GetContainingLine()
-
-        static member CreateOverarching (left:SnapshotSpan)(right:SnapshotSpan) =
-            if left.Snapshot <> right.Snapshot then
-                failwithf "left Snapshot %A does not equal right Snapshot %A"
-                            left                        right
-            else
-                let span = Span.CreateOverarching (left.Span) (right.Span)
-                SnapshotSpan(left.Snapshot, span);
 
 //        static member CreateOverarching (left:SnapshotSpan) (right:SnapshotSpan) =
 //            //Contract.
@@ -65,6 +42,17 @@ module Extensions =
             SnapshotSpan(start.Start, finish.End)
 
  
+    type ITextView with
+
+        member self.GetVisibleSnapshotLineRange() =
+            if self.InLayout = true then None else
+            let lines       = self.TextViewLines
+            let startLine   = lines.FirstVisibleLine.Start.GetContainingLine().LineNumber
+            let lastLine    = lines.LastVisibleLine.End.GetContainingLine().LineNumber
+            SnapshotLineRange.CreateForLineNumberRange self.TextSnapshot startLine lastLine
+
+
+
     type ITrackingSpan with
         // TODO in editorUtils this is nullable, so this might not work        
         member x.GetSpanSafe (snapshot:ITextSnapshot) =
@@ -86,8 +74,8 @@ module Extensions =
 
     type ITextSnapshot with
 
-        member self.GetExtent ()=
-            SnapshotSpan(self, 0, self.Length)
+        member self.GetExtent () =
+            SnapshotSpan( self, 0, self.Length )
 
 
 
@@ -109,15 +97,19 @@ module Extensions =
                                                 (ienum:IEnumerable<'source>)= 
             ienum.Select    func
      
-
+        static member fold<'state,'elem>    ( folder:'state->'elem->'state)
+                                            ( state :'state )  
+                                            ( ienum:IEnumerable<'elem>    ) = 
+            ienum.Aggregate( state, Func<'state,'elem,'state>(folder))
+     
 
         static member toHashSet<'source>() (ienum:IEnumerable<'source>) =
             HashSet<'source> ienum
 
-    
-
         static member toReadOnlyCollection<'source> (ienum:IEnumerable<'source>) =
             ReadOnlyCollection<'source>( ienum.ToList() )
+
+
 
     type List<'T> with
         member x.ToReadOnlyCollectionShallow<'T>() =

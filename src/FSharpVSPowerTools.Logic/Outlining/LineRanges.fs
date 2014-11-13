@@ -15,9 +15,33 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open System.Windows.Threading
 open FSharpVSPowerTools
-open Extensions
+
+[<AutoOpen>]
+module SpanExtensions =
+    type Span with
+        
+        static member CreateOverarching ( left:Span) (right:Span) =
+            let start   = Math.Min( left.Start, right.Start )
+            let finish  = Math.Max( left.End  , right.End   )
+            Span.FromBounds ( start, finish )
 
 
+    type SnapshotSpan with 
+        
+        member x.GetStartLine() =  x.Start.GetContainingLine()
+        member x.GetLastLine () =  x.End.GetContainingLine()
+
+        static member CreateOverarching (left:SnapshotSpan)(right:SnapshotSpan) =
+            if left.Snapshot <> right.Snapshot then
+                failwithf "left Snapshot %A does not equal right Snapshot %A"
+                            left                        right
+            else
+                let span = Span.CreateOverarching (left.Span) (right.Span)
+                SnapshotSpan(left.Snapshot, span)
+
+/// <summary>
+/// A simple line range 
+/// </summary>
 [<Struct>]
 type LineRange =
     val StartLineNumber   : int
@@ -63,7 +87,10 @@ type LineRange =
             LineRange.CreateFromBounds startLineNumber lastLineNumber
 
 
-
+/// <summary>
+/// Represents a range of lines in an ITextSnapshot.  Different from a SnapshotSpan
+/// because it declaratively supports lines instead of a position range
+/// </summary>
 [<Struct; CustomEquality; NoComparison >]
 type SnapshotLineRange =
     val Snapshot        : ITextSnapshot
@@ -125,15 +152,21 @@ type SnapshotLineRange =
     
     override x.ToString() = sprintf "[{%A}-{%A}] %A" x.StartLineNumber x.LastLineNumber x.Snapshot
  
-
+    /// <summary>
+    /// Create for a single ITextSnapshotLine
+    /// </summary>
     static member CreateForLine (snapshotLine:ITextSnapshotLine)  =
         SnapshotLineRange( snapshotLine.Snapshot, snapshotLine.LineNumber, 1 )
  
-                                      
+    /// <summary>
+    /// Create for the entire ITextSnapshot
+    /// </summary>                                    
     static member CreateForExtent (snapshot:ITextSnapshot) =
         SnapshotLineRange( snapshot, 0, snapshot.LineCount )                                     
  
-
+    /// <summary>
+    /// Create a SnapshotLineRange which includes the 2 lines
+    /// </summary>
     static member CreateForLineRange (startLine:ITextSnapshotLine) (lastLine:ITextSnapshotLine) =
         if startLine.Snapshot <> lastLine.Snapshot then
             failwithf "The snapshot of %A does not equal the snapshot of %A" 
@@ -148,11 +181,30 @@ type SnapshotLineRange =
         let lastLine  = span.GetLastLine()
         SnapshotLineRange.CreateForLineRange startLine lastLine 
 
-
+    /// <summary>
+    /// Create a range for the provided ITextSnapshotLine and with at most count 
+    /// length.  If count pushes the range past the end of the buffer then the 
+    /// span will go to the end of the buffer
+    /// </summary>
     static member CreateForLineAndMaxCount (snapshotLine:ITextSnapshotLine) (count:int) =
         let maxCount = snapshotLine.Snapshot.LineCount - snapshotLine.LineNumber
         let count' = Math.Min(count,maxCount)
         SnapshotLineRange(snapshotLine.Snapshot, snapshotLine.LineNumber, count')
+
+
+
+    /// <summary>
+    /// Create a SnapshotLineRange which includes the 2 lines
+    /// </summary>
+    static member CreateForLineNumberRange (snapshot:ITextSnapshot) (startLine:int) (lastLine:int) =
+        if startLine >= lastLine then
+            failwithf "The startline[%A] cannot be greater than the endline[%A]" 
+                            startLine                               lastLine
+        elif startLine >= snapshot.LineCount || lastLine >= snapshot.LineCount then None else
+        Some <| SnapshotLineRange(snapshot, startLine, (lastLine - startLine) + 1)
+
+
+
 
 
 /// <summary>
@@ -163,7 +215,6 @@ type SnapshotLineRange =
 /// For example if both ranges 1-3 and 2-5 are visited then the collection will only record
 /// that 1-5 is visited. 
 /// </summary>
-
 type NormalizedLineRangeCollection( visited:IEnumerable<LineRange>) as self =
     
     let list = List<LineRange>()
