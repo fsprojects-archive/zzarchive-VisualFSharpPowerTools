@@ -22,9 +22,12 @@ type Category =
     | Other
     override x.ToString() = sprintf "%A" x
 
-type CategorizedColumnSpan =
+type CategorizedColumnSpan<'a> =
     { Category: Category
-      WordSpan: WordSpan }
+      WordSpan: WordSpan
+      /// Snapshot for which the span was created.
+      /// None if the right Snapshot is maintained separatly
+      Snapshot: 'a option }
 
 module private QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
@@ -37,7 +40,8 @@ module private QuotationCategorizer =
                 seq [ { Category = Category.Quotation
                         WordSpan = { Line = r.StartLine
                                      StartCol = r.StartColumn
-                                     EndCol = r.EndColumn }} ]
+                                     EndCol = r.EndColumn }
+                        Snapshot = None } ]
             else
                 [r.StartLine..r.EndLine]
                 |> Seq.choose (fun line ->
@@ -70,7 +74,8 @@ module private QuotationCategorizer =
                         Some { Category = Category.Quotation
                                WordSpan = { Line = line
                                             StartCol = minCol
-                                            EndCol = maxCol }}))
+                                            EndCol = maxCol }
+                               Snapshot = None }))
         |> Seq.concat
 
     let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
@@ -107,7 +112,8 @@ module private StringCategorizers =
                         WordSpan = 
                           { Line = line
                             StartCol = startColumn + m.Index
-                            EndCol = startColumn + m.Index + m.Length }}
+                            EndCol = startColumn + m.Index + m.Length }
+                        Snapshot = None }
                   category :: acc  
                 ) [])
         |> Seq.concat 
@@ -330,7 +336,8 @@ module SourceCodeClassifier =
                     else Some { Category = 
                                     if not symbolUse.IsUsed then Category.Unused 
                                     else getCategory symbolUse.SymbolUse
-                                WordSpan = span' }
+                                WordSpan = span' 
+                                Snapshot = None }
         
                 categorizedSpan)
             |> Seq.groupBy (fun span -> span.WordSpan)
@@ -428,7 +435,8 @@ module SourceCodeClassifier =
                 { Category = Category.Unused
                   WordSpan = { Line = decl.DeclarationRange.StartLine 
                                StartCol = decl.DeclarationRange.StartColumn
-                               EndCol = decl.DeclarationRange.EndColumn }})
+                               EndCol = decl.DeclarationRange.EndColumn }
+                  Snapshot = None })
     
         //debug "[SourceCodeClassifier] AST: %A" ast
 

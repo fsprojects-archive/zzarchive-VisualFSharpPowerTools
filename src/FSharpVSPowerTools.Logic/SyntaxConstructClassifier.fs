@@ -20,8 +20,7 @@ type private CheckingProject =
 [<NoComparison>]
 type private FastStageData =
     { Snapshot: ITextSnapshot
-      Spans: CategorizedColumnSpan[]
-      SymbolUses: SymbolUse[]
+      Spans: CategorizedColumnSpan<ITextSnapshot>[]
       SingleSymbolsProjects: CheckingProject list }
 
 [<NoComparison>]
@@ -33,7 +32,7 @@ type private FastStage =
 [<NoComparison>]
 type private SlowStageData =
     { Snapshot: ITextSnapshot 
-      UnusedSpans: Map<WordSpan, CategorizedColumnSpan>
+      UnusedSpans: Map<WordSpan, CategorizedColumnSpan<ITextSnapshot>>
       IsUpdating: bool }
 
 [<NoComparison>]
@@ -143,12 +142,23 @@ type SyntaxConstructClassifier
     }
 
     let updateUnusedDeclarations() = 
-        let worker (symbolsUses, project, snapshot) =
+        let worker (project, snapshot) =
             asyncMaybe {    
                 let pf = Profiler()
                 debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
+                
+                let! symbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+                        vsLanguageService.GetAllUsesOfAllSymbolsInFile(
+                            snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf) |> liftAsync
+                
                 let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
-                let! symbolsUses = vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf) |> liftAsync
+                
+                let! symbolsUses =
+                    if includeUnusedReferences() then
+                        vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf) 
+                    else async { return symbolsUses }
+                    |> liftAsync 
+
                 let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)     
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
                 
@@ -168,7 +178,10 @@ type SyntaxConstructClassifier
                 let notUsedSpans =
                     spans
                     |> Array.filter (fun s -> s.Category = Category.Unused)
-                    |> Array.map (fun s -> s.WordSpan, s)
+                    |> Array.map (fun s -> 
+                        s.WordSpan, 
+                        // save current snapshot in order to create a proper SnapshotSpan from it
+                        { s with Snapshot = Some snapshot })
                     |> Map.ofArray
                                
                 fastState.Swap (function
@@ -189,7 +202,7 @@ type SyntaxConstructClassifier
             match fastState.Value, slowState.Value with
             | (FastStage.NoData | FastStage.Updating _), _ -> ()
             | _, SlowStage.NoData (isUpdating = true) -> ()
-            | FastStage.Data fastData, slowStage ->
+            | FastStage.Data _, slowStage ->
                 match slowStage with
                 | SlowStage.Data { IsUpdating = true } -> ()
                 | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> ()
@@ -201,7 +214,7 @@ type SyntaxConstructClassifier
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
 
                     let cancelToken = newCancellationToken slowStageCancellationToken
-                    Async.StartInThreadPoolSafe(worker (fastData.SymbolUses, project, snapshot), cancelToken.Token)
+                    Async.StartInThreadPoolSafe(worker (project, snapshot), cancelToken.Token)
         | _ -> ()
 
     let updateSyntaxConstructClassifiers force =
@@ -275,7 +288,6 @@ type SyntaxConstructClassifier
                         FastStage.Data 
                             { Snapshot = snapshot
                               Spans = spans
-                              SymbolUses = allSymbolsUses
                               SingleSymbolsProjects = singleSymbolsProjects }) |> ignore  
 
                     triggerClassificationChanged "UpdateSyntaxConstructClassifiers"
@@ -311,7 +323,7 @@ type SyntaxConstructClassifier
     let docEventListener = 
         new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, fun _ -> updateSyntaxConstructClassifiers false)
 
-    do if includeUnusedReferences() then
+    do if isSlowStageEnabled() then
         vsLanguageService.Checker.ProjectChecked.Add(fun projectFileName ->
             match includeUnusedReferences(), fastState.Value with
             | true, FastStage.Data { SingleSymbolsProjects = [] } -> ()
@@ -322,9 +334,15 @@ type SyntaxConstructClassifier
                     | matched, rest ->
                         (matched |> List.map (fun p -> { p with Checked = true })) @ rest
                 fastState.Swap (fun _ -> FastStage.Data { fastData with SingleSymbolsProjects = projects }) |> ignore
+                
                 match projects |> List.tryFind (fun p -> not p.Checked) with
-                | Some { Options = opts } -> vsLanguageService.StartBackgroundCompile opts
-                | None -> updateUnusedDeclarations()
+                | Some { Options = opts } -> 
+                    // there is at least one yet unchecked project, start compilation on it
+                    vsLanguageService.StartBackgroundCompile opts
+                | None -> 
+                    // all the needed projects have been checked in background, let's calculate 
+                    // Slow Stage (unused symbols and opens)
+                    updateUnusedDeclarations()
             | _ -> ()
         )
 
@@ -343,14 +361,15 @@ type SyntaxConstructClassifier
                     maybe {
                         let! clType = getClassificationType columnSpan.Category
                         // Create a span on the original snapshot
-                        let! span = fromRange snapshot (columnSpan.WordSpan.ToRange())
+                        let origSnapshot = columnSpan.Snapshot |> Option.getOrElse snapshot
+                        let! span = fromRange origSnapshot (columnSpan.WordSpan.ToRange())
                         // Translate the span to the new snapshot
                         return clType, span.TranslateTo(newSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
                     })
                 |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
                 |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))
                 |> Seq.toArray
-            spans
+            spans 
         | FastStage.NoData -> 
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(textDocument.FilePath)) then
