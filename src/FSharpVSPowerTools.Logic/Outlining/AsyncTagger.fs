@@ -909,4 +909,9 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
         allTags'.ToReadOnlyCollection()
 
 
+    member __.Dispose() =
+        _subscriptions.Select( fun (x:IDisposable) -> x.Dispose()) |> ignore
+        _subscriptions.Clear()
 
+    interface IDisposable with
+        member __.Dispose() = self.Dispose()
