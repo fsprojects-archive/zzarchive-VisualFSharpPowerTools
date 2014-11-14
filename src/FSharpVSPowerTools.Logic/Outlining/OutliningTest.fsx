@@ -108,9 +108,9 @@ getBlocks testSeq |> Seq.iter( fun x -> printseq x )
 printfn "testSeq"
 printseq testSeq
 ;;
-printfn "\ntakeBlock"
-takeBlock testSeq |> Seq.iter ( fun x ->  printf "%A " x )
-printfn "testSeq"
-printseq testSeq
+//printfn "\ntakeBlock"
+//takeBlock testSeq |> Seq.iter ( fun x ->  printf "%A " x )
+//printfn "testSeq"
+//printseq testSeq
 
 

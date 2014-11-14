@@ -20,9 +20,7 @@ open System.Threading.Tasks
 open System.Collections.ObjectModel
 open FSharpVSPowerTools.Outlining.Extensions
 
-
- type Break = unit
-
+  
 
 [<Struct>][<NoComparison>] 
 type TrackingCacheData<'Tag when 'Tag :> ITag> =
@@ -184,7 +182,7 @@ type TagCache<'Tag when 'Tag :> ITag> =
         with get() =
             x.BackgroundCacheData.IsNone && x.TrackingCacheData.IsNone
 
-    static member Empty = TagCache(None,None)
+    static member Empty = TagCache<'Tag>(None,None)
 
 
 
@@ -314,7 +312,7 @@ type CompleteReason = Finished | Cancelled | Error
 
 
 type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
-    ( asyncTaggerSource:IAsyncTaggerSource<'Data, 'Tag> ) as self =
+    ( asyncTaggerSource:IAsyncTaggerSource<'Data, 'Tag>) as self =
 
     let _subscriptions     = List<IDisposable>()
     let _asyncTaggerSource = asyncTaggerSource
@@ -404,7 +402,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
 
 
     member __.RaiseTagsChanged(span:SnapshotSpan) =
-        let lineRange = SnapshotLineRange.CreateForSpan(span);
+        //let lineRange = SnapshotLineRange.CreateForSpan(span);
         //EditorUtilsTrace.TraceInfo("AsyncTagger::RaiseTagsChanged {0} - {1}", lineRange.StartLineNumber, lineRange.LastLineNumber);
 
         _tagsChanged.Trigger( SnapshotSpanEventArgs(span))
@@ -416,7 +414,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
     /// new data is the same as the old hence we don't need to produce any changed information
     /// to the buffer
     /// </summary>
-    member __.DidTagsChange (span:SnapshotSpan) (tagList:ReadOnlyCollection<ITagSpan<'Tag>>) =
+    member  __.DidTagsChange (span:SnapshotSpan) (tagList:ReadOnlyCollection<ITagSpan<'Tag>> ) =
         if  _tagCache.TrackingCacheData.IsNone || 
             not <| _tagCache.TrackingCacheData.Value.ContainsCachedTags(span) then
             // Nothing in the tracking cache so it changed if there is anything in the new
@@ -438,7 +436,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
     /// If the Layout changes while we are in the middle of getting tags we want to 
     /// prioritize the new set of visible lines.
     /// </summary>
-    member __.OnLayoutChanged args =
+    member __.OnLayoutChanged _ =
         if _asyncBackgroundRequest.IsNone || _asyncTaggerSource.TextViewOptional.IsNone then () else
 
         let visibleLineRange = _asyncTaggerSource.TextViewOptional.Value.GetVisibleSnapshotLineRange()
@@ -461,7 +459,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
                 if asyncBackgroundRequest.CancellationTokenSource.IsCancellationRequested = false then
                     asyncBackgroundRequest.CancellationTokenSource.Cancel()
             with
-            | :? _ -> ()
+            |  exn -> ()
             _asyncBackgroundRequest <- None
 
 
@@ -469,9 +467,9 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
     /// Called when the IAsyncTaggerSource raises a Changed event.  Clear out the 
     /// cache, pass on the event to the ITagger and wait for the next request
     /// </summary>
-    member __.OnAsyncTaggerSourceChanged args =
+    member __.OnAsyncTaggerSourceChanged _ =
         // Clear out the cache.  It's no longer valid.
-        _tagCache <- TagCache<'Tag>.Empty
+        _tagCache <- TagCache<_>.Empty
         self.CancelAsyncBackgroundRequest()
 
         // Now if we've previously had a SnapshotSpan requested via GetTags go ahead
@@ -493,7 +491,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
 
     [<UsedInBackgroundThread>]
     static member GetTagsInBackgroundCore
-            ( asyncTaggerSource  : IAsyncTaggerSource<'Data, 'Tag>             )
+            ( asyncTaggerSource  : IAsyncTaggerSource<_, _>             )
             ( data               : 'Data                                       )
             ( chunkCount         : int                                         )
             ( channel            : Channel                                     )
@@ -555,7 +553,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
                         asyncTaggerSource.GetTagsInBackground data tagLineRange'.ExtentIncludingLineBreak cancellationToken
                             :?> ReadOnlyCollection<ITagSpan<'Tag>>
                     with
-                    | :? _ -> ReadOnlyCollection( List<ITagSpan<'Tag>>() ) 
+                    |  exn -> ReadOnlyCollection( List<ITagSpan<'Tag>>() ) 
                                // :> IReadOnlyCollection<ITagSpan<'Tag>>
                         // Ignore exceptions that are thrown by IAsyncTaggerSource.  If the tagger threw then we consider
                         // the tags to be nothing for this span.  
@@ -599,7 +597,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
                 // Don't report cancellation exceptions.  These are thrown during cancellation for fast
                 // break from the operation.  It's really a control flow mechanism
                 CompleteReason.Cancelled
-            | :? _ ->
+            | _ ->
                 // Handle cancellation exceptions and everything else.  Don't want an errant 
                 // exception thrown by the IAsyncTaggerSource to crash the process
 //                EditorUtilsTrace.TraceInfo("AsyncTagger Exception in background processing {0}", e);
@@ -609,7 +607,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
 
 
 
-    // <summary>
+    /// <summary>
     /// Called on the main thread when the request for tags has processed at least a small 
     /// section of the file.  This funtion may be called many times for a single background 
     /// request
@@ -618,11 +616,14 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
     /// </summary>
     member __.OnGetTagsInBackgroundProgress ( cancellationTokenSource:CancellationTokenSource)
                                             ( lineRange: SnapshotLineRange ) 
+                                         //   ( tagList: ReadOnlyCollection<ITagSpan<ITag>>) =
                                             ( tagList: ReadOnlyCollection<ITagSpan<'Tag>> ) =
+                                           // ( tagList: ReadOnlyCollection<ITagSpan<'Tag>> when 'Tag :> ITag) =
+                                           //( tagList: ReadOnlyCollection<_> ) =
         if self.IsActiveBackgroundRequest(cancellationTokenSource) = false then ()
 
         // Merge the existing background data if it's present and on the same ITextSnapshot
-        let newData =
+        let newData  =
             if  _tagCache.BackgroundCacheData.IsSome && 
                 _tagCache.BackgroundCacheData.Value.Snapshot = lineRange.Snapshot then
                 let oldData = _tagCache.BackgroundCacheData.Value
@@ -640,7 +641,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
         // TagsChanged again for that SnapshotSpan will cause needless work to ocur (and potentially
         // more layouts
         let span = lineRange.ExtentIncludingLineBreak
-        if self.DidTagsChange span tagList then self.RaiseTagsChanged(span)
+        if self.DidTagsChange span (tagList) then self.RaiseTagsChanged(span)
 
 
     /// <summary>
@@ -725,7 +726,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
         // basis.  Just expand the requested SnapshotSpan to the encompassing
         // SnaphotlineRange
         let lineRange = SnapshotLineRange.CreateForSpan(span)
-        span' = lineRange.ExtentIncludingLineBreak
+        let span = lineRange.ExtentIncludingLineBreak
 
         // If we already have a background task running for this ITextSnapshot then just enqueue this 
         // request onto that existing one.  By this point if the request exists it must be tuned to 
@@ -737,7 +738,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
                 //Contract.Requires(asyncBackgroundRequest.Snapshot == snapshot);
                 //    EditorUtilsTrace.TraceInfo("AsyncTagger Background Existing {0} - {1}", lineRange.StartLineNumber, lineRange.LastLineNumber);
                 asyncBackgroundRequest.Channel.WriteNormal(lineRange)
-            else  CancelAsyncBackgroundRequest()
+            else  self.CancelAsyncBackgroundRequest()
 
 //            Contract.Assert(!_asyncBackgroundRequest.HasValue);
 //            EditorUtilsTrace.TraceInfo("AsyncTagger Background New {0} - {1}", lineRange.StartLineNumber, lineRange.LastLineNumber);
@@ -777,7 +778,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
                 ( ( fun _ -> self.OnGetTagsInBackgroundComplete 
                                 completeReason   channel    cancellationTokenSource ) , None )
 
-        let onProgress (processedLineRane:SnapshotLineRange, tagList:ReadOnlyCollection<ITagSpan<'Tag>>) =
+        let onProgress (processedLineRane:SnapshotLineRange) (tagList:ReadOnlyCollection<ITagSpan<'Tag>>) =
              synchronizationContext.Post 
                 ( ( fun _ -> self.OnGetTagsInBackgroundProgress
                                 cancellationTokenSource processedLineRane tagList) , None )
@@ -806,8 +807,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
                                             task                    ,
                                             cancellationTokenSource )
 
-        task.Start();
-    }
+        task.Start()
 
 
     /// <summary>
@@ -848,39 +848,43 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
             // Note that we only use the overarching span to track what data we are responsible 
             // for in a
             let requestSpan = col.GetOverarchingSpan()
-            _cachedOverarchingRequestSpan <- TaggerUtil.AdjustRequestedSpan (Some _cachedOverarchingRequestSpan)  
-                                                                                requestSpan
+            _cachedOverarchingRequestSpan<- TaggerUtil.AdjustRequestedSpan( Some _cachedOverarchingRequestSpan)  
+                                                                            requestSpan
 
 
 
 
     member __.GetTags(span:SnapshotSpan) =
-        let lineRange = SnapshotLineRange.CreateForSpan(span);
+       // let lineRange = SnapshotLineRange.CreateForSpan(span);
         //EditorUtilsTrace.TraceInfo("AsyncTagger::GetTags {0} - {1}", lineRange.StartLineNumber, lineRange.LastLineNumber);
 
         // First try and see if the tagger can provide prompt data.  We want to avoid 
         // creating Task<T> instances if possible.  
-        let tagList = EmptyTagList // IEnumerable<ITagSpan<TTag>>
-        if  not <| self.TryGetTagsPrompt(span, tagList) &&
-            not <| self.TryGetTagsFromBackgroundDataCache(span, tagList) then
-            // The request couldn't be fully satisfied from the cache or prompt data so
-            // we will request the data in the background thread
-            self.GetTagsInBackground(span)
+        
+        // ref to store the result from TryGetTagsPromt
+        let cacheList:ReadOnlyCollection<ITagSpan<'Tag>> ref = ref EmptyTagList 
+        // TODO - this seems like some very risky mutation business 
+        let tryPrompt, cacheList = self.TryGetTagsPrompt span  (!cacheList :> IEnumerable<ITagSpan<'Tag>> |> ref)
+        let tryBackground = self.TryGetTagsFromBackgroundDataCache span cacheList
+        let tagList = 
+            if  tryPrompt = true || tryBackground = true then 
+                !cacheList |> IEnumerable.toReadOnlyCollection
+            else
+                // The request couldn't be fully satisfied from the cache or prompt data so
+                // we will request the data in the background thread
+                self.GetTagsInBackground(span)
 
-            // Since the request couldn't be fully fulfilled by the cache we augment the returned data
-            // with our tracking data
-            let trackingTagList = GetTagsFromTrackingDataCache span.Snapshot
-            let tagList' = tagList == null
-                ? trackingTagList
-                : tagList.Concat(trackingTagList);
+                // Since the request couldn't be fully fulfilled by the cache we augment the returned data
+                // with our tracking data
+                let trackingTagList = self.GetTagsFromTrackingDataCache span.Snapshot
+                trackingTagList 
 
         // Now filter the set of returned ITagSpan values to those which are part of the 
         // requested NormalizedSnapshotSpanCollection.  The cache lookups don't dig down and 
         // instead return all available tags.  We filter down the collection here to what's 
         // necessary.
-        tagList.Where(tagSpan => tagSpan.Span.IntersectsWith(span));
-    }
-
+        tagList |> IEnumerable<ITagSpan<'Tag>>.filter (fun tagSpan -> tagSpan.Span.IntersectsWith(span))
+                |> IEnumerable.toReadOnlyCollection
 
 
 

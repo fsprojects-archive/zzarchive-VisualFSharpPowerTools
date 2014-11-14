@@ -103,7 +103,7 @@ module Extensions =
             ienum.Aggregate( state, Func<'state,'elem,'state>(folder))
      
 
-        static member toHashSet<'source>() (ienum:IEnumerable<'source>) =
+        static member toHashSet() (ienum:IEnumerable<'source>) =
             HashSet<'source> ienum
 
         static member toReadOnlyCollection<'source> (ienum:IEnumerable<'source>) =

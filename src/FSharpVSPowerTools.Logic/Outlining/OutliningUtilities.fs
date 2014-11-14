@@ -139,5 +139,7 @@ type TaggerUtil =
 
 
 module Constants =
+    let private x = 22
+    let inline xd s = 33 + s
     [<Literal>]
     let DefaultAsyncDelay = 100       
