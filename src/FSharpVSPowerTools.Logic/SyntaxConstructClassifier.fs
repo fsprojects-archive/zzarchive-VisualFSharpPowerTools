@@ -323,28 +323,29 @@ type SyntaxConstructClassifier
     let docEventListener = 
         new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, fun _ -> updateSyntaxConstructClassifiers false)
 
+    let onProjectChecked = Handler (fun _ projectFileName ->
+        match includeUnusedReferences(), fastState.Value with
+        | true, FastStage.Data { SingleSymbolsProjects = [] } -> ()
+        | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->
+            let projects =
+                match projects |> List.partition (fun p -> p.Options.ProjectFileName = projectFileName) with
+                | [], rest -> rest
+                | matched, rest ->
+                    (matched |> List.map (fun p -> { p with Checked = true })) @ rest
+            fastState.Swap (fun _ -> FastStage.Data { fastData with SingleSymbolsProjects = projects }) |> ignore
+            
+            match projects |> List.tryFind (fun p -> not p.Checked) with
+            | Some { Options = opts } -> 
+                // there is at least one yet unchecked project, start compilation on it
+                vsLanguageService.StartBackgroundCompile opts
+            | None -> 
+                // all the needed projects have been checked in background, let's calculate 
+                // Slow Stage (unused symbols and opens)
+                updateUnusedDeclarations()
+        | _ -> ())
+        
     do if isSlowStageEnabled() then
-        vsLanguageService.Checker.ProjectChecked.Add(fun projectFileName ->
-            match includeUnusedReferences(), fastState.Value with
-            | true, FastStage.Data { SingleSymbolsProjects = [] } -> ()
-            | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->
-                let projects =
-                    match projects |> List.partition (fun p -> p.Options.ProjectFileName = projectFileName) with
-                    | [], rest -> rest
-                    | matched, rest ->
-                        (matched |> List.map (fun p -> { p with Checked = true })) @ rest
-                fastState.Swap (fun _ -> FastStage.Data { fastData with SingleSymbolsProjects = projects }) |> ignore
-                
-                match projects |> List.tryFind (fun p -> not p.Checked) with
-                | Some { Options = opts } -> 
-                    // there is at least one yet unchecked project, start compilation on it
-                    vsLanguageService.StartBackgroundCompile opts
-                | None -> 
-                    // all the needed projects have been checked in background, let's calculate 
-                    // Slow Stage (unused symbols and opens)
-                    updateUnusedDeclarations()
-            | _ -> ()
-        )
+        vsLanguageService.Checker.ProjectChecked.AddHandler onProjectChecked
 
     let getClassificationSpans (newSnapshotSpan: SnapshotSpan) =
         match fastState.Value with
@@ -388,6 +389,8 @@ type SyntaxConstructClassifier
 
     interface IDisposable with
         member __.Dispose() = 
+            if isSlowStageEnabled() then
+                vsLanguageService.Checker.ProjectChecked.RemoveHandler onProjectChecked    
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
             fastStageCancellationToken.Value
             |> Option.iter (fun token -> 
