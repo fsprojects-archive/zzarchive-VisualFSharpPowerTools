@@ -54,249 +54,6 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <ItemGroup>
-    <None Include="paket.references" />
-    <Compile Include="AssemblyInfo.fs">
-    </Compile>
-    <Resource Include="CommonResources.xaml">
-    </Resource>
-    <Resource Include="RenameDialog.xaml">
-    </Resource>
-    <Resource Include="FolderNameDialog.xaml">
-    </Resource>
-    <Resource Include="MoveToFolderDialog.xaml">
-    </Resource>
-    <Compile Include="Resource.fs">
-      <Link>Common/Resource.fs</Link>
-    </Compile>
-    <Compile Include="Constants.fs">
-      <Link>Common/Constants.fs</Link>
-    </Compile>
-    <Compile Include="Setting.fs">
-      <Link>Common/Setting.fs</Link>
-    </Compile>
-    <Compile Include="Logger.fs">
-      <Link>Common/Logger.fs</Link>
-    </Compile>
-    <Compile Include="VSUtils.fs">
-      <Link>Common/VSUtils.fs</Link>
-    </Compile>
-    <Compile Include="VisualStudioVersion.fs">
-      <Link>Common/VisualStudioVersion.fs</Link>
-    </Compile>
-    <Compile Include="ThemeManager.fs">
-      <Link>Common/ThemeManager.fs</Link>
-    </Compile>
-    <Compile Include="Status.fs">
-      <Link>Common/Status.fs</Link>
-    </Compile>
-    <Compile Include="CommonResources.xaml.fs">
-      <Link>Common/CommonResources.xaml.fs</Link>
-    </Compile>
-    <Compile Include="ProjectSystem.fs">
-      <Link>ProjectSystem/ProjectSystem.fs</Link>
-    </Compile>
-    <Compile Include="OpenDocumentsTracker.fs">
-      <Link>ProjectSystem/OpenDocumentsTracker.fs</Link>
-    </Compile>
-    <Compile Include="FileSystem.fs">
-      <Link>ProjectSystem/FileSystem.fs</Link>
-    </Compile>
-    <Compile Include="VSLanguageService.fs">
-      <Link>ProjectSystem/VSLanguageService.fs</Link>
-    </Compile>
-    <Compile Include="SolutionBuildEventListener.fs">
-      <Link>ProjectSystem/SolutionBuildEventListener.fs</Link>
-    </Compile>
-    <Compile Include="ProjectProvider.fs">
-      <Link>ProjectSystem/ProjectProvider.fs</Link>
-    </Compile>
-    <Compile Include="ProjectFactory.fs">
-      <Link>ProjectSystem/ProjectFactory.fs</Link>
-    </Compile>
-    <Compile Include="ActiveViewsRegistratorListener.fs">
-      <Link>Navigation/ActiveViewsRegistratorListener.fs</Link>
-    </Compile>
-    <Compile Include="NavigateToItem.fs">
-      <Link>Navigation/NavigateToItem.fs</Link>
-    </Compile>
-    <Compile Include="GoToDefinitionFilter.fs">
-      <Link>Navigation/GoToDefinitionFilter.fs</Link>
-    </Compile>
-    <Compile Include="CodeFormattingServices.fs">
-      <Link>Formatting/CodeFormattingServices.fs</Link>
-    </Compile>
-    <Compile Include="CodeFormattingCommands.fs">
-      <Link>Formatting/CodeFormattingCommands.fs</Link>
-    </Compile>
-    <Compile Include="FormatDocumentCommand.fs">
-      <Link>Formatting/FormatDocumentCommand.fs</Link>
-    </Compile>
-    <Compile Include="FormatSelectionCommand.fs">
-      <Link>Formatting/FormatSelectionCommand.fs</Link>
-    </Compile>
-    <Compile Include="DepthTagger.fs">
-      <Link>Coloring/DepthTagger.fs</Link>
-    </Compile>
-    <Compile Include="DepthAdornmentManager.fs">
-      <Link>Coloring/DepthAdornmentManager.fs</Link>
-    </Compile>
-    <Compile Include="SyntaxConstructClassifier.fs">
-      <Link>Coloring/SyntaxConstructClassifier.fs</Link>
-    </Compile>
-    <Compile Include="UnusedDeclarationMargin.fs">
-      <Link>Coloring/UnusedDeclarationMargin.fs</Link>
-    </Compile>
-    <Compile Include="HighlightUsageTagger.fs">
-      <Link>Symbol/HighlightUsageTagger.fs</Link>
-    </Compile>
-    <Compile Include="RenameDialog.fs">
-      <Link>Symbol/RenameDialog.fs</Link>
-    </Compile>
-    <Compile Include="RenameCommandFilter.fs">
-      <Link>Symbol/RenameCommandFilter.fs</Link>
-    </Compile>
-    <Compile Include="LibraryNode.fs">
-      <Link>Symbol/LibraryNode.fs</Link>
-    </Compile>
-    <Compile Include="Library.fs">
-      <Link>Symbol/Library.fs</Link>
-    </Compile>
-    <Compile Include="FindReferencesFilter.fs">
-      <Link>Symbol/FindReferencesFilter.fs</Link>
-    </Compile>
-    <Compile Include="FolderNameDialog.fs">
-      <Link>FolderCommand/FolderNameDialog.fs</Link>
-    </Compile>
-    <Compile Include="MoveToFolderDialog.fs">
-      <Link>FolderCommand/MoveToFolderDialog.fs</Link>
-    </Compile>
-    <Compile Include="FolderMenuUI.fs">
-      <Link>FolderCommand/FolderMenuUI.fs</Link>
-    </Compile>
-    <Compile Include="FolderMenuCommands.fs">
-      <Link>FolderCommand/FolderMenuCommands.fs</Link>
-    </Compile>
-    <Compile Include="CodeGenerationService.fs">
-      <Link>CodeGeneration/CodeGenerationService.fs</Link>
-    </Compile>
-    <Compile Include="XmlDocFilter.fs">
-      <Link>CodeGeneration/XmlDocFilter.fs</Link>
-    </Compile>
-    <Compile Include="ImplementInterfaceSmartTagger.fs">
-      <Link>CodeGeneration/ImplementInterfaceSmartTagger.fs</Link>
-    </Compile>
-    <Compile Include="RecordStubGeneratorSmartTagger.fs">
-      <Link>CodeGeneration/RecordStubGeneratorSmartTagger.fs</Link>
-    </Compile>
-    <Compile Include="UnionPatternMatchCaseGeneratorSmartTagger.fs">
-      <Link>CodeGeneration/UnionPatternMatchCaseGeneratorSmartTagger.fs</Link>
-    </Compile>
-    <Compile Include="ResolveUnopenedNamespaceTagger.fs">
-      <Link>CodeGeneration/ResolveUnopenedNamespaceTagger.fs</Link>
-    </Compile>
-    <Compile Include="TaskListCommentOptions.fs">
-      <Link>TaskList/TaskListCommentOptions.fs</Link>
-    </Compile>
-    <Compile Include="TaskListManager.fs">
-      <Link>TaskList/TaskListManager.fs</Link>
-    </Compile>
-    <Compile Include="CrossSolutionTaskListCommentManager.fs">
-      <Link>TaskList/CrossSolutionTaskListCommentManager.fs</Link>
-    </Compile>
-    <Compile Include="TaskListCommentFilter.fs">
-      <Link>TaskList/TaskListCommentFilter.fs</Link>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    </Reference>
-    <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.CoreUtility">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Editor">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Editor.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Shell.11.0">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Shell.11.0.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Shell.Immutable.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Shell.Interop.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Shell.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Shell.Interop.9.0, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Text.Data">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.Data.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Text.Logic">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.Logic.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Text.UI">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.UI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.TextManager.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Threading" />
-    <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Design" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="UIAutomationTypes" />
-    <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    </Reference>
-    <Reference Include="mscorlib" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
-      <Name>FSharpVSPowerTools.Core</Name>
-      <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-  </ItemGroup>
-  <PropertyGroup>
-    <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
-  </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework'">
       <Choose>
@@ -933,4 +690,247 @@
       </ItemGroup>
     </Otherwise>
   </Choose>
+  <ItemGroup>
+    <None Include="paket.references" />
+    <Compile Include="AssemblyInfo.fs">
+    </Compile>
+    <Resource Include="CommonResources.xaml">
+    </Resource>
+    <Resource Include="RenameDialog.xaml">
+    </Resource>
+    <Resource Include="FolderNameDialog.xaml">
+    </Resource>
+    <Resource Include="MoveToFolderDialog.xaml">
+    </Resource>
+    <Compile Include="Resource.fs">
+      <Link>Common/Resource.fs</Link>
+    </Compile>
+    <Compile Include="Constants.fs">
+      <Link>Common/Constants.fs</Link>
+    </Compile>
+    <Compile Include="Setting.fs">
+      <Link>Common/Setting.fs</Link>
+    </Compile>
+    <Compile Include="Logger.fs">
+      <Link>Common/Logger.fs</Link>
+    </Compile>
+    <Compile Include="VSUtils.fs">
+      <Link>Common/VSUtils.fs</Link>
+    </Compile>
+    <Compile Include="VisualStudioVersion.fs">
+      <Link>Common/VisualStudioVersion.fs</Link>
+    </Compile>
+    <Compile Include="ThemeManager.fs">
+      <Link>Common/ThemeManager.fs</Link>
+    </Compile>
+    <Compile Include="Status.fs">
+      <Link>Common/Status.fs</Link>
+    </Compile>
+    <Compile Include="CommonResources.xaml.fs">
+      <Link>Common/CommonResources.xaml.fs</Link>
+    </Compile>
+    <Compile Include="ProjectSystem.fs">
+      <Link>ProjectSystem/ProjectSystem.fs</Link>
+    </Compile>
+    <Compile Include="OpenDocumentsTracker.fs">
+      <Link>ProjectSystem/OpenDocumentsTracker.fs</Link>
+    </Compile>
+    <Compile Include="FileSystem.fs">
+      <Link>ProjectSystem/FileSystem.fs</Link>
+    </Compile>
+    <Compile Include="VSLanguageService.fs">
+      <Link>ProjectSystem/VSLanguageService.fs</Link>
+    </Compile>
+    <Compile Include="SolutionBuildEventListener.fs">
+      <Link>ProjectSystem/SolutionBuildEventListener.fs</Link>
+    </Compile>
+    <Compile Include="ProjectProvider.fs">
+      <Link>ProjectSystem/ProjectProvider.fs</Link>
+    </Compile>
+    <Compile Include="ProjectFactory.fs">
+      <Link>ProjectSystem/ProjectFactory.fs</Link>
+    </Compile>
+    <Compile Include="ActiveViewsRegistratorListener.fs">
+      <Link>Navigation/ActiveViewsRegistratorListener.fs</Link>
+    </Compile>
+    <Compile Include="NavigateToItem.fs">
+      <Link>Navigation/NavigateToItem.fs</Link>
+    </Compile>
+    <Compile Include="GoToDefinitionFilter.fs">
+      <Link>Navigation/GoToDefinitionFilter.fs</Link>
+    </Compile>
+    <Compile Include="CodeFormattingServices.fs">
+      <Link>Formatting/CodeFormattingServices.fs</Link>
+    </Compile>
+    <Compile Include="CodeFormattingCommands.fs">
+      <Link>Formatting/CodeFormattingCommands.fs</Link>
+    </Compile>
+    <Compile Include="FormatDocumentCommand.fs">
+      <Link>Formatting/FormatDocumentCommand.fs</Link>
+    </Compile>
+    <Compile Include="FormatSelectionCommand.fs">
+      <Link>Formatting/FormatSelectionCommand.fs</Link>
+    </Compile>
+    <Compile Include="DepthTagger.fs">
+      <Link>Coloring/DepthTagger.fs</Link>
+    </Compile>
+    <Compile Include="DepthAdornmentManager.fs">
+      <Link>Coloring/DepthAdornmentManager.fs</Link>
+    </Compile>
+    <Compile Include="SyntaxConstructClassifier.fs">
+      <Link>Coloring/SyntaxConstructClassifier.fs</Link>
+    </Compile>
+    <Compile Include="UnusedDeclarationMargin.fs">
+      <Link>Coloring/UnusedDeclarationMargin.fs</Link>
+    </Compile>
+    <Compile Include="HighlightUsageTagger.fs">
+      <Link>Symbol/HighlightUsageTagger.fs</Link>
+    </Compile>
+    <Compile Include="RenameDialog.fs">
+      <Link>Symbol/RenameDialog.fs</Link>
+    </Compile>
+    <Compile Include="RenameCommandFilter.fs">
+      <Link>Symbol/RenameCommandFilter.fs</Link>
+    </Compile>
+    <Compile Include="LibraryNode.fs">
+      <Link>Symbol/LibraryNode.fs</Link>
+    </Compile>
+    <Compile Include="Library.fs">
+      <Link>Symbol/Library.fs</Link>
+    </Compile>
+    <Compile Include="FindReferencesFilter.fs">
+      <Link>Symbol/FindReferencesFilter.fs</Link>
+    </Compile>
+    <Compile Include="FolderNameDialog.fs">
+      <Link>FolderCommand/FolderNameDialog.fs</Link>
+    </Compile>
+    <Compile Include="MoveToFolderDialog.fs">
+      <Link>FolderCommand/MoveToFolderDialog.fs</Link>
+    </Compile>
+    <Compile Include="FolderMenuUI.fs">
+      <Link>FolderCommand/FolderMenuUI.fs</Link>
+    </Compile>
+    <Compile Include="FolderMenuCommands.fs">
+      <Link>FolderCommand/FolderMenuCommands.fs</Link>
+    </Compile>
+    <Compile Include="CodeGenerationService.fs">
+      <Link>CodeGeneration/CodeGenerationService.fs</Link>
+    </Compile>
+    <Compile Include="XmlDocFilter.fs">
+      <Link>CodeGeneration/XmlDocFilter.fs</Link>
+    </Compile>
+    <Compile Include="ImplementInterfaceSmartTagger.fs">
+      <Link>CodeGeneration/ImplementInterfaceSmartTagger.fs</Link>
+    </Compile>
+    <Compile Include="RecordStubGeneratorSmartTagger.fs">
+      <Link>CodeGeneration/RecordStubGeneratorSmartTagger.fs</Link>
+    </Compile>
+    <Compile Include="UnionPatternMatchCaseGeneratorSmartTagger.fs">
+      <Link>CodeGeneration/UnionPatternMatchCaseGeneratorSmartTagger.fs</Link>
+    </Compile>
+    <Compile Include="ResolveUnopenedNamespaceTagger.fs">
+      <Link>CodeGeneration/ResolveUnopenedNamespaceTagger.fs</Link>
+    </Compile>
+    <Compile Include="TaskListCommentOptions.fs">
+      <Link>TaskList/TaskListCommentOptions.fs</Link>
+    </Compile>
+    <Compile Include="TaskListManager.fs">
+      <Link>TaskList/TaskListManager.fs</Link>
+    </Compile>
+    <Compile Include="CrossSolutionTaskListCommentManager.fs">
+      <Link>TaskList/CrossSolutionTaskListCommentManager.fs</Link>
+    </Compile>
+    <Compile Include="TaskListCommentFilter.fs">
+      <Link>TaskList/TaskListCommentFilter.fs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    </Reference>
+    <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.CoreUtility">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Editor">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Shell.11.0">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Shell.11.0.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Immutable.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop.9.0, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Text.Data">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.Data.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Text.Logic">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.Logic.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Text.UI">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf">
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Threading" />
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="UIAutomationTypes" />
+    <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    </Reference>
+    <Reference Include="mscorlib" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
+      <Name>FSharpVSPowerTools.Core</Name>
+      <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(SolutionDir)\.paket\paket.targets" />
 </Project>
