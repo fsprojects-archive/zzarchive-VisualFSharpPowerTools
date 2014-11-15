@@ -154,8 +154,6 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
     checker.BeforeBackgroundFileCheck.Add dirtyNotify
     checker
 
-  do checker.ProjectChecked.Add(fun projectFileName -> debug "[LanguageService] Project \"%s\" checked" projectFileName)
-
   /// When creating new script file on Mac, the filename we get sometimes 
   /// has a name //foo.fsx, and as a result 'Path.GetFullPath' throws in the F#
   /// language service - this fixes the issue by inventing nicer file name.

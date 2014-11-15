@@ -22,12 +22,12 @@ type Category =
     | Other
     override x.ToString() = sprintf "%A" x
 
-type CategorizedColumnSpan<'a> =
+type CategorizedColumnSpan<'T> =
     { Category: Category
       WordSpan: WordSpan
       /// Snapshot for which the span was created.
       /// None if the right Snapshot is maintained separatly
-      Snapshot: 'a option }
+      Snapshot: 'T option }
 
 module private QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
