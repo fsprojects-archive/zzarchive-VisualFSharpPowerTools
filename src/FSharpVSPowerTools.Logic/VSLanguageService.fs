@@ -127,7 +127,7 @@ type VSLanguageService
             let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
             SnapshotSpan(snapshot, startPos, endPos - startPos)
                                 
-        Lexer.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
+        Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
 
     member __.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
@@ -227,8 +227,8 @@ type VSLanguageService
             snapshot.GetLineFromLineNumber(lineNumber).GetText() 
         let source = snapshot.GetText()
         { new LexerBase() with
-            member __.GetSymbolFromTokensAtLocation (tokens, line, col) =
-                Lexer.getSymbolFromTokens tokens line col (getLineStr line)
+            member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
+                Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
             member __.TokenizeLine line =
                 Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 

@@ -276,7 +276,7 @@ module SourceCodeClassifier =
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase, getTextLine: int -> string,
                                    openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
-        let allSymbolsUses' =
+        let allSymbolsUses2 =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
             |> Seq.map (fun (line, sus) ->
@@ -286,6 +286,7 @@ module SourceCodeClassifier =
                     let r = su.SymbolUse.RangeAlternate
                     lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1)
                     |> Option.bind (fun sym -> 
+                        //debug "#### su = %A, sym.Kind = %A" su sym.Kind
                         match sym.Kind with
                         | SymbolKind.Ident ->
                             // FCS returns inaccurate ranges for multiline method chains
@@ -300,14 +301,14 @@ module SourceCodeClassifier =
        
         // index all symbol usages by LineNumber 
         let wordSpans = 
-            allSymbolsUses'
+            allSymbolsUses2
             |> Seq.map (fun (_, span) -> span)
             |> Seq.groupBy (fun span -> span.Line)
             |> Seq.map (fun (line, ranges) -> line, ranges)
             |> Map.ofSeq
 
         let spansBasedOnSymbolsUses = 
-            allSymbolsUses'
+            allSymbolsUses2
             |> Seq.choose (fun (symbolUse, span) ->
                 let span = 
                     match wordSpans.TryFind span.Line with

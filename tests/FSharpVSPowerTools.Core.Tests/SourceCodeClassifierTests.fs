@@ -41,7 +41,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         { new LexerBase() with
             member __.GetSymbolFromTokensAtLocation (_tokens, line, col) =
                 let lineStr = sourceLines.[line]
-                Lexer.getSymbol source line col lineStr LanguageServiceTestHelper.args Lexer.queryLexState
+                Lexer.getSymbol source line col lineStr SymbolLookupKind.ByRightColumn LanguageServiceTestHelper.args Lexer.queryLexState
             member __.TokenizeLine line =
                 let lineStr = sourceLines.[line]
                 Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
@@ -426,7 +426,7 @@ let ``indexer``() =
 let arr = [|1|]
 let _ = arr.[0]
 """
-    => [ 3, [ Category.Function, 11, 12 ]]
+    => [ 3, []]
 
 [<Test>]
 let ``mutable value``() = 

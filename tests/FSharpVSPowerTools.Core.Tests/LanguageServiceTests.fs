@@ -84,7 +84,7 @@ let hasNoSymbolUsage line col lineStr =
     getUsesOfSymbol line col lineStr |> assertEqual None
 
 let checkGetSymbol line col lineStr expected =
-    Lexer.getSymbol source line col lineStr args Lexer.queryLexState
+    Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args Lexer.queryLexState
     |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
         text, (line, leftCol), (line, rightCol), kind)
     |> assertEqual expected

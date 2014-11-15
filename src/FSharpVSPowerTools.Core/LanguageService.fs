@@ -127,7 +127,7 @@ type WordSpan =
 
 [<AbstractClass>]
 type LexerBase() = 
-    abstract GetSymbolFromTokensAtLocation: FSharpTokenInfo list * line: int * col: int -> Symbol option
+    abstract GetSymbolFromTokensAtLocation: FSharpTokenInfo list * line: int * rightCol: int -> Symbol option
     abstract TokenizeLine: line: int -> FSharpTokenInfo list
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
@@ -308,7 +308,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolAtLocationInFile(projectOptions, fileName, source, line, col, lineStr, args, stale, queryLexState) = 
       async { 
-          match Lexer.getSymbol source line col lineStr args queryLexState with
+          match Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args queryLexState with
           | Some sym ->
                 let! checkResults = x.ParseAndCheckFileInProject(projectOptions, fileName, source, stale)
                 return! checkResults.GetUsesOfSymbolInFileAtLocation(line, sym.RightColumn, lineStr, sym.Text)
@@ -325,7 +325,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
   member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: FSharpProjectOptions, dependentProjectsOptions: FSharpProjectOptions seq, 
                                                     fileName, source, line:int, col, lineStr, args, queryLexState, reportProgress : (string -> int -> int -> unit) option) =     
      async { 
-         match Lexer.getSymbol source line col lineStr args queryLexState with
+         match Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args queryLexState with
          | Some symbol ->
              let! fileCheckResults = x.ParseAndCheckFileInProject(currentProjectOptions, fileName, source, AllowStaleResults.MatchingSource)
              let! result = fileCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
