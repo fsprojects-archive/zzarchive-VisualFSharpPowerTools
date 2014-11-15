@@ -21,8 +21,6 @@ open FSharpVSPowerTools.Outlining.Extensions
 
 
 
-type IBasicTaggerSource<'Tag when 'Tag :> ITag> =
-    abstract GetTags : span:SnapshotSpan -> ReadOnlyCollection<ITagSpan<'Tag>>
 
 
 [<AttributeUsage(AttributeTargets.Class ||| AttributeTargets.Method ||| AttributeTargets.Interface)>]

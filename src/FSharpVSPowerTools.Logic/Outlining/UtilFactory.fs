@@ -53,6 +53,9 @@ type CountedTagger<'Tag when 'Tag :> ITag >
         [<CLIEvent>]
         member x.TagsChanged: IEvent<EventHandler<SnapshotSpanEventArgs>,SnapshotSpanEventArgs> = 
             self.Tagger.TagsChanged
+    
+    interface IDisposable with
+        member __.Dispose() = self.Dispose()
              
 
 
@@ -66,6 +69,38 @@ type UtilFactory =
     static member CreateTaggerRaw<'Data,'Tag when 'Tag :> ITag> (asyncTaggerSource:IAsyncTaggerSource<'Data,'Tag >) =
         new AsyncTagger<'Data,'Tag> (asyncTaggerSource)
 
+    /// <summary>
+    /// Create an ITagger implementation for the IAsyncTaggerSource.  This instance will be a counted 
+    /// wrapper over the single IAsyncTaggerSource represented by the specified key
+    /// </summary>
+    static member CreateTagger<'Data, 'Tag when 'Tag :> ITag> 
+            (   propertyCollection  :   PropertyCollection                      ,
+                key                 :   obj                                     ,
+                createFunc          :   unit -> IAsyncTaggerSource<'Data, 'Tag> ) : ITagger<'Tag> =
+        let makeAsyncTagger = 
+            ( fun()-> new AsyncTagger<'Data,'Tag>(createFunc()) :> ITagger<'Tag>)
+
+        new CountedTagger<'Tag> (   propertyCollection  , 
+                                    key                 , 
+                                    makeAsyncTagger     ) :> ITagger<'Tag>
+
+
+
+    static member CreateClassifierRaw<'Data>(asyncTaggerSource: IAsyncTaggerSource<'Data, IClassificationTag> ) =
+        new Classifier ( UtilFactory.CreateTaggerRaw(asyncTaggerSource))
+
+
+    static member CreateClassifier<'Data>
+                    (   propertyCollection  : PropertyCollection                                    , 
+                        key                 : obj                                                   , 
+                        createFunc          : unit -> IAsyncTaggerSource<'Data, IClassificationTag> ) =
+    
+        let makeRawClassifier = 
+            fun() -> UtilFactory.CreateClassifierRaw(createFunc())  :> IClassifier
+
+        new CountedClassifier( propertyCollection, key, makeRawClassifier )
+
+
     static member GetOrCreateOutlinerCore(textBuffer:ITextBuffer ) =
         textBuffer.Properties.GetOrCreateSingletonProperty(AdhocOutliner.OutlinerKey, ( fun _ -> new AdhocOutliner(textBuffer)))
 
@@ -75,108 +110,23 @@ type UtilFactory =
     /// of GetOrCreateOutlinerTagger
     /// </summary>
     static member GetOrCreateOutliner( textBuffer:ITextBuffer) =
-            UtilFactory.GetOrCreateOutlinerCore(textBuffer)
-
-
-
-
-    /// <summary>
-    /// Create an ITagger implementation for the IAsyncTaggerSource.  This instance will be a counted 
-    /// wrapper over the single IAsyncTaggerSource represented by the specified key
-    /// </summary>
-    static member CreateTagger<'Data, 'Tag when 'Tag :> ITag> ( propertyCollection:PropertyCollection) (key:obj) (createFunc:unit -> IAsyncTaggerSource<'Data, 'Tag>) =
-            return new CountedTagger<TTag>(
-                propertyCollection,
-                key,
-//                () => new AsyncTagger<TData, TTag>(createFunc()));
+        UtilFactory.GetOrCreateOutlinerCore(textBuffer)
 
     /// <summary>
     /// This is the ITagger implementation for IAdhocOutliner
     /// </summary>
-    static member  CreateOutlinerTagger(ITextBuffer textBuffer) =
-        eateTagger(
-            textBuffer.Properties,
-            AdhocOutliner.OutlinerTaggerKey,
-            () => GetOrCreateOutlinerCore(textBuffer));
+    static member CreateOutlinerTagger( textBuffer:ITextBuffer ) : ITagger<OutliningRegionTag> =
+        UtilFactory.CreateTagger    (textBuffer.Properties ,
+                                    AdhocOutliner.OutlinerTaggerKey  ,
+                                    (fun() -> UtilFactory.GetOrCreateOutlinerCore(textBuffer)))
+
+
+    
 
 
 
-//
-//        /// <summary>
-//        /// Create an ITagger implementation for the IBasicTaggerSource.  This instance will be a counted
-//        /// wrapper over the single IBasicTaggerSource represented by the specified key
-//        /// </summary>
-//        public static ITagger<TTag> CreateTagger<TTag>(PropertyCollection propertyCollection, object key, Func<IBasicTaggerSource<TTag>> createFunc)
-//            where TTag : ITag
-//        {
-//            return new CountedTagger<TTag>(
-//                propertyCollection,
-//                key,
-//                () => new BasicTagger<TTag>(createFunc()));
-//        }
-//
-//        public static IClassifier CreateClassifierRaw(IBasicTaggerSource<IClassificationTag> basicTaggerSource)
-//        {
-//            return new Classifier(CreateTaggerRaw(basicTaggerSource));
-//        }
-//
-//        public static IClassifier CreateClassifierRaw<TData>(IAsyncTaggerSource<TData, IClassificationTag> asyncTaggerSource)
-//        {
-//            return new Classifier(CreateTaggerRaw(asyncTaggerSource));
-//        }
-//
-//        public static IClassifier CreateClassifier(PropertyCollection propertyCollection, object key, Func<IBasicTaggerSource<IClassificationTag>> createFunc)
-//        {
-//            return new CountedClassifier(
-//                propertyCollection,
-//                key,
-//                () => CreateClassifierRaw(createFunc()));
-//        }
-//
-//        public static IClassifier CreateClassifier<TData>(PropertyCollection propertyCollection, object key, Func<IAsyncTaggerSource<TData, IClassificationTag>> createFunc)
-//        {
-//            return new CountedClassifier(
-//                propertyCollection,
-//                key,
-//                () => CreateClassifierRaw(createFunc()));
-//        }
-//
-//        public static IBasicUndoHistoryRegistry CreateBasicUndoHistoryRegistry()
-//        {
-//            return new BasicTextUndoHistoryRegistry();
-//        }
-//
-//        public static IProtectedOperations CreateProtectedOperations(IEnumerable<Lazy<IExtensionErrorHandler>> errorHandlers)
-//        {
-//            return new ProtectedOperations(errorHandlers);
-//        }
-//
-//        public static IProtectedOperations CreateProtectedOperations(IEnumerable<IExtensionErrorHandler> errorHandlers)
-//        {
-//            var lazyList = errorHandlers.Select(x => new Lazy<IExtensionErrorHandler>(() => x)).ToList();
-//            return new ProtectedOperations(lazyList);
-//        }
-//
-//        /// <summary>
-//        /// Get or create the IAdhocOutliner instance for the given ITextBuffer.  This return will be useless 
-//        /// unless the code which calls this method exports an ITaggerProvider which proxies the return 
-//        /// of GetOrCreateOutlinerTagger
-//        /// </summary>
-//        public static IAdhocOutliner GetOrCreateOutliner(ITextBuffer textBuffer)
-//        {
-//            return GetOrCreateOutlinerCore(textBuffer);
-//        }
-//
-//        /// <summary>
-//        /// This is the ITagger implementation for IAdhocOutliner
-//        /// </summary>
-//        public static ITagger<OutliningRegionTag> CreateOutlinerTagger(ITextBuffer textBuffer)
-//        {
-//            return CreateTagger(
-//                textBuffer.Properties,
-//                AdhocOutliner.OutlinerTaggerKey,
-//                () => GetOrCreateOutlinerCore(textBuffer));
-//        }
+
+
 
         
 

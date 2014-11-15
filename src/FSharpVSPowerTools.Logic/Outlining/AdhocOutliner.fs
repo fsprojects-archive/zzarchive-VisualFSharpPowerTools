@@ -66,7 +66,10 @@ type IAdhocOutliner=
     abstract Changed                : IEvent<EventArgs>
 
 
-
+/// <summary>
+/// Implementation of the IAdhocOutliner service.  This class is only used for testing
+/// so it's focused on creating the simplest implementation vs. the most efficient
+/// </summary>
 type AdhocOutliner (textBuffer:ITextBuffer) as self =
     static let emptyCollection   = ReadOnlyCollection<OutliningRegion>(List<OutliningRegion>())
     static let outlinerKey       = obj()

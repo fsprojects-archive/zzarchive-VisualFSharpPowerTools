@@ -349,8 +349,8 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
     static let EmptyTagList = ReadOnlyCollection<ITagSpan<'Tag>>(List<ITagSpan<'Tag>>())
 
     //private readonly IAsyncTaggerSource<TData, TTag> _asyncTaggerSource;
-    let _tagsChanged = Event<SnapshotSpanEventArgs>()
-
+    //let _tagsChanged = Event<SnapshotSpanEventArgs>()
+    let _tagsChanged = Event<EventHandler<SnapshotSpanEventArgs>,SnapshotSpanEventArgs>()
     /// <summary>
     /// The one and only active AsyncBackgroundRequest instance.  There can be several
     /// in flight at once.  But we will cancel the earlier ones should a new one be 
@@ -400,12 +400,13 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
         with get() = _chunkCount
         and  set v = _chunkCount <- v
 
+    member __.TagsChanged = _tagsChanged.Publish
 
     member __.RaiseTagsChanged(span:SnapshotSpan) =
         //let lineRange = SnapshotLineRange.CreateForSpan(span);
         //EditorUtilsTrace.TraceInfo("AsyncTagger::RaiseTagsChanged {0} - {1}", lineRange.StartLineNumber, lineRange.LastLineNumber);
 
-        _tagsChanged.Trigger( SnapshotSpanEventArgs(span))
+        _tagsChanged.Trigger( self, SnapshotSpanEventArgs(span))
         
 
     /// <summary>
@@ -915,3 +916,14 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
 
     interface IDisposable with
         member __.Dispose() = self.Dispose()
+
+    interface ITagger<'Tag> with
+
+        member x.GetTags(spans: NormalizedSnapshotSpanCollection): IEnumerable<ITagSpan<'Tag>> = 
+            self.GetTags(spans) :> IEnumerable<ITagSpan<'Tag>>
+        
+        [<CLIEvent>]
+        member x.TagsChanged: IEvent<EventHandler<SnapshotSpanEventArgs>,SnapshotSpanEventArgs> = 
+            self.TagsChanged
+        
+

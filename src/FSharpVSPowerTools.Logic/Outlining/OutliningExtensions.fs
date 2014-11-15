@@ -110,6 +110,10 @@ module Extensions =
                                                 (ienum:IEnumerable<'source>)= 
             ienum.Select    func
      
+        static member collect<'source,'result>   ( func:'source->IEnumerable<'result>)  
+                                                (ienum:IEnumerable<'source>)= 
+            ienum.SelectMany    func
+
         static member fold<'state,'elem>    ( folder:'state->'elem->'state)
                                             ( state :'state )  
                                             ( ienum:IEnumerable<'elem>    ) = 
