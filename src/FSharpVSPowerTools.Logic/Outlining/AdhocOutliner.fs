@@ -68,14 +68,16 @@ type IAdhocOutliner=
 
 
 type AdhocOutliner (textBuffer:ITextBuffer) as self =
-    //static let OutlinerKey       = obj()
-    static let OutlinerTaggerKey = obj()
     static let emptyCollection   = ReadOnlyCollection<OutliningRegion>(List<OutliningRegion>())
+    static let outlinerKey       = obj()
+    static let outlinerTaggerKey = obj()
 
     let map     = Dictionary<int,OutliningData>()
     let mutable counter = 0
     let changed = Event<_>()
 
+    static member OutlinerKey       = outlinerKey
+    static member OutlinerTaggerKey = outlinerTaggerKey
 
     /// <summary>
     /// The outlining implementation is worthless unless it is also registered as an ITagger 
@@ -83,7 +85,7 @@ type AdhocOutliner (textBuffer:ITextBuffer) as self =
     /// a bug and we need to notify the developer
     /// </summary>
     member __.EnsureTagger() =
-        if textBuffer.Properties.ContainsProperty(OutlinerTaggerKey) then
+        if textBuffer.Properties.ContainsProperty(outlinerTaggerKey) then
             let msg = "In order to use IAdhocOutliner you must also export an ITagger implementation for the buffer which return CreateOutliningTagger"
             raise (Exception msg)
 

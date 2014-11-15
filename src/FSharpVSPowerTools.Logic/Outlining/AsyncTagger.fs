@@ -910,7 +910,7 @@ type AsyncTagger<'Data,'Tag when 'Tag :> ITag>
 
 
     member __.Dispose() =
-        _subscriptions.Select( fun (x:IDisposable) -> x.Dispose()) |> ignore
+        _subscriptions.ForEach( fun (x:IDisposable) -> x.Dispose()) 
         _subscriptions.Clear()
 
     interface IDisposable with

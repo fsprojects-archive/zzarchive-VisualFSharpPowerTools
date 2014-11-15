@@ -41,6 +41,19 @@ module Extensions =
             let finish = self.[self.Count - 1]
             SnapshotSpan(start.Start, finish.End)
 
+
+    type PropertyCollection with
+       
+        member self.TryGetPropertySafe<'Property>( key:obj, value:'Property ref) =
+            try self.TryGetProperty<'Property>(key, value)
+            with
+            | exn ->
+                // If the value exists but is not convertible to the provided type then
+                // an exception will be thrown.  Collapse this into an empty option.  
+                // Helps guard against cases where other extensions override our values
+                // with ones of unexpected types
+                    value := Unchecked.defaultof<'Property>
+                    false
  
     type ITextView with
 
