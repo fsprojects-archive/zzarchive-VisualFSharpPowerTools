@@ -420,16 +420,22 @@ let _ = "x".``Long func``().Substring(3)
 """
     => [ 4, [ Category.Function, 12, 25; Category.Function, 28, 37 ]]
 
-[<Test; Ignore "WIP">]
+[<Test>]
 let ``indexer``() = 
     """
 let arr = [|1|]
 let _ = arr.[0]
+"""
+    => [ 3, []]
+
+[<Test>]
+let ``array slicing``() = 
+    """
+let arr = [|1|]
 let l, h = 0, 1
 let _ = arr.[l..h]
 """
-    => [ 3, []
-         5, []]
+    => [ 4, []]
 
 [<Test>]
 let ``mutable value``() = 
