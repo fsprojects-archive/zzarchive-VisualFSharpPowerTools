@@ -29,7 +29,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
                 ForegroundThreadGuard.CheckThread()
                 openDocuments <- Map.add path (OpenDocument.Create doc args.After doc.Encoding) openDocuments
 
-            and textBufferChangedSubscription: IDisposable = view.TextBuffer.Changed.Subscribe(textBufferChanged)
+            and textBufferChangedSubscription: IDisposable = view.TextBuffer.ChangedHighPriority.Subscribe(textBufferChanged)
             and viewClosed _ = 
                 ForegroundThreadGuard.CheckThread()
                 textBufferChangedSubscription.Dispose()

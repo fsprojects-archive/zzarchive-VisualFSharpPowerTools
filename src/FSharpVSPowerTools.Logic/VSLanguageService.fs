@@ -44,7 +44,7 @@ type VSLanguageService
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    let instance = LanguageService (ignore, fileSystem)
+    let instance = LanguageService (fileSystem)
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
     /// Clean up instructions are displayed on status bar.
@@ -127,7 +127,7 @@ type VSLanguageService
             let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
             SnapshotSpan(snapshot, startPos, endPos - startPos)
                                 
-        Lexer.getSymbol source line col lineStr args (buildQueryLexState point.Snapshot.TextBuffer)
+        Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
 
     member __.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
@@ -220,48 +220,54 @@ type VSLanguageService
             return symbol |> Option.map (fun s -> s, results)
         }
 
+    member __.CreateLexer (snapshot, args) =
+        let getLineStr line =
+            let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+            let lineNumber = line - lineStart
+            snapshot.GetLineFromLineNumber(lineNumber).GetText() 
+        let source = snapshot.GetText()
+        { new LexerBase() with
+            member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
+                Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
+            member __.TokenizeLine line =
+                Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
+
     member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
-                                            checkForUnusedReferences: bool, checkForUnusedOpens: bool, getSymbolDeclLocation) = 
+                                            checkForUnusedOpens: bool, pf: Profiler) = 
         async {
             Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
             let source = snapshot.GetText() 
-            let args = project.CompilerOptions
-            let getLineStr line =
-                let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-                let lineNumber = line - lineStart
-                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-            let lexer = 
-                { new LexerBase() with
-                    member __.GetSymbolFromTokensAtLocation (tokens, line, col) =
-                        Lexer.getSymbolFromTokens tokens line col (getLineStr line)
-                    member __.TokenizeLine line =
-                        Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
-
             let! opts = project.GetProjectCheckerOptions instance
-            
-            let getSymbolDeclProjects symbol =
-                async {
-                    let projects =
-                        match getSymbolDeclLocation symbol with
-                        | Some SymbolDeclarationLocation.File -> Some [project]
-                        | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
-                        | None -> None
+            let! allSymbolsUses = pf.TimeAsync "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+                instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, pf)
+            return allSymbolsUses
+        }
 
-                    match projects with
-                    | Some projects ->
-                        return! 
-                            projects
-                            |> List.toArray
-                            |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
-                            |> Async.map Some
-                    | None -> return None
-                }
+     member __.GetSymbolDeclProjects getSymbolDeclLocation currentProject (symbol: FSharpSymbol) =
+         async {
+             let projects =
+                 match getSymbolDeclLocation symbol with
+                 | Some SymbolDeclarationLocation.File -> Some [currentProject]
+                 | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
+                 | None -> None
+         
+             match projects with
+             | Some projects ->
+                 return! 
+                     projects
+                     |> List.toArray
+                     |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
+                     |> Async.map Some
+             | None -> return None
+         }
 
-            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(
-                                                opts, currentFile, source, stale,
-                                                checkForUnusedReferences, checkForUnusedOpens, getSymbolDeclProjects)
-            return allSymbolsUses, lexer
+     member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
+
+     member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
+        async {
+            let! opts = currentProject.GetProjectCheckerOptions instance
+            return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject, pf)
         }
 
      member __.GetAllEntities (fileName, source, project: IProjectProvider) =
@@ -292,6 +298,10 @@ type VSLanguageService
         debug "[Language Service] Clearing FCS caches."
         instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
+    member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
+        debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
+        instance.Checker.StartBackgroundCompile opts
+
     member __.Checker = instance.Checker
 
     /// This value is used for testing when VS lex cache isn't available

@@ -13,7 +13,9 @@ type FileSystem [<ImportingConstructor>] (openDocumentsTracker: OpenDocumentsTra
 
     let getOpenDocContent (fileName: string) =
         openDocumentsTracker.TryFindOpenDocument fileName
-        |> Option.map (fun doc -> doc.Snapshot.GetText() |> doc.Encoding.GetBytes)
+        |> Option.map (fun doc -> 
+            let content = doc.Snapshot.GetText() 
+            content |> doc.Encoding.GetBytes)
 
     interface IFileSystem with
         member __.FileStreamReadShim fileName = 

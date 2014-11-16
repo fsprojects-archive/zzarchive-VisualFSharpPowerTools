@@ -112,7 +112,7 @@
               <Paket>True</Paket>
             </Reference>
             <Reference Include="Foq">
-              <HintPath>..\..\packages\Foq\lib\net40\Foq.dll</HintPath>
+              <HintPath>..\..\packages\Foq\Lib\net40\Foq.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -131,7 +131,7 @@
               <Paket>True</Paket>
             </Reference>
             <Reference Include="Foq">
-              <HintPath>..\..\packages\Foq\lib\net40\Foq.dll</HintPath>
+              <HintPath>..\..\packages\Foq\Lib\net40\Foq.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -155,7 +155,7 @@
               <Paket>True</Paket>
             </Reference>
             <Reference Include="Foq">
-              <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+              <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -190,7 +190,7 @@
           <Paket>True</Paket>
         </Reference>
         <Reference Include="Foq">
-          <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+          <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -214,7 +214,7 @@
           <Paket>True</Paket>
         </Reference>
         <Reference Include="Foq">
-          <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+          <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -238,7 +238,7 @@
           <Paket>True</Paket>
         </Reference>
         <Reference Include="Foq">
-          <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+          <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -262,7 +262,7 @@
           <Paket>True</Paket>
         </Reference>
         <Reference Include="Foq">
-          <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+          <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -288,7 +288,7 @@
               <Paket>True</Paket>
             </Reference>
             <Reference Include="Foq">
-              <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+              <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -312,7 +312,7 @@
               <Paket>True</Paket>
             </Reference>
             <Reference Include="Foq">
-              <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+              <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -338,7 +338,7 @@
           <Paket>True</Paket>
         </Reference>
         <Reference Include="Foq">
-          <HintPath>..\..\packages\Foq\lib\net45\Foq.dll</HintPath>
+          <HintPath>..\..\packages\Foq\Lib\net45\Foq.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

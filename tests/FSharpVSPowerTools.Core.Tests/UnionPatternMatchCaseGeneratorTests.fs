@@ -26,7 +26,7 @@ open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
-let languageService = LanguageService(fun _ -> ())
+let languageService = LanguageService()
 let project() =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
@@ -75,8 +75,9 @@ module ClausesAnalysisTests =
 
 
     let private tryGetWrittenCases (pos: pos) (src: string) =
-        let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(LanguageService(fun _ -> ()), LanguageServiceTestHelper.args)
-        src
+        let codeGenService: ICodeGenerationService<_, _, _> = 
+            upcast CodeGenerationTestService(LanguageService(), LanguageServiceTestHelper.args)
+        src 
         |> asDocument
         |> tryFindPatternMatchExpr codeGenService pos
         |> Option.map (getWrittenCases)
