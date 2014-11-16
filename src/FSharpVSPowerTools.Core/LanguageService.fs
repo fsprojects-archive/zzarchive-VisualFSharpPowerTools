@@ -513,8 +513,8 @@ type LanguageService (?fileSystem: IFileSystem) =
                          |> Array.exists (fun p -> 
                              allSymbolUsesByProjectName 
                              |> Map.tryFind p.ProjectFileName
-                             |> Option.map (fun allSus ->
-                                  match allSus |> Map.tryFind sym.FullName with
+                             |> Option.map (fun allSymbolUses ->
+                                  match allSymbolUses |> Map.tryFind sym.FullName with
                                   | Some usesCount ->
                                       if p.ProjectFileName = currentProjectFile then
                                           usesCount <= 1

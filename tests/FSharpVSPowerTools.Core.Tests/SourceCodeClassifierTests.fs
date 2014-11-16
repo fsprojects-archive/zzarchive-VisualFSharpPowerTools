@@ -431,7 +431,7 @@ let _ = arr.[0]
 """
     => [ 3, []]
 
-[<Test>]
+[<Test; Ignore "FCS return FSharpFunctionOrValue and FSharpUnionCase for values used as slicing bounds">]
 let ``array slicing``() = 
     """
 let arr = [|1|]

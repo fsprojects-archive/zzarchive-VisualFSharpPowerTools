@@ -134,9 +134,9 @@ module Lexer =
         // One or two tokens that in touch with the cursor (for "let x|(g) = ()" the tokens will be "x" and "(")
         let tokensUnderCursor = 
             match lookupKind with
-            | Fuzzy ->
+            | SymbolLookupKind.Fuzzy ->
                 tokens |> List.filter (fun x -> x.Token.LeftColumn <= col && x.RightColumn + 1 >= col)
-            | ByRightColumn ->
+            | SymbolLookupKind.ByRightColumn ->
                 tokens |> List.filter (fun x -> x.RightColumn = col)
     
         // Select IDENT token. If failes, select OPERATOR token.
