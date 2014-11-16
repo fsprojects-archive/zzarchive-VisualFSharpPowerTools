@@ -420,7 +420,7 @@ let _ = "x".``Long func``().Substring(3)
 """
     => [ 4, [ Category.Function, 12, 25; Category.Function, 28, 37 ]]
 
-[<Test>]
+[<Test; Ignore "WIP">]
 let ``indexer``() = 
     """
 let arr = [|1|]
