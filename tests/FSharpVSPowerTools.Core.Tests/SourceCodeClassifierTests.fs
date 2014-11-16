@@ -24,7 +24,7 @@ let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
 let framework = FSharpTargetFramework.NET_4_5
-let languageService = LanguageService(fun _ -> ())
+let languageService = LanguageService()
 
 let opts source = 
     let opts = 
@@ -425,8 +425,11 @@ let ``indexer``() =
     """
 let arr = [|1|]
 let _ = arr.[0]
+let l, h = 0, 1
+let _ = arr.[l..h]
 """
-    => [ 3, []]
+    => [ 3, []
+         5, []]
 
 [<Test>]
 let ``mutable value``() = 

@@ -18,6 +18,7 @@ type Symbol =
       Text: string }
     member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
 
+[<RequireQualifiedAccess>]
 type SymbolLookupKind =
     | Fuzzy
     | ByRightColumn

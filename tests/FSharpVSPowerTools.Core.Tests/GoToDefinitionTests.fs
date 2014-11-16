@@ -34,7 +34,7 @@ open System.Xml.Linq
 open System.Collections.Generic
 open System.IO
 
-let languageService = LanguageService(fun _ -> ())
+let languageService = LanguageService()
 let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
 let xmlFileCache = Dictionary()
 

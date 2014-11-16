@@ -18,7 +18,7 @@ open FSharpVSPowerTools.CodeGeneration
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "InterfaceSampleFile.fs")
 let source = File.ReadAllText(fileName)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
-let vsLanguageService = LanguageService(fun _ -> ())
+let vsLanguageService = LanguageService()
 let opts = vsLanguageService.GetProjectCheckerOptions(projectFileName, [| fileName |], TestHelpers.LanguageServiceTestHelper.args, [||]) 
 
 #if INTERACTIVE

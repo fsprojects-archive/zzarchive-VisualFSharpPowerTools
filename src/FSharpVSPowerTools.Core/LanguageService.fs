@@ -138,7 +138,7 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 // Language service 
 
 /// Provides functionality for working with the F# interactive checker running in background
-type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
+type LanguageService (?fileSystem: IFileSystem) =
 
   do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
   let mutable errorHandler = None
@@ -149,10 +149,7 @@ type LanguageService (dirtyNotify, ?fileSystem: IFileSystem) =
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
-  let checker = 
-    let checker = FSharpChecker.Create(projectCacheSize=200)
-    checker.BeforeBackgroundFileCheck.Add dirtyNotify
-    checker
+  let checker = FSharpChecker.Create (projectCacheSize = 200, keepAllBackgroundResolutions = false)
 
   /// When creating new script file on Mac, the filename we get sometimes 
   /// has a name //foo.fsx, and as a result 'Path.GetFullPath' throws in the F#
