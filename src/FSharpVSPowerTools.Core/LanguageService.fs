@@ -484,22 +484,45 @@ type LanguageService (?fileSystem: IFileSystem) =
                     else refs.Length > 0 })
     
 
-    member x.GetUnusedDeclarations (symbolsUses, projectOptions, getSymbolDeclProjects, pf: Profiler) : SymbolUse[] Async =
+    member __.GetUnusedDeclarations (symbolsUses, singleDefs: (FSharpSymbol * FSharpProjectOptions[] option)[], 
+                                     currentProjectFile, pf: Profiler) : SymbolUse[] Async =
         async {
-            let singleDefs = UnusedDeclarations.getSingleDeclarations symbolsUses
-            let! notUsedSymbols =
+            let! allSymbolUsesByProjectName =
                 singleDefs 
-                |> Async.Array.map (fun fsSymbol ->
-                    async {
-                        let! opts = getSymbolDeclProjects fsSymbol
-                        match opts with
-                        | Some projects ->
-                            let! isSymbolUsed = x.IsSymbolUsedInProjects (fsSymbol, projectOptions.ProjectFileName, projects, pf) 
-                            if isSymbolUsed then return None
-                            else return Some fsSymbol
-                        | None -> return None 
-                    })
-                |> Async.map (Array.choose id)
+                |> Array.choose snd
+                |> Seq.concat
+                |> Seq.distinctBy (fun opts -> opts.ProjectFileName)
+                |> Seq.toArray
+                |> Async.Array.map (fun opts -> async {
+                    let! res = checker.ParseAndCheckProject opts
+                    let! allSymbolUses = res.GetAllUsesOfAllSymbols()
+                    return 
+                        opts.ProjectFileName, 
+                        allSymbolUses 
+                        |> Seq.map (fun su -> su.Symbol.FullName)
+                        |> Seq.countBy (fun fullName -> fullName)
+                        |> Map.ofSeq })
+                |> Async.map Map.ofArray
+                
+            let notUsedSymbols =
+                singleDefs 
+                |> Array.filter (fun (sym, projects) -> 
+                     match projects with
+                     | Some projects ->
+                         projects
+                         |> Array.exists (fun p -> 
+                             allSymbolUsesByProjectName 
+                             |> Map.tryFind p.ProjectFileName
+                             |> Option.map (fun allSus ->
+                                  match allSus |> Map.tryFind sym.FullName with
+                                  | Some usesCount ->
+                                      if p.ProjectFileName = currentProjectFile then
+                                          usesCount <= 1
+                                      else usesCount < 1
+                                  | None -> true)
+                             |> Option.getOrElse true) 
+                     | None -> true)
+                |> Array.map fst
 
             return pf.Time "LS return" <| fun _ ->
                 match notUsedSymbols with

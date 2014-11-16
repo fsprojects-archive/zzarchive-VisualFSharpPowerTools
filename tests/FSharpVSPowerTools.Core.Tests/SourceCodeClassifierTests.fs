@@ -50,7 +50,10 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         async {
             let! symbolUses = 
                 languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, Profiler())
-            return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }), Profiler())
+            let singleDefs = 
+                UnusedDeclarations.getSingleDeclarations symbolUses
+                |> Array.map (fun sym -> sym, Some [|opts|])
+            return! languageService.GetUnusedDeclarations (symbolUses, singleDefs, opts.ProjectFileName, Profiler())
         } |> Async.RunSynchronously
 
     let parseResults = 
