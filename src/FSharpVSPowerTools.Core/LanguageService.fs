@@ -490,7 +490,7 @@ type LanguageService (?fileSystem: IFileSystem) =
             let! allSymbolUsesByProjectName =
                 singleDefs 
                 |> Array.choose snd
-                |> Seq.concat
+                |> Array.concat
                 |> Seq.distinctBy (fun opts -> opts.ProjectFileName)
                 |> Seq.toArray
                 |> Async.Array.map (fun opts -> async {

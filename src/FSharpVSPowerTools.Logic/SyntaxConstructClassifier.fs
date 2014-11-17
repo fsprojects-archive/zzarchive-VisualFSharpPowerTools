@@ -276,13 +276,13 @@ type SyntaxConstructClassifier
                                 singleDefs
                                 |> Array.choose snd
                                 |> Array.concat 
-                                |> Seq.distinct 
-                                |> Seq.map (fun opts -> 
+                                |> Seq.distinct
+                                |> List.ofSeq
+                                |> List.map (fun opts -> 
                                     { Options = opts
                                       // we mark standalone FSX's fake project as already checked 
                                       // because otherwise the slow stage never completes
                                       Checked = currentProject.IsForStandaloneScript })
-                                |> Seq.toList
                             return singleDefs, projects
                         else return [||], [] }
                         
