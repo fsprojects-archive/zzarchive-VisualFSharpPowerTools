@@ -50,7 +50,10 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         async {
             let! symbolUses = 
                 languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, Profiler())
-            return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }), Profiler())
+            let singleDefs = 
+                UnusedDeclarations.getSingleDeclarations symbolUses
+                |> Array.map (fun sym -> sym, Some [|opts|])
+            return! languageService.GetUnusedDeclarations (symbolUses, singleDefs, opts.ProjectFileName, Profiler())
         } |> Async.RunSynchronously
 
     let parseResults = 
@@ -420,16 +423,22 @@ let _ = "x".``Long func``().Substring(3)
 """
     => [ 4, [ Category.Function, 12, 25; Category.Function, 28, 37 ]]
 
-[<Test; Ignore "WIP">]
+[<Test>]
 let ``indexer``() = 
     """
 let arr = [|1|]
 let _ = arr.[0]
+"""
+    => [ 3, []]
+
+[<Test; Ignore "FCS return FSharpFunctionOrValue and FSharpUnionCase for values used as slicing bounds">]
+let ``array slicing``() = 
+    """
+let arr = [|1|]
 let l, h = 0, 1
 let _ = arr.[l..h]
 """
-    => [ 3, []
-         5, []]
+    => [ 4, []]
 
 [<Test>]
 let ``mutable value``() = 

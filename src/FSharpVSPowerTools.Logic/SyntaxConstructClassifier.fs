@@ -21,6 +21,7 @@ type private CheckingProject =
 type private FastStageData =
     { Snapshot: ITextSnapshot
       Spans: CategorizedColumnSpan<ITextSnapshot>[]
+      SingleDefs: (FSharpSymbol * FSharpProjectOptions[] option) []
       SingleSymbolsProjects: CheckingProject list }
 
 [<NoComparison>]
@@ -142,7 +143,7 @@ type SyntaxConstructClassifier
     }
 
     let updateUnusedDeclarations() = 
-        let worker (project, snapshot) =
+        let worker (project, snapshot, singleDefs) =
             asyncMaybe {    
                 let pf = Profiler()
                 debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
@@ -151,11 +152,9 @@ type SyntaxConstructClassifier
                         vsLanguageService.GetAllUsesOfAllSymbolsInFile(
                             snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf) |> liftAsync
                 
-                let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
-                
                 let! symbolsUses =
                     if includeUnusedReferences() then
-                        vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf) 
+                        vsLanguageService.GetUnusedDeclarations(symbolsUses, project, singleDefs, pf) 
                     else async { return symbolsUses }
                     |> liftAsync 
 
@@ -202,7 +201,7 @@ type SyntaxConstructClassifier
             match fastState.Value, slowState.Value with
             | (FastStage.NoData | FastStage.Updating _), _ -> ()
             | _, SlowStage.NoData (isUpdating = true) -> ()
-            | FastStage.Data _, slowStage ->
+            | FastStage.Data fastData, slowStage ->
                 match slowStage with
                 | SlowStage.Data { IsUpdating = true } -> ()
                 | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> ()
@@ -214,7 +213,7 @@ type SyntaxConstructClassifier
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
 
                     let cancelToken = newCancellationToken slowStageCancellationToken
-                    Async.StartInThreadPoolSafe(worker (project, snapshot), cancelToken.Token)
+                    Async.StartInThreadPoolSafe(worker (project, snapshot, fastData.SingleDefs), cancelToken.Token)
         | _ -> ()
 
     let updateSyntaxConstructClassifiers force =
@@ -264,30 +263,34 @@ type SyntaxConstructClassifier
 
                     let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                     
-                    let! singleSymbolsProjects = async {
+                    let! singleDefs, singleSymbolsProjects = async {
                         if includeUnusedReferences() then
                             let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath currentProject
-                            let singleDefs = UnusedDeclarations.getSingleDeclarations allSymbolsUses
-                            return!
+                            let! singleDefs = 
+                                UnusedDeclarations.getSingleDeclarations allSymbolsUses
+                                |> Async.Array.map (fun sym -> async {
+                                    let! decls = vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation currentProject sym
+                                    return sym, decls })
+
+                            let projects =
                                 singleDefs
-                                |> Async.Array.map (fun symbol ->
-                                    vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation currentProject symbol)
-                                |> Async.map (
-                                       Array.choose id 
-                                    >> Array.concat 
-                                    >> Seq.distinct 
-                                    >> Seq.map (fun opts -> 
-                                        { Options = opts
-                                          // we mark standalone FSX's fake project as already checked 
-                                          // because otherwise the slow stage never completes
-                                          Checked = currentProject.IsForStandaloneScript })
-                                    >> Seq.toList)
-                        else return [] }
-                    
+                                |> Array.choose snd
+                                |> Array.concat 
+                                |> Seq.distinct
+                                |> List.ofSeq
+                                |> List.map (fun opts -> 
+                                    { Options = opts
+                                      // we mark standalone FSX's fake project as already checked 
+                                      // because otherwise the slow stage never completes
+                                      Checked = currentProject.IsForStandaloneScript })
+                            return singleDefs, projects
+                        else return [||], [] }
+                        
                     fastState.Swap (fun _ -> 
                         FastStage.Data 
                             { Snapshot = snapshot
                               Spans = spans
+                              SingleDefs = singleDefs
                               SingleSymbolsProjects = singleSymbolsProjects }) |> ignore  
 
                     triggerClassificationChanged "UpdateSyntaxConstructClassifiers"
@@ -326,8 +329,7 @@ type SyntaxConstructClassifier
     let projectCheckedSubscription = 
         if isSlowStageEnabled() then
             Some (vsLanguageService.Checker.ProjectChecked.Subscribe (fun projectFileName ->
-                match includeUnusedReferences(), fastState.Value with
-                | true, FastStage.Data { SingleSymbolsProjects = [] } -> ()
+                match isSlowStageEnabled(), fastState.Value with
                 | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->
                     let projects =
                         match projects |> List.partition (fun p -> p.Options.ProjectFileName = projectFileName) with

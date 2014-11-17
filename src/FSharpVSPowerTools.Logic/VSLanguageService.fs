@@ -264,11 +264,8 @@ type VSLanguageService
 
      member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
 
-     member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
-        async {
-            let! opts = currentProject.GetProjectCheckerOptions instance
-            return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject, pf)
-        }
+     member __.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, singleDefs, pf: Profiler) = 
+            instance.GetUnusedDeclarations(symbolUses, singleDefs, currentProject.ProjectFileName, pf)
 
      member __.GetAllEntities (fileName, source, project: IProjectProvider) =
         async { 
