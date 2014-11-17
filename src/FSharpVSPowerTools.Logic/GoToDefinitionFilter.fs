@@ -118,7 +118,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
         // The file system is case-insensitive so list.fsi and List.fsi can clash
         // Thus, we generate a tmp subfolder based on the hash of the filename
-        let subFolder = sprintf "%u" (uint32 (fileName.GetHashCode()))
+        let subFolder = sprintf "%u" (uint32 (hash fileName))
 
         let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
@@ -148,9 +148,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol with
             | Some signature ->
                 let directoryPath = Path.GetDirectoryName(filePath)
-                if not (Directory.Exists(directoryPath)) then
-                    Directory.CreateDirectory(directoryPath) |> ignore
-
+                Directory.CreateDirectory(directoryPath) |> ignore
                 File.WriteAllText(filePath, signature)
                 let canShow = 
                     try
