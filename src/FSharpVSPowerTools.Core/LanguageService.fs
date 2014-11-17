@@ -494,8 +494,10 @@ type LanguageService (?fileSystem: IFileSystem) =
                 |> Seq.distinctBy (fun opts -> opts.ProjectFileName)
                 |> Seq.toArray
                 |> Async.Array.map (fun opts -> async {
-                    let! res = checker.ParseAndCheckProject opts
-                    let! allSymbolUses = res.GetAllUsesOfAllSymbols()
+                    let! res = pf.TimeAsync "GetUnusedDeclarations :: ParseAndCheckProject" <| fun _ -> 
+                        checker.ParseAndCheckProject opts
+                    let! allSymbolUses = pf.TimeAsync "GetUnusedDeclarations :: GetAllUsesOfAllSymbols" <| fun _ -> 
+                        res.GetAllUsesOfAllSymbols()
                     return 
                         opts.ProjectFileName, 
                         allSymbolUses 
@@ -504,7 +506,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                         |> Map.ofSeq })
                 |> Async.map Map.ofArray
                 
-            let notUsedSymbols =
+            let notUsedSymbols = pf.Time "GetUnusedDeclarations :: searching for unused symbols in maps" <| fun _ ->
                 singleDefs 
                 |> Array.filter (fun (sym, projects) -> 
                      match projects with
