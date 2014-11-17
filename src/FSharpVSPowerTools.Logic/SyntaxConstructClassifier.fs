@@ -329,15 +329,7 @@ type SyntaxConstructClassifier
     let projectCheckedSubscription = 
         if isSlowStageEnabled() then
             Some (vsLanguageService.Checker.ProjectChecked.Subscribe (fun projectFileName ->
-                match includeUnusedReferences(), fastState.Value with
-                | true, FastStage.Data { SingleSymbolsProjects = [] } -> 
-                    match slowState.Value with
-                    // previous SlowState has some unused opens/declarations, but FastStage found no 
-                    // potentially unused decls. We should run updateUnusedDeclarations() in order to
-                    // clean up the old Unused, othrewise they would stay forever.
-                    | SlowStage.Data { UnusedSpans = spans } when not (Map.isEmpty spans) ->
-                        updateUnusedDeclarations()
-                    | _ -> ()
+                match isSlowStageEnabled(), fastState.Value with
                 | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->
                     let projects =
                         match projects |> List.partition (fun p -> p.Options.ProjectFileName = projectFileName) with
