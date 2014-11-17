@@ -118,7 +118,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
         // The file system is case-insensitive so list.fsi and List.fsi can clash
         // Thus, we generate a tmp subfolder based on the hash of the filename
-        let subFolder = sprintf "%u" (uint32 (hash fileName))
+        let subFolder = string (uint32 (hash fileName))
 
         let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
