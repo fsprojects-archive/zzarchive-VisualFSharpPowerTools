@@ -314,6 +314,12 @@ let private generateSignature ctx (mem: FSharpMemberOrFunctionOrValue) =
 
     | _ -> ""
 
+let private hasVisibleConstructor (typ: FSharpEntity) =
+    typ.MembersFunctionsAndValues
+    |> Seq.exists (function
+        | Constructor _ -> true
+        | _             -> false)
+
 let private tryGetNeededTypeDefSyntaxDelimiter (typ: FSharpEntity) =
     let isStruct = typ.IsValueType && not typ.IsEnum
     let hasMembers = typ.MembersFunctionsAndValues.Count > 0
@@ -425,24 +431,23 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
 
     let neededTypeDefSyntaxDelimiter = tryGetNeededTypeDefSyntaxDelimiter typ
     let classAttributeHasToBeAdded =
-        let hasVisibleConstructor =
-            typ.MembersFunctionsAndValues
-            |> Seq.exists (function
-                | Constructor _ -> true
-                | _             -> false)
-
         (not typ.IsInterface)
         && (not typ.IsValueType)
-        && (typ.IsOpaque || not hasVisibleConstructor)
+        && (typ.IsOpaque || not (hasVisibleConstructor typ))
         && not (typ.IsFSharpRecord || typ.IsFSharpUnion)
         && not (hasAttribute<AbstractClassAttribute> typ.Attributes)
         && not (hasAttribute<ClassAttribute> typ.Attributes)
         && neededTypeDefSyntaxDelimiter <> Some "class"
 
+    let isStruct = typ.IsValueType && not typ.IsEnum
+    let hasMembers = typ.MembersFunctionsAndValues.Count > 0
+
     if classAttributeHasToBeAdded then
         ctx.Writer.WriteLine("[<Class>]")
     elif typ.IsInterface && neededTypeDefSyntaxDelimiter = None then
         ctx.Writer.WriteLine("[<Interface>]")
+    elif isStruct && hasMembers && not (hasVisibleConstructor typ) then
+        ctx.Writer.WriteLine("[<Struct>]")
 
     ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams ctx typ true)
     ctx.Writer.Indent ctx.Indentation
@@ -459,9 +464,6 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     elif typ.IsEnum then
         for field in typ.FSharpFields do
             writeEnumValue ctx field
-
-    let isStruct = typ.IsValueType && not typ.IsEnum
-    let hasMembers = typ.MembersFunctionsAndValues.Count > 0
 
     if not hasMembers then
         match neededTypeDefSyntaxDelimiter with
