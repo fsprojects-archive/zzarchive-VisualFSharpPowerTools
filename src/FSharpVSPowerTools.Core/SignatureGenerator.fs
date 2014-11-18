@@ -430,10 +430,11 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     writeAttributes ctx ctx.Writer (Some typ) typ.Attributes
 
     let neededTypeDefSyntaxDelimiter = tryGetNeededTypeDefSyntaxDelimiter typ
+    let hasVisibleConstructor = hasVisibleConstructor typ
     let classAttributeHasToBeAdded =
         (not typ.IsInterface)
         && (not typ.IsValueType)
-        && (typ.IsOpaque || not (hasVisibleConstructor typ))
+        && (typ.IsOpaque || not hasVisibleConstructor)
         && not (typ.IsFSharpRecord || typ.IsFSharpUnion)
         && not (hasAttribute<AbstractClassAttribute> typ.Attributes)
         && not (hasAttribute<ClassAttribute> typ.Attributes)
@@ -446,7 +447,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
         ctx.Writer.WriteLine("[<Class>]")
     elif typ.IsInterface && neededTypeDefSyntaxDelimiter = None then
         ctx.Writer.WriteLine("[<Interface>]")
-    elif isStruct && hasMembers && not (hasVisibleConstructor typ) then
+    elif isStruct && hasMembers && not hasVisibleConstructor then
         ctx.Writer.WriteLine("[<Struct>]")
 
     ctx.Writer.WriteLine("type {0} =", getTypeNameWithGenericParams ctx typ true)
