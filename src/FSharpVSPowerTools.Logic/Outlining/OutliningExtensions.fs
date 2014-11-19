@@ -4,35 +4,16 @@ open System
 open System.Collections.Generic
 open System.Collections.ObjectModel
 open System.Linq
-open System.Text
-open System.ComponentModel.Composition
-
-open EnvDTE
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Projection
-open Microsoft.VisualStudio.Text.Outlining
-open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Utilities
-open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools.ProjectSystem
-open System.Windows.Threading
-open FSharpVSPowerTools
-//
-//type ContractException =
-//    inherit Exception
-//
-// 
+
 
 
 module Extensions =
 
 
 
-//        static member CreateOverarching (left:SnapshotSpan) (right:SnapshotSpan) =
-//            //Contract.
-//  
-//    type ReadOnlyCollection<'T> with
 
     type NormalizedSnapshotSpanCollection with
         
@@ -55,15 +36,14 @@ module Extensions =
                     value := Unchecked.defaultof<'Property>
                     false
  
-    type ITextView with
-
-        member self.GetVisibleSnapshotLineRange() =
-            if self.InLayout = true then None else
-            let lines       = self.TextViewLines
-            let startLine   = lines.FirstVisibleLine.Start.GetContainingLine().LineNumber
-            let lastLine    = lines.LastVisibleLine.End.GetContainingLine().LineNumber
-            SnapshotLineRange.CreateForLineNumberRange self.TextSnapshot startLine lastLine
-
+//    type ITextView with
+//        member self.GetVisibleSnapshotLineRange() =
+//            if self.InLayout = true then None else
+//            let lines       = self.TextViewLines
+//            let startLine   = lines.FirstVisibleLine.Start.GetContainingLine().LineNumber
+//            let lastLine    = lines.LastVisibleLine.End.GetContainingLine().LineNumber
+//            SnapshotLineRange.CreateForLineNumberRange self.TextSnapshot startLine lastLine
+//
 
 
     type ITrackingSpan with
@@ -89,6 +69,14 @@ module Extensions =
 
         member self.GetExtent () =
             SnapshotSpan( self, 0, self.Length )
+
+
+        member self.GetPoint(position:int) =
+            SnapshotPoint(self, position)
+
+
+        member self.GetChar(position:int) =
+            self.GetPoint(position).GetChar()
 
 
 

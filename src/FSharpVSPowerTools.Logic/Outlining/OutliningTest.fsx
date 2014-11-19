@@ -15,17 +15,14 @@ open System.Linq
 open System.Text
 open System.ComponentModel.Composition
 
-open EnvDTE
-open Microsoft.VisualStudio.Text.Outlining
-open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 
 
 
-type testSnapshotLine (str) =
+type testSnapshotLine (str, num) =
+    new(str) = testSnapshotLine (str,0)
     interface ITextSnapshotLine with
         member x.End: SnapshotPoint                     = Unchecked.defaultof<_>
         member x.EndIncludingLineBreak: SnapshotPoint   = Unchecked.defaultof<_>      
@@ -37,14 +34,115 @@ type testSnapshotLine (str) =
         member x.Length: int                            = Unchecked.defaultof<_>
         member x.LengthIncludingLineBreak: int          = Unchecked.defaultof<_>
         member x.LineBreakLength: int                   = Unchecked.defaultof<_>
-        member x.LineNumber: int                        = Unchecked.defaultof<_>
+        member x.LineNumber: int                        = num
         member x.Snapshot: ITextSnapshot                = Unchecked.defaultof<_>
         member x.Start: SnapshotPoint                   = Unchecked.defaultof<_>
     override __.ToString() = str
-         
 
-let printseq s = s |> Seq.iter ( fun elm -> printf "%A, " elm )
+type testTextBuffer () =
+    interface ITextBuffer with
+        member x.ChangeContentType(newContentType: Microsoft.VisualStudio.Utilities.IContentType, editTag: obj): unit = 
+            Unchecked.defaultof<_>
+        
+        [<CLIEvent>]
+        member x.Changed: IEvent<EventHandler<TextContentChangedEventArgs>,TextContentChangedEventArgs> = 
+            Unchecked.defaultof<_>
+        
+        [<CLIEvent>]
+        member x.ChangedHighPriority: IEvent<EventHandler<TextContentChangedEventArgs>,TextContentChangedEventArgs> = 
+            Unchecked.defaultof<_>
+        
+        [<CLIEvent>]
+        member x.ChangedLowPriority: IEvent<EventHandler<TextContentChangedEventArgs>,TextContentChangedEventArgs> = 
+            Unchecked.defaultof<_>
+        
+        [<CLIEvent>]
+        member x.Changing: IEvent<EventHandler<TextContentChangingEventArgs>,TextContentChangingEventArgs> = 
+            Unchecked.defaultof<_>
+        
+        member x.CheckEditAccess(): bool = 
+            Unchecked.defaultof<_>
+        
+        member x.ContentType: Microsoft.VisualStudio.Utilities.IContentType = 
+            Unchecked.defaultof<_>
+        
+        [<CLIEvent>]
+        member x.ContentTypeChanged: IEvent<EventHandler<ContentTypeChangedEventArgs>,ContentTypeChangedEventArgs> = 
+            Unchecked.defaultof<_>
+        
+        member x.CreateEdit(options: EditOptions, reiteratedVersionNumber: Nullable<int>, editTag: obj): ITextEdit = 
+            Unchecked.defaultof<_>
+        
+        member x.CreateEdit(): ITextEdit = 
+            Unchecked.defaultof<_>
+        
+        member x.CreateReadOnlyRegionEdit(): IReadOnlyRegionEdit = 
+            Unchecked.defaultof<_>
+        
+        member x.CurrentSnapshot: ITextSnapshot = 
+            Unchecked.defaultof<_>
+        
+        member x.Delete(deleteSpan: Span): ITextSnapshot = 
+            Unchecked.defaultof<_>
+        
+        member x.EditInProgress: bool = 
+            Unchecked.defaultof<_>
+        
+        member x.GetReadOnlyExtents(span: Span): NormalizedSpanCollection = 
+            Unchecked.defaultof<_>
+        
+        member x.Insert(position: int, text: string): ITextSnapshot = 
+            Unchecked.defaultof<_>
+        
+        member x.IsReadOnly(position: int): bool = 
+            Unchecked.defaultof<_>
+        
+        member x.IsReadOnly(position: int, isEdit: bool): bool = 
+            Unchecked.defaultof<_>
+        
+        member x.IsReadOnly(span: Span): bool = 
+            Unchecked.defaultof<_>
+        
+        member x.IsReadOnly(span: Span, isEdit: bool): bool = 
+            Unchecked.defaultof<_>
+        
+        [<CLIEvent>]
+        member x.PostChanged: IEvent<EventHandler,EventArgs> = 
+            Unchecked.defaultof<_>
+        
+        member x.Properties: Microsoft.VisualStudio.Utilities.PropertyCollection = 
+            Unchecked.defaultof<_>
+        
+        [<CLIEvent>]
+        member x.ReadOnlyRegionsChanged: IEvent<EventHandler<SnapshotSpanEventArgs>,SnapshotSpanEventArgs> = 
+            Unchecked.defaultof<_>
+        
+        member x.Replace(replaceSpan: Span, replaceWith: string): ITextSnapshot = 
+            Unchecked.defaultof<_>
+        
+        member x.TakeThreadOwnership(): unit = 
+            Unchecked.defaultof<_>
+        
+
+
+let printseq s = s |> Seq.iter ( fun elm -> printfn "%A, " elm )
                  printf "\n"
+
+
+[<Struct>]
+type Region =
+    val StartLine   : int
+    val EndLine     : int
+
+
+    new ( startline, (*startoffset,*) endline ) =
+        {   StartLine   = startline
+    ///         StartOffset = startoffset
+            EndLine     = endline        }
+    override self.ToString() = 
+        sprintf "[Region {ln %d - ln %d}]" self.StartLine self.EndLine
+
+
 
 let rng = Random()
 
@@ -66,12 +164,14 @@ let genSeq =
                 yield! gen ()   }
     gen()
                
-let staticSeq len =  (Seq.take len genSeq) |> Seq.toList |> List.toSeq
+let staticSeq len =  
+    (Seq.take len genSeq) 
+    |> Seq.toList 
+    |> List.mapi ( fun num elm -> testSnapshotLine (elm.GetText(), num )
+                                    :> ITextSnapshotLine)
+    |> List.toSeq
 
-let testSeq =  staticSeq 20
 ;;
-printseq testSeq;;
-printseq testSeq;;
 
 let startDoc = "///"
 let validStarts = [ "///"; "//"; "*)"; "(*";]
@@ -84,14 +184,36 @@ let lineMatchAny (line:ITextSnapshotLine) ls =
                        acc || lineMatch line start ) false ls
 
 let rec takeBlock ( lines:seq<ITextSnapshotLine> ) = 
-    seq {   if Seq.isEmpty lines then () else 
+    seq {   printfn "The length of the seq is %A" (lines.Count())
+            if lines.Count() = 0 then () else 
             let block = lines
                         |> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc )
                         |> Seq.takeWhile ( fun ln -> lineMatch ln startDoc )
+//            printfn "\n====="
+//            printfn   "Block"
+//            printfn   "====="
+            block |> Seq.iter ( printfn "%A")
             let rest = lines |> Seq.skip ( Seq.length block )
             yield block
+            if lines.Count() = rest.Count() then () else 
             yield! takeBlock rest
         }
+
+
+let takeBlocks ( lines:seq<ITextSnapshotLine> )= 
+    let rec loop (lines:seq<ITextSnapshotLine>) =
+        seq{    if lines.Count() = 0 then () else 
+                let block = lines
+                            |> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc )
+                            |> Seq.takeWhile ( fun ln -> lineMatch ln startDoc )
+                let rest = lines|> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc ) 
+                                |> Seq.skip ( Seq.length block )
+                yield block
+                yield! loop rest
+            }
+    loop lines |> Seq.map(List.ofSeq) |> List.ofSeq
+
+
 
 let getBlocks ( lines:seq<ITextSnapshotLine> ) = 
     lines |> Seq.unfold( fun lines -> 
@@ -101,16 +223,38 @@ let getBlocks ( lines:seq<ITextSnapshotLine> ) =
         let rest = lines |> Seq.skip ( Seq.length block )
         Some(block,rest))
 
+let buildRegions (regls:ITextSnapshotLine list list) =
+    let build (ls:ITextSnapshotLine list) =
+        match ls with 
+        | [] -> None
+        | _  -> let fstline = ls.[0].LineNumber
+                let lstline = ls.[ls.Length-1].LineNumber
+                if fstline = lstline then None else
+                Some <| Region( fstline, lstline)
+    match regls with
+        | [] -> []
+        | _  -> regls   |> List.map build 
+                        |> List.filter ( fun x -> x <> None ) 
+                        |> List.map Option.get 
+
+
+
+
+
+
 #time "on"
 ;;
-printfn "\ngetBlocks"
-getBlocks testSeq |> Seq.iter( fun x -> printseq x )
-printfn "testSeq"
-printseq testSeq
+let testSeq =  staticSeq 20
 ;;
-//printfn "\ntakeBlock"
-//takeBlock testSeq |> Seq.iter ( fun x ->  printf "%A " x )
 //printfn "testSeq"
 //printseq testSeq
-
+//printfn "\ngetBlocks"
+//getBlocks testSeq |> Seq.iter( fun x -> printseq x )
+//;;
+printseq testSeq
+printfn "testSeq"
+printfn "\ntakeBlock"
+testSeq |> (takeBlocks >> buildRegions )
+//|> Seq.iter ( fun x ->  printf "%A " x )
+;;
 
