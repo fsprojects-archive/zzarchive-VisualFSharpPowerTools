@@ -326,8 +326,7 @@ type SyntaxConstructClassifier
     let projectCheckedSubscription = 
         if isSlowStageEnabled() then
             Some (vsLanguageService.Checker.ProjectChecked.Subscribe (fun projectFileName ->
-                match includeUnusedReferences(), fastState.Value with
-                | true, FastStage.Data { SingleSymbolsProjects = [] } -> ()
+                match isSlowStageEnabled(), fastState.Value with
                 | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->
                     let projects =
                         match projects |> List.partition (fun p -> p.Options.ProjectFileName = projectFileName) with
