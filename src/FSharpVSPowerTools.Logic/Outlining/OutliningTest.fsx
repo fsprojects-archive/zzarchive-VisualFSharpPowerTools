@@ -8,7 +8,7 @@
 #r @"..\..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll"
 #r "EnvDTE"
 #r @"..\..\FSharpVSPowerTools.Core\bin\Debug\FSharpVSPowerTools.Core.dll"
-#load "DocumentationOutlining.fs"
+#load "CommentOutlining.fs"
 
 
 open System
@@ -19,7 +19,7 @@ open System.ComponentModel.Composition
 
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools.Outlining.DocumentationOutlining
+open FSharpVSPowerTools.Outlining.Comments
 
 
 
@@ -41,90 +41,6 @@ type testSnapshotLine (str, num) =
         member __.Start: SnapshotPoint                   = Unchecked.defaultof<_>
     override __.ToString() = str
 
-type testTextBuffer () =
-    interface ITextBuffer with
-        member x.ChangeContentType(newContentType: Microsoft.VisualStudio.Utilities.IContentType, editTag: obj): unit = 
-            Unchecked.defaultof<_>
-        
-        [<CLIEvent>]
-        member x.Changed: IEvent<EventHandler<TextContentChangedEventArgs>,TextContentChangedEventArgs> = 
-            Unchecked.defaultof<_>
-        
-        [<CLIEvent>]
-        member x.ChangedHighPriority: IEvent<EventHandler<TextContentChangedEventArgs>,TextContentChangedEventArgs> = 
-            Unchecked.defaultof<_>
-        
-        [<CLIEvent>]
-        member x.ChangedLowPriority: IEvent<EventHandler<TextContentChangedEventArgs>,TextContentChangedEventArgs> = 
-            Unchecked.defaultof<_>
-        
-        [<CLIEvent>]
-        member x.Changing: IEvent<EventHandler<TextContentChangingEventArgs>,TextContentChangingEventArgs> = 
-            Unchecked.defaultof<_>
-        
-        member x.CheckEditAccess(): bool = 
-            Unchecked.defaultof<_>
-        
-        member x.ContentType: Microsoft.VisualStudio.Utilities.IContentType = 
-            Unchecked.defaultof<_>
-        
-        [<CLIEvent>]
-        member x.ContentTypeChanged: IEvent<EventHandler<ContentTypeChangedEventArgs>,ContentTypeChangedEventArgs> = 
-            Unchecked.defaultof<_>
-        
-        member x.CreateEdit(options: EditOptions, reiteratedVersionNumber: Nullable<int>, editTag: obj): ITextEdit = 
-            Unchecked.defaultof<_>
-        
-        member x.CreateEdit(): ITextEdit = 
-            Unchecked.defaultof<_>
-        
-        member x.CreateReadOnlyRegionEdit(): IReadOnlyRegionEdit = 
-            Unchecked.defaultof<_>
-        
-        member x.CurrentSnapshot: ITextSnapshot = 
-            Unchecked.defaultof<_>
-        
-        member x.Delete(deleteSpan: Span): ITextSnapshot = 
-            Unchecked.defaultof<_>
-        
-        member x.EditInProgress: bool = 
-            Unchecked.defaultof<_>
-        
-        member x.GetReadOnlyExtents(span: Span): NormalizedSpanCollection = 
-            Unchecked.defaultof<_>
-        
-        member x.Insert(position: int, text: string): ITextSnapshot = 
-            Unchecked.defaultof<_>
-        
-        member x.IsReadOnly(position: int): bool = 
-            Unchecked.defaultof<_>
-        
-        member x.IsReadOnly(position: int, isEdit: bool): bool = 
-            Unchecked.defaultof<_>
-        
-        member x.IsReadOnly(span: Span): bool = 
-            Unchecked.defaultof<_>
-        
-        member x.IsReadOnly(span: Span, isEdit: bool): bool = 
-            Unchecked.defaultof<_>
-        
-        [<CLIEvent>]
-        member x.PostChanged: IEvent<EventHandler,EventArgs> = 
-            Unchecked.defaultof<_>
-        
-        member x.Properties: Microsoft.VisualStudio.Utilities.PropertyCollection = 
-            Unchecked.defaultof<_>
-        
-        [<CLIEvent>]
-        member x.ReadOnlyRegionsChanged: IEvent<EventHandler<SnapshotSpanEventArgs>,SnapshotSpanEventArgs> = 
-            Unchecked.defaultof<_>
-        
-        member x.Replace(replaceSpan: Span, replaceWith: string): ITextSnapshot = 
-            Unchecked.defaultof<_>
-        
-        member x.TakeThreadOwnership(): unit = 
-            Unchecked.defaultof<_>
-        
 
 
 let printseq s = s |> Seq.iteri ( fun num elm -> printfn "%d - %A, " num elm )
