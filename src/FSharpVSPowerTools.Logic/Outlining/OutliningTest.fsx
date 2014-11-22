@@ -8,6 +8,8 @@
 #r @"..\..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll"
 #r "EnvDTE"
 #r @"..\..\FSharpVSPowerTools.Core\bin\Debug\FSharpVSPowerTools.Core.dll"
+#load "DocumentationOutlining.fs"
+
 
 open System
 open System.Collections.Generic
@@ -17,26 +19,26 @@ open System.ComponentModel.Composition
 
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools
+open FSharpVSPowerTools.Outlining.DocumentationOutlining
 
 
 
 type testSnapshotLine (str, num) =
     new(str) = testSnapshotLine (str,0)
     interface ITextSnapshotLine with
-        member x.End: SnapshotPoint                     = Unchecked.defaultof<_>
-        member x.EndIncludingLineBreak: SnapshotPoint   = Unchecked.defaultof<_>      
-        member x.Extent: SnapshotSpan                   = Unchecked.defaultof<_>
-        member x.ExtentIncludingLineBreak: SnapshotSpan = Unchecked.defaultof<_>
-        member x.GetLineBreakText(): string             = Unchecked.defaultof<_>
-        member x.GetText(): string                      = str
-        member x.GetTextIncludingLineBreak(): string    = Unchecked.defaultof<_>
-        member x.Length: int                            = Unchecked.defaultof<_>
-        member x.LengthIncludingLineBreak: int          = Unchecked.defaultof<_>
-        member x.LineBreakLength: int                   = Unchecked.defaultof<_>
-        member x.LineNumber: int                        = num
-        member x.Snapshot: ITextSnapshot                = Unchecked.defaultof<_>
-        member x.Start: SnapshotPoint                   = Unchecked.defaultof<_>
+        member __.End: SnapshotPoint                     = Unchecked.defaultof<_>
+        member __.EndIncludingLineBreak: SnapshotPoint   = Unchecked.defaultof<_>      
+        member __.Extent: SnapshotSpan                   = Unchecked.defaultof<_>
+        member __.ExtentIncludingLineBreak: SnapshotSpan = Unchecked.defaultof<_>
+        member __.GetLineBreakText(): string             = Unchecked.defaultof<_>
+        member __.GetText(): string                      = str
+        member __.GetTextIncludingLineBreak(): string    = Unchecked.defaultof<_>
+        member __.Length: int                            = Unchecked.defaultof<_>
+        member __.LengthIncludingLineBreak: int          = Unchecked.defaultof<_>
+        member __.LineBreakLength: int                   = Unchecked.defaultof<_>
+        member __.LineNumber: int                        = num
+        member __.Snapshot: ITextSnapshot                = Unchecked.defaultof<_>
+        member __.Start: SnapshotPoint                   = Unchecked.defaultof<_>
     override __.ToString() = str
 
 type testTextBuffer () =
@@ -125,136 +127,59 @@ type testTextBuffer () =
         
 
 
-let printseq s = s |> Seq.iter ( fun elm -> printfn "%A, " elm )
+let printseq s = s |> Seq.iteri ( fun num elm -> printfn "%d - %A, " num elm )
                  printf "\n"
 
-
-[<Struct>]
-type Region =
-    val StartLine   : int
-    val EndLine     : int
-
-
-    new ( startline, (*startoffset,*) endline ) =
-        {   StartLine   = startline
-    ///         StartOffset = startoffset
-            EndLine     = endline        }
-    override self.ToString() = 
-        sprintf "[Region {ln %d - ln %d}]" self.StartLine self.EndLine
 
 
 
 let rng = Random()
 
 
-let options = [| "/// </summary> "; "??? //// "; "// Ouch" ; "////" ;"/// (* *)";"      ///"; " // /"  |]
+let options = [| "/// </summary> "; "??? //// "; "// Ouch" ; "////" ;"/// (* *)";"      ///"; " // /" ; 
+                 " //<<><>><><"   ; "/ / / / / /"; "/slippery/" |]
 
-let genSeq = 
-    let testLines = options
+let comOpt  = [| "// a comment "; "??? //// "; "// Ouch" ; "// //" ;"/// (* *)";"      //"; " // /" ; 
+                 " //<<><>><><"   ; "/ / / / / /"; "/slippery/" |]
+
+let genSeq (opts:string[]) = 
     let randline num = 
-        if num >= 0 && num < testLines.Length then
-            testSnapshotLine testLines.[num] :> ITextSnapshotLine
+        if num >= 0 && num < opts.Length then
+            testSnapshotLine opts.[num] :> ITextSnapshotLine
         else 
-            testSnapshotLine testLines.[0]  :> ITextSnapshotLine
+            testSnapshotLine opts.[0]  :> ITextSnapshotLine
 
     let rnd = new Random()
     let rec gen _ = 
-        seq{    let textline = randline <| rnd.Next(0,testLines.Length-1) 
+        seq{    let textline = randline <| rnd.Next(0,opts.Length-1) 
                 yield  textline
                 yield! gen ()   }
     gen()
                
-let staticSeq len =  
-    (Seq.take len genSeq) 
+let staticSeq len opts =  
+    (Seq.take len (genSeq opts) )
     |> Seq.toList 
     |> List.mapi ( fun num elm -> testSnapshotLine (elm.GetText(), num )
                                     :> ITextSnapshotLine)
     |> List.toSeq
 
-;;
-
-let startDoc = "///"
-let validStarts = [ "///"; "//"; "*)"; "(*";]
-
-let lineMatch (line:ITextSnapshotLine) start = 
-        line.GetText().TrimStart().StartsWith(start)
-
-let lineMatchAny (line:ITextSnapshotLine) ls =
-        List.fold( fun acc start -> 
-                       acc || lineMatch line start ) false ls
-
-let rec takeBlock ( lines:seq<ITextSnapshotLine> ) = 
-    seq {   printfn "The length of the seq is %A" (lines.Count())
-            if lines.Count() = 0 then () else 
-            let block = lines
-                        |> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc )
-                        |> Seq.takeWhile ( fun ln -> lineMatch ln startDoc )
-//            printfn "\n====="
-//            printfn   "Block"
-//            printfn   "====="
-            block |> Seq.iter ( printfn "%A")
-            let rest = lines |> Seq.skip ( Seq.length block )
-            yield block
-            if lines.Count() = rest.Count() then () else 
-            yield! takeBlock rest
-        }
-
-
-let takeBlocks ( lines:seq<ITextSnapshotLine> )= 
-    let rec loop (lines:seq<ITextSnapshotLine>) =
-        seq{    if lines.Count() = 0 then () else 
-                let block = lines
-                            |> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc )
-                            |> Seq.takeWhile ( fun ln -> lineMatch ln startDoc )
-                let rest = lines|> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc ) 
-                                |> Seq.skip ( Seq.length block )
-                yield block
-                yield! loop rest
-            }
-    loop lines |> Seq.map(List.ofSeq) |> List.ofSeq
-
-
-
-let getBlocks ( lines:seq<ITextSnapshotLine> ) = 
-    lines |> Seq.unfold( fun lines -> 
-        if Seq.isEmpty lines then None else 
-        let block = lines|> Seq.skipWhile ( fun ln -> not <| lineMatch ln startDoc )
-                         |> Seq.takeWhile ( fun ln -> lineMatch ln startDoc )
-        let rest = lines |> Seq.skip ( Seq.length block )
-        Some(block,rest))
-
-let buildRegions (regls:ITextSnapshotLine list list) =
-    let build (ls:ITextSnapshotLine list) =
-        match ls with 
-        | [] -> None
-        | _  -> let fstline = ls.[0].LineNumber
-                let lstline = ls.[ls.Length-1].LineNumber
-                if fstline = lstline then None else
-                Some <| Region( fstline, lstline)
-    match regls with
-        | [] -> []
-        | _  -> regls   |> List.map build 
-                        |> List.filter ( fun x -> x <> None ) 
-                        |> List.map Option.get 
-
-
-
-
 
 
 #time "on"
 ;;
-let testSeq =  staticSeq 20
+//let docSeq =  staticSeq 50 options
+let comSeq =  staticSeq 50 comOpt
 ;;
 //printfn "testSeq"
 //printseq testSeq
 //printfn "\ngetBlocks"
 //getBlocks testSeq |> Seq.iter( fun x -> printseq x )
 //;;
-printseq testSeq
+printseq comSeq
 printfn "testSeq"
-printfn "\ntakeBlock"
-testSeq |> (takeBlocks >> buildRegions )
-//|> Seq.iter ( fun x ->  printf "%A " x )
+printfn "\nBUILD COMMENT REGIONS"
+printfn   "=====================\n"
+comSeq  |> buildCommentRegions
+        |> Seq.iter ( fun x ->  printf "%A\n" x )
 ;;
 
