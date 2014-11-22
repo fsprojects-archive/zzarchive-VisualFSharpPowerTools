@@ -18,11 +18,6 @@ type Symbol =
       Text: string }
     member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
 
-[<RequireQualifiedAccess>]
-type SymbolLookupKind =
-    | Fuzzy
-    | ByRightColumn
-
 type internal DraftToken =
     { Kind: SymbolKind
       Token: FSharpTokenInfo 
@@ -83,7 +78,7 @@ module Lexer =
         loop (queryLexState source defines line) []
 
     // Returns symbol at a given position.
-    let getSymbolFromTokens (tokens: FSharpTokenInfo list) line col (lineStr: string) lookupKind: Symbol option =
+    let getSymbolFromTokens (tokens: FSharpTokenInfo list) line col (lineStr: string): Symbol option =
         let isIdentifier t = t.CharClass = FSharpTokenCharKind.Identifier
         let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
     
@@ -132,12 +127,7 @@ module Lexer =
             |> fst
            
         // One or two tokens that in touch with the cursor (for "let x|(g) = ()" the tokens will be "x" and "(")
-        let tokensUnderCursor = 
-            match lookupKind with
-            | SymbolLookupKind.Fuzzy ->
-                tokens |> List.filter (fun x -> x.Token.LeftColumn <= col && x.RightColumn + 1 >= col)
-            | SymbolLookupKind.ByRightColumn ->
-                tokens |> List.filter (fun x -> x.RightColumn = col)
+        let tokensUnderCursor = tokens |> List.filter (fun x -> x.Token.LeftColumn <= col && x.RightColumn + 1 >= col)
     
         // Select IDENT token. If failes, select OPERATOR token.
         tokensUnderCursor
@@ -145,7 +135,10 @@ module Lexer =
             match x.Kind with 
             | Ident | GenericTypeParameter | StaticallyResolvedTypeParameter -> true 
             | _ -> false) 
-        |> Option.orElse (tokensUnderCursor |> List.tryFind (fun (x: DraftToken) -> x.Kind = Operator))
+        |> Option.orElse (List.tryFind (fun (x: DraftToken) -> 
+            match x.Kind with 
+            | Operator -> true 
+            | _ -> false) tokensUnderCursor)
         |> Option.map (fun token ->
             { Kind = token.Kind
               Line = line
@@ -153,6 +146,6 @@ module Lexer =
               RightColumn = token.RightColumn + 1
               Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
     
-    let getSymbol source line col lineStr lookupKind (args: string[]) queryLexState =
+    let getSymbol source line col lineStr (args: string[]) queryLexState =
         let tokens = tokenizeLine source args line lineStr queryLexState
-        getSymbolFromTokens tokens line col lineStr lookupKind 
+        getSymbolFromTokens tokens line col lineStr 

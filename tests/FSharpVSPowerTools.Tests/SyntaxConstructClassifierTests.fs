@@ -115,16 +115,6 @@ let internal f() = ()
         File.WriteAllText(fileName, "")
         helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
-
-        // first event is raised when "fast calculatable" spans (without Unused declarations and opens) are ready
-        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
-            helper.ClassificationSpansOf(buffer, classifier)
-            |> Seq.toList
-            |> assertEqual
-                [ { Classification = "FSharp.Function"
-                    Span = (4, 14) => (4, 14) } ]
-
-        // second event is raised when all spans, including Unused are ready
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             helper.ClassificationSpansOf(buffer, classifier)
             |> Seq.toList

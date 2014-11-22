@@ -18,10 +18,14 @@ module FSharpVSPowerTools.Core.Tests.RecordStubGeneratorTests
 
 open NUnit.Framework
 open System
+open System.IO
+open System.Collections.Generic
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
@@ -38,10 +42,11 @@ let args =
         @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"
     |]
 
-let languageService = LanguageService()
+let languageService = LanguageService(fun _ -> ())
 let project() =
     let fileName = @"C:\file.fs"
     let projFileName = @"C:\Project.fsproj"
+    let files = [| fileName |]
     { ProjectFileName = projFileName
       ProjectFileNames = [| fileName |]
       OtherOptions = args

@@ -34,12 +34,12 @@ type private Cache<'K, 'V when 'K: comparison>() =
                     | Get (key, creator, r) ->
                         match cache |> Map.tryFind key with
                         | Some value ->
-                            //debug "[Project cache] Return from cache for %A" key
+                            debug "[Project cache] Return from cache for %A" key
                             r.Reply value
                             cache
                         | None ->
                             let value = creator()
-                            //debug "[Project cache] Creating new value for %A" key
+                            debug "[Project cache] Creating new value for %A" key
                             r.Reply value
                             cache |> Map.add key value
                     | TryGet (key, r) ->

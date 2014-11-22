@@ -22,12 +22,9 @@ type Category =
     | Other
     override x.ToString() = sprintf "%A" x
 
-type CategorizedColumnSpan<'T> =
+type CategorizedColumnSpan =
     { Category: Category
-      WordSpan: WordSpan
-      /// Snapshot for which the span was created.
-      /// None if the right Snapshot is maintained separatly
-      Snapshot: 'T option }
+      WordSpan: WordSpan }
 
 module private QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
@@ -40,8 +37,7 @@ module private QuotationCategorizer =
                 seq [ { Category = Category.Quotation
                         WordSpan = { Line = r.StartLine
                                      StartCol = r.StartColumn
-                                     EndCol = r.EndColumn }
-                        Snapshot = None } ]
+                                     EndCol = r.EndColumn }} ]
             else
                 [r.StartLine..r.EndLine]
                 |> Seq.choose (fun line ->
@@ -74,8 +70,7 @@ module private QuotationCategorizer =
                         Some { Category = Category.Quotation
                                WordSpan = { Line = line
                                             StartCol = minCol
-                                            EndCol = maxCol }
-                               Snapshot = None }))
+                                            EndCol = maxCol }}))
         |> Seq.concat
 
     let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
@@ -112,8 +107,7 @@ module private StringCategorizers =
                         WordSpan = 
                           { Line = line
                             StartCol = startColumn + m.Index
-                            EndCol = startColumn + m.Index + m.Length }
-                        Snapshot = None }
+                            EndCol = startColumn + m.Index + m.Length }}
                   category :: acc  
                 ) [])
         |> Seq.concat 
@@ -276,7 +270,7 @@ module SourceCodeClassifier =
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase, getTextLine: int -> string,
                                    openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
-        let allSymbolsUses2 =
+        let allSymbolsUses' =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
             |> Seq.map (fun (line, sus) ->
@@ -286,7 +280,6 @@ module SourceCodeClassifier =
                     let r = su.SymbolUse.RangeAlternate
                     lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1)
                     |> Option.bind (fun sym -> 
-                        //debug "#### su = %A, sym.Kind = %A" su sym.Kind
                         match sym.Kind with
                         | SymbolKind.Ident ->
                             // FCS returns inaccurate ranges for multiline method chains
@@ -301,14 +294,14 @@ module SourceCodeClassifier =
        
         // index all symbol usages by LineNumber 
         let wordSpans = 
-            allSymbolsUses2
+            allSymbolsUses'
             |> Seq.map (fun (_, span) -> span)
             |> Seq.groupBy (fun span -> span.Line)
             |> Seq.map (fun (line, ranges) -> line, ranges)
             |> Map.ofSeq
 
         let spansBasedOnSymbolsUses = 
-            allSymbolsUses2
+            allSymbolsUses'
             |> Seq.choose (fun (symbolUse, span) ->
                 let span = 
                     match wordSpans.TryFind span.Line with
@@ -337,8 +330,7 @@ module SourceCodeClassifier =
                     else Some { Category = 
                                     if not symbolUse.IsUsed then Category.Unused 
                                     else getCategory symbolUse.SymbolUse
-                                WordSpan = span' 
-                                Snapshot = None }
+                                WordSpan = span' }
         
                 categorizedSpan)
             |> Seq.groupBy (fun span -> span.WordSpan)
@@ -436,8 +428,7 @@ module SourceCodeClassifier =
                 { Category = Category.Unused
                   WordSpan = { Line = decl.DeclarationRange.StartLine 
                                StartCol = decl.DeclarationRange.StartColumn
-                               EndCol = decl.DeclarationRange.EndColumn }
-                  Snapshot = None })
+                               EndCol = decl.DeclarationRange.EndColumn }})
     
         //debug "[SourceCodeClassifier] AST: %A" ast
 

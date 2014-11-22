@@ -3,13 +3,6 @@
 open System
 open System.Text.RegularExpressions
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open UntypedAstUtils
-
-[<NoComparison>]
-type SymbolUse =
-    { SymbolUse: FSharpSymbolUse 
-      IsUsed: bool
-      FullNames: Idents[] }
 
 [<AutoOpen>]
 module internal TypedAstUtils =
@@ -60,6 +53,7 @@ module internal TypedAstUtils =
     let private UnnamedUnionFieldRegex = Regex("^Item(\d+)?$", RegexOptions.Compiled)
     let isUnnamedUnionCaseField (field: FSharpField) = UnnamedUnionFieldRegex.IsMatch(field.Name)
         
+
 [<AutoOpen>]
 module TypedAstExtensionHelpers =
     type FSharpEntity with
@@ -274,25 +268,3 @@ module TypedAstPatterns =
 
     let (|Event|_|) (func: FSharpMemberOrFunctionOrValue) =
         if func.IsEvent then Some () else None
-
-module UnusedDeclarations =
-    let getSingleDeclarations (symbolsUses: SymbolUse[]): FSharpSymbol[] =
-        symbolsUses
-        |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
-        |> Seq.choose (fun (symbol, uses) ->
-            match symbol with
-            | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
-            // Determining that a record, DU or module is used anywhere requires
-            // inspecting all their inclosed entities (fields, cases and func / vals)
-            // for usefulness, which is too expensive to do. Hence we never gray them out.
-            | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
-            // FCS returns inconsistent results for override members; we're going to skip these symbols.
-            | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
-            // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
-            | Parameter -> None
-            | _ ->
-                match Seq.toList uses with
-                | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
-                    Some symbol 
-                | _ -> None)
-        |> Seq.toArray

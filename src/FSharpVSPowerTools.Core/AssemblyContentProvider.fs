@@ -4,7 +4,7 @@ open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type internal ShortIdent = string
-type Idents = ShortIdent[]
+type internal Idents = ShortIdent[]
 type IsAutoOpen = bool
 type ModuleKind = { IsAutoOpen: bool; HasModuleSuffix: bool }
 

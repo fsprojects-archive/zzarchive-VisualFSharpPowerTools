@@ -24,7 +24,7 @@ let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
 let framework = FSharpTargetFramework.NET_4_5
-let languageService = LanguageService()
+let languageService = LanguageService(fun _ -> ())
 
 let opts source = 
     let opts = 
@@ -41,17 +41,15 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         { new LexerBase() with
             member __.GetSymbolFromTokensAtLocation (_tokens, line, col) =
                 let lineStr = sourceLines.[line]
-                Lexer.getSymbol source line col lineStr SymbolLookupKind.ByRightColumn LanguageServiceTestHelper.args Lexer.queryLexState
+                Lexer.getSymbol source line col lineStr LanguageServiceTestHelper.args Lexer.queryLexState
             member __.TokenizeLine line =
                 let lineStr = sourceLines.[line]
                 Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
 
-    let symbolsUses = 
-        async {
-            let! symbolUses = 
-                languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, Profiler())
-            return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }), Profiler())
-        } |> Async.RunSynchronously
+    let symbolsUses =
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, true,
+                                                      (fun _ -> async { return Some [opts] }))
+        |> Async.RunSynchronously
 
     let parseResults = 
         languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
@@ -420,16 +418,13 @@ let _ = "x".``Long func``().Substring(3)
 """
     => [ 4, [ Category.Function, 12, 25; Category.Function, 28, 37 ]]
 
-[<Test; Ignore "WIP">]
+[<Test>]
 let ``indexer``() = 
     """
 let arr = [|1|]
 let _ = arr.[0]
-let l, h = 0, 1
-let _ = arr.[l..h]
 """
-    => [ 3, []
-         5, []]
+    => [ 3, [ Category.Function, 11, 12 ]]
 
 [<Test>]
 let ``mutable value``() = 

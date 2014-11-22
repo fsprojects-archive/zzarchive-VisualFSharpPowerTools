@@ -301,7 +301,7 @@ let ``fully qualified external entities / partially qualified name``() =
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
 
 let file = "C:\\file.fs"
-let languageService = LanguageService()
+let languageService = LanguageService(fun _ -> ())
 
 type Source = string
 

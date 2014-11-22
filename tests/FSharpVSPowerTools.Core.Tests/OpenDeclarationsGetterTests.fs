@@ -106,7 +106,7 @@ let ``OpenDecl marks matching child decl even though another one is already mark
     assertEqual [true; true] (updatedDecl.Declarations |> List.map (fun decl -> decl.IsUsed))
 
 (*** OpenDeclarationGetter ***)
- 
+
 [<Test>]
 let ``first matched decl become Used, the rest decls - do not``() =
     // declaration here and in the rest of the tests are in REVERSE ORDER
@@ -178,7 +178,7 @@ let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
 let framework = FSharpTargetFramework.NET_4_5
-let languageService = LanguageService()
+let languageService = LanguageService(fun _ -> ())
 let opts source = 
     let opts = 
         languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, LanguageServiceTestHelper.args, [||], framework) 
@@ -196,7 +196,7 @@ let (=>) source (expected: (Line * (OpenDecl list)) list) =
     let parseResults = languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
     let actualOpenDeclarations =
-        let entities = 
+        let entities =
             languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             |> Async.RunSynchronously
         let qualifyOpenDeclarations line endColumn idents = 
@@ -280,7 +280,7 @@ let (|->) (source, isSignature) ((pos, expected): pos * string list) =
     let opts = opts source
     let fileName = Path.ChangeExtension(fileName, if isSignature then ".fsi" else ".fs")
     let parseResults = languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
-     
+
     let actual = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos (Option.get parseResults.ParseTree)
 
     try actual |> Collection.assertEquiv expected

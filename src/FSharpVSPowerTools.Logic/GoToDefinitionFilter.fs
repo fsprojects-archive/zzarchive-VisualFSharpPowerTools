@@ -115,12 +115,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         let fsSymbol = fsSymbolUse.Symbol
         let displayContext = fsSymbolUse.DisplayContext
         let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
-
-        // The file system is case-insensitive so list.fsi and List.fsi can clash
-        // Thus, we generate a tmp subfolder based on the hash of the filename
-        let subFolder = string (uint32 (hash fileName))
-
-        let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
+        let filePath = Path.Combine(Path.GetTempPath(), fileName)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)  
@@ -147,8 +142,6 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 |> Option.getOrElse []
             match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol with
             | Some signature ->
-                let directoryPath = Path.GetDirectoryName(filePath)
-                Directory.CreateDirectory(directoryPath) |> ignore
                 File.WriteAllText(filePath, signature)
                 let canShow = 
                     try

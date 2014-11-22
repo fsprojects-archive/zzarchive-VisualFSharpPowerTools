@@ -34,7 +34,7 @@ open System.Xml.Linq
 open System.Collections.Generic
 open System.IO
 
-let languageService = LanguageService()
+let languageService = LanguageService(fun _ -> ())
 let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
 let xmlFileCache = Dictionary()
 
@@ -516,23 +516,6 @@ let x = new MyStruct()"""
 type MyStruct =
     struct
     end
-"""
-
-[<Test>]
-let ``go to constructor-less struct metadata`` () =
-    """let x: System.Boolean = false"""
-    |> generateDefinitionFromPos (Pos.fromZ 0 14)
-    |> assertSrcAreEqualForFirstLines 11 """namespace System
-
-/// Represents a Boolean value.
-[<System.Runtime.InteropServices.ComVisible(true)>]
-[<Struct>]
-type Boolean =
-    interface System.IConvertible
-    /// Compares this instance to a specified object and returns an integer that indicates their relationship to one another.
-    member CompareTo : obj:obj -> int
-    /// Compares this instance to a specified  object and returns an integer that indicates their relationship to one another.
-    member CompareTo : value:bool -> int
 """
 
 [<Test>]
