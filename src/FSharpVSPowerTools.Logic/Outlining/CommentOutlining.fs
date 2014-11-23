@@ -13,23 +13,16 @@ module Comments =
     /// Holds the data that will be used to construct the IOutliningRegionTag
     /// </summary>
     [<Struct>]
-    type Region = 
+    type Region (startline: int, endline:int, collapsed:string, contents:string) = 
         /// Line number of the first line in the region
-        val StartLine : int
+        member __.StartLine = startline
         /// Line number of the last line in the region
-        val EndLine : int
+        member __.EndLine = endline
         /// The text displayed inline when a region is collapsed
-        val Collapsed : string
+        member __.Collapsed = collapsed
         /// The text displayed in the tooltip when a collapsed region is moused over
-        val Contents : string
-        
-        new(startline, endline, collapsed, contents) = 
-            { StartLine = startline
-              EndLine = endline
-              Collapsed = collapsed
-              Contents = contents }
-        
-        new(startline, endline) = Region(startline, endline, "...", "")
+        member __.Contents = contents
+
         override x.ToString() = sprintf "[Region {ln %d - ln %d}]" x.StartLine x.EndLine
     
     /// Check if the given string matches the start of the ITextSnapshotLine's trimmed text 
@@ -59,10 +52,9 @@ module Comments =
     let private comment = "//"
     
     let private matchDoccom ln = lineMatch ln doccom
-    let private notMatchDoccom ln = not <| lineMatch ln doccom
-    let private matchComment ln = lineMatch ln comment && notMatchDoccom ln
+    let private matchComment ln = lineMatch ln comment && (matchDoccom >> not) ln
     let private notMatchComment ln = (not <| lineMatch ln comment) || matchDoccom ln
-    let private doccomBlocks lines = takeBlocksOf lines matchDoccom notMatchDoccom
+    let private doccomBlocks lines = takeBlocksOf lines matchDoccom (matchDoccom >> not) 
     let private commentBlocks lines = takeBlocksOf lines matchComment notMatchComment
     let private trimLineStart (ln : ITextSnapshotLine) = ln.GetText().TrimStart([| ' ' |])
     
@@ -93,24 +85,30 @@ module Comments =
     /// Given a list of lines that comprise a documentation comment region, determine 
     /// the string to display when the region is collapsed
     let private getDoccomCollapsed (lines : ITextSnapshotLine list) : string = 
+        if lines = [] then ellipsis else
         let fstLineText = lines.[0].GetText()
         match lines.[0] |> filterWhitespace |> removeDoccom with
         // if the filtered first line is shorter than summary, use that line
         | ffln when ffln.Length < summary.Length -> fstLineText + ellipsis
         // if the first line of the doc comment is only "<summary>", take the next line
-        | ffln when ffln = summary -> (lines.[1].GetText()) + ellipsis
+        | ffln when ffln = summary &&
+            lines.Length > 1 -> (lines.[1].GetText()) + ellipsis
         // if the description follows the <summary> tag on the same line drop the tag and take the rest
         | ffln when ffln.[0..summary.Length - 1] = summary -> 
             let sumStart = fstLineText.IndexOf(summary) + summary.Length
             /// whitespace preceeding the doccom token
-            let indent = fstLineText.Substring(0, fstLineText.IndexOf(doccom) + doccom.Length)
-            indent + fstLineText.Substring(sumStart, fstLineText.Length - sumStart) + ellipsis
+            //let indent = fstLineText.Substring(0, fstLineText.IndexOf(doccom) + doccom.Length)
+            let indent = fstLineText.[0..fstLineText.IndexOf(doccom) + doccom.Length]
+            indent + fstLineText.[sumStart..fstLineText.Length - sumStart] + ellipsis
         // if xml tags aren't used, take the first line of the doc comment
         | _ -> fstLineText + ellipsis
     
     /// Given a list of lines that comprise a comment region, determine the string to display when the
     /// region is collapsed
-    let private getCommentCollapsed (lines : ITextSnapshotLine list) : string = lines.[0].GetText() + ellipsis
+    let private getCommentCollapsed (lines : ITextSnapshotLine list) : string = 
+        match lines with 
+        | [] -> ellipsis
+        | _ -> lines.[0].GetText() + ellipsis
     
     /// <summary>
     /// <para> Takes an ITextSnapshotline list list, where each inner list comprises the scope of a region and  </para>
@@ -129,8 +127,7 @@ module Comments =
                     Some <| Region(fstline, lstline, collapsed, contents)
         regionls
         |> List.map build
-        |> List.filter Option.isSome
-        |> List.map Option.get
+        |> List.choose id
     
     let private buildDoccomRegions ls = (doccomBlocks ls |> parseRegionsOf) getDoccomCollapsed getDoccomTooltip
     let private buildCommentRegions ls = (commentBlocks ls |> parseRegionsOf) getCommentCollapsed getCommentTooltip
@@ -165,11 +162,11 @@ module Comments =
             else -1
         
         let changeStart' : int = 
-            if newSpans.Count() > 0 then Math.Min(changeStart, newSpans.ElementAt(0).Start)
+            if newSpans.Count() > 0 then min changeStart (newSpans.ElementAt(0).Start)
             else changeStart
         
         let changeEnd' : int = 
-            if newSpans.Count() > 0 then Math.Max(changeEnd, newSpans.ElementAt(newSpans.Count() - 1).End)
+            if newSpans.Count() > 0 then max changeEnd (newSpans.ElementAt(newSpans.Count() - 1).End)
             else changeEnd
         
         let eventSpan : SnapshotSpan option = 
@@ -261,6 +258,5 @@ module Comments =
     [<ContentType("F#")>]
     type OutliningTaggerProvider() = 
         interface ITaggerProvider with
-            member __.CreateTagger<'T when 'T :> ITag>(buffer : ITextBuffer) : ITagger<'T> = 
-                let sc = Func<ITagger<'T>>(fun () -> new OutliningTagger(buffer) :> obj :?> ITagger<_>)
-                buffer.Properties.GetOrCreateSingletonProperty<ITagger<_>>(sc)
+            member __.CreateTagger buffer =
+                 buffer.Properties.GetOrCreateSingletonProperty( fun() -> OutliningTagger(buffer) :> obj :?> _ )
