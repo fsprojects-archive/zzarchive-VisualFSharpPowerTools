@@ -604,6 +604,11 @@ let getPrintfLiterals ast =
 let internal getStringLiterals ast : Range.range list =
     let result = ResizeArray() 
      
+    let visitType ty =
+        match ty with
+        | SynType.StaticConstant (SynConst.String(_, r), _) -> result.Add r
+        | _ -> ()
+
     let rec visitExpr = function 
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
             visitExpr cond
@@ -657,6 +662,7 @@ let internal getStringLiterals ast : Range.range list =
         | SynExpr.InferredUpcast(e, _) -> visitExpr e
         | SynExpr.InferredDowncast(e, _) -> visitExpr e
         | SynExpr.DotGet(e, _, _, _) -> visitExpr e
+        | SynExpr.TypeApp(_, _, tys, _, _, _, _) -> List.iter visitType tys
         | _ -> ()
          
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
@@ -670,11 +676,13 @@ let internal getStringLiterals ast : Range.range list =
         | SynMemberDefn.AutoProperty (_, _, _, _, _, _, _, _, expr, _, _) -> visitExpr expr
         | _ -> () 
 
-    let visitType ty =
+    let visitTypeDefn ty =
         let (SynTypeDefn.TypeDefn (_, repr, memberDefns, _)) = ty
         match repr with
         | SynTypeDefnRepr.ObjectModel (_, defns, _) ->
             for d in defns do visitMember d
+        | SynTypeDefnRepr.Simple(SynTypeDefnSimpleRepr.TypeAbbrev(_, SynType.App(_, _, tys, _,_ , _, _), _), _) ->
+            List.iter visitType tys
         | _ -> ()
         List.iter visitMember memberDefns
 
@@ -683,7 +691,7 @@ let internal getStringLiterals ast : Range.range list =
             match declaration with
             | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
             | SynModuleDecl.DoExpr (_, expr, _) -> visitExpr expr
-            | SynModuleDecl.Types (types, _) -> for ty in types do visitType ty
+            | SynModuleDecl.Types (types, _) -> for ty in types do visitTypeDefn ty
             | SynModuleDecl.NestedModule (_, decls, _, _) -> visitDeclarations decls
             | _ -> ()
 
