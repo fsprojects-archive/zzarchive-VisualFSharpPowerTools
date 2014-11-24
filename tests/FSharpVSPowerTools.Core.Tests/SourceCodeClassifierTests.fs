@@ -53,8 +53,8 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
             return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }), Profiler())
         } |> Async.RunSynchronously
 
-    let parseResults = 
-        languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
+    let checkResults = 
+        languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> Async.RunSynchronously
 
     let actualCategories =
         let entities =
@@ -74,7 +74,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
                | None -> []
 
-        let openDeclarations = OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
+        let openDeclarations = OpenDeclarationGetter.getOpenDeclarations (checkResults.GetUntypedAst()) entities qualifyOpenDeclarations
 
         let allEntities =
             entities
@@ -84,7 +84,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
                 |> Map.ofSeq)
 
-        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, 
+        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, checkResults, lexer, 
                                                         (fun line -> sourceLines.[line]), openDeclarations, allEntities)
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
@@ -111,7 +111,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
     
     try actual |> Collection.assertEquiv expected
     with _ -> 
-        debug "AST: %A" parseResults.ParseTree; 
+        debug "AST: %A" (checkResults.GetUntypedAst())
         reraise()
 
 [<Test>]

@@ -162,17 +162,17 @@ type SyntaxConstructClassifier
                 let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)     
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
                 
-                let! parseResults = pf.Time "parseFileInProject" <| fun _ ->
-                    vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
-                
+                let! checkResults = pf.Time "parseFileInProject" <| fun _ ->
+                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
+
                 let! entities, openDecls = 
                     if includeUnusedOpens() then
-                        getOpenDeclarations (snapshot.GetText()) project parseResults.ParseTree getTextLineOneBased pf 
+                        getOpenDeclarations (snapshot.GetText()) project (checkResults.GetUntypedAst()) getTextLineOneBased pf 
                     else async { return None, [] }
                     |> liftAsync
 
                 let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
-                    getCategoriesAndLocations (symbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, openDecls, entities)
+                    getCategoriesAndLocations (symbolsUses, checkResults, lexer, getTextLineOneBased, openDecls, entities)
                     |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
                
                 let notUsedSpans =
@@ -238,8 +238,8 @@ type SyntaxConstructClassifier
                     debug "[SyntaxConstructClassifier] - Effective update"
                     let pf = Profiler()
                                         
-                    let! parseResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
-                        vsLanguageService.ParseFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
+                    let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
+                        vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
 
                     let lexer = vsLanguageService.CreateLexer(snapshot, currentProject.CompilerOptions)
 
@@ -250,7 +250,7 @@ type SyntaxConstructClassifier
                     let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
                     let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
-                        getCategoriesAndLocations (allSymbolsUses, parseResults.ParseTree, lexer, getTextLineOneBased, [], None)
+                        getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
                         |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
 
                     let spans = 
