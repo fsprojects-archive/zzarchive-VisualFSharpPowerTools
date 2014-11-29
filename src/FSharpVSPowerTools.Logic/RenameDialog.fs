@@ -165,6 +165,8 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
 // Module for loading the rename dialog with a viewModel + owner
 [<RequireQualifiedAccess>]
 module UI = 
+    open System.Windows.Threading
+
     let loadRenameDialog (viewModel: RenameDialogViewModel) owner = 
         let window = RenameDialog()
 
@@ -176,7 +178,8 @@ module UI =
                 window.txtName.SelectAll()
                 window.Root.Activate() |> ignore
                 // Schedule activation to happen after bindings enable and make controls visible
-                window.Root.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, ThreadStart(fun _ -> ignore(window.txtName.Focus()))) |> ignore)
+                window.Root.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, 
+                                                   ThreadStart(fun _ -> ignore(window.txtName.Focus()))) |> ignore)
         window.Root.Owner <- owner
         window.Root.DataContext <- viewModel
         window.Root
