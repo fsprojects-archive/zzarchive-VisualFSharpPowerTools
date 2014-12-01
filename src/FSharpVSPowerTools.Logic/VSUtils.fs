@@ -240,6 +240,24 @@ let getSelectedFromSolutionExplorer<'T> (dte: EnvDTE80.DTE2) =
          | _ -> None)
     |> Seq.toList
 
+open System.Windows
+open System.Windows.Interop
+
+/// Display a modal dialog and set VS window as the owner
+let showDialog (wnd: Window) (shell: IVsUIShell) = 
+    match shell.GetDialogOwnerHwnd() with
+    | VSConstants.S_OK, hwnd ->
+        let helper = WindowInteropHelper(wnd)
+        helper.Owner <- hwnd
+        wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
+        try
+            if ErrorHandler.Failed(shell.EnableModeless(0)) then Some false
+            else wnd.ShowDialog() |> Option.ofNullable
+        finally
+            shell.EnableModeless(1) |> ignore
+    | _ -> 
+        None    
+
 open System.Threading
 open System.Windows.Threading
 open Microsoft.VisualStudio.Text.Classification

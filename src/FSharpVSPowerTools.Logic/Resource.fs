@@ -21,6 +21,7 @@ module Resource =
     let [<Literal>] validationDestinationFolderDoesNotExist = "Destination folder doesn't exist. Please try to create destination folder before moving files."
     let [<Literal>] validationCannotCreateFolder = "Unable to create folder. Please make sure you have enough privileges."
     let [<Literal>] validationExistingFolderOnDisk = "An existing folder has been added."
+    let [<Literal>] validationInvalidFolderName = "Invalid folder name."
     let [<Literal>] validationRenameFolderAlreadyExistsOnDisk = "Unable to rename folder. Folder with given name already exists on disk."
 
     let [<Literal>] navBarUnauthorizedMessage = "Unauthorized access to navigation bar configuration. Please try again after restarting Visual Studio from Administrator."

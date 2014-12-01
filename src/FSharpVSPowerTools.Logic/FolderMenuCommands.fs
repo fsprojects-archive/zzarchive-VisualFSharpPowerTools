@@ -173,18 +173,10 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         | [] -> Logging.logError "performVerticalMoveAction called with empty info.Items"
         | _ -> Logging.logError "performVerticalMoveAction called with more than one item in info.Items"
     
-    let showDialog (wnd: Window) = 
-        try 
-            if ErrorHandler.Failed(shell.EnableModeless(0)) then Some false
-            else wnd.ShowDialog() |> Option.ofNullable
-        finally
-            shell.EnableModeless(1) |> ignore
-    
     let askForDestinationFolder resources = 
         let model = MoveToFolderDialogModel resources
         let wnd = FolderMenuUI.loadMoveToFolderDialog model
-        wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
-        let res = showDialog wnd
+        let res = showDialog wnd shell
         match res with
         | Some true -> model.SelectedFolder
         | _ -> None
@@ -221,8 +213,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
     let askForFolderName resources = 
         let model = NewFolderNameDialogModel resources
         let wnd = FolderMenuUI.loadNewFolderDialog model
-        wnd.WindowStartupLocation <- WindowStartupLocation.CenterOwner
-        let res = showDialog wnd
+        let res = showDialog wnd shell
         match res with
         | Some true -> Some model.Name
         | _ -> None

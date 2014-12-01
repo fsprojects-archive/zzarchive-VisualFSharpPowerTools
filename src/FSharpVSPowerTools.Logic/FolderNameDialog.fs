@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Folders
 
+open System.IO
 open FSharpVSPowerTools
 open FSharp.ViewModule
 open FSharp.ViewModule.Validation
@@ -15,6 +16,11 @@ type NewFolderNameDialogResources =
 type NewFolderNameDialogModel(resources: NewFolderNameDialogResources) as self = 
     inherit ViewModelBase()
     
+    let validateFolderName (folderName: string) =
+        if (folderName.IndexOfAny <| Path.GetInvalidFileNameChars()) >= 0
+        then Some Resource.validationInvalidFolderName
+        else None
+
     let validateExists (folderName: string) = 
         match folderName.Trim() with
         | a when resources.FolderNames.Contains(a) -> Some Resource.validationFolderWithGivenNameAlreadyExists
@@ -25,6 +31,7 @@ type NewFolderNameDialogModel(resources: NewFolderNameDialogResources) as self =
         >> notNullOrWhitespace
         >> fixErrorsWithMessage Resource.validatingEmptyName
         >> custom validateExists
+        >> custom validateFolderName
         >> result
     
     let name = self.Factory.Backing(<@@ self.Name @@>, resources.OriginalName, validateName)
