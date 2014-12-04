@@ -137,17 +137,13 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                 // There is no reference point, we indent the content at the start column of the interface
                 |> Option.getOrElse iface.Range.StartColumn
 
-    // Check whether the interface is empty
-    let shouldImplementInterface _interfaceState (entity: FSharpEntity) =
-        not (InterfaceStubGenerator.hasNoInterfaceMember entity)
-
     let handleImplementInterface (snapshot: ITextSnapshot) state displayContext implementedMemberSignatures entity = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let startColumn = inferStartColumn indentSize state
         let typeParams = state.InterfaceData.TypeParameters
         let stub = InterfaceStubGenerator.formatInterface startColumn indentSize typeParams 
-                    "x" defaultBody displayContext implementedMemberSignatures entity
+                       "x" defaultBody displayContext implementedMemberSignatures entity
         if String.IsNullOrEmpty stub then
             let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore
@@ -171,22 +167,18 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
             member __.Icon = null
             member __.IsEnabled = true
             member __.Invoke() = 
-                if shouldImplementInterface state entity then
-                    async {
-                        let getMemberByLocation(name, range: range) =
-                            let lineStr = 
-                                match fromFSharpRange snapshot range with
-                                | Some span -> span.End.GetContainingLine().GetText()
-                                | None -> String.Empty
-                            results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])
-                        let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures 
-                                                               getMemberByLocation displayContext state.InterfaceData
-                        return handleImplementInterface snapshot state displayContext implementedMemberSignatures entity
-                    }
-                    |> Async.StartImmediateSafe
-                else
-                    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                    statusBar.SetText(Resource.interfaceEmptyStatusMessage) |> ignore }
+                async {
+                    let getMemberByLocation(name, range: range) =
+                        let lineStr = 
+                            match fromFSharpRange snapshot range with
+                            | Some span -> span.End.GetContainingLine().GetText()
+                            | None -> String.Empty
+                        results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])
+                    let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures 
+                                                            getMemberByLocation displayContext state.InterfaceData
+                    return handleImplementInterface snapshot state displayContext implementedMemberSignatures entity
+                }
+                |> Async.StartImmediateSafe }
 
     member __.GetSmartTagActions(snapshot, interfaceDefinition) =
         let actionSetList = ResizeArray<SmartTagActionSet>()
@@ -203,10 +195,12 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                 seq {
                     match currentWord, state with
                     | Some word, Some interfaceDefinition ->
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                        yield TagSpan<ImplementInterfaceSmartTag>(span, 
-                                ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
-                                :> ITagSpan<_>
+                        let (_, _, entity, _) = interfaceDefinition
+                        if not (InterfaceStubGenerator.hasNoInterfaceMember entity) then
+                            let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
+                            yield TagSpan<ImplementInterfaceSmartTag>(span, 
+                                    ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
+                                    :> ITagSpan<_>
                     | _ -> ()
                 })
                 Seq.empty
