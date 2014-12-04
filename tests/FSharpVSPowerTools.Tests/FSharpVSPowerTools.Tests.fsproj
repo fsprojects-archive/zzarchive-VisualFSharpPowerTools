@@ -359,18 +359,18 @@
     </Content>
     <Content Include="app.config" />
     <Content Include="paket.references" />
-    <None Include="Foq.Usage.fsx" />
     <Compile Include="ExternalProjectProvider.fs" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="MockDTE.fs" />
     <Compile Include="Mocks.fs" />
     <Compile Include="VsTestBase.fs" />
     <Compile Include="SyntaxConstructClassifierTests.fs" />
-    <Compile Include="ResolveUnopenedNamespaceSmartTaggerTests.fs" />
     <Compile Include="HighlightUsageTaggerTests.fs" />
-    <Compile Include="FormattingTests.fs" />
+    <Compile Include="FormattingCommandTests.fs" />
     <Compile Include="DepthTaggerTests.fs" />
     <Compile Include="FindReferencesCommandTests.fs" />
+    <Compile Include="ResolveUnopenedNamespaceSmartTaggerTests.fs" />
+    <Compile Include="ImplementInterfaceSmartTaggerTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
