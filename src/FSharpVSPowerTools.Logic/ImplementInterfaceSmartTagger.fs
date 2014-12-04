@@ -13,6 +13,7 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler
 
 type ImplementInterfaceSmartTag(actionSets) = 
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -195,12 +196,20 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                 seq {
                     match currentWord, state with
                     | Some word, Some interfaceDefinition ->
-                        let (_, _, entity, _) = interfaceDefinition
+                        let (interfaceState, _, entity, parseAndCheckResults) = interfaceDefinition
                         if not (InterfaceStubGenerator.hasNoInterfaceMember entity) then
-                            let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                            yield TagSpan<ImplementInterfaceSmartTag>(span, 
-                                    ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
-                                    :> ITagSpan<_>
+                            let membersAndRanges = InterfaceStubGenerator.getMemberNameAndRanges interfaceState.InterfaceData
+                            let interfaceMembers = InterfaceStubGenerator.getInterfaceMembers entity
+                            let hasTypeCheckError = 
+                                match parseAndCheckResults.GetErrors() with
+                                | Some errors -> errors |> Array.exists (fun e -> e.Severity = FSharpErrorSeverity.Error)
+                                | None -> false
+                            // This comparison is a bit expensive
+                            if hasTypeCheckError || not (List.length membersAndRanges = Seq.length interfaceMembers) then
+                                let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
+                                yield TagSpan<ImplementInterfaceSmartTag>(span, 
+                                        ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
+                                        :> ITagSpan<_>
                     | _ -> ()
                 })
                 Seq.empty

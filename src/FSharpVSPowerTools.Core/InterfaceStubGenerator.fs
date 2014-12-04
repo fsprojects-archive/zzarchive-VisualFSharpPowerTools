@@ -375,7 +375,7 @@ module InterfaceStubGenerator =
         |> Seq.distinct
 
     /// Get members in the decreasing order of inheritance chain
-    let internal getInterfaceMembers (e: FSharpEntity) = 
+    let getInterfaceMembers (e: FSharpEntity) = 
         seq {
             for (iface, instantiations) in getInterfaces e do
                 yield! iface.MembersFunctionsAndValues |> Seq.choose (fun m -> 

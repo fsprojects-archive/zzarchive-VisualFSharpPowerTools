@@ -66,6 +66,24 @@ type Impl() =
             (fun () -> helper.TagsOf(buffer, tagger) |> Seq.concat |> Seq.toList |> assertEqual [])
 
     [<Test>]
+    let ``return nothing if all members have been implemented and there is no type error``() = 
+        let content = """
+let _ =
+    { new System.IDisposable with
+          member x.Dispose(): unit = 
+              failwith "Not implemented yet"
+           }
+"""
+        let fileName = getTempFileName ".fsx"
+        let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) |> Seq.concat |> Seq.toList |> assertEqual [])
+
+    [<Test>]
     let ``should insert all members if no member has been implemented``() = 
         let content = """
 let _ =
