@@ -121,7 +121,6 @@ type Interface =
     abstract member Method1 : int -> int
     abstract member Method2 : int -> int
     abstract member Method3 : int -> int
-
 type Class() =
     interface Interface with 
         member __.Method1(n) = 2 * n
@@ -132,7 +131,7 @@ type Class() =
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 8 16) |> ignore)
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 7 16) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
@@ -146,7 +145,6 @@ type Interface =
     abstract member Method1 : int -> int
     abstract member Method2 : int -> int
     abstract member Method3 : int -> int
-
 type Class() =
     interface Interface with
         member x.Method2(arg1: int): int = 
@@ -158,20 +156,17 @@ type Class() =
         member __.Method1(n) = 2 * n
 """))
 
-    [<Test>]
+    [<Test; Category "AppVeyorLongRunning">]
     let ``should insert duplicated members once``() = 
         let content = """
 type Interface1 =
     abstract member Method : int -> int
-
 type Interface2 =
     abstract member Method : int -> int
-
 type Interface3 =
     inherit Interface1
     inherit Interface2
     abstract member Method3 : int -> int
-
 type Class() =
     interface Interface3
 """
@@ -181,7 +176,7 @@ type Class() =
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 14 16) |> ignore)
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 11 16) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
@@ -193,15 +188,12 @@ type Class() =
                         buffer.CurrentSnapshot.GetText() |> assertEquivString """
 type Interface1 =
     abstract member Method : int -> int
-
 type Interface2 =
     abstract member Method : int -> int
-
 type Interface3 =
     inherit Interface1
     inherit Interface2
     abstract member Method3 : int -> int
-
 type Class() =
     interface Interface3 with
         member x.Method(arg1: int): int = 
