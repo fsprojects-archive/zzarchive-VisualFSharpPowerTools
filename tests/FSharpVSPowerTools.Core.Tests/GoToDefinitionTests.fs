@@ -1435,9 +1435,30 @@ type ResizeArray<'T> = System.Collections.Generic.List<'T>
 """
 
 [<Test>]
+let ``support compiled name attribute`` () =
+    """open System
+[<CompiledName("C")>]
+type C() = class end"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 8)
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
+
+open System
+
+/// Adding this attribute to a value or function definition in an F# module changes the name used
+/// for the value in compiled CLI code.
+[<Sealed>]
+type CompiledNameAttribute =
+    inherit System.Attribute
+    /// Creates an instance of the attribute
+    new : compiledName:string -> CompiledNameAttribute
+    /// The name of the value as it appears in compiled code
+    member CompiledName : string
+"""
+
+[<Test>]
 let ``handle operators as compiled members`` () =
     """let x: System.DateTime = failwith "" """
-    |> generateDefinitionFromPosNoValidation (Pos.fromZ 0 20)
+    |> generateDefinitionFromPos (Pos.fromZ 0 20)
     |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
     |> assertEqual true
 
@@ -1451,7 +1472,7 @@ let ``handle uninstantiated type parameters`` () =
 
 let ``handle generic definitions`` () =
     """open System
-let x: Collections.Generic.List<'T> = failwith "" """
+let x: Collections.Generic.List<string> = failwith "" """
     |> generateDefinitionFromPos (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
     |> assertEqual true
@@ -1459,7 +1480,7 @@ let x: Collections.Generic.List<'T> = failwith "" """
 [<Test>]
 let ``handle generic definitions 2`` () =
     """open System
-let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
+let x: Collections.Generic.Dictionary<string, int> = failwith "" """
     |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
     |> assertEqual true
@@ -1468,7 +1489,7 @@ let x: Collections.Generic.Dictionary<'K, 'V> = failwith "" """
 let ``handle active patterns as parts of module declarations`` () =
     """open Microsoft.FSharp.Quotations
 let f = Patterns.(|AddressOf|_|)"""
-    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 13)
+    |> generateDefinitionFromPos (Pos.fromZ 1 13)
     |> fun str -> str.Contains("val (|AddressSet|_|) : input:Expr -> (Expr * Expr) option")
     |> assertEqual true
 
