@@ -335,6 +335,36 @@ module InterfaceStubGenerator =
             getNonAbbreviatedType typ.AbbreviatedType
         else typ
 
+    // Sometimes interface members are stored in the form of `IInterface<'T> -> ...`,
+    // so we need to get the 2nd generic argument
+    let internal (|MemberFunctionType|_|) (typ: FSharpType) =
+        if typ.IsFunctionType && typ.GenericArguments.Count = 2 then
+            Some typ.GenericArguments.[1]
+        else None
+
+    let internal (|TypeOfMember|_|) (m: FSharpMemberOrFunctionOrValue) =
+        match m.FullTypeSafe with
+        | Some (MemberFunctionType typ) when m.IsProperty && m.EnclosingEntity.IsFSharp ->
+            Some typ
+        | Some typ -> Some typ
+        | None -> None
+
+    let internal (|EventFunctionType|_|) (typ: FSharpType) =
+        match typ with
+        | MemberFunctionType typ ->
+            if typ.IsFunctionType && typ.GenericArguments.Count = 2 then
+                let retType = typ.GenericArguments.[0]
+                let argType = typ.GenericArguments.[1]
+                if argType.GenericArguments.Count = 2 then
+                    Some (argType.GenericArguments.[0], retType)
+                else None
+            else None
+        | _ ->
+            None
+
+    let internal removeWhitespace (str: string) = 
+        str.Replace(" ", "")
+
     /// Filter out duplicated interfaces in inheritance chain
     let rec internal getInterfaces (e: FSharpEntity) = 
         seq { for iface in e.AllInterfaces ->
@@ -345,7 +375,7 @@ module InterfaceStubGenerator =
         |> Seq.distinct
 
     /// Get members in the decreasing order of inheritance chain
-    let internal getInterfaceMembers (e: FSharpEntity) = 
+    let getInterfaceMembers (e: FSharpEntity) = 
         seq {
             for (iface, instantiations) in getInterfaces e do
                 yield! iface.MembersFunctionsAndValues |> Seq.choose (fun m -> 
@@ -395,36 +425,6 @@ module InterfaceStubGenerator =
             |> Seq.toList
         | InterfaceData.ObjExpr(_, bindings) -> 
             List.choose (|MemberNameAndRange|_|) bindings
-
-    // Sometimes interface members are stored in the form of `IInterface<'T> -> ...`,
-    // so we need to get the 2nd generic argument
-    let internal (|MemberFunctionType|_|) (typ: FSharpType) =
-        if typ.IsFunctionType && typ.GenericArguments.Count = 2 then
-            Some typ.GenericArguments.[1]
-        else None
-
-    let internal (|TypeOfMember|_|) (m: FSharpMemberOrFunctionOrValue) =
-        match m.FullTypeSafe with
-        | Some (MemberFunctionType typ) when m.IsProperty && m.EnclosingEntity.IsFSharp ->
-            Some typ
-        | Some typ -> Some typ
-        | None -> None
-
-    let internal (|EventFunctionType|_|) (typ: FSharpType) =
-        match typ with
-        | MemberFunctionType typ ->
-            if typ.IsFunctionType && typ.GenericArguments.Count = 2 then
-                let retType = typ.GenericArguments.[0]
-                let argType = typ.GenericArguments.[1]
-                if argType.GenericArguments.Count = 2 then
-                    Some (argType.GenericArguments.[0], retType)
-                else None
-            else None
-        | _ ->
-            None
-
-    let internal removeWhitespace (str: string) = 
-        str.Replace(" ", "")
 
     let internal normalizeEventName (m: FSharpMemberOrFunctionOrValue) =
         let name = m.DisplayName
@@ -493,17 +493,25 @@ module InterfaceStubGenerator =
                     Indentation = indentation; ObjectIdent = objectIdent; MethodBody = lines; DisplayContext = displayContext }
         let missingMembers =
             getInterfaceMembers e
-            |> Seq.filter (fun (m, insts) ->               
+            |> Seq.groupBy (fun (m, insts) ->               
                 match m with
                 | _ when isEventMember m  ->
-                    let signature = normalizeEventName m
-                    not (Set.contains signature excludedMemberSignatures)
+                    Some (normalizeEventName m)
                 | TypeOfMember typ ->
                     let signature = removeWhitespace (sprintf "%s:%s" m.DisplayName (formatType { ctx with ArgInstantiations = insts } typ))
-                    not (Set.contains signature excludedMemberSignatures) 
+                    Some signature 
                 | _ -> 
                     debug "FullType throws exceptions due to bugs in FCS."
-                    true)
+                    None)
+            |> Seq.collect (fun (signature, members) ->               
+                match signature with
+                | None ->
+                    members
+                | Some signature when not (Set.contains signature excludedMemberSignatures) ->
+                    // Return the first member from a group of members for a particular signature
+                    Seq.truncate 1 members
+                | _ -> Seq.empty)
+
         // All members have already been implemented
         if Seq.isEmpty missingMembers then
             String.Empty

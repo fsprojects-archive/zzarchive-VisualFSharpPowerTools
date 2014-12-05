@@ -119,8 +119,12 @@ namespace TestUtilities.Mocks {
 
         public ITextSnapshot Insert(int position, string text) {
             using (var edit = CreateEdit()) {
+                var oldSnapshot = _snapshot;
                 edit.Insert(position, text);
-                return edit.Apply();
+                var newSnapshot = edit.Apply();                
+                if (Changed != null)
+                    Changed(this, new TextContentChangedEventArgs(oldSnapshot, newSnapshot, EditOptions.None, null));
+                return newSnapshot;
             }
         }
 
@@ -146,11 +150,11 @@ namespace TestUtilities.Mocks {
             newText  = newText.Insert(replaceSpan.Start, replaceWith);
             var oldSnapshot = _snapshot;
             _snapshot = new MockTextSnapshot(
-                this, 
-                newText, 
-                _snapshot, 
+                this,
+                newText,
+                _snapshot,
                 new MockTextChange(
-                    new SnapshotSpan(_snapshot, replaceSpan), 
+                    new SnapshotSpan(_snapshot, replaceSpan),
                     replaceSpan.Start,
                     replaceWith
                 )
