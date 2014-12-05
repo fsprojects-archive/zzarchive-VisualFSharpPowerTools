@@ -609,6 +609,8 @@ type T2 =
     |> generateDefinitionFromPosNoValidation (Pos.fromZ 4 5)
     |> assertSrcAreEqual """module File
 
+open File
+
 type T2 =
     interface
         inherit T
@@ -669,6 +671,8 @@ type MyClass() =
     override this.Method(x) = ()"""
     |> generateDefinitionFromPosNoValidation (Pos.fromZ 5 5)
     |> assertSrcAreEqual """module File
+
+open File
 
 type MyClass =
     inherit MyBaseClass
@@ -1442,8 +1446,6 @@ type C() = class end"""
     |> generateDefinitionFromPos (Pos.fromZ 1 8)
     |> assertSrcAreEqual """namespace Microsoft.FSharp.Core
 
-open System
-
 /// Adding this attribute to a value or function definition in an F# module changes the name used
 /// for the value in compiled CLI code.
 [<Sealed>]
@@ -1453,6 +1455,26 @@ type CompiledNameAttribute =
     new : compiledName:string -> CompiledNameAttribute
     /// The name of the value as it appears in compiled code
     member CompiledName : string
+"""
+
+[<Test>]
+let ``set up transitive open declarations correctly`` () =
+    """namespace System
+[<System.Runtime.InteropServices.ComVisible(true)>]
+type T() = class end"""
+    |> generateDefinitionFromPos (Pos.fromZ 1 35)
+    |> assertSrcAreEqual """namespace System.Runtime.InteropServices
+
+open System
+
+/// Controls accessibility of an individual managed type or member, or of all types within an assembly, to COM.
+[<Runtime.InteropServices.ComVisible(true)>]
+type ComVisibleAttribute =
+    inherit System.Attribute
+    /// Initializes a new instance of the ComVisibleAttribute class.
+    new : visibility:bool -> ComVisibleAttribute
+    /// Gets a value that indicates whether the COM type is visible.
+    member Value : bool
 """
 
 [<Test>]
@@ -1534,6 +1556,7 @@ let ``file names for members should refer to type names`` () =
 let _ = Async.AwaitTask"""
     |> generateFileNameForSymbol (Pos.fromZ 1 16)
     |> assertSrcAreEqual "Microsoft.FSharp.Control.FSharpAsync.fsi"
+
 
 // Tests to add:
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)

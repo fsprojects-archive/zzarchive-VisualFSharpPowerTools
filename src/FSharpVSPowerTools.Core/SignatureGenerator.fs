@@ -659,12 +659,14 @@ and internal writeAttributes ctx writer (typ: option<FSharpEntity>) (attributes:
     let typeDefSyntaxDelimOpt = Option.bind tryGetNeededTypeDefSyntaxDelimiter typ
     let bypassAttribute (attrib: FSharpAttribute) =
         not attrib.AttributeType.Accessibility.IsPublic 
+            || isAttribute<AttributeUsageAttribute> attrib
             || (typeDefSyntaxDelimOpt = Some "struct" && isAttribute<StructAttribute> attrib)
 
     for attr in attributes do
         if not (bypassAttribute attr) then
             let attrText = formatAttribute ctx attr
-            // Bypass unsupported attribute arguments (this should be fixed in FCS, albeit not easy)
+            // Bypass unsupported attribute arguments 
+            // TODO: this should be fixed in FCS, albeit not easy.
             if not (attrText.Contains "(* unsupported attribute argument *)") then
                 writer.WriteLine(attrText)  
 
