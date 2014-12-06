@@ -6,6 +6,7 @@ NUGET
     Fantomas (1.6.0)
       FSharp.Compiler.Service (>= 0.0.73)
     Foq (1.6.0)
+    FParsec (1.0.1)
     FsCheck (1.0.3)
     FSharp.Compiler.Service (0.0.81)
     FSharp.Formatting (2.4.33)

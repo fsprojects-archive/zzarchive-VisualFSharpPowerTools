@@ -54,6 +54,18 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <PropertyGroup>
+    <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework'">
       <Choose>
@@ -100,6 +112,16 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="FSharp.Compiler.Service">
               <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net40\FSharp.Compiler.Service.dll</HintPath>
               <Private>True</Private>
@@ -119,6 +141,16 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="FSharp.Compiler.Service">
               <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net40\FSharp.Compiler.Service.dll</HintPath>
               <Private>True</Private>
@@ -135,6 +167,16 @@
           <ItemGroup>
             <Reference Include="System.Windows.Interactivity">
               <HintPath>..\..\packages\Expression.Blend.Sdk\lib\net45\System.Windows.Interactivity.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -198,6 +240,16 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
+        <Reference Include="FParsec">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FParsecCS">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.Compiler.Service">
           <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
           <Private>True</Private>
@@ -244,6 +296,16 @@
       <ItemGroup>
         <Reference Include="System.Windows.Interactivity">
           <HintPath>..\..\packages\Expression.Blend.Sdk\lib\net45\System.Windows.Interactivity.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FParsec">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FParsecCS">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -298,6 +360,16 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="FSharp.Compiler.Service">
               <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
               <Private>True</Private>
@@ -347,6 +419,16 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="FSharp.Compiler.Service">
               <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
               <Private>True</Private>
@@ -393,6 +475,16 @@
           <ItemGroup>
             <Reference Include="System.Windows.Interactivity">
               <HintPath>..\..\packages\Expression.Blend.Sdk\lib\sl50\System.Windows.Interactivity.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -447,6 +539,16 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
+        <Reference Include="FParsec">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FParsecCS">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.Compiler.Service">
           <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
           <Private>True</Private>
@@ -495,6 +597,16 @@
           <ItemGroup>
             <Reference Include="System.Windows.Interactivity">
               <HintPath>..\..\packages\Expression.Blend.Sdk\lib\sl4-wp71\System.Windows.Interactivity.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -547,6 +659,16 @@
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
             <Reference Include="FSharp.Compiler.Service">
               <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
               <Private>True</Private>
@@ -593,6 +715,16 @@
           <ItemGroup>
             <Reference Include="System.Windows.Interactivity">
               <HintPath>..\..\packages\Expression.Blend.Sdk\lib\net45\System.Windows.Interactivity.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsec">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+              <Private>True</Private>
+              <Paket>True</Paket>
+            </Reference>
+            <Reference Include="FParsecCS">
+              <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
               <Private>True</Private>
               <Paket>True</Paket>
             </Reference>
@@ -647,6 +779,16 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
+        <Reference Include="FParsec">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsec.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FParsecCS">
+          <HintPath>..\..\packages\FParsec\lib\net40-client\FParsecCS.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
         <Reference Include="FSharp.Compiler.Service">
           <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
           <Private>True</Private>
@@ -690,18 +832,6 @@
       </ItemGroup>
     </Otherwise>
   </Choose>
-  <PropertyGroup>
-    <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
-  </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <ItemGroup>
     <None Include="paket.references" />
     <Compile Include="AssemblyInfo.fs">
@@ -863,20 +993,11 @@
     </Compile>
     <Compile Include="Outlining\OutliningParsers.fs" />
     <Compile Include="Outlining\CommentOutlining.fs" />
-    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="FParsec">
-      <HintPath>..\..\packages\FParsec.1.0.1\lib\net40-client\FParsec.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FParsecCS">
-      <HintPath>..\..\packages\FParsec.1.0.1\lib\net40-client\FParsecCS.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
