@@ -262,56 +262,53 @@ module OpenDeclarationGetter =
         | _ -> []
 
     let getEffectiveOpenDeclarationsAtLocation (pos: pos) (ast: ParsedInput) =
-        match ast with
-        | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) ->
-            let rec walkModuleOrNamespace acc (decls, moduleRange) =
-                let openStatements =
+        let openStatements =
+            match ast with
+            | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) ->
+                let rec walkModuleOrNamespace openStatements (decls, moduleRange) =
                     decls
                     |> List.fold (fun acc -> 
                         function
                         | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
                             if rangeContainsPos moduleRange pos then
                                 walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
-                            else []
+                            else acc
                         | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openDeclRange) ->
                             let identArray = processOpenDeclaration longIdent
                             if openDeclRange.EndLine < pos.Line || (openDeclRange.EndLine = pos.Line && openDeclRange.EndColumn < pos.Column) then 
                                 String.Join(".", identArray) :: acc
                             else acc
-                        | _ -> acc) [] 
-                openStatements @ acc
+                        | _ -> acc) openStatements 
 
-            modules
-            |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
-                   if rangeContainsPos moduleRange pos then
-                       walkModuleOrNamespace acc (decls, moduleRange) @ acc
-                   else acc) []
-            |> Seq.distinct
-            |> Seq.toList
-            |> List.rev      
-        | ParsedInput.SigFile(ParsedSigFileInput(_, _, _, _, modules)) -> 
-            let rec walkModuleOrNamespaceSig acc (decls, moduleRange) =
-                let openStatements =
+                modules
+                |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
+                       if rangeContainsPos moduleRange pos then
+                           walkModuleOrNamespace acc (decls, moduleRange) @ acc
+                       else acc) []
+            | ParsedInput.SigFile(ParsedSigFileInput(_, _, _, _, modules)) -> 
+                let rec walkModuleOrNamespaceSig openStatements (decls, moduleRange) =
                     decls
                     |> List.fold (fun acc -> 
                         function
                         | SynModuleSigDecl.NestedModule (_, nestedModuleDecls, nestedModuleRange) -> 
                             if rangeContainsPos moduleRange pos then
                                 walkModuleOrNamespaceSig acc (nestedModuleDecls, nestedModuleRange)
-                            else []
+                            else acc
                         | SynModuleSigDecl.Open (longIdent, openDeclRange) ->
                             let identArray = processOpenDeclaration longIdent
                             if openDeclRange.EndLine < pos.Line || (openDeclRange.EndLine = pos.Line && openDeclRange.EndColumn < pos.Column) then 
                                 String.Join(".", identArray) :: acc
                             else acc
-                        | _ -> acc) [] 
-                openStatements @ acc
+                        | _ -> acc) openStatements
 
-            modules
-            |> List.fold (fun acc (SynModuleOrNamespaceSig(_, _, decls, _, _, _, moduleRange)) ->
-                   if rangeContainsPos moduleRange pos then
-                       walkModuleOrNamespaceSig acc (decls, moduleRange) @ acc
-                   else acc) []
-            |> Seq.distinct
-            |> Seq.toList
-            |> List.rev     
+                modules
+                |> List.fold (fun acc (SynModuleOrNamespaceSig(_, _, decls, _, _, _, moduleRange)) ->
+                        if rangeContainsPos moduleRange pos then
+                            walkModuleOrNamespaceSig acc (decls, moduleRange) @ acc
+                        else acc) []
+        seq {
+            yield! List.rev openStatements
+            yield getModuleOrNamespacePath pos ast
+        }
+        |> Seq.distinct
+        |> Seq.toList

@@ -3,6 +3,7 @@
 open Microsoft.FSharp.Compiler.Ast
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Range
 
 type internal ShortIdent = string
 type internal Idents = ShortIdent[]
@@ -708,3 +709,47 @@ let internal getStringLiterals ast : Range.range list =
         | _ -> ())
 
     List.ofSeq result
+
+/// Get path to containing module/namespace of a given position
+let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
+    let idents =
+        match ast with
+        | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) ->
+            let rec walkModuleOrNamespace idents (decls, moduleRange) =
+                decls
+                |> List.fold (fun acc -> 
+                    function
+                    | SynModuleDecl.NestedModule (componentInfo, nestedModuleDecls, _, nestedModuleRange) -> 
+                        if rangeContainsPos moduleRange pos then
+                            let (ComponentInfo(_,_,_,longIdent,_,_,_,_)) = componentInfo
+                            walkModuleOrNamespace (longIdent::acc) (nestedModuleDecls, nestedModuleRange)
+                        else acc
+                    | _ -> acc) idents
+
+            modules
+            |> List.fold (fun acc (SynModuleOrNamespace(longIdent, _, decls, _, _, _, moduleRange)) ->
+                    if rangeContainsPos moduleRange pos then
+                        walkModuleOrNamespace (longIdent::acc) (decls, moduleRange) @ acc
+                    else acc) []
+        | ParsedInput.SigFile(ParsedSigFileInput(_, _, _, _, modules)) -> 
+            let rec walkModuleOrNamespaceSig idents (decls, moduleRange) =
+                decls
+                |> List.fold (fun acc -> 
+                    function
+                    | SynModuleSigDecl.NestedModule (componentInfo, nestedModuleDecls, nestedModuleRange) -> 
+                        if rangeContainsPos moduleRange pos then
+                            let (ComponentInfo(_,_,_,longIdent,_,_,_,_)) = componentInfo
+                            walkModuleOrNamespaceSig (longIdent::acc) (nestedModuleDecls, nestedModuleRange)
+                        else acc
+                    | _ -> acc) idents
+
+            modules
+            |> List.fold (fun acc (SynModuleOrNamespaceSig(longIdent, _, decls, _, _, _, moduleRange)) ->
+                    if rangeContainsPos moduleRange pos then
+                        walkModuleOrNamespaceSig (longIdent::acc) (decls, moduleRange) @ acc
+                    else acc) []
+    idents
+    |> List.rev
+    |> Seq.concat
+    |> Seq.map (fun ident -> ident.idText)
+    |> String.concat "."  

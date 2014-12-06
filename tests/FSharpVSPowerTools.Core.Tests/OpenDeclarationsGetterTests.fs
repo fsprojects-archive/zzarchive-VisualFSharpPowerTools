@@ -297,10 +297,23 @@ let ``open declarations from nested modules``() =
 open System
 open System.IO
 module M =
-    open InternalModuleWithSuffix
-    let x = 0
+    module N =
+        open InternalModuleWithSuffix
+        let x = 0
 """, false)
-    |-> (pos 6 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+    |-> (pos 7 13, ["System"; "System.IO"; "InternalModuleWithSuffix"; "OpenDeclarationsGetterTests.M.N"])
+
+[<Test>]
+let ``open declarations from namespaces``() =
+    ("""
+namespace M
+    open System
+    open System.IO
+    module N =
+        open InternalModuleWithSuffix
+        let x = 0
+""", false)
+    |-> (pos 7 13, ["System"; "System.IO"; "InternalModuleWithSuffix"; "M.N"])
 
 [<Test>]
 let ``open declarations with duplication``() =
@@ -315,7 +328,7 @@ module M =
     open System.Collections.Generic
 open System.Collections.Generic
 """, false)
-    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"; "OpenDeclarationsGetterTests.M"])
 
 [<Test>]
 let ``open declarations with global prefix``() =
@@ -328,7 +341,7 @@ module M =
     open System
     let x = 0
 """, false)
-    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"; "OpenDeclarationsGetterTests.M"])
 
 [<Test>]
 let ``open declarations from nested modules in signatures``() =
@@ -339,7 +352,7 @@ module M =
     open InternalModuleWithSuffix
     val x: int
 """, true)
-    |-> (pos 6 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+    |-> (pos 6 9, ["System"; "System.IO"; "InternalModuleWithSuffix"; "OpenDeclarationsGetterTests.M"])
 
 [<Test>]
 let ``open declarations with duplication in signatures``() =
@@ -354,7 +367,7 @@ module M =
     open System.Collections.Generic
 open System.Collections.Generic
 """, true)
-    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"; "OpenDeclarationsGetterTests.M"])
 
 [<Test>]
 let ``open declarations with global prefix in signatures``() =
@@ -367,4 +380,4 @@ module M =
     open System
     val x: int
 """, true)
-    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"])
+    |-> (pos 8 9, ["System"; "System.IO"; "InternalModuleWithSuffix"; "OpenDeclarationsGetterTests.M"])
