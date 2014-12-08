@@ -1608,7 +1608,7 @@ let _ = sprintf "%7.1f" 1.0
 let _ = sprintf "%-8.1e+567" 1.0
 """
     => [ 2, [Category.Function, 8, 15; Category.Printf, 17, 22]
-         3, [Category.Function, 8, 15; Category.Printf, 17, 27]]
+         3, [Category.Function, 8, 15; Category.Printf, 17, 23]]
 
 [<Test>]
 let ``malformed printf formatters``() =
