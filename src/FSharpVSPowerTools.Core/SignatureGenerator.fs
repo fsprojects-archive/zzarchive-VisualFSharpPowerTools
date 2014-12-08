@@ -659,7 +659,9 @@ and internal writeAttributes ctx writer (typ: option<FSharpEntity>) (attributes:
     let typeDefSyntaxDelimOpt = Option.bind tryGetNeededTypeDefSyntaxDelimiter typ
     let bypassAttribute (attrib: FSharpAttribute) =
         not attrib.AttributeType.Accessibility.IsPublic 
+            // Skip a few attributes that can't be handled by FCS
             || isAttribute<AttributeUsageAttribute> attrib
+            || isAttribute<Diagnostics.DebuggerTypeProxyAttribute> attrib
             || (typeDefSyntaxDelimOpt = Some "struct" && isAttribute<StructAttribute> attrib)
 
     for attr in attributes do
