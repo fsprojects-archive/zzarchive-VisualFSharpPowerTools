@@ -2,19 +2,19 @@ NUGET
   remote: http://nuget.org/api/v2
   specs:
     Expression.Blend.Sdk (1.0.2)
-    FAKE (3.8.0)
+    FAKE (3.11.3)
     Fantomas (1.6.0)
       FSharp.Compiler.Service (>= 0.0.73)
-    Foq (1.6)
-    FsCheck (1.0.2)
-    FSharp.Compiler.Service (0.0.79)
+    Foq (1.6.0)
+    FsCheck (1.0.3)
+    FSharp.Compiler.Service (0.0.81)
     FSharp.Formatting (2.4.33)
       FSharp.Compiler.Service (>= 0.0.62)
       Microsoft.AspNet.Razor (2.0.30506.0)
       RazorEngine (3.3.0)
     FSharp.ViewModule.Core (0.9.9.1)
     FsXaml.Wpf (0.9.9)
-      Expression.Blend.Sdk (>= 1.0.2)
+      Expression.Blend.Sdk (>= 1.0.2) - net45
     Microsoft.AspNet.Razor (2.0.30506.0)
     Microsoft.Bcl (1.1.9)
       Microsoft.Bcl.Build (>= 1.0.14)
@@ -32,5 +32,5 @@ NUGET
 GITHUB
   remote: fsharp/FAKE
   specs:
-    modules/Octokit/Octokit.fsx (624156fcdfa128dfff62e60b65bf9ae1deec9a64)
+    modules/Octokit/Octokit.fsx (0a5a284350252b22075e096e6906681ece6bda1f)
       Octokit (>= 0)

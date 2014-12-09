@@ -2,7 +2,6 @@
 
 open System
 open Microsoft.FSharp.Compiler
-open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open System.Collections.Generic
@@ -118,15 +117,6 @@ module private StringCategorizers =
                 ) [])
         |> Seq.concat 
          
-    module Printf =
-        let private formattersRegex = 
-            Regex @"%\s*(([-]?\d+(\.\d+)?[eE][+-]\d{3})|([-+]?\d+(\.\d+)?[fFeEgG])|((\*|\d+)?[bcsdiuxXoeEfgGMOAat]))"
-        
-        let getCategories ast getTextLine = 
-            UntypedAstUtils.getPrintfLiterals ast
-            |> List.map (categorize Category.Printf formattersRegex getTextLine) 
-            |> Seq.concat
-
     module EscapedChars =
         let private escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
 
@@ -274,8 +264,8 @@ module SourceCodeClassifier =
             Some prefix
         | _ -> None
 
-    let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], ast: ParsedInput option, lexer: LexerBase, getTextLine: int -> string,
-                                   openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
+    let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], checkResults: ParseAndCheckResults, lexer: LexerBase, 
+                                   getTextLine: int -> string, openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
         let allSymbolsUses2 =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
@@ -356,9 +346,10 @@ module SourceCodeClassifier =
                         |> List.head)
             |> Seq.distinct
 
-        let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
+        let ast = checkResults.GetUntypedAst()
+        let longIdentsByEndPos = UntypedAstUtils.getLongIdents  ast
             
-//        debug "LongIdents by line:" 
+//        debug "LongIdents by line:"  
 //        longIdentsByEndPos 
 //        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
 //        |> Seq.iter (debug "%A")
@@ -441,10 +432,22 @@ module SourceCodeClassifier =
     
         //debug "[SourceCodeClassifier] AST: %A" ast
 
+        let printfSpecifiersRanges =        
+            checkResults.GetFormatSpecifierLocations()
+            |> Option.map (fun ranges ->
+                 ranges |> Array.map (fun r -> 
+                    { Snapshot = None
+                      Category = Category.Printf
+                      WordSpan = 
+                        { Line = r.StartLine
+                          StartCol = r.StartColumn
+                          EndCol = r.EndColumn + 1 }}))
+            |> Option.getOrElse [||]
+
         let allSpans = 
             spansBasedOnSymbolsUses 
             |> Seq.append (QuotationCategorizer.getCategories ast lexer)
-            |> Seq.append (StringCategorizers.Printf.getCategories ast getTextLine)
+            |> Seq.append printfSpecifiersRanges
             |> Seq.append (StringCategorizers.EscapedChars.getCategories ast getTextLine)
             |> Seq.append unusedOpenDeclarationSpans
             |> Seq.toArray

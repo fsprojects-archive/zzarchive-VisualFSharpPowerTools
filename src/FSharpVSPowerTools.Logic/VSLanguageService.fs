@@ -142,6 +142,12 @@ type VSLanguageService
             return! instance.ParseFileInProject(opts, currentFile, source) 
         }
 
+    member __.ParseAndCheckFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) 
+        }
+
     member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
         instance.ProcessParseTrees(
             projectProvider.ProjectFileName, 
