@@ -127,16 +127,13 @@ let x = new Tuple<int, int>(1, 2)""", (Pos.fromZ 1 12)
         """open System
 let x = Tuple<int, int>(1, 2)""", (Pos.fromZ 1 8)
     ]
-    |> List.map (fun (src, pos) -> generateDefinitionFromPosNoValidation pos src)
+    |> List.map (fun (src, pos) -> generateDefinitionFromPos pos src)
     |> List.iter (fun src ->
         assertSrcAreEqual src
             """namespace System
 
-open System
-
 /// Represents a 2-tuple, or pair. 
 type Tuple<'T1, 'T2> =
-    interface ITuple
     /// Initializes a new instance of the  class.
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
     /// Returns a value that indicates whether the current  object is equal to a specified object.
@@ -217,14 +214,11 @@ let ``go to property definition generate enclosing type metadata`` () =
 
 let t = Tuple<int, int>(0, 0)
 let u = t.Item1"""
-    |> generateDefinitionFromPosNoValidation (Pos.fromZ 3 10)
+    |> generateDefinitionFromPos (Pos.fromZ 3 10)
     |> assertSrcAreEqual """namespace System
-
-open System
 
 /// Represents a 2-tuple, or pair. 
 type Tuple<'T1, 'T2> =
-    interface ITuple
     /// Initializes a new instance of the  class.
     new : item1:'T1 * item2:'T2 -> Tuple<'T1, 'T2>
     /// Returns a value that indicates whether the current  object is equal to a specified object.
@@ -1503,7 +1497,7 @@ let x: Collections.Generic.List<string> = failwith "" """
 let ``handle generic definitions 2`` () =
     """open System
 let x: Collections.Generic.Dictionary<string, int> = failwith "" """
-    |> generateDefinitionFromPosNoValidation (Pos.fromZ 1 30)
+    |> generateDefinitionFromPos (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
     |> assertEqual true
 
