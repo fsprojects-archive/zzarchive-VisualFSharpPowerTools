@@ -3,6 +3,7 @@
 open System
 open System.Diagnostics
 open FSharpVSPowerTools
+open FSharpVSPowerTools.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -711,8 +712,8 @@ module InterfaceStubGenerator =
                 | SynExpr.TryFinally(synExpr1, synExpr2, _range, _sequencePointInfoForTry, _sequencePointInfoForFinally) -> 
                     List.tryPick walkExpr [synExpr1; synExpr2]
 
-                | SynExpr.Sequential(_sequencePointInfoForSeq, _, synExpr1, synExpr2, _range) -> 
-                    List.tryPick walkExpr [synExpr1; synExpr2]
+                | Sequentials exprs  -> 
+                    List.tryPick walkExpr exprs
 
                 | SynExpr.IfThenElse(synExpr1, synExpr2, synExprOpt, _sequencePointInfoForBinding, _isRecovery, _range, _range2) -> 
                     match synExprOpt with
@@ -786,6 +787,8 @@ module InterfaceStubGenerator =
                 | SynExpr.FromParseError(synExpr, _range)
                 | SynExpr.DiscardAfterMissingQualificationAfterDot(synExpr, _range) -> 
                     walkExpr synExpr 
+
+                | _ -> None
 
         match parsedInput with
         | ParsedInput.SigFile _input ->
