@@ -1,5 +1,7 @@
 ﻿namespace FSharpVSPowerTools
 
+open FSharpVSPowerTools.UntypedAstUtils
+
 type LongIdent = string
 
 type Entity =
@@ -246,7 +248,7 @@ module ParsedInput =
             | SynExpr.TryWith(e, _, _, _, _, _, _) -> walkExprWithKind parentKind e
             | SynExpr.TryFinally(e1, e2, _, _, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
             | SynExpr.Lazy(e, _) -> walkExprWithKind parentKind e
-            | SynExpr.Sequential(_, _, e1, e2, _) -> List.tryPick (walkExprWithKind parentKind) [e1; e2]
+            | Sequentials es -> List.tryPick (walkExprWithKind parentKind) es
             | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
                 List.tryPick (walkExprWithKind parentKind) [e1; e2] |> Option.orElse (match e3 with None -> None | Some e -> walkExprWithKind parentKind e)
             | SynExpr.Ident ident -> ifPosInRange ident.idRange (fun _ -> Some (EntityKind.FunctionOrValue false))

@@ -11,6 +11,14 @@ type internal Idents = ShortIdent[]
 let internal longIdentToArray (longIdent: LongIdent): Idents =
     longIdent |> List.map string |> List.toArray
 
+    /// An recursive pattern that collect all sequential expressions to avoid StackOverflowException
+let rec (|Sequentials|_|) = function
+    | SynExpr.Sequential(_, _, e, Sequentials es, _) ->
+        Some(e::es)
+    | SynExpr.Sequential(_, _, e1, e2, _) ->
+        Some [e1; e2]
+    | _ -> None
+
 /// Returns all Idents and LongIdents found in an untyped AST.
 let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, Idents> =
     let identsByEndPos = Dictionary<Range.pos, Idents>()
@@ -189,7 +197,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
             walkExpr e
         | SynExpr.TryFinally(e1, e2, _, _, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.Lazy(e, _) -> walkExpr e
-        | SynExpr.Sequential(_, _, e1, e2, _) -> List.iter walkExpr [e1; e2]
+        | Sequentials es -> List.iter walkExpr es
         | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
             List.iter walkExpr [e1; e2]
             e3 |> Option.iter walkExpr
@@ -401,9 +409,8 @@ let getQuatationRanges ast =
         | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> visitBindindgs bindings
         | SynExpr.Typed (expr, _, _) -> visitExpr expr
         | SynExpr.Paren (expr, _, _, _) -> visitExpr expr
-        | SynExpr.Sequential (_, _, expr1, expr2, _) ->
-            visitExpr expr1
-            visitExpr expr2
+        | Sequentials  es ->
+            List.iter visitExpr es
         | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
         | SynExpr.Tuple (exprs, _, _) -> 
             for expr in exprs do 
@@ -518,9 +525,8 @@ let internal getStringLiterals ast : Range.range list =
         | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> visitBindindgs bindings
         | SynExpr.Typed (expr, _, _) -> visitExpr expr
         | SynExpr.Paren (expr, _, _, _) -> visitExpr expr
-        | SynExpr.Sequential (_, _, expr1, expr2, _) ->
-            visitExpr expr1
-            visitExpr expr2
+        | Sequentials es ->
+            List.iter visitExpr es
         | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
         | SynExpr.Tuple (exprs, _, _) -> List.iter visitExpr exprs
         | SynExpr.Const (SynConst.String (_, r), _) -> result.Add r

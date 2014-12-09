@@ -1,6 +1,7 @@
 ﻿module FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 
 open FSharpVSPowerTools
+open FSharpVSPowerTools.UntypedAstUtils
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
@@ -398,8 +399,8 @@ let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInp
             | SynExpr.TryFinally(synExpr1, synExpr2, _range, _sequencePointInfoForTry, _sequencePointInfoForFinally) -> 
                 List.tryPick walkExpr [synExpr1; synExpr2]
 
-            | SynExpr.Sequential(_sequencePointInfoForSeq, _, synExpr1, synExpr2, _range) -> 
-                List.tryPick walkExpr [synExpr1; synExpr2]
+            | Sequentials exprs -> 
+                List.tryPick walkExpr exprs
 
             | SynExpr.IfThenElse(synExpr1, synExpr2, synExprOpt, _sequencePointInfoForBinding, _isRecovery, _range, _range2) -> 
                 match synExprOpt with
@@ -473,6 +474,8 @@ let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInp
             | SynExpr.FromParseError(synExpr, _range)
             | SynExpr.DiscardAfterMissingQualificationAfterDot(synExpr, _range) -> 
                 walkExpr synExpr
+
+            | _ -> None
         )
 
     and walkRecordField (_recordFieldName, synExprOpt, _) = 

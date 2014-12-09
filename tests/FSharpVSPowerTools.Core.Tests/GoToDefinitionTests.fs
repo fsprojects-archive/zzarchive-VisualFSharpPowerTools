@@ -41,7 +41,8 @@ let xmlFileCache = Dictionary()
 let tryGenerateDefinitionFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
-    let projectOptions = project()
+    // We use .NET 4.5.1 that comes with VS 2013 in order that Xml documentation files are retrieved correctly.
+    let projectOptions = { project() with OtherOptions = LanguageServiceTestHelper.argsDotNET451 }
 
     asyncMaybe {
         let! _range, symbolAtPos =
