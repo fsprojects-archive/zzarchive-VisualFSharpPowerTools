@@ -36,11 +36,9 @@ namespace FSharpVSPowerTools
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return;
-
             
             AddCommandFilter(textViewAdapter,
-                new HighlightUsageFilter(textView, tagAggregator.CreateTagAggregator<TextMarkerTag>(textView)));
-            
+                new HighlightUsageFilter(textView, tagAggregator.CreateTagAggregator<TextMarkerTag>(textView)));            
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, HighlightUsageFilter commandFilter)
@@ -59,6 +57,5 @@ namespace FSharpVSPowerTools
                 }
             }
         }
-
     }
 }

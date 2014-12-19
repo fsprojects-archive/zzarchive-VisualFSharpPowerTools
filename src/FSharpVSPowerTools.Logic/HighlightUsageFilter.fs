@@ -1,24 +1,12 @@
 ﻿namespace FSharpVSPowerTools.HighlightUsage
 
-open System.IO
-open System.Windows
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
-open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open FSharp.ViewModule.Progress
-open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.VisualStudio.Text.Tagging
-
-[<NoEquality; NoComparison>]
-type private DocumentState =
-    { Word: (SnapshotSpan * Symbol) option
-      File: string
-      Project: IProjectProvider }
 
 [<RequireQualifiedAccess>]
 type private NeighbourKind =
