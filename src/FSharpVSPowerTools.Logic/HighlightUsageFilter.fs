@@ -13,7 +13,7 @@ type private NeighbourKind =
     | Previous
     | Next
 
-type HighlightUsageFilter(view: IWpfTextView, 
+type HighlightUsageFilter(textView: IWpfTextView, 
                           referenceTagger: ITagAggregator<TextMarkerTag>) =
 
     let binarySearch compare (source: _ []) =
@@ -34,9 +34,9 @@ type HighlightUsageFilter(view: IWpfTextView,
         loop 0 (Array.length source - 1)
 
     let gotoReference kind =
-        view.TextBuffer.GetSnapshotPoint view.Caret.Position
+        textView.TextBuffer.GetSnapshotPoint textView.Caret.Position
         |> Option.iter (fun caretPos ->
-            let buffer = view.TextBuffer
+            let buffer = textView.TextBuffer
             let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
             let comparePosition (span: SnapshotSpan) =
                 if span.Start.Position > caretPos.Position then
@@ -61,7 +61,8 @@ type HighlightUsageFilter(view: IWpfTextView,
                         let next = if index = spans.Length-1 then 0 else index+1
                         spans.[next])
                 |> Option.iter (fun span ->
-                    view.Caret.MoveTo(span.Start) |> ignore))
+                    textView.Caret.MoveTo(span.Start) |> ignore
+                    textView.ViewScroller.EnsureSpanVisible(span, EnsureSpanVisibleOptions.ShowStart)))
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
