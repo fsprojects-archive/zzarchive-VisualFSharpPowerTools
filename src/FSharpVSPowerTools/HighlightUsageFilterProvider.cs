@@ -23,17 +23,8 @@ namespace FSharpVSPowerTools
         [Import]
         internal IVsEditorAdaptersFactoryService editorFactory = null;
 
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
         [Import(typeof(SVsServiceProvider))]
         internal System.IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
 
         [Import]
         internal IViewTagAggregatorFactoryService tagAggregator = null;
@@ -46,15 +37,10 @@ namespace FSharpVSPowerTools
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return;
 
-            ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
-            {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
-                AddCommandFilter(textViewAdapter,
-                    new HighlightUsageFilter(doc, textView, fsharpVsLanguageService,
-                                             serviceProvider, projectFactory,
-                                             tagAggregator.CreateTagAggregator<TextMarkerTag>(textView)));
-            }
+            
+            AddCommandFilter(textViewAdapter,
+                new HighlightUsageFilter(textView, tagAggregator.CreateTagAggregator<TextMarkerTag>(textView)));
+            
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, HighlightUsageFilter commandFilter)
