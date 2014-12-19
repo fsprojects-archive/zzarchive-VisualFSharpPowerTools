@@ -54,18 +54,15 @@ type FullLineAdornmentManager(view: IWpfTextView,
     
     let colors = 
         let openKey key = 
-            try
-                Registry.CurrentUser.OpenSubKey key |> Option.ofNull
-            with ex ->
-                debug "Can't open sub keys due to %A" ex
-                None
+            protectOrDefault (fun _ -> 
+                Registry.CurrentUser.OpenSubKey key |> Option.ofNull) None
             
         protectOrDefault (fun _ ->
             maybe { 
                 let themeString = themeToString currentTheme
-                let! key = openKey (sprintf @"Software\Microsoft\VisualStudio\%s\Text Editor\FSharpDepthColorizer\%s\" vsVersion themeString)
+                let! key = openKey (sprintf @"Software\Microsoft\VisualStudio\%s\Text Editor\FSharpDepthColorizer\%s" vsVersion themeString)
                            // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
-                           |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\%s\Text Editor\FSharpDepthColorizer\%s\" vsVersion themeString))
+                           |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\%s\Text Editor\FSharpDepthColorizer\%s" vsVersion themeString))
                 return [| for i in 0..9 do
                               let s = key.GetValue(sprintf "Depth%d" i) :?> string
                               yield match s.Split [| ',' |] |> Array.map byte with

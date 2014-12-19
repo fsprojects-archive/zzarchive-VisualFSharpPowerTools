@@ -1,0 +1,13 @@
+Windows Registry Editor Version 5.00
+ 
+[HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\11.0\Text Editor\FSharpDepthColorizer\Dark\]
+"Depth0"="0,0,0,0,0,0"
+"Depth1"="15,15,15,15,15,15"
+"Depth2"="30,30,30,30,30,30"
+"Depth3"="45,45,45,45,45,45"
+"Depth4"="55,55,55,55,55,55"
+"Depth5"="65,65,65,65,65,65"
+"Depth6"="75,75,75,75,75,75"
+"Depth7"="80,80,80,80,80,80"
+"Depth8"="85,85,85,85,85,85"
+"Depth9"="90,90,90,90,90,90"

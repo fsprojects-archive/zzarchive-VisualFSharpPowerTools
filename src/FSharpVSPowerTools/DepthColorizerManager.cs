@@ -63,6 +63,9 @@ namespace FSharpVSPowerTools
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
 
+        [Import]
+        internal ThemeManager themeManager = null;
+
         public void TextViewCreated(IWpfTextView textView)
         {
             if (textView == null) return;
@@ -71,7 +74,7 @@ namespace FSharpVSPowerTools
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return;
 
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
-            new FullLineAdornmentManager(textView, tagAggregator, serviceProvider);
+            new FullLineAdornmentManager(textView, tagAggregator, serviceProvider, themeManager);
         }
     }
 }
