@@ -74,7 +74,7 @@ namespace FSharpVSPowerTools
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return;
 
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
-            new FullLineAdornmentManager(textView, tagAggregator, serviceProvider, themeManager);
+            new FullLineAdornmentManager(textView, tagAggregator, themeManager);
         }
     }
 }

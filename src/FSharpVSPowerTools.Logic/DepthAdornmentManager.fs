@@ -9,7 +9,6 @@ open System.Windows.Media
 open System.Windows
 open System.Windows.Controls
 open Microsoft.Win32
-open EnvDTE
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
@@ -33,8 +32,7 @@ type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self =
 // see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works
 type FullLineAdornmentManager(view: IWpfTextView, 
-                              tagAggregator: ITagAggregator<DepthRegionTag>, 
-                              serviceProvider: System.IServiceProvider,
+                              tagAggregator: ITagAggregator<DepthRegionTag>,
                               themeManager: ThemeManager) = 
     let LayerName = Constants.depthAdornmentLayerName // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
@@ -44,28 +42,21 @@ type FullLineAdornmentManager(view: IWpfTextView,
         | VisualStudioTheme.Dark -> "Dark"
         | _ -> "Light"
 
-    let vsVersion =
-        let dte = serviceProvider.GetService<DTE, DTE>()
-        dte.Version
-    
     // Amount to increase the adornment height to ensure there aren't gaps between adornments
     // due to the way that layout rounding changes the placement of these adornments.
     let adornmentHeightFudgeFactor = 0.0 // can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
     
     let colors = 
         let openKey key = 
-            try
-                Registry.CurrentUser.OpenSubKey key |> Option.ofNull
-            with ex ->
-                debug "Can't open sub keys due to %A" ex
-                None
+            protectOrDefault (fun _ -> Registry.CurrentUser.OpenSubKey key |> Option.ofNull) None
             
         protectOrDefault (fun _ ->
             maybe { 
                 let themeString = themeToString currentTheme
-                let! key = openKey (sprintf @"Software\Microsoft\VisualStudio\%s\Text Editor\FSharpDepthColorizer\%s\" vsVersion themeString)
+                // NOTE: For some strange reason, the registry keys only work on VS 10.0, so we keep it.
+                let! key = openKey (sprintf @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString)
                            // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
-                           |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\%s\Text Editor\FSharpDepthColorizer\%s\" vsVersion themeString))
+                           |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString))
                 return [| for i in 0..9 do
                               let s = key.GetValue(sprintf "Depth%d" i) :?> string
                               yield match s.Split [| ',' |] |> Array.map byte with
