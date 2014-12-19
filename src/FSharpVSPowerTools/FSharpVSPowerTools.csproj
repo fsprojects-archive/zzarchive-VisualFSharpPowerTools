@@ -319,6 +319,7 @@
     <Compile Include="GeneralOptionsControl.Designer.cs">
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="HighlightUsageFilterProvider.cs" />
     <Compile Include="TaskListCommentFilterProvider.cs" />
     <Compile Include="UnusedDeclarationMarginProvider.cs" />
     <Compile Include="ImplementInterfaceSmartTaggerProvider.cs" />
