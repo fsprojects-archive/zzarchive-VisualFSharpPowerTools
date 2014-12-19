@@ -47,3 +47,6 @@ let guidSymbolLibrary = Guid("2ad4e2a2-b89f-48b6-98e8-363bd1a35450")
 let [<Literal>] findReferencesResults = 0x11223344u
 
 let cmdidGoToDefinition = uint32 VSConstants.VSStd97CmdID.GotoDefn
+
+let [<Literal>] cmdidNextHighlightedReference = 2400u
+let [<Literal>] cmdidPreviousHighlightedReference = 2401u

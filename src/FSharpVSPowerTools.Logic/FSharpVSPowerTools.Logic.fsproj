@@ -786,6 +786,9 @@
     <Compile Include="HighlightUsageTagger.fs">
       <Link>Symbol/HighlightUsageTagger.fs</Link>
     </Compile>
+    <Compile Include="HighlightUsageFilter.fs">
+      <Link>Symbol/HighlightUsageFilter.fs</Link>
+    </Compile>
     <Compile Include="RenameDialog.fs">
       <Link>Symbol/RenameDialog.fs</Link>
     </Compile>
