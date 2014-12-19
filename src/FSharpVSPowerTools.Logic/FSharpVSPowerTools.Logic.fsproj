@@ -744,6 +744,9 @@
     <Compile Include="SolutionBuildEventListener.fs">
       <Link>ProjectSystem/SolutionBuildEventListener.fs</Link>
     </Compile>
+    <Compile Include="ShellEventListener.fs">
+      <Link>ProjectSystem/ShellEventListener.fs</Link>
+    </Compile>
     <Compile Include="ProjectProvider.fs">
       <Link>ProjectSystem/ProjectProvider.fs</Link>
     </Compile>

@@ -411,23 +411,21 @@ namespace FSharpVSPowerTools
         [Import]
         internal ProjectFactory projectFactory = null;
 
+        [Import(typeof(SVsServiceProvider))]
+        internal IServiceProvider serviceProvider = null;
+
+        [Import]
+        internal ClassificationColorManager classificationColorManager = null;
+
+        private readonly ShellEventListener shellEventListener = null;
         private static readonly Type serviceType = typeof(SyntaxConstructClassifier);
 
-        private readonly IServiceProvider serviceProvider = null;
-        private readonly ClassificationColorManager classificationColorManager = null;
-        private readonly ShellEventListener shellEventListener = null;
-
         [ImportingConstructor]
-        public SyntaxConstructClassifierProvider([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
-                ClassificationColorManager classificationColorManager)
+        public SyntaxConstructClassifierProvider(ShellEventListener shellEventListener)
         {
-            this.serviceProvider = serviceProvider;
-            this.classificationColorManager = classificationColorManager;
-
+            this.shellEventListener = shellEventListener;
             // Receive notification for Visual Studio theme change
-            shellEventListener = new ShellEventListener(this.serviceProvider);
-            shellEventListener.Initialize();
-            shellEventListener.OnThemeChanged += UpdateTheme;
+            shellEventListener.ThemeChanged += UpdateTheme;
         }
 
         private void UpdateTheme(object sender, EventArgs e)
@@ -477,8 +475,7 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            shellEventListener.OnThemeChanged -= UpdateTheme;
-            shellEventListener.Dispose();
+            shellEventListener.ThemeChanged -= UpdateTheme;
         }
     }
 }

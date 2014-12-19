@@ -328,7 +328,6 @@
     <Compile Include="ResolveUnopenedNamespaceSmartTaggerProvider.cs" />
     <Compile Include="RecordStubGeneratorSmartTaggerProvider.cs" />
     <Compile Include="RenameCommandFilterProvider.cs" />
-    <Compile Include="ShellEventListener.cs" />
     <Compile Include="StandardCommandDispatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CodeFormattingHookHelper.cs" />
