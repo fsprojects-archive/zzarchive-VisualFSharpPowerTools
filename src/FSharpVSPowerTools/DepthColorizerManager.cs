@@ -48,9 +48,10 @@ namespace FSharpVSPowerTools
     }
 
     [Export(typeof(IWpfTextViewCreationListener))]
+    [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Structured)]
-    public class DepthColorizerAdornment : IWpfTextViewCreationListener
+    public class DepthColorizerAdornmentManager : IWpfTextViewCreationListener, IWpfTextViewConnectionListener
     {
         [Export]
         [Name(Constants.depthAdornmentLayerName)]
@@ -66,15 +67,39 @@ namespace FSharpVSPowerTools
         [Import]
         internal ThemeManager themeManager = null;
 
+        [Import]
+        internal ShellEventListener shellEventListener = null;
+
+        private static readonly Type serviceType = typeof(DepthColorizerAdornmentManager);
+
         public void TextViewCreated(IWpfTextView textView)
         {
             if (textView == null) return;
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return;
-
+            
             var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
-            new FullLineAdornmentManager(textView, tagAggregator, themeManager);
+            var adornment = new DepthColorizerAdornment(textView, tagAggregator, themeManager, shellEventListener);
+            textView.Properties.AddProperty(serviceType, adornment);
+        }
+
+        public void SubjectBuffersConnected(IWpfTextView textView, ConnectionReason reason, System.Collections.ObjectModel.Collection<ITextBuffer> subjectBuffers)
+        {
+        }
+
+        public void SubjectBuffersDisconnected(IWpfTextView textView, ConnectionReason reason, System.Collections.ObjectModel.Collection<ITextBuffer> subjectBuffers)
+        {
+            if (reason != ConnectionReason.TextViewLifetime) return;
+
+            IDisposable adornment;
+            
+            if (textView.Properties.TryGetProperty(serviceType, out adornment))
+            {
+                bool success = textView.Properties.RemoveProperty(serviceType);
+                Debug.Assert(success, "Should be able to remove adornment from the text view.");
+                adornment.Dispose();
+            }
         }
     }
 }

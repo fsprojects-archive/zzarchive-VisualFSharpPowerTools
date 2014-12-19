@@ -12,7 +12,7 @@ open Microsoft.Win32
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
-// an inexpensive-to-render rectangular adornment
+// An inexpensive-to-render rectangular adornment
 type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self = 
     inherit FrameworkElement()
     let child = new DrawingVisual()
@@ -29,69 +29,75 @@ type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self =
     override __.GetVisualChild _ = upcast child
     override __.VisualChildrenCount = 1
 
-// see http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
+// See http://blogs.msdn.com/b/noahric/archive/2010/08/25/editor-fundamentals-text-relative-adornments.aspx
 // for more about how an 'adornment manager' works
-type FullLineAdornmentManager(view: IWpfTextView, 
-                              tagAggregator: ITagAggregator<DepthRegionTag>,
-                              themeManager: ThemeManager) = 
+type DepthColorizerAdornment(view: IWpfTextView, 
+                             tagAggregator: ITagAggregator<DepthRegionTag>,
+                             themeManager: ThemeManager,
+                             shellEventListener: ShellEventListener) = 
     let LayerName = Constants.depthAdornmentLayerName // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
-
-    let currentTheme = themeManager.GetCurrentTheme()
-    let themeToString = function
-        | VisualStudioTheme.Dark -> "Dark"
-        | _ -> "Light"
 
     // Amount to increase the adornment height to ensure there aren't gaps between adornments
     // due to the way that layout rounding changes the placement of these adornments.
     let adornmentHeightFudgeFactor = 0.0 // can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
     
-    let colors = 
-        let openKey key = 
-            protectOrDefault (fun _ -> Registry.CurrentUser.OpenSubKey key |> Option.ofNull) None
+    let mutable colors = [||]
+    let mutable edgeColors = [||]
+    let mutable mainColors = [||]
+
+    let computeColors() =
+        let currentTheme = themeManager.GetCurrentTheme()
+        let themeToString = function
+            | VisualStudioTheme.Dark -> "Dark"
+            | _ -> "Light"
+
+        colors <-
+            let openKey key = 
+                protectOrDefault (fun _ -> Registry.CurrentUser.OpenSubKey key |> Option.ofNull) None
             
-        protectOrDefault (fun _ ->
-            maybe { 
-                let themeString = themeToString currentTheme
-                // NOTE: For some strange reason, the registry keys only work on VS 10.0, so we keep it.
-                let! key = openKey (sprintf @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString)
-                           // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
-                           |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString))
-                return [| for i in 0..9 do
-                              let s = key.GetValue(sprintf "Depth%d" i) :?> string
-                              yield match s.Split [| ',' |] |> Array.map byte with
-                                    | [| r1; g1; b1; r2; g2; b2 |] -> r1, g1, b1, r2, g2, b2
-                                    | _ -> failwith "Unhandled case" |]
-            }) None
-        |> Option.getOrTry (fun _ ->
-            // Gets a set of default colors to use depending on whether a light or dark theme is being used
-            match currentTheme with
-            | VisualStudioTheme.Dark ->
-                [| (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                   (70uy, 70uy, 70uy, 30uy, 30uy, 30uy) |]
-            | _ ->
-                [| (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                   (225uy, 225uy, 225uy, 255uy, 255uy, 255uy) |])
+            protectOrDefault (fun _ ->
+                maybe { 
+                    let themeString = themeToString currentTheme
+                    // NOTE: For some strange reason, the registry keys only work on VS 10.0, so we keep it.
+                    let! key = openKey (sprintf @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString)
+                               // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
+                               |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString))
+                    return [| for i in 0..9 do
+                                  let s = key.GetValue(sprintf "Depth%d" i) :?> string
+                                  yield match s.Split [| ',' |] |> Array.map byte with
+                                        | [| r1; g1; b1; r2; g2; b2 |] -> r1, g1, b1, r2, g2, b2
+                                        | _ -> failwith "Unhandled case" |]
+                }) None
+            |> Option.getOrTry (fun _ ->
+                // Gets a set of default colors to use depending on whether a light or dark theme is being used
+                match currentTheme with
+                | VisualStudioTheme.Dark ->
+                    [| (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
+                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy) |]
+                | _ ->
+                    [| (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
+                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy) |])
     
-    let edgeColors = colors |> Array.map (fun (r, g, b, _, _, _) -> Color.FromRgb(r, g, b))
-    let mainColors = colors |> Array.map (fun (_, _, _, r, g, b) -> Color.FromRgb(r, g, b))
-    
+        edgeColors <- colors |> Array.map (fun (r, g, b, _, _, _) -> Color.FromRgb(r, g, b))
+        mainColors <- colors |> Array.map (fun (_, _, _, r, g, b) -> Color.FromRgb(r, g, b))
+
     let getFadeColor(depth, numCharsWide) = 
         let depth = depth % colors.Length
         let thin = 1.0 / (4.0 * numCharsWide)
@@ -100,7 +106,7 @@ type FullLineAdornmentManager(view: IWpfTextView,
                                                               new GradientStop(mainColors.[depth], 1.0) |]), 
                                 new Point(0.0, 0.5), new Point(1.0, 0.5))
     
-    // was once useful for debugging
+    // Was once useful for debugging
     let trace s = 
         let ticks = System.DateTime.Now.Ticks
         debug "%O:%O" ticks s
@@ -157,8 +163,13 @@ type FullLineAdornmentManager(view: IWpfTextView,
         adornmentLayer.RemoveAllAdornments()
         for line in view.TextViewLines do
             refreshLine(line)
+
+    let recomputeColors = EventHandler(fun _ _ -> computeColors())
     
     do 
+        shellEventListener.ThemeChanged.AddHandler(recomputeColors)
+        // Initial computation of colors
+        computeColors()
         view.ViewportWidthChanged.Add(fun _ -> refreshView())
         view.LayoutChanged.Add(fun e -> 
             for line in e.NewOrReformattedLines do
@@ -172,3 +183,8 @@ type FullLineAdornmentManager(view: IWpfTextView,
                 adornmentLayer.RemoveAdornmentsByVisualSpan(line.Extent)
                 RefreshLine(line)
         *)
+
+    interface IDisposable with
+        member __.Dispose() = 
+            shellEventListener.ThemeChanged.RemoveHandler(recomputeColors)
+        
