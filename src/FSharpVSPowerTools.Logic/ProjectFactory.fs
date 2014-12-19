@@ -90,25 +90,33 @@ type ProjectFactory
             |> Option.iter (vsLanguageService.InvalidateProject >> Async.RunSynchronously) 
             onProjectChanged item.Project)
 
-    let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
-    do solutionBuildEventListener.ActiveConfigChanged.Add(fun p -> cache.Remove p.FullName)
-
     let signatureProjectData = Dictionary()
     let fsharpProjectsCache = ref None
- 
+
+    let clearInternalCaches() =
+        signatureProjectData.Clear()
+        fsharpProjectsCache := None
+        cache.Clear()
+
+    let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
+    // When active configuration changes, all project providers are stale so we clear our own caches
+    do solutionBuildEventListener.ActiveConfigChanged.Add(fun _ -> 
+            clearInternalCaches())
+
     do match events with
         | Some events ->
             events.SolutionEvents.add_AfterClosing (fun _ -> 
-                signatureProjectData.Clear()
-                fsharpProjectsCache := None
-                vsLanguageService.ClearCaches()
-                cache.Clear())
+                clearInternalCaches()
+                vsLanguageService.ClearCaches())
+            
             events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)
             events.ProjectsEvents.add_ItemRemoved (fun p -> onProjectChanged p)
             events.ProjectsEvents.add_ItemRenamed (fun p _ -> onProjectChanged p)
-            events.SolutionEvents.add_ProjectAdded (fun _ -> fsharpProjectsCache := None)
+
+            events.SolutionEvents.add_ProjectAdded (fun _ -> 
+                fsharpProjectsCache := None)
             events.SolutionEvents.add_ProjectRemoved (fun p -> 
                 fsharpProjectsCache := None
                 onProjectChanged p)
@@ -180,7 +188,7 @@ type ProjectFactory
             fsharpProjectsCache := Some res
             res
 
-    member x.GetSymbolDeclarationLocation (symbol: FSharpSymbol) (currentFile: FilePath) (currentProject: IProjectProvider) : SymbolDeclarationLocation option =
+    member x.GetSymbolDeclarationLocation (symbol: FSharpSymbol) (currentFile: FilePath) (currentProject: IProjectProvider) =
         Debug.Assert(currentProject.SourceFiles |> Array.exists ((=) currentFile), 
             sprintf "Current file '%s' should be included in current project '%A'." currentFile currentProject.SourceFiles)
         let isPrivateToFile = 
@@ -191,6 +199,7 @@ type ProjectFactory
             | :? FSharpUnionCase as m -> m.Accessibility.IsPrivate
             | :? FSharpField as m -> m.Accessibility.IsPrivate
             | _ -> false
+
         if isPrivateToFile then 
             Some SymbolDeclarationLocation.File 
         else 
@@ -209,7 +218,9 @@ type ProjectFactory
                     let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
                     let allProjectFileNames =
                         lazy (allProjects |> List.map (fun p -> Path.GetFullPathSafe(p.ProjectFileName)))
-                    Debug.Assert(allProjectFileNames.Value |> List.exists (fun projectFileName -> Path.GetFullPathSafe(currentProject.ProjectFileName) = projectFileName), 
+                    Debug.Assert(
+                        allProjectFileNames.Value |> List.exists (fun projectFileName -> 
+                                                        Path.GetFullPathSafe(currentProject.ProjectFileName) = projectFileName), 
                         sprintf "Current project '%s' should appear in the project list '%A'." currentProject.ProjectFileName allProjectFileNames.Value)
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
@@ -217,53 +228,17 @@ type ProjectFactory
             | None -> None
 
     member x.GetDependentProjects (dte: DTE) (projects: IProjectProvider list) =
-        let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLower()) |> set
+        let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLowerInvariant()) |> set
         x.ListFSharpProjectsInSolution dte
         |> Seq.map x.CreateForProject
         |> Seq.filter (fun p -> 
             p.GetReferencedProjects() 
             |> List.exists (fun p -> 
-                projectFileNames |> Set.contains (p.ProjectFileName.ToLower())))
+                projectFileNames |> Set.contains (p.ProjectFileName.ToLowerInvariant())))
         |> Seq.append projects
-        |> Seq.distinctBy (fun p -> p.ProjectFileName.ToLower())
+        |> Seq.distinctBy (fun p -> p.ProjectFileName.ToLowerInvariant())
         |> Seq.toList
 
     interface IDisposable with
         member __.Dispose() = 
             (solutionBuildEventListener :> IDisposable).Dispose()
-
-
-type BasicProjectFactory(events: EnvDTE80.Events2) =
-    let fsharpProjectsCache = ref None
-    let cache = Cache<ProjectUniqueName, ProjectProvider>()
-
-    let onProjectChanged (project: Project) = 
-        debug "[ProjectFactory] %s changed." project.Name
-        cache.Remove project.FullName
-
-    do events.SolutionEvents.add_AfterClosing (fun _ -> 
-        fsharpProjectsCache := None
-        cache.Clear())
-
-    member __.ListFSharpProjectsInSolution(dte: DTE) =
-        let rec handleProject (p: Project) =
-            if p === null then []
-            elif isFSharpProject p then [ p ]
-            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-            else []
-        
-        and handleProjectItems (items: ProjectItems) = 
-            [ for pi in items do
-                    yield! handleProject pi.SubProject ]
-
-        match !fsharpProjectsCache with
-        | Some x -> x
-        | None ->
-            let res = [ for p in dte.Solution.Projects do
-                            yield! handleProject p ]
-            fsharpProjectsCache := Some res
-            res
-
-    member x.CreateForProject(project: Project): IProjectProvider = 
-        cache.Get project.FullName (fun _ ->
-            new ProjectProvider (project, x.CreateForProject, onProjectChanged, id)) :> _
