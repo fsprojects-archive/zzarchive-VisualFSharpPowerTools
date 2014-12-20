@@ -690,6 +690,18 @@
       </ItemGroup>
     </Otherwise>
   </Choose>
+  <PropertyGroup>
+    <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <ItemGroup>
     <None Include="paket.references" />
     <Compile Include="AssemblyInfo.fs">
@@ -849,11 +861,22 @@
     <Compile Include="TaskListCommentFilter.fs">
       <Link>TaskList/TaskListCommentFilter.fs</Link>
     </Compile>
+    <Compile Include="Outlining\OutliningParsers.fs" />
+    <Compile Include="Outlining\CommentOutlining.fs" />
+    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="FParsec">
+      <HintPath>..\..\packages\FParsec.1.0.1\lib\net40-client\FParsec.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FParsecCS">
+      <HintPath>..\..\packages\FParsec.1.0.1\lib\net40-client\FParsecCS.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
@@ -919,24 +942,10 @@
     <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     </Reference>
     <Reference Include="mscorlib" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
       <Name>FSharpVSPowerTools.Core</Name>
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
-  <PropertyGroup>
-    <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
-  </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(SolutionDir)\.paket\paket.targets" />
 </Project>
