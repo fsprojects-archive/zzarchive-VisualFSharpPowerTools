@@ -48,8 +48,11 @@ type VsTestBase() =
     let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
                                               openDocumentsTracker, fileSystem, serviceProvider, SkipLexCache = true)
     let projectFactory = new MockProjectFactory(serviceProvider, openDocumentsTracker, vsLanguageService, dte)
+
+    let shellEventListener = new ShellEventListener(serviceProvider)
     
     member __.ServiceProvider = serviceProvider
+    member __.ShellEventListener = shellEventListener
     member __.FSharpLanguageService = fsharpLanguageService
     member __.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService
     member __.DocumentFactoryService = documentFactoryService

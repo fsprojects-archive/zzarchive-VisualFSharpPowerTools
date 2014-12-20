@@ -15,7 +15,10 @@ type ClassificationSpan =
 type SyntaxConstructClassifierHelper() =    
     inherit VsTestBase()
     
-    let classifierProvider = new SyntaxConstructClassifierProvider(base.ServiceProvider, null,
+    let classifierProvider = new SyntaxConstructClassifierProvider(
+                                    shellEventListener = base.ShellEventListener,
+                                    serviceProvider = base.ServiceProvider, 
+                                    classificationColorManager = null,
                                     projectFactory = base.ProjectFactory,
                                     fsharpVsLanguageService = base.VsLanguageService,
                                     classificationRegistry = base.ClassificationTypeRegistryService,
