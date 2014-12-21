@@ -6,45 +6,42 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Utilities
 open System
 open System.ComponentModel.Composition
-open System.Linq
 open System.Text
 
 module Comments = 
-    let encompassedBy (rg : Region) (encomp : Region) = rg.StartLine > encomp.StartLine && rg.EndLine < encomp.EndLine
+    let encompassedBy (rg: Region) (encomp: Region) = rg.StartLine > encomp.StartLine && rg.EndLine < encomp.EndLine
     
     [<Struct>]
     type private ParsedRegions = 
-        val DocBlocks : Region list
-        val ComBlocks : Region list
-        val StarBlocks : Region list
+        val DocBlocks: Region list
+        val ComBlocks: Region list
+        val StarBlocks: Region list
         new(docBlocks, comBlocks, starBlocks) = 
             { DocBlocks = docBlocks
               ComBlocks = comBlocks
               StarBlocks = starBlocks }
     
-    let snapshotText (lines : seq<ITextSnapshotLine>) = 
-        let folder (sb : StringBuilder) (ln : ITextSnapshotLine) = sb.Append(ln.GetText() + "\n")
-        let sb = lines |> Seq.fold folder (StringBuilder())
-        sb.ToString()
+    let snapshotText = 
+        Seq.fold (fun (sb: StringBuilder) (ln: ITextSnapshotLine) ->
+            sb.Append(ln.GetText() + "\n"))
+            (StringBuilder())
+        >> string
     
     let private constructAllRegions fileText = 
         let findInText psr = findInString fileText psr |> List.choose id
-        let docCandidates = findInText docBlock
-        let comCandidates = findInText comBlock
-        let starCandidates = findInText starBlock
-        let triStrings = findInText skipTriString
-        let multiStrings = findInText skipMultiString
-        let folder (rg : Region) (isEncompassed : bool) (encomp : Region) = isEncompassed || encompassedBy rg encomp
-        let inline regionFilter (filterls : Region list) (rgls : Region list) = 
+        let folder (rg: Region) (isEncompassed: bool) (encomp: Region) = isEncompassed || encompassedBy rg encomp
+        
+        let regionFilter (filterls: Region list) (rgls: Region list) = 
             rgls |> List.filter (fun rg -> not <| List.fold (folder rg) false filterls)
-        let doubleFilter = regionFilter triStrings >> regionFilter multiStrings
-        let starBlocksFinal = doubleFilter starCandidates
+             
+        let doubleFilter = regionFilter (findInText skipTriString) >> regionFilter (findInText skipMultiString)
+        let starBlocksFinal = doubleFilter (findInText starBlock)
         let tripleFilter = doubleFilter >> regionFilter starBlocksFinal
-        let docBlocksFinal = tripleFilter docCandidates
-        let comBlocksFinal = tripleFilter comCandidates
+        let docBlocksFinal = tripleFilter (findInText docBlock)
+        let comBlocksFinal = tripleFilter (findInText comBlock)
         ParsedRegions(docBlocksFinal, comBlocksFinal, starBlocksFinal)
-    
-    let private asSnapshotSpan (region : Region) (snapshot : ITextSnapshot) = 
+      
+    let private asSnapshotSpan (region: Region) (snapshot: ITextSnapshot) = 
         if region.StartLine > snapshot.Length || region.EndLine > snapshot.Length then None
         else 
             let startLine = snapshot.GetLineFromLineNumber(region.StartLine)
@@ -56,9 +53,8 @@ module Comments =
                                  if region.EndOffset = -1 then endLine.End
                                  else endLine.Start + region.EndOffset)
     
-    let private parse (newSnapshot : ITextSnapshot) (oldSnapshot : ITextSnapshot) (oldRegions : Region list) 
-        (newRegions : Region list) = 
-        let oldSpans : Span list = 
+    let private parse (newSnapshot: ITextSnapshot) (oldSnapshot: ITextSnapshot) oldRegions newRegions = 
+        let oldSpans = 
             oldRegions
             |> List.map (fun r -> 
                    let rs = (asSnapshotSpan r oldSnapshot)
@@ -66,42 +62,41 @@ module Comments =
                    else None)
             |> List.choose id
         
-        let newSpans : Span list = 
+        let newSpans = 
             newRegions
-            |> List.map (fun r -> 
-                   let rs = (asSnapshotSpan r newSnapshot)
-                   if rs.IsNone then None
-                   else Some rs.Value.Span)
-            |> List.choose id
+            |> List.choose (fun r -> 
+                   asSnapshotSpan r newSnapshot
+                   |> Option.map (fun rs -> rs.Span))
         
-        let oldSpanCollection = NormalizedSpanCollection oldSpans
-        let newSpanCollection = NormalizedSpanCollection newSpans
-        let removed = NormalizedSpanCollection.Difference(oldSpanCollection, newSpanCollection)
-        
-        let changeStart : int = 
-            if removed.Count > 0 then removed.[0].Start
+        let removedSpans = 
+            NormalizedSpanCollection.Difference(NormalizedSpanCollection oldSpans, NormalizedSpanCollection newSpans) 
+         
+        let changeStart = 
+            if removedSpans.Count > 0 then removedSpans.[0].Start
             else Int32.MaxValue
         
-        let changeEnd : int = 
-            if removed.Count > 0 then removed.[removed.Count - 1].End
+        let changeEnd = 
+            if removedSpans.Count > 0 then removedSpans.[removedSpans.Count - 1].End
             else -1
         
-        let changeStart' : int = 
-            if newSpans.Count() > 0 then min changeStart (newSpans.ElementAt(0).Start)
-            else changeStart
+        let changeStart = 
+            match newSpans with
+            | [] -> changeStart
+            | h :: _ -> min changeStart h.Start
+         
+        let changeEnd = 
+            match List.rev newSpans with
+            | [] -> changeEnd
+            | h :: _ -> max changeEnd h.End
         
-        let changeEnd' : int = 
-            if newSpans.Count() > 0 then max changeEnd (newSpans.ElementAt(newSpans.Count() - 1).End)
-            else changeEnd
-        
-        let eventSpan : SnapshotSpan option = 
-            if changeStart' > changeEnd' then None
-            else Some <| SnapshotSpan(newSnapshot, Span.FromBounds(changeStart', changeEnd'))
+        let eventSpan = 
+            if changeStart > changeEnd then None
+            else Some <| SnapshotSpan(newSnapshot, Span.FromBounds(changeStart, changeEnd))
         
         (newSnapshot, eventSpan)
     
-    let private generateTags (spans : NormalizedSnapshotSpanCollection) (currentSnapshot : ITextSnapshot) 
-        (currentRegions : Region list) : seq<ITagSpan<IOutliningRegionTag>> = 
+    let private generateTags (spans: NormalizedSnapshotSpanCollection) (currentSnapshot: ITextSnapshot) 
+        (currentRegions: Region list): seq<ITagSpan<IOutliningRegionTag>> = 
         if spans.Count = 0 then [] :> seq<_>
         else 
             let snapEntire = 
@@ -114,7 +109,7 @@ module Comments =
             /// EndLineNumber for the entire textbuffer
             let endLineNum = snapEntire.End.GetContainingLine().LineNumber
             
-            let rec loop (acc : ITagSpan<IOutliningRegionTag> list) (currgs : Region list) = 
+            let rec loop (acc: ITagSpan<IOutliningRegionTag> list) (currgs: Region list) = 
                 match currgs with
                 | rg :: tl when rg.StartLine <= endLineNum && rg.EndLine >= startLineNum -> 
                     let startLine = currentSnapshot.GetLineFromLineNumber(rg.StartLine)
@@ -135,10 +130,10 @@ module Comments =
     
     [<NoComparison>]
     type private TaggerState = 
-        { OutlineRegions : Region list
-          Snapshot : ITextSnapshot }
+        { OutlineRegions: Region list
+          Snapshot: ITextSnapshot }
     
-    type OutliningTagger(buffer : ITextBuffer) as self = 
+    type OutliningTagger(buffer: ITextBuffer) as self = 
         let tagsChanged = Event<EventHandler<SnapshotSpanEventArgs>, SnapshotSpanEventArgs>()
         
         let mutable taggerState = 
@@ -171,10 +166,10 @@ module Comments =
             else self.Reparse()
         
         interface ITagger<IOutliningRegionTag> with
-            member __.GetTags(spans : NormalizedSnapshotSpanCollection) : seq<ITagSpan<IOutliningRegionTag>> = 
+            member __.GetTags(spans: NormalizedSnapshotSpanCollection): seq<ITagSpan<IOutliningRegionTag>> = 
                 generateTags spans taggerState.Snapshot taggerState.OutlineRegions
             [<CLIEvent>]
-            member __.TagsChanged : IEvent<EventHandler<SnapshotSpanEventArgs>, SnapshotSpanEventArgs> = 
+            member __.TagsChanged: IEvent<EventHandler<SnapshotSpanEventArgs>, SnapshotSpanEventArgs> = 
                 tagsChanged.Publish
     
     [<Export(typeof<ITaggerProvider>)>]
