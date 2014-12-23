@@ -15,6 +15,13 @@ type XmlDocSig = string
 type XmlDoc = string list
 
 [<NoComparison; NoEquality>]
+type Filterer = {
+    MemberOrFunctionOrValueFilter: (FSharpMemberOrFunctionOrValue -> bool) option }
+with
+    static member NoFilters = {
+        MemberOrFunctionOrValueFilter = None }
+
+[<NoComparison; NoEquality>]
 type internal Context = 
     {
         Writer: ColumnIndentedTextWriter
@@ -358,7 +365,7 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
     else
         prefixToConsider + "." + (QuoteIdentifierIfNeeded moduleNameOnly)
 
-let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
+let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) filterer =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")  
     if not isTopLevel then
         writeDocs ctx.Writer modul.XmlDoc (fun _ -> modul.XmlDocSig) ctx.GetXmlDocBySignature
@@ -376,11 +383,11 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
 
     for entity in modul.PublicNestedEntities do
         match entity with
-        | FSharpModule -> writeModule false ctx entity
+        | FSharpModule -> writeModule false ctx entity filterer
         | AbbreviatedType abbreviatedType -> writeTypeAbbrev true ctx entity abbreviatedType
         | FSharpException -> writeFSharpExceptionType true ctx entity
         | Delegate when entity.IsFSharp -> writeDelegateType true ctx entity
-        | _ -> writeType true ctx entity
+        | _ -> writeType true ctx entity filterer
 
         ctx.Writer.WriteLine("")
     if not isTopLevel then
@@ -423,7 +430,7 @@ and internal writeTypeHeader ctx (typ: FSharpEntity) =
         writer.WriteLine("open {0}", decl))
     writer.WriteLine("")    
 
-and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
+and internal writeType isNestedEntity ctx (typ: FSharpEntity) (filterer: Filterer) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
 
     writeDocs ctx.Writer typ.XmlDoc (fun _ -> typ.XmlDocSig) ctx.GetXmlDocBySignature
@@ -521,7 +528,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
 
     // Constructors
     for constr in membersPartition.Constructors do
-        writeMember ctx constr
+        writeMember ctx constr filterer.MemberOrFunctionOrValueFilter
 
     // Fields
     if typ.IsClass || isStruct then
@@ -531,15 +538,15 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
 
     // Abstract members
     for mem in membersPartition.AbstractMembers do
-        writeMember ctx mem
+        writeMember ctx mem filterer.MemberOrFunctionOrValueFilter
 
     // Concrete instance members
     for mem in membersPartition.ConcreteInstanceMembers do
-        writeMember ctx mem
+        writeMember ctx mem filterer.MemberOrFunctionOrValueFilter
 
     // Static members
     for mem in membersPartition.StaticMembers do
-        writeMember ctx mem
+        writeMember ctx mem filterer.MemberOrFunctionOrValueFilter
 
     // Nested entities
     // Deactivate nested types display for the moment (C# doesn't do it)
@@ -725,10 +732,13 @@ and internal writeClassOrStructField ctx (field: FSharpField) =
     writeDocs ctx.Writer field.XmlDoc (fun _ -> field.XmlDocSig) ctx.GetXmlDocBySignature
     ctx.Writer.WriteLine("val {0} : {1}", QuoteIdentifierIfNeeded field.DisplayName, formatType ctx field.FieldType)
 
-and internal writeMember ctx (mem: FSharpMemberOrFunctionOrValue) =
+and internal writeMember ctx (mem: FSharpMemberOrFunctionOrValue) filter =
     Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
 
+
     match mem with
+    | _ when Option.isSome filter && filter.Value mem = false -> ()
+//    | _ when mem.FullName.StartsWith "Microsoft.FSharp.Linq.QueryBuilder.C" = false -> () // filter everything that doesn't start with C, can you pass in an activePattern
     | Constructor _entity ->
         writeDocs ctx.Writer mem.XmlDoc (fun _ -> mem.XmlDocSig) ctx.GetXmlDocBySignature
         ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
@@ -794,7 +804,7 @@ and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     ctx.Writer.Write(" : ")
     ctx.Writer.WriteLine("{0}", formatType ctx group.OverallType)
 
-let formatSymbol getXmlDocBySignature indentation displayContext openDeclarations (symbol: FSharpSymbol) =
+let formatSymbol getXmlDocBySignature indentation displayContext openDeclarations (symbol: FSharpSymbol) filterer =
     use writer = new ColumnIndentedTextWriter()
     use openDeclWriter = new ColumnIndentedTextWriter()
     let ctx = { Writer = writer; OpenDeclWriter = openDeclWriter;
@@ -806,11 +816,11 @@ let formatSymbol getXmlDocBySignature indentation displayContext openDeclaration
         match symbol with
         | TypedAstPatterns.Entity(entity, _, _) ->
             match entity with
-            | FSharpModule -> writeModule true ctx entity
+            | FSharpModule -> writeModule true ctx entity filterer
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev false ctx entity abbreviatedType
             | FSharpException -> writeFSharpExceptionType false ctx entity
             | Delegate when entity.IsFSharp -> writeDelegateType false ctx entity
-            | _ -> writeType false ctx entity
+            | _ -> writeType false ctx entity filterer
             |> Some
         | MemberFunctionOrValue mem ->
             writeSymbol mem.LogicalEnclosingEntity

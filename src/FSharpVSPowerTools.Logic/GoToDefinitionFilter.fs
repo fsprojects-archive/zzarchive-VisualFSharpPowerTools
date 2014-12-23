@@ -145,7 +145,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 parseTree 
                 |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) 
                 |> Option.getOrElse []
-            match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol with
+            match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol SignatureGenerator.Filterer.NoFilters with
             | Some signature ->
                 let directoryPath = Path.GetDirectoryName(filePath)
                 Directory.CreateDirectory(directoryPath) |> ignore
