@@ -210,7 +210,6 @@ module SourceCodeClassifier =
                 | MemberFunctionOrValue func -> not func.IsMember
                 | _ -> false
             res)
-        //|> Array.map (fun (symbolUse, _) -> symbolUse)
 
     let internal getCategory (symbolUse: FSharpSymbolUse) =
         match symbolUse.Symbol with
@@ -240,7 +239,6 @@ module SourceCodeClassifier =
         if what.EndCol < from.EndCol && what.EndCol > from.StartCol then
             { from with StartCol = what.EndCol + 1 } // the dot between parts
         else from
-
 
     let getFullPrefix (longIdents: IDictionary<_,_>) fullName (endPos: Range.pos): Idents option =
         match longIdents.TryGetValue endPos with
@@ -290,7 +288,7 @@ module SourceCodeClassifier =
             |> Seq.toArray
        
         // index all symbol usages by LineNumber 
-        let wordSpans = 
+        let wordSpansByLine = 
             allSymbolsUses2
             |> Seq.map (fun (_, span) -> span)
             |> Seq.groupBy (fun span -> span.Line)
@@ -301,7 +299,7 @@ module SourceCodeClassifier =
             allSymbolsUses2
             |> Seq.choose (fun (symbolUse, span) ->
                 let span = 
-                    match wordSpans.TryFind span.Line with
+                    match wordSpansByLine.TryFind span.Line with
                     | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
                     | _ -> span
 
@@ -346,13 +344,17 @@ module SourceCodeClassifier =
                         |> List.head)
             |> Seq.distinct
 
-        let ast = checkResults.GetUntypedAst()
-        let longIdentsByEndPos = UntypedAstUtils.getLongIdents  ast
-            
 //        debug "LongIdents by line:"  
 //        longIdentsByEndPos 
 //        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
 //        |> Seq.iter (debug "%A")
+
+//        allEntities
+//        |> Option.iter (fun es ->
+//            es
+//            |> Map.toSeq
+//            |> Seq.map (fun (fullName, idents) -> sprintf "%s %A" fullName idents)
+//            |> fun lines -> System.IO.File.WriteAllLines (@"L:\temp\_entities_.txt", lines))
 
         let removeModuleSuffixes (symbolUses: SymbolUse[]) =
             match allEntities with
@@ -386,6 +388,9 @@ module SourceCodeClassifier =
 //                let r = sUse.SymbolUse.RangeAlternate
 //                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames r.StartLine r.StartColumn r.EndLine r.EndColumn
 //            symbolUses
+
+        let ast = checkResults.GetUntypedAst()
+        let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
 
         let symbolPrefixes: (Range.range * Idents) [] =
             allSymbolsUses

@@ -39,8 +39,8 @@ module internal TypedAstUtils =
          entity.Attributes
          |> tryGetAttribute<CompilationRepresentationAttribute>
          |> Option.bind (fun a -> 
-              a.ConstructorArguments 
-              |> Seq.tryPick (fun (_, arg) ->
+              Option.attempt (fun _ -> a.ConstructorArguments)
+              |> Option.bind (fun args -> args |> Seq.tryPick (fun (_, arg) ->
                    let res =
                        match arg with
                        | :? int32 as arg when arg = int CompilationRepresentationFlags.ModuleSuffix -> 
@@ -49,7 +49,7 @@ module internal TypedAstUtils =
                            Some() 
                        | _ -> 
                            None
-                   res))
+                   res)))
          |> Option.isSome
 
     let isOperator (name: string) =
@@ -83,6 +83,20 @@ module TypedAstExtensionHelpers =
             //debug "GetFullDisplayName: FullName = %A, Result = %A" fullName res
             res
 
+        member x.TryGetFullCompiledName() =
+            let fullName = x.TryGetFullName() |> Option.map (fun fullName -> fullName.Split '.')
+            let res = 
+                match fullName with
+                | Some fullName ->
+                    match Option.attempt (fun _ -> x.CompiledName) with
+                    | Some shortCompiledName when not (shortCompiledName.Contains ".") ->
+                        Some (fullName |> Array.replace (fullName.Length - 1) shortCompiledName)
+                    | _ -> Some fullName
+                | None -> None 
+                |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
+            //debug "GetFullCompiledName: FullName = %A, Result = %A" fullName res
+            res
+
         member x.PublicNestedEntities =
             x.NestedEntities |> Seq.filter (fun entity -> entity.Accessibility.IsPublic)
 
@@ -101,13 +115,13 @@ module TypedAstExtensionHelpers =
             | None -> None
             |> Option.map (fun fullDisplayName -> String.Join (".", fullDisplayName))
 
-        member x.TryGetFullCompiledOperatorNameIdents() =
+        member x.TryGetFullCompiledOperatorNameIdents() : Idents option =
             // For operator ++ displayName is ( ++ ) compiledName is op_PlusPlus
             if isOperator x.DisplayName && x.DisplayName <> x.CompiledName then
                 Option.attempt (fun _ -> x.EnclosingEntity)
                 |> Option.bind (fun e -> e.TryGetFullName())
                 |> Option.map (fun enclosingEntityFullName -> 
-                    [| enclosingEntityFullName + "." + x.CompiledName|])
+                     Array.append (enclosingEntityFullName.Split '.') [| x.CompiledName |])
             else None
 
     type FSharpAssemblySignature with

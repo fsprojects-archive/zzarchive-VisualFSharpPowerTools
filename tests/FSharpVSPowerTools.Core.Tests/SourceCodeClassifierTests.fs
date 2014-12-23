@@ -1329,6 +1329,17 @@ let _ = 1 ++| 2
     => [ 4, []]
 
 [<Test>]
+let ``usage of an operator makes the module /with Module suffix/ it's defined in to be not marked as unused``() =
+    """
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module M =
+    let (++|) x y = ()
+open M
+let _ = 1 ++| 2
+"""
+    => [ 5, []]
+
+[<Test>]
 let ``type used in pattern matching with "as" keyword causes the module in which the type is defined to be not marked as unused``() =
     """
 module M = 

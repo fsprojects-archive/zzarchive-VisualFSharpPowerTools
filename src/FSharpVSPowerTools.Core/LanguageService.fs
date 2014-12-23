@@ -409,8 +409,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                     let fullNames = 
                         match symbolUse.Symbol with
                         // Make sure that unsafe manipulation isn't executed if unused opens are disabled
-                        | _ when not checkForUnusedOpens -> 
-                            None
+                        | _ when not checkForUnusedOpens -> None
                         | MemberFunctionOrValue func when func.IsExtensionMember ->
                             if func.IsProperty then
                                 let fullNames =
@@ -445,7 +444,12 @@ type LanguageService (?fileSystem: IFileSystem) =
                         | MemberFunctionOrValue func ->
                             match func with
                             | Constructor _ -> None
-                            | _ -> func.TryGetFullCompiledOperatorNameIdents()
+                            | _ -> 
+                                Some [| yield func.FullName 
+                                        match func.TryGetFullCompiledOperatorNameIdents() with
+                                        | Some idents -> yield String.concat "." idents
+                                        | None -> ()
+                                     |]
                         | Entity e ->
                             match e with
                             | e, TypedAstPatterns.Attribute, _ ->

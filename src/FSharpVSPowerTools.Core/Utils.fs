@@ -11,6 +11,10 @@ module Seq =
     let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
 
 [<RequireQualifiedAccess>]
+module List =
+    let tryHead = function [] -> None | h :: _ -> Some h
+
+[<RequireQualifiedAccess>]
 module Array =
     /// Returns true if one array has another as its subset from index 0.
     let startsWith (prefix: _ array) (whole: _ array) =
@@ -90,6 +94,11 @@ module Option =
         match x with
         | Some x -> x
         | None -> None
+
+    let inline toList x =
+        match x with
+        | Some x -> [x]
+        | None -> []
     
 // Async helper functions copied from https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/ControlCollections.Async.fs
 [<RequireQualifiedAccess>]
