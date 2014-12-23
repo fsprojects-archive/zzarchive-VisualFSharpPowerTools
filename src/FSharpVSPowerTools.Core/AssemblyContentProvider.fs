@@ -80,7 +80,7 @@ type Parent =
             entity.TryGetFullDisplayName()
             |> Option.map (fun fullDisplayName ->
                 fullName,
-                fullDisplayName.Split '.' 
+                fullDisplayName.Split '.'
                 |> removeGenericParamsCount 
                 |> removeModuleSuffix))
 
@@ -106,14 +106,45 @@ module AssemblyContentProvider =
                           HasModuleSuffix = hasModuleSuffixAttribute entity }
                 | _ -> EntityKind.Type })
 
+    let private traverseMemberFunctionAndValues ns (parent: Parent) (membersFunctionsAndValues: seq<FSharpMemberOrFunctionOrValue>) =
+        membersFunctionsAndValues
+        |> Seq.map (fun func ->
+            let processIdents fullName idents = 
+                { FullName = fullName
+                  CleanedIdents = parent.FixParentModuleSuffix idents
+                  Namespace = ns
+                  IsPublic = func.Accessibility.IsPublic
+                  TopRequireQualifiedAccessParent = 
+                        parent.RequiresQualifiedAccess |> Option.map parent.FixParentModuleSuffix
+                  AutoOpenParent = parent.AutoOpen |> Option.map parent.FixParentModuleSuffix
+                  Kind = EntityKind.FunctionOrValue func.IsActivePattern }
+
+            [ yield! func.TryGetFullDisplayName() 
+                     |> Option.map (fun fullDisplayName -> processIdents func.FullName (fullDisplayName.Split '.'))
+                     |> Option.toList
+              (* for 
+                 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+                 module M =
+                     let (++) x y = ()
+                 open M
+                 let _ = 1 ++ 2
+                
+                 we should return additional RawEntity { FullName = MModule.op_PlusPlus; CleanedIdents = [|"M"; "op_PlusPlus"|] ... }
+              *)
+              yield! func.TryGetFullCompiledOperatorNameIdents() 
+                     |> Option.map (fun fullCompiledIdents ->
+                          processIdents (fullCompiledIdents |> String.concat ".") fullCompiledIdents)
+                     |> Option.toList ])
+        |> Seq.concat
+
     let rec private traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 
 
         seq { if not entity.IsProvided then
                 match contentType, entity.Accessibility.IsPublic with
                 | Full, _ | Public, true ->
                     let ns = entity.Namespace |> Option.map (fun x -> x.Split '.') |> Option.orElse parent.Namespace
-
                     let currentEntity = createEntity ns parent entity
+
                     match currentEntity with
                     | Some x -> yield x
                     | None -> ()
@@ -142,32 +173,7 @@ module AssemblyContentProvider =
                           Namespace = ns }
 
                     if entity.IsFSharpModule then
-                        for func in entity.MembersFunctionsAndValues do
-                            match func.TryGetFullDisplayName() with
-                            | Some displayName ->
-                                let fullNameAndIdents =
-                                    let rawIdents = displayName.Split '.'
-
-                                    if false && func.IsActivePattern then
-                                        func.CompiledName.Split([|'|'|], StringSplitOptions.RemoveEmptyEntries)
-                                        |> Array.filter ((<>) "_")
-                                        |> Array.map (fun patternCase ->
-                                             let idents = Array.append rawIdents [| patternCase |]
-                                             idents |> String.concat ".", idents)
-                                    else [| func.FullName, rawIdents |]
-                                
-                                yield!
-                                    fullNameAndIdents
-                                    |> Array.map (fun (fullName, cleanIdents) ->
-                                        { FullName = fullName
-                                          CleanedIdents = currentParent.FixParentModuleSuffix cleanIdents
-                                          Namespace = ns
-                                          IsPublic = func.Accessibility.IsPublic
-                                          TopRequireQualifiedAccessParent = 
-                                              currentParent.RequiresQualifiedAccess |> Option.map currentParent.FixParentModuleSuffix
-                                          AutoOpenParent = currentParent.AutoOpen |> Option.map currentParent.FixParentModuleSuffix
-                                          Kind = EntityKind.FunctionOrValue func.IsActivePattern })
-                            | None -> ()
+                        yield! traverseMemberFunctionAndValues ns currentParent entity.MembersFunctionsAndValues
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
                         yield! traverseEntity contentType currentParent e 
