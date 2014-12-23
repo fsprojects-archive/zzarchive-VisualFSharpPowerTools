@@ -735,10 +735,8 @@ and internal writeClassOrStructField ctx (field: FSharpField) =
 and internal writeMember ctx (mem: FSharpMemberOrFunctionOrValue) filter =
     Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
 
-
     match mem with
     | _ when Option.isSome filter && filter.Value mem = false -> ()
-//    | _ when mem.FullName.StartsWith "Microsoft.FSharp.Linq.QueryBuilder.C" = false -> () // filter everything that doesn't start with C, can you pass in an activePattern
     | Constructor _entity ->
         writeDocs ctx.Writer mem.XmlDoc (fun _ -> mem.XmlDocSig) ctx.GetXmlDocBySignature
         ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
