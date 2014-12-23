@@ -13,6 +13,10 @@ using Microsoft.VisualStudio.Text.Editor;
 using EnvDTE;
 using EnvDTE80;
 using System.Collections.Generic;
+using System.IO;
+using VSLangProj;
+using System.Reflection;
+using System.Windows;
 
 namespace FSharpVSPowerTools
 {
@@ -23,18 +27,18 @@ namespace FSharpVSPowerTools
         public static readonly Guid guidAddReferenceInFSICmdSet = new Guid(guidAddReferenceInFSICmdSetString);
 
         private DTE2 dte2;
-        private EnvDTE.BuildEvents BuildEvents;
+        private BuildEvents buildEvents;
         private OleMenuCommandService mcs;
         private IVsUIShell shell;
 
         public FSIReferenceCommand(DTE2 dte2, OleMenuCommandService mcs, IVsUIShell shell)
         {
             this.dte2 = dte2;
-            this.BuildEvents = dte2.Events.BuildEvents;
+            this.buildEvents = dte2.Events.BuildEvents;
             this.mcs = mcs;
             this.shell = shell;
 
-            BuildEvents.OnBuildDone += BuildEvents_OnBuildDone;
+            buildEvents.OnBuildDone += BuildEvents_OnBuildDone;
             Trace.WriteLine(string.Format(CultureInfo.CurrentCulture, "Entering constructor for: {0}", this.ToString()));
         }
 
@@ -70,7 +74,7 @@ namespace FSharpVSPowerTools
 
         private Project GetActiveProject()
         {
-            DTE dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+            var dte = dte2 as DTE;
             return GetActiveProject(dte);
         }
 
@@ -78,7 +82,7 @@ namespace FSharpVSPowerTools
         {
             Project activeProject = null;
 
-            System.Array activeSolutionProjects = dte.ActiveSolutionProjects as System.Array;
+            Array activeSolutionProjects = dte.ActiveSolutionProjects as Array;
             if (activeSolutionProjects != null && activeSolutionProjects.Length > 0)
             {
                 activeProject = activeSolutionProjects.GetValue(0) as Project;
@@ -99,17 +103,17 @@ namespace FSharpVSPowerTools
             var subfolderName = "Scripts";
             if (this.IsCurrentProjectFSharp(proj))
             {
-                //create Script folder
+                // Create Script folder
                 var projectFolder = this.GetProjectFolder(proj);
-                var scriptFolder = System.IO.Path.Combine(projectFolder, subfolderName);
-                if (!System.IO.Directory.Exists(scriptFolder))
+                var scriptFolder = Path.Combine(projectFolder, subfolderName);
+                if (!Directory.Exists(scriptFolder))
                 {
-                    System.IO.Directory.CreateDirectory(scriptFolder);
+                    Directory.CreateDirectory(scriptFolder);
                 }
 
                 var path = scriptFolder;
-                var textFile = System.IO.Path.Combine(path, fileName);
-                using (var writer = System.IO.File.CreateText(textFile))
+                var textFile = Path.Combine(path, fileName);
+                using (var writer = File.CreateText(textFile))
                 {
                     writer.Write(content);
                 }
@@ -146,9 +150,9 @@ namespace FSharpVSPowerTools
             var list = new List<string>();
             var projectRefList = new List<string>();
 
-            if (project.Object is VSLangProj.VSProject)
+            if (project.Object is VSProject)
             {
-                VSLangProj.VSProject vsproject = (VSLangProj.VSProject)project.Object;
+                VSProject vsproject = (VSProject)project.Object;
                 for (int i = 0; i < vsproject.References.Count; i++)
                 {
                     var reference = vsproject.References.Item(i + 1);
@@ -166,17 +170,17 @@ namespace FSharpVSPowerTools
                     else
                     {
                         var fullPath = reference.Path;
-                        if (System.IO.File.Exists(fullPath))
+                        if (File.Exists(fullPath))
                             list.Add(reference.Path);
                     }
                 }
             }
 
-            list = list.Select(n => System.String.Format("#r @\"{0}\"", n)).ToList();
-            projectRefList = projectRefList.Select(n => System.String.Format("#r @\"{0}\"", n)).ToList();
-            var result = System.String.Format("// Warning: Generated file, your change could be losted when new file is generated. \r\n{0}\r\n\r\n{1}",
-                            System.String.Join("\r\n", list),
-                            System.String.Join("\r\n", projectRefList));
+            list = list.Select(n => String.Format("#r @\"{0}\"", n)).ToList();
+            projectRefList = projectRefList.Select(n => String.Format("#r @\"{0}\"", n)).ToList();
+            var result = String.Format("// Warning: Generated file, your change could be lost when new file is generated. \r\n{0}\r\n\r\n{1}",
+                            String.Join("\r\n", list),
+                            String.Join("\r\n", projectRefList));
             return result;
         }
 
@@ -195,7 +199,7 @@ namespace FSharpVSPowerTools
             {
                 var config = project.ConfigurationManager.Item(i + 1);
                 var outputPath = config.Properties.Item("OutputPath").Value.ToString();
-                var p = System.IO.Path.Combine(System.IO.Path.Combine(projectPath, outputPath), outputFileName);
+                var p = Path.Combine(Path.Combine(projectPath, outputPath), outputFileName);
                 dict.Add(config.ConfigurationName, p);
             }
             return dict;
@@ -203,18 +207,18 @@ namespace FSharpVSPowerTools
 
         private string GenerateLoadScriptContent(Project project, string scriptFile, string tag)
         {
-            var projectfolder = System.IO.Path.Combine(this.GetProjectFolder(project), "Scripts");
-            var load = System.String.Format("#load @\"{0}\"", System.IO.Path.Combine(projectfolder, scriptFile));
+            var projectfolder = Path.Combine(this.GetProjectFolder(project), "Scripts");
+            var load = String.Format("#load @\"{0}\"", Path.Combine(projectfolder, scriptFile));
             var outputs = this.GetProjectOuputs(project);
             if (outputs.ContainsKey(tag))
             {
                 var output = outputs[tag];
-                var result = System.String.Format("#r @\"{0}\"\r\n", output);
-                return System.String.Format("{0}\r\n{1}", load, result);
+                var result = String.Format("#r @\"{0}\"\r\n", output);
+                return String.Format("{0}\r\n{1}", load, result);
             }
             else
             {
-                return System.String.Format("{0}\r\n", load);
+                return String.Format("{0}\r\n", load);
             }
         }
 
@@ -227,24 +231,24 @@ namespace FSharpVSPowerTools
             foreach (var output in outputs)
             {
                 var tag = output.Key;
-                var fileName = tag == "Debug" ? "load-refs.fsx" : System.String.Format("load-refs-{0}.fsx", tag);
+                var fileName = tag == "Debug" ? "load-refs.fsx" : String.Format("load-refs-{0}.fsx", tag);
                 var content = this.GenerateFileContent(project, tag);
                 this.AddFileToActiveProject(project, fileName, content);
                 content = this.GenerateLoadScriptContent(project, fileName, tag);
-                fileName = tag == "Debug" ? "load-project.fsx" : System.String.Format("load-project-{0}.fsx", tag);
+                fileName = tag == "Debug" ? "load-project.fsx" : String.Format("load-project-{0}.fsx", tag);
                 this.AddFileToActiveProject(project, fileName, content);
             }
         }
 
-        private System.Collections.Generic.List<string> GetReferences(Project project)
+        private List<string> GetReferences(Project project)
         {
             var excludingList = new string[] { "FSharp.Core", "mscorlib" };
 
-            var list = new System.Collections.Generic.List<string>();
+            var list = new List<string>();
 
-            if (project.Object is VSLangProj.VSProject)
+            if (project.Object is VSProject)
             {
-                VSLangProj.VSProject vsproject = (VSLangProj.VSProject)project.Object;
+                VSProject vsproject = (VSProject)project.Object;
                 for (int i = 0; i < vsproject.References.Count; i++)
                 {
                     var reference = vsproject.References.Item(i+1);                    
@@ -252,7 +256,7 @@ namespace FSharpVSPowerTools
                         continue;
 
                     var fullPath = reference.Path;
-                    if (System.IO.File.Exists(fullPath))
+                    if (File.Exists(fullPath))
                         list.Add(reference.Path);
                 }
             }
@@ -266,8 +270,8 @@ namespace FSharpVSPowerTools
             {
                 // Create the command for the menu item.
                 CommandID menuCommandID = new CommandID(guidAddReferenceInFSICmdSet, (int)cmdidAddReferenceInFSI);
-                MenuCommand menuItem = new MenuCommand(MenuItemCallback, menuCommandID );
-                mcs.AddCommand( menuItem );
+                MenuCommand menuItem = new MenuCommand(AddReferenceInFSI, menuCommandID);
+                mcs.AddCommand(menuItem);
             }
         }
 
@@ -276,7 +280,7 @@ namespace FSharpVSPowerTools
         /// See the Initialize method to see how the menu item is associated to this function using
         /// the OleMenuCommandService service and the MenuCommand class.
         /// </summary>
-        private void MenuItemCallback(object sender, EventArgs e)
+        private void AddReferenceInFSI(object sender, EventArgs e)
         {
             IVsWindowFrame frame;
             Guid guid = new Guid("dee22b65-9761-4a26-8fb2-759b971d6dfc");
@@ -292,10 +296,10 @@ namespace FSharpVSPowerTools
                 var l = GetReferences(project);
 
                 var t = frame.GetType();
-                var mi = t.GetProperty("FrameView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                var mi = t.GetProperty("FrameView", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 var frameView = mi.GetValue(frame);
-                var v = frameView.GetType().GetProperty("Content").GetValue(frameView) as System.Windows.DependencyObject;
-                var content = v.GetType().GetProperty("Content").GetValue(v) as System.Windows.DependencyObject;
+                var v = frameView.GetType().GetProperty("Content").GetValue(frameView) as DependencyObject;
+                var content = v.GetType().GetProperty("Content").GetValue(v) as DependencyObject;
                 var content2 = content.GetType().GetProperty("Content").GetValue(content);
                 var content3 = content2.GetType().GetProperty("Content").GetValue(content2);
                 var content4 = content3.GetType().GetProperty("TextView").GetValue(content3);
@@ -306,17 +310,17 @@ namespace FSharpVSPowerTools
                     var line = wpfView.Caret.ContainingTextViewLine;
                     var pos = line.End.Position;
 
-                    string resultString = "";
+                    string resultString = "\r\n";
                     foreach (var item in l)
                     {
-                        resultString += System.String.Format("#r @\"{0}\"\r\n", item);
+                        resultString += String.Format("#r @\"{0}\"\r\n", item);
                     }
 
                     edit.Insert(pos, resultString.TrimEnd() + ";;");
                     edit.Apply();
                 }
 
-                //generate script files
+                // Generate script files
                 if (this.IsCurrentProjectFSharp(project))
                 {
                     this.GenerateFile(project);
@@ -326,7 +330,7 @@ namespace FSharpVSPowerTools
             {
                 Guid clsid = Guid.Empty;
                 int result;
-                Microsoft.VisualStudio.ErrorHandler.ThrowOnFailure(shell.ShowMessageBox(
+                ErrorHandler.ThrowOnFailure(shell.ShowMessageBox(
                            0,
                            ref clsid,
                            "",
