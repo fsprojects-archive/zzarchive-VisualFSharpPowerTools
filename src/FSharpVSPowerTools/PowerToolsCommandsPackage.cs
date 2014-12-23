@@ -18,7 +18,7 @@ namespace FSharpVSPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [InstalledProductRegistration("#110", "#112", "1.x")]
+    [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)]
     [ProvideBindingPath]
     [ProvideOptionPage(typeof(GeneralOptionsPage), Resource.vsPackageTitle, "General", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", 0, 0, true, 0)]
@@ -105,6 +105,9 @@ namespace FSharpVSPowerTools
             {
                 newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
                 newFolderMenu.SetupCommands();
+
+                var fsiReferenceMenu = new FSIReferenceCommand(DTE.Value, mcs, shell);
+                fsiReferenceMenu.SetupCommands();
             }
         }
 

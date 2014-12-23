@@ -13,44 +13,27 @@ using Microsoft.VisualStudio.Text.Editor;
 using EnvDTE;
 using EnvDTE80;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace TaoLiu.AddReferenceInFSI
+namespace FSharpVSPowerTools
 {
-    /// <summary>
-    /// This is the class that implements the package exposed by this assembly.
-    ///
-    /// The minimum requirement for a class to be considered a valid package for Visual Studio
-    /// is to implement the IVsPackage interface and register itself with the shell.
-    /// This package uses the helper classes defined inside the Managed Package Framework (MPF)
-    /// to do it: it derives from the Package class that provides the implementation of the 
-    /// IVsPackage interface and uses the registration attributes defined in the framework to 
-    /// register itself and its components with the shell.
-    /// </summary>
-    // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is
-    // a package.
-    [PackageRegistration(UseManagedResourcesOnly = true)]
-    // This attribute is used to register the information needed to show this package
-    // in the Help/About dialog of Visual Studio.
-    [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)]
-    // This attribute is needed to let the shell know that this package exposes some menus.
-    [ProvideMenuResource("Menus.ctmenu", 1)]
-    [Guid(GuidList.guidAddReferenceInFSIPkgString)]
-    [ProvideAutoLoad(Microsoft.VisualStudio.VSConstants.UICONTEXT.NoSolution_string)]
-    public sealed class AddReferenceInFSIPackage : Package
+    public sealed class FSIReferenceCommand
     {
-        
-        static DTE2 dte2 = Package.GetGlobalService(typeof(DTE)) as DTE2;
-        static EnvDTE.BuildEvents BuildEvents = dte2.Events.BuildEvents;
-        /// <summary>
-        /// Default constructor of the package.
-        /// Inside this method you can place any initialization code that does not require 
-        /// any Visual Studio service because at this point the package object is created but 
-        /// not sited yet inside Visual Studio environment. The place to do all the other 
-        /// initialization is the Initialize method.
-        /// </summary>
-        public AddReferenceInFSIPackage()
+        public const uint cmdidAddReferenceInFSI = 0x100;
+        public const string guidAddReferenceInFSICmdSetString = "8c9a49dd-2d34-4d18-905b-c557692980be";
+        public static readonly Guid guidAddReferenceInFSICmdSet = new Guid(guidAddReferenceInFSICmdSetString);
+
+        private DTE2 dte2;
+        private EnvDTE.BuildEvents BuildEvents;
+        private OleMenuCommandService mcs;
+        private IVsUIShell shell;
+
+        public FSIReferenceCommand(DTE2 dte2, OleMenuCommandService mcs, IVsUIShell shell)
         {
+            this.dte2 = dte2;
+            this.BuildEvents = dte2.Events.BuildEvents;
+            this.mcs = mcs;
+            this.shell = shell;
+
             BuildEvents.OnBuildDone += BuildEvents_OnBuildDone;
             Trace.WriteLine(string.Format(CultureInfo.CurrentCulture, "Entering constructor for: {0}", this.ToString()));
         }
@@ -95,7 +78,7 @@ namespace TaoLiu.AddReferenceInFSI
         {
             Project activeProject = null;
 
-            Array activeSolutionProjects = dte.ActiveSolutionProjects as Array;
+            System.Array activeSolutionProjects = dte.ActiveSolutionProjects as System.Array;
             if (activeSolutionProjects != null && activeSolutionProjects.Length > 0)
             {
                 activeProject = activeSolutionProjects.GetValue(0) as Project;
@@ -189,11 +172,11 @@ namespace TaoLiu.AddReferenceInFSI
                 }
             }
 
-            list = list.Select(n => String.Format("#r @\"{0}\"", n)).ToList();
-            projectRefList = projectRefList.Select(n=>String.Format("#r @\"{0}\"", n)).ToList();
-            var result = String.Format("// Warning: Generated file, your change could be losted when new file is generated. \r\n{0}\r\n\r\n{1}", 
-                            String.Join("\r\n", list), 
-                            String.Join("\r\n", projectRefList));
+            list = list.Select(n => System.String.Format("#r @\"{0}\"", n)).ToList();
+            projectRefList = projectRefList.Select(n => System.String.Format("#r @\"{0}\"", n)).ToList();
+            var result = System.String.Format("// Warning: Generated file, your change could be losted when new file is generated. \r\n{0}\r\n\r\n{1}",
+                            System.String.Join("\r\n", list),
+                            System.String.Join("\r\n", projectRefList));
             return result;
         }
 
@@ -221,17 +204,17 @@ namespace TaoLiu.AddReferenceInFSI
         private string GenerateLoadScriptContent(Project project, string scriptFile, string tag)
         {
             var projectfolder = System.IO.Path.Combine(this.GetProjectFolder(project), "Scripts");
-            var load = String.Format("#load @\"{0}\"", System.IO.Path.Combine(projectfolder, scriptFile));
+            var load = System.String.Format("#load @\"{0}\"", System.IO.Path.Combine(projectfolder, scriptFile));
             var outputs = this.GetProjectOuputs(project);
             if (outputs.ContainsKey(tag))
             {
                 var output = outputs[tag];
-                var result = String.Format("#r @\"{0}\"\r\n", output);
-                return String.Format("{0}\r\n{1}", load, result);
+                var result = System.String.Format("#r @\"{0}\"\r\n", output);
+                return System.String.Format("{0}\r\n{1}", load, result);
             }
             else
             {
-                return String.Format("{0}\r\n", load);
+                return System.String.Format("{0}\r\n", load);
             }
         }
 
@@ -244,11 +227,11 @@ namespace TaoLiu.AddReferenceInFSI
             foreach (var output in outputs)
             {
                 var tag = output.Key;
-                var fileName = tag == "Debug" ? "load-refs.fsx" : String.Format("load-refs-{0}.fsx", tag);
+                var fileName = tag == "Debug" ? "load-refs.fsx" : System.String.Format("load-refs-{0}.fsx", tag);
                 var content = this.GenerateFileContent(project, tag);
                 this.AddFileToActiveProject(project, fileName, content);
                 content = this.GenerateLoadScriptContent(project, fileName, tag);
-                fileName = tag=="Debug" ? "load-project.fsx" : String.Format("load-project-{0}.fsx", tag);
+                fileName = tag == "Debug" ? "load-project.fsx" : System.String.Format("load-project-{0}.fsx", tag);
                 this.AddFileToActiveProject(project, fileName, content);
             }
         }
@@ -277,31 +260,16 @@ namespace TaoLiu.AddReferenceInFSI
             return list;
         }
 
-        /////////////////////////////////////////////////////////////////////////////
-        // Overridden Package Implementation
-        #region Package Members
-
-        /// <summary>
-        /// Initialization of the package; this method is called right after the package is sited, so this is the place
-        /// where you can put all the initialization code that rely on services provided by VisualStudio.
-        /// </summary>
-        protected override void Initialize()
+        public void SetupCommands()
         {
-            Trace.WriteLine (string.Format(CultureInfo.CurrentCulture, "Entering Initialize() of: {0}", this.ToString()));
-            base.Initialize();
-
-            // Add our command handlers for menu (commands must exist in the .vsct file)
-            OleMenuCommandService mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
-            if ( null != mcs )
+            if (null != mcs)
             {
                 // Create the command for the menu item.
-                CommandID menuCommandID = new CommandID(GuidList.guidAddReferenceInFSICmdSet, (int)PkgCmdIDList.cmdidMyCommand);
+                CommandID menuCommandID = new CommandID(guidAddReferenceInFSICmdSet, (int)cmdidAddReferenceInFSI);
                 MenuCommand menuItem = new MenuCommand(MenuItemCallback, menuCommandID );
                 mcs.AddCommand( menuItem );
             }
         }
-
-        #endregion
 
         /// <summary>
         /// This function is the callback used to execute a command when the a menu item is clicked.
@@ -310,9 +278,6 @@ namespace TaoLiu.AddReferenceInFSI
         /// </summary>
         private void MenuItemCallback(object sender, EventArgs e)
         {
-            // Show a Message Box to prove we were here
-            IVsUIShell shell = (IVsUIShell)GetService(typeof(SVsUIShell));
-
             IVsWindowFrame frame;
             Guid guid = new Guid("dee22b65-9761-4a26-8fb2-759b971d6dfc");
             shell.FindToolWindow((uint)__VSFINDTOOLWIN.FTW_fForceCreate, ref guid, out frame);
@@ -344,7 +309,7 @@ namespace TaoLiu.AddReferenceInFSI
                     string resultString = "";
                     foreach (var item in l)
                     {
-                        resultString += String.Format("#r @\"{0}\"\r\n", item);
+                        resultString += System.String.Format("#r @\"{0}\"\r\n", item);
                     }
 
                     edit.Insert(pos, resultString.TrimEnd() + ";;");

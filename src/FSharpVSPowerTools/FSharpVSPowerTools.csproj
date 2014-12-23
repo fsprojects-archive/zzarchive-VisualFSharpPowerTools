@@ -298,6 +298,7 @@
     <Compile Include="CodeGenerationOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="FSIReferenceCommand.cs" />
     <Compile Include="GlobalOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -364,6 +365,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Resource Include="Resources\Images.png" />
+    <Resource Include="Resources\Package.ico" />
     <VSCTCompile Include="FSharpVSPowerTools.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
       <SubType>Designer</SubType>
