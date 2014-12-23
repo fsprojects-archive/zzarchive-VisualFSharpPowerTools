@@ -287,11 +287,8 @@ namespace FSharpVSPowerTools
             shell.FindToolWindow((uint)__VSFINDTOOLWIN.FTW_fForceCreate, ref guid, out frame);
             if (frame != null)
             {
-                //if (frame.IsVisible() != 0)
-                {
-                    frame.Show();
-                }
-
+                frame.Show();
+                
                 var project = GetActiveProject();
                 var l = GetReferences(project);
 

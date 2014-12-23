@@ -76,8 +76,13 @@ namespace FSharpVSPowerTools
         {
             if (generalOptions.FolderOrganizationEnabled)
             {
-                SetupMenu();
+                SetupFolderMenu();
                 RegisterPriorityCommandTarget();
+            }
+
+            if (generalOptions.GenerateReferencesEnabled)
+            {
+                SetupReferenceMenu();
             }
 
             if (generalOptions.TaskListCommentsEnabled)
@@ -96,7 +101,19 @@ namespace FSharpVSPowerTools
             }
         }
 
-        private void SetupMenu()
+        private void SetupReferenceMenu()
+        {
+            var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+
+            if (mcs != null)
+            {
+                var fsiReferenceMenu = new FSIReferenceCommand(DTE.Value, mcs, shell);
+                fsiReferenceMenu.SetupCommands();
+            }
+        }
+
+        private void SetupFolderMenu()
         {
             var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
@@ -105,9 +122,6 @@ namespace FSharpVSPowerTools
             {
                 newFolderMenu = new FolderMenuCommands(DTE.Value, mcs, shell);
                 newFolderMenu.SetupCommands();
-
-                var fsiReferenceMenu = new FSIReferenceCommand(DTE.Value, mcs, shell);
-                fsiReferenceMenu.SetupCommands();
             }
         }
 
