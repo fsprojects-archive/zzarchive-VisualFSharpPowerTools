@@ -19,7 +19,20 @@ type Filterer =
     {
         MemberOrFunctionOrValueFilter: FSharpMemberOrFunctionOrValue -> bool
     }
-    static member NoFilters = { MemberOrFunctionOrValueFilter = fun _ -> true }
+    static member NoFilters =
+        { 
+            MemberOrFunctionOrValueFilter = fun _ -> true
+        }
+
+[<NoComparison; NoEquality>]
+type BlankLines =
+    {
+        BeforeMemberOrFunctionOrValue: int
+    }
+    static member None =
+        {
+            BeforeMemberOrFunctionOrValue = 0
+        }
 
 [<NoComparison; NoEquality>]
 type internal Context = 
@@ -33,6 +46,7 @@ type internal Context =
         ResolvingOpenDeclarations: (OpenDeclaration * bool) []
         GetXmlDocBySignature: XmlDocSig -> XmlDoc
         Filterer: Filterer
+        BlankLines: BlankLines
     }
 
 let private hasUnitOnlyParameter (mem: FSharpMemberOrFunctionOrValue) =
@@ -374,7 +388,7 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
         ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)   
         ctx.Writer.Indent ctx.Indentation
 
-    if modul.MembersFunctionsAndValues.Count > 0 then
+    if ctx.BlankLines.BeforeMemberOrFunctionOrValue < 1 && modul.MembersFunctionsAndValues.Count > 0 then
         ctx.Writer.WriteLine("")
     for value in modul.MembersFunctionsAndValues do
         writeFunctionOrValue ctx value
@@ -710,19 +724,23 @@ and internal writeUnionCaseField ctx (field: FSharpField) =
 
 and internal writeFunctionOrValue ctx (value: FSharpMemberOrFunctionOrValue) =
     Debug.Assert(value.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a valid F# module.")
-    writeDocs ctx.Writer value.XmlDoc (fun _ -> value.XmlDocSig) ctx.GetXmlDocBySignature
 
-    let constraints = getConstraints ctx value.GenericParameters
-    let valueName = 
-        if value.IsActivePattern then 
-            sprintf "(%s)" value.LogicalName 
-        else formatValueOrMemberName value.LogicalName
+    if ctx.Filterer.MemberOrFunctionOrValueFilter value then
+        ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeMemberOrFunctionOrValue
 
-    if value.FullType.IsFunctionType then
-        let inlineSpecifier = if needsInlineAnnotation value then "inline " else ""
-        ctx.Writer.WriteLine("val {0}{1} : {2}{3}", inlineSpecifier, valueName, generateSignature ctx value, constraints)
-    else
-        ctx.Writer.WriteLine("val {0} : {1}{2}", valueName, formatType ctx value.FullType, constraints)
+        writeDocs ctx.Writer value.XmlDoc (fun _ -> value.XmlDocSig) ctx.GetXmlDocBySignature
+
+        let constraints = getConstraints ctx value.GenericParameters
+        let valueName = 
+            if value.IsActivePattern then 
+                sprintf "(%s)" value.LogicalName 
+            else formatValueOrMemberName value.LogicalName
+
+        if value.FullType.IsFunctionType then
+            let inlineSpecifier = if needsInlineAnnotation value then "inline " else ""
+            ctx.Writer.WriteLine("val {0}{1} : {2}{3}", inlineSpecifier, valueName, generateSignature ctx value, constraints)
+        else
+            ctx.Writer.WriteLine("val {0} : {1}{2}", valueName, formatType ctx value.FullType, constraints)
 
 and internal writeClassOrStructField ctx (field: FSharpField) =
     Debug.Assert(field.DeclaringEntity.IsClass ||
@@ -736,48 +754,50 @@ and internal writeClassOrStructField ctx (field: FSharpField) =
 and internal writeMember ctx (mem: FSharpMemberOrFunctionOrValue) =
     Debug.Assert(not mem.LogicalEnclosingEntity.IsFSharpModule, "The enclosing entity should be a type.")
 
-    match mem with
-    | _ when ctx.Filterer.MemberOrFunctionOrValueFilter mem = false -> ()
-    | Constructor _entity ->
-        writeDocs ctx.Writer mem.XmlDoc (fun _ -> mem.XmlDocSig) ctx.GetXmlDocBySignature
-        ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
-    | Event -> ()
-    | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
-        // Discard explicit getter/setter methods
-        writeDocs ctx.Writer mem.XmlDoc (fun _ -> mem.XmlDocSig) ctx.GetXmlDocBySignature
-        writeAttributes ctx ctx.Writer None mem.Attributes
+    if ctx.Filterer.MemberOrFunctionOrValueFilter mem then
+        ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeMemberOrFunctionOrValue
 
-        let memberType =
-            // Is static?
-            if not mem.IsInstanceMember then
-                "static member"
-            // Is abstract && enclosing type is interface/abstract?
-            elif mustAppearAsAbstractMember mem then
-                "abstract member"
-            elif mem.IsOverrideOrExplicitInterfaceImplementation then
-                "override"
-            else
-                "member"
+        match mem with
+        | Constructor _entity ->
+            writeDocs ctx.Writer mem.XmlDoc (fun _ -> mem.XmlDocSig) ctx.GetXmlDocBySignature
+            ctx.Writer.WriteLine("new : {0}", generateSignature ctx mem)
+        | Event -> ()
+        | _ when not mem.IsPropertyGetterMethod && not mem.IsPropertySetterMethod ->
+            // Discard explicit getter/setter methods
+            writeDocs ctx.Writer mem.XmlDoc (fun _ -> mem.XmlDocSig) ctx.GetXmlDocBySignature
+            writeAttributes ctx ctx.Writer None mem.Attributes
 
-        let propertyType =
-            if mem.HasSetterMethod && mem.HasGetterMethod then " with get, set"
-            elif mem.HasSetterMethod then " with set"
-            else ""
+            let memberType =
+                // Is static?
+                if not mem.IsInstanceMember then
+                    "static member"
+                // Is abstract && enclosing type is interface/abstract?
+                elif mustAppearAsAbstractMember mem then
+                    "abstract member"
+                elif mem.IsOverrideOrExplicitInterfaceImplementation then
+                    "override"
+                else
+                    "member"
 
-        let inlineAnnotation =
-            if needsInlineAnnotation mem then "inline " else ""
+            let propertyType =
+                if mem.HasSetterMethod && mem.HasGetterMethod then " with get, set"
+                elif mem.HasSetterMethod then " with set"
+                else ""
 
-        let constraints = getConstraints ctx mem.GenericParameters
+            let inlineAnnotation =
+                if needsInlineAnnotation mem then "inline " else ""
 
-        ctx.Writer.WriteLine("{0} {1}{2} : {3}{4}{5}",
-                             memberType,
-                             inlineAnnotation,
-                             // We don't need to demangle operator names since member operators should appear in their compiled forms
-                             QuoteIdentifierIfNeeded mem.LogicalName,
-                             generateSignature ctx mem,
-                             propertyType,
-                             constraints)
-    | _ -> ()
+            let constraints = getConstraints ctx mem.GenericParameters
+
+            ctx.Writer.WriteLine("{0} {1}{2} : {3}{4}{5}",
+                                 memberType,
+                                 inlineAnnotation,
+                                 // We don't need to demangle operator names since member operators should appear in their compiled forms
+                                 QuoteIdentifierIfNeeded mem.LogicalName,
+                                 generateSignature ctx mem,
+                                 propertyType,
+                                 constraints)
+        | _ -> ()
 
 and internal writeDocs writer docs getXmlDocSig xmlDocBySig =
     let xmlDocs =
@@ -803,14 +823,15 @@ and internal writeActivePattern ctx (case: FSharpActivePatternCase) =
     ctx.Writer.Write(" : ")
     ctx.Writer.WriteLine("{0}", formatType ctx group.OverallType)
 
-let formatSymbol getXmlDocBySignature indentation displayContext openDeclarations (symbol: FSharpSymbol) filterer =
+let formatSymbol getXmlDocBySignature indentation displayContext openDeclarations (symbol: FSharpSymbol) filterer blankLines =
     use writer = new ColumnIndentedTextWriter()
     use openDeclWriter = new ColumnIndentedTextWriter()
     let ctx = { Writer = writer; OpenDeclWriter = openDeclWriter;
                 Indentation = indentation; DisplayContext = displayContext; 
                 ResolvingOpenDeclarations = openDeclarations |> Seq.map (fun openDecl -> openDecl, false) |> Seq.toArray;
                 GetXmlDocBySignature = getXmlDocBySignature;
-                Filterer = filterer }
+                Filterer = filterer;
+                BlankLines = blankLines }
     
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with

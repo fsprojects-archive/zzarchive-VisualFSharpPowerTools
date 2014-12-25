@@ -51,6 +51,10 @@ module internal Utils =
         member x.WriteLine(s: string, [<ParamArray>] objs: obj []) =
             indentWriter.WriteLine(s, objs)
 
+        member x.WriteBlankLines count =
+            for i in 0 .. count - 1 do
+                x.WriteLine ""
+
         member x.Indent i = 
             indentWriter.Indent <- indentWriter.Indent + i
 
