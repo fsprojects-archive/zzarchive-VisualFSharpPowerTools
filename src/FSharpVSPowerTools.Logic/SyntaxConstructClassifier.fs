@@ -82,6 +82,12 @@ type SyntaxConstructClassifier
         |> ignore
         newToken
 
+    let disposeCancellationToken (currentToken: Atom<CancellationTokenSource option>) = 
+        currentToken.Value
+        |> Option.iter (fun token -> 
+            token.Cancel()
+            token.Dispose())
+
     let getCurrentProject() =
         maybe {
             // If there is no backing document, an ITextDocument instance might be null
@@ -390,9 +396,6 @@ type SyntaxConstructClassifier
         member __.Dispose() = 
             projectCheckedSubscription |> Option.iter (fun sub -> sub.Dispose())
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
-            fastStageCancellationToken.Value
-            |> Option.iter (fun token -> 
-                token.Cancel()
-                token.Dispose())
+            disposeCancellationToken fastStageCancellationToken
+            disposeCancellationToken slowStageCancellationToken
             (docEventListener :> IDisposable).Dispose()
-         

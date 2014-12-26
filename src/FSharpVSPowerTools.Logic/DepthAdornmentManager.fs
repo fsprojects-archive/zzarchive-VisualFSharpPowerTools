@@ -40,7 +40,8 @@ type DepthColorizerAdornment(view: IWpfTextView,
 
     // Amount to increase the adornment height to ensure there aren't gaps between adornments
     // due to the way that layout rounding changes the placement of these adornments.
-    let adornmentHeightFudgeFactor = 0.0 // can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
+    // Can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
+    let adornmentHeightFudgeFactor = 0.0 
     
     let mutable colors = [||]
     let mutable edgeColors = [||]
@@ -60,7 +61,7 @@ type DepthColorizerAdornment(view: IWpfTextView,
                 maybe { 
                     let themeString = themeToString currentTheme
                     // NOTE: For some strange reason, the registry keys only work on VS 10.0, so we keep it.
-                    let! key = openKey (sprintf @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString)
+                    use! key = openKey (sprintf @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString)
                                // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
                                |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString))
                     return [| for i in 0..9 do
@@ -112,7 +113,8 @@ type DepthColorizerAdornment(view: IWpfTextView,
         debug "%O:%O" ticks s
         ()
     
-    // A hack; when you ask 0-width spans to compute this, they report the wrong answer. This is the default font size on my box, and just need a default value until we find a real character to use.
+    // A hack; when you ask 0-width spans to compute this, they report the wrong answer. 
+    // This is the default font size on my box, and just need a default value until we find a real character to use.
     let mutable pixelsPerChar = 7.0
     
     let refreshLine(line: ITextViewLine) = 
@@ -131,7 +133,7 @@ type DepthColorizerAdornment(view: IWpfTextView,
             if tagSpan.Length > 0 then 
                 pixelsPerChar <- view.TextViewLines.GetCharacterBounds(tagSpan.Start).Right 
                                  - view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
-            // negative d means a depth of -d and a blank line where we have to adorn in a non-char-relative way since there are no whitespace chars on the line to tag
+            // Negative d means a depth of -d and a blank line where we have to adorn in a non-char-relative way since there are no whitespace chars on the line to tag
             let left = 
                 if d > 0 then view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
                 else view.TextViewLines.GetCharacterBounds((snd tagSpans.[0]).Start).Left + pixelsPerChar * (float (sc))
@@ -145,7 +147,7 @@ type DepthColorizerAdornment(view: IWpfTextView,
             
             let depth = abs d
             let color = getFadeColor(depth, (right - left) / pixelsPerChar)
-            // sometimes at startup these calculations go funky and I get a negative number for (right-left), hmm...
+            // Sometimes at startup these calculations go funky and I get a negative number for (right-left), hmm...
             let width = max (right - left) 0.0 
             debug "Rect: line.Top %f left %f width %f color %i" line.Top left width depth
             let rectangle = 

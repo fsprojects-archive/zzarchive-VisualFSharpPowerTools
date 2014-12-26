@@ -13,7 +13,8 @@ open Microsoft.VisualStudio.Text.Classification
 open System.Windows.Input
 
 [<Name(Constants.fsharpUnusedDeclarationMargin)>]
-type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextViewMargin,
+type UnusedDeclarationMargin(textView: IWpfTextView, 
+                             marginContainer: IWpfTextViewMargin,
                              classifier: IClassifier) =
     inherit Canvas()
 
@@ -62,7 +63,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
                                    200us, updateDisplay)
 
     interface IWpfTextViewMargin with
-        member x.Enabled = 
+        member __.Enabled = 
             true
         
         member x.GetTextViewMargin(marginName: string): ITextViewMargin = 
@@ -76,9 +77,5 @@ type UnusedDeclarationMargin(textView: IWpfTextView, marginContainer: IWpfTextVi
         member x.VisualElement: FrameworkElement = 
             x :> _
 
-        member x.Dispose() = 
+        member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
-
-        
-
-        
