@@ -126,11 +126,19 @@ type ProjectFactory
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
-    member __.AddSignatureProjectProvider(filePath: string, project: IProjectProvider) =
+    member __.RegisterSignatureProjectProvider(filePath: string, project: IProjectProvider) =
         // We have to keep the project provider even the buffer has been close.
         // If the buffer is reopened via Navigate Backward, we still have to colorize the text.
         // The project provider will be discard once the solution is closed.
-        signatureProjectData.[filePath] <- project
+        let signatureProject = SignatureProjectProvider(filePath, project) :> IProjectProvider
+        signatureProjectData.[filePath] <- signatureProject
+        signatureProject
+
+    member __.TryGetSignatureProjectProvider(filePath: string) =
+        match signatureProjectData.TryGetValue(filePath) with
+        | true, project ->
+            Some project
+        | _ -> None
 
     abstract CreateForProject: Project -> IProjectProvider
 
@@ -162,7 +170,7 @@ type ProjectFactory
             elif isSignatureExtension ext then
                 match signatureProjectData.TryGetValue(filePath) with
                 | true, project ->
-                    Some (SignatureProjectProvider(filePath, project) :> _)
+                    Some project
                 | _ -> None
             else
                 None
