@@ -167,6 +167,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     |> Option.iter (fun window -> 
                           if window <> null then
                               window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
+                    // Prevent the window being reopened as a part of a solution
+                    windowFrame.SetProperty(int __VSFPROPID5.VSFPROPID_DontAutoOpen, true) |> ignore
                     currentWindowFrame <- Some windowFrame
                     let vsTextView = VsShellUtilities.GetTextView(windowFrame)
                     let mutable vsTextLines = Unchecked.defaultof<_>
