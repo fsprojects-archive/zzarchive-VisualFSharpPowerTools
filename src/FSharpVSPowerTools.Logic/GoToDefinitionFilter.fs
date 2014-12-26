@@ -110,23 +110,24 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     static let mutable currentWindow: (IVsWindowFrame * string) option = None 
 
     /// Try to do an approximate match to determine whether two symbols have the same origin
-    let matchSymbol (symbol1: FSharpSymbol) (symbol2: FSharpSymbol) =        
-        match symbol1, symbol2 with
-        | TypedAstPatterns.Entity _, TypedAstPatterns.Entity _
+    let matchSymbol filePath (originalSymbol: FSharpSymbol) (syntheticSymbol: FSharpSymbol) =        
+        match originalSymbol, syntheticSymbol with
+        | TypedAstPatterns.Entity (originalEntity, _, _), TypedAstPatterns.Entity (syntheticEntity, _, _) ->
+            // There is some trickery where comparison of full names isn't correct due to missing ModuleSuffix attribute values on certain symbols
+            // We fall back to compare display names and access paths
+            Option.attempt (fun _ -> 
+                originalEntity.DisplayName = syntheticEntity.DisplayName && 
+                originalEntity.AccessPath = syntheticEntity.AccessPath && 
+                syntheticSymbol.DeclarationLocation |> Option.map (fun r -> r.FileName = filePath) |> Option.getOrElse false)
+            |> Option.getOrElse false
         | MemberFunctionOrValue _, MemberFunctionOrValue _
         | ActivePatternCase _, ActivePatternCase _                    
         | UnionCase _, UnionCase _
         | Field _, Field _ -> 
-            Option.attempt (fun _ -> symbol1.FullName = symbol2.FullName)
-            |> Option.getOrElse false
-        | UnionCase uc1, TypedAstPatterns.Entity (entity2, _, _) ->
-            match uc1.ReturnType with
-            | TypeWithDefinition entity1 ->
-                Option.attempt (fun _ -> entity1.FullName = entity2.FullName)
-                |> Option.getOrElse false
-            | _ -> false
-        | Field(field1, _), TypedAstPatterns.Entity (entity2, _, _) ->
-            Option.attempt (fun _ -> field1.DeclaringEntity.FullName = entity2.FullName)
+            // Two symbols should have the same full name and synthetic symbol has to be defined in the current file
+            Option.attempt (fun _ -> 
+                originalSymbol.FullName = syntheticSymbol.FullName && 
+                syntheticSymbol.DeclarationLocation |> Option.map (fun r -> r.FileName = filePath) |> Option.getOrElse false)
             |> Option.getOrElse false
         | _ -> false
 
@@ -136,7 +137,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                                 signature, filePath, signatureProject, 
                                 AllowStaleResults.No, checkForUnusedOpens=false, profiler=Profiler())
             match symbolUses |> Array.tryPick(fun { SymbolUse = symbolUse } -> 
-                                    if matchSymbol currentSymbol symbolUse.Symbol then Some symbolUse.Symbol else None) with
+                                    if matchSymbol filePath currentSymbol symbolUse.Symbol then Some symbolUse.Symbol else None) with
             | Some symbol ->
                 let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
                 symbol.DeclarationLocation
