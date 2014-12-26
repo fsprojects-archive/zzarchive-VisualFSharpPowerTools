@@ -29,4 +29,8 @@ Active patterns
 
 ![Highlight active patterns](img/highlight_active_patterns.png)
 
+Go to Next and Previous Highlighted references
+-----------------------
+When highlight references are enabled, you can go to next and previous highlighted references using default keybindings: `Ctrl Shift + Arrow Down` and `Ctrl Shift + Arrow Up` respectively. 
+These key bindings can be changed by searching for `Edit.NextHighlightedReference` and `Edit.PreviousHighlightedReference` command in Visual Studio.
 *)
