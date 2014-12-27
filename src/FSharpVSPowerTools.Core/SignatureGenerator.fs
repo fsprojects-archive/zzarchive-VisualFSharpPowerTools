@@ -18,20 +18,36 @@ type XmlDoc = string list
 type Filterer =
     {
         MemberOrFunctionOrValueFilter: FSharpMemberOrFunctionOrValue -> bool
+        ModuleFilter: FSharpEntity -> bool
     }
     static member NoFilters =
         { 
             MemberOrFunctionOrValueFilter = fun _ -> true
+            ModuleFilter = fun _ -> true
         }
 
 [<NoComparison; NoEquality>]
 type BlankLines =
     {
+        BeforeMembersFunctionsAndValues: int
         BeforeMemberOrFunctionOrValue: int
+        BeforePublicNestedEntities: int
+        AfterPublicNestedEntity: int
+        BeforeModuleHeaderOpenDeclaration: int
+        BeforeTypeHeaderOpenDeclaration: int
+        AfterTypeHeader: int
+        AfterUnionCase: int
     }
     static member None =
         {
+            BeforeMembersFunctionsAndValues = 1
             BeforeMemberOrFunctionOrValue = 0
+            BeforePublicNestedEntities = 1
+            AfterPublicNestedEntity = 1
+            BeforeModuleHeaderOpenDeclaration = 1
+            BeforeTypeHeaderOpenDeclaration = 1
+            AfterTypeHeader = 1
+            AfterUnionCase = 1
         }
 
 [<NoComparison; NoEquality>]
@@ -382,34 +398,35 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
 
 let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
     Debug.Assert(modul.IsFSharpModule, "The entity should be a valid F# module.")  
-    if not isTopLevel then
-        writeDocs ctx.Writer modul.XmlDoc (fun _ -> modul.XmlDocSig) ctx.GetXmlDocBySignature
-        writeAttributes ctx ctx.Writer (Some modul) modul.Attributes
-        ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)   
-        ctx.Writer.Indent ctx.Indentation
+    if ctx.Filterer.ModuleFilter modul then
+        if not isTopLevel then
+            writeDocs ctx.Writer modul.XmlDoc (fun _ -> modul.XmlDocSig) ctx.GetXmlDocBySignature
+            writeAttributes ctx ctx.Writer (Some modul) modul.Attributes
+            ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)   
+            ctx.Writer.Indent ctx.Indentation
 
-    if ctx.BlankLines.BeforeMemberOrFunctionOrValue < 1 && modul.MembersFunctionsAndValues.Count > 0 then
-        ctx.Writer.WriteLine("")
-    for value in modul.MembersFunctionsAndValues do
-        writeFunctionOrValue ctx value
+        if modul.MembersFunctionsAndValues.Count > 0 then
+            ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeMembersFunctionsAndValues
+        for value in modul.MembersFunctionsAndValues do
+            writeFunctionOrValue ctx value
 
-    if not (Seq.isEmpty modul.PublicNestedEntities) then
-        ctx.Writer.WriteLine("")
+        if not (Seq.isEmpty modul.PublicNestedEntities) then
+            ctx.Writer.WriteBlankLines ctx.BlankLines.BeforePublicNestedEntities
 
-    for entity in modul.PublicNestedEntities do
-        match entity with
-        | FSharpModule -> writeModule false ctx entity
-        | AbbreviatedType abbreviatedType -> writeTypeAbbrev true ctx entity abbreviatedType
-        | FSharpException -> writeFSharpExceptionType true ctx entity
-        | Delegate when entity.IsFSharp -> writeDelegateType true ctx entity
-        | _ -> writeType true ctx entity
+        for entity in modul.PublicNestedEntities do
+            match entity with
+            | FSharpModule -> writeModule false ctx entity
+            | AbbreviatedType abbreviatedType -> writeTypeAbbrev true ctx entity abbreviatedType
+            | FSharpException -> writeFSharpExceptionType true ctx entity
+            | Delegate when entity.IsFSharp -> writeDelegateType true ctx entity
+            | _ -> writeType true ctx entity
 
-        ctx.Writer.WriteLine("")
-    if not isTopLevel then
-        ctx.Writer.Unindent ctx.Indentation
+            ctx.Writer.WriteBlankLines ctx.BlankLines.AfterPublicNestedEntity
+        if not isTopLevel then
+            ctx.Writer.Unindent ctx.Indentation
 
-    if isTopLevel then
-        writeModuleHeader ctx modul
+        if isTopLevel then
+            writeModuleHeader ctx modul
 
 /// Write open declarations, XmlDoc and attributes of modules to a separate buffer.
 /// It supposes to be called after all internal details have been written.
@@ -423,7 +440,7 @@ and internal writeModuleHeader ctx (modul: FSharpEntity) =
     |> Seq.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
     |> Seq.iteri (fun i decl ->
         if i = 0 then 
-            writer.WriteLine("")
+            ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeModuleHeaderOpenDeclaration
         writer.WriteLine("open {0}", decl)) 
 
 and internal getParentPath (entity: FSharpEntity) =
@@ -441,9 +458,9 @@ and internal writeTypeHeader ctx (typ: FSharpEntity) =
     |> Seq.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
     |> Seq.iteri (fun i decl ->
         if i = 0 then 
-            writer.WriteLine("")
+            ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeTypeHeaderOpenDeclaration
         writer.WriteLine("open {0}", decl))
-    writer.WriteLine("")    
+    ctx.Writer.WriteBlankLines ctx.BlankLines.AfterTypeHeader
 
 and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
@@ -659,7 +676,7 @@ and internal writeUnionCase ctx (case: FSharpUnionCase) =
                 ctx.Writer.Write(" * ")
             writeUnionCaseField ctx field)
 
-    ctx.Writer.WriteLine("")
+    ctx.Writer.WriteBlankLines ctx.BlankLines.AfterUnionCase
 
 and internal formatAttribute ctx (attribute: FSharpAttribute) =
     let definition = attribute.Format(ctx.DisplayContext)
