@@ -36,6 +36,7 @@ namespace FSharpVSPowerTools
     public class PowerToolsCommandsPackage : Package, IDisposable
     {
         private FolderMenuCommands newFolderMenu;
+        private FsiReferenceCommand fsiReferenceMenu;
         private FSharpLibrary library;
 
         private uint pctCookie;
@@ -109,7 +110,7 @@ namespace FSharpVSPowerTools
 
             if (mcs != null)
             {
-                var fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs, shell);
+                fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs, shell);
                 fsiReferenceMenu.SetupCommands();
             }
         }
@@ -171,6 +172,8 @@ namespace FSharpVSPowerTools
             UnregisterLibrary();
             if (taskListCommentManager != null)
                 (taskListCommentManager as IDisposable).Dispose();
+            if (fsiReferenceMenu != null)
+                (fsiReferenceMenu as IDisposable).Dispose();
         }
     }
 }
