@@ -55,10 +55,10 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             writer.Write(content)
 
             let projectFolderScript = 
-                if project.ProjectItems.Item(scriptFolderName) <> null then
-                    project.ProjectItems.Item(scriptFolderName)
-                else 
-                    project.ProjectItems.AddFolder(scriptFolderName)
+                project.ProjectItems.Item(scriptFolderName)
+                |> Option.ofNull
+                |> Option.getOrTry (fun _ ->
+                    project.ProjectItems.AddFolder(scriptFolderName))
             projectFolderScript.ProjectItems.AddFromFile(textFile) |> ignore
             project.Save()
 
@@ -76,17 +76,27 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         |> Option.map (fun sourceProject -> sourceProject.GetValue(reference) :?> Project)
         |> Option.bind getActiveProjectOutput
 
+    let getRelativePath (file: string) (folder: string) =
+        let fileUri = Uri(file)
+        // Folders must end in a slash
+        let folder =
+            if not <| folder.EndsWith(Path.DirectorySeparatorChar.ToString()) then
+                folder + string Path.DirectorySeparatorChar
+            else folder
+        let folderUri = Uri(folder)
+        Uri.UnescapeDataString(folderUri.MakeRelativeUri(fileUri).ToString().Replace('/', Path.DirectorySeparatorChar))
+
     let generateLoadScriptContent(project: Project, scriptFile: string) =
-        let projectfolder = Path.Combine(getProjectFolder project, scriptFolderName)
+        let projectFolder = Path.Combine(getProjectFolder project, scriptFolderName)
         use projectProvider = new ProjectProvider(project, (fun _ -> None), (fun _ -> ()), id)
         let sb = StringBuilder()
-        sb.AppendLine(sprintf "#load @\"%s\"" (Path.Combine(projectfolder, scriptFile))) |> ignore
+        sb.AppendLine(sprintf "#load @\"%s\"" scriptFile) |> ignore
         match (projectProvider :> IProjectProvider).SourceFiles |> Array.toList with
         | [] -> ()
         | first::rest ->
-            sb.AppendLine(sprintf "#load @\"%s\"" first) |> ignore
+            sb.AppendLine(sprintf "#load @\"%s\"" (getRelativePath first projectFolder)) |> ignore
             for sourceFile in rest do
-                sb.AppendLine(sprintf "      @\"%s\"" sourceFile) |> ignore
+                sb.AppendLine(sprintf "      @\"%s\"" (getRelativePath sourceFile projectFolder)) |> ignore
         sb.ToString()   
 
     let isReferenceProject (reference: Reference) =
@@ -110,14 +120,14 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             vsProject.References
             |> toReferenceSeq
             |> Seq.iter (fun reference -> 
-                    if not (excludingList.Contains reference.Name) then
-                        if isReferenceProject reference then
-                            getActiveOutputFileFullPath reference
-                            |> Option.iter (fun outputFilePath -> projectRefList.Add(outputFilePath))
-                        else
-                            let fullPath = reference.Path
-                            if File.Exists fullPath then
-                                assemblyRefList.Add(fullPath))
+                if not (excludingList.Contains reference.Name) then
+                    if isReferenceProject reference then
+                        getActiveOutputFileFullPath reference
+                        |> Option.iter (fun outputFilePath -> projectRefList.Add(outputFilePath))
+                    else
+                        let fullPath = reference.Path
+                        if File.Exists fullPath then
+                            assemblyRefList.Add(fullPath))
         | _ -> ()
 
         let assemblyRefList = assemblyRefList |> Seq.map (sprintf "#r @\"%s\"") |> Seq.toList
