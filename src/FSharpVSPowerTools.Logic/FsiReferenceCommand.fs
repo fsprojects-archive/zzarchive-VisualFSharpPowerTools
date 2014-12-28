@@ -18,7 +18,7 @@ open Microsoft.VisualStudio.Text.Editor
 open System.Reflection
 open System.Globalization
 
-type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell) =
+type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUIShell) =
     static let scriptFolderName = "Scripts"
     
     let containsReferenceScript (project: Project) = 
@@ -76,7 +76,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         |> Option.map (fun sourceProject -> sourceProject.GetValue(reference) :?> Project)
         |> Option.bind getActiveProjectOutput
 
-    let getRelativePath (file: string) (folder: string) =
+    let getRelativePath (folder: string) (file: string) =
         let fileUri = Uri(file)
         // Folders must end in a slash
         let folder =
@@ -87,43 +87,38 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         Uri.UnescapeDataString(folderUri.MakeRelativeUri(fileUri).ToString().Replace('/', Path.DirectorySeparatorChar))
 
     let generateLoadScriptContent(project: Project, scriptFile: string) =
-        let projectFolder = Path.Combine(getProjectFolder project, scriptFolderName)
+        let scriptFolder = Path.Combine(getProjectFolder project, scriptFolderName)
         use projectProvider = new ProjectProvider(project, (fun _ -> None), (fun _ -> ()), id)
         let sb = StringBuilder()
         sb.AppendLine(sprintf "#load @\"%s\"" scriptFile) |> ignore
-        match (projectProvider :> IProjectProvider).SourceFiles |> Array.toList with
-        | [] -> ()
-        | first::rest ->
-            sb.AppendLine(sprintf "#load @\"%s\"" (getRelativePath first projectFolder)) |> ignore
-            for sourceFile in rest do
-                sb.AppendLine(sprintf "      @\"%s\"" (getRelativePath sourceFile projectFolder)) |> ignore
+        match (projectProvider :> IProjectProvider).SourceFiles with
+        | [||] -> ()
+        | sourceFiles ->
+            sb.Append("#load ") |> ignore
+            let relativePaths = sourceFiles |> Array.map (getRelativePath scriptFolder >> sprintf "@\"%s\"")
+            sb.Append(String.Join(Environment.NewLine + new String(' ', "#load ".Length), relativePaths)) |> ignore
+            sb.AppendLine(";;") |> ignore
         sb.ToString()   
 
     let isReferenceProject (reference: Reference) =
         let sourceProject = reference.GetType().GetProperty("SourceProject")
         sourceProject <> null && sourceProject.GetValue(reference) <> null
 
-    let toReferenceSeq (references: References) =
-        seq {
-            for i in 0..references.Count-1 ->
-                references.Item(i + 1)
-        }
-
     let generateFileContent(project: Project) =
         let excludingList = set [| "FSharp.Core"; "mscorlib" |]
-
         let assemblyRefList = ResizeArray()
         let projectRefList = ResizeArray()
 
         match project.Object with
         | :? VSProject as vsProject ->
             vsProject.References
-            |> toReferenceSeq
+            |> Seq.cast<Reference>
             |> Seq.iter (fun reference -> 
                 if not (excludingList.Contains reference.Name) then
                     if isReferenceProject reference then
+                        let scriptFolder = Path.Combine(getProjectFolder project, scriptFolderName)
                         getActiveOutputFileFullPath reference
-                        |> Option.iter (fun outputFilePath -> projectRefList.Add(outputFilePath))
+                        |> Option.iter (getRelativePath scriptFolder >> projectRefList.Add)
                     else
                         let fullPath = reference.Path
                         if File.Exists fullPath then
@@ -143,74 +138,13 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             addFileToActiveProject(project, "load-references.fsx", generateFileContent project)
             let content = generateLoadScriptContent(project, "load-references.fsx")
             addFileToActiveProject(project, "load-project.fsx", content))
-    
-    let getReferences (project: Project) =
-        let excludingList = set [| "FSharp.Core"; "mscorlib" |]
 
-        let assemblyRefList = ResizeArray()
-
-        match project.Object with
-        | :? VSProject as vsProject ->
-            vsProject.References
-            |> toReferenceSeq
-            |> Seq.iter (fun reference -> 
-                    if not (excludingList.Contains reference.Name) then
-                        let fullPath = reference.Path
-                        if File.Exists fullPath then
-                            assemblyRefList.Add(fullPath))
-        | _ -> ()
-
-        assemblyRefList
-
-    let addReferenceInFSI() =
-        let fsiWindowGuid = ref (Guid("dee22b65-9761-4a26-8fb2-759b971d6dfc"))
-        match shell.FindToolWindow(uint32 __VSFINDTOOLWIN.FTW_fForceCreate, fsiWindowGuid) with
-        | VSConstants.S_OK, frame ->
-            frame.Show() |> ignore
-            getActiveProject()
-            |> Option.iter (fun project ->
-                let references = getReferences project
-                let t = frame.GetType()
-                let mi: PropertyInfo = t.GetProperty("FrameView", BindingFlags.Instance ||| BindingFlags.NonPublic ||| BindingFlags.Public)
-                let frameView = mi.GetValue(frame)
-                let v = frameView.GetType().GetProperty("Content").GetValue(frameView) :?> DependencyObject
-                let content = v.GetType().GetProperty("Content").GetValue(v) :?> DependencyObject
-                let content2 = content.GetType().GetProperty("Content").GetValue(content)
-                let content3 = content2.GetType().GetProperty("Content").GetValue(content2)
-                let content4 = content3.GetType().GetProperty("TextView").GetValue(content3)
-                let wpfView = content4 :?> IWpfTextView
-                let textBuffer = wpfView.TextBuffer                
-                use edit = textBuffer.CreateEdit()
-                let line = wpfView.Caret.ContainingTextViewLine
-                let pos = line.End.Position
-
-                let sb = StringBuilder()
-                sb.Append("\r\n") |> ignore
-                for reference in references do
-                    sb.AppendFormat("#r @\"{0}\"\r\n", reference) |> ignore
-
-                edit.Insert(pos, sb.ToString().TrimEnd() + ";;") |> ignore
-                edit.Apply() |> ignore
-
-                // Generate script files
-                if isFSharpProject project then
-                    generateFile project)
-        | _ ->
-            let clsid = ref Guid.Empty
-            let result = ref 0
-            ErrorHandler.ThrowOnFailure(
-                shell.ShowMessageBox(
-                        0u,
-                        clsid,
-                        "",
-                        "Please open FSI.",
-                        String.Empty,
-                        0u,
-                        OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST,
-                        OLEMSGICON.OLEMSGICON_INFO,
-                        0,        // false
-                        result)) |> ignore
+    let generateReferencesForFsi() =
+        getActiveProject()
+        |> Option.iter (fun project ->
+            // Generate script files
+            if isFSharpProject project then
+                generateFile project)        
 
     do dte2.Events.BuildEvents.add_OnBuildDone (fun _ _ ->
             let projects = dte2.Solution.Projects
@@ -223,8 +157,8 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
                     generateFile project))
 
     member __.SetupCommands() =
-        let menuCommandID = CommandID(Constants.guidAddReferenceInFSICmdSet, int Constants.cmdidAddReferenceInFSI)
-        let menuCommand = OleMenuCommand((fun _ _ -> addReferenceInFSI()), menuCommandID)
+        let menuCommandID = CommandID(Constants.guidGenerateReferencesForFsiCmdSet, int Constants.cmdidGenerateReferencesForFsi)
+        let menuCommand = OleMenuCommand((fun _ _ -> generateReferencesForFsi()), menuCommandID)
         menuCommand.BeforeQueryStatus.Add (fun _ -> 
             let visibility = getActiveProject() |> Option.map isFSharpProject |> Option.getOrElse false
             menuCommand.Visible <- visibility)
