@@ -78,13 +78,16 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
 
     let generateLoadScriptContent(project: Project, scriptFile: string) =
         let projectfolder = Path.Combine(getProjectFolder project, scriptFolderName)
-        let load = String.Format("#load @\"{0}\"", Path.Combine(projectfolder, scriptFile))
-        match getActiveProjectOutput project with
-        | Some output ->
-            let result = String.Format("#r @\"{0}\"\r\n", output)
-            String.Format("{0}\r\n{1}", load, result)
-        | None ->
-            String.Format("{0}\r\n", load)
+        use projectProvider = new ProjectProvider(project, (fun _ -> None), (fun _ -> ()), id)
+        let sb = StringBuilder()
+        sb.AppendLine(sprintf "#load @\"%s\"" (Path.Combine(projectfolder, scriptFile))) |> ignore
+        match (projectProvider :> IProjectProvider).SourceFiles |> Array.toList with
+        | [] -> ()
+        | first::rest ->
+            sb.AppendLine(sprintf "#load @\"%s\"" first) |> ignore
+            for sourceFile in rest do
+                sb.AppendLine(sprintf "      @\"%s\"" sourceFile) |> ignore
+        sb.ToString()   
 
     let isReferenceProject (reference: Reference) =
         let sourceProject = reference.GetType().GetProperty("SourceProject")
@@ -117,11 +120,12 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
                                 assemblyRefList.Add(fullPath))
         | _ -> ()
 
-        let assemblyRefList = assemblyRefList |> Seq.map (fun reference -> String.Format("#r @\"{0}\"", reference)) |> Seq.toList
-        let projectRefList = projectRefList |> Seq.map (fun reference -> String.Format("#r @\"{0}\"", reference)) |> Seq.toList
-        String.Format("// Warning: Generated file, your change could be lost when new file is generated. \r\n{0}\r\n\r\n{1}",
-                    String.Join("\r\n", assemblyRefList),
-                    String.Join("\r\n", projectRefList))
+        let assemblyRefList = assemblyRefList |> Seq.map (sprintf "#r @\"%s\"") |> Seq.toList
+        let projectRefList = projectRefList |> Seq.map (sprintf "#r @\"%s\"") |> Seq.toList
+        String.Join(Environment.NewLine, 
+                    "// Warning: generated file; your changes could be lost when a new file is generated. ",
+                    String.Join(Environment.NewLine, assemblyRefList),
+                    String.Join(Environment.NewLine, projectRefList))
 
     let generateFile (project: Project) =
         Option.ofNull project
