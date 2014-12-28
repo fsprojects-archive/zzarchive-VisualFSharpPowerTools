@@ -35,7 +35,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
 
     let getActiveProject() =
         let dte = dte2 :?> DTE
-        dte.ActiveSolutionProjects :?> obj[]
+        dte.ActiveSolutionProjects :?> obj []
         |> Seq.tryHead
         |> Option.map (fun o -> o :?> Project)
 
@@ -62,35 +62,28 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             projectFolderScript.ProjectItems.AddFromFile(textFile) |> ignore
             project.Save()
 
-    let getProjectOutputs (project: Project) =
-        let dict = Dictionary()
-        let projectPath = getProjectFolder project
-        let outputFileName = project.Properties.Item("OutputFileName").Value.ToString()
-        seq {
-            for i in 0..project.ConfigurationManager.Count-1 ->
-                project.ConfigurationManager.Item(i + 1)
-        }
-        |> Seq.iter (fun config ->
-                let outputPath = config.Properties.Item("OutputPath").Value.ToString()
-                let p = Path.Combine(Path.Combine(projectPath, outputPath), outputFileName)
-                dict.Add(config.ConfigurationName, p))
-        dict
+    let getActiveProjectOutput (project: Project) =
+        Option.attempt (fun _ ->
+            let projectPath = getProjectFolder project
+            let outputFileName = project.Properties.Item("OutputFileName").Value.ToString()
+            let config = project.ConfigurationManager.ActiveConfiguration
+            let outputPath = config.Properties.Item("OutputPath").Value.ToString()
+            Path.Combine(Path.Combine(projectPath, outputPath), outputFileName))
 
-    let getOutputFileFullPaths (reference: Reference) =
+    let getActiveOutputFileFullPath (reference: Reference) =
         reference.GetType().GetProperty("SourceProject")
         |> Option.ofNull
         |> Option.map (fun sourceProject -> sourceProject.GetValue(reference) :?> Project)
-        |> Option.map getProjectOutputs
+        |> Option.bind getActiveProjectOutput
 
-    let generateLoadScriptContent(project: Project, scriptFile: string, tag: string) =
+    let generateLoadScriptContent(project: Project, scriptFile: string) =
         let projectfolder = Path.Combine(getProjectFolder project, scriptFolderName)
         let load = String.Format("#load @\"{0}\"", Path.Combine(projectfolder, scriptFile))
-        let outputs = getProjectOutputs project
-        match outputs.TryGetValue(tag) with
-        | true, output ->
+        match getActiveProjectOutput project with
+        | Some output ->
             let result = String.Format("#r @\"{0}\"\r\n", output)
             String.Format("{0}\r\n{1}", load, result)
-        | _ ->
+        | None ->
             String.Format("{0}\r\n", load)
 
     let isReferenceProject (reference: Reference) =
@@ -103,7 +96,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
                 references.Item(i + 1)
         }
 
-    let generateFileContent(project: Project, tag: string) =
+    let generateFileContent(project: Project) =
         let excludingList = set [| "FSharp.Core"; "mscorlib" |]
 
         let assemblyRefList = ResizeArray()
@@ -116,12 +109,8 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             |> Seq.iter (fun reference -> 
                     if not (excludingList.Contains reference.Name) then
                         if isReferenceProject reference then
-                            getOutputFileFullPaths reference
-                            |> Option.iter (fun outputFilePaths ->
-                                match outputFilePaths.TryGetValue(tag) with
-                                | true, path ->
-                                    projectRefList.Add(path)
-                                | _ -> ())
+                            getActiveOutputFileFullPath reference
+                            |> Option.iter (fun outputFilePath -> projectRefList.Add(outputFilePath))
                         else
                             let fullPath = reference.Path
                             if File.Exists fullPath then
@@ -136,16 +125,10 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
 
     let generateFile (project: Project) =
         Option.ofNull project
-        |> Option.map getProjectOutputs
-        |> Option.iter (fun outputs -> 
-            outputs
-            |> Seq.iter (fun (KeyValue(tag, _)) ->
-                 let fileName = if tag = "Debug" then "load-references.fsx" else String.Format("load-references-{0}.fsx", tag)
-                 let content = generateFileContent(project, tag)
-                 addFileToActiveProject(project, fileName, content)
-                 let content = generateLoadScriptContent(project, fileName, tag)
-                 let fileName = if tag = "Debug" then "load-project.fsx" else String.Format("load-project-{0}.fsx", tag)
-                 addFileToActiveProject(project, fileName, content)))
+        |> Option.iter (fun project ->
+            addFileToActiveProject(project, "load-references.fsx", generateFileContent project)
+            let content = generateLoadScriptContent(project, "load-references.fsx")
+            addFileToActiveProject(project, "load-project.fsx", content))
     
     let getReferences (project: Project) =
         let excludingList = set [| "FSharp.Core"; "mscorlib" |]
