@@ -31,11 +31,9 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             |> Seq.exists (fun item -> item.Name.Contains("load-refs")))
         |> Option.getOrElse false
 
-    let getActiveProject() =
-        let dte = dte2 :?> DTE
-        dte.ActiveSolutionProjects :?> obj[]
-        |> Seq.tryHead
-        |> Option.map (fun o -> o :?> Project)
+    let getSelectedProject() =
+        getSelectedFromSolutionExplorer<Project> dte2
+        |> List.tryHead
 
     let getProjectFolder(project: Project) =
         project.Properties.Item("FullPath").Value.ToString()
@@ -169,7 +167,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         match shell.FindToolWindow(uint32 __VSFINDTOOLWIN.FTW_fForceCreate, fsiWindowGuid) with
         | VSConstants.S_OK, frame ->
             frame.Show() |> ignore
-            getActiveProject()
+            getSelectedProject()
             |> Option.iter (fun project ->
                 let references = getReferences project
                 let t = frame.GetType()
@@ -226,5 +224,8 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
 
     member __.SetupCommands() =
         let menuCommandID = CommandID(Constants.guidAddReferenceInFSICmdSet, int Constants.cmdidAddReferenceInFSI)
-        let menuItem = OleMenuCommand((fun _ _ -> addReferenceInFSI()), menuCommandID)
-        mcs.AddCommand(menuItem)
+        let menuCommand = OleMenuCommand((fun _ _ -> addReferenceInFSI()), menuCommandID)
+        menuCommand.BeforeQueryStatus.Add (fun _ -> 
+            let visibility = getSelectedProject() |> Option.map isFSharpProject |> Option.isSome
+            menuCommand.Visible <- visibility)
+        mcs.AddCommand(menuCommand)

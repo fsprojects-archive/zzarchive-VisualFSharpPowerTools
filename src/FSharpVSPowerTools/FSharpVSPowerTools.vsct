@@ -102,6 +102,10 @@
       <Group guid="guidAddReferenceInFSICmdSet" id="AddReferenceInFSIMenuGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_REFERENCEROOT"/>
       </Group>
+      
+      <Group guid="guidAddReferenceInFSICmdSet" id="AddReferenceInFSIMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_PROJNODE"/>
+      </Group>
 
     </Groups>
 
@@ -147,11 +151,12 @@
           <ButtonText>Move to Folder</ButtonText>
         </Strings>
       </Button>
-
-
+      
       <Button guid="guidAddReferenceInFSICmdSet" id="cmdidAddReferenceInFSI" priority="0x0100" type="Button">
         <Parent guid="guidAddReferenceInFSICmdSet" id="AddReferenceInFSIMenuGroup" />
         <Icon guid="guidImages" id="bmpPic1" />
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings>
           <ButtonText>Generate References for F# Interactive</ButtonText>
         </Strings>
