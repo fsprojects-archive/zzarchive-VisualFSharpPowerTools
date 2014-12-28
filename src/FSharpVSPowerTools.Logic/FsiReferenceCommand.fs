@@ -19,20 +19,16 @@ open System.Reflection
 open System.Globalization
 
 type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell) =
-    static let cmdidAddReferenceInFSI = 0x100u
-    static let guidAddReferenceInFSICmdSetString = "8c9a49dd-2d34-4d18-905b-c557692980be"
-    static let guidAddReferenceInFSICmdSet = Guid(guidAddReferenceInFSICmdSetString)
-               
-    let containsRefScript (project: Project) = 
+    let containsReferenceScript (project: Project) = 
         project.ProjectItems.Item("Scripts") 
         |> Option.ofNull
         |> Option.bind (fun scriptItem -> Option.ofNull scriptItem.ProjectItems)
         |> Option.map (fun projectItems -> 
-            let rec loop i =
-                if i >= projectItems.Count then false
-                else
-                    projectItems.Item(i + 1).Name.Contains("load-refs") || loop (i + 1)
-            loop 0)
+            seq {
+                for i in 0..projectItems.Count-1 ->
+                    projectItems.Item(i + 1)
+            }
+            |> Seq.exists (fun item -> item.Name.Contains("load-refs")))
         |> Option.getOrElse false
 
     let getActiveProject() =
@@ -50,11 +46,10 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             // Create Script folder
             let projectFolder = getProjectFolder project
             let scriptFolder = Path.Combine(projectFolder, subfolderName)
-            if not(Directory.Exists scriptFolder) then
+            if not (Directory.Exists scriptFolder) then
                 Directory.CreateDirectory(scriptFolder) |> ignore
 
-            let path = scriptFolder
-            let textFile = Path.Combine(path, fileName)
+            let textFile = Path.Combine(scriptFolder, fileName)
             use writer = File.CreateText(textFile)
             writer.Write(content)
 
@@ -67,7 +62,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             project.Save()
 
     let getProjectOutputs (project: Project) =
-        let dict = Dictionary<string, string>()
+        let dict = Dictionary()
         let projectPath = getProjectFolder project
         let outputFileName = project.Properties.Item("OutputFileName").Value.ToString()
         seq {
@@ -90,12 +85,11 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         let projectfolder = Path.Combine(getProjectFolder project, "Scripts")
         let load = String.Format("#load @\"{0}\"", Path.Combine(projectfolder, scriptFile))
         let outputs = getProjectOutputs project
-        // TODO: use TryGetValue and sprintf here
-        if outputs.ContainsKey(tag) then
-            let output = outputs.[tag]
+        match outputs.TryGetValue(tag) with
+        | true, output ->
             let result = String.Format("#r @\"{0}\"\r\n", output)
             String.Format("{0}\r\n{1}", load, result)
-        else
+        | _ ->
             String.Format("{0}\r\n", load)
 
     let isReferenceProject (reference: Reference) =
@@ -111,31 +105,32 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
     let generateFileContent(project: Project, tag: string) =
         let excludingList = set [| "FSharp.Core"; "mscorlib" |]
 
-        let list = ResizeArray()
+        let assemblyRefList = ResizeArray()
         let projectRefList = ResizeArray()
 
         match project.Object with
-        | :? VSProject as vsproject ->
-            vsproject.References
+        | :? VSProject as vsProject ->
+            vsProject.References
             |> toReferenceSeq
             |> Seq.iter (fun reference -> 
                     if not (excludingList.Contains reference.Name) then
                         if isReferenceProject reference then
                             getOutputFileFullPaths reference
-                            |> Option.iter (fun outputFilePath ->
-                                // TODO: Refactor here
-                                if outputFilePath.ContainsKey(tag) then
-                                    projectRefList.Add(outputFilePath.[tag]))
+                            |> Option.iter (fun outputFilePaths ->
+                                match outputFilePaths.TryGetValue(tag) with
+                                | true, path ->
+                                    projectRefList.Add(path)
+                                | _ -> ())
                         else
                             let fullPath = reference.Path
                             if File.Exists fullPath then
-                                list.Add(reference.Path))
+                                assemblyRefList.Add(fullPath))
         | _ -> ()
 
-        let list = list |> Seq.map (fun n -> String.Format("#r @\"{0}\"", n)) |> Seq.toList
-        let projectRefList = projectRefList |> Seq.map (fun n -> String.Format("#r @\"{0}\"", n)) |> Seq.toList
+        let assemblyRefList = assemblyRefList |> Seq.map (fun reference -> String.Format("#r @\"{0}\"", reference)) |> Seq.toList
+        let projectRefList = projectRefList |> Seq.map (fun reference -> String.Format("#r @\"{0}\"", reference)) |> Seq.toList
         String.Format("// Warning: Generated file, your change could be lost when new file is generated. \r\n{0}\r\n\r\n{1}",
-                    String.Join("\r\n", list),
+                    String.Join("\r\n", assemblyRefList),
                     String.Join("\r\n", projectRefList))
 
     let generateFile (project: Project) =
@@ -154,30 +149,29 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
     let getReferences (project: Project) =
         let excludingList = set [| "FSharp.Core"; "mscorlib" |]
 
-        let list = ResizeArray()
+        let assemblyRefList = ResizeArray()
 
         match project.Object with
-        | :? VSProject as vsproject ->
-            vsproject.References
+        | :? VSProject as vsProject ->
+            vsProject.References
             |> toReferenceSeq
             |> Seq.iter (fun reference -> 
                     if not (excludingList.Contains reference.Name) then
                         let fullPath = reference.Path
                         if File.Exists fullPath then
-                            list.Add(reference.Path))
+                            assemblyRefList.Add(fullPath))
         | _ -> ()
 
-        list
+        assemblyRefList
 
     let addReferenceInFSI() =
-        let guid = ref (Guid("dee22b65-9761-4a26-8fb2-759b971d6dfc"))
-        match shell.FindToolWindow(uint32 __VSFINDTOOLWIN.FTW_fForceCreate, guid) with
+        let fsiWindowGuid = ref (Guid("dee22b65-9761-4a26-8fb2-759b971d6dfc"))
+        match shell.FindToolWindow(uint32 __VSFINDTOOLWIN.FTW_fForceCreate, fsiWindowGuid) with
         | VSConstants.S_OK, frame ->
             frame.Show() |> ignore
             getActiveProject()
             |> Option.iter (fun project ->
-                let l = getReferences project
-
+                let references = getReferences project
                 let t = frame.GetType()
                 let mi: PropertyInfo = t.GetProperty("FrameView", BindingFlags.Instance ||| BindingFlags.NonPublic ||| BindingFlags.Public)
                 let frameView = mi.GetValue(frame)
@@ -190,12 +184,12 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
                 let textBuffer = wpfView.TextBuffer                
                 use edit = textBuffer.CreateEdit()
                 let line = wpfView.Caret.ContainingTextViewLine
-                let pos = line.End.Position;
+                let pos = line.End.Position
 
                 let sb = StringBuilder()
                 sb.Append("\r\n") |> ignore
-                for item in l do
-                    sb.AppendFormat("#r @\"{0}\"\r\n", item) |> ignore
+                for reference in references do
+                    sb.AppendFormat("#r @\"{0}\"\r\n", reference) |> ignore
 
                 edit.Insert(pos, sb.ToString().TrimEnd() + ";;") |> ignore
                 edit.Apply() |> ignore
@@ -204,7 +198,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
                 if isFSharpProject project then
                     generateFile project)
         | _ ->
-            let clsid = ref Guid.Empty;
+            let clsid = ref Guid.Empty
             let result = ref 0
             ErrorHandler.ThrowOnFailure(
                 shell.ShowMessageBox(
@@ -227,10 +221,10 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
                     projects.Item(i + 1)
             }
             |> Seq.iter (fun project ->
-                if isFSharpProject project && containsRefScript project then
+                if isFSharpProject project && containsReferenceScript project then
                     generateFile(project)))
 
     member __.SetupCommands() =
-        let menuCommandID = CommandID(guidAddReferenceInFSICmdSet, int cmdidAddReferenceInFSI)
+        let menuCommandID = CommandID(Constants.guidAddReferenceInFSICmdSet, int Constants.cmdidAddReferenceInFSI)
         let menuItem = OleMenuCommand((fun _ _ -> addReferenceInFSI()), menuCommandID)
         mcs.AddCommand(menuItem)
