@@ -17,6 +17,7 @@ open System.Windows
 open Microsoft.VisualStudio.Text.Editor
 open System.Reflection
 open System.Globalization
+open System.Runtime.Versioning
 
 type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUIShell) =
     static let scriptFolderName = "Scripts"
@@ -26,10 +27,8 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
         |> Option.ofNull
         |> Option.bind (fun scriptItem -> Option.ofNull scriptItem.ProjectItems)
         |> Option.map (fun projectItems -> 
-            seq {
-                for i in 0..projectItems.Count-1 ->
-                    projectItems.Item(i + 1)
-            }
+            projectItems
+            |> Seq.cast<ProjectItem>
             |> Seq.exists (fun item -> item.Name.Contains("load-references")))
         |> Option.getOrElse false
 
@@ -104,25 +103,44 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
         let sourceProject = reference.GetType().GetProperty("SourceProject")
         sourceProject <> null && sourceProject.GetValue(reference) <> null
 
-    let generateFileContent(project: Project) =
+    let getReferenceAssembliesFolderByVersion (project: Project) =
+        Option.attempt (fun _ ->
+            let targetFrameworkMoniker = project.Properties.Item("TargetFrameworkMoniker").Value.ToString()
+            let frameworkVersion = FrameworkName(targetFrameworkMoniker).Version.ToString()
+            let programFiles = 
+                match Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) with
+                | null -> Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+                | s -> s 
+            sprintf @"%s\Reference Assemblies\Microsoft\Framework\.NETFramework\v%s" programFiles frameworkVersion)
+
+    let generateFileContent (project: Project) =
         let excludingList = set [| "FSharp.Core"; "mscorlib" |]
         let assemblyRefList = ResizeArray()
         let projectRefList = ResizeArray()
 
         match project.Object with
         | :? VSProject as vsProject ->
+            let scriptFolder = Path.Combine(getProjectFolder project, scriptFolderName)
+            let referenceAssembliesFolder = getReferenceAssembliesFolderByVersion project
             vsProject.References
             |> Seq.cast<Reference>
             |> Seq.iter (fun reference -> 
                 if not (excludingList.Contains reference.Name) then
                     if isReferenceProject reference then
-                        let scriptFolder = Path.Combine(getProjectFolder project, scriptFolderName)
                         getActiveOutputFileFullPath reference
                         |> Option.iter (getRelativePath scriptFolder >> projectRefList.Add)
                     else
                         let fullPath = reference.Path
-                        if File.Exists fullPath then
-                            assemblyRefList.Add(fullPath))
+                        if File.Exists(fullPath) then
+                            let referenceFolder = Path.GetDirectoryName(fullPath)
+                            match referenceAssembliesFolder with
+                            | Some referenceAssembliesFolder ->
+                                if String.Equals(Path.GetFullPathSafe(referenceAssembliesFolder), 
+                                                 Path.GetFullPathSafe(referenceFolder), StringComparison.OrdinalIgnoreCase) then
+                                    assemblyRefList.Add(Path.GetFileName(fullPath))
+                                else
+                                    assemblyRefList.Add(getRelativePath scriptFolder fullPath)
+                            | _ -> assemblyRefList.Add(getRelativePath scriptFolder fullPath))
         | _ -> ()
 
         let assemblyRefList = assemblyRefList |> Seq.map (sprintf "#r @\"%s\"") |> Seq.toList
@@ -147,11 +165,8 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
                 generateFile project)        
 
     do dte2.Events.BuildEvents.add_OnBuildDone (fun _ _ ->
-            let projects = dte2.Solution.Projects
-            seq {
-                for i in 0..projects.Count-1 ->
-                    projects.Item(i + 1)
-            }
+            dte2.Solution.Projects
+            |> Seq.cast<Project>
             |> Seq.iter (fun project ->
                 if isFSharpProject project && containsReferenceScript project then
                     generateFile project))
