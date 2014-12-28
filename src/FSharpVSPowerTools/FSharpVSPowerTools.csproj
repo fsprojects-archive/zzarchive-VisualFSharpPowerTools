@@ -298,7 +298,6 @@
     <Compile Include="CodeGenerationOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="FSIReferenceCommand.cs" />
     <Compile Include="GlobalOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>

@@ -13,12 +13,13 @@ using FSharpVSPowerTools.TaskList;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using Microsoft.VisualStudio.ComponentModelHost;
+using FSharpVSPowerTools.Reference;
 
 namespace FSharpVSPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)]
+    [InstalledProductRegistration("#110", "#112", AssemblyVersionInformation.Version, IconResourceID = 400)]
     [ProvideBindingPath]
     [ProvideOptionPage(typeof(GeneralOptionsPage), Resource.vsPackageTitle, "General", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", 0, 0, true, 0)]
@@ -108,7 +109,7 @@ namespace FSharpVSPowerTools
 
             if (mcs != null)
             {
-                var fsiReferenceMenu = new FSIReferenceCommand(DTE.Value, mcs, shell);
+                var fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs, shell);
                 fsiReferenceMenu.SetupCommands();
             }
         }
