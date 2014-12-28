@@ -19,8 +19,10 @@ open System.Reflection
 open System.Globalization
 
 type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell) =
+    static let scriptFolderName = "Scripts"
+    
     let containsReferenceScript (project: Project) = 
-        project.ProjectItems.Item("Scripts") 
+        project.ProjectItems.Item(scriptFolderName) 
         |> Option.ofNull
         |> Option.bind (fun scriptItem -> Option.ofNull scriptItem.ProjectItems)
         |> Option.map (fun projectItems -> 
@@ -28,22 +30,23 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
                 for i in 0..projectItems.Count-1 ->
                     projectItems.Item(i + 1)
             }
-            |> Seq.exists (fun item -> item.Name.Contains("load-refs")))
+            |> Seq.exists (fun item -> item.Name.Contains("load-references")))
         |> Option.getOrElse false
 
-    let getSelectedProject() =
-        getSelectedFromSolutionExplorer<Project> dte2
-        |> List.tryHead
+    let getActiveProject() =
+        let dte = dte2 :?> DTE
+        dte.ActiveSolutionProjects :?> obj[]
+        |> Seq.tryHead
+        |> Option.map (fun o -> o :?> Project)
 
     let getProjectFolder(project: Project) =
         project.Properties.Item("FullPath").Value.ToString()
 
     let addFileToActiveProject(project: Project, fileName: string, content: string) = 
-        let subfolderName = "Scripts"
         if isFSharpProject project then
             // Create Script folder
             let projectFolder = getProjectFolder project
-            let scriptFolder = Path.Combine(projectFolder, subfolderName)
+            let scriptFolder = Path.Combine(projectFolder, scriptFolderName)
             if not (Directory.Exists scriptFolder) then
                 Directory.CreateDirectory(scriptFolder) |> ignore
 
@@ -52,10 +55,10 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             writer.Write(content)
 
             let projectFolderScript = 
-                if project.ProjectItems.Item(subfolderName) <> null then
-                    project.ProjectItems.Item(subfolderName)
+                if project.ProjectItems.Item(scriptFolderName) <> null then
+                    project.ProjectItems.Item(scriptFolderName)
                 else 
-                    project.ProjectItems.AddFolder(subfolderName)
+                    project.ProjectItems.AddFolder(scriptFolderName)
             projectFolderScript.ProjectItems.AddFromFile(textFile) |> ignore
             project.Save()
 
@@ -80,7 +83,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         |> Option.map getProjectOutputs
 
     let generateLoadScriptContent(project: Project, scriptFile: string, tag: string) =
-        let projectfolder = Path.Combine(getProjectFolder project, "Scripts")
+        let projectfolder = Path.Combine(getProjectFolder project, scriptFolderName)
         let load = String.Format("#load @\"{0}\"", Path.Combine(projectfolder, scriptFile))
         let outputs = getProjectOutputs project
         match outputs.TryGetValue(tag) with
@@ -137,7 +140,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         |> Option.iter (fun outputs -> 
             outputs
             |> Seq.iter (fun (KeyValue(tag, _)) ->
-                 let fileName = if tag = "Debug" then "load-refs.fsx" else String.Format("load-refs-{0}.fsx", tag)
+                 let fileName = if tag = "Debug" then "load-references.fsx" else String.Format("load-references-{0}.fsx", tag)
                  let content = generateFileContent(project, tag)
                  addFileToActiveProject(project, fileName, content)
                  let content = generateLoadScriptContent(project, fileName, tag)
@@ -167,7 +170,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
         match shell.FindToolWindow(uint32 __VSFINDTOOLWIN.FTW_fForceCreate, fsiWindowGuid) with
         | VSConstants.S_OK, frame ->
             frame.Show() |> ignore
-            getSelectedProject()
+            getActiveProject()
             |> Option.iter (fun project ->
                 let references = getReferences project
                 let t = frame.GetType()
@@ -220,12 +223,12 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, shell: IVsUIShe
             }
             |> Seq.iter (fun project ->
                 if isFSharpProject project && containsReferenceScript project then
-                    generateFile(project)))
+                    generateFile project))
 
     member __.SetupCommands() =
         let menuCommandID = CommandID(Constants.guidAddReferenceInFSICmdSet, int Constants.cmdidAddReferenceInFSI)
         let menuCommand = OleMenuCommand((fun _ _ -> addReferenceInFSI()), menuCommandID)
         menuCommand.BeforeQueryStatus.Add (fun _ -> 
-            let visibility = getSelectedProject() |> Option.map isFSharpProject |> Option.isSome
+            let visibility = getActiveProject() |> Option.map isFSharpProject |> Option.getOrElse false
             menuCommand.Visible <- visibility)
         mcs.AddCommand(menuCommand)
