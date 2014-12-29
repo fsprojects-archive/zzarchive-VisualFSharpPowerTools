@@ -109,35 +109,65 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     // Keep a single window frame for all text views
     static let mutable currentWindow: (IVsWindowFrame * string) option = None 
 
-    /// Try to do an approximate match to determine whether two symbols have the same origin
-    let matchSymbol filePath (originalSymbol: FSharpSymbol) (syntheticSymbol: FSharpSymbol) =        
-        match originalSymbol, syntheticSymbol with
-        | TypedAstPatterns.Entity (originalEntity, _, _), TypedAstPatterns.Entity (syntheticEntity, _, _) ->
-            // There is some trickery where comparison of full names isn't correct due to missing ModuleSuffix attribute values on certain symbols
-            // We fall back to compare display names and access paths
-            Option.attempt (fun _ -> 
-                originalEntity.DisplayName = syntheticEntity.DisplayName && 
-                originalEntity.AccessPath = syntheticEntity.AccessPath && 
-                syntheticSymbol.DeclarationLocation |> Option.map (fun r -> r.FileName = filePath) |> Option.getOrElse false)
-            |> Option.getOrElse false
-        | MemberFunctionOrValue _, MemberFunctionOrValue _
-        | ActivePatternCase _, ActivePatternCase _                    
-        | UnionCase _, UnionCase _
-        | Field _, Field _ -> 
-            // Two symbols should have the same full name and synthetic symbol has to be defined in the current file
-            Option.attempt (fun _ -> 
-                originalSymbol.FullName = syntheticSymbol.FullName && 
-                syntheticSymbol.DeclarationLocation |> Option.map (fun r -> r.FileName = filePath) |> Option.getOrElse false)
-            |> Option.getOrElse false
-        | _ -> false
-
     let gotoExactLocation signature filePath signatureProject currentSymbol vsTextBuffer =
         async {
-            let! symbolUses = vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(
-                                signature, filePath, signatureProject, 
-                                AllowStaleResults.No, checkForUnusedOpens=false, profiler=Profiler())
-            match symbolUses |> Array.tryPick(fun { SymbolUse = symbolUse } -> 
-                                    if matchSymbol filePath currentSymbol symbolUse.Symbol then Some symbolUse.Symbol else None) with
+            let! symbolUses = 
+                vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(
+                    signature, filePath, signatureProject, 
+                    AllowStaleResults.No, checkForUnusedOpens=false, profiler=Profiler())
+
+            /// Try to reconstruct fully qualified name for the purpose of matching symbols
+            let rec tryGetFullyQualifiedName (symbol: FSharpSymbol) = 
+                Option.attempt (fun _ -> 
+                    match symbol with
+                    | TypedAstPatterns.Entity (entity, _, _) ->
+                        Some (sprintf "%s.%s" entity.AccessPath entity.DisplayName)
+                    | MemberFunctionOrValue mem ->
+                        tryGetFullyQualifiedName mem.EnclosingEntity
+                        |> Option.map (fun parent -> sprintf "%s.%s" parent mem.DisplayName)
+                    | Field(field, _) ->
+                        tryGetFullyQualifiedName field.DeclaringEntity
+                        |> Option.map (fun parent -> sprintf "%s.%s" parent field.DisplayName)
+                    | UnionCase uc ->
+                        match uc.ReturnType with
+                        | TypeWithDefinition entity ->
+                            tryGetFullyQualifiedName entity
+                            |> Option.map (fun parent -> sprintf "%s.%s" parent uc.DisplayName)
+                        | _ -> 
+                            None
+                    | _ ->
+                        None)
+                |> Option.flatten
+                |> Option.orTry (fun _ -> Option.attempt (fun _ -> symbol.FullName))
+
+            let isLocalSymbol filePath (symbol: FSharpSymbol) =
+                symbol.DeclarationLocation 
+                |> Option.map (fun r -> String.Equals(r.FileName, filePath, StringComparison.OrdinalIgnoreCase)) 
+                |> Option.getOrElse false
+
+            let currentSymbolFullName = tryGetFullyQualifiedName currentSymbol
+
+            let matchedSymbol = 
+                symbolUses 
+                |> Seq.groupBy (fun { SymbolUse = symbolUse } -> symbolUse.Symbol)
+                |> Seq.collect (fun (_, uses) -> Seq.truncate 1 uses)
+                |> Seq.choose (fun { SymbolUse = symbolUse } -> 
+                    match symbolUse.Symbol with
+                    | TypedAstPatterns.Entity _
+                    | MemberFunctionOrValue _
+                    | ActivePatternCase _                   
+                    | UnionCase _
+                    | Field _ as symbol -> 
+                        let symbolFullName = tryGetFullyQualifiedName symbol
+                        if symbolFullName = currentSymbolFullName && isLocalSymbol filePath symbol then
+                            Some symbol
+                        else None
+                    | _ -> None)
+                |> Seq.sortBy (fun symbol -> 
+                    symbol.DeclarationLocation |> Option.map (fun r -> r.StartLine, r.StartColumn))
+                |> Seq.tryHead
+
+            match matchedSymbol with
             | Some symbol ->
                 let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
                 symbol.DeclarationLocation
@@ -209,9 +239,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     if canShow then
                         // Ensure that only one signature is opened at a time
                         currentWindow 
-                        |> Option.bind (fun (window, content) -> 
-                            Option.ofNull window |> Option.map (fun window -> window, content))
-                        |> Option.iter (fun (window, _) -> window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
+                        |> Option.bind (fun (window, _) -> Option.ofNull window)
+                        |> Option.iter (fun window -> window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
                         // Prevent the window being reopened as a part of a solution
                         (!windowFrame).SetProperty(int __VSFPROPID5.VSFPROPID_DontAutoOpen, true) |> ignore
                         currentWindow <- Some (!windowFrame, signature)
