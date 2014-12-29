@@ -238,15 +238,21 @@ type VSLanguageService
             member __.TokenizeLine line =
                 Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
 
-    member __.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
-                                            checkForUnusedOpens: bool, pf: Profiler) = 
+    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
+                                            checkForUnusedOpens: bool, profiler: Profiler) = 
         async {
             Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
             let source = snapshot.GetText() 
+            return! x.GetAllUsesOfAllSymbolsInSourceString(source, currentFile, project, stale, checkForUnusedOpens, profiler)
+        }
+
+    member __.GetAllUsesOfAllSymbolsInSourceString (source: string, currentFile: string, project: IProjectProvider, stale,
+                                                    checkForUnusedOpens: bool, profiler: Profiler) = 
+        async {
             let! opts = project.GetProjectCheckerOptions instance
-            let! allSymbolsUses = pf.TimeAsync "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, pf)
+            let! allSymbolsUses = profiler.TimeAsync "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+                instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, profiler)
             return allSymbolsUses
         }
 
