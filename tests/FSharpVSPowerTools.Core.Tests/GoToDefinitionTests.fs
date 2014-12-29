@@ -83,7 +83,7 @@ let tryGenerateDefinitionFromPos caretPos src =
                     []
             
         let openDeclarations = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation caretPos parseTree
-        let! generatedCode = liftMaybe <| formatSymbol getXmlDocBySignature 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol Filterer.NoFilters BlankLines.None
+        let! generatedCode = liftMaybe <| formatSymbol getXmlDocBySignature 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol Filterer.NoFilters BlankLines.Default
         return generatedCode
     }
     |> Async.RunSynchronously
@@ -472,12 +472,12 @@ type MyStruct =
 
 [<Test>]
 let ``go to empty class metadata`` () =
-    """
+    let a = """
 type MyClass = class end
 
 let x: MyClass = Unchecked.defaultof<_>"""
-    |> generateDefinitionFromPos (Pos.fromZ 3 7)
-    |> assertSrcAreEqual """module File
+    let b = a |> generateDefinitionFromPos (Pos.fromZ 3 7)
+    b |> assertSrcAreEqual """module File
 
 type MyClass =
     class

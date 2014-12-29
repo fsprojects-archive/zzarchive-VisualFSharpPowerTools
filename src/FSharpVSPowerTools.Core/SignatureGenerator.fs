@@ -38,7 +38,7 @@ type BlankLines =
         AfterTypeHeader: int
         AfterUnionCase: int
     }
-    static member None =
+    static member Default =
         {
             BeforeMembersFunctionsAndValues = 1
             BeforeMemberOrFunctionOrValue = 0
@@ -48,6 +48,17 @@ type BlankLines =
             BeforeTypeHeaderOpenDeclaration = 1
             AfterTypeHeader = 1
             AfterUnionCase = 1
+        }
+    static member None =
+        {
+            BeforeMembersFunctionsAndValues = 0
+            BeforeMemberOrFunctionOrValue = 0
+            BeforePublicNestedEntities = 0
+            AfterPublicNestedEntity = 0
+            BeforeModuleHeaderOpenDeclaration = 0
+            BeforeTypeHeaderOpenDeclaration = 0
+            AfterTypeHeader = 0
+            AfterUnionCase = 0
         }
 
 [<NoComparison; NoEquality>]
@@ -440,7 +451,7 @@ and internal writeModuleHeader ctx (modul: FSharpEntity) =
     |> Seq.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
     |> Seq.iteri (fun i decl ->
         if i = 0 then 
-            ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeModuleHeaderOpenDeclaration
+            writer.WriteBlankLines ctx.BlankLines.BeforeModuleHeaderOpenDeclaration
         writer.WriteLine("open {0}", decl)) 
 
 and internal getParentPath (entity: FSharpEntity) =
@@ -458,9 +469,9 @@ and internal writeTypeHeader ctx (typ: FSharpEntity) =
     |> Seq.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
     |> Seq.iteri (fun i decl ->
         if i = 0 then 
-            ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeTypeHeaderOpenDeclaration
+            writer.WriteBlankLines ctx.BlankLines.BeforeTypeHeaderOpenDeclaration
         writer.WriteLine("open {0}", decl))
-    ctx.Writer.WriteBlankLines ctx.BlankLines.AfterTypeHeader
+    writer.WriteBlankLines ctx.BlankLines.AfterTypeHeader
 
 and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
     Debug.Assert(not typ.IsFSharpModule, "The entity should be a type.")
