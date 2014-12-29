@@ -35,6 +35,7 @@ Here are currently supported features:
  * [Resolve unopened namespaces and modules](resolveunopenednamespaces.html)
  * [Go to metadata](gotometadata.html)
  * [Task List comments](tasklistcomments.html)
+ * [Generate references in F# Interactive](generatereferences.html)
   
 Default Keymap
 --------------
