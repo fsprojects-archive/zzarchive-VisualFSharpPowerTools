@@ -472,12 +472,12 @@ type MyStruct =
 
 [<Test>]
 let ``go to empty class metadata`` () =
-    let a = """
+    """
 type MyClass = class end
 
 let x: MyClass = Unchecked.defaultof<_>"""
-    let b = a |> generateDefinitionFromPos (Pos.fromZ 3 7)
-    b |> assertSrcAreEqual """module File
+    |> generateDefinitionFromPos (Pos.fromZ 3 7)
+    |> assertSrcAreEqual """module File
 
 type MyClass =
     class
