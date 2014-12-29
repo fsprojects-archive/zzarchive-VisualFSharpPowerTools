@@ -13,12 +13,13 @@ using FSharpVSPowerTools.TaskList;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using Microsoft.VisualStudio.ComponentModelHost;
+using FSharpVSPowerTools.Reference;
 
 namespace FSharpVSPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [InstalledProductRegistration("#110", "#112", "1.x")]
+    [InstalledProductRegistration("#110", "#112", AssemblyVersionInformation.Version, IconResourceID = 400)]
     [ProvideBindingPath]
     [ProvideOptionPage(typeof(GeneralOptionsPage), Resource.vsPackageTitle, "General", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", 0, 0, true, 0)]
@@ -35,6 +36,7 @@ namespace FSharpVSPowerTools
     public class PowerToolsCommandsPackage : Package, IDisposable
     {
         private FolderMenuCommands newFolderMenu;
+        private FsiReferenceCommand fsiReferenceMenu;
         private FSharpLibrary library;
 
         private uint pctCookie;
@@ -76,8 +78,13 @@ namespace FSharpVSPowerTools
         {
             if (generalOptions.FolderOrganizationEnabled)
             {
-                SetupMenu();
+                SetupFolderMenu();
                 RegisterPriorityCommandTarget();
+            }
+
+            if (generalOptions.GenerateReferencesEnabled)
+            {
+                SetupReferenceMenu();
             }
 
             if (generalOptions.TaskListCommentsEnabled)
@@ -96,7 +103,19 @@ namespace FSharpVSPowerTools
             }
         }
 
-        private void SetupMenu()
+        private void SetupReferenceMenu()
+        {
+            var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+
+            if (mcs != null)
+            {
+                fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs, shell);
+                fsiReferenceMenu.SetupCommands();
+            }
+        }
+
+        private void SetupFolderMenu()
         {
             var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
@@ -153,6 +172,8 @@ namespace FSharpVSPowerTools
             UnregisterLibrary();
             if (taskListCommentManager != null)
                 (taskListCommentManager as IDisposable).Dispose();
+            if (fsiReferenceMenu != null)
+                (fsiReferenceMenu as IDisposable).Dispose();
         }
     }
 }

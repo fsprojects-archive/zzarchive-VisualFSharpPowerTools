@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbUnusedOpens = new System.Windows.Forms.CheckBox();
             this.chbTaskListComments = new System.Windows.Forms.CheckBox();
             this.chbGoToMetadata = new System.Windows.Forms.CheckBox();
             this.chbUnusedReferences = new System.Windows.Forms.CheckBox();
@@ -52,12 +53,13 @@ namespace FSharpVSPowerTools
             this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbUnusedOpens = new System.Windows.Forms.CheckBox();
+            this.chbGenerateReferences = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbGenerateReferences);
             this.grbOptions.Controls.Add(this.chbUnusedOpens);
             this.grbOptions.Controls.Add(this.chbTaskListComments);
             this.grbOptions.Controls.Add(this.chbGoToMetadata);
@@ -86,6 +88,18 @@ namespace FSharpVSPowerTools
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbUnusedOpens
+            // 
+            this.chbUnusedOpens.AutoSize = true;
+            this.chbUnusedOpens.Checked = true;
+            this.chbUnusedOpens.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbUnusedOpens.Location = new System.Drawing.Point(204, 156);
+            this.chbUnusedOpens.Name = "chbUnusedOpens";
+            this.chbUnusedOpens.Size = new System.Drawing.Size(136, 17);
+            this.chbUnusedOpens.TabIndex = 19;
+            this.chbUnusedOpens.Text = "Gray out unused opens";
+            this.chbUnusedOpens.UseVisualStyleBackColor = true;
             // 
             // chbTaskListComments
             // 
@@ -325,17 +339,17 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
-            // chbUnusedOpens
+            // chbGenerateReferences
             // 
-            this.chbUnusedOpens.AutoSize = true;
-            this.chbUnusedOpens.Checked = true;
-            this.chbUnusedOpens.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbUnusedOpens.Location = new System.Drawing.Point(204, 156);
-            this.chbUnusedOpens.Name = "chbUnusedOpens";
-            this.chbUnusedOpens.Size = new System.Drawing.Size(136, 17);
-            this.chbUnusedOpens.TabIndex = 19;
-            this.chbUnusedOpens.Text = "Gray out unused opens";
-            this.chbUnusedOpens.UseVisualStyleBackColor = true;
+            this.chbGenerateReferences.AutoSize = true;
+            this.chbGenerateReferences.Checked = true;
+            this.chbGenerateReferences.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbGenerateReferences.Location = new System.Drawing.Point(204, 228);
+            this.chbGenerateReferences.Name = "chbGenerateReferences";
+            this.chbGenerateReferences.Size = new System.Drawing.Size(157, 17);
+            this.chbGenerateReferences.TabIndex = 20;
+            this.chbGenerateReferences.Text = "Generate references for FSI";
+            this.chbGenerateReferences.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -376,5 +390,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbTaskListComments;
         private System.Windows.Forms.CheckBox chbGoToMetadata;
         private System.Windows.Forms.CheckBox chbUnusedOpens;
+        private System.Windows.Forms.CheckBox chbGenerateReferences;
     }
 }

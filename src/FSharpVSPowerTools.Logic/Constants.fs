@@ -50,3 +50,8 @@ let cmdidGoToDefinition = uint32 VSConstants.VSStd97CmdID.GotoDefn
 
 let [<Literal>] cmdidNextHighlightedReference = 2400u
 let [<Literal>] cmdidPreviousHighlightedReference = 2401u
+
+let [<Literal>] cmdidGenerateReferencesForFsi = 0x100u
+let [<Literal>] guidAddReferenceInFSICmdSetString = "8c9a49dd-2d34-4d18-905b-c557692980be"
+let guidGenerateReferencesForFsiCmdSet = Guid(guidAddReferenceInFSICmdSetString)
+    
