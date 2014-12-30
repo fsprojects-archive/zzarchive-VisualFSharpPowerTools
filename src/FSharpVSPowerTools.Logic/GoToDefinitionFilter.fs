@@ -217,7 +217,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     |> Option.getOrElse []
                 match SignatureGenerator.formatSymbol 
                         (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol 
-                        SignatureGenerator.Filterer.NoFilters SignatureGenerator.BlankLines.None with
+                        SignatureGenerator.Filterer.NoFilters SignatureGenerator.BlankLines.Default with
                 | Some signature ->
                     let directoryPath = Path.GetDirectoryName(filePath)
                     Directory.CreateDirectory(directoryPath) |> ignore

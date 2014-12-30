@@ -83,7 +83,7 @@ let tryGenerateDefinitionFromPos caretPos src =
                     []
             
         let openDeclarations = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation caretPos parseTree
-        let! generatedCode = liftMaybe <| formatSymbol getXmlDocBySignature 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol Filterer.NoFilters BlankLines.None
+        let! generatedCode = liftMaybe <| formatSymbol getXmlDocBySignature 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol Filterer.NoFilters BlankLines.Default
         return generatedCode
     }
     |> Async.RunSynchronously
