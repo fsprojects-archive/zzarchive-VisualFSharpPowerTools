@@ -126,17 +126,26 @@ type ProjectFactory
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
-    member __.AddSignatureProjectProvider(filePath: string, project: IProjectProvider) =
+    member __.RegisterSignatureProjectProvider(filePath: string, project: IProjectProvider) =
         // We have to keep the project provider even the buffer has been close.
         // If the buffer is reopened via Navigate Backward, we still have to colorize the text.
         // The project provider will be discard once the solution is closed.
-        signatureProjectData.[filePath] <- project
+        let signatureProject = SignatureProjectProvider(filePath, project) :> IProjectProvider
+        signatureProjectData.[filePath] <- signatureProject
+        signatureProject
+
+    member __.TryGetSignatureProjectProvider(filePath: string) =
+        match signatureProjectData.TryGetValue(filePath) with
+        | true, project ->
+            Some project
+        | _ -> None
 
     abstract CreateForProject: Project -> IProjectProvider
 
     default x.CreateForProject (project: Project): IProjectProvider = 
+        let createProjectProvider project = Some (x.CreateForProject project)
         cache.Get project.FullName (fun _ ->
-            new ProjectProvider (project, x.CreateForProject, onProjectChanged, vsLanguageService.FixProjectLoadTime)) :> _
+            new ProjectProvider (project, createProjectProvider, onProjectChanged, vsLanguageService.FixProjectLoadTime)) :> _
 
     member x.CreateForDocument buffer (doc: Document) =
         let filePath = doc.FullName
@@ -162,7 +171,7 @@ type ProjectFactory
             elif isSignatureExtension ext then
                 match signatureProjectData.TryGetValue(filePath) with
                 | true, project ->
-                    Some (SignatureProjectProvider(filePath, project) :> _)
+                    Some project
                 | _ -> None
             else
                 None

@@ -119,6 +119,12 @@ namespace FSharpVSPowerTools
             set { chbGoToMetadata.Checked = value; }
         }
 
+        public bool GenerateReferencesEnabled
+        {
+            get { return chbGenerateReferences.Checked; }
+            set { chbGenerateReferences.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -139,6 +145,7 @@ namespace FSharpVSPowerTools
             UnusedOpensEnabled = _optionsPage.UnusedOpensEnabled;
             TaskListCommentsEnabled = _optionsPage.TaskListCommentsEnabled;
             GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
+            GenerateReferencesEnabled = _optionsPage.GenerateReferencesEnabled;
         }
 
         private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

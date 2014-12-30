@@ -4,6 +4,7 @@ open System
 open System.Diagnostics
 
 [<RequireQualifiedAccess>]
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Seq =
     let tryHead s =
         if Seq.isEmpty s then None else Some (Seq.head s)
@@ -15,9 +16,10 @@ module List =
     let tryHead = function [] -> None | h :: _ -> Some h
 
 [<RequireQualifiedAccess>]
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Array =
     /// Returns true if one array has another as its subset from index 0.
-    let startsWith (prefix: _ array) (whole: _ array) =
+    let startsWith (prefix: _ []) (whole: _ []) =
         let rec loop index =
             if index > prefix.Length - 1 then true
             elif index > whole.Length - 1 then false
@@ -26,13 +28,13 @@ module Array =
         prefix.Length = 0 || loop 0
 
     /// Returns true if one array has trailing elements equal to another's.
-    let endsWith (suffix: _ array) (whole: _ array) =
+    let endsWith (suffix: _ []) (whole: _ []) =
         whole 
         |> Array.rev
         |> startsWith (Array.rev suffix)
 
     /// Returns a new array with an element replaced with a given value.
-    let replace index value (arr: _ array) =
+    let replace index value (arr: _ []) =
         if index >= arr.Length then raise (IndexOutOfRangeException "index")
         let res = Array.copy arr
         res.[index] <- value
@@ -40,7 +42,7 @@ module Array =
 
     /// Returns all heads of a given array.
     /// For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]
-    let heads (array: 'T[]) =
+    let heads (array: 'T []) =
         array 
         //|> Array.rev
         |> Array.fold (fun (soFar, res) x -> 
@@ -51,6 +53,7 @@ module Array =
         |> List.toArray
 
 [<RequireQualifiedAccess>]
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Option =
     let inline ofNull value =
         if obj.ReferenceEquals(value, null) then None else Some value
@@ -102,6 +105,7 @@ module Option =
     
 // Async helper functions copied from https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/ControlCollections.Async.fs
 [<RequireQualifiedAccess>]
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Async =
     /// Transforms an Async value using the specified function.
     [<CompiledName("Map")>]
@@ -330,6 +334,7 @@ module AsyncMaybe =
         async |> Async.map Some
 
 [<RequireQualifiedAccess>]
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module String =
     let lowerCaseFirstChar (str: string) =
         match str with

@@ -107,83 +107,161 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         | None -> []
 
     // Keep a single window frame for all text views
-    static let mutable currentWindowFrame: IVsWindowFrame option = None 
+    static let mutable currentWindow: (IVsWindowFrame * string) option = None 
+
+    let gotoExactLocation signature filePath signatureProject currentSymbol vsTextBuffer =
+        async {
+            let! symbolUses = 
+                vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(
+                    signature, filePath, signatureProject, 
+                    AllowStaleResults.No, checkForUnusedOpens=false, profiler=Profiler())
+
+            /// Try to reconstruct fully qualified name for the purpose of matching symbols
+            let rec tryGetFullyQualifiedName (symbol: FSharpSymbol) = 
+                Option.attempt (fun _ -> 
+                    match symbol with
+                    | TypedAstPatterns.Entity (entity, _, _) ->
+                        Some (sprintf "%s.%s" entity.AccessPath entity.DisplayName)
+                    | MemberFunctionOrValue mem ->
+                        tryGetFullyQualifiedName mem.EnclosingEntity
+                        |> Option.map (fun parent -> sprintf "%s.%s" parent mem.DisplayName)
+                    | Field(field, _) ->
+                        tryGetFullyQualifiedName field.DeclaringEntity
+                        |> Option.map (fun parent -> sprintf "%s.%s" parent field.DisplayName)
+                    | UnionCase uc ->
+                        match uc.ReturnType with
+                        | TypeWithDefinition entity ->
+                            tryGetFullyQualifiedName entity
+                            |> Option.map (fun parent -> sprintf "%s.%s" parent uc.DisplayName)
+                        | _ -> 
+                            None
+                    | _ ->
+                        None)
+                |> Option.flatten
+                |> Option.orTry (fun _ -> Option.attempt (fun _ -> symbol.FullName))
+
+            let isLocalSymbol filePath (symbol: FSharpSymbol) =
+                symbol.DeclarationLocation 
+                |> Option.map (fun r -> String.Equals(r.FileName, filePath, StringComparison.OrdinalIgnoreCase)) 
+                |> Option.getOrElse false
+
+            let currentSymbolFullName = tryGetFullyQualifiedName currentSymbol
+
+            let matchedSymbol = 
+                symbolUses 
+                |> Seq.groupBy (fun { SymbolUse = symbolUse } -> symbolUse.Symbol)
+                |> Seq.collect (fun (_, uses) -> Seq.truncate 1 uses)
+                |> Seq.choose (fun { SymbolUse = symbolUse } -> 
+                    match symbolUse.Symbol with
+                    | TypedAstPatterns.Entity _
+                    | MemberFunctionOrValue _
+                    | ActivePatternCase _                   
+                    | UnionCase _
+                    | Field _ as symbol -> 
+                        let symbolFullName = tryGetFullyQualifiedName symbol
+                        if symbolFullName = currentSymbolFullName && isLocalSymbol filePath symbol then
+                            Some symbol
+                        else None
+                    | _ -> None)
+                |> Seq.sortBy (fun symbol -> 
+                    symbol.DeclarationLocation |> Option.map (fun r -> r.StartLine, r.StartColumn))
+                |> Seq.tryHead
+
+            match matchedSymbol with
+            | Some symbol ->
+                let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+                symbol.DeclarationLocation
+                |> Option.iter (fun r -> 
+                    let (startRow, startCol) = (r.StartLine-1, r.StartColumn)
+                    vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, startRow, startCol) 
+                    |> ensureSucceeded)
+            | None ->
+                Logging.logInfo "Can't find a matching symbol for '%A'" currentSymbol
+        }
 
     // Now the input is an entity or a member/value.
     // We always generate the full enclosing entity signature if the symbol is a member/value
-    let navigateToMetadata project (span: SnapshotSpan) parseTree (fsSymbolUse: FSharpSymbolUse) = 
-        let fsSymbol = fsSymbolUse.Symbol
-        let displayContext = fsSymbolUse.DisplayContext
-        let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
+    let navigateToMetadata project (span: SnapshotSpan) ast (fsSymbolUse: FSharpSymbolUse) = 
+        async {
+            let fsSymbol = fsSymbolUse.Symbol
+            let displayContext = fsSymbolUse.DisplayContext
+            let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
 
-        // The file system is case-insensitive so list.fsi and List.fsi can clash
-        // Thus, we generate a tmp subfolder based on the hash of the filename
-        let subFolder = string (uint32 (hash fileName))
+            // The file system is case-insensitive so list.fsi and List.fsi can clash
+            // Thus, we generate a tmp subfolder based on the hash of the filename
+            let subFolder = string (uint32 (hash fileName))
 
-        let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
-        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-        let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
-        let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)  
-        let mutable hierarchy = Unchecked.defaultof<_>
-        let mutable itemId = Unchecked.defaultof<_>
-        let mutable windowFrame = Unchecked.defaultof<_>
-        let isOpened = 
-            VsShellUtilities.IsDocumentOpen(
-                serviceProvider, 
-                filePath, 
-                Constants.guidLogicalTextView,
-                &hierarchy,
-                &itemId,
-                &windowFrame)      
-        if isOpened then
-            // If the buffer has been opened, we will not re-generate signatures
-            windowFrame.Show() |> ensureSucceeded
-        else
-            let (startLine, startCol, _, _) = span.ToRange()
-            let pos = mkPos (startLine+1) startCol
-            let openDeclarations = 
-                parseTree 
-                |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) 
-                |> Option.getOrElse []
-            match SignatureGenerator.formatSymbol (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol SignatureGenerator.Filterer.NoFilters SignatureGenerator.BlankLines.Default with
-            | Some signature ->
-                let directoryPath = Path.GetDirectoryName(filePath)
-                Directory.CreateDirectory(directoryPath) |> ignore
-                File.WriteAllText(filePath, signature)
-                let canShow = 
-                    try
-                        VsShellUtilities.OpenDocument(
-                            serviceProvider, 
-                            filePath, 
-                            Constants.guidLogicalTextView, 
-                            &hierarchy,
-                            &itemId,
-                            &windowFrame)
-                        true
-                    with _ -> false
-                if canShow then
-                    // Ensure that only one signature is opened at a time
-                    currentWindowFrame 
-                    |> Option.iter (fun window -> 
-                          if window <> null then
-                              window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
-                    currentWindowFrame <- Some windowFrame
-                    let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-                    let mutable vsTextLines = Unchecked.defaultof<_>
-                    vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
-                    let vsTextBuffer = vsTextLines :> IVsTextBuffer
-                    match vsTextBuffer.GetStateFlags() with
-                    | VSConstants.S_OK, currentFlags ->
-                        // Try to set buffer to read-only mode
-                        vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
-                    | _ -> ()
-                    projectFactory.AddSignatureProjectProvider(filePath, project)
-                    // We display the window after putting the project into the project system.
-                    // Hopefully syntax coloring on generated signatures will catch up on time.
-                    windowFrame.Show() |> ensureSucceeded
-                    statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore
-            | None ->
-                statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
+            let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
+            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+            let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
+            let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)  
+            match VsShellUtilities.IsDocumentOpen(serviceProvider, filePath, Constants.guidLogicalTextView) with
+            | true, _hierarchy, _itemId, windowFrame ->
+                let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+                let mutable vsTextLines = Unchecked.defaultof<_>
+                vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
+                let vsTextBuffer = vsTextLines :> IVsTextBuffer                
+                match currentWindow, projectFactory.TryGetSignatureProjectProvider(filePath) with
+                | Some (_, signature), Some signatureProject ->
+                    do! gotoExactLocation signature filePath signatureProject fsSymbol vsTextBuffer
+                | _ -> 
+                    Logging.logInfo "Can't find a signature or signature project for '%s'" filePath
+                // If the buffer has been opened, we will not re-generate signatures
+                windowFrame.Show() |> ensureSucceeded
+            | _ ->
+                let (startLine, startCol, _, _) = span.ToRange()
+                let pos = mkPos (startLine+1) startCol
+                let openDeclarations = 
+                    ast 
+                    |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) 
+                    |> Option.getOrElse []
+                match SignatureGenerator.formatSymbol 
+                        (getXmlDocBySignature fsSymbol) indentSize displayContext openDeclarations fsSymbol 
+                        SignatureGenerator.Filterer.NoFilters SignatureGenerator.BlankLines.Default with
+                | Some signature ->
+                    let directoryPath = Path.GetDirectoryName(filePath)
+                    Directory.CreateDirectory(directoryPath) |> ignore
+                    File.WriteAllText(filePath, signature)
+                    let mutable hierarchy = Unchecked.defaultof<_>
+                    let mutable itemId = Unchecked.defaultof<_>
+                    let windowFrame = ref null
+                    let canShow = 
+                        try
+                            VsShellUtilities.OpenDocument(
+                                serviceProvider, 
+                                filePath, 
+                                Constants.guidLogicalTextView, 
+                                &hierarchy,
+                                &itemId,
+                                windowFrame)
+                            true
+                        with _ -> false
+                    if canShow then
+                        // Ensure that only one signature is opened at a time
+                        currentWindow 
+                        |> Option.bind (fun (window, _) -> Option.ofNull window)
+                        |> Option.iter (fun window -> window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
+                        // Prevent the window being reopened as a part of a solution
+                        (!windowFrame).SetProperty(int __VSFPROPID5.VSFPROPID_DontAutoOpen, true) |> ignore
+                        currentWindow <- Some (!windowFrame, signature)
+                        let vsTextView = VsShellUtilities.GetTextView(!windowFrame)
+                        let mutable vsTextLines = Unchecked.defaultof<_>
+                        vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
+                        let vsTextBuffer = vsTextLines :> IVsTextBuffer
+                        match vsTextBuffer.GetStateFlags() with
+                        | VSConstants.S_OK, currentFlags ->
+                            // Try to set buffer to read-only mode
+                            vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
+                        | _ -> ()
+                        let signatureProject = projectFactory.RegisterSignatureProjectProvider(filePath, project)
+                        do! gotoExactLocation signature filePath signatureProject fsSymbol vsTextBuffer
+                        // We display the window after putting the project into the project system.
+                        // Hopefully syntax coloring on generated signatures will catch up on time.
+                        (!windowFrame).Show() |> ensureSucceeded
+                        statusBar.SetText(Resource.goToDefinitionStatusMessage) |> ignore
+                | None ->
+                    statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
+        }
 
     let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
         match fsSymbol with
@@ -214,7 +292,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     return continueCommandChain()
                 | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
                     if shouldGenerateDefinition fsSymbolUse.Symbol then
-                        return navigateToMetadata project span parseTree fsSymbolUse  
+                        return! navigateToMetadata project span parseTree fsSymbolUse  
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 

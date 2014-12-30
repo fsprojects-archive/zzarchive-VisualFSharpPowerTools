@@ -9,8 +9,10 @@ open VSLangProj
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type internal ProjectProvider(project: Project, getProjectProvider: Project -> IProjectProvider, 
-                              onChanged: Project -> unit, fixProjectLoadTime: FSharpProjectOptions -> FSharpProjectOptions) =
+type internal ProjectProvider(project: Project, 
+                              getProjectProvider: Project -> IProjectProvider option, 
+                              onChanged: Project -> unit, 
+                              fixProjectLoadTime: FSharpProjectOptions -> FSharpProjectOptions) =
     static let mutable getField = None
     do Debug.Assert(project <> null, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
@@ -96,7 +98,7 @@ type internal ProjectProvider(project: Project, getProjectProvider: Project -> I
             return Path.Combine (fullPath, outputPath, outputFileName) |> Path.GetFullPathSafe
         })
 
-    let referencedProjects = lazy (project.GetReferencedFSharpProjects() |> List.map getProjectProvider)
+    let referencedProjects = lazy (project.GetReferencedFSharpProjects() |> List.choose getProjectProvider)
     let allReferencedProjects = lazy (
         project.GetReferencedProjects()
         |> List.map (fun p -> p.FileName)
