@@ -118,47 +118,48 @@ type DepthColorizerAdornment(view: IWpfTextView,
     let mutable pixelsPerChar = 7.0
     
     let refreshLine(line: ITextViewLine) = 
-        trace ("refresh line {0}", line.TextTop)
-        let tags = tagAggregator.GetTags(line.Extent)
+        protect (fun _ ->
+            trace ("refresh line {0}", line.TextTop)
+            let tags = tagAggregator.GetTags(line.Extent)
         
-        let tagSpans = 
-            tags
-            |> Seq.map (fun tag -> 
-                   let spans = tag.Span.GetSpans(view.TextSnapshot)
-                   tag.Tag.Info, new SnapshotSpan(spans.[0].Start, spans.[spans.Count - 1].End))
-            |> (fun x -> new ResizeArray<_>(x))
-        for i = 0 to tagSpans.Count - 1 do
-            let (_, sc, ec, d), tagSpan = tagSpans.[i]
-            let adornmentHeight = line.Height - (line.LineTransform.TopSpace - line.DefaultLineTransform.TopSpace)
-            if tagSpan.Length > 0 then 
-                pixelsPerChar <- view.TextViewLines.GetCharacterBounds(tagSpan.Start).Right 
-                                 - view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
-            // Negative d means a depth of -d and a blank line where we have to adorn in a non-char-relative way since there are no whitespace chars on the line to tag
-            let left = 
-                if d > 0 then view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
-                else view.TextViewLines.GetCharacterBounds((snd tagSpans.[0]).Start).Left + pixelsPerChar * (float (sc))
+            let tagSpans = 
+                tags
+                |> Seq.map (fun tag -> 
+                       let spans = tag.Span.GetSpans(view.TextSnapshot)
+                       tag.Tag.Info, new SnapshotSpan(spans.[0].Start, spans.[spans.Count - 1].End))
+                |> (fun x -> new ResizeArray<_>(x))
+            for i = 0 to tagSpans.Count - 1 do
+                let (_, sc, ec, d), tagSpan = tagSpans.[i]
+                let adornmentHeight = line.Height - (line.LineTransform.TopSpace - line.DefaultLineTransform.TopSpace)
+                if tagSpan.Length > 0 then 
+                    pixelsPerChar <- view.TextViewLines.GetCharacterBounds(tagSpan.Start).Right 
+                                     - view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
+                // Negative d means a depth of -d and a blank line where we have to adorn in a non-char-relative way since there are no whitespace chars on the line to tag
+                let left = 
+                    if d > 0 then view.TextViewLines.GetCharacterBounds(tagSpan.Start).Left
+                    else view.TextViewLines.GetCharacterBounds((snd tagSpans.[0]).Start).Left + pixelsPerChar * (float (sc))
             
-            let right = 
-                if (i <> tagSpans.Count - 1) then 
-                    let r = view.TextViewLines.GetCharacterBounds(tagSpan.End).Right
-                    if d > 0 then r
-                    else left + pixelsPerChar * (float (ec - sc))
-                else view.ViewportWidth + view.MaxTextRightCoordinate
+                let right = 
+                    if (i <> tagSpans.Count - 1) then 
+                        let r = view.TextViewLines.GetCharacterBounds(tagSpan.End).Right
+                        if d > 0 then r
+                        else left + pixelsPerChar * (float (ec - sc))
+                    else view.ViewportWidth + view.MaxTextRightCoordinate
             
-            let depth = abs d
-            let color = getFadeColor(depth, (right - left) / pixelsPerChar)
-            // Sometimes at startup these calculations go funky and I get a negative number for (right-left), hmm...
-            let width = max (right - left) 0.0 
-            debug "Rect: line.Top %f left %f width %f color %i" line.Top left width depth
-            let rectangle = 
-                new RectangleGeometry(new Rect(new Size(width, adornmentHeight + adornmentHeightFudgeFactor)))
-            let adornment = new RectangleAdornment(color, rectangle)
-            Canvas.SetLeft(adornment, left)
-            Canvas.SetTop(adornment, line.Top + (line.Height - adornmentHeight) - (adornmentHeightFudgeFactor / 2.0))
-            Canvas.SetZIndex(adornment, depth)
-            // Add adornment to the appropriate adornment layer
-            adornmentLayer.AddAdornment
-                (AdornmentPositioningBehavior.TextRelative, Nullable<_>(line.Extent), null, adornment, null) |> ignore
+                let depth = abs d
+                let color = getFadeColor(depth, (right - left) / pixelsPerChar)
+                // Sometimes at startup these calculations go funky and I get a negative number for (right-left), hmm...
+                let width = max (right - left) 0.0 
+                debug "Rect: line.Top %f left %f width %f color %i" line.Top left width depth
+                let rectangle = 
+                    new RectangleGeometry(new Rect(new Size(width, adornmentHeight + adornmentHeightFudgeFactor)))
+                let adornment = new RectangleAdornment(color, rectangle)
+                Canvas.SetLeft(adornment, left)
+                Canvas.SetTop(adornment, line.Top + (line.Height - adornmentHeight) - (adornmentHeightFudgeFactor / 2.0))
+                Canvas.SetZIndex(adornment, depth)
+                // Add adornment to the appropriate adornment layer
+                adornmentLayer.AddAdornment
+                    (AdornmentPositioningBehavior.TextRelative, Nullable<_>(line.Extent), null, adornment, null) |> ignore)
     
     let refreshView() = 
         trace ("refresh view")
