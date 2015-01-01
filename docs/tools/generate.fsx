@@ -24,8 +24,8 @@ let info =
 
 #I "../../packages/FSharp.Formatting/lib/net40"
 #I "../../packages/RazorEngine/lib/net40"
-// Use this until FSharp.Formatting upgrades to a new version of FCS
-#I "../../packages/FSharp.Compiler.Service.0.0.61/lib/net45"
+// Use this local copy of FCS until FSharp.Formatting upgrades to a new version of FCS
+#I "../../lib"
 #r "../../packages/Microsoft.AspNet.Razor/lib/net40/System.Web.Razor.dll"
 #r "../../packages/FAKE/tools/FakeLib.dll"
 #r "RazorEngine.dll"

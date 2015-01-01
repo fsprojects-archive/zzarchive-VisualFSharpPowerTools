@@ -30,6 +30,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\faq.fsx = docs\content\faq.fsx
 		docs\content\findallreferences.fsx = docs\content\findallreferences.fsx
 		docs\content\folderorganization.fsx = docs\content\folderorganization.fsx
+		docs\content\generatereferences.fsx = docs\content\generatereferences.fsx
 		docs\content\gotometadata.fsx = docs\content\gotometadata.fsx
 		docs\content\highlightusage.fsx = docs\content\highlightusage.fsx
 		docs\content\implementinterface.fsx = docs\content\implementinterface.fsx
