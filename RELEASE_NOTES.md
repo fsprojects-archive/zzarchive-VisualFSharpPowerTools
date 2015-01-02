@@ -1,4 +1,4 @@
-#### 1.7.0 - Unreleased
+#### 1.7.0 - January 2 2015
 * Fix various bugs on Go to Metadata ([#865](https://github.com/fsprojects/VisualFSharpPowerTools/issues/865), [#867](https://github.com/fsprojects/VisualFSharpPowerTools/issues/867), [#891](https://github.com/fsprojects/VisualFSharpPowerTools/issues/891))
 * Check graying out unused declarations/opens in a separate coloring stage ([#852](https://github.com/fsprojects/VisualFSharpPowerTools/issues/852))
 * Improve performance of Find All References when symbols appear on many documents ([#839](https://github.com/fsprojects/VisualFSharpPowerTools/issues/839))
