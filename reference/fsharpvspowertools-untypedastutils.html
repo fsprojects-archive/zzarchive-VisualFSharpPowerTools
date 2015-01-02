@@ -50,15 +50,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '108', 108)" onmouseover="showTip(event, '108', 108)">
+          <code onmouseout="hideTip(event, '110', 110)" onmouseover="showTip(event, '110', 110)">
             getLongIdentAt ast pos
           </code>
-          <div class="tip" id="108">
+          <div class="tip" id="110">
             <strong>Signature:</strong> ast:ParsedInput -&gt; pos:pos -&gt; Idents option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L358-358" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L367-367" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -68,38 +68,65 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '109', 109)" onmouseover="showTip(event, '109', 109)">
-            getPrintfLiterals ast
+          <code onmouseout="hideTip(event, '111', 111)" onmouseover="showTip(event, '111', 111)">
+            getModuleOrNamespacePath pos ast
           </code>
-          <div class="tip" id="109">
-            <strong>Signature:</strong> ast:ParsedInput option -&gt; range list<br />
+          <div class="tip" id="111">
+            <strong>Signature:</strong> pos:pos -&gt; ast:ParsedInput -&gt; string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L477-477" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L594-594" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
-          <p>Returns ranges of all printf format string literals.</p>
+          <p>Get path to containing module/namespace of a given position</p>
 
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '110', 110)" onmouseover="showTip(event, '110', 110)">
+          <code onmouseout="hideTip(event, '112', 112)" onmouseover="showTip(event, '112', 112)">
             getQuatationRanges ast
           </code>
-          <div class="tip" id="110">
+          <div class="tip" id="112">
             <strong>Signature:</strong> ast:ParsedInput option -&gt; List&lt;range&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L365-365" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L374-374" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
           <p>Returns ranges of all quotations found in an untyped AST</p>
+
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>Active patterns</h3>
+  <table class="table table-bordered member-list">
+    <thead>
+      <tr><td>Active pattern</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '113', 113)" onmouseover="showTip(event, '113', 113)">
+            ( |Sequentials|_| ) _arg1
+          </code>
+          <div class="tip" id="113">
+            <strong>Signature:</strong> _arg1:SynExpr -&gt; SynExpr list option<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UntypedAstUtils.fs#L15-15" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>An recursive pattern that collect all sequential expressions to avoid StackOverflowException</p>
 
         </td>
       </tr>
@@ -140,6 +167,7 @@
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./../gotometadata.html">Go to metadata</a></li>
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
+                <li><a href="./../generatereferences.html">Generate references in F# Interactive</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

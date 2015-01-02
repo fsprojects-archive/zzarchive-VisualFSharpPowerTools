@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>navigateto</title>
+    <title>generatereferences</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A collection of additional commands for F# in Visual Studio">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko, Denis Ok">
@@ -32,14 +32,21 @@
       <div class="row">
         <div class="span9" id="main">
           
-<h2><a name="NavigateTo-Ctrl-command" class="anchor" href="#NavigateTo-Ctrl-command">NavigateTo (Ctrl + ,) command</a></h2>
+<h2><a name="Generate-references-in-F-Interactive" class="anchor" href="#Generate-references-in-F-Interactive">Generate references in F# Interactive</a></h2>
 
-<p>This feature can also be activated through Edit --> NavigateTo menu. 
-It performs quick search to navigate between different locations in the source files.</p>
+<p>The feature is originally written by Tao Liu (see <a href="http://apollo13cn.blogspot.dk/2012/08/f-add-reference-addon.html">the relevant article</a>).
+When being integrated to VFPT, the feature has been modified as follows:</p>
 
-<p>Here is a screencast in VS2013 where symbols are returned from both C# and F# projects.</p>
+<ul>
+<li>Script files are generated for the project's active build configuration only.</li>
+<li>The script files consists of relative paths for references.</li>
+<li>The <code>load-references.fsx</code> script generates <code>#r</code> directives for all references in a given project.</li>
+<li>The <code>load-project.fsx</code> script generates <code>#load</code> directives for all source files in a given project.</li>
+</ul>
 
-<p><img src="img/navigate_to.gif" alt="NavigateTo" /></p>
+<p>The feature can be invoked from 'Generate References in F# Interactive' command on a References node or a Project node itself (see the screenshot below).</p>
+
+<p><img src="img/generate_references.png" alt="Generate references" /></p>
 
 
         </div>

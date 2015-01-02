@@ -50,15 +50,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '112', 112)" onmouseover="showTip(event, '112', 112)">
+          <code onmouseout="hideTip(event, '116', 116)" onmouseover="showTip(event, '116', 116)">
             formatInterface (...)
           </code>
-          <div class="tip" id="112">
+          <div class="tip" id="116">
             <strong>Signature:</strong> startColumn:int -&gt; indentation:int -&gt; typeInstances:string [] -&gt; objectIdent:string -&gt; methodBody:string -&gt; displayContext:FSharpDisplayContext -&gt; excludedMemberSignatures:Set&lt;string&gt; -&gt; e:FSharpEntity -&gt; string<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L472-472" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L473-473" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -69,15 +69,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '113', 113)" onmouseover="showTip(event, '113', 113)">
+          <code onmouseout="hideTip(event, '117', 117)" onmouseover="showTip(event, '117', 117)">
             getImplementedMemberSignatures (...)
           </code>
-          <div class="tip" id="113">
+          <div class="tip" id="117">
             <strong>Signature:</strong> getMemberByLocation:(string * range -&gt; Async&lt;FSharpSymbolUse option&gt;) -&gt; displayContext:FSharpDisplayContext -&gt; interfaceData:InterfaceData -&gt; Async&lt;Set&lt;string&gt;&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L440-440" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L441-441" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -92,15 +92,34 @@ Because it isn't, we implement a crude way of getting member signatures:
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '114', 114)" onmouseover="showTip(event, '114', 114)">
+          <code onmouseout="hideTip(event, '118', 118)" onmouseover="showTip(event, '118', 118)">
+            getInterfaceMembers e
+          </code>
+          <div class="tip" id="118">
+            <strong>Signature:</strong> e:FSharpEntity -&gt; seq&lt;FSharpMemberOrFunctionOrValue * seq&lt;FSharpGenericParameter * FSharpType&gt;&gt;<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L379-379" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Get members in the decreasing order of inheritance chain</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '119', 119)" onmouseover="showTip(event, '119', 119)">
             getMemberNameAndRanges _arg1
           </code>
-          <div class="tip" id="114">
+          <div class="tip" id="119">
             <strong>Signature:</strong> _arg1:InterfaceData -&gt; (string * range) list<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L388-388" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L419-419" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -113,15 +132,15 @@ positions of 'member', which indicate the indentation for generating new members
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '115', 115)" onmouseover="showTip(event, '115', 115)">
+          <code onmouseout="hideTip(event, '120', 120)" onmouseover="showTip(event, '120', 120)">
             hasNoInterfaceMember e
           </code>
-          <div class="tip" id="115">
+          <div class="tip" id="120">
             <strong>Signature:</strong> e:FSharpEntity -&gt; bool<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L359-359" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L390-390" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -132,15 +151,15 @@ positions of 'member', which indicate the indentation for generating new members
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '116', 116)" onmouseover="showTip(event, '116', 116)">
+          <code onmouseout="hideTip(event, '121', 121)" onmouseover="showTip(event, '121', 121)">
             isInterface e
           </code>
-          <div class="tip" id="116">
+          <div class="tip" id="121">
             <strong>Signature:</strong> e:FSharpEntity -&gt; bool<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L468-468" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L469-469" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -151,15 +170,15 @@ positions of 'member', which indicate the indentation for generating new members
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '117', 117)" onmouseover="showTip(event, '117', 117)">
+          <code onmouseout="hideTip(event, '122', 122)" onmouseover="showTip(event, '122', 122)">
             tryFindInterfaceDeclaration (...)
           </code>
-          <div class="tip" id="117">
+          <div class="tip" id="122">
             <strong>Signature:</strong> pos:pos -&gt; parsedInput:ParsedInput -&gt; InterfaceData option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L542-542" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs#L551-551" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -204,6 +223,7 @@ positions of 'member', which indicate the indentation for generating new members
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./../gotometadata.html">Go to metadata</a></li>
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
+                <li><a href="./../generatereferences.html">Generate references in F# Interactive</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

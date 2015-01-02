@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>CategorizedColumnSpan - Visual F# Power Tools</title>
+    <title>Array - Visual F# Power Tools</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko, Denis Ok">
@@ -35,49 +35,93 @@
 
 
 
-<h1>CategorizedColumnSpan</h1>
+<h1>Array</h1>
 <div class="xmldoc">
 </div>
-  <h3>Record Fields</h3>
+
+<!-- Render nested types and modules, if there are any -->
+
+  <h3>Functions and values</h3>
   <table class="table table-bordered member-list">
     <thead>
-      <tr><td>Record Field</td><td>Description</td></tr>
+      <tr><td>Function or value</td><td>Description</td></tr>
     </thead>
     <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '159', 159)" onmouseover="showTip(event, '159', 159)">
-            Category
+          <code onmouseout="hideTip(event, '1', 1)" onmouseover="showTip(event, '1', 1)">
+            endsWith(suffix whole)
           </code>
-          <div class="tip" id="159">
-            <strong>Signature:</strong> Category<br />
-                      </div>
+          <div class="tip" id="1">
+            <strong>Signature:</strong> suffix:&#39;?20500 [] -&gt; whole:&#39;?20500 [] -&gt; bool<br />
+                          <strong>Type parameters:</strong> '?20500          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs#L26-26" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L31-31" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
-          
+          <p>Returns true if one array has trailing elements equal to another's.</p>
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '160', 160)" onmouseover="showTip(event, '160', 160)">
-            WordSpan
+          <code onmouseout="hideTip(event, '2', 2)" onmouseover="showTip(event, '2', 2)">
+            heads(array)
           </code>
-          <div class="tip" id="160">
-            <strong>Signature:</strong> WordSpan<br />
-                      </div>
+          <div class="tip" id="2">
+            <strong>Signature:</strong> array:&#39;T [] -&gt; &#39;T [] []<br />
+                          <strong>Type parameters:</strong> 'T          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs#L27-27" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L45-45" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
-          
+          <p>Returns all heads of a given array.
+For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '3', 3)" onmouseover="showTip(event, '3', 3)">
+            replace(index value arr)
+          </code>
+          <div class="tip" id="3">
+            <strong>Signature:</strong> index:int -&gt; value:&#39;?20502 -&gt; arr:&#39;?20502 [] -&gt; &#39;?20502 []<br />
+                          <strong>Type parameters:</strong> '?20502          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L37-37" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Returns a new array with an element replaced with a given value.</p>
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '4', 4)" onmouseover="showTip(event, '4', 4)">
+            startsWith(prefix whole)
+          </code>
+          <div class="tip" id="4">
+            <strong>Signature:</strong> prefix:&#39;?20498 [] -&gt; whole:&#39;?20498 [] -&gt; bool<br />
+                          <strong>Type parameters:</strong> '?20498          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L22-22" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Returns true if one array has another as its subset from index 0.</p>
+
         </td>
       </tr>
     </tbody>
@@ -117,6 +161,7 @@
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./../gotometadata.html">Go to metadata</a></li>
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
+                <li><a href="./../generatereferences.html">Generate references in F# Interactive</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

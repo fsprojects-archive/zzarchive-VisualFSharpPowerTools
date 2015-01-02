@@ -62,6 +62,11 @@ If you encounter any bug, please take some time to record diagnostics informatio
 <p>If object identifiers (<code>x</code> in <code>x.Member</code>) aren't referred anywhere in the member bodies, they are understood as unused values.
 In order to fix it, we recommend to use <code>__</code> or any identifier with <code>_</code> prefix (<code>_x</code> for example).</p>
 
+<h2><a name="Why-are-my-VFPT-key-bindings-overriden-by-ReSharper" class="anchor" href="#Why-are-my-VFPT-key-bindings-overriden-by-ReSharper">Why are my VFPT key bindings overriden by ReSharper?</a></h2>
+
+<p>If you are using Visual F# Power Tools along side with ReSharper 8 or below, there is a <a href="http://youtrack.jetbrains.com/issue/RSRP-409199">known issue</a> where some F# commands are hidden by ReSharper. 
+You can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -> Options -> Keyboard &amp; Menus).</p>
+
 
         </div>
         <div class="span3">
@@ -97,6 +102,7 @@ In order to fix it, we recommend to use <code>__</code> or any identifier with <
                 <li><a href="./resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./gotometadata.html">Go to metadata</a></li>
                 <li><a href="./tasklistcomments.html">Task List comments</a></li>
+                <li><a href="./generatereferences.html">Generate references in F# Interactive</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./reference/index.html">API Reference</a></li>

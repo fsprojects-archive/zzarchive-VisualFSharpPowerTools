@@ -54,11 +54,11 @@
             getSymbol (...)
           </code>
           <div class="tip" id="27">
-            <strong>Signature:</strong> source:&#39;?19902 -&gt; line:int -&gt; col:int -&gt; lineStr:string -&gt; args:string [] -&gt; queryLexState:(&#39;?19902 -&gt; string list -&gt; int -&gt; FSharpTokenizerLexState) -&gt; Symbol option<br />
-                          <strong>Type parameters:</strong> '?19902          </div>
+            <strong>Signature:</strong> source:&#39;?20054 -&gt; line:int -&gt; col:int -&gt; lineStr:string -&gt; lookupKind:SymbolLookupKind -&gt; args:string [] -&gt; queryLexState:(&#39;?20054 -&gt; string list -&gt; int -&gt; FSharpTokenizerLexState) -&gt; Symbol option<br />
+                          <strong>Type parameters:</strong> '?20054          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L149-149" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L156-156" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -72,11 +72,11 @@
             getSymbolFromTokens (...)
           </code>
           <div class="tip" id="28">
-            <strong>Signature:</strong> tokens:FSharpTokenInfo list -&gt; line:int -&gt; col:int -&gt; lineStr:string -&gt; Symbol option<br />
+            <strong>Signature:</strong> tokens:FSharpTokenInfo list -&gt; line:int -&gt; col:int -&gt; lineStr:string -&gt; lookupKind:SymbolLookupKind -&gt; Symbol option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L81-81" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L86-86" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -94,7 +94,7 @@
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L50-50" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L55-55" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -108,11 +108,11 @@
             tokenizeLine (...)
           </code>
           <div class="tip" id="30">
-            <strong>Signature:</strong> source:&#39;?19898 -&gt; args:string [] -&gt; line:&#39;?19899 -&gt; lineStr:string -&gt; queryLexState:(&#39;?19898 -&gt; string list -&gt; &#39;?19899 -&gt; FSharpTokenizerLexState) -&gt; FSharpTokenInfo list<br />
-                          <strong>Type parameters:</strong> '?19898, '?19899          </div>
+            <strong>Signature:</strong> source:&#39;?20050 -&gt; args:string [] -&gt; line:&#39;?20051 -&gt; lineStr:string -&gt; queryLexState:(&#39;?20050 -&gt; string list -&gt; &#39;?20051 -&gt; FSharpTokenizerLexState) -&gt; FSharpTokenInfo list<br />
+                          <strong>Type parameters:</strong> '?20050, '?20051          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L68-68" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Lexer.fs#L73-73" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -157,6 +157,7 @@
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./../gotometadata.html">Go to metadata</a></li>
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
+                <li><a href="./../generatereferences.html">Generate references in F# Interactive</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>
