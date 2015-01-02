@@ -31,7 +31,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Gray out unused open statements
  - Go to metadata
  - Task List comments
- - Generate references in F# Interactive (see [this article](http://apollo13cn.blogspot.dk/2012/08/f-add-reference-addon.html))
+ - Generate references for F# Interactive (see [this article](http://apollo13cn.blogspot.dk/2012/08/f-add-reference-addon.html))
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 

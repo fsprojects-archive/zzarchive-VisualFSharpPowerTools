@@ -1,3 +1,5 @@
+#### 1.8.0 - Unreleased
+
 #### 1.7.0 - January 2 2015
 * Fix various bugs on Go to Metadata ([#865](https://github.com/fsprojects/VisualFSharpPowerTools/issues/865), [#867](https://github.com/fsprojects/VisualFSharpPowerTools/issues/867), [#891](https://github.com/fsprojects/VisualFSharpPowerTools/issues/891))
 * Check graying out unused declarations/opens in a separate coloring stage ([#852](https://github.com/fsprojects/VisualFSharpPowerTools/issues/852))
@@ -5,7 +7,7 @@
 * Report printf specifiers from user-defined printf-like functions ([#877](https://github.com/fsprojects/VisualFSharpPowerTools/issues/877))
 * Implement Next and Previous Highlighted Reference commands ([#899](https://github.com/fsprojects/VisualFSharpPowerTools/issues/899))
 * Automatically update depth colorizer when VS theme changes ([#901](https://github.com/fsprojects/VisualFSharpPowerTools/issues/901))
-* Integrate AddReferenceInFSI extension as Generate References in F# Interactive feature ([#904](https://github.com/fsprojects/VisualFSharpPowerTools/pull/904))
+* Integrate AddReferenceInFSI extension as Generate References for F# Interactive feature ([#904](https://github.com/fsprojects/VisualFSharpPowerTools/pull/904))
 * No longer reopen generated signatures and go to exact symbol locations on signature files ([#906](https://github.com/fsprojects/VisualFSharpPowerTools/issues/906))
 
 #### 1.6.1 - November 6 2014
