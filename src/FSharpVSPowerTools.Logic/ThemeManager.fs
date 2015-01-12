@@ -6,6 +6,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.Win32
+open EnvDTE
 
 type VisualStudioTheme =
     | Unknown = 0
@@ -24,7 +25,7 @@ type ThemeManager [<ImportingConstructor>]
     let getThemeId() =
         let categoryName = "General"
         let themePropertyName = "CurrentTheme"
-        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+        let dte = serviceProvider.GetService<DTE, SDTE>()
         let keyName = 
             match VisualStudioVersion.fromDTEVersion dte.Version with
             | VisualStudioVersion.VS2012
@@ -32,21 +33,34 @@ type ThemeManager [<ImportingConstructor>]
             | VisualStudioVersion.VS14 as version ->
                 Some (String.Format(@"Software\Microsoft\VisualStudio\{0}.0\{1}", VisualStudioVersion.toString version, categoryName))
             | v ->
-                debug "Unknown Visual Studio version detected while updating theme colors: %O" v
+                Logging.logWarning "Unknown Visual Studio version detected while checking theme colors: %O" v
                 None
-        keyName |> Option.map (fun keyName ->
+        keyName 
+        |> Option.bind (fun keyName ->
             use key = Registry.CurrentUser.OpenSubKey(keyName)
-            string (key.GetValue(themePropertyName, String.Empty)))
+            key.GetValue(themePropertyName, null)
+            |> Option.ofNull
+            |> Option.map string)
 
-    member x.GetCurrentTheme() =
-        match getThemeId() with
-        | Some themeId ->
+    member __.GetCurrentTheme() =
+        getThemeId()
+        |> Option.bind (fun themeId ->
             match Guid.TryParse(themeId) with
             | true, themeGuid ->
                 match themes.TryGetValue(themeGuid) with
-                | true, t -> t
-                | _ -> VisualStudioTheme.Unknown
-            | _ ->
-                VisualStudioTheme.Unknown
-        | None -> 
-            VisualStudioTheme.Unknown
+                | true, t -> Some t
+                | _ -> None
+            | _ -> None)
+        |> Option.getOrTry (fun _ ->
+            try 
+                Logging.logWarning "Can't read Visual Studio themes from registry keys."
+                let dte = serviceProvider.GetService<DTE, SDTE>()
+                let fontsAndColors = 
+                    dte.Properties("FontsAndColors", "TextEditor").Item("FontsAndColorsItems").Object :?> FontsAndColorsItems
+                let background = System.Drawing.ColorTranslator.FromOle(int (fontsAndColors.Item("Plain Text").Background))
+                match background.R, background.G, background.B with
+                | 30uy, 30uy, 30uy -> VisualStudioTheme.Dark
+                | _ -> VisualStudioTheme.Light
+            with _ -> 
+                Logging.logError "Can't read Visual Studio themes from Fonts and Colors Items."
+                VisualStudioTheme.Unknown)
