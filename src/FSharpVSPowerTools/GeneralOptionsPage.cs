@@ -17,13 +17,10 @@ namespace FSharpVSPowerTools
         private const string navBarConfig = "fsharp-navigationbar-enabled";
         private bool _navBarEnabledInAppConfig;
 
-        private readonly Logger logger;
-
         public GeneralOptionsPage()
         {
             var componentModel = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
-            logger = componentModel.DefaultExportProvider.GetExportedValue<Logger>();
-
+        
             XmlDocEnabled = true;
             FormattingEnabled = true;
             _navBarEnabledInAppConfig = GetNavigationBarConfig();
@@ -58,7 +55,7 @@ namespace FSharpVSPowerTools
             }
             catch (Exception ex)
             {
-                logger.LogException(ex);
+                LoggingModule.logException(ex);
                 return false;
             }
         }
@@ -97,14 +94,14 @@ namespace FSharpVSPowerTools
                 }
                 else
                 {
-                    logger.MessageBox(LogType.Error, Resource.navBarUnauthorizedMessage);
+                    LoggingModule.messageBoxError(Resource.navBarUnauthorizedMessage);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                logger.MessageBox(LogType.Error, Resource.navBarErrorMessage);
-                logger.LogException(ex);
+                LoggingModule.messageBoxError(Resource.navBarErrorMessage);
+                LoggingModule.logException(ex);
                 return false;
             }
         }

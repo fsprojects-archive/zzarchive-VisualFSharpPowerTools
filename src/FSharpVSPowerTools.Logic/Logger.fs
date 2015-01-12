@@ -18,7 +18,7 @@ type LogType =
         | Error -> "Error"
 
 [<Export>]
-type Logger [<ImportingConstructor>] 
+type internal Logger [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
     let getEntryTypeInt = function
@@ -45,19 +45,10 @@ type Logger [<ImportingConstructor>]
         with get () = globalServiceProvider |> Option.getOrElse (ServiceProvider.GlobalProvider :> _)
         and set v = globalServiceProvider <- Some v
 
-    member __.Log logType message =
+    member __.Log(logType, message) =
         getActivityLogService()
         |> Option.iter (fun s -> s.LogEntry(uint32 (getEntryTypeInt logType), Resource.vsPackageTitle, message) |> ignore)
-
-    member x.LogExceptionWithMessage(e: Exception, message) =
-        let message =
-            sprintf "Message: %s\nException Message: %s\nStack Trace: %s" message e.Message e.StackTrace
-        x.Log LogType.Error message
-
-    member x.LogException (e: Exception) =
-        let message = sprintf "Exception Message: %s\nStack Trace: %s" e.Message e.StackTrace
-        x.Log LogType.Error message
-                
+        
     member __.MessageBox(logType, message) =
         let icon = getIcon logType
         let service = getShellService()
@@ -100,17 +91,23 @@ module Logging =
     open OutputWindowHelper
 
     /// This is a global logger, please make sure that it is executed after the package is loaded.
-    let logger = lazy (Logger(Logger.GlobalServiceProvider))
+    let internal logger = lazy (Logger(Logger.GlobalServiceProvider))
 
-    let log logType (msg: Printf.StringFormat<'T, unit>) = 
+    let internal log logType (msg: Printf.StringFormat<'T, unit>) = 
         let format msg = 
             diagnose logType msg
-            logger.Value.Log logType msg
+            logger.Value.Log(logType, msg)
         Printf.kprintf format msg
         
     let logInfo msg = log LogType.Information msg
     let logWarning msg = log LogType.Warning msg
     let logError msg = log LogType.Error msg
+
+    // Specialized logging functions to be used in C#
+
+    let logInfoMessage (msg: string) = logInfo "%s" msg
+    let logWarningMessage (msg: string) = logWarning "%s" msg
+    let logErrorMessage (msg: string) = logError "%s" msg
 
     let logExceptionWithMessage (ex: Exception) message = 
         logError "Context: %s\nException Message: %s\nStack Trace: %s" message ex.Message ex.StackTrace
@@ -118,7 +115,7 @@ module Logging =
     let logException (ex: Exception) = 
         logError "Exception Message: %s\nStack Trace: %s" ex.Message ex.StackTrace
         
-    let messageBox logType msg = logger.Value.MessageBox(logType, msg) |> ignore
+    let internal messageBox logType msg = logger.Value.MessageBox(logType, msg) |> ignore
 
     let messageBoxInfo msg = messageBox LogType.Information msg
     let messageBoxWarning msg = messageBox LogType.Warning msg
