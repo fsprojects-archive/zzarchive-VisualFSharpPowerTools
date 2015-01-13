@@ -43,6 +43,7 @@ namespace FSharpVSPowerTools
             TaskListCommentsEnabled = true;
             GoToMetadataEnabled = true;
             GenerateReferencesEnabled = true;
+            CSharpToFSharpEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -166,6 +167,8 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GenerateReferencesEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool CSharpToFSharpEnabled { get; set; }
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
@@ -208,6 +211,7 @@ namespace FSharpVSPowerTools
                 TaskListCommentsEnabled = _optionsControl.TaskListCommentsEnabled;
                 GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
                 GenerateReferencesEnabled = _optionsControl.GenerateReferencesEnabled;
+                CSharpToFSharpEnabled = _optionsControl.CSharpToFSharpEnabled;
             }
 
             base.OnApply(e);

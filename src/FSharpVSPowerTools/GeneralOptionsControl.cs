@@ -125,6 +125,12 @@ namespace FSharpVSPowerTools
             set { chbGenerateReferences.Checked = value; }
         }
 
+        public bool CSharpToFSharpEnabled
+        {
+            get { return chbCSharpTypos.Checked; }
+            set { chbCSharpTypos.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
