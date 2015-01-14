@@ -50,12 +50,10 @@ type CSharpToFSharpFilter(textView: IVsTextView, wpfTextView: IWpfTextView, file
                         let quotes = newLine.Contains("\"") || newLine.Contains("'") || newLine.Contains("//") || newLine.Contains("(*") || newLine.Contains("``")
                         match indexBegin > startPos && ``typing after arrow`` && newLine.IndexOf("->")<0 && not(quotes) with
                         | true -> 
-                            let ``kleisli arrow`` = "->"
-                            let lambdaFun = "(fun "
                             let lambdaPart = Text.Span.FromBounds(indexArrow, indexArrow+2)
                             let beginPart = Text.Span.FromBounds(indexBegin, indexBegin+1)
-                            buffer.Replace(lambdaPart, ``kleisli arrow``) |> ignore
-                            buffer.Replace(beginPart, lambdaFun) |> ignore
+                            buffer.Replace(lambdaPart, "->") |> ignore
+                            buffer.Replace(beginPart, "(fun ") |> ignore
                             ()
                         | false -> ()
                 | _ -> ()
