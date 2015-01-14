@@ -37,25 +37,32 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
         project.Properties.Item("FullPath").Value.ToString()
 
     let getFullFilePathInScriptFolder project fileName = 
-        let projectFolder = getProjectFolder project
-        let scriptFolder = projectFolder </> scriptFolderName
-        if not (Directory.Exists scriptFolder) then
-            Directory.CreateDirectory(scriptFolder) |> ignore
+        let scriptFolder = getProjectFolder project </> scriptFolderName
+        Directory.CreateDirectory scriptFolder |> ignore
         scriptFolder </> fileName
 
     let addFileToActiveProject(project: Project, fileName: string, content: string) = 
         if isFSharpProject project then
             let textFile = getFullFilePathInScriptFolder project fileName
-            use writer = File.CreateText(textFile)
-            writer.Write(content)
+            if not (File.Exists textFile) || File.ReadAllText textFile <> content then
+                use writer = File.CreateText textFile
+                writer.Write content 
 
+            let isProjectDirty = ref false
             let projectFolderScript = 
-                project.ProjectItems.Item(scriptFolderName)
+                project.ProjectItems.Item scriptFolderName
                 |> Option.ofNull
                 |> Option.getOrTry (fun _ ->
-                    project.ProjectItems.AddFolder(scriptFolderName))
-            projectFolderScript.ProjectItems.AddFromFile(textFile) |> ignore
-            project.Save()
+                    isProjectDirty := true
+                    project.ProjectItems.AddFolder scriptFolderName)
+            projectFolderScript.ProjectItems.Item fileName
+            |> Option.ofNull
+            |> function
+               | None ->
+                   isProjectDirty := true
+                   projectFolderScript.ProjectItems.AddFromFile textFile |> ignore
+               | _ -> ()
+            if !isProjectDirty then project.Save()
 
     let getActiveProjectOutput (project: Project) =
         Option.attempt <| fun _ ->
@@ -75,7 +82,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
         let fileUri = Uri file
         // Folders must end in a slash
         let folder =
-            if not <| folder.EndsWith (Path.DirectorySeparatorChar.ToString()) then
+            if not <| folder.EndsWith (string Path.DirectorySeparatorChar) then
                 folder + string Path.DirectorySeparatorChar
             else folder
         let folderUri = Uri folder
@@ -98,7 +105,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
         sb.AppendLine(sprintf "#load @\"%s\"" scriptFile) |> ignore
         match filterTempAttributeFileName project (projectProvider :> IProjectProvider).SourceFiles with
         | [||] -> ()
-        | sourceFiles ->
+        | sourceFiles -> 
             sb.Append("#load ") |> ignore
             let relativePaths = sourceFiles |> Array.map (getRelativePath scriptFolder >> sprintf "@\"%s\"")
             sb.AppendLine(String.Join(Environment.NewLine + new String(' ', "#load ".Length), relativePaths)) |> ignore
@@ -156,14 +163,13 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
     let generateFileContent (refLines: #seq<string>) =
         String.Join(Environment.NewLine, headerComment, String.Join(Environment.NewLine, refLines))
 
-    let tryGetExistingFileRefs project fileName = 
+    let getExistingFileRefs project fileName = 
         let filePath = getFullFilePathInScriptFolder project fileName  
         if File.Exists filePath then
             File.ReadLines filePath
             |> Seq.filter (fun (line: string) -> line.StartsWith "#r")
             |> Seq.toList
-            |> Some
-        else None
+        else []
 
     let mergeRefs existing actual =
         // remove refs which don't actual anymore (they have been removed from the project)
@@ -181,9 +187,9 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
             let loadRefsFileName = "load-references.fsx"
             let actualRefs = generateRefs project
             let refs = 
-                match tryGetExistingFileRefs project loadRefsFileName with
-                | None -> actualRefs
-                | Some existingRefs -> mergeRefs existingRefs actualRefs
+                let existingRefs = getExistingFileRefs project loadRefsFileName
+                mergeRefs existingRefs actualRefs
+
             addFileToActiveProject(project, loadRefsFileName, generateFileContent refs)
             let content = generateLoadScriptContent(project, "load-references.fsx")
             addFileToActiveProject(project, "load-project.fsx", content))
