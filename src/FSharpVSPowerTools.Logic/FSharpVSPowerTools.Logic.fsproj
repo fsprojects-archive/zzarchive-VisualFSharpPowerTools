@@ -189,6 +189,9 @@
     <Compile Include="XmlDocFilter.fs">
       <Link>CodeGeneration/XmlDocFilter.fs</Link>
     </Compile>
+    <Compile Include="CSharpToFSharpFilter.fs">
+      <Link>CodeGeneration/CSharpToFSharpFilter.fs</Link>
+    </Compile>
     <Compile Include="ImplementInterfaceSmartTagger.fs">
       <Link>CodeGeneration/ImplementInterfaceSmartTagger.fs</Link>
     </Compile>

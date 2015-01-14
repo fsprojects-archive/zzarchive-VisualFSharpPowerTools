@@ -130,6 +130,7 @@
     <Compile Include="CodeGenerationOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="CSharpToFSharpFilterProvider.cs" />
     <Compile Include="GlobalOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>

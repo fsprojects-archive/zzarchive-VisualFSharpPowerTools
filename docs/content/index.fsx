@@ -36,6 +36,7 @@ Here are currently supported features:
  * [Go to metadata](gotometadata.html)
  * [Task List comments](tasklistcomments.html)
  * [Generate references in F# Interactive](generatereferences.html)
+ * [Auto-correct common C#-/JavaScript-developer typos in F#-files](commoncstypos.html)
   
 Default Keymap
 --------------
