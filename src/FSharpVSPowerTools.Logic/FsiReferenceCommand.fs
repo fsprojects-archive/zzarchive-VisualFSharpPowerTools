@@ -165,6 +165,16 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
             |> Some
         else None
 
+    let mergeRefs existing actual =
+        // remove refs which don't actual anymore (they have been removed from the project)
+        let existing =
+            existing |> List.filter (fun existingRef -> List.exists ((=) existingRef) actual)
+        // get refs which don't exist in the existing file
+        let newExtraRefs =
+            actual |> List.filter (fun actualRef -> not <| List.exists ((=) actualRef) existing)
+        // concatenate old survived refs and the extra ones
+        existing @ newExtraRefs
+
     let generateFile (project: Project) =
         Option.ofNull project
         |> Option.iter (fun project ->
@@ -173,18 +183,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
             let refs = 
                 match tryGetExistingFileRefs project loadRefsFileName with
                 | None -> actualRefs
-                | Some existingRefs ->
-                    // remove refs which don't actual anymore (they have been removed from the project)
-                    let existingRefs =
-                        existingRefs 
-                        |> List.filter (fun existingRef -> List.exists ((=) existingRef) actualRefs)
-                    // get refs which don't exist in the existing file
-                    let newExtraRefs =
-                        actualRefs
-                        |> List.filter (fun actualRef -> not <| List.exists ((=) actualRef) existingRefs)
-                    // concatenate old survived refs and the extra ones
-                    existingRefs @ newExtraRefs
-
+                | Some existingRefs -> mergeRefs existingRefs actualRefs
             addFileToActiveProject(project, loadRefsFileName, generateFileContent refs)
             let content = generateLoadScriptContent(project, "load-references.fsx")
             addFileToActiveProject(project, "load-project.fsx", content))
