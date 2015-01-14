@@ -449,6 +449,9 @@ module Pervasive =
             try Path.GetFileName path
             with _ -> path
 
+    /// Path.Combine
+    let (</>) path1 path2 = Path.Combine (path1, path2)
+
 module Reflection =
     open System.Reflection
 
