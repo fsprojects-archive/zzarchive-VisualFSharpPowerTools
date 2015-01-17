@@ -1,4 +1,7 @@
 #### 1.8.0 - Unreleased
+* Fix wrong recognition of dark themes on VS 2015 ([#917](https://github.com/fsprojects/VisualFSharpPowerTools/issues/917))
+* Generate references for F# Interactive preserve references order if users override them ([#921](https://github.com/fsprojects/VisualFSharpPowerTools/issues/921))
+* Remove dependencies on .NET 4.5, which cause installation errors on VS 2015 ([#924](https://github.com/fsprojects/VisualFSharpPowerTools/issues/924))
 
 #### 1.7.0 - January 2 2015
 * Fix various bugs on Go to Metadata ([#865](https://github.com/fsprojects/VisualFSharpPowerTools/issues/865), [#867](https://github.com/fsprojects/VisualFSharpPowerTools/issues/867), [#891](https://github.com/fsprojects/VisualFSharpPowerTools/issues/891))
