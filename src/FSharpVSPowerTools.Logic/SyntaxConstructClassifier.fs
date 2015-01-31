@@ -26,7 +26,7 @@ type private FastStageData =
 [<NoComparison>]
 type private FastStage =
     | NoData
-    | Updating of snapshot: ITextSnapshot
+    | Updating of oldData:FastStageData option * snapshot: ITextSnapshot
     | Data of FastStageData 
 
 [<NoComparison>]
@@ -231,11 +231,17 @@ type SyntaxConstructClassifier
             | None, _, _ -> false
             | _, true, _ -> true
             | _, _, FastStage.NoData -> true
-            | Some snapshot, _, FastStage.Updating oldSnapshot -> oldSnapshot <> snapshot
+            | Some snapshot, _, FastStage.Updating (_, oldSnapshot) -> oldSnapshot <> snapshot
             | Some snapshot, _, FastStage.Data { Snapshot = oldSnapshot } -> oldSnapshot <> snapshot
 
         snapshot |> Option.iter (fun snapshot -> 
-            fastState.Swap (fun _ -> Updating snapshot) |> ignore)
+            fastState.Swap (fun oldState -> 
+                let oldData = 
+                    match oldState with
+                    | FastStage.Data data -> Some data
+                    | FastStage.Updating (data, _) -> data
+                    | _ -> None
+                Updating (oldData, snapshot)) |> ignore)
                 
         if needUpdate then
             let worker = async {
@@ -354,7 +360,8 @@ type SyntaxConstructClassifier
         
     let getClassificationSpans (newSnapshotSpan: SnapshotSpan) =
         match fastState.Value with
-        | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans } ->
+        | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans }
+        | FastStage.Updating (Some { FastStageData.Snapshot = snapshot; Spans = spans }, _) ->
             // We get additional 10 lines above the current snapshot in case the user inserts some line
             // while we were getting locations from FCS. It's not as reliable though. 
             let spanStartLine = max 0 (newSnapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
@@ -370,7 +377,7 @@ type SyntaxConstructClassifier
                         let origSnapshot = columnSpan.Snapshot |> Option.getOrElse snapshot
                         let! span = fromRange origSnapshot (columnSpan.WordSpan.ToRange())
                         // Translate the span to the new snapshot
-                        return clType, span.TranslateTo(newSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive) 
+                        return clType, span.TranslateTo(newSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)  
                     })
                 |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
                 |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))
@@ -379,7 +386,7 @@ type SyntaxConstructClassifier
         | FastStage.NoData -> 
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(textDocument.FilePath)) then
-                // If not yet schedule an action, do it now.
+                // If not yet schedule an action, do it now. 
                 updateSyntaxConstructClassifiers false
             [||]
         | FastStage.Updating _ -> [||]
