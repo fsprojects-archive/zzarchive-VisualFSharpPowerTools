@@ -201,7 +201,7 @@ type ProjectFactory
         Debug.Assert(currentProject.SourceFiles |> Array.exists ((=) currentFile), 
             sprintf "Current file '%s' should be included in current project '%A'." currentFile currentProject.SourceFiles)
         let isPrivateToFile = 
-            match symbol with 
+            match symbol with
             | :? FSharpMemberOrFunctionOrValue as m -> not m.IsModuleValueOrMember
             | :? FSharpEntity as m -> m.Accessibility.IsPrivate
             | :? FSharpGenericParameter -> true
@@ -211,7 +211,8 @@ type ProjectFactory
 
         if isPrivateToFile then 
             Some SymbolDeclarationLocation.File 
-        else 
+        else
+            let isSymbolLocalForProject = TypedAstUtils.isSymbolLocalForProject symbol 
             match Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation with
             | Some loc ->
                 Logging.logInfo "Trying to find symbol '%O' declared at '%O' from current file '%O'..." symbol loc.FileName currentFile
@@ -222,7 +223,7 @@ type ProjectFactory
                     // The standalone script might include other files via '#load'
                     // These files appear in project options and the standalone file 
                     // should be treated as an individual project
-                    Some (SymbolDeclarationLocation.Projects [currentProject])
+                    Some (SymbolDeclarationLocation.Projects ([currentProject], isSymbolLocalForProject))
                 else
                     let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
                     let allProjectFileNames =
@@ -233,7 +234,7 @@ type ProjectFactory
                         sprintf "Current project '%s' should appear in the project list '%A'." currentProject.ProjectFileName allProjectFileNames.Value)
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
-                    | projects -> Some (SymbolDeclarationLocation.Projects projects)
+                    | projects -> Some (SymbolDeclarationLocation.Projects (projects, isSymbolLocalForProject))
             | None -> None
 
     member x.GetDependentProjects (dte: DTE) (projects: IProjectProvider list) =
