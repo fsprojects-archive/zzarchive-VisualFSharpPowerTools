@@ -112,11 +112,14 @@ type RenameCommandFilter(textDocument: ITextDocument,
                     | SymbolDeclarationLocation.File -> 
                         report "Renaming symbols in file..."
                         vsLanguageService.FindUsagesInFile (cw, symbol, context.ParseAndCheckResults)
-                    | SymbolDeclarationLocation.Projects declarationProjects -> 
+                    | SymbolDeclarationLocation.Projects (declarationProjects, false) -> 
                         report "Performing Rename in projects..."
                         let dependentProjects = projectFactory.GetDependentProjects dte declarationProjects
                         report (sprintf "Performing Rename in %d projects..." dependentProjects.Length)
                         vsLanguageService.FindUsages (cw, state.File, state.Project, dependentProjects, showProgress)
+                    | SymbolDeclarationLocation.Projects (declarationProjects, true) -> 
+                        report (sprintf "Performing Rename in %d projects..." declarationProjects.Length)
+                        vsLanguageService.FindUsages (cw, state.File, state.Project, declarationProjects, showProgress)
                 
                 let usages =
                     symbolUses 

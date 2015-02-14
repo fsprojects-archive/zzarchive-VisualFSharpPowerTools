@@ -12,7 +12,7 @@ type SymbolUse =
       FullNames: Idents[] }
 
 [<AutoOpen>]
-module internal TypedAstUtils =
+module TypedAstUtils =
     let isSymbolLocalForProject (symbol: FSharpSymbol) = 
         match symbol with 
         | :? FSharpParameter -> true

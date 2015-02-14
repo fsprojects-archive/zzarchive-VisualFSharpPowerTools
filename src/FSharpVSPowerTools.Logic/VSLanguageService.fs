@@ -20,7 +20,7 @@ type FilePath = string
 type SymbolDeclarationLocation = 
     | File
     /// The case where the declared symbol may be included into several projects
-    | Projects of IProjectProvider list 
+    | Projects of IProjectProvider list * isLocalForProject: bool
 
 and IProjectProvider =
     abstract IsForStandaloneScript: bool
@@ -261,7 +261,7 @@ type VSLanguageService
              let projects =
                  match getSymbolDeclLocation symbol with
                  | Some SymbolDeclarationLocation.File -> Some [currentProject]
-                 | Some (SymbolDeclarationLocation.Projects declProjects) -> Some declProjects
+                 | Some (SymbolDeclarationLocation.Projects (declProjects, _)) -> Some declProjects
                  | None -> None
          
              match projects with
