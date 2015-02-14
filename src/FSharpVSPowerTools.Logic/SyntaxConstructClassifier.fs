@@ -115,9 +115,6 @@ type SyntaxConstructClassifier
     let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
 
     let triggerClassificationChanged snapshot reason =
-        // TextBuffer is null if a solution is closed at this moment
-        //if textDocument.TextBuffer <> null then
-        //let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
         classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
         debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
@@ -358,14 +355,12 @@ type SyntaxConstructClassifier
                 | _ -> ()))
         else None
         
-    let getClassificationSpans (newSnapshotSpan: SnapshotSpan) =
+    let getClassificationSpans (snapshotSpan: SnapshotSpan) =
         match fastState.Value with
         | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans }
         | FastStage.Updating (Some { FastStageData.Snapshot = snapshot; Spans = spans }, _) ->
-            // We get additional 10 lines above the current snapshot in case the user inserts some line
-            // while we were getting locations from FCS. It's not as reliable though. 
-            let spanStartLine = max 0 (newSnapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
-            let spanEndLine = (newSnapshotSpan.End - 1).GetContainingLine().LineNumber + 1
+            let spanStartLine = snapshotSpan.Start.GetContainingLine().LineNumber + 1
+            let spanEndLine = snapshotSpan.End.GetContainingLine().LineNumber + 1
             let spans =
                 spans
                 // Locations are sorted, so we can safely filter them efficiently
@@ -377,8 +372,8 @@ type SyntaxConstructClassifier
                         let origSnapshot = columnSpan.Snapshot |> Option.getOrElse snapshot
                         let! span = fromRange origSnapshot (columnSpan.WordSpan.ToRange())
                         let span = 
-                            if newSnapshotSpan.Snapshot <> snapshot then
-                                span.TranslateTo(newSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)  
+                            if snapshotSpan.Snapshot <> snapshot then
+                                span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)  
                             else span
                         // Translate the span to the new snapshot
                         return clType, span 
