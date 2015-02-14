@@ -355,12 +355,12 @@ type SyntaxConstructClassifier
                 | _ -> ()))
         else None
         
-    let getClassificationSpans (snapshotSpan: SnapshotSpan) =
+    let getClassificationSpans (targetSnapshotSpan: SnapshotSpan) =
         match fastState.Value with
         | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans }
         | FastStage.Updating (Some { FastStageData.Snapshot = snapshot; Spans = spans }, _) ->
-            let spanStartLine = snapshotSpan.Start.GetContainingLine().LineNumber + 1
-            let spanEndLine = snapshotSpan.End.GetContainingLine().LineNumber + 1
+            let spanStartLine = targetSnapshotSpan.Start.GetContainingLine().LineNumber + 1
+            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 1
             let spans =
                 spans
                 // Locations are sorted, so we can safely filter them efficiently
@@ -372,8 +372,8 @@ type SyntaxConstructClassifier
                         let origSnapshot = columnSpan.Snapshot |> Option.getOrElse snapshot
                         let! span = fromRange origSnapshot (columnSpan.WordSpan.ToRange())
                         let span = 
-                            if snapshotSpan.Snapshot <> snapshot then
-                                span.TranslateTo(snapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)  
+                            if targetSnapshotSpan.Snapshot <> span.Snapshot then
+                                span.TranslateTo(targetSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)  
                             else span
                         // Translate the span to the new snapshot
                         return clType, span 
