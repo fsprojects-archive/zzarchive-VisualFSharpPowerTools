@@ -263,6 +263,7 @@ type SyntaxConstructClassifier
 
                     let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                         getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
+                        |> Array.map (fun span -> { span with Snapshot = Some snapshot })
                         |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
 
                     let spans = 
