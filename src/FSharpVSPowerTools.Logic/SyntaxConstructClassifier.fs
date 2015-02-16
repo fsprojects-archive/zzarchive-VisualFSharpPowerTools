@@ -188,7 +188,8 @@ type SyntaxConstructClassifier
                     |> Map.ofArray
                                
                 fastState.Swap (function
-                    | FastStage.Data data -> FastStage.Data { data with Spans = spans; SingleSymbolsProjects = [] }
+                    | FastStage.Data data -> 
+                        FastStage.Data { data with Snapshot = snapshot; Spans = spans; SingleSymbolsProjects = [] }
                     | state -> state)
                     |> ignore
                 
