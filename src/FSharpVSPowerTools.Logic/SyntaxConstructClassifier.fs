@@ -26,7 +26,7 @@ type private FastStageData =
 [<NoComparison>]
 type private FastStage =
     | NoData
-    | Updating of oldData:FastStageData option * snapshot: ITextSnapshot
+    | Updating of oldData:FastStageData option * currentSnapshot: ITextSnapshot
     | Data of FastStageData 
 
 [<NoComparison>]
@@ -212,8 +212,7 @@ type SyntaxConstructClassifier
                 | SlowStage.NoData (isUpdating = true) -> ()
                 | _ -> 
                     slowState.Swap (function
-                        | SlowStage.Data data ->
-                             SlowStage.Data { data with IsUpdating = true } 
+                        | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true } 
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
 
                     let cancelToken = newCancellationToken slowStageCancellationToken
@@ -242,7 +241,7 @@ type SyntaxConstructClassifier
                 
         if needUpdate then
             let worker = async {
-                match getCurrentProject(), getCurrentSnapshot() with
+                match getCurrentProject(), snapshot with
                 | Some currentProject, Some snapshot ->
                     debug "[SyntaxConstructClassifier] - Effective update"
                     let pf = Profiler()
@@ -272,7 +271,7 @@ type SyntaxConstructClassifier
                         | _ -> spans
 
                     let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-                    
+
                     let! singleSymbolsProjects = async {
                         if includeUnusedReferences() then
                             let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath currentProject
@@ -392,8 +391,8 @@ type SyntaxConstructClassifier
 
     interface IClassifier with
         // It's called for each visible line of code
-        member __.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
-            upcast (protectOrDefault (fun _ -> getClassificationSpans snapshotSpan) [||])
+        member __.GetClassificationSpans span =
+            upcast (protectOrDefault (fun _ -> getClassificationSpans span) [||])
 
         [<CLIEvent>]
         member __.ClassificationChanged = classificationChanged.Publish
