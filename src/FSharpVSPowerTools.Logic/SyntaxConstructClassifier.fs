@@ -26,7 +26,7 @@ type private FastStageData =
 [<NoComparison>]
 type private FastStage =
     | NoData
-    | Updating of oldData:FastStageData option * snapshot: ITextSnapshot
+    | Updating of oldData:FastStageData option * currentSnapshot: ITextSnapshot
     | Data of FastStageData 
 
 [<NoComparison>]
@@ -114,13 +114,10 @@ type SyntaxConstructClassifier
     let isSlowStageEnabled() = includeUnusedOpens() || includeUnusedReferences()
     let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
 
-    let triggerClassificationChanged reason =
-        // TextBuffer is null if a solution is closed at this moment
-        if textDocument.TextBuffer <> null then
-            let currentSnapshot = textDocument.TextBuffer.CurrentSnapshot
-            let span = SnapshotSpan(currentSnapshot, 0, currentSnapshot.Length)
-            classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
-            debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
+    let triggerClassificationChanged snapshot reason =
+        let span = SnapshotSpan(snapshot, 0, snapshot.Length)
+        classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
+        debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
 
     let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
         let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
@@ -191,7 +188,8 @@ type SyntaxConstructClassifier
                     |> Map.ofArray
                                
                 fastState.Swap (function
-                    | FastStage.Data data -> FastStage.Data { data with Spans = spans; SingleSymbolsProjects = [] }
+                    | FastStage.Data data -> 
+                        FastStage.Data { data with Snapshot = snapshot; Spans = spans; SingleSymbolsProjects = [] }
                     | state -> state)
                     |> ignore
                 
@@ -200,7 +198,7 @@ type SyntaxConstructClassifier
                 debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
                 pf.Stop()
                 Logging.logInfo "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result
-                triggerClassificationChanged "UpdateUnusedDeclarations"
+                triggerClassificationChanged snapshot "UpdateUnusedDeclarations"
             } |> Async.map ignore
 
         match getCurrentProject(), getCurrentSnapshot() with
@@ -215,8 +213,7 @@ type SyntaxConstructClassifier
                 | SlowStage.NoData (isUpdating = true) -> ()
                 | _ -> 
                     slowState.Swap (function
-                        | SlowStage.Data data ->
-                             SlowStage.Data { data with IsUpdating = true } 
+                        | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true } 
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
 
                     let cancelToken = newCancellationToken slowStageCancellationToken
@@ -245,7 +242,7 @@ type SyntaxConstructClassifier
                 
         if needUpdate then
             let worker = async {
-                match getCurrentProject(), getCurrentSnapshot() with
+                match getCurrentProject(), snapshot with
                 | Some currentProject, Some snapshot ->
                     debug "[SyntaxConstructClassifier] - Effective update"
                     let pf = Profiler()
@@ -275,7 +272,7 @@ type SyntaxConstructClassifier
                         | _ -> spans
 
                     let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-                    
+
                     let! singleSymbolsProjects = async {
                         if includeUnusedReferences() then
                             let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath currentProject
@@ -302,7 +299,7 @@ type SyntaxConstructClassifier
                               Spans = spans
                               SingleSymbolsProjects = singleSymbolsProjects }) |> ignore  
 
-                    triggerClassificationChanged "UpdateSyntaxConstructClassifiers"
+                    triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"
 
                     if isSlowStageEnabled() then
                         if currentProject.IsForStandaloneScript then
@@ -358,14 +355,12 @@ type SyntaxConstructClassifier
                 | _ -> ()))
         else None
         
-    let getClassificationSpans (newSnapshotSpan: SnapshotSpan) =
+    let getClassificationSpans (targetSnapshotSpan: SnapshotSpan) =
         match fastState.Value with
         | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans }
         | FastStage.Updating (Some { FastStageData.Snapshot = snapshot; Spans = spans }, _) ->
-            // We get additional 10 lines above the current snapshot in case the user inserts some line
-            // while we were getting locations from FCS. It's not as reliable though. 
-            let spanStartLine = max 0 (newSnapshotSpan.Start.GetContainingLine().LineNumber + 1 - 10)
-            let spanEndLine = (newSnapshotSpan.End - 1).GetContainingLine().LineNumber + 1
+            let spanStartLine = targetSnapshotSpan.Start.GetContainingLine().LineNumber + 1
+            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 1
             let spans =
                 spans
                 // Locations are sorted, so we can safely filter them efficiently
@@ -376,8 +371,12 @@ type SyntaxConstructClassifier
                         // Create a span on the original snapshot
                         let origSnapshot = columnSpan.Snapshot |> Option.getOrElse snapshot
                         let! span = fromRange origSnapshot (columnSpan.WordSpan.ToRange())
+                        let span = 
+                            if targetSnapshotSpan.Snapshot <> span.Snapshot then
+                                span.TranslateTo(targetSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)  
+                            else span
                         // Translate the span to the new snapshot
-                        return clType, span.TranslateTo(newSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)  
+                        return clType, span 
                     })
                 |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
                 |> Seq.map (fun (clType, span) -> ClassificationSpan(span, clType))
@@ -393,8 +392,8 @@ type SyntaxConstructClassifier
 
     interface IClassifier with
         // It's called for each visible line of code
-        member __.GetClassificationSpans(snapshotSpan: SnapshotSpan) =
-            upcast (protectOrDefault (fun _ -> getClassificationSpans snapshotSpan) [||])
+        member __.GetClassificationSpans span =
+            upcast (protectOrDefault (fun _ -> getClassificationSpans span) [||])
 
         [<CLIEvent>]
         member __.ClassificationChanged = classificationChanged.Publish
