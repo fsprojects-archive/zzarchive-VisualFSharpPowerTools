@@ -239,10 +239,10 @@ Target "All" DoNothing
   =?> ("IntegrationTests", isLocalBuild)
   ==> "All"
 
-"Main" 
-  ==> "CleanDocs"
-  ==> "GenerateDocs"
-  ==> "ReleaseDocs"
-  ==> "Release"
+//"Main" 
+//  ==> "CleanDocs"
+//  ==> "GenerateDocs"
+//  ==> "ReleaseDocs"
+//  ==> "Release"
 
 RunTargetOrDefault "Main"
