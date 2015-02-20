@@ -1,5 +1,3 @@
-#### 1.8.0 - Unreleased
-
 #### 1.7.3 - Feburary 20 2015
 * Find all references and Rename refactoring does not search for private/internal symbol usages in projects other than ones where it's declared 
 ([#931](https://github.com/fsprojects/VisualFSharpPowerTools/issues/931))
