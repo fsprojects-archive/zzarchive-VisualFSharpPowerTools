@@ -1,5 +1,10 @@
 #### 1.8.0 - Unreleased
 
+#### 1.7.3 - Feburary 20 2015
+* Find all references and Rename refactoring does not search for private/internal symbol usages in projects other than ones where it's declared 
+([#931](https://github.com/fsprojects/VisualFSharpPowerTools/issues/931))
+* Fix inconsistent code coloring ([#933](https://github.com/fsprojects/VisualFSharpPowerTools/pull/933))
+
 #### 1.7.2 - Feburary 5 2015
 * Fix wrong recognition of dark themes on VS 2015 ([#917](https://github.com/fsprojects/VisualFSharpPowerTools/issues/917))
 * Generate references for F# Interactive preserve references order if users override them ([#921](https://github.com/fsprojects/VisualFSharpPowerTools/issues/921))
