@@ -18,6 +18,7 @@ type Category =
     | Unused
     | Printf
     | Escaped
+    | Operator
     | Other
     override x.ToString() = sprintf "%A" x
 
@@ -37,7 +38,8 @@ module private QuotationCategorizer =
         |> Seq.map (fun (r: Range.range) -> 
             if r.EndLine = r.StartLine then
                 seq [ { Category = Category.Quotation
-                        WordSpan = { Line = r.StartLine
+                        WordSpan = { SymbolKind = SymbolKind.Other
+                                     Line = r.StartLine
                                      StartCol = r.StartColumn
                                      EndCol = r.EndColumn }
                         Snapshot = None } ]
@@ -71,7 +73,8 @@ module private QuotationCategorizer =
                             tok.LeftColumn + tok.FullMatchedLength
 
                         Some { Category = Category.Quotation
-                               WordSpan = { Line = line
+                               WordSpan = { SymbolKind = SymbolKind.Other
+                                            Line = line
                                             StartCol = minCol
                                             EndCol = maxCol }
                                Snapshot = None }))
@@ -109,7 +112,8 @@ module private StringCategorizers =
                   let category =
                       { Category = category
                         WordSpan = 
-                          { Line = line
+                          { SymbolKind = SymbolKind.Other
+                            Line = line
                             StartCol = startColumn + m.Index
                             EndCol = startColumn + m.Index + m.Length }
                         Snapshot = None }
@@ -280,9 +284,20 @@ module SourceCodeClassifier =
                             // FCS returns inaccurate ranges for multiline method chains
                             // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
                             if r.StartLine < r.EndLine then
-                                Some (su, { Line = r.End.Line; StartCol = r.End.Column - sym.Text.Length; EndCol = r.End.Column })
+                                Some (su, { SymbolKind = sym.Kind
+                                            Line = r.End.Line
+                                            StartCol = r.End.Column - sym.Text.Length
+                                            EndCol = r.End.Column })
                             else 
-                                Some (su, { Line = r.End.Line; StartCol = r.Start.Column; EndCol = r.End.Column })
+                                Some (su, { SymbolKind = sym.Kind
+                                            Line = r.End.Line
+                                            StartCol = r.Start.Column
+                                            EndCol = r.End.Column })
+                        | SymbolKind.Operator -> 
+                            Some (su, { SymbolKind = sym.Kind
+                                        Line = r.End.Line 
+                                        StartCol = r.Start.Column
+                                        EndCol = r.End.Column })
                         | _ -> None)))
             |> Seq.concat
             |> Seq.toArray
@@ -430,7 +445,8 @@ module SourceCodeClassifier =
             unusedOpenDeclarations
             |> List.map (fun decl -> 
                 { Category = Category.Unused
-                  WordSpan = { Line = decl.DeclarationRange.StartLine 
+                  WordSpan = { SymbolKind = SymbolKind.Other
+                               Line = decl.DeclarationRange.StartLine 
                                StartCol = decl.DeclarationRange.StartColumn
                                EndCol = decl.DeclarationRange.EndColumn }
                   Snapshot = None })
@@ -444,10 +460,20 @@ module SourceCodeClassifier =
                     { Snapshot = None
                       Category = Category.Printf
                       WordSpan = 
-                        { Line = r.StartLine
+                        { SymbolKind = SymbolKind.Other
+                          Line = r.StartLine
                           StartCol = r.StartColumn
                           EndCol = r.EndColumn + 1 }}))
             |> Option.getOrElse [||]
+
+        let operatorSpans =
+            allSymbolsUses2
+            |> Array.choose (fun (_, span) -> 
+                if span.SymbolKind = SymbolKind.Operator then
+                    Some { Category = Category.Operator
+                           WordSpan = span
+                           Snapshot = None }
+                else None)
 
         let allSpans = 
             spansBasedOnSymbolsUses 
@@ -455,6 +481,7 @@ module SourceCodeClassifier =
             |> Seq.append printfSpecifiersRanges
             |> Seq.append (StringCategorizers.EscapedChars.getCategories ast getTextLine)
             |> Seq.append unusedOpenDeclarationSpans
+            |> Seq.append operatorSpans
             |> Seq.toArray
 
     //    for span in allSpans do
