@@ -88,13 +88,15 @@ module Module1 =
             helper.ClassificationSpansOf(buffer, classifier)
             |> Seq.toList
             |> assertEqual
-                [ { Classification = "FSharp.Function"; Span = (2, 5) => (2, 18) };
-                  { Classification = "FSharp.ReferenceType"; Span = (3, 25) => (3, 35) };
-                  { Classification = "FSharp.ValueType"; Span = (3, 37) => (3, 39) }; 
-                  { Classification = "FSharp.MutableVar"; Span = (4, 13) => (4, 24) };
-                  { Classification = "FSharp.PatternCase"; Span = (5, 7) => (5, 19) }; 
-                  { Classification = "FSharp.PatternCase"; Span = (5, 29) => (5, 32) };
-                  { Classification = "FSharp.Quotation"; Span = (6, 9) => (6, 19) }; 
+                [ { Classification = "FSharp.Function"; Span = (2, 5) => (2, 18) }
+                  { Classification = "FSharp.Operator"; Span = (2, 26) => (2, 26) }
+                  { Classification = "FSharp.ReferenceType"; Span = (3, 25) => (3, 35) }
+                  { Classification = "FSharp.ValueType"; Span = (3, 37) => (3, 39) } 
+                  { Classification = "FSharp.MutableVar"; Span = (4, 13) => (4, 24) }
+                  { Classification = "FSharp.PatternCase"; Span = (5, 7) => (5, 19) } 
+                  { Classification = "FSharp.PatternCase"; Span = (5, 29) => (5, 32) }
+                  { Classification = "FSharp.Quotation"; Span = (6, 9) => (6, 19) } 
+                  { Classification = "FSharp.Operator"; Span = (6, 14) => (6, 14) }
                   { Classification = "FSharp.Module"; Span = (7, 8) => (7, 14) } ] 
 
     [<Test>]
@@ -171,4 +173,5 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
                   { Classification = "FSharp.Escaped"; Span = (7, 36, 7, 37) }
                   { Classification = "FSharp.Escaped"; Span = (7, 39, 7, 40) } 
                   { Classification = "FSharp.Function"; Span = (7, 59, 7, 67) }
-                  { Classification = "FSharp.Function"; Span = (7, 74, 7, 79) }]
+                  { Classification = "FSharp.Operator"; Span = (7, 71, 7, 72) } 
+                  { Classification = "FSharp.Function"; Span = (7, 74, 7, 79) } ]
