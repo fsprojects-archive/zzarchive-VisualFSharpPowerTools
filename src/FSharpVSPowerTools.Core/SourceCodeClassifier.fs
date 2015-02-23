@@ -1,10 +1,8 @@
 ﻿namespace FSharpVSPowerTools
 
-open System
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
-open System.Collections.Generic
 
 [<RequireQualifiedAccess>]
 type Category =
@@ -85,29 +83,24 @@ module private QuotationCategorizer =
 module private StringCategorizers =
     open System.Text.RegularExpressions
 
-    let categorize category (regex: Regex) (getTextLine: int -> string) (ranges: Range.range) =
+    let categorize category (regex: Regex) (getTextLine: int -> string) (r: Range.range) =
         let lines =
-            [ranges.StartLine..ranges.EndLine]
+            [r.StartLine..r.EndLine]
             |> List.map (fun line ->
                 let lineStr = getTextLine (line - 1)
-                if line = ranges.StartLine && line = ranges.EndLine && ranges.StartColumn + 1 <= ranges.EndColumn - 1 then
-                    lineStr.[ranges.StartColumn + 1 .. ranges.EndColumn - 1],
-                    line, ranges.StartColumn + 1
-                elif line = ranges.StartLine then 
-                    lineStr.[ranges.StartColumn + 1 ..], line, ranges.StartColumn + 1
-                elif line = ranges.EndLine then
-                    lineStr.[..ranges.EndColumn - 1], line, 0
+                if line = r.StartLine && line = r.EndLine && r.StartColumn + 1 <= r.EndColumn - 1 then
+                    lineStr.[r.StartColumn + 1 .. r.EndColumn - 1], line, r.StartColumn + 1
+                elif line = r.StartLine then 
+                    lineStr.[r.StartColumn + 1 ..], line, r.StartColumn + 1
+                elif line = r.EndLine then
+                    lineStr.[..r.EndColumn - 1], line, 0
                 else lineStr, line, 0)
 
         lines
         |> List.map (fun (str, line, startColumn) ->
-             let matches = 
-                regex.Matches str 
-                |> Seq.cast<Match> 
-                |> Seq.filter (fun m -> m.Value <> "")
-                |> Seq.toArray
-
-             matches
+             regex.Matches str 
+             |> Seq.cast<Match> 
+             |> Seq.filter (fun m -> m.Value <> "")
              |> Seq.fold (fun acc (m: Match) -> 
                   let category =
                       { Category = category
@@ -172,7 +165,7 @@ module SourceCodeClassifier =
     // Example: for ReferenceType symbol "System.Diagnostics.DebuggerDisplay" there are "System", "Diagnostics" and "DebuggerDisplay"
     // plane symbols. After excluding "System", we get "Diagnostics.DebuggerDisplay",
     // after excluding "Diagnostics", we get "DebuggerDisplay" and we are done.
-    let excludeWordSpan from what =
+    let private excludeWordSpan from what =
         if what.EndCol < from.EndCol && what.EndCol > from.StartCol then
             { from with StartCol = what.EndCol + 1 } // the dot between parts
         else from
@@ -189,7 +182,7 @@ module SourceCodeClassifier =
                     let r = su.SymbolUse.RangeAlternate
                     lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1)
                     |> Option.bind (fun sym -> 
-                        //debug "#### su = %A, sym.Kind = %A" su sym.Kind
+                        //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
                         match sym.Kind with
                         | SymbolKind.Ident ->
                             // FCS returns inaccurate ranges for multiline method chains
@@ -204,7 +197,7 @@ module SourceCodeClassifier =
                                             Line = r.End.Line
                                             StartCol = r.Start.Column
                                             EndCol = r.End.Column })
-                        | SymbolKind.Operator -> 
+                        | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
                             Some (su, { SymbolKind = sym.Kind
                                         Line = r.End.Line 
                                         StartCol = r.Start.Column

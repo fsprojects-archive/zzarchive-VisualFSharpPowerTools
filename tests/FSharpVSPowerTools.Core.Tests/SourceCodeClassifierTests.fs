@@ -126,14 +126,14 @@ let ``module function``() =
     """
 let moduleFunction x = x + 1
 """
-    => [ 2, [ Category.Function, 4, 18 ]]
+    => [ 2, [ Category.Function, 4, 18; Category.Operator, 25, 26 ]]
 
 [<Test>]
 let ``module higher order function``() = 
     """
 let higherOrderFunction func x = (func x) - 1
 """
-   => [ 2, [ Category.Function, 24, 28; Category.Function, 34, 38; Category.Function, 4, 23 ]]
+   => [ 2, [ Category.Function, 24, 28; Category.Function, 34, 38; Category.Function, 4, 23; Category.Operator, 42, 43 ]]
 
 [<Test>]
 let ``class let value``() = 
@@ -206,13 +206,22 @@ type Class() =
          4, []]
           
 [<Test>]
-let ``constructors``() = 
+let ``class constructor``() = 
     """
 type Class() =
     new (_: int) = new Class()
 """
     => [ 2, [ Category.ReferenceType, 5, 10 ]
          3, [ Category.ValueType, 12, 15; Category.ReferenceType, 23, 28 ]]
+
+[<Test>]
+let ``generic class constructor``() = 
+    """
+type Class<'a>() = class end
+    let _ = new Class<_>()
+"""
+    => [ 2, [ Category.ReferenceType, 5, 10 ]
+         3, [ Category.ReferenceType, 16, 21 ]]
 
 [<Test>]
 let ``interface implemented in a class``() = 
@@ -460,7 +469,8 @@ let refValue = ref 1
 refValue := !refValue + 1
 """ 
     => [ 2, [ Category.MutableVar, 4, 12; Category.Function, 15, 18 ]
-         3, [ Category.MutableVar, 0, 8; Category.MutableVar, 13, 21 ]]
+         3, [ Category.MutableVar, 0, 8; Category.Operator, 9, 11; Category.Operator, 12, 13; Category.MutableVar, 13, 21
+              Category.Operator, 22, 23 ]]
 
 [<Test>]
 let ``reference field``() = 
@@ -472,7 +482,7 @@ type RecordWithRefValue =
     { Field: int ref }
 """
     => [ 3, [ Category.Function, 19, 22; Category.MutableVar, 8, 16 ]
-         4, [ Category.MutableVar, 13, 21 ]
+         4, [ Category.Operator, 12, 13; Category.MutableVar, 13, 21 ]
          6, [ Category.MutableVar, 6, 11; Category.ValueType, 13, 16; Category.ReferenceType, 17, 20 ]]
 
 [<Test>]
@@ -480,7 +490,7 @@ let ``single line quotation``() =
     """
 let _ = <@ 1 = 1 @>
 """
-    => [ 2, [ Category.Quotation, 8, 19 ]]
+    => [ 2, [ Category.Quotation, 8, 19; Category.Operator, 13, 14 ]]
 
 [<Test>]
 let ``multi line quotation``() = 
@@ -488,8 +498,8 @@ let ``multi line quotation``() =
 let _ = <@ 1 = 1
            && 2 = 2 @>
 """
-    => [ 2, [ Category.Quotation, 8, 16 ]
-         3, [ Category.Quotation, 11, 22 ]]
+    => [ 2, [ Category.Quotation, 8, 16; Category.Operator, 13, 14 ]
+         3, [ Category.Operator, 11, 13; Category.Quotation, 11, 22; Category.Operator, 16, 17 ]]
 
 [<Test>]
 let ``quotation as function argument``() = 
@@ -505,8 +515,9 @@ let _ =
 let qf1 (n, e1) = ()
 let _ = qf1 (1, <@ 1 @>)
 """
-    => [ 2, [ Category.Function, 8, 10; Category.Quotation, 11, 22 ]
-         4, [ Category.Function, 8, 9; Category.Quotation, 10, 21; Category.Quotation, 22, 33 ]
+    => [ 2, [ Category.Function, 8, 10; Category.Quotation, 11, 22; Category.Operator, 16, 17 ]
+         4, [ Category.Function, 8, 9; Category.Quotation, 10, 21; Category.Operator, 15, 16; Category.Operator, 27, 28; 
+              Category.Quotation, 22, 33 ]
          9, [ Category.Quotation, 6, 16 ]
          11, [ Category.Function, 8, 11; Category.Quotation, 16, 23 ]]
 
@@ -518,9 +529,9 @@ type TypeWithQuotations() =
     member __.F() = <@ 1 = 1 @>
     member __.P = <@ 1 + 1 @>
 """
-    => [ 3, [ Category.Quotation, 12, 23 ]
-         4, [ Category.Function, 14, 15; Category.Quotation, 20, 31 ]
-         5, [ Category.Quotation, 18, 29 ]]
+    => [ 3, [ Category.Quotation, 12, 23; Category.Operator, 17, 18 ]
+         4, [ Category.Function, 14, 15; Category.Quotation, 20, 31; Category.Operator, 25, 26 ]
+         5, [ Category.Quotation, 18, 29; Category.Operator, 23, 24 ]]
 
 [<Test>]
 let ``untyped quotation``() = 
@@ -538,8 +549,8 @@ let _  = f <@ 1
               + 3 @> <@@ 1 @@>
 """
     => [ 3, [ Category.Function, 9, 10; Category.Quotation, 11, 15 ]
-         4, [ Category.Quotation, 14, 17 ]
-         5, [ Category.Quotation, 14, 20; Category.Quotation, 21, 30 ]]
+         4, [ Category.Operator, 14, 15; Category.Quotation, 14, 17 ]
+         5, [ Category.Operator, 14, 15; Category.Quotation, 14, 20; Category.Quotation, 21, 30 ]]
 
 [<Test>]
 let ``quotation in lambda``() = 
@@ -713,9 +724,9 @@ let ``F# external modules``() =
     """
 let _ = [1] |> Seq.sort |> Seq.toList |> List.rev
 """
-    => [ 2, [ Category.Module, 15, 18; Category.Function, 19, 23
-              Category.Module, 27, 30; Category.Function, 31, 37
-              Category.Module, 41, 45; Category.Function, 46, 49 ]]
+    => [ 2, [ Category.Operator, 12, 14; Category.Module, 15, 18; Category.Function, 19, 23
+              Category.Operator, 24, 26; Category.Module, 27, 30; Category.Function, 31, 37
+              Category.Operator, 38, 40; Category.Module, 41, 45; Category.Function, 46, 49 ]]
 
 [<Test>]
 let ``byref argument``() = 
@@ -1672,3 +1683,16 @@ let _ = "a\r\n".Replace("\r\n", "\n").Split('\r')
     => [ 2, [ Category.Escaped, 10, 12; Category.Escaped, 12, 14; Category.Function, 16, 23
               Category.Escaped, 25, 27; Category.Escaped, 27, 29
               Category.Escaped, 33, 35; Category.Function, 38, 43 ]]
+
+[<Test>]
+let operators() =
+    """
+let _ = 1 + 2
+let _ = 1 = 2
+let (>>=) _x _y = ()
+let _ = 1 >>= 2
+"""
+    => [ 2, [ Category.Operator, 10, 11 ]
+         3, [ Category.Operator, 10, 11 ]
+         4, [ Category.Operator, 5, 8 ]
+         5, [ Category.Operator, 10, 13 ]]
