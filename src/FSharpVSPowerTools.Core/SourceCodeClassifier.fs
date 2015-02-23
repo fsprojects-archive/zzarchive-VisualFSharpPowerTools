@@ -148,73 +148,6 @@ module SourceCodeClassifier =
         | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
         | _ -> Category.Other 
 
-    // Filter out symbols which ranges are fully included into a bigger symbols. 
-    // For example, for this code: Ns.Module.Module1.Type.NestedType.Method() FCS returns the following symbols: 
-    // Ns, Module, Module1, Type, NestedType, Method.
-    // We want to filter all of them but the longest one (Method).
-    let filterNestedSymbolUses (longIdents: IDictionary<_,_>) symbolUses =
-        symbolUses
-        |> Array.map (fun sUse ->
-            match longIdents.TryGetValue sUse.SymbolUse.RangeAlternate.End with
-            | true, longIdent -> sUse, Some longIdent
-            | _ -> sUse, None)
-        |> Seq.groupBy (fun (_, longIdent) -> longIdent)
-        |> Seq.map (fun (longIdent, sUses) -> longIdent, sUses |> Seq.map fst)
-        |> Seq.map (fun (longIdent, symbolUses) ->
-            match longIdent with
-            | Some _ -> 
-                (* Find all longest SymbolUses which has unique roots. For example:
-                           
-                    module Top
-                    module M =
-                        type System.IO.Path with
-                            member static ExtensionMethod() = ()
-
-                    open M
-                    open System
-                    let _ = IO.Path.ExtensionMethod()
-
-                    The last line contains three SymbolUses: "System.IO", "System.IO.Path" and "Top.M.ExtensionMethod". 
-                    So, we filter out "System.IO" since it's a prefix of "System.IO.Path".
-
-                *)
-                let res =
-                    symbolUses
-                    |> Seq.sortBy (fun symbolUse -> -symbolUse.SymbolUse.RangeAlternate.EndColumn)
-                    |> Seq.fold (fun (prev, acc) next ->
-                         match prev with
-                         | Some prev -> 
-                            if prev.FullNames
-                               |> Array.exists (fun prevFullName ->
-                                    next.FullNames
-                                    |> Array.exists (fun nextFullName ->
-                                         nextFullName.Length < prevFullName.Length
-                                         && prevFullName |> Array.startsWith nextFullName)) then 
-                                Some prev, acc
-                            else Some next, next :: acc
-                         | None -> Some next, next :: acc)
-                       (None, [])
-                    |> snd
-                    |> List.rev
-                    |> List.toSeq
-                res
-            | None -> symbolUses)
-        |> Seq.concat
-        |> Seq.toArray
-
-    let getSymbolUsesPotentiallyRequireOpenDecls symbolsUses =
-        symbolsUses
-        |> Array.filter (fun symbolUse ->
-            let res = 
-                match symbolUse.SymbolUse.Symbol with
-                | Pattern | RecordField _
-                | Entity (Class | (AbbreviatedType _ | FSharpType | ValueType | FSharpModule | Array), _, _)
-                | Entity (_, _, Tuple)
-                | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
-                | MemberFunctionOrValue func -> not func.IsMember
-                | _ -> false
-            res)
-
     let internal getCategory (symbolUse: FSharpSymbolUse) =
         match symbolUse.Symbol with
         | Field (MutableVar, _)
@@ -243,28 +176,6 @@ module SourceCodeClassifier =
         if what.EndCol < from.EndCol && what.EndCol > from.StartCol then
             { from with StartCol = what.EndCol + 1 } // the dot between parts
         else from
-
-    let getFullPrefix (longIdents: IDictionary<_,_>) fullName (endPos: Range.pos): Idents option =
-        match longIdents.TryGetValue endPos with
-        | true, longIdent ->
-            let rec loop matchFound longIdents symbolIdents =
-                match longIdents, symbolIdents with
-                | [], _ -> symbolIdents
-                | _, [] -> []
-                | lh :: lt, sh :: st ->
-                    if lh <> sh then
-                        if matchFound then symbolIdents else loop matchFound lt symbolIdents
-                    else loop true lt st
-                        
-            let prefix = 
-                loop false (longIdent |> Array.rev |> List.ofArray) (fullName |> Array.rev |> List.ofArray)
-                |> List.rev
-                |> List.toArray
-                            
-//            debug "[SourceCodeClassifier] QualifiedSymbol: FullName = %A, Symbol end pos = (%d, %d), Res = %A" 
-//                  fullName endPos.Line endPos.Column prefix
-            Some prefix
-        | _ -> None
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], checkResults: ParseAndCheckResults, lexer: LexerBase, 
                                    getTextLine: int -> string, openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
@@ -371,32 +282,6 @@ module SourceCodeClassifier =
 //            |> Seq.map (fun (fullName, idents) -> sprintf "%s %A" fullName idents)
 //            |> fun lines -> System.IO.File.WriteAllLines (@"L:\temp\_entities_.txt", lines))
 
-        let removeModuleSuffixes (symbolUses: SymbolUse[]) =
-            match allEntities with
-            | Some entities ->
-                symbolUses 
-                |> Array.map (fun symbolUse ->
-                    let fullNames =
-                        symbolUse.FullNames
-                        |> Array.map (fun fullName ->
-                            match entities |> Map.tryFind (String.Join (".", fullName)) with
-                            | Some [cleanIdents] ->
-                                //debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
-                                cleanIdents
-                            | Some (firstCleanIdents :: _ as cleanIdentsList) ->
-                                if cleanIdentsList |> List.exists ((=) fullName) then
-                                    //debug "[SourceCodeClassifier] An exact match found among several clean idents: %A" fullName
-                                    fullName
-                                else
-                                    //debug "[SourceCodeClassifier] No match found among several clean idents, return the first one FullName %A -> %A" 
-                                      //    fullName firstCleanIdents
-                                    firstCleanIdents
-                            | _ -> 
-                                //debug "[SourceCodeClassifier] NOT Cleaned FullName %A" fullName
-                                fullName)
-                    { symbolUse with FullNames = fullNames })
-            | None -> symbolUses
-
 //        let printSymbolUses msg (symbolUses: SymbolUse[]) =
 //            debug "[SourceCodeClassifier] %s SymbolUses:\n" msg
 //            for sUse in symbolUses do
@@ -405,44 +290,9 @@ module SourceCodeClassifier =
 //            symbolUses
 
         let ast = checkResults.GetUntypedAst()
-        let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
-
-        let symbolPrefixes: (Range.range * Idents) [] =
-            allSymbolsUses
-            |> getSymbolUsesPotentiallyRequireOpenDecls
-            //|> printSymbolUses "SymbolUsesPotentiallyRequireOpenDecls"
-            |> removeModuleSuffixes
-            //|> printSymbolUses "SymbolUsesWithModuleSuffixedRemoved"
-            |> filterNestedSymbolUses longIdentsByEndPos
-            //|> printSymbolUses "SymbolUses without nested"
-            |> Array.map (fun symbolUse ->
-                let sUseRange = symbolUse.SymbolUse.RangeAlternate
-                symbolUse.FullNames
-                |> Array.choose (fun fullName ->
-                    getFullPrefix longIdentsByEndPos fullName sUseRange.End
-                    |> Option.bind (function
-                         | [||] -> None
-                         | prefix -> Some (sUseRange, prefix)))) 
-            |> Array.concat
-
-        //debug "[SourceCodeClassifier] Symbols prefixes:\n%A,\nOpen declarations:\n%A" symbolPrefixes openDeclarations
-        
-        let openDeclarations = 
-            Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->
-                openDecls |> OpenDeclarationGetter.updateOpenDeclsWithSymbolPrefix symbolPrefix symbolRange
-            ) symbolPrefixes openDeclarations
-            |> OpenDeclarationGetter.spreadIsUsedFlagToParents
-
-        //debug "[SourceCodeClassifier] Fully processed open declarations:"
-        //for decl in openDeclarations do debug "%A" decl
-
-        let unusedOpenDeclarations: OpenDeclaration list =
-            openDeclarations |> List.filter (fun decl -> not decl.IsUsed)
-
-        //debug "[SourceCodeClassifier] Unused open declarations: %A" unusedOpenDeclarations
 
         let unusedOpenDeclarationSpans =
-            unusedOpenDeclarations
+            OpenDeclarationGetter.getUnusedOpenDeclarations ast allSymbolsUses openDeclarations allEntities
             |> List.map (fun decl -> 
                 { Category = Category.Unused
                   WordSpan = { SymbolKind = SymbolKind.Other
@@ -451,8 +301,6 @@ module SourceCodeClassifier =
                                EndCol = decl.DeclarationRange.EndColumn }
                   Snapshot = None })
     
-        //debug "[SourceCodeClassifier] AST: %A" ast
-
         let printfSpecifiersRanges =        
             checkResults.GetFormatSpecifierLocations()
             |> Option.map (fun ranges ->
