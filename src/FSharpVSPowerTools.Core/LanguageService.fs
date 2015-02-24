@@ -136,8 +136,10 @@ type WordSpan =
 type LexerBase() = 
     abstract GetSymbolFromTokensAtLocation: FSharpTokenInfo list * line: int * rightCol: int -> Symbol option
     abstract TokenizeLine: line: int -> FSharpTokenInfo list
+    abstract LineCount: int
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
+    member x.TokenizeAll() = [|0..x.LineCount-1|] |> Array.map x.TokenizeLine
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 

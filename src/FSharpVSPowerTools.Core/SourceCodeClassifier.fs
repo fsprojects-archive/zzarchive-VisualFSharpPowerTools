@@ -133,7 +133,7 @@ module private StringCategorizers =
             |> Seq.concat
 
 module private OperatorCategorizer = 
-    let getSpans (symbolUses: (SymbolUse * WordSpan) []) (spansByLine: Map<int, seq<WordSpan>>) (lexer: LexerBase) =
+    let getSpans (symbolUses: (SymbolUse * WordSpan) []) (spansByLine: Map<int, seq<WordSpan>>) tokensByLine =
         let spansBasedOnSymbolUse =
             symbolUses
             |> Array.choose (fun (_, span) -> 
@@ -142,10 +142,9 @@ module private OperatorCategorizer =
                            WordSpan = span
                            Snapshot = None }
                 else None)
-
+        //System.Diagnostics.Debugger.Launch() |> ignore
         let spansBasedOnLexer =
-            spansByLine |> Map.fold (fun (acc: ResizeArray<_>) line spans -> 
-                let tokens = lexer.TokenizeLine (line - 1)
+            tokensByLine |> Array.foldi (fun (acc: ResizeArray<_>) line tokens -> 
                 let operatorTokens = 
                     tokens
                     |> List.choose (fun t -> 
@@ -153,22 +152,24 @@ module private OperatorCategorizer =
                         | "EQUALS" -> Some (t.LeftColumn, t.LeftColumn + t.FullMatchedLength)
                         | _ -> None)
                     |> List.filter (fun (lCol, rCol) ->
-                        spans 
-                        |> Seq.exists (fun s -> 
-                            (lCol < s.StartCol - 1 || lCol > s.EndCol - 1)
-                            && (rCol < s.StartCol - 1  || rCol > s.EndCol - 1)))
+                        match spansByLine |> Map.tryFind (line + 1) with
+                        | Some spans -> 
+                            spans |> Seq.exists (fun s -> 
+                                (lCol < s.StartCol - 1 || lCol > s.EndCol - 1)
+                                && (rCol < s.StartCol - 1  || rCol > s.EndCol - 1))
+                        | None -> true)
                     |> List.map (fun (lCol, rCol) ->
                         { Category = Category.Operator
                           WordSpan = 
                             { SymbolKind = SymbolKind.Operator
-                              Line = line
+                              Line = line + 1
                               StartCol = lCol
                               EndCol = rCol }
                           Snapshot = None })
                 acc.AddRange(operatorTokens)
                 acc) (ResizeArray())
 
-        Array.append spansBasedOnSymbolUse (spansBasedOnLexer.ToArray())
+        Array.append spansBasedOnSymbolUse (spansBasedOnLexer.ToArray()) |> Seq.distinct |> Seq.toArray
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
@@ -210,11 +211,14 @@ module SourceCodeClassifier =
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], checkResults: ParseAndCheckResults, lexer: LexerBase, 
                                    getTextLine: int -> string, openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
+
+        let tokensByLine = lexer.TokenizeAll()
+
         let allSymbolsUses2 =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
             |> Seq.map (fun (line, sus) ->
-                let tokens = lexer.TokenizeLine (line - 1)
+                let tokens = tokensByLine.[line - 1]
                 sus |> Seq.choose (fun su ->
                     let r = su.SymbolUse.RangeAlternate
                     lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) |> Option.bind (fun sym -> 
@@ -349,7 +353,7 @@ module SourceCodeClassifier =
             |> Seq.append printfSpecifiersRanges
             |> Seq.append (StringCategorizers.EscapedChars.getCategories ast getTextLine)
             |> Seq.append unusedOpenDeclarationSpans
-            |> Seq.append (OperatorCategorizer.getSpans allSymbolsUses2 wordSpansByLine lexer)
+            |> Seq.append (OperatorCategorizer.getSpans allSymbolsUses2 wordSpansByLine tokensByLine)
             |> Seq.toArray
 
     //    for span in allSpans do

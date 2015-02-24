@@ -183,3 +183,4 @@ paket-files
 *.xml
 
 release.cmd
+_NCrunch_*
