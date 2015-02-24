@@ -1685,7 +1685,7 @@ let _ = "a\r\n".Replace("\r\n", "\n").Split('\r')
               Category.Escaped, 33, 35; Category.Function, 38, 43 ]]
 
 [<Test>]
-let operators() =
+let ``operators based on SymbolUse``() =
     """
 let _ = 1 + 2
 let _ = 1 = 2
@@ -1695,4 +1695,11 @@ let _ = 1 >>= 2
     => [ 2, [ Category.Operator, 10, 11 ]
          3, [ Category.Operator, 10, 11 ]
          4, [ Category.Operator, 5, 8 ]
-         5, [ Category.Operator, 10, 13 ]]
+         5, [ Category.Operator, 10, 13 ]] 
+         
+[<Test>]
+let ``operators based on Lexer``() =
+    """
+let f x = 1
+"""
+    => [ 2, [ Category.Operator, 6, 7 ]] 

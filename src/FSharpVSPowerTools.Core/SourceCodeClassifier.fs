@@ -132,6 +132,44 @@ module private StringCategorizers =
             |> List.map (categorize Category.Escaped escapingSymbolsRegex getTextLine) 
             |> Seq.concat
 
+module private OperatorCategorizer = 
+    let getSpans (symbolUses: (SymbolUse * WordSpan) []) (spansByLine: Map<int, seq<WordSpan>>) (lexer: LexerBase) =
+        let spansBasedOnSymbolUse =
+            symbolUses
+            |> Array.choose (fun (_, span) -> 
+                if span.SymbolKind = SymbolKind.Operator then
+                    Some { Category = Category.Operator
+                           WordSpan = span
+                           Snapshot = None }
+                else None)
+
+        let spansBasedOnLexer =
+            spansByLine |> Map.fold (fun (acc: ResizeArray<_>) line spans -> 
+                let tokens = lexer.TokenizeLine (line - 1)
+                let operatorTokens = 
+                    tokens
+                    |> List.choose (fun t -> 
+                        match t.TokenName with 
+                        | "EQUALS" -> Some (t.LeftColumn, t.LeftColumn + t.FullMatchedLength)
+                        | _ -> None)
+                    |> List.filter (fun (lCol, rCol) ->
+                        spans 
+                        |> Seq.exists (fun s -> 
+                            (lCol < s.StartCol - 1 || lCol > s.EndCol - 1)
+                            && (rCol < s.StartCol - 1  || rCol > s.EndCol - 1)))
+                    |> List.map (fun (lCol, rCol) ->
+                        { Category = Category.Operator
+                          WordSpan = 
+                            { SymbolKind = SymbolKind.Operator
+                              Line = line
+                              StartCol = lCol
+                              EndCol = rCol }
+                          Snapshot = None })
+                acc.AddRange(operatorTokens)
+                acc) (ResizeArray())
+
+        Array.append spansBasedOnSymbolUse (spansBasedOnLexer.ToArray())
+
 module SourceCodeClassifier =
     let getIdentifierCategory = function
         | Entity (_, ValueType, _) -> Category.ValueType
@@ -177,11 +215,9 @@ module SourceCodeClassifier =
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
             |> Seq.map (fun (line, sus) ->
                 let tokens = lexer.TokenizeLine (line - 1)
-                sus
-                |> Seq.choose (fun su ->
+                sus |> Seq.choose (fun su ->
                     let r = su.SymbolUse.RangeAlternate
-                    lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1)
-                    |> Option.bind (fun sym -> 
+                    lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) |> Option.bind (fun sym -> 
                         //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
                         match sym.Kind with
                         | SymbolKind.Ident ->
@@ -307,22 +343,13 @@ module SourceCodeClassifier =
                           EndCol = r.EndColumn + 1 }}))
             |> Option.getOrElse [||]
 
-        let operatorSpans =
-            allSymbolsUses2
-            |> Array.choose (fun (_, span) -> 
-                if span.SymbolKind = SymbolKind.Operator then
-                    Some { Category = Category.Operator
-                           WordSpan = span
-                           Snapshot = None }
-                else None)
-
         let allSpans = 
             spansBasedOnSymbolsUses 
             |> Seq.append (QuotationCategorizer.getCategories ast lexer)
             |> Seq.append printfSpecifiersRanges
             |> Seq.append (StringCategorizers.EscapedChars.getCategories ast getTextLine)
             |> Seq.append unusedOpenDeclarationSpans
-            |> Seq.append operatorSpans
+            |> Seq.append (OperatorCategorizer.getSpans allSymbolsUses2 wordSpansByLine lexer)
             |> Seq.toArray
 
     //    for span in allSpans do
