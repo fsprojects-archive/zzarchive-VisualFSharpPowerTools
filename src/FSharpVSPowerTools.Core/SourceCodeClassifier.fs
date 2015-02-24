@@ -142,6 +142,13 @@ module private OperatorCategorizer =
                            WordSpan = span
                            Snapshot = None }
                 else None)
+
+        let operatorSpansByLine = 
+            spansBasedOnSymbolUse 
+            |> Seq.map (fun span -> span.WordSpan)
+            |> Seq.groupBy (fun s -> s.Line) 
+            |> Map.ofSeq
+
         //System.Diagnostics.Debugger.Launch() |> ignore
         let spansBasedOnLexer =
             tokensByLine |> Array.foldi (fun (acc: ResizeArray<_>) line tokens -> 
@@ -149,10 +156,14 @@ module private OperatorCategorizer =
                     tokens
                     |> List.choose (fun t -> 
                         match t.TokenName with 
-                        | "EQUALS" -> Some (t.LeftColumn, t.LeftColumn + t.FullMatchedLength)
+                        | "EQUALS" -> Some (t.LeftColumn, t.RightColumn + 1)
                         | _ -> None)
                     |> List.filter (fun (lCol, rCol) ->
-                        match spansByLine |> Map.tryFind (line + 1) with
+                        let spans =
+                            match operatorSpansByLine |> Map.tryFind (line + 1) with
+                            | None -> spansByLine |> Map.tryFind (line + 1)
+                            | x -> x
+                        match spans with
                         | Some spans -> 
                             spans |> Seq.exists (fun s -> 
                                 (lCol < s.StartCol && rCol < s.StartCol) || 

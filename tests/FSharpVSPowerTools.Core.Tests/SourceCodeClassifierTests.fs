@@ -1704,16 +1704,20 @@ let ``operators based on SymbolUse``() =
 let _ = 1 + 2
 let _ = 1 = 2
 let (>>=) _x _y = ()
-let _ = 1 >>= 2
+let _ = 1 >>= fun _ -> 2
 """
     => [ 2, [ Cat.Operator, 10, 11; Cat.Operator, 6, 7 ]
          3, [ Cat.Operator, 10, 11; Cat.Operator, 6, 7 ]
          4, [ Cat.Operator, 5, 8; Cat.Operator, 16, 17 ]
          5, [ Cat.Operator, 10, 13; Cat.Operator, 6, 7 ]] 
-         
+
 [<Test>]
 let ``operators based on Lexer``() =
     """
 let _ = 1
+let a = [||]
+let (>>=) _x _y = ()
+a.[0] >>= fun _ -> ()
 """
-    => [ 2, [ Cat.Operator, 6, 7 ]] 
+    => [ 2, [ Cat.Operator, 6, 7 ]
+         5, [ Cat.Operator, 1, 2; Cat.Operator, 6, 9 ]] 
