@@ -155,8 +155,8 @@ module private OperatorCategorizer =
                         match spansByLine |> Map.tryFind (line + 1) with
                         | Some spans -> 
                             spans |> Seq.exists (fun s -> 
-                                (lCol < s.StartCol - 1 || lCol > s.EndCol - 1)
-                                && (rCol < s.StartCol - 1  || rCol > s.EndCol - 1))
+                                (lCol < s.StartCol && rCol < s.StartCol) || 
+                                (lCol > s.EndCol && rCol > s.EndCol))
                         | None -> true)
                     |> List.map (fun (lCol, rCol) ->
                         { Category = Category.Operator

@@ -113,7 +113,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
         |> List.sortBy (fun (line, _) -> line)
     
     try actual |> Collection.assertEquiv expected
-    with e -> 
+    with _ -> 
         debug "AST: %A" (checkResults.GetUntypedAst())
         for x in actual do
             debug "Actual: %A" x
@@ -420,7 +420,7 @@ let ``generic type with ignored type parameter``() =
     """
 let _ = list<_>.Empty
 """
-    => [ 2, [ Cat.ReferenceType, 8, 12 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ReferenceType, 8, 12 ]]
 
 [<Test>]
 let ``F# namespace``() = 
@@ -436,7 +436,7 @@ type System.String with
     member __.``Long func``() = "x"
 let _ = "x".``Long func``().Substring(3)
 """
-    => [ 4, [ Cat.Function, 12, 25; Cat.Function, 28, 37 ]]
+    => [ 4, [ Cat.Operator, 6, 7; Cat.Function, 12, 25; Cat.Function, 28, 37 ]]
 
 [<Test; Ignore "WIP">]
 let ``indexer``() = 
@@ -557,7 +557,7 @@ let _  = f <@ 1
               + 2
               + 3 @> <@@ 1 @@>
 """
-    => [ 3, [ Cat.Function, 9, 10; Cat.Quotation, 11, 15 ]
+    => [ 3, [ Cat.Operator, 7, 8; Cat.Function, 9, 10; Cat.Quotation, 11, 15 ]
          4, [ Cat.Operator, 14, 15; Cat.Quotation, 14, 17 ]
          5, [ Cat.Operator, 14, 15; Cat.Quotation, 14, 20; Cat.Quotation, 21, 30 ]]
 
@@ -604,7 +604,7 @@ let ``quotation as default constructor arguments``() =
 type ClassWithQuotationInConstructor(expr) = class end
 let _ = ClassWithQuotationInConstructor(<@ 1 @>)
 """
-    => [ 3, [ Cat.ReferenceType, 8, 39; Cat.Quotation, 40, 47 ]]
+    => [ 3, [ Cat.Operator, 6, 7; Cat.ReferenceType, 8, 39; Cat.Quotation, 40, 47 ]]
 
 [<Test>]
 let ``quotation as initialization of auto property``() = 
@@ -993,7 +993,7 @@ let ``multiple open declaration in the same line``() =
     """
 open System.IO; let _ = File.Create "";; open System.IO
 """
-    => [ 2, [ Cat.ReferenceType, 24, 28; Cat.Function, 29, 35; Cat.Unused, 46, 55 ]]
+    => [ 2, [ Cat.Operator, 22, 23; Cat.ReferenceType, 24, 28; Cat.Function, 29, 35; Cat.Unused, 46, 55 ]]
 
 [<Test>]
 let ``open a nested module inside another one is not unused``() =
@@ -1493,8 +1493,8 @@ let _ = printfn ""
 let _ = printfn "%s %s"
 do printfn "%6d %%  % 06d" 1 2
 """
-    => [ 2, [ Cat.Function, 8, 15 ]
-         3, [ Cat.Function, 8, 15; Cat.Printf, 17, 19; Cat.Printf, 20, 22 ]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15 ]
+         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 19; Cat.Printf, 20, 22 ]
          4, [ Cat.Function, 3, 10; Cat.Printf, 12, 15; Cat.Printf, 20, 25 ]]
 
 [<Test>]
@@ -1509,7 +1509,7 @@ try
 with _ ->
     failwithf "foo %d bar" 0
 """
-    =>  [ 3, [ Cat.Function, 12, 19; Cat.Printf, 25, 27 ]
+    =>  [ 3, [ Cat.Operator, 10, 11; Cat.Function, 12, 19; Cat.Printf, 25, 27 ]
           5, [ Cat.Function, 8, 15; Cat.Printf, 21, 23 ]
           7, [ Cat.Function, 8, 14; Cat.Printf, 20, 22 ]
           9, [ Cat.Function, 4, 13; Cat.Printf, 19, 21 ]]
@@ -1549,12 +1549,12 @@ let ``printf formatters in escaped string``() =
     """
 let _ = sprintf @"%A"
 """
-    => [ 2, [ Cat.Function, 8, 15; Cat.Printf, 18, 20 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 18, 20 ]]
 
 [<Test>]
 let ``printf formatters in triple-quoted string``() =
     "let _ = sprintf \"\"\"%A\"\"\""
-    => [ 1, [ Cat.Function, 8, 15; Cat.Printf, 19, 21 ]]
+    => [ 1, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 19, 21 ]]
 
 [<Test>]
 let ``multiline printf formatters``() =
@@ -1563,7 +1563,7 @@ let _ = printfn "foo %s %d
                  %A bar
 %i"
 """
-    => [ 2, [ Cat.Function, 8, 15; Cat.Printf, 21, 23; Cat.Printf, 24, 26 ] 
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 21, 23; Cat.Printf, 24, 26 ] 
          3, [ Cat.Printf, 17, 19 ]
          4, [ Cat.Printf, 0, 2 ] ]
 
@@ -1606,7 +1606,7 @@ let ``printf formatters are not colorized in plane strings``() =
     """
 let _ = sprintf "foo", "%A"
 """
-    => [ 2, [Cat.Function, 8, 15 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15 ]]
 
 [<Test>]
 let ``fprintf formatters``() =
@@ -1625,15 +1625,15 @@ let ``kprintf and bprintf formatters``() =
 let _ = Printf.kprintf (fun _ -> ()) "%A" 1
 let _ = Printf.bprintf null "%A" 1
 """
-    => [ 2, [Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 38, 40]
-         3, [Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 29, 31]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 38, 40]
+         3, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 29, 31]]
 
 [<Test>]
 let ``wildcards in printf formatters``() =
     """
 let _ = sprintf "%*d" 1
 """
-    => [ 2, [Cat.Function, 8, 15; Cat.Printf, 17, 20 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 20 ]]
 
 [<Test>]
 let ``float printf formatters``() =
@@ -1641,15 +1641,15 @@ let ``float printf formatters``() =
 let _ = sprintf "%7.1f" 1.0
 let _ = sprintf "%-8.1e+567" 1.0
 """
-    => [ 2, [Cat.Function, 8, 15; Cat.Printf, 17, 22]
-         3, [Cat.Function, 8, 15; Cat.Printf, 17, 23]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 22]
+         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 23]]
 
 [<Test>]
 let ``malformed printf formatters``() =
     """
 let _ = sprintf "%.7f %7.1A %7.f %--8.1f"
 """
-    => [ 2, [Cat.Function, 8, 15]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15]]
 
 [<Test>]
 let ``all escaped symbols in string``() =
@@ -1693,7 +1693,8 @@ let ``escaped symbols in method chains``() =
     """
 let _ = "a\r\n".Replace("\r\n", "\n").Split('\r')
 """
-    => [ 2, [ Cat.Escaped, 10, 12; Cat.Escaped, 12, 14; Cat.Function, 16, 23
+    => [ 2, [ Cat.Operator, 6, 7; 
+              Cat.Escaped, 10, 12; Cat.Escaped, 12, 14; Cat.Function, 16, 23
               Cat.Escaped, 25, 27; Cat.Escaped, 27, 29
               Cat.Escaped, 33, 35; Cat.Function, 38, 43 ]]
 
