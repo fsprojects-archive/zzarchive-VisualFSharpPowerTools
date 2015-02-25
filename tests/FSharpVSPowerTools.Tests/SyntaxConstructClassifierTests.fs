@@ -85,26 +85,26 @@ module Module1 =
         helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
-            helper.ClassificationSpansOf(buffer, classifier)
-            |> Seq.toList
-            |> assertEqual
-                [ { Classification = "FSharp.Function"; Span = (2, 5) => (2, 18) }
-                  { Classification = "FSharp.Operator"; Span = (2, 26) => (2, 26) }
-                  { Classification = "FSharp.Operator"; Span = (2, 22) => (2, 22) }
-                  { Classification = "FSharp.Operator"; Span = (3, 23) => (3, 23) }
-                  { Classification = "FSharp.ReferenceType"; Span = (3, 25) => (3, 35) }
-                  { Classification = "FSharp.ValueType"; Span = (3, 37) => (3, 39) } 
-                  { Classification = "FSharp.MutableVar"; Span = (4, 13) => (4, 24) }
-                  { Classification = "FSharp.Operator"; Span = (4, 26) => (4, 26) }
-                  { Classification = "FSharp.PatternCase"; Span = (5, 7) => (5, 19) }
-                  { Classification = "FSharp.Operator"; Span = (5, 27) => (5, 27) } 
-                  { Classification = "FSharp.PatternCase"; Span = (5, 29) => (5, 32) }
-                  { Classification = "FSharp.Operator"; Span = (6, 7) => (6, 7) }
-                  { Classification = "FSharp.Quotation"; Span = (6, 9) => (6, 19) } 
-                  { Classification = "FSharp.Operator"; Span = (6, 14) => (6, 14) }
-                  { Classification = "FSharp.Module"; Span = (7, 8) => (7, 14) } 
-                  { Classification = "FSharp.Operator"; Span = (7, 16) => (7, 16) }
-                  { Classification = "FSharp.Operator"; Span = (8, 11) => (8, 11) }] 
+        let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
+        let expected =
+            [ { Classification = "FSharp.Function"; Span = (2, 5) => (2, 18) }
+              { Classification = "FSharp.Operator"; Span = (2, 22) => (2, 22) }
+              { Classification = "FSharp.Operator"; Span = (2, 26) => (2, 26) }
+              { Classification = "FSharp.Operator"; Span = (3, 23) => (3, 23) }
+              { Classification = "FSharp.ReferenceType"; Span = (3, 25) => (3, 35) }
+              { Classification = "FSharp.ValueType"; Span = (3, 37) => (3, 39) } 
+              { Classification = "FSharp.MutableVar"; Span = (4, 13) => (4, 24) }
+              { Classification = "FSharp.Operator"; Span = (4, 26) => (4, 26) }
+              { Classification = "FSharp.PatternCase"; Span = (5, 7) => (5, 19) }
+              { Classification = "FSharp.Operator"; Span = (5, 27) => (5, 27) } 
+              { Classification = "FSharp.PatternCase"; Span = (5, 29) => (5, 32) }
+              { Classification = "FSharp.Operator"; Span = (6, 7) => (6, 7) }
+              { Classification = "FSharp.Quotation"; Span = (6, 9) => (6, 19) } 
+              { Classification = "FSharp.Operator"; Span = (6, 14) => (6, 14) }
+              { Classification = "FSharp.Module"; Span = (7, 8) => (7, 14) } 
+              { Classification = "FSharp.Operator"; Span = (7, 16) => (7, 16) }
+              { Classification = "FSharp.Operator"; Span = (8, 11) => (8, 11) }] 
+        CollectionAssert.AreEquivalent(expected, actual)
 
     [<Test>]
     let ``should be able to get classification spans for unused items``() = 
@@ -130,12 +130,12 @@ let internal f() = ()
 
         // second event is raised when all spans, including Unused are ready
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
-            helper.ClassificationSpansOf(buffer, classifier)
-            |> Seq.toList
-            |> assertEqual
+            let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
+            let expected =
                 [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) };
                   { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) };
                   { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) } ]
+            CollectionAssert.AreEquivalent(expected, actual)
         File.Delete(fileName)
         
 
@@ -156,9 +156,8 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ -> 
-            helper.ClassificationSpansOf(buffer, classifier)
-            |> Seq.toList
-            |> assertEqual 
+            let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
+            let expected = 
                 [ { Classification = "FSharp.Module"; Span = (2, 8, 2, 24) }
                   
                   { Classification = "FSharp.ReferenceType"; Span = (4, 6, 4, 12) }
@@ -186,3 +185,4 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
                   { Classification = "FSharp.Function"; Span = (7, 59, 7, 67) }
                   { Classification = "FSharp.Operator"; Span = (7, 71, 7, 72) } 
                   { Classification = "FSharp.Function"; Span = (7, 74, 7, 79) } ]
+            CollectionAssert.AreEquivalent(expected, actual)
