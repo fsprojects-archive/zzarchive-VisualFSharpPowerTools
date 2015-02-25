@@ -1699,7 +1699,7 @@ let _ = "a\r\n".Replace("\r\n", "\n").Split('\r')
               Cat.Escaped, 33, 35; Cat.Function, 38, 43 ]]
 
 [<Test>]
-let ``operators based on SymbolUse``() =
+let ``operators``() =
     """
 let _ = 1 + 2
 let _ = 1 = 2
@@ -1712,7 +1712,7 @@ let _ = 1 >>= fun _ -> 2
          5, [ Cat.Operator, 10, 13; Cat.Operator, 6, 7 ]] 
 
 [<Test>]
-let ``operators based on Lexer``() =
+let ``lexer-based operator is hidden by symbol-based one``() =
     """
 let _ = 1
 let a = [||]
@@ -1720,4 +1720,13 @@ let (>>=) _x _y = ()
 a.[0] >>= fun _ -> ()
 """
     => [ 2, [ Cat.Operator, 6, 7 ]
-         5, [ Cat.Operator, 1, 2; Cat.Operator, 6, 9 ]] 
+         5, [ Cat.Operator, 1, 2; Cat.Function, 1, 2; Cat.Operator, 6, 9 ]]
+
+[<Test>]
+let ``cast operators``() =
+    """
+let _ = System.DateTime.Now :> obj
+let _ = System.DateTime.Now :?> obj
+"""
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 30; Cat.ReferenceType, 31, 34 ] 
+         3, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 31; Cat.ReferenceType, 32, 35 ] ]

@@ -143,31 +143,27 @@ module private OperatorCategorizer =
                            Snapshot = None }
                 else None)
 
-        let operatorSpansByLine = 
-            spansBasedOnSymbolUse 
-            |> Seq.map (fun span -> span.WordSpan)
-            |> Seq.groupBy (fun s -> s.Line) 
-            |> Map.ofSeq
-
-        //System.Diagnostics.Debugger.Launch() |> ignore
         let spansBasedOnLexer =
             tokensByLine |> Array.foldi (fun (acc: ResizeArray<_>) line tokens -> 
                 let operatorTokens = 
                     tokens
+                    // pick only =, :> and :?> operators
                     |> List.choose (fun t -> 
-                        match t.TokenName with 
-                        | "EQUALS" -> Some (t.LeftColumn, t.RightColumn + 1)
+                        match Parser.tokenTagToTokenId t.Tag with 
+                        | Parser.TOKEN_EQUALS 
+                        | Parser.TOKEN_COLON_GREATER
+                        | Parser.TOKEN_COLON_QMARK_GREATER -> 
+                            Some (t.LeftColumn, t.RightColumn + 1)
                         | _ -> None)
+                    // pick tokens which are not overlapped with any symbols
                     |> List.filter (fun (lCol, rCol) ->
-                        let spans =
-                            match operatorSpansByLine |> Map.tryFind (line + 1) with
-                            | None -> spansByLine |> Map.tryFind (line + 1)
-                            | x -> x
-                        match spans with
+                        match spansByLine |> Map.tryFind (line + 1) with
                         | Some spans -> 
-                            spans |> Seq.exists (fun s -> 
-                                (lCol < s.StartCol && rCol < s.StartCol) || 
-                                (lCol > s.EndCol && rCol > s.EndCol))
+                            spans 
+                            |> Seq.exists (fun s -> 
+                                (s.StartCol <= lCol && s.EndCol >= lCol) || 
+                                (s.StartCol <= rCol && s.EndCol >= rCol))
+                            |> not
                         | None -> true)
                     |> List.map (fun (lCol, rCol) ->
                         { Category = Category.Operator
