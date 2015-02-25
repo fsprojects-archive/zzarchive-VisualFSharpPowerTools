@@ -128,8 +128,8 @@ let internal f() = ()
             helper.ClassificationSpansOf(buffer, classifier)
             |> Seq.toList
             |> assertEqual
-                [ { Classification = "FSharp.Function"
-                    Span = (4, 14) => (4, 14) } ]
+                [ { Classification = "FSharp.Function"; Span = (4, 14) => (4, 14) }
+                  { Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
 
         // second event is raised when all spans, including Unused are ready
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
