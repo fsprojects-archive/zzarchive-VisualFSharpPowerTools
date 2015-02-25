@@ -62,13 +62,16 @@ module SyntaxConstructClassifierTests =
         DocumentEventListener.SkipTimerDelay <- true
 
     [<Test>]
-    let ``should not return anything if the code doesn't contain semantic symbol``() = 
+    let ``should return a syngle operator symbol if the code doesn't contain any other symbols``() = 
         let content = "let x = 0"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
-            (fun () -> helper.ClassificationSpansOf(buffer, classifier) |> Seq.isEmpty |> assertTrue)
+            (fun () -> 
+            helper.ClassificationSpansOf(buffer, classifier) 
+            |> Seq.toList
+            |> assertEqual [ { Classification = "FSharp.Operator"; Span = (1, 7) => (1, 7) } ])
 
     [<Test>]
     let ``should be able to get classification spans for main categories``() = 
@@ -132,9 +135,10 @@ let internal f() = ()
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
             let expected =
-                [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) };
-                  { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) };
-                  { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) } ]
+                [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) }
+                  { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) }
+                  { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) }
+                  {Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
             CollectionAssert.AreEquivalent(expected, actual)
         File.Delete(fileName)
         
