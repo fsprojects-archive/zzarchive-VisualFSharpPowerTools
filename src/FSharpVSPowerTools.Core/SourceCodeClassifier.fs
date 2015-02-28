@@ -152,7 +152,8 @@ module private OperatorCategorizer =
                         match Parser.tokenTagToTokenId t.Tag with 
                         | Parser.TOKEN_EQUALS 
                         | Parser.TOKEN_COLON_GREATER
-                        | Parser.TOKEN_COLON_QMARK_GREATER -> 
+                        | Parser.TOKEN_COLON_QMARK_GREATER 
+                        | Parser.TOKEN_COLON_QMARK -> 
                             Some (t.LeftColumn, t.RightColumn + 1)
                         | _ -> None)
                     // pick tokens which are not overlapped with any symbols

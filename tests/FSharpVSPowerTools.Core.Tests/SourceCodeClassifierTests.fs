@@ -1705,11 +1705,13 @@ let _ = 1 + 2
 let _ = 1 = 2
 let (>>=) _x _y = ()
 let _ = 1 >>= fun _ -> 2
+let _ = match obj() with | :? exn -> () | _ -> ()
 """
     => [ 2, [ Cat.Operator, 10, 11; Cat.Operator, 6, 7 ]
          3, [ Cat.Operator, 10, 11; Cat.Operator, 6, 7 ]
          4, [ Cat.Operator, 5, 8; Cat.Operator, 16, 17 ]
-         5, [ Cat.Operator, 10, 13; Cat.Operator, 6, 7 ]] 
+         5, [ Cat.Operator, 10, 13; Cat.Operator, 6, 7 ] 
+         6, [ Cat.Operator, 6, 7; Cat.ReferenceType, 14, 17; Cat.Operator, 27, 29; Cat.ReferenceType, 30, 33 ]] 
 
 [<Test>]
 let ``lexer-based operator is hidden by symbol-based one``() =
