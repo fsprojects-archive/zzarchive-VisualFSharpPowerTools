@@ -17,8 +17,6 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
-open EnvDTE
-open EnvDTE80
 
 type GoToDefinitionFilter(textDocument: ITextDocument,
                           view: IWpfTextView, 
