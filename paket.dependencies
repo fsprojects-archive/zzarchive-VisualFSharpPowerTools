@@ -12,5 +12,7 @@ nuget FsCheck
 nuget NUnit
 nuget Foq
 nuget Nuget.CommandLine
+nuget SourceLink
+nuget SourceLink.SymbolStore
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx

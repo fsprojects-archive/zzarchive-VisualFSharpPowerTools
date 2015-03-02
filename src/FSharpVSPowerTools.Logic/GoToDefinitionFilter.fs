@@ -17,6 +17,9 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
+open SourceLink
+open SourceLink.SymbolStore
+open System.Diagnostics
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -277,6 +280,48 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
+    // Implementation location is pointed to fsi files for out-of-solution symbols
+    // In that case, we create fake locations in the implementation files
+    let tryGetImplementationLocation (fsSymbol: FSharpSymbol) =
+        fsSymbol.ImplementationLocation
+        |> Option.map (fun range ->
+            if range.FileName.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase) then
+                let implFileName = Path.ChangeExtension(range.FileName, ".fs")
+                mkRange implFileName (mkPos 0 0) (mkPos 0 0)
+            else range)
+
+    let navigateToSource (fsSymbol: FSharpSymbol) (symbolCache: SymbolCache)(url: string) = 
+        match symbolCache.DownloadFile url with
+        | null ->
+            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+            statusBar.SetText(sprintf "The url '%s' is invalid and can't be downloaded." url) |> ignore
+        | filePath ->
+            tryGetImplementationLocation fsSymbol
+            |> Option.iter (fun r -> 
+                serviceProvider.NavigateTo(filePath, r.StartLine, r.StartColumn, r.EndLine, r.EndColumn))
+
+    let tryFindSourceUrl (fsSymbol: FSharpSymbol) = 
+        fsSymbol.Assembly.FileName
+        |> Option.bind (fun assemblyPath -> 
+            let pdbPath = Path.ChangeExtension(assemblyPath, ".pdb")
+            let cacheDir = Path.Combine(Path.GetTempPath(), Path.GetFileNameSafe(assemblyPath) |> hash |> string)
+            Directory.CreateDirectory(cacheDir) |> ignore
+            if File.Exists(pdbPath) then
+                use pdbStream = File.OpenRead(pdbPath)
+                let symbolCache = SymbolCache(cacheDir)
+                let pdbReader = symbolCache.ReadPdb pdbStream pdbPath
+                if pdbReader.IsSourceIndexed then
+                    let documents = [| for d in pdbReader.Documents -> d.SourceFilePath |]
+                    tryGetImplementationLocation fsSymbol
+                    |> Option.bind (fun range -> 
+                        let path = Path.GetFullPathSafe(range.FileName)
+                        Debug.Assert(documents |> Array.exists ((=) path), "Path should exist in the list of documents.")
+                        pdbReader.GetDownloadUrl(path)
+                        |> Option.map (fun url -> 
+                            symbolCache, url))
+                else None
+            else None)
+
     let cancellationToken = Atom None
 
     let gotoDefinition continueCommandChain =
@@ -302,7 +347,13 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                         if shouldGenerateDefinition fsSymbolUse.Symbol then
                             return! navigateToMetadata project span parseTree fsSymbolUse
                     | NavigationPreference.DownloadedSource ->          
-                        return Logging.messageBoxInfo "Not implemented yet"
+                        match tryFindSourceUrl fsSymbolUse.Symbol with
+                        | Some(symbolCache, url) ->
+                            return navigateToSource fsSymbolUse.Symbol symbolCache url
+                        | None ->
+                            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                            statusBar.SetText("Can't navigate to source since it is not source indexed.") |> ignore
+                            return ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
