@@ -28,6 +28,7 @@ namespace FSharpVSPowerTools
         public const string FSharpUnused = Constants.fsharpUnused;
         public const string FSharpPrintf = Constants.fsharpPrintf;
         public const string FSharpEscaped = Constants.fsharpEscaped;
+        public const string FSharpOperator = Constants.fsharpOperator;
 
         [Export]
         [Name(FSharpReferenceType)]
@@ -78,6 +79,11 @@ namespace FSharpVSPowerTools
         [Name(FSharpEscaped)]
         [BaseDefinition("identifier")]
         internal static ClassificationTypeDefinition FSharpEscapedClassificationType = null;
+
+        [Export]
+        [Name(FSharpOperator)]
+        [BaseDefinition("identifier")]
+        internal static ClassificationTypeDefinition FSharpOperatorClassificationType = null;
     }
 
     public class FontColor
@@ -114,7 +120,8 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(43, 145, 175)) },
                 { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(157, 157, 157)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(43, 145, 175)) },
-                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(255, 0, 128)) }
+                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(255, 0, 128)) },
+                { ClassificationTypes.FSharpOperator, new FontColor(Colors.Black) }
             };
 
             themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
@@ -133,7 +140,8 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpModule, new FontColor(Color.FromRgb(78, 201, 176)) },
                 { ClassificationTypes.FSharpUnused, new FontColor(Color.FromRgb(155, 155, 155)) },
                 { ClassificationTypes.FSharpPrintf, new FontColor(Color.FromRgb(78, 220, 176)) },
-                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(190, 0, 94)) }
+                { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(190, 0, 94)) },
+                { ClassificationTypes.FSharpOperator, new FontColor(Color.FromRgb(220, 220, 220)) }
             };
 
             themeColors.Add(VisualStudioTheme.Dark, darkColors);
@@ -387,6 +395,23 @@ namespace FSharpVSPowerTools
              {
                  this.DisplayName = "F# Escaped Characters";
                  var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpEscaped);
+                 this.ForegroundColor = colors.Foreground;
+                 this.BackgroundColor = colors.Background;
+             }
+        }
+
+        [Export(typeof(EditorFormatDefinition))]
+        [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpOperator)]
+        [Name(ClassificationTypes.FSharpOperator)]
+        [UserVisible(true)]
+        [Order(After = Priority.Low, Before = Priority.Default)]
+        internal sealed class FSharpOperatorFormat : ClassificationFormatDefinition
+        {
+             [ImportingConstructor]
+             public FSharpOperatorFormat(ClassificationColorManager colorManager)
+             {
+                 this.DisplayName = "F# Operators";
+                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpOperator);
                  this.ForegroundColor = colors.Foreground;
                  this.BackgroundColor = colors.Background;
              }

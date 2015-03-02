@@ -52,6 +52,13 @@ module Array =
         |> snd 
         |> List.toArray
 
+    let foldi (folder : 'State -> int -> 'T -> 'State) (state : 'State) (array : 'T[]) =
+        let mutable state = state
+        let len = array.Length
+        for i = 0 to len - 1 do
+            state <- folder state i array.[i]
+        state
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Option =

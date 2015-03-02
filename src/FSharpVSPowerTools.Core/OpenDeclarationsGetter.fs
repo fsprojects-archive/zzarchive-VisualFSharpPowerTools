@@ -44,7 +44,7 @@ module OpenDeclarationGetter =
     open System 
     open System.Diagnostics
 
-    let getAutoOpenModules entities =
+    let private getAutoOpenModules entities =
         entities 
         |> List.filter (fun e -> 
              match e.Kind with
@@ -52,7 +52,7 @@ module OpenDeclarationGetter =
              | _ -> false)
         |> List.map (fun e -> e.CleanedIdents)
 
-    let getActivePatterns entities =
+    let private getActivePatterns entities =
         entities 
         |> List.filter (fun e -> 
              match e.Kind with
@@ -312,3 +312,155 @@ module OpenDeclarationGetter =
         }
         |> Seq.distinct
         |> Seq.toList
+
+    let private removeModuleSuffixes allEntities (symbolUses: SymbolUse[]) =
+        match allEntities with
+        | Some entities ->
+            symbolUses 
+            |> Array.map (fun symbolUse ->
+                let fullNames =
+                    symbolUse.FullNames
+                    |> Array.map (fun fullName ->
+                        match entities |> Map.tryFind (String.Join (".", fullName)) with
+                        | Some [cleanIdents] ->
+                            //debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
+                            cleanIdents
+                        | Some (firstCleanIdents :: _ as cleanIdentsList) ->
+                            if cleanIdentsList |> List.exists ((=) fullName) then
+                                //debug "[SourceCodeClassifier] An exact match found among several clean idents: %A" fullName
+                                fullName
+                            else
+                                //debug "[SourceCodeClassifier] No match found among several clean idents, return the first one FullName %A -> %A" 
+                                  //    fullName firstCleanIdents
+                                firstCleanIdents
+                        | _ -> 
+                            //debug "[SourceCodeClassifier] NOT Cleaned FullName %A" fullName
+                            fullName)
+                { symbolUse with FullNames = fullNames })
+        | None -> symbolUses
+
+    open FSharpVSPowerTools.TypedAstPatterns
+    open System.Collections.Generic
+
+    let private getSymbolUsesPotentiallyRequireOpenDecls symbolsUses =
+        symbolsUses
+        |> Array.filter (fun symbolUse ->
+            let res = 
+                match symbolUse.SymbolUse.Symbol with
+                | Pattern | RecordField _
+                | Entity (Class | (AbbreviatedType _ | FSharpType | ValueType | FSharpModule | Array), _, _)
+                | Entity (_, _, Tuple)
+                | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
+                | MemberFunctionOrValue func -> not func.IsMember
+                | _ -> false
+            res) 
+
+    // Filter out symbols which ranges are fully included into a bigger symbols. 
+    // For example, for this code: Ns.Module.Module1.Type.NestedType.Method() FCS returns the following symbols: 
+    // Ns, Module, Module1, Type, NestedType, Method.
+    // We want to filter all of them but the longest one (Method).
+    let private filterNestedSymbolUses (longIdents: IDictionary<_,_>) symbolUses =
+        symbolUses
+        |> Array.map (fun sUse ->
+            match longIdents.TryGetValue sUse.SymbolUse.RangeAlternate.End with
+            | true, longIdent -> sUse, Some longIdent
+            | _ -> sUse, None)
+        |> Seq.groupBy (fun (_, longIdent) -> longIdent)
+        |> Seq.map (fun (longIdent, sUses) -> longIdent, sUses |> Seq.map fst)
+        |> Seq.map (fun (longIdent, symbolUses) ->
+            match longIdent with
+            | Some _ -> 
+                (* Find all longest SymbolUses which has unique roots. For example:
+                           
+                    module Top
+                    module M =
+                        type System.IO.Path with
+                            member static ExtensionMethod() = ()
+
+                    open M
+                    open System
+                    let _ = IO.Path.ExtensionMethod()
+
+                    The last line contains three SymbolUses: "System.IO", "System.IO.Path" and "Top.M.ExtensionMethod". 
+                    So, we filter out "System.IO" since it's a prefix of "System.IO.Path".
+
+                *)
+                let res =
+                    symbolUses
+                    |> Seq.sortBy (fun symbolUse -> -symbolUse.SymbolUse.RangeAlternate.EndColumn)
+                    |> Seq.fold (fun (prev, acc) next ->
+                         match prev with
+                         | Some prev -> 
+                            if prev.FullNames
+                               |> Array.exists (fun prevFullName ->
+                                    next.FullNames
+                                    |> Array.exists (fun nextFullName ->
+                                         nextFullName.Length < prevFullName.Length
+                                         && prevFullName |> Array.startsWith nextFullName)) then 
+                                Some prev, acc
+                            else Some next, next :: acc
+                         | None -> Some next, next :: acc)
+                       (None, [])
+                    |> snd
+                    |> List.rev
+                    |> List.toSeq
+                res
+            | None -> symbolUses)
+        |> Seq.concat
+        |> Seq.toArray
+
+    let private getFullPrefix (longIdents: IDictionary<_,_>) fullName (endPos: Range.pos): Idents option =
+        match longIdents.TryGetValue endPos with
+        | true, longIdent ->
+            let rec loop matchFound longIdents symbolIdents =
+                match longIdents, symbolIdents with
+                | [], _ -> symbolIdents
+                | _, [] -> []
+                | lh :: lt, sh :: st ->
+                    if lh <> sh then
+                        if matchFound then symbolIdents else loop matchFound lt symbolIdents
+                    else loop true lt st
+                        
+            let prefix = 
+                loop false (longIdent |> Array.rev |> List.ofArray) (fullName |> Array.rev |> List.ofArray)
+                |> List.rev
+                |> List.toArray
+                            
+//            debug "[SourceCodeClassifier] QualifiedSymbol: FullName = %A, Symbol end pos = (%d, %d), Res = %A" 
+//                  fullName endPos.Line endPos.Column prefix
+            Some prefix
+        | _ -> None
+
+    let getUnusedOpenDeclarations ast allSymbolsUses openDeclarations allEntities =
+        let longIdentsByEndPos = UntypedAstUtils.getLongIdents ast
+
+        let symbolPrefixes: (Range.range * Idents) [] =
+            allSymbolsUses
+            |> getSymbolUsesPotentiallyRequireOpenDecls
+            //|> printSymbolUses "SymbolUsesPotentiallyRequireOpenDecls"
+            |> removeModuleSuffixes allEntities
+            //|> printSymbolUses "SymbolUsesWithModuleSuffixedRemoved"
+            |> filterNestedSymbolUses longIdentsByEndPos
+            //|> printSymbolUses "SymbolUses without nested"
+            |> Array.map (fun symbolUse ->
+                let sUseRange = symbolUse.SymbolUse.RangeAlternate
+                symbolUse.FullNames
+                |> Array.choose (fun fullName ->
+                    getFullPrefix longIdentsByEndPos fullName sUseRange.End
+                    |> Option.bind (function
+                         | [||] -> None
+                         | prefix -> Some (sUseRange, prefix)))) 
+            |> Array.concat
+
+        //debug "[SourceCodeClassifier] Symbols prefixes:\n%A,\nOpen declarations:\n%A" symbolPrefixes openDeclarations
+        
+        let openDeclarations = 
+            Array.foldBack (fun (symbolRange: Range.range, symbolPrefix: Idents) openDecls ->
+                openDecls |> updateOpenDeclsWithSymbolPrefix symbolPrefix symbolRange
+            ) symbolPrefixes openDeclarations
+            |> spreadIsUsedFlagToParents
+
+        //debug "[SourceCodeClassifier] Fully processed open declarations:"
+        //for decl in openDeclarations do debug "%A" decl
+
+        openDeclarations |> List.filter (fun decl -> not decl.IsUsed)

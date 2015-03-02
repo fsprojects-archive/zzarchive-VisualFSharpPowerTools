@@ -31,6 +31,8 @@ type internal DraftToken =
         { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
 
 module Lexer =
+    open Microsoft.FSharp.Compiler
+
     /// Get the array of all lex states in current source
     let internal getLexStates defines (source: string) =
         [|
@@ -88,9 +90,9 @@ module Lexer =
         let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
     
         let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) token =
-            match token.TokenName with
-            | "QUOTE" -> GenericTypeParameterPrefix
-            | "INFIX_AT_HAT_OP" ->
+            match Parser.tokenTagToTokenId token.Tag with
+            | Parser.TOKEN_QUOTE -> GenericTypeParameterPrefix
+            | Parser.TOKEN_INFIX_AT_HAT_OP ->
                  // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.
                  // We have to check the char itself to distingush one from another.
                  if token.FullMatchedLength = 1 && lineStr.[token.LeftColumn] = '^' then 

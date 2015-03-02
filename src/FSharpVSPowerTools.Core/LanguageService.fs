@@ -121,11 +121,13 @@ type AllowStaleResults =
     | No
 
 type WordSpan = 
-    { Line: int
+    { SymbolKind: SymbolKind
+      Line: int
       StartCol: int
       EndCol: int }
-    static member FromRange (r: Range.range) = 
-        { Line = r.StartLine
+    static member FromRange kind (r: Range.range) = 
+        { SymbolKind = kind
+          Line = r.StartLine
           StartCol = r.StartColumn 
           EndCol = r.EndColumn }
     member x.ToRange() = x.Line, x.StartCol, x.Line, x.EndCol
@@ -134,8 +136,10 @@ type WordSpan =
 type LexerBase() = 
     abstract GetSymbolFromTokensAtLocation: FSharpTokenInfo list * line: int * rightCol: int -> Symbol option
     abstract TokenizeLine: line: int -> FSharpTokenInfo list
+    abstract LineCount: int
     member x.GetSymbolAtLocation (line: int, col: int) =
            x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
+    member x.TokenizeAll() = [|0..x.LineCount-1|] |> Array.map x.TokenizeLine
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
