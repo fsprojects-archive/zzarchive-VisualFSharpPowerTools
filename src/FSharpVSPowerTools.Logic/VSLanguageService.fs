@@ -227,16 +227,20 @@ type VSLanguageService
         }
 
     member __.CreateLexer (snapshot, args) =
+        let lineStart, _, lineEnd, _ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+        
         let getLineStr line =
-            let lineStart,_,_,_ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
             let lineNumber = line - lineStart
             snapshot.GetLineFromLineNumber(lineNumber).GetText() 
+        
         let source = snapshot.GetText()
+        
         { new LexerBase() with
             member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
                 Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
             member __.TokenizeLine line =
-                Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer) }
+                Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer)
+            member __.LineCount = lineEnd + 1 }
 
     member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
                                             checkForUnusedOpens: bool, profiler: Profiler) = 

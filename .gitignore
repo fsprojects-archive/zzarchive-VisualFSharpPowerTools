@@ -187,3 +187,5 @@ release.cmd
 tests/data/*/*.dll
 tests/data/*/*.xml
 tests/data/*/*.pdb
+
+_NCrunch_*

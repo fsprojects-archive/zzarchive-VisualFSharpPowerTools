@@ -64,6 +64,7 @@ type SyntaxConstructClassifier
         | Category.Unused -> Some Constants.fsharpUnused
         | Category.Printf -> Some Constants.fsharpPrintf
         | Category.Escaped -> Some Constants.fsharpEscaped
+        | Category.Operator -> Some Constants.fsharpOperator
         | _ -> None
         |> Option.map classificationRegistry.GetClassificationType
 
