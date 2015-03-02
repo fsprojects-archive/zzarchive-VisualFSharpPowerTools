@@ -1,8 +1,9 @@
 #### 1.8.0 - Unreleased
+* Support operator coloring ([#936](https://github.com/fsprojects/VisualFSharpPowerTools/issues/936))
 
 #### 1.7.3 - February 20 2015
 * Find all references and Rename refactoring does not search for private/internal symbol usages in projects other than ones where it's declared 
-([#931](https://github.com/fsprojects/VisualFSharpPowerTools/issues/931))
+([#932](https://github.com/fsprojects/VisualFSharpPowerTools/issues/932))
 * Fix inconsistent code coloring ([#933](https://github.com/fsprojects/VisualFSharpPowerTools/pull/933))
 
 #### 1.7.2 - February 5 2015

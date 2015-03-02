@@ -40,7 +40,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let lineStr = span.Start.GetContainingLine().GetText()
-                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, false)
+                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
                     return Some (project, fileScopedCheckResults.GetUntypedAst(), span, fsSymbolUse, findDeclResult) 
                 | _ -> return None
             | _ -> return None
@@ -296,6 +296,9 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
+    static member ClearXmlDocCache() =
+        xmlDocCache.Clear()
+
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
 
@@ -316,4 +319,12 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
-                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
+                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
+                
+    interface IDisposable with
+        member __.Dispose() = 
+            cancellationToken.Value
+            |> Option.iter (fun token -> 
+                token.Cancel()
+                token.Dispose())
+           
