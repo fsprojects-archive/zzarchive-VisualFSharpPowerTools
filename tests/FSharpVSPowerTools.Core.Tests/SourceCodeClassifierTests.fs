@@ -26,6 +26,8 @@ let sourceFiles = [| fileName |]
 let framework = FSharpTargetFramework.NET_4_5
 let languageService = LanguageService()
 
+type private Cat = Category
+
 let opts source = 
     let opts = 
         languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, LanguageServiceTestHelper.args, [||], framework) 
@@ -44,7 +46,8 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 Lexer.getSymbol source line col lineStr SymbolLookupKind.ByRightColumn LanguageServiceTestHelper.args Lexer.queryLexState
             member __.TokenizeLine line =
                 let lineStr = sourceLines.[line]
-                Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState }
+                Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState 
+            member __.LineCount = sourceLines.Length }
 
     let symbolsUses = 
         async {
@@ -97,7 +100,7 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
                 spans
                 |> Seq.choose (fun span ->
                     match span.Category with 
-                    | Category.Other -> None
+                    | Cat.Other -> None
                     | _ -> Some (span.Category, span.WordSpan.StartCol, span.WordSpan.EndCol))
                 |> Seq.sortBy (fun (_, startCol, _) -> startCol)
                 |> Seq.toList
@@ -112,6 +115,8 @@ let (=>) source (expected: (int * ((Category * int * int) list)) list) =
     try actual |> Collection.assertEquiv expected
     with _ -> 
         debug "AST: %A" (checkResults.GetUntypedAst())
+        for x in actual do
+            debug "Actual: %A" x
         reraise()
 
 [<Test>]
@@ -119,39 +124,42 @@ let ``module value``() =
     """
 let moduleValue = 1
 """
-    => [2, []]
+    => [2, [Cat.Operator, 16, 17]]
 
 [<Test>]
 let ``module function``() = 
     """
 let moduleFunction x = x + 1
 """
-    => [ 2, [ Category.Function, 4, 18 ]]
+    => [ 2, [ Cat.Function, 4, 18; Cat.Operator, 21, 22; Cat.Operator, 25, 26 ]]
 
 [<Test>]
 let ``module higher order function``() = 
     """
 let higherOrderFunction func x = (func x) - 1
 """
-   => [ 2, [ Category.Function, 24, 28; Category.Function, 34, 38; Category.Function, 4, 23 ]]
+   => [ 2, [ Cat.Function, 24, 28; Cat.Function, 34, 38; Cat.Function, 4, 23; Cat.Operator, 31, 32; Cat.Operator, 42, 43 ]]
 
 [<Test>]
 let ``class let value``() = 
     """
 type Class() =
     let value = 1
-    member x.M = value
+    member __.M = value
 """
-    => [ 3, []]
+    => [ 2, [ Cat.ReferenceType, 5, 10; Cat.Operator, 13, 14 ]
+         3, [ Cat.Operator, 14, 15 ]
+         4, [ Cat.Operator, 16, 17 ]]
 
 [<Test>]
 let ``class let function``() = 
     """
 type Class() =
     let classLetFunction x = x
-    member x.M = classLetFunction 1
+    member __.M = classLetFunction 1
 """
-    => [ 3, [ Category.Function, 8, 24 ]]
+    => [ 3, [ Cat.Function, 8, 24; Cat.Operator, 27, 28 ]
+         4, [ Cat.Function, 18, 34; Cat.Operator, 16, 17 ]]
 
 [<Test>]
 let ``class method``() = 
@@ -159,7 +167,7 @@ let ``class method``() =
 type Class() =
     member __.Method _ = ()
 """
-   => [ 3, [ Category.Function, 14, 20 ]]
+   => [ 3, [ Cat.Function, 14, 20; Cat.Operator, 23, 24 ]]
 
 [<Test>]
 let ``class property``() = 
@@ -167,7 +175,7 @@ let ``class property``() =
 type Class() =
     member __.Prop = ()
 """
-   => [ 3, []]
+   => [ 3, [ Cat.Operator, 19, 20]]
 
 [<Test>]
 let ``static method``() = 
@@ -175,7 +183,7 @@ let ``static method``() =
 type Class() =
     static member Method _ = ()
 """
-    => [3, [ Category.Function, 18, 24 ]]
+    => [3, [ Cat.Function, 18, 24; Cat.Operator, 27, 28 ]]
 
 [<Test>]
 let ``static property``() = 
@@ -183,7 +191,7 @@ let ``static property``() =
 type Class() =
     static member StaticProperty = 1
 """
-    => [ 3, []]
+    => [ 3, [ Cat.Operator, 33, 34 ]]
 
 [<Test>]
 let ``event``() = 
@@ -192,8 +200,8 @@ type Class() =
     let event = Event<_>()
     member __.Event = event.Publish
 """
-    => [ 3, [ Category.ReferenceType, 16, 21 ]
-         4, []]
+    => [ 3, [  Cat.Operator, 14, 15; Cat.ReferenceType, 16, 21 ]
+         4, [ Cat.Operator, 20, 21 ]]
 
 [<Test>]
 let ``static event``() = 
@@ -202,17 +210,26 @@ type Class() =
     static let staticEvent = Event<_>()
     static member StaticEvent = staticEvent.Publish
 """
-    => [ 3, [ Category.ReferenceType, 29, 34 ]
-         4, []]
+    => [ 3, [  Cat.Operator, 27, 28; Cat.ReferenceType, 29, 34 ]
+         4, [ Cat.Operator, 30, 31 ]]
           
 [<Test>]
-let ``constructors``() = 
+let ``class constructor``() = 
     """
 type Class() =
     new (_: int) = new Class()
 """
-    => [ 2, [ Category.ReferenceType, 5, 10 ]
-         3, [ Category.ValueType, 12, 15; Category.ReferenceType, 23, 28 ]]
+    => [ 2, [ Cat.ReferenceType, 5, 10; Cat.Operator, 13, 14 ]
+         3, [ Cat.ValueType, 12, 15; Cat.Operator, 17, 18; Cat.ReferenceType, 23, 28 ]]
+
+[<Test>]
+let ``generic class constructor``() = 
+    """
+type Class<'a>() = class end
+    let _ = new Class<_>()
+"""
+    => [ 2, [ Cat.ReferenceType, 5, 10; Cat.Operator, 17, 18 ]
+         3, [ Cat.Operator, 10, 11; Cat.ReferenceType, 16, 21 ]]
 
 [<Test>]
 let ``interface implemented in a class``() = 
@@ -221,8 +238,8 @@ type Class() =
     interface System.IDisposable with
         member __.Dispose() = ()
 """
-    => [ 3, [ Category.ReferenceType, 21, 32 ]
-         4, [ Category.Function, 18, 25 ]]
+    => [ 3, [ Cat.ReferenceType, 21, 32 ]
+         4, [ Cat.Function, 18, 25; Cat.Operator, 28, 29 ]]
 
 [<Test>]
 let ``property with explicit accessors``() = 
@@ -233,15 +250,15 @@ type Class() =
                 and set(_: int) = ()
 """
     => [ 3, [] 
-         4, []
-         5, [ Category.ValueType, 27, 30 ]]
+         4, [ Cat.Operator, 27, 28 ]
+         5, [ Cat.ValueType, 27, 30; Cat.Operator, 32, 33 ]]
 
 [<Test>]
 let ``fully qualified CLI type constructor``() = 
     """
 let dateTime = new System.Net.WebClient()
 """
-    => [ 2, [ Category.ReferenceType, 30, 39 ]]
+    => [ 2, [  Cat.Operator, 13, 14; Cat.ReferenceType, 30, 39 ]]
 
 [<Test>]
 let ``fully qualified F# type constructor``() = 
@@ -252,14 +269,14 @@ module M1 =
 
 let m1m2Type = M1.M2.Type()
 """
-    => [ 6, [ Category.Module, 18, 20; Category.Module, 15, 17; Category.ReferenceType, 21, 25 ]]
+    => [ 6, [  Cat.Operator, 13, 14; Cat.Module, 18, 20; Cat.Module, 15, 17; Cat.ReferenceType, 21, 25 ]]
 
 [<Test>]
 let ``generic class declaration``() = 
     """
 type GenericClass<'T>() = class end
 """
-    => [ 2, [ Category.ReferenceType, 5, 17 ]]
+    => [ 2, [ Cat.ReferenceType, 5, 17; Cat.Operator, 24, 25 ]]
 
 [<Test>]
 let ``generic class instantiation``() = 
@@ -272,9 +289,9 @@ let genericClassOfInt = GenericClass<int>()
 let genericClassOfUserFSharpType = GenericClass<M1.M2.Type>()
 let genericClassOfCLIType = GenericClass<System.DateTime>()
 """
-    => [ 6, [ Category.ReferenceType, 24, 36; Category.ValueType, 37, 40 ]
-         7, [ Category.ReferenceType, 35, 47; Category.Module, 51, 53; Category.Module, 48, 50; Category.ReferenceType, 54, 58 ]
-         8, [ Category.ReferenceType, 28, 40; Category.ValueType, 48, 56 ]]
+    => [ 6, [ Cat.Operator, 22, 23; Cat.ReferenceType, 24, 36; Cat.ValueType, 37, 40 ]
+         7, [ Cat.Operator, 33, 34; Cat.ReferenceType, 35, 47; Cat.Module, 51, 53; Cat.Module, 48, 50; Cat.ReferenceType, 54, 58 ]
+         8, [ Cat.Operator, 26, 27; Cat.ReferenceType, 28, 40; Cat.ValueType, 48, 56 ]]
 
 [<Test>]
 let ``record``() = 
@@ -284,9 +301,10 @@ module M1 =
         type Type() = class end
 type Record = { IntField: int; UserTypeField: M1.M2.Type }
 """
-    => [ 5, [ Category.ReferenceType, 5, 11
-              Category.ValueType, 26, 29
-              Category.Module, 49, 51; Category.Module, 46, 48; Category.ReferenceType, 52, 56 ]]
+    => [ 5, [ Cat.ReferenceType, 5, 11
+              Cat.Operator, 12, 13
+              Cat.ValueType, 26, 29
+              Cat.Module, 49, 51; Cat.Module, 46, 48; Cat.ReferenceType, 52, 56 ]]
 
 [<Test>]
 let ``value type``() = 
@@ -299,13 +317,13 @@ type UserValueTypeAbbriviation = UserValueType
 let userValueType = UserValueType()
 let userValueTypeAbbriviation: UserValueTypeAbbriviation = UserValueTypeAbbriviation()
 """
-    => [ 2, [ Category.ValueType, 27, 30 ]
-         3, [ Category.ValueType, 22, 27 ]
-         4, [ Category.ValueType, 34, 42 ]
-         5, [ Category.ValueType, 5, 18 ]
-         6, [ Category.ValueType, 5, 30; Category.ValueType, 33, 46 ]
-         7, [ Category.ValueType, 20, 33 ] 
-         8, [ Category.ValueType, 31, 56; Category.ValueType, 59, 84 ]]
+    => [ 2, [ Cat.ValueType, 27, 30; Cat.Operator, 31, 32 ]
+         3, [ Cat.ValueType, 22, 27; Cat.Operator, 28, 29 ]
+         4, [ Cat.ValueType, 34, 42; Cat.Operator, 25, 26 ]
+         5, [ Cat.ValueType, 5, 18; Cat.Operator, 19, 20 ]
+         6, [ Cat.ValueType, 5, 30; Cat.Operator, 31, 32; Cat.ValueType, 33, 46 ]
+         7, [ Cat.Operator, 18, 19; Cat.ValueType, 20, 33 ] 
+         8, [ Cat.ValueType, 31, 56; Cat.Operator, 57, 58; Cat.ValueType, 59, 84 ]]
 
 [<Test>]
 let ``DU case of function``() =
@@ -314,23 +332,23 @@ type DUWithFunction = FuncCase of (unit -> unit)
 let (FuncCase funcCase) = FuncCase (fun() -> ())
 match FuncCase (fun() -> ()) with FuncCase func -> func()
 """
-    => [ 2, [ Category.ReferenceType, 5, 19; Category.PatternCase, 22, 30; Category.ReferenceType, 35, 39; Category.ReferenceType, 43, 47 ]
-         3, [ Category.PatternCase, 5, 13; Category.Function, 14, 22; Category.PatternCase, 26, 34 ]
-         4, [ Category.PatternCase, 6, 14; Category.PatternCase, 34, 42; Category.Function, 43, 47; Category.Function, 51, 55 ]]
+    => [ 2, [ Cat.ReferenceType, 5, 19; Cat.Operator, 20, 21; Cat.PatternCase, 22, 30; Cat.ReferenceType, 35, 39; Cat.ReferenceType, 43, 47 ]
+         3, [ Cat.PatternCase, 5, 13; Cat.Function, 14, 22; Cat.Operator, 24, 25; Cat.PatternCase, 26, 34 ]
+         4, [ Cat.PatternCase, 6, 14; Cat.PatternCase, 34, 42; Cat.Function, 43, 47; Cat.Function, 51, 55 ]]
 
 [<Test>]
 let ``double quoted function without spaces``() = 
     """
 let ``double_quoted_function_without_spaces`` () = ()
 """
-    => [ 2, [ Category.Function, 4, 45 ]]
+    => [ 2, [ Cat.Function, 4, 45; Cat.Operator, 49, 50 ]]
 
 [<Test>]
 let ``double quoted function with spaces``() = 
     """
 let ``double quoted function with spaces`` () = ()
 """
-    => [ 2, [ Category.Function, 4, 42 ]]
+    => [ 2, [ Cat.Function, 4, 42; Cat.Operator, 46, 47 ]]
 
 [<Test>]
 let ``fully qualified attribute``() = 
@@ -338,14 +356,14 @@ let ``fully qualified attribute``() =
 [<System.Diagnostics.DebuggerDisplay "name">]
 type TypeWithAttribute() = class end
 """
-    => [ 2, [ Category.ReferenceType, 21, 36 ]]
+    => [ 2, [ Cat.ReferenceType, 21, 36 ]]
 
 [<Test>]
 let ``async type``() = 
     """
 let asyncRunSync = Async.RunSynchronously
 """
-    => [ 2, [ Category.Function, 4, 16; Category.ReferenceType, 19, 24; Category.Function, 25, 41 ]]
+    => [ 2, [ Cat.Function, 4, 16; Cat.Operator, 17, 18; Cat.ReferenceType, 19, 24; Cat.Function, 25, 41 ]]
 
 [<Test>]
 let ``standard computation expression name``() = 
@@ -356,8 +374,8 @@ seq {
 } |> ignore
 """
     => [ 2, []
-         3, [ Category.Function, 8, 12 ]
-         4, [ Category.Function, 10, 14 ]]
+         3, [ Cat.Function, 8, 12; Cat.Operator, 15, 16 ]
+         4, [ Cat.Function, 10, 14 ]]
 
 [<Test>]
 let ``used let bindings in computation expression should not be marked as unused``() = 
@@ -368,8 +386,8 @@ seq {
 } |> ignore
 """
     => [ 2, []
-         3, [ Category.Function, 8, 12 ]
-         4, [ Category.Function, 10, 14 ]]
+         3, [ Cat.Function, 8, 12; Cat.Operator, 15, 16 ]
+         4, [ Cat.Function, 10, 14 ]]
 
 [<Test>]
 let ``user defined computation expression name``() = 
@@ -381,35 +399,35 @@ type CustomBuilder() =
 let customComputationExpression = CustomBuilder()
 let _ = customComputationExpression { add "str" }
 """
-    => [ 7, []]
+    => [ 7, [ Cat.Operator, 6, 7 ]]
 
 [<Test>]
 let ``method chain``() =
     """
 let _ = System.Environment.MachineName.ToLower()
 """
-    => [ 2, [ Category.ReferenceType, 15, 26; Category.Function, 39, 46 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ReferenceType, 15, 26; Cat.Function, 39, 46 ]]
     
 [<Test>]
 let ``complex method chain``() =
     """
 let _ = System.Guid.NewGuid().ToString("N").Substring(1)
 """
-    => [ 2, [ Category.ValueType, 15, 19; Category.Function, 20, 27; Category.Function, 30, 38; Category.Function, 44, 53 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 19; Cat.Function, 20, 27; Cat.Function, 30, 38; Cat.Function, 44, 53 ]]
 
 [<Test>]
 let ``generic type with ignored type parameter``() = 
     """
 let _ = list<_>.Empty
 """
-    => [ 2, [ Category.ReferenceType, 8, 12 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ReferenceType, 8, 12 ]]
 
 [<Test>]
 let ``F# namespace``() = 
     """
 let _ = Microsoft.FSharp.Collections.List<int>.Empty
 """
-    => [ 2, [ Category.ReferenceType, 37, 41; Category.ValueType, 42, 45 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ReferenceType, 37, 41; Cat.ValueType, 42, 45 ]]
        
 [<Test>]
 let ``double quoted member``() = 
@@ -418,7 +436,7 @@ type System.String with
     member __.``Long func``() = "x"
 let _ = "x".``Long func``().Substring(3)
 """
-    => [ 4, [ Category.Function, 12, 25; Category.Function, 28, 37 ]]
+    => [ 4, [ Cat.Operator, 6, 7; Cat.Function, 12, 25; Cat.Function, 28, 37 ]]
 
 [<Test; Ignore "WIP">]
 let ``indexer``() = 
@@ -436,7 +454,7 @@ let ``mutable value``() =
     """
 let mutable mutableValue = 1
 """
-    => [ 2,  [ Category.MutableVar, 12, 24 ]]
+    => [ 2,  [ Cat.MutableVar, 12, 24; Cat.Operator, 25, 26 ]]
 
 [<Test>]
 let ``mutable field``() =
@@ -449,9 +467,9 @@ type MutableClass() =
 let func() =
     let mutable mutableLocalVar = 1 in mutableLocalVar
 """
-    => [ 3, [ Category.MutableVar, 14, 26; Category.ValueType, 28, 31 ]
-         5, [ Category.MutableVar, 16, 28 ]
-         8, [ Category.MutableVar, 16, 31; Category.MutableVar, 39, 54 ]]
+    => [ 3, [ Cat.MutableVar, 14, 26; Cat.ValueType, 28, 31 ]
+         5, [ Cat.MutableVar, 16, 28; Cat.Operator, 29, 30 ]
+         8, [ Cat.MutableVar, 16, 31; Cat.Operator, 32, 33; Cat.MutableVar, 39, 54 ]]
 
 [<Test>]
 let ``reference value``() = 
@@ -459,8 +477,9 @@ let ``reference value``() =
 let refValue = ref 1
 refValue := !refValue + 1
 """ 
-    => [ 2, [ Category.MutableVar, 4, 12; Category.Function, 15, 18 ]
-         3, [ Category.MutableVar, 0, 8; Category.MutableVar, 13, 21 ]]
+    => [ 2, [ Cat.MutableVar, 4, 12; Cat.Operator, 13, 14; Cat.Function, 15, 18 ]
+         3, [ Cat.MutableVar, 0, 8; Cat.Operator, 9, 11; Cat.Operator, 12, 13; Cat.MutableVar, 13, 21
+              Cat.Operator, 22, 23 ]]
 
 [<Test>]
 let ``reference field``() = 
@@ -471,16 +490,16 @@ type ClassWithRefValue() =
 type RecordWithRefValue = 
     { Field: int ref }
 """
-    => [ 3, [ Category.Function, 19, 22; Category.MutableVar, 8, 16 ]
-         4, [ Category.MutableVar, 13, 21 ]
-         6, [ Category.MutableVar, 6, 11; Category.ValueType, 13, 16; Category.ReferenceType, 17, 20 ]]
+    => [ 3, [ Cat.Operator, 17, 18; Cat.Function, 19, 22; Cat.MutableVar, 8, 16 ]
+         4, [ Cat.Operator, 10, 11; Cat.Operator, 12, 13; Cat.MutableVar, 13, 21 ]
+         6, [ Cat.MutableVar, 6, 11; Cat.ValueType, 13, 16; Cat.ReferenceType, 17, 20 ]]
 
 [<Test>]
 let ``single line quotation``() = 
     """
 let _ = <@ 1 = 1 @>
 """
-    => [ 2, [ Category.Quotation, 8, 19 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Quotation, 8, 19; Cat.Operator, 13, 14 ]]
 
 [<Test>]
 let ``multi line quotation``() = 
@@ -488,8 +507,8 @@ let ``multi line quotation``() =
 let _ = <@ 1 = 1
            && 2 = 2 @>
 """
-    => [ 2, [ Category.Quotation, 8, 16 ]
-         3, [ Category.Quotation, 11, 22 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Quotation, 8, 16; Cat.Operator, 13, 14 ]
+         3, [ Cat.Operator, 11, 13; Cat.Quotation, 11, 22; Cat.Operator, 16, 17 ]]
 
 [<Test>]
 let ``quotation as function argument``() = 
@@ -505,10 +524,11 @@ let _ =
 let qf1 (n, e1) = ()
 let _ = qf1 (1, <@ 1 @>)
 """
-    => [ 2, [ Category.Function, 8, 10; Category.Quotation, 11, 22 ]
-         4, [ Category.Function, 8, 9; Category.Quotation, 10, 21; Category.Quotation, 22, 33 ]
-         9, [ Category.Quotation, 6, 16 ]
-         11, [ Category.Function, 8, 11; Category.Quotation, 16, 23 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 10; Cat.Quotation, 11, 22; Cat.Operator, 16, 17 ]
+         4, [ Cat.Operator, 6, 7; Cat.Function, 8, 9; Cat.Quotation, 10, 21; Cat.Operator, 15, 16;
+              Cat.Quotation, 22, 33; Cat.Operator, 27, 28 ]
+         9, [ Cat.Quotation, 6, 16 ]
+         11, [ Cat.Operator, 6, 7; Cat.Function, 8, 11; Cat.Quotation, 16, 23 ]]
 
 [<Test>]
 let ``quotation in type``() = 
@@ -518,16 +538,16 @@ type TypeWithQuotations() =
     member __.F() = <@ 1 = 1 @>
     member __.P = <@ 1 + 1 @>
 """
-    => [ 3, [ Category.Quotation, 12, 23 ]
-         4, [ Category.Function, 14, 15; Category.Quotation, 20, 31 ]
-         5, [ Category.Quotation, 18, 29 ]]
+    => [ 3, [ Cat.Operator, 10, 11; Cat.Quotation, 12, 23; Cat.Operator, 17, 18 ]
+         4, [ Cat.Function, 14, 15; Cat.Operator, 18, 19; Cat.Quotation, 20, 31; Cat.Operator, 25, 26 ]
+         5, [ Cat.Operator, 16, 17; Cat.Quotation, 18, 29; Cat.Operator, 23, 24 ]]
 
 [<Test>]
 let ``untyped quotation``() = 
     """
 let _ = <@@ 1 @@>
 """
-    => [ 2, [ Category.Quotation, 8, 17 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Quotation, 8, 17 ]]
 
 [<Test>]
 let ``complicated quotation layout``() = 
@@ -537,16 +557,16 @@ let _  = f <@ 1
               + 2
               + 3 @> <@@ 1 @@>
 """
-    => [ 3, [ Category.Function, 9, 10; Category.Quotation, 11, 15 ]
-         4, [ Category.Quotation, 14, 17 ]
-         5, [ Category.Quotation, 14, 20; Category.Quotation, 21, 30 ]]
+    => [ 3, [ Cat.Operator, 7, 8; Cat.Function, 9, 10; Cat.Quotation, 11, 15 ]
+         4, [ Cat.Operator, 14, 15; Cat.Quotation, 14, 17 ]
+         5, [ Cat.Operator, 14, 15; Cat.Quotation, 14, 20; Cat.Quotation, 21, 30 ]]
 
 [<Test>]
 let ``quotation in lambda``() = 
     """
 let _ = fun() -> <@ 1 @>
 """
-    => [ 2, [ Category.Quotation, 17, 24 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Quotation, 17, 24 ]]
 
 [<Test>]
 let ``quotation in record``() = 
@@ -554,21 +574,21 @@ let ``quotation in record``() =
 type RecordWithQuotation = { Field: Microsoft.FSharp.Quotations.Expr<int> }
 let _ = { Field = <@ 1 @> }
 """
-    => [ 3, [ Category.Quotation, 18, 25 ]]
+    => [ 3, [ Cat.Operator, 6, 7; Cat.Operator, 16, 17; Cat.Quotation, 18, 25 ]]
 
 [<Test>]
 let ``quotation in list expression``() = 
     """
 let _ = [ <@ 1 @> ]
 """
-    => [ 2, [ Category.Quotation, 10, 17 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Quotation, 10, 17 ]]
 
 [<Test>]
 let ``quotation in seq for expression``() = 
     """
 let _ = seq { for i in [1..10] -> <@ i @> }
 """
-    => [ 2, [ Category.Quotation, 34, 41 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Quotation, 34, 41 ]]
 
 [<Test>]
 let ``quotation as a result of function``() = 
@@ -576,7 +596,7 @@ let ``quotation as a result of function``() =
 let qf() : Microsoft.FSharp.Quotations.Expr<int> =
     <@ 1 @>
 """
-    => [ 3, [ Category.Quotation, 4, 11 ]]
+    => [ 3, [ Cat.Quotation, 4, 11 ]]
 
 [<Test>]
 let ``quotation as default constructor arguments``() = 
@@ -584,7 +604,7 @@ let ``quotation as default constructor arguments``() =
 type ClassWithQuotationInConstructor(expr) = class end
 let _ = ClassWithQuotationInConstructor(<@ 1 @>)
 """
-    => [ 3, [ Category.ReferenceType, 8, 39; Category.Quotation, 40, 47 ]]
+    => [ 3, [ Cat.Operator, 6, 7; Cat.ReferenceType, 8, 39; Cat.Quotation, 40, 47 ]]
 
 [<Test>]
 let ``quotation as initialization of auto property``() = 
@@ -592,7 +612,7 @@ let ``quotation as initialization of auto property``() =
 type ClassWithWritableProperty() =
     member val Prop = <@@ 1 @@> with get, set
 """
-    => [ 3, [ Category.MutableVar, 15, 19; Category.Quotation, 22, 31 ]]
+    => [ 3, [ Cat.MutableVar, 15, 19; Cat.Operator, 20, 21; Cat.Quotation, 22, 31 ]]
 
 [<Test>]
 let ``quotation in property setter``() = 
@@ -602,7 +622,7 @@ type ClassWithWritableProperty() =
 let clWithWritableProperty = ClassWithWritableProperty()
 clWithWritableProperty.Prop <- <@@ 2 @@>
 """
-    => [ 5, [ Category.Quotation, 31, 40 ]]
+    => [ 5, [ Cat.Quotation, 31, 40 ]]
 
 [<Test>]
 let ``quotation in nested module``() = 
@@ -610,7 +630,7 @@ let ``quotation in nested module``() =
 module NestedModule =
     let _ = <@ 1 @>
 """
-    => [ 3, [ Category.Quotation, 12, 19 ]]
+    => [ 3, [ Cat.Operator, 10, 11; Cat.Quotation, 12, 19 ]]
 
 [<Test>]
 let ``quotation inside computation expression``() =
@@ -635,15 +655,15 @@ let _ =
             return! ret <@ 1 @>
     }
 """
-    => [ 6, [ Category.Quotation, 16, 23 ]
-         7, [ Category.Function, 11, 17; Category.Quotation, 18, 25 ]
-         8, [ Category.Function, 17, 20; Category.Quotation, 21, 28 ]
-         10, [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
-         12, [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]
-         13, [ Category.Function, 12, 19; Category.Quotation, 20, 28 ]
-         14, [ Category.Quotation, 14, 21 ]
-         17, [ Category.Quotation, 19, 26 ]
-         19, [ Category.Function, 20, 23; Category.Quotation, 24, 31 ]]
+    => [ 6, [ Cat.Operator, 14, 15; Cat.Quotation, 16, 23 ]
+         7, [ Cat.Function, 11, 17; Cat.Quotation, 18, 25 ]
+         8, [ Cat.Operator, 15, 16; Cat.Function, 17, 20; Cat.Quotation, 21, 28 ]
+         10, [ Cat.Function, 20, 23; Cat.Quotation, 24, 31 ]
+         12, [ Cat.Function, 20, 23; Cat.Quotation, 24, 31 ]
+         13, [ Cat.Function, 12, 19; Cat.Quotation, 20, 28 ]
+         14, [ Cat.Quotation, 14, 21 ]
+         17, [ Cat.Quotation, 19, 26 ]
+         19, [ Cat.Function, 20, 23; Cat.Quotation, 24, 31 ]]
 
 [<Test>]
 let ``quotation in try / with / finally blocks``() =
@@ -661,12 +681,12 @@ async {
     return ()
 }
 """
-    => [3, [ Category.Quotation, 8, 15]
-        4, [ Category.Quotation, 14, 21]
-        5, [ Category.Function, 8, 14; Category.Quotation, 15, 22]
-        9, [ Category.Quotation, 12, 19]
-        10, [ Category.Quotation, 18, 25]
-        11, [ Category.Function, 12, 18; Category.Quotation, 19, 26]
+    => [3, [ Cat.Quotation, 8, 15]
+        4, [ Cat.Quotation, 14, 21]
+        5, [ Cat.Function, 8, 14; Cat.Quotation, 15, 22]
+        9, [ Cat.Quotation, 12, 19]
+        10, [ Cat.Quotation, 18, 25]
+        11, [ Cat.Function, 12, 18; Cat.Quotation, 19, 26]
        ]
 
 [<Test>]
@@ -675,8 +695,8 @@ let ``tuple alias``() =
 type Tuple = int * string
 let tupleFunc (x: Tuple) : Tuple = x
 """
-    => [ 2, [ Category.ReferenceType, 5, 10; Category.ValueType, 13, 16; Category.ReferenceType, 19, 25 ]    
-         3, [ Category.Function, 4, 13; Category.ReferenceType, 18, 23; Category.ReferenceType, 27, 32 ]]
+    => [ 2, [ Cat.ReferenceType, 5, 10; Cat.Operator, 11, 12; Cat.ValueType, 13, 16; Cat.ReferenceType, 19, 25 ]    
+         3, [ Cat.Function, 4, 13; Cat.ReferenceType, 18, 23; Cat.ReferenceType, 27, 32; Cat.Operator, 33, 34 ]]
 
 [<Test>]
 let ``multiline method chain``() = 
@@ -686,8 +706,8 @@ let _ =
         .Substring(1)
         .Trim().Remove(1)
 """
-    => [ 4, [ Category.Function, 9, 18 ]
-         5, [ Category.Function, 9, 13; Category.Function, 16, 22 ]]
+    => [ 4, [ Cat.Function, 9, 18 ]
+         5, [ Cat.Function, 9, 13; Cat.Function, 16, 22 ]]
 
 [<Test>]
 let ``module``() = 
@@ -697,34 +717,36 @@ module Module2 =
     module Module3 =
         let x = ()
 """
-    => [ 2, [ Category.Module, 7, 14 ]
-         3, [ Category.Module, 7, 14 ]
-         4, [ Category.Module, 11, 18 ]]
+    => [ 2, [ Cat.Module, 7, 14 ]
+         3, [ Cat.Module, 7, 14; Cat.Operator, 15, 16 ]
+         4, [ Cat.Module, 11, 18; Cat.Operator, 19, 20 ]]
 
 [<Test>]
 let ``static CLR class``() = 
     """
 let _ = System.Linq.Enumerable.Range(0, 1)
 """
-    => [ 2, [ Category.ReferenceType, 20, 30; Category.Function, 31, 36 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ReferenceType, 20, 30; Cat.Function, 31, 36 ]]
 
 [<Test>]
 let ``F# external modules``() = 
     """
 let _ = [1] |> Seq.sort |> Seq.toList |> List.rev
 """
-    => [ 2, [ Category.Module, 15, 18; Category.Function, 19, 23
-              Category.Module, 27, 30; Category.Function, 31, 37
-              Category.Module, 41, 45; Category.Function, 46, 49 ]]
+    => [ 2, [ Cat.Operator, 6, 7;
+              Cat.Operator, 12, 14; Cat.Module, 15, 18; Cat.Function, 19, 23
+              Cat.Operator, 24, 26; Cat.Module, 27, 30; Cat.Function, 31, 37
+              Cat.Operator, 38, 40; Cat.Module, 41, 45; Cat.Function, 46, 49 ]]
 
 [<Test>]
 let ``byref argument``() = 
     """
 let ``func with byref arg`` (_: byref<int>) = ()
 """
-    => [ 2, [ Category.Function, 4, 27
-              Category.ReferenceType, 32, 37
-              Category.ValueType, 38, 41 ]]
+    => [ 2, [ Cat.Function, 4, 27
+              Cat.ReferenceType, 32, 37
+              Cat.ValueType, 38, 41
+              Cat.Operator, 44, 45 ]]
 
 [<Test>]
 let ``unit of measure``() =
@@ -735,9 +757,9 @@ let _: int<ms> =
 type RecordWithUnitOfMeasure =
     { Field1: int<ms> }
 """
-    => [ 3, [ Category.ValueType, 7, 10; Category.ReferenceType, 11, 13 ]
-         4, [ Category.ReferenceType, 6, 8 ]
-         6, [ Category.ValueType, 14, 17; Category.ReferenceType, 18, 20 ]]
+    => [ 3, [ Cat.ValueType, 7, 10; Cat.ReferenceType, 11, 13; Cat.Operator, 15, 16 ]
+         4, [ Cat.ReferenceType, 6, 8 ]
+         6, [ Cat.ValueType, 14, 17; Cat.ReferenceType, 18, 20 ]]
 
 [<Test>]
 let ``standard and custom numeric literals``() = 
@@ -747,8 +769,8 @@ module NumericLiteralZ =
     let FromInt32 (i: int) = i
 let _ = 77Z
 """
-    => [ 2, []    
-         5, []]
+    => [ 2, [ Cat.Operator, 6, 7 ]    
+         5, [ Cat.Operator, 6, 7 ]]
 
 [<Test>]
 let ``anonymous generic parameters``() =
@@ -762,20 +784,20 @@ module AnonymousGenericParameters =
     let i () : Map<'a, 'b> = new Map<'a, 'b>([])
     let j () : System.Collections.Generic.List<_> = new System.Collections.Generic.List<_>()
 """
-    => [ 3, [ Category.Function, 8, 10; Category.ReferenceType, 16, 19; Category.ReferenceType, 34, 37 ]
-         4, [ Category.Function, 8, 11; Category.ReferenceType, 16, 19; Category.ReferenceType, 34, 37 ] 
-         5, [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
-         6, [ Category.Function, 8, 10; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ] 
-         7, [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
-         8, [ Category.Function, 8, 9; Category.ReferenceType, 15, 18; Category.ReferenceType, 33, 36 ]
-         9, [ Category.Function, 8, 9; Category.ReferenceType, 42, 46; Category.ReferenceType, 83, 87 ]]
+    => [ 3, [ Cat.Function, 8, 10; Cat.ReferenceType, 16, 19; Cat.Operator, 28, 29; Cat.ReferenceType, 34, 37 ]
+         4, [ Cat.Function, 8, 11; Cat.ReferenceType, 16, 19; Cat.Operator, 28, 29; Cat.ReferenceType, 34, 37 ] 
+         5, [ Cat.Function, 8, 9; Cat.ReferenceType, 15, 18; Cat.Operator, 27, 28; Cat.ReferenceType, 33, 36 ]
+         6, [ Cat.Function, 8, 10; Cat.ReferenceType, 15, 18; Cat.Operator, 27, 28; Cat.ReferenceType, 33, 36 ] 
+         7, [ Cat.Function, 8, 9; Cat.ReferenceType, 15, 18; Cat.Operator, 27, 28; Cat.ReferenceType, 33, 36 ]
+         8, [ Cat.Function, 8, 9; Cat.ReferenceType, 15, 18; Cat.Operator, 27, 28; Cat.ReferenceType, 33, 36 ]
+         9, [ Cat.Function, 8, 9; Cat.ReferenceType, 42, 46; Cat.Operator, 50, 51; Cat.ReferenceType, 83, 87 ]]
 
 [<Test>]
 let ``array alias``() =
     """
 type ArrayAlias = byte[]
 """
-    => [ 2, [ Category.ReferenceType, 5, 15; Category.ValueType, 18, 22 ]]
+    => [ 2, [ Cat.ReferenceType, 5, 15; Cat.Operator, 16, 17; Cat.ValueType, 18, 22 ]]
 
 [<Test; Ignore "Lexer cannot recognize (|P|_|) as an Ident at position of the last bar">]
 let ``active pattern``() =
@@ -783,8 +805,8 @@ let ``active pattern``() =
 let (|ActivePattern|_|) x = Some x
 let _ = (|ActivePattern|_|) 1
 """
-    => [ 2, [ Category.PatternCase, 6, 19; Category.PatternCase, 28, 32 ]
-         3, [ Category.Function, 8, 27 ]]
+    => [ 2, [ Cat.PatternCase, 6, 19; Cat.PatternCase, 28, 32 ]
+         3, [ Cat.Function, 8, 27 ]]
 
 [<Test>]
 let ``non public module``() =
@@ -792,7 +814,7 @@ let ``non public module``() =
 module private PrivateModule =
     let x = ()
 """
-    => [ 2, [ Category.Module, 15, 28 ]]
+    => [ 2, [ Cat.Module, 15, 28; Cat.Operator, 29, 30 ]]
 
 [<Test>]
 let ``unused non public module function and value``() =
@@ -801,15 +823,15 @@ module private PrivateModule =
     let func _ = ()
     let value = ()
 """
-    => [ 3, [ Category.Unused, 8, 12 ]  
-         4, [ Category.Unused, 8, 13 ]]
+    => [ 3, [ Cat.Unused, 8, 12; Cat.Operator, 15, 16 ]  
+         4, [ Cat.Unused, 8, 13; Cat.Operator, 14, 15 ]]
 
 [<Test>]
 let ``unused default constructor of non public class``() =
     """
 type private PrivateClass() = class end
 """
-    => [ 2, [ Category.Unused, 13, 25 ]]
+    => [ 2, [ Cat.Unused, 13, 25; Cat.Operator, 28, 29 ]]
 
 [<Test>]
 let ``unused non public class let binding``() =
@@ -819,8 +841,8 @@ type PublicClass() =
     let letFunc _ = ()
     member __.P = ()
 """
-    => [ 3, [ Category.Unused, 8, 16] 
-         4, [ Category.Unused, 8, 15]]
+    => [ 3, [ Cat.Unused, 8, 16; Cat.Operator, 17, 18 ] 
+         4, [ Cat.Unused, 8, 15; Cat.Operator, 18, 19 ]]
 
 [<Test>]
 let ``unused non public class member``() =
@@ -829,8 +851,8 @@ type PublicClass() =
     member private __.Prop = ()
     member private __.Method _ = ()
 """
-    => [ 3, [ Category.Unused, 22, 26] 
-         4, [ Category.Unused, 22, 28]]
+    => [ 3, [ Cat.Unused, 22, 26; Cat.Operator, 27, 28 ] 
+         4, [ Cat.Unused, 22, 28; Cat.Operator, 31, 32 ]]
 
 [<Test>]
 let ``unused self binding``() =
@@ -838,7 +860,7 @@ let ``unused self binding``() =
 type PublicClass() =
     member this.PublicMethod _ = ()
 """ 
-    => [ 3, [ Category.Unused, 11, 15; Category.Function, 16, 28 ]]
+    => [ 3, [ Cat.Unused, 11, 15; Cat.Function, 16, 28; Cat.Operator, 31, 32 ]]
 
 [<Test>]
 let ``used self binding``() =
@@ -846,7 +868,7 @@ let ``used self binding``() =
 type PublicClass() =
     member this.Method2 _ = this
 """
-    => [ 3, [ Category.Function, 16, 23 ]]
+    => [ 3, [ Cat.Function, 16, 23; Cat.Operator, 26, 27 ]]
 
 [<Test>]
 let ``unused function / member argument``() =
@@ -855,8 +877,8 @@ type PublicClass() =
     member __.Method1 (arg1: int, arg2) = arg2
 let func arg1 arg2 = arg2
 """
-    => [ 3, [ Category.Function, 14, 21; Category.Unused, 23, 27; Category.ValueType, 29, 32 ]
-         4, [ Category.Function, 4, 8; Category.Unused, 9, 13 ]]
+    => [ 3, [ Cat.Function, 14, 21; Cat.Unused, 23, 27; Cat.ValueType, 29, 32; Cat.Operator, 40, 41 ]
+         4, [ Cat.Function, 4, 8; Cat.Unused, 9, 13; Cat.Operator, 19, 20 ]]
 
 [<Test>]
 let ``unused function / member local binding``() =
@@ -869,8 +891,8 @@ let func x =
     let local = 1
     x
 """
-    => [ 4, [ Category.Unused, 12, 17 ]
-         7, [ Category.Unused, 8, 13 ]]
+    => [ 4, [ Cat.Unused, 12, 17; Cat.Operator, 18, 19 ]
+         7, [ Cat.Unused, 8, 13; Cat.Operator, 14, 15 ]]
 
 [<Test>]
 let ``unused DU field names are not marked as unused even though they are not used anywhere``() =
@@ -878,10 +900,11 @@ let ``unused DU field names are not marked as unused even though they are not us
 type DU = Case of field1: int * field2: string
 let _ = Case (1, "")
 """
-    => [ 2, [ Category.ReferenceType, 5, 7
-              Category.PatternCase, 10, 14
-              Category.ValueType, 26, 29
-              Category.ReferenceType, 40, 46 ]]
+    => [ 2, [ Cat.ReferenceType, 5, 7
+              Cat.Operator, 8, 9
+              Cat.PatternCase, 10, 14
+              Cat.ValueType, 26, 29
+              Cat.ReferenceType, 40, 46 ]]
 
 [<Test>]
 let ``unused open declaration in top level module``() =
@@ -892,7 +915,7 @@ open System.IO
 let _ = DateTime.Now
 """
     => [ 3, []
-         4, [ Category.Unused, 5, 14 ]]
+         4, [ Cat.Unused, 5, 14 ]]
          
 [<Test>]
 let ``unused open declaration in namespace``() =
@@ -904,7 +927,7 @@ module Nested =
     let _ = DateTime.Now
 """
     => [ 3, []
-         4, [ Category.Unused, 5, 14 ]]
+         4, [ Cat.Unused, 5, 14 ]]
          
 [<Test>]
 let ``unused open declaration in nested module``() =
@@ -916,7 +939,7 @@ module Nested =
     let _ = DateTime.Now
 """
     => [ 4, []
-         5, [ Category.Unused, 9, 18 ]]
+         5, [ Cat.Unused, 9, 18 ]]
 
 [<Test>] 
 let ``unused open declaration due to partially qualified symbol``() =
@@ -927,7 +950,7 @@ open System.IO
 let _ = IO.File.Create ""
 """
     => [ 3, []
-         4, [ Category.Unused, 5, 14 ]]
+         4, [ Cat.Unused, 5, 14 ]]
 
 [<Test>]
 let ``unused parent open declaration due to partially qualified symbol``() =
@@ -937,7 +960,7 @@ open System
 open System.IO
 let _ = File.Create ""
 """
-    => [ 3, [ Category.Unused, 5, 11 ]
+    => [ 3, [ Cat.Unused, 5, 11 ]
          4, []]
 
 [<Test>]
@@ -949,7 +972,7 @@ module Nested =
     open System.IO
     let _ = File.Create ""
 """
-    => [ 3, [ Category.Unused, 5, 14 ]
+    => [ 3, [ Cat.Unused, 5, 14 ]
          5, []]
 
 [<Test>]
@@ -970,7 +993,7 @@ let ``multiple open declaration in the same line``() =
     """
 open System.IO; let _ = File.Create "";; open System.IO
 """
-    => [ 2, [ Category.ReferenceType, 24, 28; Category.Function, 29, 35; Category.Unused, 46, 55 ]]
+    => [ 2, [ Cat.Operator, 22, 23; Cat.ReferenceType, 24, 28; Cat.Function, 29, 35; Cat.Unused, 46, 55 ]]
 
 [<Test>]
 let ``open a nested module inside another one is not unused``() =
@@ -1031,7 +1054,7 @@ open NormalModule.AutoOpenModule1.NestedNormalModule.AutoOpenModule2
 open NormalModule.AutoOpenModule1.NestedNormalModule
 let _ = Class()
 """
-    => [ 12, [ Category.Unused, 5, 68 ]
+    => [ 12, [ Cat.Unused, 5, 68 ]
          13, []]
     
 [<Test>]
@@ -1063,7 +1086,7 @@ module Module =
 open Module
 let _ = "a long string".Trim()
 """
-    => [ 5, [ Category.Unused, 5, 11 ]]
+    => [ 5, [ Cat.Unused, 5, 11 ]]
 
 [<Test>]
 let ``open declaration is not marked as unused if an extension method is used``() =
@@ -1088,7 +1111,7 @@ module Module =
 open Module
 let x = Class()
 """
-    => [ 6, [ Category.Unused, 5, 11 ]]
+    => [ 6, [ Cat.Unused, 5, 11 ]]
 
 [<Test>]
 let ``open declaration is not marked as unused if a type from it used in a constructor signarute``() =
@@ -1108,7 +1131,7 @@ module M =
 open M
 type Site (x: int -> unit) = class end
 """
-    => [ 4, [ Category.Unused, 5, 6 ] ]
+    => [ 4, [ Cat.Unused, 5, 6 ] ]
 
 [<Test>]
 let ``static extension method applied to a type results that both namespaces /where the type is declared and where the extension is declared/ is not marked as unudes``() =
@@ -1142,7 +1165,7 @@ module M =
     open System
     let _ = dt.Hour
 """
-    => [4, [ Category.Unused, 9, 15 ]]
+    => [4, [ Cat.Unused, 9, 15 ]]
 
 [<Test>]
 let ``either of two open declarations are not marked as unused if symbols from both of them are used``() =
@@ -1178,7 +1201,7 @@ module M =
 open M
 let _ = M.func 1
 """
-    => [4, [Category.Unused, 5, 6 ]]
+    => [4, [Cat.Unused, 5, 6 ]]
 
 [<Test>]
 let ``open module is not marked as unused if a symbol defined in it is used in OCaml-style type annotation``() =
@@ -1256,7 +1279,7 @@ module M =
     open InternalModuleWithSuffix
     let _ = InternalModuleWithSuffix.func1()
 """
-    => [ 6, [Category.Unused, 9, 33 ]]
+    => [ 6, [Cat.Unused, 9, 33 ]]
     
 [<Test>]
 let ``redundant opening a module is marks as unused``() =
@@ -1267,7 +1290,7 @@ module M =
     open InternalModuleWithSuffix
     let _ = InternalModuleWithSuffix.func1()
 """
-    => [ 5, [Category.Unused, 9, 33 ]]
+    => [ 5, [Cat.Unused, 9, 33 ]]
 
 [<Test>]
 let ``usage of an unqualified union case makes opening module in which it's defined not maked as unused``() =
@@ -1395,7 +1418,7 @@ module Module =
     open ``global``.Namesp
     let _ = System.String("")
 """
-    => [ 3, [Category.Unused, 9, 26]]
+    => [ 3, [Cat.Unused, 9, 26]]
 
 [<Test>]
 let ``record fields should be taken into account``() = 
@@ -1431,7 +1454,7 @@ type IClass() =
 
 let f (x: IClass) = (x :> IInterface).Property
 """
-    => [ 7, []]
+    => [ 7, [ Cat.Operator, 27, 28 ]]
 
 [<Test>]
 let ``active pattern cases should be taken into account``() =
@@ -1461,7 +1484,7 @@ module M =
 open M
 let _ = 1
 """
-    => [ 4, [ Category.Unused, 5, 6 ]]
+    => [ 4, [ Cat.Unused, 5, 6 ]]
     
 [<Test>]
 let ``printf formatters in bindings``() =
@@ -1470,9 +1493,9 @@ let _ = printfn ""
 let _ = printfn "%s %s"
 do printfn "%6d %%  % 06d" 1 2
 """
-    => [ 2, [ Category.Function, 8, 15 ]
-         3, [ Category.Function, 8, 15; Category.Printf, 17, 19; Category.Printf, 20, 22 ]
-         4, [ Category.Function, 3, 10; Category.Printf, 12, 15; Category.Printf, 20, 25 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15 ]
+         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 19; Cat.Printf, 20, 22 ]
+         4, [ Cat.Function, 3, 10; Cat.Printf, 12, 15; Cat.Printf, 20, 25 ]]
 
 [<Test>]
 let ``printf formatters in try / with / finally``() =
@@ -1486,10 +1509,10 @@ try
 with _ ->
     failwithf "foo %d bar" 0
 """
-    =>  [ 3, [ Category.Function, 12, 19; Category.Printf, 25, 27 ]
-          5, [ Category.Function, 8, 15; Category.Printf, 21, 23 ]
-          7, [ Category.Function, 8, 14; Category.Printf, 20, 22 ]
-          9, [ Category.Function, 4, 13; Category.Printf, 19, 21 ]]
+    =>  [ 3, [ Cat.Operator, 10, 11; Cat.Function, 12, 19; Cat.Printf, 25, 27 ]
+          5, [ Cat.Function, 8, 15; Cat.Printf, 21, 23 ]
+          7, [ Cat.Function, 8, 14; Cat.Printf, 20, 22 ]
+          9, [ Cat.Function, 4, 13; Cat.Printf, 19, 21 ]]
 
 [<Test>]
 let ``printf formatters in record / DU members``() =
@@ -1507,10 +1530,10 @@ type DU = DU
         override __.ToString() = 
             sprintf "%d" 1
 """
-    => [ 5, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
-         7, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
-         11, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]
-         13, [ Category.Function, 12, 19; Category.Printf, 21, 23 ]]
+    => [ 5, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]
+         7, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]
+         11, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]
+         13, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]]
 
 [<Test>]
 let ``printf formatters in extention members``() =
@@ -1519,19 +1542,19 @@ type System.Object with
     member __.M1 = 
         sprintf "%A" 
 """
-    => [ 4, [ Category.Function, 8, 15; Category.Printf, 17, 19 ]]
+    => [ 4, [ Cat.Function, 8, 15; Cat.Printf, 17, 19 ]]
 
 [<Test>]
 let ``printf formatters in escaped string``() =
     """
 let _ = sprintf @"%A"
 """
-    => [ 2, [ Category.Function, 8, 15; Category.Printf, 18, 20 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 18, 20 ]]
 
 [<Test>]
 let ``printf formatters in triple-quoted string``() =
     "let _ = sprintf \"\"\"%A\"\"\""
-    => [ 1, [ Category.Function, 8, 15; Category.Printf, 19, 21 ]]
+    => [ 1, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 19, 21 ]]
 
 [<Test>]
 let ``multiline printf formatters``() =
@@ -1540,9 +1563,9 @@ let _ = printfn "foo %s %d
                  %A bar
 %i"
 """
-    => [ 2, [ Category.Function, 8, 15; Category.Printf, 21, 23; Category.Printf, 24, 26 ] 
-         3, [ Category.Printf, 17, 19 ]
-         4, [ Category.Printf, 0, 2 ] ]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 21, 23; Cat.Printf, 24, 26 ] 
+         3, [ Cat.Printf, 17, 19 ]
+         4, [ Cat.Printf, 0, 2 ] ]
 
 [<Test>]
 let ``printf formatters in for expressions``() =
@@ -1555,10 +1578,10 @@ for _ in (sprintf "%d" 1).ToCharArray() do
 |> ignore
 
     """
-    => [ 2, [ Category.Function, 10, 17; Category.Printf, 19, 21; Category.Function, 26, 37 ]
-         3, [ Category.Function, 4, 11; Category.Printf, 13, 15]
-         5, [ Category.Function, 12, 19; Category.Printf, 21, 23; Category.Function, 28, 39 ]
-         6, [ Category.Function, 10, 17; Category.Printf, 19, 21]
+    => [ 2, [ Cat.Function, 10, 17; Cat.Printf, 19, 21; Cat.Function, 26, 37 ]
+         3, [ Cat.Function, 4, 11; Cat.Printf, 13, 15]
+         5, [ Cat.Function, 12, 19; Cat.Printf, 21, 23; Cat.Function, 28, 39 ]
+         6, [ Cat.Function, 10, 17; Cat.Printf, 19, 21]
     ]
 
 [<Test>]
@@ -1566,7 +1589,7 @@ let ``printf formatters in quoted expressions``() =
     """
 let _ = <@ sprintf "%A" @>
 """
-    => [ 2, [Category.Function, 11, 18; Category.Printf, 20, 22; Category.Quotation, 8, 26 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 11, 18; Cat.Printf, 20, 22; Cat.Quotation, 8, 26 ]]
 
 [<Test>]
 let ``printf formatters if printf function is namespace qualified``() =
@@ -1575,15 +1598,15 @@ let _ = Microsoft.FSharp.Core.Printf.printf "%A" 0
 open Microsoft.FSharp.Core
 let _ = Printf.printf "%A" 0
 """
-    => [ 2, [ Category.Module, 30, 36; Category.Function, 37, 43; Category.Printf, 45, 47 ]
-         4, [ Category.Module, 8, 14; Category.Function, 15, 21; Category.Printf, 23, 25 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Module, 30, 36; Cat.Function, 37, 43; Cat.Printf, 45, 47 ]
+         4, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 21; Cat.Printf, 23, 25 ]]
 
 [<Test>]
 let ``printf formatters are not colorized in plane strings``() =
     """
 let _ = sprintf "foo", "%A"
 """
-    => [ 2, [Category.Function, 8, 15 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15 ]]
 
 [<Test>]
 let ``fprintf formatters``() =
@@ -1592,9 +1615,9 @@ let _ = fprintf null "%A" 0
 let _ = Microsoft.FSharp.Core.Printf.fprintf null "%A" 0
 let _ = fprintfn null "%A" 0
 """
-    => [ 2, [Category.Function, 8, 15; Category.Printf, 22, 24 ]
-         3, [Category.Module, 30, 36; Category.Function, 37, 44; Category.Printf, 51, 53 ]
-         4, [Category.Function, 8, 16; Category.Printf, 23, 25 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 22, 24 ]
+         3, [ Cat.Operator, 6, 7; Cat.Module, 30, 36; Cat.Function, 37, 44; Cat.Printf, 51, 53 ]
+         4, [ Cat.Operator, 6, 7; Cat.Function, 8, 16; Cat.Printf, 23, 25 ]]
 
 [<Test>]
 let ``kprintf and bprintf formatters``() =
@@ -1602,15 +1625,15 @@ let ``kprintf and bprintf formatters``() =
 let _ = Printf.kprintf (fun _ -> ()) "%A" 1
 let _ = Printf.bprintf null "%A" 1
 """
-    => [ 2, [Category.Module, 8, 14; Category.Function, 15, 22; Category.Printf, 38, 40]
-         3, [Category.Module, 8, 14; Category.Function, 15, 22; Category.Printf, 29, 31]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 38, 40]
+         3, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 29, 31]]
 
 [<Test>]
 let ``wildcards in printf formatters``() =
     """
 let _ = sprintf "%*d" 1
 """
-    => [ 2, [Category.Function, 8, 15; Category.Printf, 17, 20 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 20 ]]
 
 [<Test>]
 let ``float printf formatters``() =
@@ -1618,38 +1641,39 @@ let ``float printf formatters``() =
 let _ = sprintf "%7.1f" 1.0
 let _ = sprintf "%-8.1e+567" 1.0
 """
-    => [ 2, [Category.Function, 8, 15; Category.Printf, 17, 22]
-         3, [Category.Function, 8, 15; Category.Printf, 17, 23]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 22]
+         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 23]]
 
 [<Test>]
 let ``malformed printf formatters``() =
     """
 let _ = sprintf "%.7f %7.1A %7.f %--8.1f"
 """
-    => [ 2, [Category.Function, 8, 15]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15]]
 
 [<Test>]
 let ``all escaped symbols in string``() =
     """    
 let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"
 """
-    => [ 2, [ Category.Escaped, 9, 11
-              Category.Escaped, 11, 13
-              Category.Escaped, 14, 16
-              Category.Escaped, 16, 18
-              Category.Escaped, 23, 25
-              Category.Escaped, 26, 28
-              Category.Escaped, 29, 31
-              Category.Escaped, 32, 38
-              Category.Escaped, 39, 49 ]]
+    => [ 2, [ Cat.Operator, 6, 7
+              Cat.Escaped, 9, 11
+              Cat.Escaped, 11, 13
+              Cat.Escaped, 14, 16
+              Cat.Escaped, 16, 18
+              Cat.Escaped, 23, 25
+              Cat.Escaped, 26, 28
+              Cat.Escaped, 29, 31
+              Cat.Escaped, 32, 38
+              Cat.Escaped, 39, 49 ]]
 
 [<Test>]
 let ``escaped symbols in multiline string``() =
     """
 let _ = "\n
 \r" """
-    => [ 2, [ Category.Escaped, 9, 11 ]
-         3, [ Category.Escaped, 0, 2 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Escaped, 9, 11 ]
+         3, [ Cat.Escaped, 0, 2 ]]
 
 [<Test>]
 let ``escaped symbols in complex multiline string``() =
@@ -1659,16 +1683,52 @@ let _ = "foo \n bar \r baz
  \r f \t\b \\ 
 \n"
 """
-    => [ 2, [ Category.Escaped, 13, 15; Category.Escaped, 20, 22 ]
-         3, [ Category.Escaped, 0, 2 ]
-         4, [ Category.Escaped, 1, 3; Category.Escaped, 6, 8; Category.Escaped, 8, 10; Category.Escaped, 11, 13 ]
-         5, [ Category.Escaped, 0, 2 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Escaped, 13, 15; Cat.Escaped, 20, 22 ]
+         3, [ Cat.Escaped, 0, 2 ]
+         4, [ Cat.Escaped, 1, 3; Cat.Escaped, 6, 8; Cat.Escaped, 8, 10; Cat.Escaped, 11, 13 ]
+         5, [ Cat.Escaped, 0, 2 ]]
 
 [<Test>]
 let ``escaped symbols in method chains``() =
     """
 let _ = "a\r\n".Replace("\r\n", "\n").Split('\r')
 """
-    => [ 2, [ Category.Escaped, 10, 12; Category.Escaped, 12, 14; Category.Function, 16, 23
-              Category.Escaped, 25, 27; Category.Escaped, 27, 29
-              Category.Escaped, 33, 35; Category.Function, 38, 43 ]]
+    => [ 2, [ Cat.Operator, 6, 7; 
+              Cat.Escaped, 10, 12; Cat.Escaped, 12, 14; Cat.Function, 16, 23
+              Cat.Escaped, 25, 27; Cat.Escaped, 27, 29
+              Cat.Escaped, 33, 35; Cat.Function, 38, 43 ]]
+
+[<Test>]
+let ``operators``() =
+    """
+let _ = 1 + 2
+let _ = 1 = 2
+let (>>=) _x _y = ()
+let _ = 1 >>= fun _ -> 2
+let _ = match obj() with | :? exn -> () | _ -> ()
+"""
+    => [ 2, [ Cat.Operator, 10, 11; Cat.Operator, 6, 7 ]
+         3, [ Cat.Operator, 10, 11; Cat.Operator, 6, 7 ]
+         4, [ Cat.Operator, 5, 8; Cat.Operator, 16, 17 ]
+         5, [ Cat.Operator, 10, 13; Cat.Operator, 6, 7 ] 
+         6, [ Cat.Operator, 6, 7; Cat.ReferenceType, 14, 17; Cat.Operator, 27, 29; Cat.ReferenceType, 30, 33 ]] 
+
+[<Test>]
+let ``lexer-based operator is hidden by symbol-based one``() =
+    """
+let _ = 1
+let a = [||]
+let (>>=) _x _y = ()
+a.[0] >>= fun _ -> ()
+"""
+    => [ 2, [ Cat.Operator, 6, 7 ]
+         5, [ Cat.Operator, 1, 2; Cat.Function, 1, 2; Cat.Operator, 6, 9 ]]
+
+[<Test>]
+let ``cast operators``() =
+    """
+let _ = System.DateTime.Now :> obj
+let _ = System.DateTime.Now :?> obj
+"""
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 30; Cat.ReferenceType, 31, 34 ] 
+         3, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 31; Cat.ReferenceType, 32, 35 ] ]
