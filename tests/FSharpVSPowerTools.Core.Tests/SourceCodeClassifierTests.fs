@@ -337,6 +337,13 @@ match FuncCase (fun() -> ()) with FuncCase func -> func()
          4, [ Cat.PatternCase, 6, 14; Cat.PatternCase, 34, 42; Cat.Function, 43, 47; Cat.Function, 51, 55 ]]
 
 [<Test>]
+let ``single case DU without leading pipe``() =
+    """
+type DU = Case
+"""
+    => [2, [Category.ReferenceType, 5, 7; Cat.Operator, 8, 9; Category.PatternCase, 10, 14 ]]
+
+[<Test>]
 let ``double quoted function without spaces``() = 
     """
 let ``double_quoted_function_without_spaces`` () = ()
