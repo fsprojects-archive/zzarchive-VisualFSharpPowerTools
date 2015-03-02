@@ -66,14 +66,16 @@ namespace FSharpVSPowerTools
             if (textView == null) return;
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
-            if (generalOptions == null || !generalOptions.GoToMetadataEnabled) return;
-
+            if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToDownloadedSourceEnabled)) return;
+            // Favor Navigate to Source feature
+            var preference = generalOptions.GoToDownloadedSourceEnabled ? NavigationPreference.DownloadedSource : NavigationPreference.Metadata;
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
                 Debug.Assert(doc != null, "Text document shouldn't be null.");
                 var commandFilter = new GoToDefinitionFilter(doc, textView, editorOptionsFactory,
-                                                             fsharpVsLanguageService, serviceProvider, projectFactory);
+                                                             fsharpVsLanguageService, serviceProvider, projectFactory,
+                                                             preference);
                 textView.Properties.AddProperty(serviceType, commandFilter);
                 AddCommandFilter(textViewAdapter, commandFilter);
             }

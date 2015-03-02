@@ -18,12 +18,18 @@ open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
 
+[<RequireQualifiedAccess>]
+type NavigationPreference =
+    | DownloadedSource
+    | Metadata
+
 type GoToDefinitionFilter(textDocument: ITextDocument,
                           view: IWpfTextView, 
                           editorOptionsFactory: IEditorOptionsFactoryService, 
                           vsLanguageService: VSLanguageService, 
                           serviceProvider: System.IServiceProvider,                          
-                          projectFactory: ProjectFactory) =
+                          projectFactory: ProjectFactory,
+                          navigationPreference) =
     let getDocumentState () =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -291,8 +297,12 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     // Declaration location might exist so let Visual F# Tools handle it. 
                     return continueCommandChain()
                 | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
-                    if shouldGenerateDefinition fsSymbolUse.Symbol then
-                        return! navigateToMetadata project span parseTree fsSymbolUse  
+                    match navigationPreference with
+                    | NavigationPreference.Metadata ->
+                        if shouldGenerateDefinition fsSymbolUse.Symbol then
+                            return! navigateToMetadata project span parseTree fsSymbolUse
+                    | NavigationPreference.DownloadedSource ->          
+                        return Logging.messageBoxInfo "Not implemented yet"
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
