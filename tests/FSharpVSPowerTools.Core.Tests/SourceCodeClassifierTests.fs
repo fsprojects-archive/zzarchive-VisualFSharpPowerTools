@@ -341,7 +341,7 @@ let ``single case DU without leading pipe``() =
     """
 type DU = Case
 """
-    => [2, [Category.ReferenceType, 5, 7; Category.PatternCase, 10, 14 ]]
+    => [2, [Category.ReferenceType, 5, 7; Cat.Operator, 8, 9; Category.PatternCase, 10, 14 ]]
 
 [<Test>]
 let ``double quoted function without spaces``() = 
