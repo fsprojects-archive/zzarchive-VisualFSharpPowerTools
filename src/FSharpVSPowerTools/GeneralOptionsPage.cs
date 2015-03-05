@@ -43,7 +43,7 @@ namespace FSharpVSPowerTools
             TaskListCommentsEnabled = true;
             GoToMetadataEnabled = true;
             GenerateReferencesEnabled = true;
-            GoToDownloadedSourceEnabled = true;
+            GoToSymbolSourceEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -168,7 +168,7 @@ namespace FSharpVSPowerTools
         public bool GenerateReferencesEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool GoToDownloadedSourceEnabled { get; set; }
+        public bool GoToSymbolSourceEnabled { get; set; }
 
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -212,7 +212,7 @@ namespace FSharpVSPowerTools
                 TaskListCommentsEnabled = _optionsControl.TaskListCommentsEnabled;
                 GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
                 GenerateReferencesEnabled = _optionsControl.GenerateReferencesEnabled;
-                GoToDownloadedSourceEnabled = _optionsControl.GoToDownloadedSourceEnabled;
+                GoToSymbolSourceEnabled = _optionsControl.GoToSymbolSourceEnabled;
             }
 
             base.OnApply(e);

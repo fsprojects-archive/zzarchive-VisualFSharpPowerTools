@@ -33,6 +33,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                           vsLanguageService: VSLanguageService, 
                           serviceProvider: System.IServiceProvider,                          
                           projectFactory: ProjectFactory,
+                          referenceSourceProvider: ReferenceSourceProvider,
                           navigationPreference) =
     let getDocumentState () =
         async {
@@ -349,19 +350,25 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                         if shouldGenerateDefinition fsSymbolUse.Symbol then
                             return! navigateToMetadata project span parseTree fsSymbolUse
                     | NavigationPreference.SymbolSourceOrMetadata
-                    | NavigationPreference.SymbolSource as pref ->          
-                        match tryFindSourceUrl fsSymbolUse.Symbol with
-                        | Some(symbolCache, url) ->
-                            return navigateToSource fsSymbolUse.Symbol symbolCache url
-                        | None ->
-                            match pref with
-                            | NavigationPreference.SymbolSourceOrMetadata ->
-                                if shouldGenerateDefinition fsSymbolUse.Symbol then
-                                    return! navigateToMetadata project span parseTree fsSymbolUse
-                            | _ ->
-                                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                                statusBar.SetText("Can't navigate to source since it is not source indexed.") |> ignore
-                                return ()
+                    | NavigationPreference.SymbolSource as pref ->   
+                        let symbol = fsSymbolUse.Symbol
+                        if symbol.Assembly.FileName
+                           |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
+                           |> Option.getOrElse false then
+                            referenceSourceProvider.NavigateTo symbol
+                        else
+                            match tryFindSourceUrl symbol with
+                            | Some(symbolCache, url) ->
+                                return navigateToSource symbol symbolCache url
+                            | None ->
+                                match pref with
+                                | NavigationPreference.SymbolSourceOrMetadata ->
+                                    if shouldGenerateDefinition symbol then
+                                        return! navigateToMetadata project span parseTree fsSymbolUse
+                                | _ ->
+                                    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                                    statusBar.SetText("Can't navigate to source since it is not source indexed.") |> ignore
+                                    return ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 

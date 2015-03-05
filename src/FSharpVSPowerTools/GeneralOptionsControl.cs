@@ -125,10 +125,10 @@ namespace FSharpVSPowerTools
             set { chbGenerateReferences.Checked = value; }
         }
 
-        public bool GoToDownloadedSourceEnabled
+        public bool GoToSymbolSourceEnabled
         {
-            get { return chbGoToDownloadedSource.Checked; }
-            set { chbGoToDownloadedSource.Checked = value; }
+            get { return chbGoToSymbolSource.Checked; }
+            set { chbGoToSymbolSource.Checked = value; }
         }
 
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
@@ -152,7 +152,7 @@ namespace FSharpVSPowerTools
             TaskListCommentsEnabled = _optionsPage.TaskListCommentsEnabled;
             GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
             GenerateReferencesEnabled = _optionsPage.GenerateReferencesEnabled;
-            GoToDownloadedSourceEnabled = _optionsPage.GoToDownloadedSourceEnabled;
+            GoToSymbolSourceEnabled = _optionsPage.GoToSymbolSourceEnabled;
         }
     }
 }

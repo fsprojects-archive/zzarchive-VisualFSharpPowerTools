@@ -19,6 +19,12 @@ using EnvDTE;
 
 namespace FSharpVSPowerTools
 {
+    [Export(typeof(DotNetReferenceSourceProvider))]
+    public class DotNetReferenceSourceProvider : ReferenceSourceProvider
+    {
+        DotNetReferenceSourceProvider() : base("http://referencesource.microsoft.com") { }
+    }
+
     [Export(typeof(IVsTextViewCreationListener))]
     [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
@@ -39,6 +45,9 @@ namespace FSharpVSPowerTools
 
         [Import]
         internal ProjectFactory projectFactory = null;
+
+        [Import(typeof(DotNetReferenceSourceProvider))]
+        internal ReferenceSourceProvider referenceSourceProvider = null;
 
         private readonly System.IServiceProvider serviceProvider = null;
         private readonly SolutionEvents solutionEvents = null;
@@ -66,9 +75,9 @@ namespace FSharpVSPowerTools
             if (textView == null) return;
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
-            if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToDownloadedSourceEnabled)) return;
+            if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToSymbolSourceEnabled)) return;
             // Favor Navigate to Source feature over Go to Metadata
-            var preference = generalOptions.GoToDownloadedSourceEnabled
+            var preference = generalOptions.GoToSymbolSourceEnabled
                                 ? (generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource) 
                                 : NavigationPreference.Metadata;
             ITextDocument doc;
@@ -77,7 +86,9 @@ namespace FSharpVSPowerTools
                 Debug.Assert(doc != null, "Text document shouldn't be null.");
                 var commandFilter = new GoToDefinitionFilter(doc, textView, editorOptionsFactory,
                                                              fsharpVsLanguageService, serviceProvider, projectFactory,
-                                                             preference);
+                                                             referenceSourceProvider, preference);
+                if (!referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
+                    referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);
                 AddCommandFilter(textViewAdapter, commandFilter);
             }
@@ -120,7 +131,8 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            this.solutionEvents.AfterClosing -= Cleanup;
+            solutionEvents.AfterClosing -= Cleanup;
+            (referenceSourceProvider as IDisposable).Dispose();
         }
     }
 }
