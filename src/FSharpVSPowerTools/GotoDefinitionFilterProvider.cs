@@ -67,8 +67,10 @@ namespace FSharpVSPowerTools
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToDownloadedSourceEnabled)) return;
-            // Favor Navigate to Source feature
-            var preference = generalOptions.GoToDownloadedSourceEnabled ? NavigationPreference.DownloadedSource : NavigationPreference.Metadata;
+            // Favor Navigate to Source feature over Go to Metadata
+            var preference = generalOptions.GoToDownloadedSourceEnabled
+                                ? (generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource) 
+                                : NavigationPreference.Metadata;
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {

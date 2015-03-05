@@ -7,8 +7,8 @@ open SourceLink
 open SourceLink.SymbolStore
 open System.Reflection
  
-let pdbFcs = Path.Combine(__SOURCE_DIRECTORY__, @"packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.pdb")
-let dllFcs = Path.Combine(__SOURCE_DIRECTORY__, @"packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll")
+let pdbFcs = Path.Combine(__SOURCE_DIRECTORY__, @"packages\FSharp.Compiler.Service.0.0.61\lib\net45\FSharp.Compiler.Service.pdb")
+let dllFcs = Path.Combine(__SOURCE_DIRECTORY__, @"packages\FSharp.Compiler.Service.0.0.61\net45\FSharp.Compiler.Service.dll")
 let cacheDir = Path.Combine(__SOURCE_DIRECTORY__, @"packages")
  
 let printPdbDocuments() =

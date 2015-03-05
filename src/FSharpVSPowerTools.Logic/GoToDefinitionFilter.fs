@@ -23,7 +23,8 @@ open System.Diagnostics
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
-    | DownloadedSource
+    | SymbolSourceOrMetadata
+    | SymbolSource
     | Metadata
 
 type GoToDefinitionFilter(textDocument: ITextDocument,
@@ -280,14 +281,14 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
-    // Implementation location is pointed to fsi files for out-of-solution symbols
+    // Implementation location points to fsi files for out-of-solution symbols
     // In that case, we create fake locations in the implementation files
     let tryGetImplementationLocation (fsSymbol: FSharpSymbol) =
         fsSymbol.ImplementationLocation
         |> Option.map (fun range ->
             if range.FileName.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase) then
                 let implFileName = Path.ChangeExtension(range.FileName, ".fs")
-                mkRange implFileName (mkPos 0 0) (mkPos 0 0)
+                mkRange implFileName (mkPos 1 0) (mkPos 1 0)
             else range)
 
     let navigateToSource (fsSymbol: FSharpSymbol) (symbolCache: SymbolCache)(url: string) = 
@@ -298,11 +299,12 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         | filePath ->
             tryGetImplementationLocation fsSymbol
             |> Option.iter (fun r -> 
-                serviceProvider.NavigateTo(filePath, r.StartLine, r.StartColumn, r.EndLine, r.EndColumn))
+                serviceProvider.NavigateTo(filePath, r.StartLine-1, r.StartColumn, r.EndLine-1, r.EndColumn))
 
     let tryFindSourceUrl (fsSymbol: FSharpSymbol) = 
         fsSymbol.Assembly.FileName
         |> Option.bind (fun assemblyPath -> 
+            // TODO: implementing pdb file discovery
             let pdbPath = Path.ChangeExtension(assemblyPath, ".pdb")
             let cacheDir = Path.Combine(Path.GetTempPath(), Path.GetFileNameSafe(assemblyPath) |> hash |> string)
             Directory.CreateDirectory(cacheDir) |> ignore
@@ -346,14 +348,20 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     | NavigationPreference.Metadata ->
                         if shouldGenerateDefinition fsSymbolUse.Symbol then
                             return! navigateToMetadata project span parseTree fsSymbolUse
-                    | NavigationPreference.DownloadedSource ->          
+                    | NavigationPreference.SymbolSourceOrMetadata
+                    | NavigationPreference.SymbolSource as pref ->          
                         match tryFindSourceUrl fsSymbolUse.Symbol with
                         | Some(symbolCache, url) ->
                             return navigateToSource fsSymbolUse.Symbol symbolCache url
                         | None ->
-                            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                            statusBar.SetText("Can't navigate to source since it is not source indexed.") |> ignore
-                            return ()
+                            match pref with
+                            | NavigationPreference.SymbolSourceOrMetadata ->
+                                if shouldGenerateDefinition fsSymbolUse.Symbol then
+                                    return! navigateToMetadata project span parseTree fsSymbolUse
+                            | _ ->
+                                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                                statusBar.SetText("Can't navigate to source since it is not source indexed.") |> ignore
+                                return ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
