@@ -20,6 +20,8 @@ open Microsoft.FSharp.Compiler.Range
 open SourceLink
 open SourceLink.SymbolStore
 open System.Diagnostics
+open System.Net.Http
+open System.Text.RegularExpressions
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -282,25 +284,35 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
-    // Implementation location points to fsi files for out-of-solution symbols
-    // In that case, we create fake locations in the implementation files
-    let tryGetImplementationLocation (fsSymbol: FSharpSymbol) =
-        fsSymbol.ImplementationLocation
-        |> Option.map (fun range ->
-            if range.FileName.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase) then
-                let implFileName = Path.ChangeExtension(range.FileName, ".fs")
-                mkRange implFileName (mkPos 1 0) (mkPos 1 0)
-            else range)
+    let replace (b:string) c (a:string) = a.Replace(b, c)
 
-    let navigateToSource (fsSymbol: FSharpSymbol) (symbolCache: SymbolCache)(url: string) = 
-        match symbolCache.DownloadFile url with
-        | null ->
-            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-            statusBar.SetText(sprintf "The url '%s' is invalid and can't be downloaded." url) |> ignore
-        | filePath ->
-            tryGetImplementationLocation fsSymbol
-            |> Option.iter (fun r -> 
-                serviceProvider.NavigateTo(filePath, r.StartLine-1, r.StartColumn, r.EndLine-1, r.EndColumn))
+    let navigateToSource (fsSymbol: FSharpSymbol) (url: string) = 
+        async {
+            use handler = new HttpClientHandler(UseDefaultCredentials = true)
+            use http = new HttpClient(handler)
+            let! response = http.GetAsync(url) |> Async.AwaitTask
+            if response.IsSuccessStatusCode then
+                fsSymbol.ImplementationLocation
+                |> Option.iter (fun r ->
+                    // Note: other source code hostings might have different url templating
+                    let m = Regex.Matches(url, "[0-9a-fA-F]{32}") |> Seq.cast<Match> |> Seq.tryHead
+                    let replaceBlob (m: Match option) url =
+                        match m with
+                        | Some m when m.Success ->
+                            replace m.Value (sprintf "blob/%s" m.Value) url
+                        | _ -> url
+                    let browserUrl =
+                        sprintf "%s#L%d"
+                            (url 
+                             |> replace "raw.githubusercontent" "github" 
+                             |> replace "raw.github" "github" 
+                             |> replaceBlob m)
+                            r.StartLine
+                    Process.Start(browserUrl) |> ignore)
+            else
+                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                statusBar.SetText(sprintf "The url '%s' is invalid with error code %A." url response.StatusCode) |> ignore
+        }
 
     let tryFindSourceUrl (fsSymbol: FSharpSymbol) = 
         fsSymbol.Assembly.FileName
@@ -313,15 +325,20 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 use pdbStream = File.OpenRead(pdbPath)
                 let symbolCache = SymbolCache(cacheDir)
                 let pdbReader = symbolCache.ReadPdb pdbStream pdbPath
-                if pdbReader.IsSourceIndexed then
-                    let documents = [| for d in pdbReader.Documents -> d.SourceFilePath |]
-                    tryGetImplementationLocation fsSymbol
+                if pdbReader.IsSourceIndexed then                    
+                    fsSymbol.ImplementationLocation
                     |> Option.bind (fun range -> 
-                        let path = Path.GetFullPathSafe(range.FileName)
-                        Debug.Assert(documents |> Array.exists ((=) path), "Path should exist in the list of documents.")
+                        // Fsi files don't appear on symbol servers, so we try to get urls via its associated fs files
+                        let path, isFsiFile = 
+                            let path = Path.GetFullPathSafe(range.FileName)
+                            let isFsiFile = path.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase)
+                            let newPath = if isFsiFile then Path.ChangeExtension(path, ".fs") else path
+                            newPath, isFsiFile
                         pdbReader.GetDownloadUrl(path)
                         |> Option.map (fun url -> 
-                            symbolCache, url))
+                            if isFsiFile then 
+                                Path.ChangeExtension(url, ".fsi")
+                            else url))
                 else None
             else None)
 
@@ -358,8 +375,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                             referenceSourceProvider.NavigateTo symbol
                         else
                             match tryFindSourceUrl symbol with
-                            | Some(symbolCache, url) ->
-                                return navigateToSource symbol symbolCache url
+                            | Some url ->
+                                return! navigateToSource symbol url
                             | None ->
                                 match pref with
                                 | NavigationPreference.SymbolSourceOrMetadata ->
