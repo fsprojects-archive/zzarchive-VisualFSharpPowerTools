@@ -43,7 +43,8 @@ type ReferenceSourceProvider(baseUrl: string) =
     let networkAvailabilitySubscription = NetworkChange.NetworkAvailabilityChanged.Subscribe(networkAvailabilityChanged)
     let networkAddressSubscription = NetworkChange.NetworkAddressChanged.Subscribe(fun _ -> lookUpAvailableAssemblies())
 
-    let byteArrayToHexString (bytes: byte []) digits =
+    let byteArrayToHexString (bytes: byte []) =
+        let digits = bytes.Length * 2
         let chars = Array.zeroCreate digits
         for i in 0..digits/2-1 do
             let b1 = byte (bytes.[i] >>> 4)
@@ -52,11 +53,11 @@ type ReferenceSourceProvider(baseUrl: string) =
             chars.[i * 2 + 1] <- if b2 > 9uy then char (b2 + 87uy) else char (b2 + 0x30uy)
         String(chars)
 
-    let getMD5Hash (input: string) digits =
+    let getMD5Hash (input: string) =
         use md5 = MD5.Create()
         let bytes = Encoding.UTF8.GetBytes(input)
         let hashBytes = md5.ComputeHash(bytes)
-        byteArrayToHexString hashBytes digits
+        byteArrayToHexString hashBytes
 
     member __.IsActivated =
         timer.IsEnabled
@@ -76,12 +77,13 @@ type ReferenceSourceProvider(baseUrl: string) =
                 Some entity.XmlDocSig
             | _ -> None
         xmlDocSig
-        |> Option.iter (fun xmlDocSig ->
+        |> Option.map (fun xmlDocSig ->
             symbol.Assembly.FileName
             |> Option.map Path.GetFileNameWithoutExtension
             |> Option.iter (fun assemblyName ->
-                let url = baseUrl + "/" + assemblyName + "/a.html#" + getMD5Hash xmlDocSig 16
+                let url = baseUrl + "/" + assemblyName + "/a.html#" + getMD5Hash xmlDocSig
                 Process.Start url |> ignore))
+        |> Option.getOrTry (fun _ -> Logging.logWarning "Can't find navigation information for %s" symbol.FullName)
     
     interface IDisposable with
         member __.Dispose() =

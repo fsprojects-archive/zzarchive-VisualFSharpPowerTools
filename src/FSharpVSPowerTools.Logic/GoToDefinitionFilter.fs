@@ -413,7 +413,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                                         return! navigateToMetadata project span parseTree fsSymbolUse
                                 | _ ->
                                     let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                                    statusBar.SetText("Can't navigate to source since it is not source indexed.") |> ignore
+                                    statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
                                     return ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
