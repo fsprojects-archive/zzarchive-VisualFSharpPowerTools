@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbGoToSymbolSource = new System.Windows.Forms.CheckBox();
             this.chbGenerateReferences = new System.Windows.Forms.CheckBox();
             this.chbUnusedOpens = new System.Windows.Forms.CheckBox();
             this.chbTaskListComments = new System.Windows.Forms.CheckBox();
@@ -52,7 +53,6 @@ namespace FSharpVSPowerTools
             this.lblInfo = new System.Windows.Forms.Label();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbGoToSymbolSource = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -86,6 +86,18 @@ namespace FSharpVSPowerTools
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbGoToSymbolSource
+            // 
+            this.chbGoToSymbolSource.AutoSize = true;
+            this.chbGoToSymbolSource.Checked = true;
+            this.chbGoToSymbolSource.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbGoToSymbolSource.Location = new System.Drawing.Point(16, 227);
+            this.chbGoToSymbolSource.Name = "chbGoToSymbolSource";
+            this.chbGoToSymbolSource.Size = new System.Drawing.Size(116, 17);
+            this.chbGoToSymbolSource.TabIndex = 21;
+            this.chbGoToSymbolSource.Text = "Navigate to source";
+            this.chbGoToSymbolSource.UseVisualStyleBackColor = true;
             // 
             // chbGenerateReferences
             // 
@@ -328,18 +340,6 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.TabIndex = 1;
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
-            // 
-            // chbGoToDownloadedSource
-            // 
-            this.chbGoToSymbolSource.AutoSize = true;
-            this.chbGoToSymbolSource.Checked = true;
-            this.chbGoToSymbolSource.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGoToSymbolSource.Location = new System.Drawing.Point(16, 227);
-            this.chbGoToSymbolSource.Name = "chbGoToDownloadedSource";
-            this.chbGoToSymbolSource.Size = new System.Drawing.Size(116, 17);
-            this.chbGoToSymbolSource.TabIndex = 21;
-            this.chbGoToSymbolSource.Text = "Navigate to source";
-            this.chbGoToSymbolSource.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
