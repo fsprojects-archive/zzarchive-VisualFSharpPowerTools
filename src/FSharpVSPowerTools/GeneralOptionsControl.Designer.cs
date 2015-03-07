@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbGenerateReferences = new System.Windows.Forms.CheckBox();
             this.chbUnusedOpens = new System.Windows.Forms.CheckBox();
             this.chbTaskListComments = new System.Windows.Forms.CheckBox();
             this.chbGoToMetadata = new System.Windows.Forms.CheckBox();
@@ -49,16 +50,15 @@ namespace FSharpVSPowerTools
             this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
             this.chbNavBar = new System.Windows.Forms.CheckBox();
             this.lblInfo = new System.Windows.Forms.Label();
-            this.lblTitle = new System.Windows.Forms.Label();
-            this.lblHome = new System.Windows.Forms.LinkLabel();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbGenerateReferences = new System.Windows.Forms.CheckBox();
+            this.chbGoToSymbolSource = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // grbOptions
             // 
+            this.grbOptions.Controls.Add(this.chbGoToSymbolSource);
             this.grbOptions.Controls.Add(this.chbGenerateReferences);
             this.grbOptions.Controls.Add(this.chbUnusedOpens);
             this.grbOptions.Controls.Add(this.chbTaskListComments);
@@ -78,8 +78,6 @@ namespace FSharpVSPowerTools
             this.grbOptions.Controls.Add(this.chbHighlightUsage);
             this.grbOptions.Controls.Add(this.chbNavBar);
             this.grbOptions.Controls.Add(this.lblInfo);
-            this.grbOptions.Controls.Add(this.lblTitle);
-            this.grbOptions.Controls.Add(this.lblHome);
             this.grbOptions.Controls.Add(this.chbFormatting);
             this.grbOptions.Controls.Add(this.chbXmlDoc);
             this.grbOptions.Location = new System.Drawing.Point(3, 3);
@@ -88,6 +86,18 @@ namespace FSharpVSPowerTools
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbGenerateReferences
+            // 
+            this.chbGenerateReferences.AutoSize = true;
+            this.chbGenerateReferences.Checked = true;
+            this.chbGenerateReferences.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbGenerateReferences.Location = new System.Drawing.Point(204, 228);
+            this.chbGenerateReferences.Name = "chbGenerateReferences";
+            this.chbGenerateReferences.Size = new System.Drawing.Size(157, 17);
+            this.chbGenerateReferences.TabIndex = 20;
+            this.chbGenerateReferences.Text = "Generate references for FSI";
+            this.chbGenerateReferences.UseVisualStyleBackColor = true;
             // 
             // chbUnusedOpens
             // 
@@ -188,7 +198,7 @@ namespace FSharpVSPowerTools
             // lblInformation
             // 
             this.lblInformation.AutoSize = true;
-            this.lblInformation.Location = new System.Drawing.Point(12, 238);
+            this.lblInformation.Location = new System.Drawing.Point(12, 251);
             this.lblInformation.Name = "lblInformation";
             this.lblInformation.Size = new System.Drawing.Size(139, 13);
             this.lblInformation.TabIndex = 13;
@@ -288,31 +298,11 @@ namespace FSharpVSPowerTools
             // 
             this.lblInfo.AutoSize = true;
             this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.lblInfo.Location = new System.Drawing.Point(13, 255);
+            this.lblInfo.Location = new System.Drawing.Point(13, 268);
             this.lblInfo.Name = "lblInfo";
             this.lblInfo.Size = new System.Drawing.Size(331, 13);
             this.lblInfo.TabIndex = 5;
             this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
-            // 
-            // lblTitle
-            // 
-            this.lblTitle.AutoSize = true;
-            this.lblTitle.Location = new System.Drawing.Point(13, 271);
-            this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(95, 13);
-            this.lblTitle.TabIndex = 4;
-            this.lblTitle.Text = "Visit user guides at";
-            // 
-            // lblHome
-            // 
-            this.lblHome.AutoSize = true;
-            this.lblHome.Location = new System.Drawing.Point(114, 271);
-            this.lblHome.Name = "lblHome";
-            this.lblHome.Size = new System.Drawing.Size(254, 13);
-            this.lblHome.TabIndex = 3;
-            this.lblHome.TabStop = true;
-            this.lblHome.Text = "http://fsprojects.github.io/VisualFSharpPowerTools/";
-            this.lblHome.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lblHome_LinkClicked);
             // 
             // chbFormatting
             // 
@@ -339,17 +329,17 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
             // 
-            // chbGenerateReferences
+            // chbGoToDownloadedSource
             // 
-            this.chbGenerateReferences.AutoSize = true;
-            this.chbGenerateReferences.Checked = true;
-            this.chbGenerateReferences.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGenerateReferences.Location = new System.Drawing.Point(204, 228);
-            this.chbGenerateReferences.Name = "chbGenerateReferences";
-            this.chbGenerateReferences.Size = new System.Drawing.Size(157, 17);
-            this.chbGenerateReferences.TabIndex = 20;
-            this.chbGenerateReferences.Text = "Generate references for FSI";
-            this.chbGenerateReferences.UseVisualStyleBackColor = true;
+            this.chbGoToSymbolSource.AutoSize = true;
+            this.chbGoToSymbolSource.Checked = true;
+            this.chbGoToSymbolSource.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbGoToSymbolSource.Location = new System.Drawing.Point(16, 227);
+            this.chbGoToSymbolSource.Name = "chbGoToDownloadedSource";
+            this.chbGoToSymbolSource.Size = new System.Drawing.Size(116, 17);
+            this.chbGoToSymbolSource.TabIndex = 21;
+            this.chbGoToSymbolSource.Text = "Navigate to source";
+            this.chbGoToSymbolSource.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -370,8 +360,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.GroupBox grbOptions;
         private System.Windows.Forms.CheckBox chbFormatting;
         private System.Windows.Forms.CheckBox chbXmlDoc;
-        private System.Windows.Forms.Label lblTitle;
-        private System.Windows.Forms.LinkLabel lblHome;
         private System.Windows.Forms.Label lblInfo;
         private System.Windows.Forms.CheckBox chbNavBar;
         private System.Windows.Forms.CheckBox chbHighlightUsage;
@@ -391,5 +379,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbGoToMetadata;
         private System.Windows.Forms.CheckBox chbUnusedOpens;
         private System.Windows.Forms.CheckBox chbGenerateReferences;
+        private System.Windows.Forms.CheckBox chbGoToSymbolSource;
     }
 }

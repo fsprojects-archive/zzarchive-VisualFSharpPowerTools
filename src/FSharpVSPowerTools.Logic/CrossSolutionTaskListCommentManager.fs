@@ -195,7 +195,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
         solutionEvents.add_AfterClosing(fun () -> onSolutionClosed ())
 
     interface IDisposable with
-        member __.Dispose(): unit = 
+        member __.Dispose() = 
             fileChangeSubscription.Dispose()
             optionsChangeSubscription.Dispose()
             (optionsMonitor :> IDisposable).Dispose()

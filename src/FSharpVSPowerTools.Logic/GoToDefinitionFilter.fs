@@ -17,13 +17,27 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
+open SourceLink
+open SourceLink.SymbolStore
+open System.Diagnostics
+open System.Net.Http
+open System.Text.RegularExpressions
+open Microsoft.Win32
+
+[<RequireQualifiedAccess>]
+type NavigationPreference =
+    | SymbolSourceOrMetadata
+    | SymbolSource
+    | Metadata
 
 type GoToDefinitionFilter(textDocument: ITextDocument,
                           view: IWpfTextView, 
                           editorOptionsFactory: IEditorOptionsFactoryService, 
                           vsLanguageService: VSLanguageService, 
                           serviceProvider: System.IServiceProvider,                          
-                          projectFactory: ProjectFactory) =
+                          projectFactory: ProjectFactory,
+                          referenceSourceProvider: ReferenceSourceProvider,
+                          navigationPreference) =
     let getDocumentState () =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -40,7 +54,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let lineStr = span.Start.GetContainingLine().GetText()
-                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, false)
+                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
                     return Some (project, fileScopedCheckResults.GetUntypedAst(), span, fsSymbolUse, findDeclResult) 
                 | _ -> return None
             | _ -> return None
@@ -271,6 +285,92 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
+    let replace (b:string) c (a:string) = a.Replace(b, c)
+
+    let getSymbolCacheDir() = 
+        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+        let keyName = String.Format(@"Software\Microsoft\VisualStudio\{0}.0\Debugger",
+                                    dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toString)
+        use key = Registry.CurrentUser.OpenSubKey(keyName)
+        key.GetValue("SymbolCacheDir", null)
+        |> Option.ofNull
+        |> Option.bind (fun o ->
+            let s = string o
+            if String.IsNullOrEmpty s then None else Some s)
+
+    let navigateToSource (fsSymbol: FSharpSymbol) (url: string) = 
+        async {
+            use handler = new HttpClientHandler(UseDefaultCredentials = true)
+            use http = new HttpClient(handler)
+            let! response = http.GetAsync(url) |> Async.AwaitTask
+            if response.IsSuccessStatusCode then
+                fsSymbol.ImplementationLocation
+                |> Option.iter (fun r ->
+                    // NOTE: other source code hostings might have different url templates
+                    let m = Regex.Matches(url, "[0-9a-fA-F]{32}") |> Seq.cast<Match> |> Seq.tryHead
+                    let replaceBlob (m: Match option) url =
+                        match m with
+                        | Some m when m.Success ->
+                            replace m.Value (sprintf "blob/%s" m.Value) url
+                        | _ -> url
+                    let browserUrl =
+                        sprintf "%s#L%d"
+                            (url 
+                             |> replace "raw.githubusercontent" "github" 
+                             |> replace "raw.github" "github" 
+                             |> replaceBlob m)
+                            r.StartLine
+                    Process.Start(browserUrl) |> ignore)
+            else
+                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                statusBar.SetText(sprintf "The url '%s' is invalid with error code %A." url response.StatusCode) |> ignore
+        }
+
+    let tryFindSourceUrl (fsSymbol: FSharpSymbol) = 
+        let changeExt ext path = Path.ChangeExtension(path, ext)
+        let combine prefix suffix = Path.Combine(prefix, suffix)
+        let fileNameOf path = Path.GetFileNameSafe(path)
+        let fullPathOf path = Path.GetFullPathSafe(path)
+        maybe {
+            let! assemblyPath = fsSymbol.Assembly.FileName
+            // First try to find pdb files in the current folder
+            // If not found, try to find pdb files in the symbol cache folder
+            let! pdbPath = 
+                maybe {
+                    let localPdbPath = changeExt ".pdb" assemblyPath
+                    if File.Exists(localPdbPath) then 
+                        return localPdbPath
+                    else
+                        let! cacheDir = getSymbolCacheDir()
+                        let cachePdbPath = fileNameOf assemblyPath |> combine cacheDir |> changeExt ".pdb"
+                        if File.Exists(cachePdbPath) then 
+                            return cachePdbPath
+                        else
+                            return! None
+                }
+
+            let cacheDir = fileNameOf assemblyPath |> hash |> string |> combine (Path.GetTempPath())
+            Directory.CreateDirectory(cacheDir) |> ignore
+            use pdbStream = File.OpenRead(pdbPath)
+            let symbolCache = SymbolCache(cacheDir)
+            let pdbReader = symbolCache.ReadPdb pdbStream pdbPath
+            if pdbReader.IsSourceIndexed then                    
+                let! range = fsSymbol.ImplementationLocation
+                // Fsi files don't appear on symbol servers, so we try to get urls via its associated fs files
+                let path, isFsiFile = 
+                    let path = fullPathOf range.FileName
+                    let isFsiFile = path.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase)
+                    let newPath = if isFsiFile then changeExt ".fs" path else path
+                    newPath, isFsiFile
+                let! url = pdbReader.GetDownloadUrl(path)
+                if isFsiFile then 
+                    return changeExt ".fsi" url
+                else 
+                    return url
+            else 
+                return! None
+        }
+
     let cancellationToken = Atom None
 
     let gotoDefinition continueCommandChain =
@@ -291,10 +391,35 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     // Declaration location might exist so let Visual F# Tools handle it. 
                     return continueCommandChain()
                 | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
-                    if shouldGenerateDefinition fsSymbolUse.Symbol then
-                        return! navigateToMetadata project span parseTree fsSymbolUse  
+                    match navigationPreference with
+                    | NavigationPreference.Metadata ->
+                        if shouldGenerateDefinition fsSymbolUse.Symbol then
+                            return! navigateToMetadata project span parseTree fsSymbolUse
+                    | NavigationPreference.SymbolSourceOrMetadata
+                    | NavigationPreference.SymbolSource as pref ->   
+                        let symbol = fsSymbolUse.Symbol
+                        if symbol.Assembly.FileName
+                           |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
+                           |> Option.getOrElse false then
+                            referenceSourceProvider.NavigateTo symbol
+                        else
+                            match tryFindSourceUrl symbol with
+                            | Some url ->
+                                return! navigateToSource symbol url
+                            | None ->
+                                match pref with
+                                | NavigationPreference.SymbolSourceOrMetadata ->
+                                    if shouldGenerateDefinition symbol then
+                                        return! navigateToMetadata project span parseTree fsSymbolUse
+                                | _ ->
+                                    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                                    statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
+                                    return ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
+
+    static member ClearXmlDocCache() =
+        xmlDocCache.Clear()
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
@@ -316,4 +441,12 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
-                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
+                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
+                
+    interface IDisposable with
+        member __.Dispose() = 
+            cancellationToken.Value
+            |> Option.iter (fun token -> 
+                token.Cancel()
+                token.Dispose())
+           

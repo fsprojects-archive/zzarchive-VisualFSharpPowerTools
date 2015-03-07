@@ -129,12 +129,13 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
                     context <- ctx
                     reportProgress report Idle
                     let fullName = fsSymbol.FullName
-                    let displayName = fsSymbol.DisplayName
                     let location =
-                        if fullName.EndsWith displayName then 
+                        match fsSymbol.DisplayName with
+                        | "" -> ""
+                        | displayName when fullName.EndsWith displayName ->
                             let locationLength = max 0 (fullName.Length - (displayName.Length + 1))
                             fullName.Remove locationLength
-                        else fullName
+                        | _ -> fullName
                     symbolLocation <- location
                     updateFullName originalName
                     initialized.Value <- true

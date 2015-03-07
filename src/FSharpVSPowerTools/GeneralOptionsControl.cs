@@ -125,6 +125,12 @@ namespace FSharpVSPowerTools
             set { chbGenerateReferences.Checked = value; }
         }
 
+        public bool GoToSymbolSourceEnabled
+        {
+            get { return chbGoToSymbolSource.Checked; }
+            set { chbGoToSymbolSource.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -146,12 +152,7 @@ namespace FSharpVSPowerTools
             TaskListCommentsEnabled = _optionsPage.TaskListCommentsEnabled;
             GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
             GenerateReferencesEnabled = _optionsPage.GenerateReferencesEnabled;
+            GoToSymbolSourceEnabled = _optionsPage.GoToSymbolSourceEnabled;
         }
-
-        private void lblHome_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            System.Diagnostics.Process.Start(lblHome.Text);
-        }
-
     }
 }
