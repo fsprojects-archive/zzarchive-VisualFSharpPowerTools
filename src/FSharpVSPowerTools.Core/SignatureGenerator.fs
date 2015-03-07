@@ -908,5 +908,5 @@ let getFileNameFromSymbol (symbol: FSharpSymbol) =
         |> Option.getOrElse tempFileName
 
     let regexSearch = String(Path.GetInvalidFileNameChars()) + String(Path.GetInvalidPathChars())
-    let r = Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
-    r.Replace(fileName + ".fsi", "")
+    let pattern = Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
+    pattern.Replace(fileName + ".fsi", "")

@@ -49,6 +49,7 @@ module Resource =
 
     let [<Literal>] goToDefinitionStatusMessage = "Generated symbol metadata"
     let [<Literal>] goToDefinitionInvalidSymbolMessage = "Can't generate metadata for this symbol."
+    let [<Literal>] goToDefinitionNoSourceSymbolMessage = "Can't navigate to source since there is no associated pdb file or it is not source indexed."
 
     let [<Literal>] languageServiceErrorMessage = """
 Internal language services have encountered severe errors.
