@@ -22,6 +22,7 @@ open SourceLink.SymbolStore
 open System.Diagnostics
 open System.Net.Http
 open System.Text.RegularExpressions
+open Microsoft.Win32
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -286,6 +287,17 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
     let replace (b:string) c (a:string) = a.Replace(b, c)
 
+    let getSymbolCacheDir() = 
+        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+        let keyName = String.Format(@"Software\Microsoft\VisualStudio\{0}.0\Debugger",
+                                    dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toString)
+        use key = Registry.CurrentUser.OpenSubKey(keyName)
+        key.GetValue("SymbolCacheDir", null)
+        |> Option.ofNull
+        |> Option.bind (fun o ->
+            let s = string o
+            if String.IsNullOrEmpty s then None else Some s)
+
     let navigateToSource (fsSymbol: FSharpSymbol) (url: string) = 
         async {
             use handler = new HttpClientHandler(UseDefaultCredentials = true)
@@ -294,7 +306,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             if response.IsSuccessStatusCode then
                 fsSymbol.ImplementationLocation
                 |> Option.iter (fun r ->
-                    // Note: other source code hostings might have different url templating
+                    // NOTE: other source code hostings might have different url templates
                     let m = Regex.Matches(url, "[0-9a-fA-F]{32}") |> Seq.cast<Match> |> Seq.tryHead
                     let replaceBlob (m: Match option) url =
                         match m with
@@ -315,32 +327,49 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
         }
 
     let tryFindSourceUrl (fsSymbol: FSharpSymbol) = 
-        fsSymbol.Assembly.FileName
-        |> Option.bind (fun assemblyPath -> 
-            // TODO: implementing pdb file discovery
-            let pdbPath = Path.ChangeExtension(assemblyPath, ".pdb")
-            let cacheDir = Path.Combine(Path.GetTempPath(), Path.GetFileNameSafe(assemblyPath) |> hash |> string)
+        let changeExt ext path = Path.ChangeExtension(path, ext)
+        let combine prefix suffix = Path.Combine(prefix, suffix)
+        let fileNameOf path = Path.GetFileNameSafe(path)
+        let fullPathOf path = Path.GetFullPathSafe(path)
+        maybe {
+            let! assemblyPath = fsSymbol.Assembly.FileName
+            // First try to find pdb files in the current folder
+            // If not found, try to find pdb files in the symbol cache folder
+            let! pdbPath = 
+                maybe {
+                    let localPdbPath = changeExt ".pdb" assemblyPath
+                    if File.Exists(localPdbPath) then 
+                        return localPdbPath
+                    else
+                        let! cacheDir = getSymbolCacheDir()
+                        let cachePdbPath = fileNameOf assemblyPath |> combine cacheDir |> changeExt ".pdb"
+                        if File.Exists(cachePdbPath) then 
+                            return cachePdbPath
+                        else
+                            return! None
+                }
+
+            let cacheDir = fileNameOf assemblyPath |> hash |> string |> combine (Path.GetTempPath())
             Directory.CreateDirectory(cacheDir) |> ignore
-            if File.Exists(pdbPath) then
-                use pdbStream = File.OpenRead(pdbPath)
-                let symbolCache = SymbolCache(cacheDir)
-                let pdbReader = symbolCache.ReadPdb pdbStream pdbPath
-                if pdbReader.IsSourceIndexed then                    
-                    fsSymbol.ImplementationLocation
-                    |> Option.bind (fun range -> 
-                        // Fsi files don't appear on symbol servers, so we try to get urls via its associated fs files
-                        let path, isFsiFile = 
-                            let path = Path.GetFullPathSafe(range.FileName)
-                            let isFsiFile = path.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase)
-                            let newPath = if isFsiFile then Path.ChangeExtension(path, ".fs") else path
-                            newPath, isFsiFile
-                        pdbReader.GetDownloadUrl(path)
-                        |> Option.map (fun url -> 
-                            if isFsiFile then 
-                                Path.ChangeExtension(url, ".fsi")
-                            else url))
-                else None
-            else None)
+            use pdbStream = File.OpenRead(pdbPath)
+            let symbolCache = SymbolCache(cacheDir)
+            let pdbReader = symbolCache.ReadPdb pdbStream pdbPath
+            if pdbReader.IsSourceIndexed then                    
+                let! range = fsSymbol.ImplementationLocation
+                // Fsi files don't appear on symbol servers, so we try to get urls via its associated fs files
+                let path, isFsiFile = 
+                    let path = fullPathOf range.FileName
+                    let isFsiFile = path.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase)
+                    let newPath = if isFsiFile then changeExt ".fs" path else path
+                    newPath, isFsiFile
+                let! url = pdbReader.GetDownloadUrl(path)
+                if isFsiFile then 
+                    return changeExt ".fsi" url
+                else 
+                    return url
+            else 
+                return! None
+        }
 
     let cancellationToken = Atom None
 

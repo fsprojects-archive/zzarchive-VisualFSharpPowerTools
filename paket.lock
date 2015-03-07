@@ -27,7 +27,6 @@ NUGET
     NUnit.Runners (2.6.4)
     Octokit (0.7.2)
       Microsoft.Net.Http
-    SourceLink (0.4.2)
     SourceLink.SymbolStore (0.5.0-ci1411242108)
 GITHUB
   remote: fsharp/FAKE
