@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Threading
 open System.Security
+open System.Reflection
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
@@ -16,7 +17,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
-open Microsoft.FSharp.Compiler.Range
+open Microsoft.FSharp.Compiler
 open SourceLink
 open SourceLink.SymbolStore
 open System.Diagnostics
@@ -224,7 +225,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 windowFrame.Show() |> ensureSucceeded
             | _ ->
                 let (startLine, startCol, _, _) = span.ToRange()
-                let pos = mkPos (startLine+1) startCol
+                let pos = Range.mkPos (startLine+1) startCol
                 let openDeclarations = 
                     ast 
                     |> Option.map (OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation pos) 
@@ -298,29 +299,27 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             let s = string o
             if String.IsNullOrEmpty s then None else Some s)
 
-    let navigateToSource (fsSymbol: FSharpSymbol) (url: string) = 
+    let navigateToSource (url: string) (range: Range.range) = 
         async {
             use handler = new HttpClientHandler(UseDefaultCredentials = true)
             use http = new HttpClient(handler)
             let! response = http.GetAsync(url) |> Async.AwaitTask
             if response.IsSuccessStatusCode then
-                fsSymbol.ImplementationLocation
-                |> Option.iter (fun r ->
-                    // NOTE: other source code hostings might have different url templates
-                    let m = Regex.Matches(url, "[0-9a-fA-F]{32}") |> Seq.cast<Match> |> Seq.tryHead
-                    let replaceBlob (m: Match option) url =
-                        match m with
-                        | Some m when m.Success ->
-                            replace m.Value (sprintf "blob/%s" m.Value) url
-                        | _ -> url
-                    let browserUrl =
-                        sprintf "%s#L%d"
-                            (url 
-                             |> replace "raw.githubusercontent" "github" 
-                             |> replace "raw.github" "github" 
-                             |> replaceBlob m)
-                            r.StartLine
-                    Process.Start(browserUrl) |> ignore)
+                // NOTE: other source code hostings might have different url templates
+                let m = Regex.Matches(url, "[0-9a-fA-F]{32}") |> Seq.cast<Match> |> Seq.tryHead
+                let replaceBlob (m: Match option) url =
+                    match m with
+                    | Some m when m.Success ->
+                        replace m.Value (sprintf "blob/%s" m.Value) url
+                    | _ -> url
+                let browserUrl =
+                    sprintf "%s#L%d"
+                        (url 
+                            |> replace "raw.githubusercontent" "github" 
+                            |> replace "raw.github" "github" 
+                            |> replaceBlob m)
+                        range.StartLine
+                Process.Start(browserUrl) |> ignore
             else
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                 statusBar.SetText(sprintf "The url '%s' is invalid with error code %A." url response.StatusCode) |> ignore
@@ -354,19 +353,54 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             use pdbStream = File.OpenRead(pdbPath)
             let symbolCache = SymbolCache(cacheDir)
             let pdbReader = symbolCache.ReadPdb pdbStream pdbPath
-            if pdbReader.IsSourceIndexed then                    
-                let! range = fsSymbol.ImplementationLocation
-                // Fsi files don't appear on symbol servers, so we try to get urls via its associated fs files
-                let path, isFsiFile = 
-                    let path = fullPathOf range.FileName
-                    let isFsiFile = path.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase)
-                    let newPath = if isFsiFile then changeExt ".fs" path else path
-                    newPath, isFsiFile
-                let! url = pdbReader.GetDownloadUrl(path)
-                if isFsiFile then 
-                    return changeExt ".fsi" url
-                else 
-                    return url
+            
+            if pdbReader.IsSourceIndexed then   
+                let range = fsSymbol.ImplementationLocation 
+                // Dummy range may be returned if FCS can't fully read C# assemblies
+                if range.IsNone || range = Some Range.rangeStartup then
+                    let! mem = 
+                        match fsSymbol with
+                        | MemberFunctionOrValue mem ->
+                            Some mem
+                        | TypedAstPatterns.Entity(entity, _, _) ->
+                            entity.MembersFunctionsAndValues 
+                            |> Seq.tryFind (fun mem -> mem.IsImplicitConstructor || mem.DisplayName = ".ctor")
+                            |> Option.orTry (fun _ ->
+                                Logging.logWarning "Can't find type constructors; fall back to the first type member."
+                                entity.MembersFunctionsAndValues |> Seq.tryHead)
+                        | _ -> None
+                    let! fullName = mem.LogicalEnclosingEntity.TryFullName
+                    Logging.logWarning "Try to find source location by reflection from '%s'." assemblyPath
+                    let dll = Assembly.LoadFrom assemblyPath
+                    let! typ = dll.DefinedTypes |> Seq.tryFind (fun typ -> typ.FullName = fullName)
+                    // NOTE: we will not be able to distinguish between overloaded members.
+                    let! mbr = 
+                        if mem.IsProperty then
+                            typ.GetProperties() 
+                            |> Seq.tryPick (fun mbr -> if mbr.Name = mem.DisplayName then Some (mbr :> MemberInfo) else None)
+                        elif mem.IsEvent then
+                            typ.GetEvents() 
+                            |> Seq.tryPick (fun mbr -> if mbr.Name = mem.DisplayName then Some (mbr :> MemberInfo) else None)
+                        else typ.GetMembers() |> Seq.tryFind (fun mbr -> mbr.Name = mem.DisplayName)
+                    let! mth = pdbReader.GetMethod mbr.MetadataToken
+                    let! sp = mth.SequencePoints |> Seq.tryHead
+                    let! url = pdbReader.GetDownloadUrl(sp.Document.SourceFilePath)
+                    let dummyPos = Range.mkPos (sp.Line-1) sp.Column
+                    let inferedRange = Range.mkRange url dummyPos dummyPos
+                    return (url, inferedRange)
+                else
+                    let! range = range
+                    // Fsi files don't appear on symbol servers, so we try to get urls via its associated fs files
+                    let path, isFsiFile = 
+                        let path = fullPathOf range.FileName
+                        let isFsiFile = path.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase)
+                        let newPath = if isFsiFile then changeExt ".fs" path else path
+                        newPath, isFsiFile
+                    let! url = pdbReader.GetDownloadUrl(path)
+                    if isFsiFile then 
+                        return (changeExt ".fsi" url, range)
+                    else 
+                        return (url, range)
             else 
                 return! None
         }
@@ -404,8 +438,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                             referenceSourceProvider.NavigateTo symbol
                         else
                             match tryFindSourceUrl symbol with
-                            | Some url ->
-                                return! navigateToSource symbol url
+                            | Some (url, range) ->
+                                return! navigateToSource url range
                             | None ->
                                 match pref with
                                 | NavigationPreference.SymbolSourceOrMetadata ->
