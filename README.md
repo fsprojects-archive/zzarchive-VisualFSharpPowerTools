@@ -5,6 +5,8 @@
 Visual F# Power Tools
 =====================
 
+[![Join the chat at https://gitter.im/fsprojects/VisualFSharpPowerTools](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/fsprojects/VisualFSharpPowerTools?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Power commands for F# in Visual Studio
 
 ### Why Visual F# Power Tools?
