@@ -13,9 +13,12 @@ open System.ComponentModel.Design
 open System.Text
 open System.Runtime.Versioning
 
-type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUIShell) =
+type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
     static let scriptFolderName = "Scripts"
-    static let headerComment = "// Warning: generated file; your changes could be lost when a new file is generated."
+    static let header = 
+        String.Join(Environment.NewLine, 
+                    "// Warning: generated file; your changes could be lost when a new file is generated.",
+                    "#I __SOURCE_DIRECTORY__")
     
     let containsReferenceScript (project: Project) = 
         project.ProjectItems.Item(scriptFolderName) 
@@ -64,20 +67,6 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
                | _ -> ()
             if !isProjectDirty then project.Save()
 
-    let getActiveProjectOutput (project: Project) =
-        Option.attempt <| fun _ ->
-            let projectPath = getProjectFolder project
-            let outputFileName = project.Properties.Item("OutputFileName").Value.ToString()
-            let config = project.ConfigurationManager.ActiveConfiguration
-            let outputPath = config.Properties.Item("OutputPath").Value.ToString()
-            projectPath </> outputPath </> outputFileName
-
-    let getActiveOutputFileFullPath (reference: Reference) =
-        reference.GetType().GetProperty "SourceProject"
-        |> Option.ofNull
-        |> Option.map (fun sourceProject -> sourceProject.GetValue(reference) :?> Project)
-        |> Option.bind getActiveProjectOutput
-
     let getRelativePath (folder: string) (file: string) =
         let fileUri = Uri file
         // Folders must end in a slash
@@ -97,23 +86,18 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
             sourceFiles |> Array.filter (fun fileName -> Path.GetFileNameSafe(fileName) <> tempAttributeFileName))
         |> Option.getOrElse sourceFiles
 
-    let generateLoadScriptContent(project: Project, scriptFile: string) =
+    let generateLoadScriptContent(project: Project, projectProvider: IProjectProvider, scriptFile: string) =
         let scriptFolder = getProjectFolder project </> scriptFolderName
-        use projectProvider = new ProjectProvider(project, (fun _ -> None), (fun _ -> ()), id)
         let sb = StringBuilder()
-        sb.AppendLine(headerComment) |> ignore
+        sb.AppendLine(header) |> ignore
         sb.AppendLine(sprintf "#load @\"%s\"" scriptFile) |> ignore
-        match filterTempAttributeFileName project (projectProvider :> IProjectProvider).SourceFiles with
+        match filterTempAttributeFileName project projectProvider.SourceFiles with
         | [||] -> ()
         | sourceFiles -> 
             sb.Append("#load ") |> ignore
             let relativePaths = sourceFiles |> Array.map (getRelativePath scriptFolder >> sprintf "@\"%s\"")
             sb.AppendLine(String.Join(Environment.NewLine + new String(' ', "#load ".Length), relativePaths)) |> ignore
         sb.ToString()   
-
-    let isReferenceProject (reference: Reference) =
-        let sourceProject = reference.GetType().GetProperty("SourceProject")
-        sourceProject <> null && sourceProject.GetValue(reference) <> null
 
     let getReferenceAssembliesFolderByVersion (project: Project) =
         Option.attempt (fun _ ->
@@ -125,43 +109,47 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
                 | s -> s 
             sprintf @"%s\Reference Assemblies\Microsoft\Framework\.NETFramework\v%s" programFiles frameworkVersion)
 
-    let generateRefs (project: Project) =
-        let excludingList = set [| "FSharp.Core"; "mscorlib" |]
-        let assemblyRefList = ResizeArray()
-        let projectRefList = ResizeArray()
+    let generateRefs(project: Project, projectProvider: IProjectProvider) =
+        let blackList = set [| "FSharp.Core"; "mscorlib" |]
+        let whiteList =
+            project.Object
+            |> tryCast<VSProject>
+            |> Option.map (fun vsProject ->
+                vsProject.References
+                |> Seq.cast<Reference>
+                |> Seq.map (fun reference -> reference.Name))
+            |> Option.getOrElse Seq.empty
+            |> Set.ofSeq
 
-        match project.Object with
-        | :? VSProject as vsProject ->
-            let scriptFolder = getProjectFolder project </> scriptFolderName
-            let referenceAssembliesFolder = getReferenceAssembliesFolderByVersion project
-            vsProject.References
-            |> Seq.cast<Reference>
-            |> Seq.iter (fun reference -> 
-                if not (excludingList.Contains reference.Name) then
-                    if isReferenceProject reference then
-                        getActiveOutputFileFullPath reference
-                        |> Option.iter (getRelativePath scriptFolder >> projectRefList.Add)
-                    else
-                        let fullPath = reference.Path
-                        if File.Exists fullPath then
-                            let referenceFolder = Path.GetDirectoryName fullPath
-                            match referenceAssembliesFolder with
-                            | Some referenceAssembliesFolder ->
-                                if String.Equals(Path.GetFullPathSafe referenceAssembliesFolder, 
-                                                 Path.GetFullPathSafe referenceFolder, StringComparison.OrdinalIgnoreCase) then
-                                    assemblyRefList.Add(Path.GetFileName fullPath)
-                                else
-                                    assemblyRefList.Add(getRelativePath scriptFolder fullPath)
-                            | _ -> assemblyRefList.Add(getRelativePath scriptFolder fullPath))
-        | _ -> ()
+        let scriptFolder = getProjectFolder project </> scriptFolderName
+        let referenceAssembliesFolder = getReferenceAssembliesFolderByVersion project
 
-        assemblyRefList 
-        |> Seq.append projectRefList
+        // We use compiler options to ensure that assembly references are resolved in the right order.
+        projectProvider.CompilerOptions
+        |> Seq.choose (fun x -> if x.StartsWith("-r:") then Some (x.[3..].Trim(' ', '"')) else None)
+        |> Seq.choose (fun assemblyPath ->    
+            let assemblyName = Path.GetFileNameWithoutExtension(assemblyPath)        
+            if not (blackList.Contains assemblyName) && whiteList.Contains assemblyName then
+                let fullPath = Path.GetFullPathSafe(assemblyPath)
+                if File.Exists fullPath then
+                    let referenceFolder = Path.GetDirectoryName fullPath
+                    match referenceAssembliesFolder with
+                    | Some referenceAssembliesFolder ->
+                        if String.Equals(Path.GetFullPathSafe referenceAssembliesFolder, 
+                                         Path.GetFullPathSafe referenceFolder, 
+                                         StringComparison.OrdinalIgnoreCase) then
+                            Some (Path.GetFileNameSafe fullPath)
+                        else
+                            Some (getRelativePath scriptFolder fullPath)
+                    | None -> 
+                            Some (getRelativePath scriptFolder fullPath)
+                else None
+            else None)
         |> Seq.map (sprintf "#r @\"%s\"") 
         |> Seq.toList
 
     let generateFileContent (refLines: #seq<string>) =
-        String.Join(Environment.NewLine, headerComment, String.Join(Environment.NewLine, refLines))
+        String.Join(Environment.NewLine, header, String.Join(Environment.NewLine, refLines))
 
     let getExistingFileRefs project fileName = 
         let filePath = getFullFilePathInScriptFolder project fileName  
@@ -181,17 +169,23 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService, _shell: IVsUISh
         // concatenate old survived refs and the extra ones
         existing @ newExtraRefs
 
+    let rec createProjectProvider project =
+        let getProjectProvider project =
+            Some (createProjectProvider project :> IProjectProvider)
+        new ProjectProvider(project, getProjectProvider, (fun _ -> ()), id)
+
     let generateFile (project: Project) =
         Option.ofNull project
         |> Option.iter (fun project ->
             let loadRefsFileName = "load-references.fsx"
-            let actualRefs = generateRefs project
+            use projectProvider = createProjectProvider project
+            let actualRefs = generateRefs(project, projectProvider)
             let refs = 
                 let existingRefs = getExistingFileRefs project loadRefsFileName
                 mergeRefs existingRefs actualRefs
 
             addFileToActiveProject(project, loadRefsFileName, generateFileContent refs)
-            let content = generateLoadScriptContent(project, "load-references.fsx")
+            let content = generateLoadScriptContent(project, projectProvider, loadRefsFileName)
             addFileToActiveProject(project, "load-project.fsx", content))
 
     let generateReferencesForFsi() =
