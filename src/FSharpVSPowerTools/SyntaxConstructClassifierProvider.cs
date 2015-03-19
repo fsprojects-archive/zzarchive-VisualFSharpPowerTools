@@ -233,7 +233,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpReferenceType)]
         [Name(ClassificationTypes.FSharpReferenceType)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpReferenceTypeFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -250,7 +249,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpValueType)]
         [Name(ClassificationTypes.FSharpValueType)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpValueTypeFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -267,7 +265,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpPatternCase)]
         [Name(ClassificationTypes.FSharpPatternCase)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpPatternCaseFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -284,7 +281,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpFunction)]
         [Name(ClassificationTypes.FSharpFunction)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpFunctionFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -301,7 +297,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpMutableVar)]
         [Name(ClassificationTypes.FSharpMutableVar)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpMutableVarFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -318,7 +313,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpQuotation)]
         [Name(ClassificationTypes.FSharpQuotation)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpQuotationFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -336,7 +330,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpModule)]
         [Name(ClassificationTypes.FSharpModule)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpModuleFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -353,7 +346,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpUnused)]
         [Name(ClassificationTypes.FSharpUnused)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpUnusedFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
@@ -370,7 +362,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpPrintf)]
         [Name(ClassificationTypes.FSharpPrintf)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpPrintfFormat : ClassificationFormatDefinition
         {
              [ImportingConstructor]
@@ -387,7 +378,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpEscaped)]
         [Name(ClassificationTypes.FSharpEscaped)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpEscapedFormat : ClassificationFormatDefinition
         {
              [ImportingConstructor]
@@ -404,7 +394,6 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpOperator)]
         [Name(ClassificationTypes.FSharpOperator)]
         [UserVisible(true)]
-        [Order(After = Priority.Low, Before = Priority.Default)]
         internal sealed class FSharpOperatorFormat : ClassificationFormatDefinition
         {
              [ImportingConstructor]
