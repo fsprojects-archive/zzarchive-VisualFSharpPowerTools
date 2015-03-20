@@ -25,11 +25,11 @@ NUGET
     NuGet.CommandLine (2.8.3)
     NUnit (2.6.4)
     NUnit.Runners (2.6.4)
-    Octokit (0.7.2)
+    Octokit (0.7.3)
       Microsoft.Net.Http
     SourceLink.SymbolStore (0.5.0-ci1411242108)
 GITHUB
   remote: fsharp/FAKE
   specs:
-    modules/Octokit/Octokit.fsx (99bf805630805455031684c9369b1872d14a4fdd)
+    modules/Octokit/Octokit.fsx (685c463493b846703648c21df066b9805c13767e)
       Octokit
