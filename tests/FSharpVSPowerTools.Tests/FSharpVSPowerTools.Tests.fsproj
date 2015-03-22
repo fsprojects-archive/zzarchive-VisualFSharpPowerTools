@@ -72,6 +72,10 @@
     <Content Include="net45\Foq.Usage.fsx">
       <Paket>True</Paket>
     </Content>
+    <None Include="$(SolutionDir)\lib\native\srcsrv.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Visible>False</Visible>
+    </None>
     <Content Include="app.config" />
     <Content Include="paket.references" />
     <Compile Include="ExternalProjectProvider.fs" />

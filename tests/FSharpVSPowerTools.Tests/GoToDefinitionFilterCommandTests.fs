@@ -43,15 +43,15 @@ module GoToDefinitionCommandTests =
     [<Test>]
     let ``should be able to go to definition to an external class``() = 
         let content = """
-module GoToDefinitionTests
+module NavigateToSourceTests
 open System.IO
 let f x = Path.GetFileName(x)
 let g x = File.Exists(x)
 """
-        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/NavigateToSource/NavigateToSource.fsproj"))
-        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/NavigateToSource/FAKETests.fs"))
+        let projectFileName = fullPathBasedOnSourceDir "../data/NavigateToSource/NavigateToSource.fsproj"
+        let fileName = fullPathBasedOnSourceDir "../data/NavigateToSource/OctokitTests.fs"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)    
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
         let textView = createMockTextView buffer
         let command = helper.GetCommandFilter(textView)
         let urlChanged = command.UrlChanged.Value
@@ -69,15 +69,15 @@ let g x = File.Exists(x)
                 |> assertEqual "http://referencesource.microsoft.com/mscorlib/a.html#090eca8621a248ee")
 
     [<Test>]
-    let ``should be able to go to definition to an external member``() = 
+    let ``should be able to go to definition to an external member using reference sources``() = 
         let content = """
-module GoToDefinitionTests
+module NavigateToSourceTests
 open System.IO
 let f x = Path.GetFileName(x)
 let g x = File.Exists(x)
 """
-        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/NavigateToSource/NavigateToSource.fsproj"))
-        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/NavigateToSource/FAKETests.fs"))
+        let projectFileName = fullPathBasedOnSourceDir "../data/NavigateToSource/NavigateToSource.fsproj"
+        let fileName = fullPathBasedOnSourceDir "../data/NavigateToSource/OctokitTests.fs"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
         let textView = createMockTextView buffer
@@ -95,5 +95,34 @@ let g x = File.Exists(x)
                 command.CurrentUrl
                 |> Option.get
                 |> assertEqual "http://referencesource.microsoft.com/mscorlib/a.html#95facc58d06cadd0")
+
+    [<Test>]
+    let ``should be able to go to definition to an external member using pdb files``() = 
+        let content = """
+module FAKETests
+open Fake
+Target "Main" DoNothing
+RunTargetOrDefault "Main"
+"""
+        let projectFileName = fullPathBasedOnSourceDir "../data/NavigateToSource/NavigateToSource.fsproj"
+        let fileName = fullPathBasedOnSourceDir "../data/NavigateToSource/FAKETests.fs"
+        let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
+        let textView = createMockTextView buffer
+        let command = helper.GetCommandFilter(textView)
+        let urlChanged = command.UrlChanged.Value
+        let filter = command :> IOleCommandTarget
+        let prefix = Path.GetFullPath(fileName)
+        
+        testEventTrigger urlChanged "Timed out before being able to go to definition" timeout
+            (fun () -> 
+                textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 1) |> ignore
+                filter.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidGoToDefinition, 
+                    0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
+            (fun () -> 
+                let url = Option.get command.CurrentUrl
+                // We don't assert on hash values since it will be changed on next FAKE release
+                url.Contains("https://raw.github.com/fsharp/FAKE/") |> assertEqual true
+                url.Contains("/src/app/FakeLib/TargetHelper.fs") |> assertEqual true)
 
 

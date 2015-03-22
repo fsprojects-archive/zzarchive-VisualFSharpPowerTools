@@ -135,9 +135,8 @@ open FSharp.Data
 type Project = XmlProvider<"<root><value>1</value><value>3</value></root>">
 let _ = Project.GetSample()
 """
-        // Use absolute path just to be sure
-        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fsproj"))
-        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/TypeProviderTests/TypeProviderTests.fs"))
+        let projectFileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fsproj"
+        let fileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fs"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let view = helper.GetView(buffer)
@@ -159,9 +158,8 @@ module Test =
     let _ = Project1.Class11()
     let _ = Project1.Class11.X
 """
-        // Use absolute path just to be sure
-        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/MultiProjects/Project2/Project2.fsproj"))
-        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/MultiProjects/Project2/Project21.fs"))
+        let projectFileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project2.fsproj"
+        let fileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project21.fs"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let view = helper.GetView(buffer)

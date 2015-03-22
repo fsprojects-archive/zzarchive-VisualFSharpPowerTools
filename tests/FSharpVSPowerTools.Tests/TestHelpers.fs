@@ -89,3 +89,6 @@ let inline prependNewLine str = Environment.NewLine + str
 let inline appendNewLine str = str + Environment.NewLine
 
 let nameOf<'T> = typeof<'T>.Name
+
+let fullPathBasedOnSourceDir relativePath =
+    Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, relativePath))
