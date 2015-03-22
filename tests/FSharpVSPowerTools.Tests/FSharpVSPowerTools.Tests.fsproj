@@ -72,7 +72,11 @@
     <Content Include="net45\Foq.Usage.fsx">
       <Paket>True</Paket>
     </Content>
-    <None Include="$(SolutionDir)\lib\native\srcsrv.dll">
+    <None Include="$(SolutionDir)\lib\native\x64\srcsrv.dll" Condition="'$(BuildingInsideVisualStudio)' == ''">
+	   <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	   <Visible>False</Visible>
+	</None>
+	<None Include="$(SolutionDir)\lib\native\x86\srcsrv.dll" Condition="'$(BuildingInsideVisualStudio)' != ''">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>False</Visible>
     </None>
