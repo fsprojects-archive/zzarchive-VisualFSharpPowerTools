@@ -33,6 +33,7 @@ let createGeneralOptionsPage() =
             page.UnusedReferencesEnabled --> true
             page.UnusedOpensEnabled --> true
             page.XmlDocEnabled --> true
+            page.GoToSymbolSourceEnabled --> true
         @>)
 
 let createClassificationTypeRegistryService() =
