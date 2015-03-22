@@ -40,6 +40,17 @@ module GoToDefinitionCommandTests =
         DocumentEventListener.SkipTimerDelay <- true
         Logger.GlobalServiceProvider <- helper.ServiceProvider
 
+    let internal getCommandFilter content filePath projectPath =
+        let projectFileName = fullPathBasedOnSourceDir projectPath
+        let fileName = fullPathBasedOnSourceDir filePath
+        let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
+        let textView = createMockTextView buffer
+        let command = helper.GetCommandFilter(textView)
+        let urlChanged = command.UrlChanged.Value
+        let filter = command :> IOleCommandTarget
+        textView, command, filter, urlChanged
+
     [<Test>]
     let ``should be able to go to definition to an external class``() = 
         let content = """
@@ -48,15 +59,9 @@ open System.IO
 let f x = Path.GetFileName(x)
 let g x = File.Exists(x)
 """
-        let projectFileName = fullPathBasedOnSourceDir "../data/NavigateToSource/NavigateToSource.fsproj"
-        let fileName = fullPathBasedOnSourceDir "../data/NavigateToSource/OctokitTests.fs"
-        let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
-        let textView = createMockTextView buffer
-        let command = helper.GetCommandFilter(textView)
-        let urlChanged = command.UrlChanged.Value
-        let filter = command :> IOleCommandTarget
-        let prefix = Path.GetFullPath(fileName)
+        let (textView, command, filter, urlChanged) = 
+            getCommandFilter content "../data/NavigateToSource/OctokitTests.fs"
+                "../data/NavigateToSource/NavigateToSource.fsproj"
         
         testEventTrigger urlChanged "Timed out before being able to go to definition" timeout
             (fun () -> 
@@ -65,8 +70,7 @@ let g x = File.Exists(x)
                     0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
             (fun () -> 
                 command.CurrentUrl
-                |> Option.get
-                |> assertEqual "http://referencesource.microsoft.com/mscorlib/a.html#090eca8621a248ee")
+                |> assertEqual (Some "http://referencesource.microsoft.com/mscorlib/a.html#090eca8621a248ee"))
 
     [<Test>]
     let ``should be able to go to definition to an external member using reference sources``() = 
@@ -76,15 +80,9 @@ open System.IO
 let f x = Path.GetFileName(x)
 let g x = File.Exists(x)
 """
-        let projectFileName = fullPathBasedOnSourceDir "../data/NavigateToSource/NavigateToSource.fsproj"
-        let fileName = fullPathBasedOnSourceDir "../data/NavigateToSource/OctokitTests.fs"
-        let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
-        let textView = createMockTextView buffer
-        let command = helper.GetCommandFilter(textView)
-        let urlChanged = command.UrlChanged.Value
-        let filter = command :> IOleCommandTarget
-        let prefix = Path.GetFullPath(fileName)
+        let (textView, command, filter, urlChanged) = 
+            getCommandFilter content "../data/NavigateToSource/OctokitTests.fs"
+                "../data/NavigateToSource/NavigateToSource.fsproj"
         
         testEventTrigger urlChanged "Timed out before being able to go to definition" timeout
             (fun () -> 
@@ -93,8 +91,7 @@ let g x = File.Exists(x)
                     0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
             (fun () -> 
                 command.CurrentUrl
-                |> Option.get
-                |> assertEqual "http://referencesource.microsoft.com/mscorlib/a.html#95facc58d06cadd0")
+                |> assertEqual (Some "http://referencesource.microsoft.com/mscorlib/a.html#95facc58d06cadd0"))
 
     [<Test>]
     let ``should be able to go to definition to an external member using pdb files``() = 
@@ -104,15 +101,9 @@ open Fake
 Target "Main" DoNothing
 RunTargetOrDefault "Main"
 """
-        let projectFileName = fullPathBasedOnSourceDir "../data/NavigateToSource/NavigateToSource.fsproj"
-        let fileName = fullPathBasedOnSourceDir "../data/NavigateToSource/FAKETests.fs"
-        let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
-        let textView = createMockTextView buffer
-        let command = helper.GetCommandFilter(textView)
-        let urlChanged = command.UrlChanged.Value
-        let filter = command :> IOleCommandTarget
-        let prefix = Path.GetFullPath(fileName)
+        let (textView, command, filter, urlChanged) = 
+            getCommandFilter content "../data/NavigateToSource/FAKETests.fs"
+                "../data/NavigateToSource/NavigateToSource.fsproj"
         
         testEventTrigger urlChanged "Timed out before being able to go to definition" timeout
             (fun () -> 
@@ -122,7 +113,7 @@ RunTargetOrDefault "Main"
             (fun () -> 
                 let url = Option.get command.CurrentUrl
                 // We don't assert on hash values since it will be changed on next FAKE release
-                url.Contains("https://raw.github.com/fsharp/FAKE/") |> assertEqual true
-                url.Contains("/src/app/FakeLib/TargetHelper.fs") |> assertEqual true)
+                url.Contains("https://raw.github.com/fsharp/FAKE/") |> assertTrue
+                url.Contains("/src/app/FakeLib/TargetHelper.fs") |> assertTrue)
 
 
