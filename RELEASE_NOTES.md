@@ -1,6 +1,9 @@
 #### 1.8.0 - Unreleased
 * Support operator coloring ([#936](https://github.com/fsprojects/VisualFSharpPowerTools/issues/936))
 * Implement Navigate to Source ([#945](https://github.com/fsprojects/VisualFSharpPowerTools/issues/945))
+* Implement assembly resolution for FsiReferenceCommand ([#949](https://github.com/fsprojects/VisualFSharpPowerTools/pull/949))
+* Fix missing colors in VS 2012 ([#952](https://github.com/fsprojects/VisualFSharpPowerTools/pull/952))
+
 
 #### 1.7.3 - February 20 2015
 * Find all references and Rename refactoring does not search for private/internal symbol usages in projects other than ones where it's declared 

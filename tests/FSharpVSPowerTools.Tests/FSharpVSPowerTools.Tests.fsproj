@@ -72,6 +72,14 @@
     <Content Include="net45\Foq.Usage.fsx">
       <Paket>True</Paket>
     </Content>
+    <None Include="$(SolutionDir)\lib\native\x64\srcsrv.dll" Condition="'$(BuildingInsideVisualStudio)' == ''">
+	   <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	   <Visible>False</Visible>
+	</None>
+	<None Include="$(SolutionDir)\lib\native\x86\srcsrv.dll" Condition="'$(BuildingInsideVisualStudio)' != ''">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Visible>False</Visible>
+    </None>
     <Content Include="app.config" />
     <Content Include="paket.references" />
     <Compile Include="ExternalProjectProvider.fs" />
@@ -86,6 +94,7 @@
     <Compile Include="FindReferencesCommandTests.fs" />
     <Compile Include="ResolveUnopenedNamespaceSmartTaggerTests.fs" />
     <Compile Include="ImplementInterfaceSmartTaggerTests.fs" />
+    <Compile Include="GoToDefinitionFilterCommandTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />

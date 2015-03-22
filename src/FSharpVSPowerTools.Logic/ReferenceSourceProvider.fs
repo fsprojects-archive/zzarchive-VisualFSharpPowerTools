@@ -68,7 +68,7 @@ type ReferenceSourceProvider(baseUrl: string) =
 
     member __.AvailableAssemblies = availableAssemblies
 
-    member __.NavigateTo(symbol: FSharpSymbol) = 
+    member __.TryGetNavigatedUrl(symbol: FSharpSymbol) = 
         let xmlDocSig =
             match symbol with
             | MemberFunctionOrValue mem ->
@@ -77,15 +77,14 @@ type ReferenceSourceProvider(baseUrl: string) =
                 Some entity.XmlDocSig
             | _ -> None
         xmlDocSig
-        |> Option.map (fun xmlDocSig ->
+        |> Option.bind (fun xmlDocSig ->
             symbol.Assembly.FileName
             |> Option.map Path.GetFileNameWithoutExtension
-            |> Option.iter (fun assemblyName ->
+            |> Option.map (fun assemblyName ->
                 let url = baseUrl + "/" + assemblyName + "/a.html#" + getMD5Hash xmlDocSig
                 Logging.logInfo "Go to definition at '%s'." url
-                Process.Start url |> ignore))
-        |> Option.getOrTry (fun _ -> Logging.logWarning "Can't find navigation information for %s." symbol.FullName)
-    
+                url))
+        
     interface IDisposable with
         member __.Dispose() =
             lookUpSubscription.Dispose()

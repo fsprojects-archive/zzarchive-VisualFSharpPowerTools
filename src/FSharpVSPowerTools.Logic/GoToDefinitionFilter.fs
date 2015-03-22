@@ -30,6 +30,10 @@ type NavigationPreference =
     | SymbolSource
     | Metadata
 
+type internal UrlChangeEventArgs(url: string) =
+    inherit EventArgs()
+    member __.Url = url
+
 type GoToDefinitionFilter(textDocument: ITextDocument,
                           view: IWpfTextView, 
                           editorOptionsFactory: IEditorOptionsFactoryService, 
@@ -37,7 +41,11 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                           serviceProvider: System.IServiceProvider,                          
                           projectFactory: ProjectFactory,
                           referenceSourceProvider: ReferenceSourceProvider,
-                          navigationPreference) =
+                          navigationPreference: NavigationPreference,
+                          fireNavigationEvent: bool) =
+    let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
+    let mutable currentUrl = None
+
     let getDocumentState () =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -320,6 +328,9 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                              |> replace "raw.github" "github" 
                              |> replaceBlob m)
                             r.StartLine
+                    if fireNavigationEvent then
+                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))
+                        currentUrl <- Some url
                     Process.Start(browserUrl) |> ignore)
             else
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
@@ -398,10 +409,18 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     | NavigationPreference.SymbolSourceOrMetadata
                     | NavigationPreference.SymbolSource as pref ->   
                         let symbol = fsSymbolUse.Symbol
+                        Logging.logInfo "Checking symbol source of %s..." symbol.FullName
                         if symbol.Assembly.FileName
                            |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
                            |> Option.getOrElse false then
-                            referenceSourceProvider.NavigateTo symbol
+                            match referenceSourceProvider.TryGetNavigatedUrl symbol with
+                            | Some url ->
+                                if fireNavigationEvent then
+                                    urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))
+                                    currentUrl <- Some url
+                                Process.Start url |> ignore
+                            | None ->
+                                Logging.logWarning "Can't find navigation information for %s." symbol.FullName
                         else
                             match tryFindSourceUrl symbol with
                             | Some url ->
@@ -423,6 +442,9 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
+
+    member internal __.UrlChanged = urlChanged |> Option.map (fun event -> event.Publish)
+    member internal __.CurrentUrl = currentUrl
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
