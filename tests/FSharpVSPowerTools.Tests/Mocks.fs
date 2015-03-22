@@ -13,6 +13,7 @@ open Microsoft.VisualStudio.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
+open Microsoft.VisualStudio.OLE.Interop
 
 let createGeneralOptionsPage() =
     Mock<IGeneralOptions>.With(fun page ->
@@ -73,6 +74,16 @@ let createEditorOperationsFactoryService() =
 
 let createTextBufferUndoManagerProvider() =
     Mock<ITextBufferUndoManagerProvider>().Create()
+
+let createDummyCommandTarget() =
+    {
+        new IOleCommandTarget with
+            member __.Exec(_pguidCmdGroup: byref<Guid>, _nCmdID: uint32, _nCmdexecopt: uint32, _pvaIn: nativeint, _pvaOut: nativeint): int = 
+                VSConstants.S_OK
+            
+            member __.QueryStatus(_pguidCmdGroup: byref<Guid>, _cCmds: uint32, _prgCmds: OLECMD [], _pCmdText: nativeint): int = 
+                VSConstants.S_OK
+    }
     
 let createDocumentFactoryService() =
     { 
@@ -181,6 +192,7 @@ let createVsEditorAdaptersFactoryService() =
         { 
           new IVsTextView with
               member __.AddCommandFilter(pNewCmdTarg: OLE.Interop.IOleCommandTarget, ppNextCmdTarg: byref<OLE.Interop.IOleCommandTarget>): int = 
+                  ppNextCmdTarg <- createDummyCommandTarget()
                   VSConstants.S_OK
               
               member __.CenterColumns(iLine: int, iLeftCol: int, iColCount: int): int = 

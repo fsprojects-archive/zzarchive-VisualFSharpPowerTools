@@ -25,11 +25,11 @@ namespace FSharpVSPowerTools
         public DotNetReferenceSourceProvider() : base("http://referencesource.microsoft.com") { }
     }
 
-    [Export(typeof(IWpfTextViewCreationListener))]
+    [Export(typeof(IVsTextViewCreationListener))]
     [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
-    public class GoToDefinitionFilterProvider : IWpfTextViewCreationListener, IWpfTextViewConnectionListener, IDisposable
+    public class GoToDefinitionFilterProvider : IVsTextViewCreationListener, IWpfTextViewConnectionListener, IDisposable
     {
         [Import]
         internal IVsEditorAdaptersFactoryService editorFactory = null;
@@ -72,16 +72,22 @@ namespace FSharpVSPowerTools
  	        GoToDefinitionFilter.ClearXmlDocCache();
         }
 
-        public void TextViewCreated(IWpfTextView textView)
+        public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            RegisterCommandFilter(textView, fireNavigationEvent: false);
+            var textView = editorFactory.GetWpfTextView(textViewAdapter);
+            if (textView == null) return;
+            Register(textViewAdapter, textView, fireNavigationEvent: false);
         }
 
         internal GoToDefinitionFilter RegisterCommandFilter(IWpfTextView textView, bool fireNavigationEvent)
         {
             var textViewAdapter = editorFactory.GetViewAdapter(textView);
             if (textViewAdapter == null) return null;
+            return Register(textViewAdapter, textView, fireNavigationEvent);
+        }
 
+        private GoToDefinitionFilter Register(IVsTextView textViewAdapter, IWpfTextView textView, bool fireNavigationEvent)
+        {
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToSymbolSourceEnabled)) return null;
             // Favor Navigate to Source feature over Go to Metadata
@@ -101,7 +107,6 @@ namespace FSharpVSPowerTools
                 AddCommandFilter(textViewAdapter, commandFilter);
                 return commandFilter;
             }
-
             return null;
         }
 

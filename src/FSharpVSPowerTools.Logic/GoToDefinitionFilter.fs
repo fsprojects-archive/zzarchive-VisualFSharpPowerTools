@@ -448,29 +448,22 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
-            let nextTarget = x.NextTarget
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
+                let nextTarget = x.NextTarget
                 let cmdGroup = ref pguidCmdGroup
-                gotoDefinition (fun _ -> 
-                    if nextTarget <> null then
-                        nextTarget.Exec(cmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) |> ignore)
+                gotoDefinition (fun _ -> nextTarget.Exec(cmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) |> ignore)
                 // We assume that the operation is going to succeed.
                 VSConstants.S_OK
-            elif nextTarget <> null then
-                nextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
-            else 
-                VSConstants.S_OK
+            else
+                x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD[], pCmdText: IntPtr) =
-            let nextTarget = x.NextTarget
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && 
                 prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdidGoToDefinition) then
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
-            elif nextTarget <> null then
-                nextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
             else
-                VSConstants.S_OK
+                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
                 
     interface IDisposable with
         member __.Dispose() = 

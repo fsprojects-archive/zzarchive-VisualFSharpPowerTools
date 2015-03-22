@@ -20,7 +20,7 @@ type GoToDefinitionCommandHelper() =
                         projectFactory = base.ProjectFactory,
                         referenceSourceProvider = base.ReferenceSourceProvider)
 
-    member __.GetCommand(wpfTextView) =
+    member __.GetCommandFilter(wpfTextView) =
         command.RegisterCommandFilter(wpfTextView, fireNavigationEvent = true)
 
 module GoToDefinitionCommandTests =
@@ -53,7 +53,7 @@ let g x = File.Exists(x)
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)    
         let textView = createMockTextView buffer
-        let command = helper.GetCommand(textView)
+        let command = helper.GetCommandFilter(textView)
         let urlChanged = command.UrlChanged.Value
         let filter = command :> IOleCommandTarget
         let prefix = Path.GetFullPath(fileName)
@@ -81,7 +81,7 @@ let g x = File.Exists(x)
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
         let textView = createMockTextView buffer
-        let command = helper.GetCommand(textView)
+        let command = helper.GetCommandFilter(textView)
         let urlChanged = command.UrlChanged.Value
         let filter = command :> IOleCommandTarget
         let prefix = Path.GetFullPath(fileName)
