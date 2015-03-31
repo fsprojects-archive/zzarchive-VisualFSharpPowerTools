@@ -1,6 +1,6 @@
 [![Issue Stats](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools/badge/issue)](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools)
 [![Issue Stats](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools/badge/pr)](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools)
-[![NuGet](https://img.shields.io/nuget/dt/FSharpVSPowerTools.Core.svg)]()
+[![NuGet](https://img.shields.io/nuget/dt/FSharpVSPowerTools.Core.svg)](https://www.nuget.org/packages/FSharpVSPowerTools.Core/)
 
 Visual F# Power Tools
 =====================
