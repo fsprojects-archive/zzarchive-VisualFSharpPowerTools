@@ -2,12 +2,12 @@ NUGET
   remote: http://nuget.org/api/v2
   specs:
     Expression.Blend.Sdk (1.0.2)
-    FAKE (3.23.0)
+    FAKE (3.26.3)
     Fantomas (1.6.0)
       FSharp.Compiler.Service (>= 0.0.73)
     Foq (1.7)
     FsCheck (1.0.4)
-    FSharp.Compiler.Service (0.0.86)
+    FSharp.Compiler.Service (0.0.87)
     FSharp.Formatting (2.7.5)
       FSharp.Compiler.Service (>= 0.0.82)
       FSharpVSPowerTools.Core (>= 1.7.0)
@@ -27,9 +27,9 @@ NUGET
     NUnit.Runners (2.6.4)
     Octokit (0.8.0)
       Microsoft.Net.Http
-    SourceLink.SymbolStore (0.5.0-ci1503171444)
+    SourceLink.SymbolStore (0.5.0)
 GITHUB
   remote: fsharp/FAKE
   specs:
-    modules/Octokit/Octokit.fsx (8c43fc5a6b2af40e207e38eb37159454b238c10d)
+    modules/Octokit/Octokit.fsx (441fc8ba85f4ee3ef79462e0d6221668398d1444)
       Octokit

@@ -445,16 +445,24 @@ let _ = "x".``Long func``().Substring(3)
 """
     => [ 4, [ Cat.Operator, 6, 7; Cat.Function, 12, 25; Cat.Function, 28, 37 ]]
 
-[<Test; Ignore "WIP">]
+[<Test>]
 let ``indexer``() = 
     """
 let arr = [|1|]
 let _ = arr.[0]
 let l, h = 0, 1
 let _ = arr.[l..h]
+let _ = arr.[0..h]
+let _ = arr.[l..1]
+let _ = arr.[l..]
+let _ = arr.[..h]
 """
-    => [ 3, []
-         5, []]
+    => [ 3, [ Cat.Operator, 6, 7; Cat.Operator, 11, 12; Cat.Module, 11, 12 ]
+         5, [ Cat.Operator, 6, 7; Cat.Operator, 11, 12; Cat.Module, 11, 12 ]
+         6, [ Cat.Operator, 6, 7; Cat.Operator, 11, 12; Cat.Module, 11, 12 ]
+         7, [ Cat.Operator, 6, 7; Cat.Operator, 11, 12; Cat.Module, 11, 12 ]
+         8, [ Cat.Operator, 6, 7; Cat.Operator, 11, 12; Cat.Module, 11, 12 ]
+         9, [ Cat.Operator, 6, 7; Cat.Operator, 11, 12; Cat.Module, 11, 12 ]]
 
 [<Test>]
 let ``mutable value``() = 
@@ -1729,7 +1737,7 @@ let (>>=) _x _y = ()
 a.[0] >>= fun _ -> ()
 """
     => [ 2, [ Cat.Operator, 6, 7 ]
-         5, [ Cat.Operator, 1, 2; Cat.Function, 1, 2; Cat.Operator, 6, 9 ]]
+         5, [ Cat.Operator, 1, 2; Cat.Module, 1, 2; Cat.Operator, 6, 9 ]] 
 
 [<Test>]
 let ``cast operators``() =
