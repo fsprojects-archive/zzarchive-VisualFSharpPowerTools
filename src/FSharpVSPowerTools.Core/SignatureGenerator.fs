@@ -104,17 +104,14 @@ type private MembersPartition =
         StaticMembers: FSharpMemberOrFunctionOrValue[]
     }
     static member Create(members: seq<FSharpMemberOrFunctionOrValue>) =
-        // NOTE: If we want to handle EventHandler<'T> types, we can test
-        //       match mem.ReturnParameter.Type with
-        //       | TypeWithDefinition -> mem.ReturnParameter.Type.TypeWithDefinition.FullName = "System.EventHandler`1"
-        //       | _ -> false
-        let filteredMembers = members
-                              |> Seq.filter (fun mem ->
-                                  mem.Accessibility.IsPublic &&
-                                  not mem.IsExplicitInterfaceImplementation &&
-                                  not mem.IsPropertyGetterMethod &&
-                                  not mem.IsPropertySetterMethod &&
-                                  not mem.IsEvent)
+        let filteredMembers = 
+            members
+            |> Seq.filter (fun mem ->
+                mem.Accessibility.IsPublic &&
+                not mem.IsExplicitInterfaceImplementation &&
+                not mem.IsPropertyGetterMethod &&
+                not mem.IsPropertySetterMethod &&
+                not mem.IsEvent)
 
         let constructors = ResizeArray<_>()
         let abstractMembers = ResizeArray<_>()
@@ -391,7 +388,7 @@ let private tryRemoveModuleSuffix (modul: FSharpEntity) (moduleName: string) =
     let prefixToConsider =
         match modul.Namespace with
         | Some namespacePrefix -> namespacePrefix
-        // TODO: it's not because there's no namespace that the module is not inside a module
+        // NOTE: it's not because there's no namespace that the module is not inside a module
         // Ex: module Microsoft.FSharp.Compiler.Range.Pos
         // -> Pos is in the Range module
         | None -> if modul.AccessPath = "global" then "" else modul.AccessPath
@@ -874,7 +871,11 @@ let formatSymbol getXmlDocBySignature indentation displayContext openDeclaration
         | MemberFunctionOrValue mem ->
             writeSymbol mem.LogicalEnclosingEntity
         | ActivePatternCase case ->
-            Some (writeActivePattern ctx case)
+            match case.Group.EnclosingEntity with
+            | Some entity ->
+                writeSymbol entity
+            | None ->
+                Some (writeActivePattern ctx case)
         | UnionCase uc ->
             match uc.ReturnType with
             | TypeWithDefinition entity ->

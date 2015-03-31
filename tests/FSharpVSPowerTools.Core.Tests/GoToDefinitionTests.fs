@@ -370,10 +370,13 @@ let testNumber i =
     | Even -> printfn "%d is even" i
     | Odd -> printfn "%d is odd" i"""
     |> generateDefinitionFromPos (Pos.fromZ 6 7)
-    |> assertSrcAreEqual """val (|Even|Odd|) : int -> Choice<unit,unit>
+    |> assertSrcAreEqual """module File
+
+val (|Even|Odd|) : i:int -> Choice<unit,unit>
+val testNumber : i:int -> unit
 """
 
-[<Test; Ignore("activate when it's possible to know in which module or namespace an active pattern is defined")>]
+[<Test>]
 let ``go to total active patterns should display enclosing module or namespace`` () =
     """
 let (|Even|Odd|) i = 
@@ -386,7 +389,8 @@ let testNumber i =
     |> generateDefinitionFromPos (Pos.fromZ 6 7)
     |> assertSrcAreEqual """module File
 
-val (|Even|Odd|) : int -> Choice<unit,unit>
+val (|Even|Odd|) : i:int -> Choice<unit,unit>
+val testNumber : i:int -> unit
 """
 
 [<Test>]
@@ -401,7 +405,10 @@ let fizzBuzz = function
     | DivisibleBy 5 -> "Buzz" 
     | _ -> "" """
     |> generateDefinitionFromPos (Pos.fromZ 5 7)
-    |> assertSrcAreEqual """val (|DivisibleBy|_|) : int -> int -> unit option
+    |> assertSrcAreEqual """module File
+
+val (|DivisibleBy|_|) : by:int -> n:int -> unit option
+val fizzBuzz : _arg1:int -> string
 """
 
 [<Test>]
@@ -1477,7 +1484,7 @@ let ``handle operators as compiled members`` () =
     """let x: System.DateTime = failwith "" """
     |> generateDefinitionFromPos (Pos.fromZ 0 20)
     |> fun str -> str.Contains("static member op_GreaterThanOrEqual : t1:System.DateTime * t2:System.DateTime -> bool")
-    |> assertEqual true
+    |> assertTrue
 
 [<Test>]
 let ``handle uninstantiated type parameters`` () =
@@ -1485,14 +1492,14 @@ let ``handle uninstantiated type parameters`` () =
     |> generateDefinitionFromPos (Pos.fromZ 0 12)
     // Resulting types from FCS are non-deterministic so we are not yet able to assert a specific answer.
     |> fun str -> str.Contains("val array2D : rows:seq") && not <| str.Contains("'?")
-    |> assertEqual true
+    |> assertTrue
 
 let ``handle generic definitions`` () =
     """open System
 let x: Collections.Generic.List<string> = failwith "" """
     |> generateDefinitionFromPos (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member GetEnumerator : unit -> System.Collections.Generic.List<'T>.Enumerator")
-    |> assertEqual true
+    |> assertTrue
 
 [<Test>]
 let ``handle generic definitions 2`` () =
@@ -1500,7 +1507,7 @@ let ``handle generic definitions 2`` () =
 let x: Collections.Generic.Dictionary<string, int> = failwith "" """
     |> generateDefinitionFromPos (Pos.fromZ 1 30)
     |> fun str -> str.Contains("member Values : System.Collections.Generic.Dictionary<'TKey,'TValue>.ValueCollection")
-    |> assertEqual true
+    |> assertTrue
 
 [<Test>]
 let ``handle active patterns as parts of module declarations`` () =
@@ -1508,7 +1515,7 @@ let ``handle active patterns as parts of module declarations`` () =
 let f = Patterns.(|AddressOf|_|)"""
     |> generateDefinitionFromPos (Pos.fromZ 1 13)
     |> fun str -> str.Contains("val (|AddressSet|_|) : input:Expr -> (Expr * Expr) option")
-    |> assertEqual true
+    |> assertTrue
 
 let generateFileNameForSymbol caretPos src =
     let document: IDocument = upcast MockDocument(src)
@@ -1551,7 +1558,6 @@ let ``file names for members should refer to type names`` () =
 let _ = Async.AwaitTask"""
     |> generateFileNameForSymbol (Pos.fromZ 1 16)
     |> assertSrcAreEqual "Microsoft.FSharp.Control.FSharpAsync.fsi"
-
 
 // Tests to add:
 // TODO: buffer should have the same behavior as C#'s generated metadata ([from metadata] instead of [read-only] header, preview buffer and not permanent buffer)
