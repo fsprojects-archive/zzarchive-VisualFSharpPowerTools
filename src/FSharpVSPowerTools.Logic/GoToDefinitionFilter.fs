@@ -169,7 +169,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                                 sb.AppendFormat("{0}|", name) |> ignore
                             if not group.IsTotal then
                                 sb.Append("_|") |> ignore
-                            sprintf "%s.( %s )" parent (sb.ToString()))
+                            sprintf "%s.( %O )" parent sb)
                     | _ ->
                         None)
                 |> Option.flatten
@@ -342,8 +342,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                              |> replaceBlob m)
                             r.StartLine
                     if fireNavigationEvent then
-                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))
                         currentUrl <- Some url
+                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                        
                     Process.Start(browserUrl) |> ignore)
             else
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
@@ -429,8 +429,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                             match referenceSourceProvider.TryGetNavigatedUrl symbol with
                             | Some url ->
                                 if fireNavigationEvent then
-                                    urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))
                                     currentUrl <- Some url
+                                    urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
                                 Process.Start url |> ignore
                             | None ->
                                 Logging.logWarning "Can't find navigation information for %s." symbol.FullName
