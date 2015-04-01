@@ -7,7 +7,7 @@ type VisualStudioVersion =
     | Unknown = 0
     | VS2012 = 11
     | VS2013 = 12
-    | VS14 = 14
+    | VS2015 = 14
 
 type IMinimalVisualStudioVersionMetadata =
     abstract Version: VisualStudioVersion with get
@@ -31,7 +31,7 @@ module VisualStudioVersion =
                 match parts.[0] with
                 | "11" -> VisualStudioVersion.VS2012
                 | "12" -> VisualStudioVersion.VS2013
-                | "14" -> VisualStudioVersion.VS14
+                | "14" -> VisualStudioVersion.VS2015
                 | _ -> VisualStudioVersion.Unknown
     
     let matches (currentVersion: VisualStudioVersion) (featureVersion: VisualStudioVersion) = 

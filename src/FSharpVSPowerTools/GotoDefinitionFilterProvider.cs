@@ -22,7 +22,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(DotNetReferenceSourceProvider))]
     public class DotNetReferenceSourceProvider : ReferenceSourceProvider
     {
-        DotNetReferenceSourceProvider() : base("http://referencesource.microsoft.com") { }
+        public DotNetReferenceSourceProvider() : base("http://referencesource.microsoft.com") { }
     }
 
     [Export(typeof(IVsTextViewCreationListener))]
@@ -60,8 +60,11 @@ namespace FSharpVSPowerTools
 
             var dte = serviceProvider.GetService(typeof(SDTE)) as DTE;
             var events = dte.Events as Events2;
-            this.solutionEvents = events.SolutionEvents;
-            this.solutionEvents.AfterClosing += Cleanup;
+            if (events != null)
+            {
+                this.solutionEvents = events.SolutionEvents;
+                this.solutionEvents.AfterClosing += Cleanup;
+            }
         }
 
         private void Cleanup()
@@ -73,9 +76,20 @@ namespace FSharpVSPowerTools
         {
             var textView = editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
+            Register(textViewAdapter, textView, fireNavigationEvent: false);
+        }
 
+        internal GoToDefinitionFilter RegisterCommandFilter(IWpfTextView textView, bool fireNavigationEvent)
+        {
+            var textViewAdapter = editorFactory.GetViewAdapter(textView);
+            if (textViewAdapter == null) return null;
+            return Register(textViewAdapter, textView, fireNavigationEvent);
+        }
+
+        private GoToDefinitionFilter Register(IVsTextView textViewAdapter, IWpfTextView textView, bool fireNavigationEvent)
+        {
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
-            if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToSymbolSourceEnabled)) return;
+            if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToSymbolSourceEnabled)) return null;
             // Favor Navigate to Source feature over Go to Metadata
             var preference = generalOptions.GoToSymbolSourceEnabled
                                 ? (generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource) 
@@ -86,12 +100,14 @@ namespace FSharpVSPowerTools
                 Debug.Assert(doc != null, "Text document shouldn't be null.");
                 var commandFilter = new GoToDefinitionFilter(doc, textView, editorOptionsFactory,
                                                              fsharpVsLanguageService, serviceProvider, projectFactory,
-                                                             referenceSourceProvider, preference);
+                                                             referenceSourceProvider, preference, fireNavigationEvent);
                 if (!referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
                     referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);
                 AddCommandFilter(textViewAdapter, commandFilter);
+                return commandFilter;
             }
+            return null;
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, GoToDefinitionFilter commandFilter)
@@ -131,7 +147,8 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            solutionEvents.AfterClosing -= Cleanup;
+            if (solutionEvents != null)
+                solutionEvents.AfterClosing -= Cleanup;
             (referenceSourceProvider as IDisposable).Dispose();
         }
     }

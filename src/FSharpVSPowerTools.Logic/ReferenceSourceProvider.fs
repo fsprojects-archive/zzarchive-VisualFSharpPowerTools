@@ -44,9 +44,9 @@ type ReferenceSourceProvider(baseUrl: string) =
     let networkAddressSubscription = NetworkChange.NetworkAddressChanged.Subscribe(fun _ -> lookUpAvailableAssemblies())
 
     let byteArrayToHexString (bytes: byte []) =
-        let digits = bytes.Length * 2
-        let chars = Array.zeroCreate digits
-        for i in 0..digits/2-1 do
+        let length = bytes.Length
+        let chars = Array.zeroCreate length
+        for i in 0..length/2-1 do
             let b1 = byte (bytes.[i] >>> 4)
             chars.[i * 2] <- if b1 > 9uy then char (b1 + 87uy) else char (b1 + 0x30uy)
             let b2 = byte (bytes.[i] &&& 0xFuy)
@@ -68,7 +68,7 @@ type ReferenceSourceProvider(baseUrl: string) =
 
     member __.AvailableAssemblies = availableAssemblies
 
-    member __.NavigateTo(symbol: FSharpSymbol) = 
+    member __.TryGetNavigatedUrl(symbol: FSharpSymbol) = 
         let xmlDocSig =
             match symbol with
             | MemberFunctionOrValue mem ->
@@ -77,14 +77,14 @@ type ReferenceSourceProvider(baseUrl: string) =
                 Some entity.XmlDocSig
             | _ -> None
         xmlDocSig
-        |> Option.map (fun xmlDocSig ->
+        |> Option.bind (fun xmlDocSig ->
             symbol.Assembly.FileName
             |> Option.map Path.GetFileNameWithoutExtension
-            |> Option.iter (fun assemblyName ->
+            |> Option.map (fun assemblyName ->
                 let url = baseUrl + "/" + assemblyName + "/a.html#" + getMD5Hash xmlDocSig
-                Process.Start url |> ignore))
-        |> Option.getOrTry (fun _ -> Logging.logWarning "Can't find navigation information for %s" symbol.FullName)
-    
+                Logging.logInfo "Go to definition at '%s'." url
+                url))
+        
     interface IDisposable with
         member __.Dispose() =
             lookUpSubscription.Dispose()

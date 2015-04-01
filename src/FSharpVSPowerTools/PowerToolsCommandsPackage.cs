@@ -106,11 +106,10 @@ namespace FSharpVSPowerTools
         private void SetupReferenceMenu()
         {
             var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
-            var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
-
+            
             if (mcs != null)
             {
-                fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs, shell);
+                fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs);
                 fsiReferenceMenu.SetupCommands();
             }
         }

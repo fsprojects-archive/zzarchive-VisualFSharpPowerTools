@@ -23,12 +23,17 @@ open System.Diagnostics
 open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Win32
+open System.Text
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
     | SymbolSourceOrMetadata
     | SymbolSource
     | Metadata
+
+type internal UrlChangeEventArgs(url: string) =
+    inherit EventArgs()
+    member __.Url = url
 
 type GoToDefinitionFilter(textDocument: ITextDocument,
                           view: IWpfTextView, 
@@ -37,7 +42,11 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                           serviceProvider: System.IServiceProvider,                          
                           projectFactory: ProjectFactory,
                           referenceSourceProvider: ReferenceSourceProvider,
-                          navigationPreference) =
+                          navigationPreference: NavigationPreference,
+                          fireNavigationEvent: bool) =
+    let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
+    let mutable currentUrl = None
+
     let getDocumentState () =
         async {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -149,6 +158,18 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                             |> Option.map (fun parent -> sprintf "%s.%s" parent uc.DisplayName)
                         | _ -> 
                             None
+                    | ActivePatternCase case ->
+                        let group = case.Group
+                        group.EnclosingEntity
+                        |> Option.bind tryGetFullyQualifiedName
+                        |> Option.map (fun parent -> 
+                            let sb = StringBuilder()
+                            sb.Append("|") |> ignore
+                            for name in group.Names do
+                                sb.AppendFormat("{0}|", name) |> ignore
+                            if not group.IsTotal then
+                                sb.Append("_|") |> ignore
+                            sprintf "%s.( %O )" parent sb)
                     | _ ->
                         None)
                 |> Option.flatten
@@ -320,6 +341,9 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                              |> replace "raw.github" "github" 
                              |> replaceBlob m)
                             r.StartLine
+                    if fireNavigationEvent then
+                        currentUrl <- Some url
+                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                        
                     Process.Start(browserUrl) |> ignore)
             else
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
@@ -398,10 +422,18 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     | NavigationPreference.SymbolSourceOrMetadata
                     | NavigationPreference.SymbolSource as pref ->   
                         let symbol = fsSymbolUse.Symbol
+                        Logging.logInfo "Checking symbol source of %s..." symbol.FullName
                         if symbol.Assembly.FileName
                            |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
                            |> Option.getOrElse false then
-                            referenceSourceProvider.NavigateTo symbol
+                            match referenceSourceProvider.TryGetNavigatedUrl symbol with
+                            | Some url ->
+                                if fireNavigationEvent then
+                                    currentUrl <- Some url
+                                    urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
+                                Process.Start url |> ignore
+                            | None ->
+                                Logging.logWarning "Can't find navigation information for %s." symbol.FullName
                         else
                             match tryFindSourceUrl symbol with
                             | Some url ->
@@ -423,6 +455,9 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
+
+    member internal __.UrlChanged = urlChanged |> Option.map (fun event -> event.Publish)
+    member internal __.CurrentUrl = currentUrl
 
     interface IOleCommandTarget with
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =

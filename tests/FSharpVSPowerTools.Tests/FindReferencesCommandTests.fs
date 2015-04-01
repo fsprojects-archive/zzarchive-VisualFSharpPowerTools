@@ -111,9 +111,8 @@ module Sample
 
 val func : int -> int
 """
-        // Use absolute path just to be sure
-        let projectFileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/FSharpSignature/FSharpSignature.fsproj"))
-        let fileName = Path.GetFullPathSafe(Path.Combine(__SOURCE_DIRECTORY__, "../data/FSharpSignature/Sample.fsi"))
+        let projectFileName = fullPathBasedOnSourceDir "../data/FSharpSignature/FSharpSignature.fsproj"
+        let fileName = fullPathBasedOnSourceDir "../data/FSharpSignature/Sample.fsi"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)         
         let textView = createMockTextView buffer

@@ -1,9 +1,11 @@
 [![Issue Stats](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools/badge/issue)](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools)
 [![Issue Stats](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools/badge/pr)](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools)
-
+[![NuGet](https://img.shields.io/nuget/dt/FSharpVSPowerTools.Core.svg)](https://www.nuget.org/packages/FSharpVSPowerTools.Core/)
 
 Visual F# Power Tools
 =====================
+
+[![Join the chat at https://gitter.im/fsprojects/VisualFSharpPowerTools](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/fsprojects/VisualFSharpPowerTools?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Power commands for F# in Visual Studio
 
@@ -36,6 +38,7 @@ and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
  - Go to metadata
  - Task List comments
  - Generate references for F# Interactive (see [this article](http://apollo13cn.blogspot.dk/2012/08/f-add-reference-addon.html))
+ - Navigate to source
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 

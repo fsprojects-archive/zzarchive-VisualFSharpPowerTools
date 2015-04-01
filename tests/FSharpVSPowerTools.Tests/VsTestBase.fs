@@ -50,7 +50,10 @@ type VsTestBase() =
     let projectFactory = new MockProjectFactory(serviceProvider, openDocumentsTracker, vsLanguageService, dte)
 
     let shellEventListener = new ShellEventListener(serviceProvider)
-    
+    let referenceSourceProvider = new DotNetReferenceSourceProvider()
+    // Ensure that the timer is activated before running tests
+    do if not referenceSourceProvider.IsActivated then referenceSourceProvider.Activate()
+
     member __.ServiceProvider = serviceProvider
     member __.ShellEventListener = shellEventListener
     member __.FSharpLanguageService = fsharpLanguageService
@@ -65,6 +68,7 @@ type VsTestBase() =
     member __.EditorOptionsFactoryService = editorOptionsFactoryService
     member __.EditorOperationsFactoryService = editorOperationsFactoryService
     member __.TextBufferUndoManagerProvider = textBufferUndoManagerProvider
+    member __.ReferenceSourceProvider = referenceSourceProvider
 
     member __.AddProject(project: IProjectProvider) = 
         dte.AddProject(project.ProjectFileName, project)

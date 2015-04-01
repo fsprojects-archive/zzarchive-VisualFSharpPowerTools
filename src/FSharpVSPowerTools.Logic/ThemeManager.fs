@@ -30,7 +30,7 @@ type ThemeManager [<ImportingConstructor>]
             match VisualStudioVersion.fromDTEVersion dte.Version with
             | VisualStudioVersion.VS2012
             | VisualStudioVersion.VS2013
-            | VisualStudioVersion.VS14 as version ->
+            | VisualStudioVersion.VS2015 as version ->
                 Some (String.Format(@"Software\Microsoft\VisualStudio\{0}.0\{1}", VisualStudioVersion.toString version, categoryName))
             | v ->
                 Logging.logWarning "Unknown Visual Studio version detected while checking theme colors: %O" v
