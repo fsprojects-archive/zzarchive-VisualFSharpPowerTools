@@ -243,6 +243,6 @@ Target "All" DoNothing
   ==> "CleanDocs"
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
-//  ==> "Release"
+  ==> "Release"
 
 RunTargetOrDefault "Main"
