@@ -73,46 +73,10 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '34', 34)" onmouseover="showTip(event, '34', 34)">
-            getActivePatterns entities
-          </code>
-          <div class="tip" id="34">
-            <strong>Signature:</strong> entities:RawEntity list -&gt; Idents list<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L55-55" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
           <code onmouseout="hideTip(event, '35', 35)" onmouseover="showTip(event, '35', 35)">
-            getAutoOpenModules entities
-          </code>
-          <div class="tip" id="35">
-            <strong>Signature:</strong> entities:RawEntity list -&gt; Idents list<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L47-47" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '36', 36)" onmouseover="showTip(event, '36', 36)">
             getEffectiveOpenDeclarationsAtLocation (...)
           </code>
-          <div class="tip" id="36">
+          <div class="tip" id="35">
             <strong>Signature:</strong> pos:pos -&gt; ast:ParsedInput -&gt; string list<br />
                       </div>
         </td>
@@ -127,15 +91,33 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '37', 37)" onmouseover="showTip(event, '37', 37)">
+          <code onmouseout="hideTip(event, '36', 36)" onmouseover="showTip(event, '36', 36)">
             getOpenDeclarations (...)
           </code>
-          <div class="tip" id="37">
+          <div class="tip" id="36">
             <strong>Signature:</strong> ast:ParsedInput option -&gt; entities:RawEntity list option -&gt; qualifyOpenDeclarations:(Line -&gt; EndColumn -&gt; Idents -&gt; RawOpenDeclaration list) -&gt; OpenDeclaration list<br />
                       </div>
         </td>
         <td class="xmldoc">
             <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L172-172" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '37', 37)" onmouseover="showTip(event, '37', 37)">
+            getUnusedOpenDeclarations (...)
+          </code>
+          <div class="tip" id="37">
+            <strong>Signature:</strong> ast:ParsedInput option -&gt; allSymbolsUses:SymbolUse [] -&gt; openDeclarations:OpenDeclaration list -&gt; allEntities:Map&lt;string,Idents list&gt; option -&gt; OpenDeclaration list<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L434-434" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -251,7 +233,8 @@
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./../gotometadata.html">Go to metadata</a></li>
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
-                <li><a href="./../generatereferences.html">Generate references in F# Interactive</a></li>
+                <li><a href="./../generatereferences.html">Generate references for F# Interactive</a></li>
+                <li><a href="./../navigatetosource.html">Navigate to source</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

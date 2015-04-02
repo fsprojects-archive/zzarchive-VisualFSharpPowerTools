@@ -54,8 +54,8 @@
             endsWith(suffix whole)
           </code>
           <div class="tip" id="1">
-            <strong>Signature:</strong> suffix:&#39;?20501 [] -&gt; whole:&#39;?20501 [] -&gt; bool<br />
-                          <strong>Type parameters:</strong> '?20501          </div>
+            <strong>Signature:</strong> suffix:&#39;?21035 [] -&gt; whole:&#39;?21035 [] -&gt; bool<br />
+                          <strong>Type parameters:</strong> '?21035          </div>
         </td>
         <td class="xmldoc">
             <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L31-31" class="github-link">
@@ -70,9 +70,27 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '2', 2)" onmouseover="showTip(event, '2', 2)">
-            heads(array)
+            foldi(folder state array)
           </code>
           <div class="tip" id="2">
+            <strong>Signature:</strong> folder:(&#39;State -&gt; int -&gt; &#39;T -&gt; &#39;State) -&gt; state:&#39;State -&gt; array:&#39;T [] -&gt; &#39;State<br />
+                          <strong>Type parameters:</strong> 'State, 'T          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L55-55" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '3', 3)" onmouseover="showTip(event, '3', 3)">
+            heads(array)
+          </code>
+          <div class="tip" id="3">
             <strong>Signature:</strong> array:&#39;T [] -&gt; &#39;T [] []<br />
                           <strong>Type parameters:</strong> 'T          </div>
         </td>
@@ -89,12 +107,12 @@ For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '3', 3)" onmouseover="showTip(event, '3', 3)">
+          <code onmouseout="hideTip(event, '4', 4)" onmouseover="showTip(event, '4', 4)">
             replace(index value arr)
           </code>
-          <div class="tip" id="3">
-            <strong>Signature:</strong> index:int -&gt; value:&#39;?20503 -&gt; arr:&#39;?20503 [] -&gt; &#39;?20503 []<br />
-                          <strong>Type parameters:</strong> '?20503          </div>
+          <div class="tip" id="4">
+            <strong>Signature:</strong> index:int -&gt; value:&#39;?21037 -&gt; arr:&#39;?21037 [] -&gt; &#39;?21037 []<br />
+                          <strong>Type parameters:</strong> '?21037          </div>
         </td>
         <td class="xmldoc">
             <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L37-37" class="github-link">
@@ -108,12 +126,12 @@ For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '4', 4)" onmouseover="showTip(event, '4', 4)">
+          <code onmouseout="hideTip(event, '5', 5)" onmouseover="showTip(event, '5', 5)">
             startsWith(prefix whole)
           </code>
-          <div class="tip" id="4">
-            <strong>Signature:</strong> prefix:&#39;?20499 [] -&gt; whole:&#39;?20499 [] -&gt; bool<br />
-                          <strong>Type parameters:</strong> '?20499          </div>
+          <div class="tip" id="5">
+            <strong>Signature:</strong> prefix:&#39;?21033 [] -&gt; whole:&#39;?21033 [] -&gt; bool<br />
+                          <strong>Type parameters:</strong> '?21033          </div>
         </td>
         <td class="xmldoc">
             <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L22-22" class="github-link">
@@ -161,7 +179,8 @@ For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]</p>
                 <li><a href="./../resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
                 <li><a href="./../gotometadata.html">Go to metadata</a></li>
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
-                <li><a href="./../generatereferences.html">Generate references in F# Interactive</a></li>
+                <li><a href="./../generatereferences.html">Generate references for F# Interactive</a></li>
+                <li><a href="./../navigatetosource.html">Navigate to source</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>
