@@ -1,4 +1,4 @@
-#### 1.8.0 - Unreleased
+#### 1.8.0 - April 2 2015
 * Support operator coloring ([#936](https://github.com/fsprojects/VisualFSharpPowerTools/issues/936))
 * Implement Navigate to Source ([#945](https://github.com/fsprojects/VisualFSharpPowerTools/issues/945))
 * Implement assembly resolution for FsiReferenceCommand ([#949](https://github.com/fsprojects/VisualFSharpPowerTools/pull/949))
