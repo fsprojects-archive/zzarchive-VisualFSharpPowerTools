@@ -1,5 +1,6 @@
-﻿using FSharpVSPowerTools.ProjectSystem;
-using FSharpVSPowerTools.SymbolInfo;
+﻿using FSharpVSPowerTools;
+using FSharpVSPowerTools.ProjectSystem;
+using FSharpVSPowerTools.QuickInfo;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -16,7 +17,7 @@ namespace Winterdom.Viasfora.Margins
     [ContentType("text")]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Document)]
-    public class DevMarginProvider : IWpfTextViewMarginProvider
+    public class QuickInfoMarginProvider : IWpfTextViewMarginProvider
     {
         [Import]
         internal ITextDocumentFactoryService textDocumentFactoryService = null;
@@ -32,15 +33,15 @@ namespace Winterdom.Viasfora.Margins
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost textViewHost, IWpfTextViewMargin marginContainer)
         {
-//            var generalOptions = Setting.getGeneralOptions(serviceProvider);
-//            if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return null;
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            if (generalOptions == null || !generalOptions.QuickInfoPanelEnabled) return null;
 
             var textView = textViewHost.TextView;
             var buffer = textView.TextBuffer;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return new SymbolInfoMargin(doc, textView, languageService, serviceProvider, projectFactory);
+                return new QuickInfoMargin(doc, textView, languageService, serviceProvider, projectFactory);
             else
                 return null;
         }

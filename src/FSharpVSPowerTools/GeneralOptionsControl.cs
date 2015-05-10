@@ -131,6 +131,12 @@ namespace FSharpVSPowerTools
             set { chbGoToSymbolSource.Checked = value; }
         }
 
+        public bool QuickInfoPanelEnabled
+        {
+            get { return chbQuickInfoPanel.Checked; }
+            set { chbQuickInfoPanel.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -153,6 +159,7 @@ namespace FSharpVSPowerTools
             GoToMetadataEnabled = _optionsPage.GoToMetadataEnabled;
             GenerateReferencesEnabled = _optionsPage.GenerateReferencesEnabled;
             GoToSymbolSourceEnabled = _optionsPage.GoToSymbolSourceEnabled;
+            QuickInfoPanelEnabled = _optionsPage.QuickInfoPanelEnabled;
         }
     }
 }

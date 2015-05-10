@@ -1,44 +1,34 @@
-﻿namespace FSharpVSPowerTools.SymbolInfo
+﻿namespace FSharpVSPowerTools.QuickInfo
 
 open System
-open System.IO
-open System.Collections.Generic
-open System.Linq
-open System.Text
-open System.Windows
-open System.Threading
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Projection
-open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.ViewModule
-open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type SymbolInfoVisual = FsXaml.XAML<"SymbolInfoMargin.xaml", ExposeNamedProperties=true>
+type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
-type SymbolInfoViewModel() as self = 
+type QuickInfoViewModel() as self = 
     inherit ViewModelBase()
-    let symbolInfo = self.Factory.Backing(<@@ self.SymbolInfo @@>, "")
-    member __.SymbolInfo
-        with get () = symbolInfo.Value
-        and set (v) = symbolInfo.Value <- v
+    let quickInfo = self.Factory.Backing(<@@ self.QuickInfo @@>, "")
+    member __.QuickInfo
+        with get () = quickInfo.Value
+        and set (v) = quickInfo.Value <- v
 
-type SymbolInfoMargin (textDocument: ITextDocument,
-                       view: ITextView, 
-                       vsLanguageService: VSLanguageService, 
-                       serviceProvider: IServiceProvider,
-                       projectFactory: ProjectFactory) = 
+type QuickInfoMargin (textDocument: ITextDocument,
+                      view: ITextView, 
+                      vsLanguageService: VSLanguageService, 
+                      serviceProvider: IServiceProvider,
+                      projectFactory: ProjectFactory) = 
 
     let updateLock = obj()
     let mutable currentWord = None
-    let model = SymbolInfoViewModel()
-    let visual = SymbolInfoVisual()
+    let model = QuickInfoViewModel()
+    let visual = QuickInfoVisual()
     do visual.Root.DataContext <- model
     let mutable requestedPoint = SnapshotPoint()
 
@@ -49,7 +39,7 @@ type SymbolInfoMargin (textDocument: ITextDocument,
         lock updateLock (fun () ->
             if currentRequest = requestedPoint then
                 currentWord <- newWord
-                model.SymbolInfo <- match si with Some x -> x | None -> "")
+                model.QuickInfo <- match si with Some x -> x | None -> "")
 
     let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan,
                   fileName: string, projectProvider: IProjectProvider) =
@@ -76,15 +66,8 @@ type SymbolInfoMargin (textDocument: ITextDocument,
                                     | FSharpToolTipElement.Single (s, _) -> Some s
                                     | FSharpToolTipElement.Group ((s, _) :: _) -> Some s
                                     | _ -> None)
-
-//                            let fmt = SignatureGenerator.formatSymbol 
-//                                        (fun _ -> [])
-//                                        4 FSharpDisplayContext.Empty [] symbolUse.Symbol
-//                                        SignatureGenerator.Filterer.NoFilters SignatureGenerator.BlankLines.Default false
                             synchronousUpdate (currentRequest, Some newWord, info)
-                        | None ->
-                            // Return empty values in order to clear up markers
-                            synchronousUpdate (currentRequest, None, None)
+                        | None -> synchronousUpdate (currentRequest, None, None)
                     | None -> synchronousUpdate (currentRequest, None, None)
                 with e ->
                     Logging.logExceptionWithMessage e "Failed to update highlight references."

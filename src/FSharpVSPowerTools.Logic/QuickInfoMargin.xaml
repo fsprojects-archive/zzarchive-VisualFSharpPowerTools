@@ -4,10 +4,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:sys="clr-namespace:System;assembly=mscorlib" 
              xmlns:vs="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.11.0" 
-             xmlns:pt="clr-namespace:FSharpVSPowerTools.SymbolInfo"
+             xmlns:pt="clr-namespace:FSharpVSPowerTools.QuickInfo"
              mc:Ignorable="d" 
              Height="24"
              d:DesignHeight="25" d:DesignWidth="600">
-    <TextBox IsEnabled="True" IsReadOnly="True" Text="{Binding SymbolInfo, Mode=OneWay}" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+    <TextBox IsEnabled="True" IsReadOnly="True" Text="{Binding QuickInfo, Mode=OneWay}" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
 </UserControl>
 
