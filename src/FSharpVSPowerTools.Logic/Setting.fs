@@ -21,6 +21,7 @@ type IGeneralOptions =
     abstract GoToMetadataEnabled: bool with get, set
     abstract GenerateReferencesEnabled: bool with get, set
     abstract GoToSymbolSourceEnabled: bool with get, set
+    abstract QuickInfoPanelEnabled: bool with get, set
 
 type IFormattingOptions =
     abstract PageWidth: int with get, set
