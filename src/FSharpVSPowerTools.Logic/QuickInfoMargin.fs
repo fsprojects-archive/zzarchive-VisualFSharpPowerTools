@@ -9,6 +9,7 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.VisualStudio.Text.Tagging
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
@@ -23,7 +24,8 @@ type QuickInfoMargin (textDocument: ITextDocument,
                       view: ITextView, 
                       vsLanguageService: VSLanguageService, 
                       serviceProvider: IServiceProvider,
-                      projectFactory: ProjectFactory) = 
+                      projectFactory: ProjectFactory,
+                      errorTagAggregator: ITagAggregator<IErrorTag>) =
 
     let updateLock = obj()
     let mutable currentWord = None
@@ -41,34 +43,45 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 currentWord <- newWord
                 model.QuickInfo <- match si with Some x -> x | None -> "")
 
+    let getError (span: SnapshotSpan) =
+        let spans =
+            errorTagAggregator.GetTags(span)
+            |> Seq.map (fun mappedSpan -> 
+                sprintf "%s: %O" mappedSpan.Tag.ErrorType mappedSpan.Tag.ToolTipContent)
+            |> Seq.toArray
+            |> String.concat Environment.NewLine
+        spans
+
     let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan,
                   fileName: string, projectProvider: IProjectProvider) =
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, fileName, projectProvider, AllowStaleResults.No)
-                    match res with
-                    | Some (symbolUse, _) ->
-                        let span = fromFSharpRange newWord.Snapshot symbolUse.RangeAlternate
+                    synchronousUpdate (currentRequest, Some newWord, Some (getError newWord))
 
-                        match span with
-                        | Some _ -> 
-                            let lineStr = requestedPoint.GetContainingLine().GetText()
-                            
-                            let! tooltip =
-                                vsLanguageService.GetOpenDeclarationTooltip(
-                                    symbol.Line + 1, symbol.RightColumn, lineStr, [symbol.Text], projectProvider, 
-                                    textDocument.FilePath, newWord.Snapshot.GetText())
-                            let info = 
-                                tooltip 
-                                |> Option.bind (fun (FSharpToolTipText x) -> List.tryHead x)
-                                |> Option.bind (function
-                                    | FSharpToolTipElement.Single (s, _) -> Some s
-                                    | FSharpToolTipElement.Group ((s, _) :: _) -> Some s
-                                    | _ -> None)
-                            synchronousUpdate (currentRequest, Some newWord, info)
-                        | None -> synchronousUpdate (currentRequest, None, None)
-                    | None -> synchronousUpdate (currentRequest, None, None)
+//                    let! res = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, fileName, projectProvider, AllowStaleResults.No)
+//                    match res with
+//                    | Some (symbolUse, _) ->
+//                        let span = fromFSharpRange newWord.Snapshot symbolUse.RangeAlternate
+//
+//                        match span with
+//                        | Some _ -> 
+//                            let lineStr = requestedPoint.GetContainingLine().GetText()
+//                            
+//                            let! tooltip =
+//                                vsLanguageService.GetOpenDeclarationTooltip(
+//                                    symbol.Line + 1, symbol.RightColumn, lineStr, [symbol.Text], projectProvider, 
+//                                    textDocument.FilePath, newWord.Snapshot.GetText())
+//                            let info = 
+//                                tooltip 
+//                                |> Option.bind (fun (FSharpToolTipText x) -> List.tryHead x)
+//                                |> Option.bind (function
+//                                    | FSharpToolTipElement.Single (s, _) -> Some s
+//                                    | FSharpToolTipElement.Group ((s, _) :: _) -> Some s
+//                                    | _ -> None)
+//                            synchronousUpdate (currentRequest, Some newWord, info)
+//                        | None -> synchronousUpdate (currentRequest, None, None)
+//                    | None -> synchronousUpdate (currentRequest, None, None)
                 with e ->
                     Logging.logExceptionWithMessage e "Failed to update highlight references."
                     synchronousUpdate (currentRequest, None, None)

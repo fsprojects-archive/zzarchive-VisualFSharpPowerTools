@@ -4,6 +4,7 @@ using FSharpVSPowerTools.QuickInfo;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using System;
 using System.ComponentModel.Composition;
@@ -31,6 +32,9 @@ namespace Winterdom.Viasfora.Margins
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
 
+        [Import]
+        internal IViewTagAggregatorFactoryService tagAggregator = null;
+
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost textViewHost, IWpfTextViewMargin marginContainer)
         {
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
@@ -41,7 +45,8 @@ namespace Winterdom.Viasfora.Margins
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return new QuickInfoMargin(doc, textView, languageService, serviceProvider, projectFactory);
+                return new QuickInfoMargin(doc, textView, languageService, serviceProvider, projectFactory,
+                    tagAggregator.CreateTagAggregator<IErrorTag>(textView));
             else
                 return null;
         }
