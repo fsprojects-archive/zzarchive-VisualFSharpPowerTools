@@ -41,7 +41,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         lock updateLock (fun () ->
             if currentRequest = requestedPoint then
                 currentWord <- newWord
-                model.QuickInfo <- match quickInfo with Some x -> x | None -> "")
+                model.QuickInfo <- match quickInfo with Some x -> x | None -> "<no info (wip)>")
 
     let getError (span: SnapshotSpan) =
         let spans =
@@ -62,8 +62,8 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 requestedPoint <- point
                 let currentRequest = requestedPoint
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument buffer doc
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath) |> liftMaybe
+                let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
                 match vsLanguageService.GetSymbol(currentRequest, project) with
                 | Some (newWord, _l) ->
                     // If this is the same word we currently have, we're done (e.g. caret moved within a word).
