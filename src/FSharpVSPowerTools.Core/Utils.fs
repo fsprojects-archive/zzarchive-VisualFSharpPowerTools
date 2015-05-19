@@ -273,6 +273,16 @@ type AsyncMaybeBuilder () =
     [<DebuggerStepThrough>]
     member (*inline*) __.ReturnFrom value : Async<'T option> = value
 
+    [<DebuggerStepThrough>]
+    member (*inline*) __.ReturnFrom (value: 'T option) : Async<'T option> = async.Return value
+
+    [<DebuggerStepThrough>]
+    member (*inline*) __.ReturnFrom (value: 'T Async) : Async<'T option> = 
+        async {  
+            let! value' = value
+            return Some value'
+        }
+
     // unit -> M<'T>
     [<DebuggerStepThrough>]
     member (*inline*) __.Zero () : Async<unit option> =
@@ -304,6 +314,22 @@ type AsyncMaybeBuilder () =
             | None -> return None
             | Some result -> return! f result
         }
+
+    [<DebuggerStepThrough>]
+    member (*inline*) __.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
+        async {
+            match value with
+            | None -> return None
+            | Some result -> return! f result
+        }
+
+    [<DebuggerStepThrough>]
+    member (*inline*) __.Bind (value: Async<'T>, f : 'T -> Async<'U option>) : Async<'U option> =
+        async {
+            let! value' = value
+            return! f value'
+        }
+
     // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
     [<DebuggerStepThrough>]
     member __.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
