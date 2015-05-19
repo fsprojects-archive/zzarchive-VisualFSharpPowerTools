@@ -11,6 +11,7 @@ type NewFolderNameDialog = FsXaml.XAML<"FolderNameDialog.xaml">
 type NewFolderNameDialogResources = 
     { WindowTitle: string
       FolderNames: Set<string>
+      CheckUniqueFolderNames: bool
       OriginalName: string }
 
 type NewFolderNameDialogModel(resources: NewFolderNameDialogResources) as self = 
@@ -30,7 +31,7 @@ type NewFolderNameDialogModel(resources: NewFolderNameDialogResources) as self =
         validate "Name"
         >> notNullOrWhitespace
         >> fixErrorsWithMessage Resource.validatingEmptyName
-        >> custom validateExists
+        >> (if resources.CheckUniqueFolderNames then (custom validateExists) else id)
         >> custom validateFolderName
         >> result
     
