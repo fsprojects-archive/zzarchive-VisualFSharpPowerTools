@@ -70,7 +70,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
                                 | _ -> () }
                     |> Seq.groupBy fst
                     |> Seq.sortBy (fun (severity, _) -> if severity = FSharpErrorSeverity.Error then 0 else 1)
-                    |> Seq.map (fun (s, es) -> s, es |> Seq.map snd |> List.ofSeq)
+                    |> Seq.map (fun (s, es) -> s, es |> Seq.map snd |> Seq.distinct |> List.ofSeq)
                     |> Seq.toArray
             } 
             |> Async.map (Option.getOrElse [||] >> updateError)
