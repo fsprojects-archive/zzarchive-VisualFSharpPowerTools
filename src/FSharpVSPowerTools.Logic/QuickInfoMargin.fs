@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.QuickInfo
 
 open System
+open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
@@ -8,6 +9,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
 open FSharp.ViewModule
+open Microsoft.FSharp.Compiler
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
@@ -30,7 +32,24 @@ type QuickInfoMargin (textDocument: ITextDocument,
     do visual.Root.DataContext <- model
     let buffer = view.TextBuffer
 
-    let updateError error = lock updateLock (fun () -> model.QuickInfo <- match error with Some x -> x | None -> "")
+    let updateError (errors: (FSharpErrorSeverity * string list) []) = lock updateLock <| fun () -> 
+        model.QuickInfo <-
+            errors 
+            |> Array.map (fun (severity, errors) -> 
+                let title = 
+                    match errors with
+                    | [_] -> sprintf "%+A" severity
+                    | _ -> sprintf "%+As (%d)" severity errors.Length
+                title + ": " + 
+                (match errors with 
+                 | [e] -> e
+                 | _ -> errors |> List.mapi (fun i e -> sprintf "%d. %s" (i + 1) e) |> List.toArray |> String.concat ", "))
+            |> String.concat ", "
+
+    let flattenLines (x: string) =
+        match x with
+        | null -> ""
+        | x -> x.Replace("\r\n", ", ").Replace("\r", ", ").Replace("\n", ", ") 
 
     let updateAtCaretPosition () =
         let caretPos = view.Caret.Position
@@ -44,16 +63,19 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 let! errors = checkResults.GetErrors() |> liftMaybe
                 do! (if Array.isEmpty errors then None else Some()) |> liftMaybe
                 return 
-                    [| for e in errors do
-                         if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
-                             match fromRange buffer.CurrentSnapshot (e.StartLineAlternate, e.StartColumn, e.EndLineAlternate, e.EndColumn) with
-                             | Some span when point.InSpan span -> yield sprintf "%+A: %s" e.Severity e.Message 
-                             | _ -> () |]
-                    |> String.concat Environment.NewLine 
+                    seq { for e in errors do
+                            if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
+                                match fromRange buffer.CurrentSnapshot (e.StartLineAlternate, e.StartColumn, e.EndLineAlternate, e.EndColumn) with
+                                | Some span when point.InSpan span -> yield e.Severity, flattenLines e.Message
+                                | _ -> () }
+                    |> Seq.groupBy fst
+                    |> Seq.sortBy (fun (severity, _) -> if severity = FSharpErrorSeverity.Error then 0 else 1)
+                    |> Seq.map (fun (s, es) -> s, es |> Seq.map snd |> List.ofSeq)
+                    |> Seq.toArray
             } 
-            |> Async.map updateError
+            |> Async.map (Option.getOrElse [||] >> updateError)
             |> Async.StartInThreadPoolSafe
-        | _ -> updateError None
+        | _ -> updateError [||]
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, updateAtCaretPosition)
 
