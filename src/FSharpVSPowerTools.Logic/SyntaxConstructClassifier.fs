@@ -198,7 +198,7 @@ type SyntaxConstructClassifier
                 slowState.Swap (fun _ -> SlowStage.Data { Snapshot = snapshot; UnusedSpans = notUsedSpans; IsUpdating = false }) |> ignore
                 debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
                 pf.Stop()
-                Logging.logInfo "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result
+                //Logging.logInfo "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result
                 triggerClassificationChanged snapshot "UpdateUnusedDeclarations"
             } |> Async.map ignore
 
@@ -310,7 +310,7 @@ type SyntaxConstructClassifier
                             vsLanguageService.StartBackgroundCompile currentProjectOpts
 
                     pf.Stop()
-                    Logging.logInfo "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result
+                    //Logging.logInfo "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result
                     
                 | _ -> () } 
             Async.StartInThreadPoolSafe (worker, cancelToken.Token) 

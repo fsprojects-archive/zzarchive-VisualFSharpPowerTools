@@ -44,6 +44,7 @@ namespace FSharpVSPowerTools
             GoToMetadataEnabled = true;
             GenerateReferencesEnabled = true;
             GoToSymbolSourceEnabled = true;
+            QuickInfoPanelEnabled = true;
         }
 
         private bool GetNavigationBarConfig()
@@ -170,7 +171,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GoToSymbolSourceEnabled { get; set; }
 
-
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool QuickInfoPanelEnabled { get; set; }
+        
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -213,6 +216,7 @@ namespace FSharpVSPowerTools
                 GoToMetadataEnabled = _optionsControl.GoToMetadataEnabled;
                 GenerateReferencesEnabled = _optionsControl.GenerateReferencesEnabled;
                 GoToSymbolSourceEnabled = _optionsControl.GoToSymbolSourceEnabled;
+                QuickInfoPanelEnabled = _optionsControl.QuickInfoPanelEnabled;
             }
 
             base.OnApply(e);
