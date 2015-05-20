@@ -61,11 +61,11 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                         let newWord = symbolRange
 
                         // Recheck cursor position to ensure it's still in new word
-                        let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                        let! point = buffer.GetSnapshotPoint view.Caret.Position
                         if point.InSpan newWord then
-                            return! Some(patMatchExpr, unionTypeDefinition, insertionPos) |> liftMaybe
+                            return! Some(patMatchExpr, unionTypeDefinition, insertionPos)
                         else
-                            return! liftMaybe None
+                            return! None
                     }
                     |> Async.map (fun result -> 
                         unionDefinition <- result

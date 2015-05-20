@@ -91,7 +91,7 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                             let! (fsSymbolUse, results) = 
                                 vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
                             // Recheck cursor position to ensure it's still in new word
-                            let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                            let! point = buffer.GetSnapshotPoint view.Caret.Position
                             return!
                                 (match fsSymbolUse.Symbol with
                                 | :? FSharpEntity as entity when point.InSpan newWord ->
@@ -100,8 +100,8 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                                         && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
                                         Some (interfaceState, fsSymbolUse.DisplayContext, entity, results)
                                     else None
-                                | _ -> None) |> liftMaybe
-                        | _ -> return! liftMaybe None
+                                | _ -> None)
+                        | _ -> return! None
                     } 
                     |> Async.map (fun result -> 
                         state <- result

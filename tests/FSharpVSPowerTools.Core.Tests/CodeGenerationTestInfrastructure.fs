@@ -58,7 +58,7 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
         member x.GetSymbolAndUseAtPositionOfKind(project, snapshot, pos, kind) =
             asyncMaybe {
                 let x = x :> ICodeGenerationService<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos) |> liftMaybe
+                let! range, symbol = x.GetSymbolAtPosition(project, snapshot, pos)
                 let src = snapshot.GetText()
                 let line = snapshot.GetLineText1 pos.Line1
                 let! parseAndCheckResults =
@@ -72,7 +72,7 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
                     let! symbolUse =
                         parseAndCheckResults.GetSymbolUseAtLocation(pos.Line, symbol.RightColumn, line, [symbol.Text])
                     return range, symbol, symbolUse
-                | _ -> return! None |> liftMaybe
+                | _ -> return! None
             }
 
         member x.ParseFileInProject(snapshot, projectOptions) =
@@ -132,8 +132,7 @@ module Helpers =
         let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
 
         asyncMaybe {
-            let! _range, symbolAtPos =
-                liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
+            let! _range, symbolAtPos = codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
             let! _range, _symbol, symbolUse = 
                 codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
 
@@ -147,8 +146,7 @@ module Helpers =
         let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
 
         asyncMaybe {
-            let! _range, symbolAtPos =
-                liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
+            let! _range, symbolAtPos = codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
             let! _range, _symbol, symbolUse = 
                 codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
 

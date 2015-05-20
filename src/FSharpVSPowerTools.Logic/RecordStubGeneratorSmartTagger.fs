@@ -61,11 +61,11 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                         let newWord = symbolRange
 
                         // Recheck cursor position to ensure it's still in new word
-                        let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
+                        let! point = buffer.GetSnapshotPoint view.Caret.Position
                         if point.InSpan newWord then
-                            return! Some (recordExpression, recordDefinition, insertionPos) |> liftMaybe
+                            return! Some (recordExpression, recordDefinition, insertionPos)
                         else
-                            return! liftMaybe None
+                            return! None
                     }
                     |> Async.map (fun result -> 
                         recordDefinition <- result

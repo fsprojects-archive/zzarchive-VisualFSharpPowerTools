@@ -88,8 +88,8 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                 requestedPoint <- point
                 let currentRequest = requestedPoint
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath) |> liftMaybe
-                let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                let! project = projectFactory.CreateForDocument buffer doc
                 match vsLanguageService.GetSymbol(currentRequest, project) with
                 | Some (newWord, symbol) ->
                     // If this is the same word we currently have, we're done (e.g. caret moved within a word).

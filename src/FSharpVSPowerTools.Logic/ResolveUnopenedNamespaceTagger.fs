@@ -55,25 +55,24 @@ type ResolveUnopenedNamespaceSmartTagger
                     state <- None
                     //let ctx = System.Threading.SynchronizationContext.Current
                     asyncMaybe {
-                        let! newWord, sym = vsLanguageService.GetSymbol (point, project) |> liftMaybe
+                        let! newWord, sym = vsLanguageService.GetSymbol (point, project)
                         // Recheck cursor position to ensure it's still in new word
-                        let! point = buffer.GetSnapshotPoint view.Caret.Position |> liftMaybe
-                        if not (point.InSpan newWord) then return! liftMaybe None
+                        let! point = buffer.GetSnapshotPoint view.Caret.Position
+                        if not (point.InSpan newWord) then return! None
                         else
                             //do! Async.SwitchToThreadPool() |> liftAsync
                             let! res = 
                                 vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
                             
                             match res with
-                            | Some _ -> return! liftMaybe None
+                            | Some _ -> return! None
                             | None ->
                                 let! checkResults = 
                                     vsLanguageService.ParseFileInProject (doc.FullName, newWord.Snapshot.GetText(), project) |> liftAsync
 
                                 let pos = codeGenService.ExtractFSharpPos point
-                                let! parseTree = liftMaybe checkResults.ParseTree
-                                
-                                let! entityKind = ParsedInput.getEntityKind parseTree pos |> liftMaybe
+                                let! parseTree = checkResults.ParseTree
+                                let! entityKind = ParsedInput.getEntityKind parseTree pos
                                 let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
 
                                 //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
@@ -107,7 +106,7 @@ type ResolveUnopenedNamespaceSmartTagger
 
                                 debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
                                 
-                                let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn) |> liftMaybe
+                                let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn)
                                 let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
                                 return entities |> Seq.map createEntity |> Seq.concat |> Seq.toList
                     }

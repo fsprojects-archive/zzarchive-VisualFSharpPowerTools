@@ -544,7 +544,7 @@ let tryFindRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Proj
     asyncMaybe {
         let! recordExpression, insertionPos =
             tryFindStubInsertionParamsAtPos codeGenService project pos document
-
+             
         let! symbolRange, symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 
@@ -557,5 +557,5 @@ let tryFindRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Proj
             field.DisplayName = symbol.Text ->
                 return! Some (symbolRange, recordExpression, field.DeclaringEntity, insertionPos)
         | _ ->
-            return! None |> liftMaybe
+            return! None
     }
