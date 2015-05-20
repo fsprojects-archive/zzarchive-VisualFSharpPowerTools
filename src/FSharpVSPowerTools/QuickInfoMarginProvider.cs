@@ -14,7 +14,6 @@ namespace Winterdom.Viasfora.Margins
     [Name(FSharpVSPowerTools.Constants.symbolInfoMargin)]
     [Order(After = PredefinedMarginNames.HorizontalScrollBar)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
-    [ContentType("text")]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Document)]
     public class QuickInfoMarginProvider : IWpfTextViewMarginProvider
