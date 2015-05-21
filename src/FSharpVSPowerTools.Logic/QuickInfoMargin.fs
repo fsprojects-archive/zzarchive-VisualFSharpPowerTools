@@ -36,6 +36,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         model.QuickInfo <-
             errors 
             |> Array.map (fun (severity, errors) -> 
+                let errors = List.map String.trim errors
                 let title = 
                     match errors with
                     | [_] -> sprintf "%+A" severity
@@ -43,13 +44,23 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 title + ": " + 
                 (match errors with 
                  | [e] -> e
-                 | _ -> errors |> List.mapi (fun i e -> sprintf "%d. %s" (i + 1) e) |> List.toArray |> String.concat ", "))
-            |> String.concat ", "
+                 | _ -> 
+                    errors 
+                    |> List.mapi (fun i e -> sprintf "%d. %s" (i + 1) e) 
+                    |> List.toArray 
+                    |> String.concat " "))
+            |> String.concat " "
 
     let flattenLines (x: string) =
         match x with
         | null -> ""
-        | x -> x.Replace("\r\n", ", ").Replace("\r", ", ").Replace("\n", ", ") 
+        | x ->
+            x 
+            |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|]
+            |> Array.map String.trim
+            |> Array.mapi (fun i x -> if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then ". " + x else " " + x)
+            |> String.concat ""
+            |> fun x -> if x.[x.Length - 1] <> '.' then x + "." else x
 
     let updateAtCaretPosition () =
         let caretPos = view.Caret.Position

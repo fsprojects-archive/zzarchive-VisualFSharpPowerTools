@@ -357,6 +357,9 @@ module String =
                | "" -> str, None
                | index -> str.Substring (0, str.Length - index.Length), Some (int index)
 
+    let trim (x: string) = match x with null -> null | x -> x.Trim()
+    let split options (separator: string[]) (x: string) = match x with null -> null | x -> x.Split(separator, options)
+
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
     open System.Diagnostics
