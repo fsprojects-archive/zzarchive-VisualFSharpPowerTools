@@ -45,14 +45,13 @@ let tryGenerateDefinitionFromPos caretPos src =
     let projectOptions = { project() with OtherOptions = LanguageServiceTestHelper.argsDotNET451 }
 
     asyncMaybe {
-        let! _range, symbolAtPos =
-            liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
+        let! _range, symbolAtPos = codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
         let! parseResults =
             codeGenService.ParseFileInProject(document, projectOptions)
             |> liftAsync
-        let! parseTree = parseResults.ParseTree |> liftMaybe           
+        let! parseTree = parseResults.ParseTree
         let getXmlDocBySignature = 
             let xmlFile = symbolUse.Symbol.Assembly.FileName |> Option.map (fun fileName -> Path.ChangeExtension(fileName, ".xml"))
             let xmlMemberMap =
@@ -83,7 +82,7 @@ let tryGenerateDefinitionFromPos caretPos src =
                     []
             
         let openDeclarations = OpenDeclarationGetter.getEffectiveOpenDeclarationsAtLocation caretPos parseTree
-        let! generatedCode = liftMaybe <| formatSymbol getXmlDocBySignature 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol Filterer.NoFilters BlankLines.Default
+        let! generatedCode = formatSymbol getXmlDocBySignature 4 symbolUse.DisplayContext openDeclarations symbolUse.Symbol Filterer.NoFilters BlankLines.Default
         return generatedCode
     }
     |> Async.RunSynchronously
@@ -1523,8 +1522,7 @@ let generateFileNameForSymbol caretPos src =
     let projectOptions = project()
 
     asyncMaybe {
-        let! _range, symbolAtPos =
-            liftMaybe <| codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
+        let! _range, symbolAtPos = codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
         

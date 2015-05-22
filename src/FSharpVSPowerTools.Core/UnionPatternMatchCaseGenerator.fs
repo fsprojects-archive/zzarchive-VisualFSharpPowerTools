@@ -564,31 +564,28 @@ let tryFindCaseInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Pro
 
         if checkThatPatternMatchExprEndsWithCompleteClause patMatchExpr then
             let! insertionParams = tryFindInsertionParams codeGenService project document patMatchExpr
-                                   |> liftMaybe
-
             return patMatchExpr, insertionParams
         else
-            return! None |> liftMaybe
+            return! None
     }
 
 let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! patMatchExpr, insertionParams = tryFindCaseInsertionParamsAtPos codeGenService project pos document
         let! symbolRange, _symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
-
         let! superficialTypeDefinition =
             match symbolUse.Symbol with
             | TypedAstPatterns.UnionCase(case) when case.ReturnType.HasTypeDefinition ->
-                Some case.ReturnType.TypeDefinition |> liftMaybe
-            | TypedAstPatterns.Entity(entity, _, _) -> Some entity |> liftMaybe
-            | _ -> None |> liftMaybe
+                Some case.ReturnType.TypeDefinition
+            | TypedAstPatterns.Entity(entity, _, _) -> Some entity
+            | _ -> None
 
         let! realTypeDefinition =
             match superficialTypeDefinition with
             | AbbreviatedType(TypeWithDefinition typeDef) when typeDef.IsFSharpUnion ->
-                Some typeDef |> liftMaybe
-            | UnionType(_) -> Some superficialTypeDefinition |> liftMaybe
-            | _ -> None |> liftMaybe 
+                Some typeDef
+            | UnionType(_) -> Some superficialTypeDefinition
+            | _ -> None
 
         return symbolRange, patMatchExpr, realTypeDefinition, insertionParams
     }

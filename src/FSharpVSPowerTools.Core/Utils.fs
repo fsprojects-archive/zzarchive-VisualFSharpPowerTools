@@ -265,29 +265,24 @@ type MaybeBuilder () =
 
 [<Sealed>]
 type AsyncMaybeBuilder () =
-    // 'T -> M<'T>
     [<DebuggerStepThrough>]
-    member (*inline*) __.Return value : Async<'T option> = Some value |> async.Return
+    member __.Return value : Async<'T option> = Some value |> async.Return
 
-    // M<'T> -> M<'T>
     [<DebuggerStepThrough>]
-    member (*inline*) __.ReturnFrom value : Async<'T option> = value
+    member __.ReturnFrom value : Async<'T option> = value
 
-    // unit -> M<'T>
     [<DebuggerStepThrough>]
-    member (*inline*) __.Zero () : Async<unit option> =
-        Some ()     // TODO : Should this be None?
-        |> async.Return
+    member __.ReturnFrom (value: 'T option) : Async<'T option> = async.Return value
 
-    // (unit -> M<'T>) -> M<'T>
+    [<DebuggerStepThrough>]
+    member __.Zero () : Async<unit option> =
+        Some () |> async.Return
+
     [<DebuggerStepThrough>]
     member __.Delay (f : unit -> Async<'T option>) : Async<'T option> = f ()
 
-    // M<'T> -> M<'T> -> M<'T>
-    // or
-    // M<unit> -> M<'T> -> M<'T>
     [<DebuggerStepThrough>]
-    member (*inline*) __.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
+    member __.Combine (r1, r2 : Async<'T option>) : Async<'T option> =
         async {
             let! r1' = r1
             match r1' with
@@ -295,48 +290,43 @@ type AsyncMaybeBuilder () =
             | Some () -> return! r2
         }
 
-    // M<'T> * ('T -> M<'U>) -> M<'U>
     [<DebuggerStepThrough>]
-    member (*inline*) __.Bind (value, f : 'T -> Async<'U option>) : Async<'U option> =
+    member __.Bind (value: Async<'T option>, f : 'T -> Async<'U option>) : Async<'U option> =
         async {
             let! value' = value
             match value' with
             | None -> return None
             | Some result -> return! f result
         }
-    // 'T * ('T -> M<'U>) -> M<'U> when 'U :> IDisposable
+
+    [<DebuggerStepThrough>]
+    member __.Bind (value: 'T option, f : 'T -> Async<'U option>) : Async<'U option> =
+        async {
+            match value with
+            | None -> return None
+            | Some result -> return! f result
+        }
+
     [<DebuggerStepThrough>]
     member __.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
         try body resource
         finally 
             if resource <> null then resource.Dispose ()
 
-    // (unit -> bool) * M<'T> -> M<'T>
     [<DebuggerStepThrough>]
     member x.While (guard, body : Async<_ option>) : Async<_ option> =
         if guard () then
-            // OPTIMIZE : This could be simplified so we don't need to make calls to Bind and While.
             x.Bind (body, (fun () -> x.While (guard, body)))
         else
             x.Zero ()
 
-    // seq<'T> * ('T -> M<'U>) -> M<'U>
-    // or
-    // seq<'T> * ('T -> M<'U>) -> seq<M<'U>>
     [<DebuggerStepThrough>]
     member x.For (sequence : seq<_>, body : 'T -> Async<unit option>) : Async<_ option> =
-        // OPTIMIZE : This could be simplified so we don't need to make calls to Using, While, Delay.
         x.Using (sequence.GetEnumerator (), fun enum ->
-            x.While (
-                enum.MoveNext,
-                x.Delay (fun () ->
-                    body enum.Current)))
+            x.While (enum.MoveNext, x.Delay (fun () -> body enum.Current)))
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AsyncMaybe =
-    let liftMaybe (maybe: Option<'T>) : Async<_ option> =
-        async { return maybe }
-
     let inline liftAsync (async : Async<'T>) : Async<_ option> =
         async |> Async.map Some
 

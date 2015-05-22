@@ -29,14 +29,14 @@ type CodeGenerationService(languageService: VSLanguageService, textBuffer: IText
         member x.GetSymbolAndUseAtPositionOfKind(project, document, pos, kind) =
             asyncMaybe {
                 let x = x :> ICodeGenerationService<_, _, _>
-                let! range, symbol = x.GetSymbolAtPosition(project, document, pos) |> liftMaybe
+                let! range, symbol = x.GetSymbolAtPosition(project, document, pos)
 
                 match symbol.Kind with
                 | k when k = kind ->
                     let! symbolUse, _ =
                         languageService.GetFSharpSymbolUse(range, symbol, document.FullName, project, AllowStaleResults.MatchingSource)
                     return range, symbol, symbolUse
-                | _ -> return! None |> liftMaybe
+                | _ -> return! None
             }
 
         member x.ParseFileInProject(document, project) =

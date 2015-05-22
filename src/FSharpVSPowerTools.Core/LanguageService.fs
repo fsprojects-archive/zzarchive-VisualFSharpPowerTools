@@ -103,7 +103,7 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
             | Some (checkResults, _) -> 
                 let tokenTag = Parser.tagOfToken (Parser.token.IDENT "")
                 return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
-            | None -> return! (liftMaybe None)
+            | None -> return! None
         }
 
 [<RequireQualifiedAccess>]

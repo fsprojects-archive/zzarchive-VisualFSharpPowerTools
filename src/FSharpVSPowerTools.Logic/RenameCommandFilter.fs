@@ -90,7 +90,7 @@ type RenameCommandFilter(textDocument: ITextDocument,
                 let symbolDeclarationLocation = 
                     projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol state.File state.Project
 
-                return! liftMaybe <|
+                return! 
                     match symbolDeclarationLocation with
                     | Some location ->
                         Some { Symbol = symbol

@@ -535,27 +535,27 @@ let tryFindStubInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Pro
         let! recordExpression = tryFindRecordExprInBufferAtPos codeGenService project pos document
         if checkThatRecordExprEndsWithRBrace codeGenService project document recordExpression then
             let! insertionPos = RecordStubsInsertionParams.TryCreateFromRecordExpression recordExpression
-                                |> liftMaybe
             return recordExpression, insertionPos
         else
-            return! None |> liftMaybe
+            return! None
     }
 
 let tryFindRecordDefinitionFromPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
     asyncMaybe {
         let! recordExpression, insertionPos =
             tryFindStubInsertionParamsAtPos codeGenService project pos document
-
-        let! symbolRange, symbol, symbolUse = codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
+             
+        let! symbolRange, symbol, symbolUse = 
+            codeGenService.GetSymbolAndUseAtPositionOfKind(project, document, pos, SymbolKind.Ident)
 
         match symbolUse.Symbol with
         | :? FSharpEntity as entity when entity.IsFSharpRecord && entity.DisplayName = symbol.Text ->
-            return! Some (symbolRange, recordExpression, entity, insertionPos) |> liftMaybe
+            return! Some (symbolRange, recordExpression, entity, insertionPos)
 
         | :? FSharpField as field when
             field.DeclaringEntity.IsFSharpRecord &&
             field.DisplayName = symbol.Text ->
-                return! Some (symbolRange, recordExpression, field.DeclaringEntity, insertionPos) |> liftMaybe
+                return! Some (symbolRange, recordExpression, field.DeclaringEntity, insertionPos)
         | _ ->
-            return! None |> liftMaybe
+            return! None
     }
