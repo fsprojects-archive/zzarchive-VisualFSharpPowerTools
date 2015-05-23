@@ -11,7 +11,7 @@ using System.ComponentModel.Composition;
 namespace Winterdom.Viasfora.Margins
 {
     [Export(typeof(IWpfTextViewMarginProvider))]
-    [Name(FSharpVSPowerTools.Constants.symbolInfoMargin)]
+    [Name(FSharpVSPowerTools.Constants.QuickInfoMargin)]
     [Order(After = PredefinedMarginNames.HorizontalScrollBar)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
     [ContentType("F#")]

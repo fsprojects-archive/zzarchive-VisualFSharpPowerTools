@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
 EndProject
@@ -38,6 +38,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\navbar.fsx = docs\content\navbar.fsx
 		docs\content\navigateto.fsx = docs\content\navigateto.fsx
 		docs\content\navigatetosource.fsx = docs\content\navigatetosource.fsx
+		docs\content\quickinfopanel.fsx = docs\content\quickinfopanel.fsx
 		docs\content\recordstubgeneration.fsx = docs\content\recordstubgeneration.fsx
 		docs\content\rename.fsx = docs\content\rename.fsx
 		docs\content\resolveunopenednamespaces.fsx = docs\content\resolveunopenednamespaces.fsx

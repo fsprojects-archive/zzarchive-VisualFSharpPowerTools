@@ -31,6 +31,7 @@ namespace FSharpVSPowerTools
         private void InitializeComponent()
         {
             this.grbOptions = new System.Windows.Forms.GroupBox();
+            this.chbQuickInfoPanel = new System.Windows.Forms.CheckBox();
             this.chbGoToSymbolSource = new System.Windows.Forms.CheckBox();
             this.chbGenerateReferences = new System.Windows.Forms.CheckBox();
             this.chbUnusedOpens = new System.Windows.Forms.CheckBox();
@@ -53,7 +54,6 @@ namespace FSharpVSPowerTools
             this.lblInfo = new System.Windows.Forms.Label();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
-            this.chbQuickInfoPanel = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -88,6 +88,18 @@ namespace FSharpVSPowerTools
             this.grbOptions.TabIndex = 0;
             this.grbOptions.TabStop = false;
             this.grbOptions.Text = "Turn features on/off";
+            // 
+            // chbQuickInfoPanel
+            // 
+            this.chbQuickInfoPanel.AutoSize = true;
+            this.chbQuickInfoPanel.Checked = true;
+            this.chbQuickInfoPanel.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chbQuickInfoPanel.Location = new System.Drawing.Point(213, 227);
+            this.chbQuickInfoPanel.Name = "chbQuickInfoPanel";
+            this.chbQuickInfoPanel.Size = new System.Drawing.Size(103, 17);
+            this.chbQuickInfoPanel.TabIndex = 22;
+            this.chbQuickInfoPanel.Text = "Quick info panel";
+            this.chbQuickInfoPanel.UseVisualStyleBackColor = true;
             // 
             // chbGoToSymbolSource
             // 
@@ -245,7 +257,7 @@ namespace FSharpVSPowerTools
             this.chbSyntaxColoring.AutoSize = true;
             this.chbSyntaxColoring.Checked = true;
             this.chbSyntaxColoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbSyntaxColoring.Location = new System.Drawing.Point(15, 181);
+            this.chbSyntaxColoring.Location = new System.Drawing.Point(16, 180);
             this.chbSyntaxColoring.Name = "chbSyntaxColoring";
             this.chbSyntaxColoring.Size = new System.Drawing.Size(98, 17);
             this.chbSyntaxColoring.TabIndex = 11;
@@ -342,18 +354,6 @@ namespace FSharpVSPowerTools
             this.chbXmlDoc.TabIndex = 1;
             this.chbXmlDoc.Text = "Auto-generating XmlDoc";
             this.chbXmlDoc.UseVisualStyleBackColor = true;
-            // 
-            // chbQuickInfoPanel
-            // 
-            this.chbQuickInfoPanel.AutoSize = true;
-            this.chbQuickInfoPanel.Checked = true;
-            this.chbQuickInfoPanel.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbQuickInfoPanel.Location = new System.Drawing.Point(213, 227);
-            this.chbQuickInfoPanel.Name = "chbQuickInfoPanel";
-            this.chbQuickInfoPanel.Size = new System.Drawing.Size(103, 17);
-            this.chbQuickInfoPanel.TabIndex = 22;
-            this.chbQuickInfoPanel.Text = "Quick info panel";
-            this.chbQuickInfoPanel.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 

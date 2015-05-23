@@ -57,8 +57,9 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | x ->
             x 
             |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|]
-            |> Array.map String.trim
-            |> Array.mapi (fun i x -> if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then ". " + x else " " + x)
+            |> Array.mapi (fun i x -> 
+                if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then 
+                    ". " + (String.trim x) else " " + (String.trim x))
             |> String.concat ""
             |> fun x -> if x.[x.Length - 1] <> '.' then x + "." else x
 
@@ -68,11 +69,11 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | Some point ->
             asyncMaybe {
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath) |> liftMaybe
-                let! project = projectFactory.CreateForDocument buffer doc |> liftMaybe
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                let! project = projectFactory.CreateForDocument buffer doc
                 let! checkResults = vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, buffer.CurrentSnapshot.GetText(), project) |> liftAsync
-                let! errors = checkResults.GetErrors() |> liftMaybe
-                do! (if Array.isEmpty errors then None else Some()) |> liftMaybe
+                let! errors = checkResults.GetErrors()
+                do! (if Array.isEmpty errors then None else Some())
                 return 
                     seq { for e in errors do
                             if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
@@ -97,7 +98,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         
         member x.GetTextViewMargin name =
             match name with
-            | Constants.symbolInfoMargin -> upcast x
+            | Constants.QuickInfoMargin -> upcast x
             | _ -> Unchecked.defaultof<_>
 
     interface IDisposable with
