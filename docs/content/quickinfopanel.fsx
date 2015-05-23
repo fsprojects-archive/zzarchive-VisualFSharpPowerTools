@@ -8,7 +8,7 @@ Quick Info panel
 -----------------------
 
 This panel is a small margin located at the bottom of the code editor. It automatically shows errors and warnings under the
-cursor, eliminating the need to use mouse to see tooltip with the same info.
+cursor, eliminating the need to use mouses to see tooltips with the same info.
 
 Here is a demo screencast.
 

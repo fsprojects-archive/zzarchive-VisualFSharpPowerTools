@@ -10,8 +10,27 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
+open System.Windows.Interactivity
+open System.Windows.Controls
+open System.Windows.Input
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
+
+type DoubleClickBehavior() =
+    inherit Behavior<TextBox>()
+    let mutable associatedObjectMouseDoubleClick = null
+    
+    let initAssociatedObjectMouseDoubleClick (textBox: TextBox) =
+        associatedObjectMouseDoubleClick <- MouseButtonEventHandler (fun sender routedEventArgs -> textBox.SelectAll())
+
+    override x.OnAttached() =
+        initAssociatedObjectMouseDoubleClick x.AssociatedObject
+        x.AssociatedObject.MouseDoubleClick.AddHandler associatedObjectMouseDoubleClick
+        base.OnAttached()
+
+    override x.OnDetaching() =
+        x.AssociatedObject.MouseDoubleClick.RemoveHandler associatedObjectMouseDoubleClick
+        base.OnDetaching()
 
 type QuickInfoViewModel() as self = 
     inherit ViewModelBase()
@@ -58,10 +77,10 @@ type QuickInfoMargin (textDocument: ITextDocument,
             x 
             |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|]
             |> Array.mapi (fun i x -> 
-                if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then 
-                    ". " + (String.trim x) else " " + (String.trim x))
+                if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then ". " + (String.trim x) 
+                else " " + (String.trim x))
             |> String.concat ""
-            |> fun x -> if x.[x.Length - 1] <> '.' then x + "." else x
+            |> fun x -> if x.Length > 0 && x.[x.Length - 1] <> '.' then x + "." else x
 
     let updateAtCaretPosition () =
         let caretPos = view.Caret.Position
