@@ -369,15 +369,6 @@ type Async with
             }
         Async.Start(comp, ?cancellationToken = cancellationToken)       
 
-//    static member ExecuteInThreadPool f =
-//        let ctx = System.Threading.SynchronizationContext.Current
-//        async {
-//            do! Async.SwitchToThreadPool()
-//            let! r = f
-//            do! Async.SwitchToContext ctx
-//            return r
-//        }
-
 /// Provides an IDisposable handle which allows us to override the cursor cleanly as well as restore whenever needed
 type CursorOverrideHandle(newCursor) =
     let mutable disposed = false
