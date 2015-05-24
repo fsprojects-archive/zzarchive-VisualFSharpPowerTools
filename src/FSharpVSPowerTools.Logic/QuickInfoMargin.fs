@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools.QuickInfo
 
 open System
-open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
@@ -10,9 +9,6 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
-open System.Windows.Interactivity
-open System.Windows.Controls
-open System.Windows.Input
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
