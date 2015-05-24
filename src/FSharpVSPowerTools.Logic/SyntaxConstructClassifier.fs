@@ -152,8 +152,8 @@ type SyntaxConstructClassifier
                 debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
                 
                 let! symbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                        vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                            snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf) |> liftAsync
+                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(
+                        snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf) |> liftAsync
                 
                 let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
                 
@@ -281,7 +281,7 @@ type SyntaxConstructClassifier
                             return!
                                 singleDefs
                                 |> Async.Array.map (fun symbol ->
-                                    vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation currentProject symbol)
+                                     vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation currentProject symbol)
                                 |> Async.map (
                                        Array.choose id 
                                     >> Array.concat 
@@ -335,7 +335,7 @@ type SyntaxConstructClassifier
 
     let projectCheckedSubscription = 
         if isSlowStageEnabled() then
-            Some (vsLanguageService.Checker.ProjectChecked.Subscribe (fun projectFileName ->
+            Some (vsLanguageService.RawChecker.ProjectChecked.Subscribe (fun projectFileName ->
                 match isSlowStageEnabled(), fastState.Value with
                 | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->
                     let projects =

@@ -32,7 +32,8 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
             let sourceCodeOfTheFile = snapshot.GetText()
             let syncContext = System.Threading.SynchronizationContext.Current
             do! Async.SwitchToThreadPool()
-            let! ranges = DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, fsharpLanguageService.Checker)
+            let! ranges = fsharpLanguageService.CheckerAsync (fun x ->
+                            DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, x))
             do! Async.SwitchToContext(syncContext)
 
             let newResults =

@@ -75,7 +75,8 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
-                let! checkResults = vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, buffer.CurrentSnapshot.GetText(), project) |> liftAsync
+                let! checkResults = 
+                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, buffer.CurrentSnapshot.GetText(), project) |> liftAsync
                 let! errors = checkResults.GetErrors()
                 do! (if Array.isEmpty errors then None else Some())
                 return 

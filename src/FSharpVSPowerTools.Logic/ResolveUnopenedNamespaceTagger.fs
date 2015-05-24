@@ -53,14 +53,12 @@ type ResolveUnopenedNamespaceSmartTagger
                 if wordChanged then
                     currentWord <- Some newWord
                     state <- None
-                    //let ctx = System.Threading.SynchronizationContext.Current
                     asyncMaybe {
                         let! newWord, sym = vsLanguageService.GetSymbol (point, project)
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
                         if not (point.InSpan newWord) then return! None
                         else
-                            //do! Async.SwitchToThreadPool() |> liftAsync
                             let! res = 
                                 vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
                             
