@@ -169,15 +169,6 @@ type LanguageService (?fileSystem: IFileSystem) =
         return r
     }
 
-  let checker (f: FSharpChecker -> 'a) = 
-    let ctx = System.Threading.SynchronizationContext.Current
-    async {
-        do! Async.SwitchToThreadPool()
-        let r = f checkerInstance
-        do! Async.SwitchToContext ctx
-        return r
-    }
-    
   /// When creating new script file on Mac, the filename we get sometimes 
   /// has a name //foo.fsx, and as a result 'Path.GetFullPath' throws in the F#
   /// language service - this fixes the issue by inventing nicer file name.
@@ -241,8 +232,7 @@ type LanguageService (?fileSystem: IFileSystem) =
         try 
             let fileName = fixFileName(fileName)
             debug "GetScriptCheckerOptions: Creating for stand-alone file or script: '%s'" fileName
-            let! opts = checkerAsync (fun x -> 
-                x.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename))
+            let! opts = checkerInstance.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
                 
             let results =         
                 // The FSharpChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
@@ -293,10 +283,10 @@ type LanguageService (?fileSystem: IFileSystem) =
     // Try to get recent results from the F# service
     let res = 
         match stale with 
-        | AllowStaleResults.MatchingFileName -> checker (fun x -> x.TryGetRecentTypeCheckResultsForFile(fileName, options)) 
-        | AllowStaleResults.MatchingSource -> checker (fun x -> x.TryGetRecentTypeCheckResultsForFile(fileName, options, source=src))
-        | AllowStaleResults.No -> async.Return None
-    match Async.RunSynchronously res with 
+        | AllowStaleResults.MatchingFileName -> checkerInstance.TryGetRecentTypeCheckResultsForFile(fileName, options) 
+        | AllowStaleResults.MatchingSource -> checkerInstance.TryGetRecentTypeCheckResultsForFile(fileName, options, source=src)
+        | AllowStaleResults.No -> None
+    match res with 
     | Some (untyped,typed,_) when typed.HasFullTypeCheckInfo  -> Some (ParseAndCheckResults(typed, untyped))
     | _ -> None
 
@@ -327,7 +317,7 @@ type LanguageService (?fileSystem: IFileSystem) =
               debug "Parsing: Trigger parse (fileName=%s)" fileName
               let! results = parseAndCheckFileInProject(fileName, src, opts)
               debug "Worker: Starting background compilations"
-              do! checker (fun x -> x.StartBackgroundCompile(opts))
+              checkerInstance.StartBackgroundCompile opts
               return results
       }
 
@@ -378,11 +368,10 @@ type LanguageService (?fileSystem: IFileSystem) =
          | _ -> return None 
      }
 
-  member __.InvalidateConfiguration(options) = checker (fun x -> x.InvalidateConfiguration(options)) |> Async.RunSynchronously
+  member __.InvalidateConfiguration options = checkerInstance.InvalidateConfiguration options
 
   // additions
 
-  member __.Checker<'a> (f: FSharpChecker -> 'a) = checker f |> Async.RunSynchronously
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
@@ -407,7 +396,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                           | Some opts -> 
                               return opts
                         }
-                      let! parseResults = checkerAsync (fun x -> x.ParseFileInProject(file, source, opts))
+                      let! parseResults = checkerInstance.ParseFileInProject(file, source, opts)
                       match parseResults.ParseTree with
                       | Some tree -> parseTreeHandler tree
                       | None -> ()

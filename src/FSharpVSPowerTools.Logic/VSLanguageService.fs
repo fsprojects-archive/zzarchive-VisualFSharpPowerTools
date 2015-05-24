@@ -307,18 +307,17 @@ type VSLanguageService
     member __.InvalidateProject (projectProvider: IProjectProvider) = 
         async {
             let! opts = projectProvider.GetProjectCheckerOptions(instance) 
-            return instance.Checker (fun x -> x.InvalidateConfiguration opts)
+            return instance.RawChecker.InvalidateConfiguration opts
         }
 
     member __.ClearCaches() = 
         debug "[Language Service] Clearing FCS caches."
-        instance.Checker (fun x -> x.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients())
+        instance.RawChecker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
     member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
-        instance.Checker (fun x -> x.StartBackgroundCompile opts)
+        instance.RawChecker.StartBackgroundCompile opts
 
-    member __.Checker x = instance.Checker x
     member __.CheckerAsync x = instance.CheckerAsync x
     member __.RawChecker = instance.RawChecker
 
