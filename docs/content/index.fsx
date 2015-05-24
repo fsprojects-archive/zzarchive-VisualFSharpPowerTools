@@ -37,6 +37,7 @@ Here are currently supported features:
  * [Task List comments](tasklistcomments.html)
  * [Generate references for F# Interactive](generatereferences.html)
  * [Navigate to source](navigatetosource.html)
+ * [Quick info panel](quickinfopanel.html)
   
 Default Keymap
 --------------
