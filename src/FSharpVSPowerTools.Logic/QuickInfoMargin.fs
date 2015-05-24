@@ -16,22 +16,6 @@ open System.Windows.Input
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
-type DoubleClickBehavior() =
-    inherit Behavior<TextBox>()
-    let mutable associatedObjectMouseDoubleClick = null
-    
-    let initAssociatedObjectMouseDoubleClick (textBox: TextBox) =
-        associatedObjectMouseDoubleClick <- MouseButtonEventHandler (fun sender routedEventArgs -> textBox.SelectAll())
-
-    override x.OnAttached() =
-        initAssociatedObjectMouseDoubleClick x.AssociatedObject
-        x.AssociatedObject.MouseDoubleClick.AddHandler associatedObjectMouseDoubleClick
-        base.OnAttached()
-
-    override x.OnDetaching() =
-        x.AssociatedObject.MouseDoubleClick.RemoveHandler associatedObjectMouseDoubleClick
-        base.OnDetaching()
-
 type QuickInfoViewModel() as self = 
     inherit ViewModelBase()
     let quickInfo = self.Factory.Backing(<@@ self.QuickInfo @@>, "")
@@ -48,7 +32,12 @@ type QuickInfoMargin (textDocument: ITextDocument,
     let updateLock = obj()
     let model = QuickInfoViewModel()
     let visual = QuickInfoVisual()
+    
     do visual.Root.DataContext <- model
+       visual.tbQuickInfo.MouseDoubleClick.Add (fun _ ->
+           System.Windows.Clipboard.SetText visual.tbQuickInfo.Text
+           visual.tbQuickInfo.SelectAll())
+    
     let buffer = view.TextBuffer
 
     let updateError (errors: (FSharpErrorSeverity * string list) []) = lock updateLock <| fun () -> 

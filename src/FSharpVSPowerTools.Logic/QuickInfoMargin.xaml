@@ -5,18 +5,13 @@
              xmlns:sys="clr-namespace:System;assembly=mscorlib" 
              xmlns:vs="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.11.0" 
              xmlns:pt="clr-namespace:FSharpVSPowerTools.QuickInfo"
-             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
              mc:Ignorable="d" 
              Height="24"
              d:DesignHeight="25" d:DesignWidth="600">
-    <TextBox 
+    <TextBox x:Name="tbQuickInfo" 
         IsEnabled="True" 
         IsReadOnly="True" 
         Text="{Binding QuickInfo, Mode=OneWay}" 
-        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
-        <i:Interaction.Behaviors>
-            <pt:DoubleClickBehavior/>
-        </i:Interaction.Behaviors>
-    </TextBox>
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
 </UserControl>
 
