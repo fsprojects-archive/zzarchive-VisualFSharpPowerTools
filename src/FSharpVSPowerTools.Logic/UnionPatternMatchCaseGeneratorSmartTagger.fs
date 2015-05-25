@@ -13,6 +13,7 @@ open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.Threading
 
 type UnionPatternMatchCaseGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -54,6 +55,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                     | Some oldWord -> newWord <> oldWord
 
                 if wordChanged then
+                    let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         let vsDocument = VSDocument(doc, point.Snapshot)
                         let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
@@ -67,10 +69,14 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                         else
                             return! None
                     }
-                    |> Async.map (fun result -> 
-                        unionDefinition <- result
-                        buffer.TriggerTagsChanged self tagsChanged)
-                    |> Async.StartImmediateSafe
+                    |> Async.bind (fun result -> 
+                        async {
+                            // Switch back to UI thread before firing events
+                            do! Async.SwitchToContext uiContext
+                            unionDefinition <- result
+                            buffer.TriggerTagsChanged self tagsChanged
+                        })
+                    |> Async.StartInThreadPoolSafe
 
                     currentWord <- Some newWord
             | _ -> 
