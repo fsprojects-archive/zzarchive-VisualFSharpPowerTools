@@ -101,26 +101,26 @@ Target "Build" (fun _ ->
     |> ignore
 )
 
-Target "CleanVSIX" (fun _ ->
-    ZipHelper.Unzip "bin/vsix" "bin/FSharpVSPowerTools.vsix"
-    let regex = Regex("bin")
-    let filesToKeep =
-      Directory.GetFiles("bin", "*.dll")
-      |> Seq.map (fun fileName -> regex.Replace(fileName, "bin/vsix", 1))
-    let filesToDelete = 
-      Seq.fold (--) (!! "bin/vsix/*.dll") filesToKeep
-        -- "bin/vsix/FsXaml.Wpf.TypeProvider.dll"
-        ++ "bin/vsix/Microsoft.VisualStudio*"
-        ++ "bin/vsix/Microsoft.Build*"
-    DeleteFiles filesToDelete
-    ZipHelper.Zip "bin/vsix" "bin/FSharpVSPowerTools.vsix" (!! "bin/vsix/**")
-)
-
 // Build test projects in Debug mode in order to provide correct paths for multi-project scenarios
 Target "BuildTests" (fun _ ->    
     !! "tests/data/**/*.sln"
     |> MSBuildDebug "" "Rebuild"
     |> ignore
+)
+
+let count label glob =
+    let (fileCount, lineCount) =
+        !! glob
+        |> Seq.map (fun path ->
+            File.ReadLines(path) |> Seq.length)
+        |> Seq.fold (fun (fileCount, lineCount) lineNum -> (fileCount+1, lineCount + lineNum)) (0, 0)
+    printfn "%s - File Count: %i, Line Count: %i." label fileCount lineCount
+
+Target "RunStatistics" (fun _ ->
+    count "F# Source" "src/**/*.fs"
+    count "C# Source" "src/**/*.cs"
+    count "F# Test" "tests/**/*.fs"
+    count "C# Test" "tests/**/*.cs"
 )
 
 // --------------------------------------------------------------------------------------
@@ -228,8 +228,8 @@ Target "All" DoNothing
   ==> "UnitTests"
   ==> "Main"
 
-"Build"
-  ==> "CleanVSIX"
+"Clean"
+ ==> "RunStatistics"
 
 "Release"
   ==> "PublishNuGet"
