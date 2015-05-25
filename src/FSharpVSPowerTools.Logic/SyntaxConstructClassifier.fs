@@ -124,6 +124,8 @@ type SyntaxConstructClassifier
         let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
             vsLanguageService.GetAllEntities(textDocument.FilePath, source, project)    
 
+        do! Async.SwitchToThreadPool()
+
         return pf.Time "getOpenDeclarations" <| fun _ ->
             let qualifyOpenDeclarations line endCol idents = 
                 let lineStr = getTextLineOneBased (line - 1)
