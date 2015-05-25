@@ -88,11 +88,11 @@ module private StringCategorizers =
             [r.StartLine..r.EndLine]
             |> List.map (fun line ->
                 let lineStr = getTextLine (line - 1)
-                if line = r.StartLine && line = r.EndLine && r.StartColumn + 1 <= r.EndColumn - 1 then
+                if lineStr.Length > r.StartColumn + 1 && line = r.StartLine && line = r.EndLine && r.StartColumn + 1 <= r.EndColumn - 1 then
                     lineStr.[r.StartColumn + 1 .. r.EndColumn - 1], line, r.StartColumn + 1
-                elif line = r.StartLine then 
+                elif lineStr.Length > r.StartColumn + 1 && line = r.StartLine then 
                     lineStr.[r.StartColumn + 1 ..], line, r.StartColumn + 1
-                elif line = r.EndLine then
+                elif lineStr.Length > r.EndColumn - 1 && line = r.EndLine then
                     lineStr.[..r.EndColumn - 1], line, 0
                 else lineStr, line, 0)
 
