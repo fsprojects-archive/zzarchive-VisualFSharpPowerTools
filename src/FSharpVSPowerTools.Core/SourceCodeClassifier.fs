@@ -88,11 +88,11 @@ module private StringCategorizers =
             [r.StartLine..r.EndLine]
             |> List.map (fun line ->
                 let lineStr = getTextLine (line - 1)
-                if line = r.StartLine && line = r.EndLine && r.StartColumn + 1 <= r.EndColumn - 1 then
+                if lineStr.Length > r.StartColumn + 1 && line = r.StartLine && line = r.EndLine && r.StartColumn + 1 <= r.EndColumn - 1 then
                     lineStr.[r.StartColumn + 1 .. r.EndColumn - 1], line, r.StartColumn + 1
-                elif line = r.StartLine then 
+                elif lineStr.Length > r.StartColumn + 1 && line = r.StartLine then 
                     lineStr.[r.StartColumn + 1 ..], line, r.StartColumn + 1
-                elif line = r.EndLine then
+                elif lineStr.Length > r.EndColumn - 1 && line = r.EndLine then
                     lineStr.[..r.EndColumn - 1], line, 0
                 else lineStr, line, 0)
 
@@ -118,9 +118,11 @@ module private StringCategorizers =
         let private escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
 
         let private isRegularString (r: Range.range) getTextLine =
-            let lineStr: string = getTextLine (r.StartLine - 1) 
-            let origLiteral = lineStr.Substring r.StartColumn
-            not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
+            let lineStr: string = getTextLine (r.StartLine - 1)
+            if lineStr.Length > r.StartColumn then
+                let origLiteral = lineStr.Substring r.StartColumn
+                not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
+            else true
 
         (* VisualStudio return the following strings (presented here as char arrays):
            "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
@@ -183,7 +185,7 @@ module SourceCodeClassifier =
     let getIdentifierCategory = function
         | Entity (_, ValueType, _) -> Category.ValueType
         | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module
+        | Entity (_, FSharpModule, _) -> Category.Module 
         | Entity (_, _, Tuple) -> Category.ReferenceType
         | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
         | _ -> Category.Other 

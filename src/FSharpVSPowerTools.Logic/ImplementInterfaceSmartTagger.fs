@@ -14,6 +14,7 @@ open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler
+open System.Threading
 
 type ImplementInterfaceSmartTag(actionSets) = 
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -84,6 +85,7 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         match symbol.Kind with
                         | SymbolKind.Ident ->
@@ -103,10 +105,14 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                                 | _ -> None)
                         | _ -> return! None
                     } 
-                    |> Async.map (fun result -> 
-                        state <- result
-                        buffer.TriggerTagsChanged self tagsChanged)
-                    |> Async.StartImmediateSafe
+                    |> Async.bind (fun result -> 
+                        async {
+                            // Switch back to UI thread before firing events
+                            do! Async.SwitchToContext uiContext
+                            state <- result
+                            buffer.TriggerTagsChanged self tagsChanged
+                        })
+                    |> Async.StartInThreadPoolSafe
                     currentWord <- Some newWord
             | _ -> 
                 currentWord <- None 
@@ -168,6 +174,7 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
             member __.Icon = null
             member __.IsEnabled = true
             member __.Invoke() = 
+                let uiContext = SynchronizationContext.Current
                 async {
                     let getMemberByLocation(name, range: range) =
                         let lineStr = 
@@ -177,9 +184,10 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                         results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])
                     let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures 
                                                             getMemberByLocation displayContext state.InterfaceData
+                    do! Async.SwitchToContext uiContext
                     return handleImplementInterface snapshot state displayContext implementedMemberSignatures entity
                 }
-                |> Async.StartImmediateSafe }
+                |> Async.StartInThreadPoolSafe }
 
     member __.GetSmartTagActions(snapshot, interfaceDefinition) =
         let actionSetList = ResizeArray<SmartTagActionSet>()

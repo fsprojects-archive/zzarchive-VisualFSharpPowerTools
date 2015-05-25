@@ -158,7 +158,16 @@ type LanguageService (?fileSystem: IFileSystem) =
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
-  let checker = FSharpChecker.Create (projectCacheSize = 200, keepAllBackgroundResolutions = false)
+  let checkerInstance = FSharpChecker.Create (projectCacheSize = 200, keepAllBackgroundResolutions = false)
+
+  let checkerAsync (f: FSharpChecker -> Async<'a>) = 
+    let ctx = System.Threading.SynchronizationContext.Current
+    async {
+        do! Async.SwitchToThreadPool()
+        let! r = f checkerInstance
+        do! Async.SwitchToContext ctx
+        return r
+    }
 
   /// When creating new script file on Mac, the filename we get sometimes 
   /// has a name //foo.fsx, and as a result 'Path.GetFullPath' throws in the F#
@@ -181,7 +190,8 @@ type LanguageService (?fileSystem: IFileSystem) =
           let fileName = fixFileName (fileName)
           debug "Worker: Parse and typecheck source..."
           let! res = 
-              Async.Catch (checker.ParseAndCheckFileInProject (fileName, 0, source, options, IsResultObsolete(fun () -> false), null))
+              Async.Catch (checkerAsync (fun x -> 
+                x.ParseAndCheckFileInProject (fileName, 0, source, options, IsResultObsolete(fun () -> false), null)))
           debug "Worker: Parse completed"
           // Construct new typed parse result if the task succeeded
           let results = 
@@ -222,7 +232,7 @@ type LanguageService (?fileSystem: IFileSystem) =
         try 
             let fileName = fixFileName(fileName)
             debug "GetScriptCheckerOptions: Creating for stand-alone file or script: '%s'" fileName
-            let! opts = checker.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
+            let! opts = checkerInstance.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
                 
             let results =         
                 // The FSharpChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
@@ -266,15 +276,15 @@ type LanguageService (?fileSystem: IFileSystem) =
   member __.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
         debug "Parsing: Get untyped parse result (fileName=%s)" fileName
-        return! checker.ParseFileInProject(fileName, src, projectOptions)
+        return! checkerAsync (fun x -> x.ParseFileInProject(fileName, src, projectOptions))
     }
 
   member internal __.TryGetStaleTypedParseResult(fileName:string, options, src, stale)  = 
     // Try to get recent results from the F# service
     let res = 
         match stale with 
-        | AllowStaleResults.MatchingFileName -> checker.TryGetRecentTypeCheckResultsForFile(fileName, options) 
-        | AllowStaleResults.MatchingSource -> checker.TryGetRecentTypeCheckResultsForFile(fileName, options, source=src) 
+        | AllowStaleResults.MatchingFileName -> checkerInstance.TryGetRecentTypeCheckResultsForFile(fileName, options) 
+        | AllowStaleResults.MatchingSource -> checkerInstance.TryGetRecentTypeCheckResultsForFile(fileName, options, source=src)
         | AllowStaleResults.No -> None
     match res with 
     | Some (untyped,typed,_) when typed.HasFullTypeCheckInfo  -> Some (ParseAndCheckResults(typed, untyped))
@@ -307,7 +317,7 @@ type LanguageService (?fileSystem: IFileSystem) =
               debug "Parsing: Trigger parse (fileName=%s)" fileName
               let! results = parseAndCheckFileInProject(fileName, src, opts)
               debug "Worker: Starting background compilations"
-              checker.StartBackgroundCompile(opts)
+              checkerInstance.StartBackgroundCompile opts
               return results
       }
 
@@ -345,7 +355,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                             try                         
                                 let projectName = Path.GetFileNameWithoutExtension(opts.ProjectFileName)
                                 reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
-                                let! projectResults = checker.ParseAndCheckProject opts
+                                let! projectResults = checkerAsync (fun x -> x.ParseAndCheckProject opts)
                                 let! refs = projectResults.GetUsesOfSymbol fsSymbolUse.Symbol
                                 return refs 
                             with e ->
@@ -358,11 +368,12 @@ type LanguageService (?fileSystem: IFileSystem) =
          | _ -> return None 
      }
 
-  member __.InvalidateConfiguration(options) = checker.InvalidateConfiguration(options)
+  member __.InvalidateConfiguration options = checkerInstance.InvalidateConfiguration options
 
   // additions
 
-  member __.Checker = checker
+  member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
+  member __.RawChecker = checkerInstance
 
   member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
       let rec loop i options = 
@@ -385,7 +396,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                           | Some opts -> 
                               return opts
                         }
-                      let! parseResults = checker.ParseFileInProject(file, source, opts)
+                      let! parseResults = checkerInstance.ParseFileInProject(file, source, opts)
                       match parseResults.ParseTree with
                       | Some tree -> parseTreeHandler tree
                       | None -> ()
@@ -488,7 +499,7 @@ type LanguageService (?fileSystem: IFileSystem) =
         |> Async.Array.exists (fun opts ->
             async {
                 let! projectResults = pf.TimeAsync "IsSymbolUsedInProjects :: ParseAndCheckProject" <| fun _ ->
-                     checker.ParseAndCheckProject opts
+                     checkerAsync (fun x -> x.ParseAndCheckProject opts)
                 let! refs = pf.TimeAsync "IsSymbolUsedInProjects :: GetUsesOfSymbol" <| fun _ ->
                      projectResults.GetUsesOfSymbol symbol
                 return

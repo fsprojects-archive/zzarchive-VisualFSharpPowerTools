@@ -13,6 +13,7 @@ open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.Threading
 
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -54,12 +55,11 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         let vsDocument = VSDocument(doc, point.Snapshot)
-                        let! symbolRange, recordExpression, recordDefinition, insertionPos =
+                        let! newWord, recordExpression, recordDefinition, insertionPos =
                             tryFindRecordDefinitionFromPos codeGenService project point vsDocument
-                        let newWord = symbolRange
-
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
                         if point.InSpan newWord then
@@ -67,10 +67,14 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                         else
                             return! None
                     }
-                    |> Async.map (fun result -> 
-                        recordDefinition <- result
-                        buffer.TriggerTagsChanged self tagsChanged)
-                    |> Async.StartImmediateSafe
+                    |> Async.bind (fun result -> 
+                        async {
+                            // Switch back to UI thread before firing events
+                            do! Async.SwitchToContext uiContext
+                            recordDefinition <- result
+                            buffer.TriggerTagsChanged self tagsChanged
+                        })
+                    |> Async.StartInThreadPoolSafe
                     currentWord <- Some newWord
             | _ -> 
                 currentWord <- None 

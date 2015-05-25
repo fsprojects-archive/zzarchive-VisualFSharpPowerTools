@@ -87,6 +87,7 @@ type Parent =
 module AssemblyContentProvider =
     open System.IO
     open System.Collections.Generic
+    open System.Collections.Concurrent
 
     let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
         parent.FormatEntityFullName entity
@@ -192,7 +193,7 @@ module AssemblyContentProvider =
         |> Seq.concat 
         |> Seq.toList
 
-    let private entityCache = Dictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
+    let private entityCache = ConcurrentDictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
 
     let getAssemblyContent contentType (fileName: string option) (assemblies: FSharpAssembly list) =
         match fileName with

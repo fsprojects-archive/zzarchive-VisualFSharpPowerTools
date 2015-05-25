@@ -12,6 +12,7 @@ open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler
+open System.Threading
 
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -53,14 +54,13 @@ type ResolveUnopenedNamespaceSmartTagger
                 if wordChanged then
                     currentWord <- Some newWord
                     state <- None
-                    //let ctx = System.Threading.SynchronizationContext.Current
+                    let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         let! newWord, sym = vsLanguageService.GetSymbol (point, project)
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
                         if not (point.InSpan newWord) then return! None
                         else
-                            //do! Async.SwitchToThreadPool() |> liftAsync
                             let! res = 
                                 vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
                             
@@ -110,10 +110,14 @@ type ResolveUnopenedNamespaceSmartTagger
                                 let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
                                 return entities |> Seq.map createEntity |> Seq.concat |> Seq.toList
                     }
-                    |> Async.map (fun result -> 
-                         state <- result
-                         buffer.TriggerTagsChanged self tagsChanged)
-                    |> Async.StartImmediateSafe
+                    |> Async.bind (fun result -> 
+                        async {
+                            // Switch back to UI thread before firing events
+                            do! Async.SwitchToContext uiContext
+                            state <- result
+                            buffer.TriggerTagsChanged self tagsChanged
+                        })
+                    |> Async.StartInThreadPoolSafe
                     
             | _ -> 
                 currentWord <- None 

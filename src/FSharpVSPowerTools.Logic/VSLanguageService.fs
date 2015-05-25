@@ -307,18 +307,19 @@ type VSLanguageService
     member __.InvalidateProject (projectProvider: IProjectProvider) = 
         async {
             let! opts = projectProvider.GetProjectCheckerOptions(instance) 
-            return instance.Checker.InvalidateConfiguration opts
+            return instance.RawChecker.InvalidateConfiguration opts
         }
 
     member __.ClearCaches() = 
         debug "[Language Service] Clearing FCS caches."
-        instance.Checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+        instance.RawChecker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
     
     member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
-        instance.Checker.StartBackgroundCompile opts
+        instance.RawChecker.StartBackgroundCompile opts
 
-    member __.Checker = instance.Checker
+    member __.CheckerAsync x = instance.CheckerAsync x
+    member __.RawChecker = instance.RawChecker
 
     /// This value is used for testing when VS lex cache isn't available
     member internal __.SkipLexCache 
