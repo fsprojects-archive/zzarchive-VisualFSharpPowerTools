@@ -5,6 +5,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open System.Threading
 
 // The tag that carries metadata about F# color-regions.
 type DepthRegionTag(info: int * int * int * int) = 
@@ -27,15 +28,12 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
     let tagsChanged = Event<_,_>()
     
     let refreshFileImpl() = 
+        let uiContext = SynchronizationContext.Current
         async { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            let sourceCodeOfTheFile = snapshot.GetText()
-            let syncContext = System.Threading.SynchronizationContext.Current
-            do! Async.SwitchToThreadPool()
+            let sourceCodeOfTheFile = snapshot.GetText()                        
             let! ranges = fsharpLanguageService.CheckerAsync (fun x ->
                             DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, x))
-            do! Async.SwitchToContext(syncContext)
-
             let newResults =
                 ranges 
                 |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
@@ -57,9 +55,11 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
 
             lastResults.Swap (fun _ -> newResults) |> ignore
             debug "[DepthTagger] Firing tagschanged"
+            // Switch back to UI thread before firing events
+            do! Async.SwitchToContext(uiContext)
             tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))
         } 
-        |> Async.StartImmediateSafe
+        |> Async.StartInThreadPoolSafe
     
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, refreshFileImpl) 
     
