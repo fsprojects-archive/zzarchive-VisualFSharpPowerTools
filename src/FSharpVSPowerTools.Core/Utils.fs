@@ -124,6 +124,16 @@ module Async =
             return mapping x
         }
 
+    // Transforms an Async value using the specified Async function.
+    [<CompiledName("Bind")>]
+    let bind (binding : 'T -> Async<'U>) (value : Async<'T>) : Async<'U> =
+        async {
+            // Get the input value.
+            let! x = value
+            // Apply the binding function and return the result.
+            return! binding x
+        }
+
     [<RequireQualifiedAccess>]    
     module Array =
         /// Async implementation of Array.map.
