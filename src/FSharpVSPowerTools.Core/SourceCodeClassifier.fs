@@ -118,9 +118,11 @@ module private StringCategorizers =
         let private escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
 
         let private isRegularString (r: Range.range) getTextLine =
-            let lineStr: string = getTextLine (r.StartLine - 1) 
-            let origLiteral = lineStr.Substring r.StartColumn
-            not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
+            let lineStr: string = getTextLine (r.StartLine - 1)
+            if lineStr.Length > r.StartColumn then
+                let origLiteral = lineStr.Substring r.StartColumn
+                not (origLiteral.StartsWith "\"\"\"" || origLiteral.StartsWith "@")
+            else true
 
         (* VisualStudio return the following strings (presented here as char arrays):
            "a\"b" => [|'"'; 'a'; '\\'; '"'; 'b'; '"'|]
@@ -183,7 +185,7 @@ module SourceCodeClassifier =
     let getIdentifierCategory = function
         | Entity (_, ValueType, _) -> Category.ValueType
         | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module
+        | Entity (_, FSharpModule, _) -> Category.Module 
         | Entity (_, _, Tuple) -> Category.ReferenceType
         | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
         | _ -> Category.Other 
