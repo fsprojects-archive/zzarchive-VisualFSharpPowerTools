@@ -108,16 +108,14 @@ type ResolveUnopenedNamespaceSmartTagger
                                 
                                 let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn)
                                 let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
-                                let result = entities |> Seq.map createEntity |> Seq.concat |> Seq.toList
-                                
-                                return result
+                                return entities |> Seq.map createEntity |> Seq.concat |> Seq.toList
                     }
                     |> Async.bind (fun result -> 
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             state <- result
-                            return buffer.TriggerTagsChanged self tagsChanged
+                            buffer.TriggerTagsChanged self tagsChanged
                         })
                     |> Async.StartInThreadPoolSafe
                     

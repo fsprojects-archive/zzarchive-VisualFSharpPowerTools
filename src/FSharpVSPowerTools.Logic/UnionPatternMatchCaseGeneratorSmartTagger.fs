@@ -74,7 +74,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             unionDefinition <- result
-                            return buffer.TriggerTagsChanged self tagsChanged
+                            buffer.TriggerTagsChanged self tagsChanged
                         })
                     |> Async.StartInThreadPoolSafe
 
