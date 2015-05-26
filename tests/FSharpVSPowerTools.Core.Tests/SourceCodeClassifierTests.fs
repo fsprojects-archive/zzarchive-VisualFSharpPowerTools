@@ -1502,6 +1502,14 @@ let _ = 1
     => [ 4, [ Cat.Unused, 5, 6 ]]
     
 [<Test>]
+let ``type in type parameter constraint should be taken into account``() =
+    """
+open System
+let f (x: 'a when 'a :> IDisposable) = ()
+"""
+    => [ 2, []]
+
+[<Test>]
 let ``printf formatters in bindings``() =
     """
 let _ = printfn ""

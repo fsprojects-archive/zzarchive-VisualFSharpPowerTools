@@ -133,7 +133,9 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynType.Fun(t1, t2, _) -> 
             walkType t1
             walkType t2
-        | SynType.WithGlobalConstraints(t, _, _) -> walkType t
+        | SynType.WithGlobalConstraints(t, typeConstraints, _) -> 
+            walkType t
+            List.iter walkTypeConstraint typeConstraints
         | SynType.HashConstraint(t, _) -> walkType t
         | SynType.MeasureDivide(t1, t2, _) -> 
             walkType t1
