@@ -30,7 +30,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
                 let data =
                     classifier.GetClassificationSpans(span)
                     |> Seq.choose (fun classification -> 
-                        if classification.ClassificationType.Classification.Contains(Constants.fsharpUnused) then
+                        if classification.ClassificationType.Classification.StartsWith (Constants.fsharpUnused, StringComparison.Ordinal) then
                             let pos = classification.Span.Start.Position
                             Some (textView.TextSnapshot.GetLineNumberFromPosition(pos), pos)
                         else None)
