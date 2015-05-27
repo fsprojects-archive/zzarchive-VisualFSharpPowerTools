@@ -178,10 +178,6 @@ module TypedAstPatterns =
            && (not abbreviated.IsStaticInstantiation || original.IsFSharpAbbreviation) then Some()
         else None 
 
-    let (|Intf|_|) (_: FSharpEntity, abbreviated: FSharpEntity, _) = 
-        if abbreviated.IsInterface then Some()
-        else None 
-
     let (|Record|_|) (e: FSharpEntity) = if e.IsFSharpRecord then Some() else None
     let (|UnionType|_|) (e: FSharpEntity) = if e.IsFSharpUnion then Some() else None
     let (|Delegate|_|) (e: FSharpEntity) = if e.IsDelegate then Some() else None
