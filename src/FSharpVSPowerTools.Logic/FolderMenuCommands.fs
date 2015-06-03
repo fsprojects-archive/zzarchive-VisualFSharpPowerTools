@@ -197,8 +197,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         match folderExists, destination with
         | true, Some destination ->
             for item in info.Items do
-                Debug.Assert(item.FileCount = 1s, "Item should be unique.")
-                let filePath = item.FileNames(1s) //1 based indexing
+                let filePath = VSUtils.filePath item
                 let buildAction = item.TryGetProperty("ItemType")
                 let newItem = destination.AddFromFileCopy(filePath)
                 // The new item may lose ItemType; we try to recover it.
@@ -224,8 +223,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             | [ item ] -> item.ProjectItems
             | _ -> info.Project.ProjectItems
         let folder = items.AddFolder name
-        Debug.Assert(folder.FileCount = 1s, "Item should be unique.")
-        let folderFilename = folder.FileNames(1s) //1 based indexing
+        let folderFilename = VSUtils.filePath folder
         if Directory.Exists(folderFilename) then
             // We tolerate that folder might already exist
             Logging.messageBoxInfo Resource.validationExistingFolderOnDisk
