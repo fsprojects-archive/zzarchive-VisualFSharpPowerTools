@@ -1,4 +1,7 @@
 #### 1.9.0 - Unreleased
+* Implement QuickInfo margin ([#973](https://github.com/fsprojects/VisualFSharpPowerTools/issues/973))
+* Fix UI freezes by moving computation to background threads ([#975](https://github.com/fsprojects/VisualFSharpPowerTools/issues/975))
+* Improve folder organization feature ([#969](https://github.com/fsprojects/VisualFSharpPowerTools/issues/969), [#986](https://github.com/fsprojects/VisualFSharpPowerTools/issues/986))
 
 #### 1.8.0 - April 2 2015
 * Support operator coloring ([#936](https://github.com/fsprojects/VisualFSharpPowerTools/issues/936))
