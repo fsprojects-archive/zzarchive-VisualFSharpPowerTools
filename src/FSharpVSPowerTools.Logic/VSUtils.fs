@@ -50,6 +50,10 @@ let isPhysicalFile (item: EnvDTE.ProjectItem) =
 let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
     item <> null && isPhysicalFileOrFolderKind item.Kind
 
+let filePath (item: EnvDTE.ProjectItem) =
+    Debug.Assert(item.FileCount = 1s, "Item should be unique.")
+    item.FileNames(1s) //1 based indexing
+
 let inline private isTypeParameter (prefix: char) (s: string) =
     match s.Length with
     | 0 | 1 -> false
