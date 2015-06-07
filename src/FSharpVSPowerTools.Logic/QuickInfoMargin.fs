@@ -9,6 +9,8 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpVSPowerTools.CodeGeneration
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
@@ -28,7 +30,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
     let updateLock = obj()
     let model = QuickInfoViewModel()
     let visual = QuickInfoVisual()
-    
+
     do visual.Root.DataContext <- model
        visual.tbQuickInfo.MouseDoubleClick.Add (fun _ ->
            System.Windows.Clipboard.SetText visual.tbQuickInfo.Text
@@ -36,24 +38,28 @@ type QuickInfoMargin (textDocument: ITextDocument,
     
     let buffer = view.TextBuffer
 
-    let updateError (errors: (FSharpErrorSeverity * string list) []) = lock updateLock <| fun () -> 
+    let updateQuickInfo (tooltip: string option, errors: ((FSharpErrorSeverity * string list) []) option) = lock updateLock <| fun () -> 
         model.QuickInfo <-
-            errors 
-            |> Array.map (fun (severity, errors) -> 
-                let errors = List.map String.trim errors
-                let title = 
-                    match errors with
-                    | [_] -> sprintf "%+A" severity
-                    | _ -> sprintf "%+As (%d)" severity errors.Length
-                title + ": " + 
-                (match errors with 
-                 | [e] -> e
-                 | _ -> 
-                    errors 
-                    |> List.mapi (fun i e -> sprintf "%d. %s" (i + 1) e) 
-                    |> List.toArray 
-                    |> String.concat " "))
-            |> String.concat " "
+            errors
+            |> Option.map (fun errors ->
+                errors 
+                |> Array.map (fun (severity, errors) -> 
+                    let errors = List.map String.trim errors
+                    let title = 
+                        match errors with
+                        | [_] -> sprintf "%+A" severity
+                        | _ -> sprintf "%+As (%d)" severity errors.Length
+                    title + ": " + 
+                    (match errors with 
+                     | [e] -> e
+                     | _ -> 
+                        errors 
+                        |> List.mapi (fun i e -> sprintf "%d. %s" (i + 1) e) 
+                        |> List.toArray 
+                        |> String.concat " "))
+                |> String.concat " ")
+            |> Option.orElse tooltip
+            |> Option.getOrElse "F# QuickInfo panel"
 
     let flattenLines (x: string) =
         match x with
@@ -75,24 +81,46 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
+                let! tooltip =
+                    asyncMaybe {
+                        let! newWord, symbol = vsLanguageService.GetSymbol (point, project)
+                        let lineStr = point.GetContainingLine().GetText()
+
+                        let! (FSharpToolTipText tooltip) =
+                            vsLanguageService.GetOpenDeclarationTooltip(
+                                symbol.Line + 1, symbol.RightColumn, lineStr, [symbol.Text], project, 
+                                textDocument.FilePath, newWord.Snapshot.GetText())
+                        return!
+                            tooltip
+                            |> List.tryHead
+                            |> Option.bind (function
+                                | FSharpToolTipElement.Single (s, _) -> Some s
+                                | FSharpToolTipElement.Group ((s, _) :: _) -> Some s
+                                | _ -> None)
+                    } |> Async.map Some
                 let! checkResults = 
                     vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, buffer.CurrentSnapshot.GetText(), project) |> liftAsync
-                let! errors = checkResults.GetErrors()
-                do! (if Array.isEmpty errors then None else Some())
-                return 
-                    seq { for e in errors do
-                            if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
-                                match fromRange buffer.CurrentSnapshot (e.StartLineAlternate, e.StartColumn, e.EndLineAlternate, e.EndColumn) with
-                                | Some span when point.InSpan span -> yield e.Severity, flattenLines e.Message
-                                | _ -> () }
-                    |> Seq.groupBy fst
-                    |> Seq.sortBy (fun (severity, _) -> if severity = FSharpErrorSeverity.Error then 0 else 1)
-                    |> Seq.map (fun (s, es) -> s, es |> Seq.map snd |> Seq.distinct |> List.ofSeq)
-                    |> Seq.toArray
+                let! errors =
+                    asyncMaybe {
+                        let! errors = checkResults.GetErrors()
+                        do! (if Array.isEmpty errors then None else Some())
+                        return!
+                            seq { for e in errors do
+                                    if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
+                                        match fromRange buffer.CurrentSnapshot (e.StartLineAlternate, e.StartColumn, e.EndLineAlternate, e.EndColumn) with
+                                        | Some span when point.InSpan span -> yield e.Severity, flattenLines e.Message
+                                        | _ -> () }
+                            |> Seq.groupBy fst
+                            |> Seq.sortBy (fun (severity, _) -> if severity = FSharpErrorSeverity.Error then 0 else 1)
+                            |> Seq.map (fun (s, es) -> s, es |> Seq.map snd |> Seq.distinct |> List.ofSeq)
+                            |> Seq.toArray
+                            |> function [||] -> None | es -> Some es
+                    } |> Async.map Some
+                return tooltip, errors
             } 
-            |> Async.map (Option.getOrElse [||] >> updateError)
+            |> Async.map (Option.getOrElse (None, None) >> updateQuickInfo)
             |> Async.StartInThreadPoolSafe
-        | _ -> updateError [||]
+        | _ -> updateQuickInfo (None, None)
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, updateAtCaretPosition)
 
