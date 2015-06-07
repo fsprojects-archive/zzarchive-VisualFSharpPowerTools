@@ -101,6 +101,13 @@ Target "Build" (fun _ ->
     |> ignore
 )
 
+Target "BuildVS2015" (fun _ ->
+    // We would like to build only one solution
+    !! (solutionFile + ".v14.sln")
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
+)
+
 // Build test projects in Debug mode in order to provide correct paths for multi-project scenarios
 Target "BuildTests" (fun _ ->    
     !! "tests/data/**/*.sln"
@@ -227,6 +234,9 @@ Target "All" DoNothing
   ==> "BuildTests"
   ==> "UnitTests"
   ==> "Main"
+
+"Clean"
+  ==> "BuildVS2015"
 
 "Clean"
  ==> "RunStatistics"
