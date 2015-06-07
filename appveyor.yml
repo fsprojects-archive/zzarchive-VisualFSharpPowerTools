@@ -1,19 +1,5 @@
-environment:
-  matrix:
-    - os: Windows Server 2012 R2
-      build_target: Main
-
-    - os: Visual Studio 2015 RC
-      build_target: BuildVS2015
-
-matrix:
-  fast_finish: false 
-
 build_script:
-  - ps: .\build.cmd $env:build_target
- 
+  - ps: .\build.cmd
 test: off
-
 artifacts:
   - path: bin\*.vsix
-    name: $(build_target)
