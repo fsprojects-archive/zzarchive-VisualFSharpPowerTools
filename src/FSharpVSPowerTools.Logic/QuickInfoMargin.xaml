@@ -4,14 +4,24 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:sys="clr-namespace:System;assembly=mscorlib" 
              xmlns:vs="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.11.0" 
-             xmlns:pt="clr-namespace:FSharpVSPowerTools.QuickInfo"
+             xmlns:local="clr-namespace:FSharpVSPowerTools.Common;assembly=FSharpVSPowerTools.Logic"
              mc:Ignorable="d" 
              Height="24"
              d:DesignHeight="25" d:DesignWidth="600">
     <TextBox x:Name="tbQuickInfo" 
         IsEnabled="True" 
         IsReadOnly="True" 
-        Text="{Binding QuickInfo, Mode=OneWay}" 
-        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+        Text="{Binding QuickInfo, Mode=OneWay}" />
+    <UserControl.Resources>
+        <ResourceDictionary 
+              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:fsxaml="http://github.com/fsprojects/FsXaml">
+            <Style TargetType="{x:Type TextBox}">
+                <Setter Property="Background" Value="{DynamicResource {x:Static local:VSColors.CommandShelfBackgroundGradientBrushKey}}" />
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static local:VSColors.CommandBarTextActiveBrushKey}}" />
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
 </UserControl>
 
