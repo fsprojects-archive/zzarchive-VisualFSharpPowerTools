@@ -82,6 +82,9 @@
     <Compile Include="VSUtils.fs">
       <Link>Common/VSUtils.fs</Link>
     </Compile>
+    <Compile Include="VSColors.fs">
+      <Link>Common/VSColors.fs</Link>
+    </Compile>
     <Compile Include="VisualStudioVersion.fs">
       <Link>Common/VisualStudioVersion.fs</Link>
     </Compile>

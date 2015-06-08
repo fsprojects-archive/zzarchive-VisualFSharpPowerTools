@@ -1,6 +1,5 @@
 ﻿using FSharpVSPowerTools;
 using FSharpVSPowerTools.ProjectSystem;
-using FSharpVSPowerTools.QuickInfo;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -8,10 +7,10 @@ using Microsoft.VisualStudio.Utilities;
 using System;
 using System.ComponentModel.Composition;
 
-namespace Winterdom.Viasfora.Margins
+namespace FSharpVSPowerTools.QuickInfo
 {
     [Export(typeof(IWpfTextViewMarginProvider))]
-    [Name(FSharpVSPowerTools.Constants.QuickInfoMargin)]
+    [Name(Constants.QuickInfoMargin)]
     [Order(After = PredefinedMarginNames.HorizontalScrollBar)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
     [ContentType("F#")]
