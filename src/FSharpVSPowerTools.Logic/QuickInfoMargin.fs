@@ -10,7 +10,6 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools.CodeGeneration
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
