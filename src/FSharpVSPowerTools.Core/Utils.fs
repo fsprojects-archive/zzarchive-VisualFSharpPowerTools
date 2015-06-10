@@ -29,9 +29,17 @@ module Array =
 
     /// Returns true if one array has trailing elements equal to another's.
     let endsWith (suffix: _ []) (whole: _ []) =
-        whole 
-        |> Array.rev
-        |> startsWith (Array.rev suffix)
+        let suffixLength = suffix.Length
+        let wholeLength = whole.Length
+        let rec loop step =
+            if step > suffixLength then true
+            elif step > wholeLength then false
+            elif suffix.[suffixLength - step] = whole.[wholeLength - step] then loop (step + 1)
+            else false
+
+        if suffix.Length = 0 then true
+        elif whole.Length < suffix.Length then false
+        else loop 1
 
     /// Returns a new array with an element replaced with a given value.
     let replace index value (arr: _ []) =
@@ -43,14 +51,10 @@ module Array =
     /// Returns all heads of a given array.
     /// For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]
     let heads (array: 'T []) =
-        array 
-        //|> Array.rev
-        |> Array.fold (fun (soFar, res) x -> 
-            let soFar = x :: soFar 
-            soFar, (soFar |> List.rev |> List.toArray) :: res
-        )  ([], [])
-        |> snd 
-        |> List.toArray
+        let res = Array.zeroCreate<'T[]> array.Length
+        for i = array.Length - 1 downto 0 do
+            res.[i] <- array.[0..i]
+        res
 
     let foldi (folder : 'State -> int -> 'T -> 'State) (state : 'State) (array : 'T[]) =
         let mutable state = state

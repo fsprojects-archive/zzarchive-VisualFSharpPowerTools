@@ -86,7 +86,6 @@ type Parent =
 
 module AssemblyContentProvider =
     open System.IO
-    open System.Collections.Generic
     open System.Collections.Concurrent
 
     let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
@@ -190,8 +189,7 @@ module AssemblyContentProvider =
     let private getAssemblySignaturesContent contentType (assemblies: FSharpAssembly list) = 
         assemblies 
         |> List.map (fun asm -> getAssemblySignatureContent contentType asm.Contents)
-        |> Seq.concat 
-        |> Seq.toList
+        |> List.concat 
 
     let private entityCache = ConcurrentDictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
 

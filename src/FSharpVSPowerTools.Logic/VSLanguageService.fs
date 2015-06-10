@@ -307,7 +307,7 @@ type VSLanguageService
     member __.InvalidateProject (projectProvider: IProjectProvider) = 
         async {
             let! opts = projectProvider.GetProjectCheckerOptions(instance) 
-            return instance.RawChecker.InvalidateConfiguration opts
+            return! instance.InvalidateConfiguration opts
         }
 
     member __.ClearCaches() = 

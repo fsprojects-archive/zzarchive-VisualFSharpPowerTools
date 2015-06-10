@@ -70,14 +70,17 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
 
         let getLineStr line = sourceLines.[line - 1]
 
-        let qualifyOpenDeclarations line endColumn idents = 
-            languageService.GetIdentTooltip (line, endColumn, getLineStr line, Array.toList idents, opts, fileName, source)
-            |> Async.RunSynchronously
-            |> function
-               | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-               | None -> []
+        let qualifyOpenDeclarations line endColumn idents = async {
+            let! tooltip = languageService.GetIdentTooltip (line, endColumn, getLineStr line, Array.toList idents, opts, fileName, source)
+            return 
+                match tooltip with
+                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                | None -> []
+        }
 
-        let openDeclarations = OpenDeclarationGetter.getOpenDeclarations (checkResults.GetUntypedAst()) entities qualifyOpenDeclarations
+        let openDeclarations = 
+            OpenDeclarationGetter.getOpenDeclarations (checkResults.GetUntypedAst()) entities qualifyOpenDeclarations
+            |> Async.RunSynchronously
 
         let allEntities =
             entities
