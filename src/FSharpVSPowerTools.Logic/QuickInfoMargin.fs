@@ -58,8 +58,12 @@ type QuickInfoMargin (textDocument: ITextDocument,
                         |> List.toArray 
                         |> String.concat " "))
                 |> String.concat " ")
-            |> Option.orElse tooltip
-            |> Option.getOrElse "F# QuickInfo panel"
+            |> Option.orElse (tooltip |> Option.bind (fun tooltip ->
+                tooltip 
+                |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|] 
+                |> Array.toList 
+                |> List.tryHead))
+            |> Option.getOrElse ""
 
     let flattenLines (x: string) =
         match x with
