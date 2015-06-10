@@ -58,11 +58,11 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                     let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         let vsDocument = VSDocument(doc, point.Snapshot)
-                        let! newWord, recordExpression, recordDefinition, insertionPos =
+                        let! symbolRange, recordExpression, recordDefinition, insertionPos =
                             tryFindRecordDefinitionFromPos codeGenService project point vsDocument
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
-                        if point.InSpan newWord then
+                        if point.InSpan symbolRange then
                             return! Some (recordExpression, recordDefinition, insertionPos)
                         else
                             return! None
@@ -72,10 +72,10 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             recordDefinition <- result
+                            currentWord <- Some newWord
                             buffer.TriggerTagsChanged self tagsChanged
                         })
                     |> Async.StartInThreadPoolSafe
-                    currentWord <- Some newWord
             | _ -> 
                 currentWord <- None 
                 buffer.TriggerTagsChanged self tagsChanged
@@ -114,13 +114,9 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
             member __.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
 
     member __.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
-        let actionSetList = ResizeArray<SmartTagActionSet>()
-        let actionList = ResizeArray<ISmartTagAction>()
-
-        actionList.Add(generateRecordStub snapshot expression insertionPos entity)
-        let actionSet = SmartTagActionSet(actionList.AsReadOnly())
-        actionSetList.Add(actionSet)
-        actionSetList.AsReadOnly()
+        let actions = [ generateRecordStub snapshot expression insertionPos entity ]
+        [ SmartTagActionSet(Seq.toReadOnlyCollection actions) ]
+        |> Seq.toReadOnlyCollection
 
     interface ITagger<RecordStubGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =

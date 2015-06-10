@@ -72,11 +72,10 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             unionDefinition <- result
+                            currentWord <- Some newWord
                             buffer.TriggerTagsChanged self tagsChanged
                         })
                     |> Async.StartInThreadPoolSafe
-
-                    currentWord <- Some newWord
             | _ -> 
                 currentWord <- None
                 buffer.TriggerTagsChanged self tagsChanged
@@ -86,7 +85,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger
 
     let handleGenerateUnionPatternMatchCases
         (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr)
-        (insertionParams: _) entity = 
+        insertionParams entity = 
         use transaction = textUndoHistory.CreateTransaction(Resource.unionPatternMatchCaseCommandName)
 
         let stub = UnionPatternMatchCaseGenerator.formatMatchExpr
@@ -110,13 +109,9 @@ type UnionPatternMatchCaseGeneratorSmartTagger
             member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
 
     member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
-        let actionSetList = ResizeArray<SmartTagActionSet>()
-        let actionList = ResizeArray<ISmartTagAction>()
-
-        actionList.Add(generateUnionPatternMatchCase snapshot expression insertionPos entity)
-        let actionSet = SmartTagActionSet(actionList.AsReadOnly())
-        actionSetList.Add(actionSet)
-        actionSetList.AsReadOnly()
+        let actions = [ generateUnionPatternMatchCase snapshot expression insertionPos entity ]
+        [ SmartTagActionSet(Seq.toReadOnlyCollection actions) ]
+        |> Seq.toReadOnlyCollection
 
     interface ITagger<UnionPatternMatchCaseGeneratorSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<UnionPatternMatchCaseGeneratorSmartTag> seq =

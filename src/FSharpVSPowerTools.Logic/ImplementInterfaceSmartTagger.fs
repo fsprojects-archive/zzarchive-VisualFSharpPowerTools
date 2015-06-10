@@ -110,10 +110,10 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             state <- result
+                            currentWord <- Some newWord
                             buffer.TriggerTagsChanged self tagsChanged
                         })
                     |> Async.StartInThreadPoolSafe
-                    currentWord <- Some newWord
             | _ -> 
                 currentWord <- None 
                 buffer.TriggerTagsChanged self tagsChanged
@@ -190,13 +190,9 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                 |> Async.StartInThreadPoolSafe }
 
     member __.GetSmartTagActions(snapshot, interfaceDefinition) =
-        let actionSetList = ResizeArray<SmartTagActionSet>()
-        let actionList = ResizeArray<ISmartTagAction>()
-
-        actionList.Add(implementInterface snapshot interfaceDefinition)
-        let actionSet = SmartTagActionSet(actionList.AsReadOnly())
-        actionSetList.Add(actionSet)
-        actionSetList.AsReadOnly()
+        let actions = [ implementInterface snapshot interfaceDefinition ]
+        [ SmartTagActionSet(Seq.toReadOnlyCollection actions) ]
+        |> Seq.toReadOnlyCollection
 
     interface ITagger<ImplementInterfaceSmartTag> with
         member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<ImplementInterfaceSmartTag> seq =
