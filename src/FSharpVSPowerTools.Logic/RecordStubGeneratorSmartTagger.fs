@@ -124,10 +124,13 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                 seq {
                     match currentWord, recordDefinition with
                     | Some word, Some (expression, entity, insertionPos) when shouldGenerateRecordStub expression entity ->
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                        yield TagSpan<_>(span, 
+                        let word = 
+                            let currentSnapshot = buffer.CurrentSnapshot
+                            if currentSnapshot = word.Snapshot then word
+                            else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
+                        yield TagSpan<_>(word, 
                                          RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
-                              :> ITagSpan<_>
+                              :> _
                     | _ -> ()
                 })
                 Seq.empty

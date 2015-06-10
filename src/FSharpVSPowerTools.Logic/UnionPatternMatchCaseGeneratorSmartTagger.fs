@@ -119,10 +119,13 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                 seq {
                     match currentWord, unionDefinition with
                     | Some word, Some (expression, entity, insertionPos) when shouldGenerateUnionPatternMatchCases expression entity ->
-                        let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                        yield TagSpan<_>(span, 
+                        let word = 
+                            let currentSnapshot = buffer.CurrentSnapshot
+                            if currentSnapshot = word.Snapshot then word
+                            else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
+                        yield TagSpan<_>(word, 
                                          UnionPatternMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
-                              :> ITagSpan<_>
+                              :> _
                     | _ -> ()
                 }) 
                 Seq.empty

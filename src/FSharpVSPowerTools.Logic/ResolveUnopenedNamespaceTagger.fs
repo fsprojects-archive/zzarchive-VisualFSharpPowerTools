@@ -207,11 +207,11 @@ type ResolveUnopenedNamespaceSmartTagger
                 seq {
                     match currentWord, state with
                     | Some word, Some candidates ->
-                        let span =
+                        let word =
                             if buffer.CurrentSnapshot = word.Snapshot then word
                             else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive)
 
-                        yield TagSpan<_>(span, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates)) :> _
+                        yield TagSpan<_>(word, ResolveUnopenedNamespaceSmartTag(getSmartTagActions word candidates)) :> _
                     | _ -> ()
                 })
                 Seq.empty

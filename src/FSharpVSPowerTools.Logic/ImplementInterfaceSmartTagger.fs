@@ -210,10 +210,13 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                                 | None -> false
                             // This comparison is a bit expensive
                             if hasTypeCheckError || not (List.length membersAndRanges = Seq.length interfaceMembers) then
-                                let span = SnapshotSpan(buffer.CurrentSnapshot, word.Span)
-                                yield TagSpan<ImplementInterfaceSmartTag>(span, 
+                                let word = 
+                                    let currentSnapshot = buffer.CurrentSnapshot
+                                    if currentSnapshot = word.Snapshot then word
+                                    else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
+                                yield TagSpan<_>(word, 
                                         ImplementInterfaceSmartTag(x.GetSmartTagActions(word.Snapshot, interfaceDefinition)))
-                                        :> ITagSpan<_>
+                                        :> _
                     | _ -> ()
                 })
                 Seq.empty
