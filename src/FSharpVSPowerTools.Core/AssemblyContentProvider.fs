@@ -87,6 +87,7 @@ type Parent =
 module AssemblyContentProvider =
     open System.IO
     open System.Collections.Concurrent
+    open System.Collections.Generic
 
     let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
         parent.FormatEntityFullName entity
@@ -184,29 +185,30 @@ module AssemblyContentProvider =
             |> Seq.map (traverseEntity contentType Parent.Empty)
             |> Seq.concat
             |> Seq.distinct
-            |> Seq.toList
 
     let private getAssemblySignaturesContent contentType (assemblies: FSharpAssembly list) = 
         assemblies 
-        |> List.map (fun asm -> getAssemblySignatureContent contentType asm.Contents)
-        |> List.concat 
+        |> Seq.map (fun asm -> getAssemblySignatureContent contentType asm.Contents)
+        |> Seq.concat
+        |> Seq.toList
 
-    let private entityCache = ConcurrentDictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
+    let private entityCache = Dictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
 
     let getAssemblyContent contentType (fileName: string option) (assemblies: FSharpAssembly list) =
         match fileName with
         | Some fileName ->
             let assemblyWriteTime = FileInfo(fileName).LastWriteTime
-            match contentType, entityCache.TryGetValue fileName with
-            | _, (true, (cacheWriteTime, Full, entities))
-            | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
-                //debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
-                entities
-            | _ ->
-                //debug "[AssemblyContentProvider] Getting entities from %s." fileName
-                let entities = getAssemblySignaturesContent contentType assemblies
-                entityCache.[fileName] <- (assemblyWriteTime, contentType, entities)
-                entities
+            lock entityCache <| fun _ ->
+                match contentType, entityCache.TryGetValue fileName with
+                | _, (true, (cacheWriteTime, Full, entities))
+                | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
+                    //debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
+                    entities
+                | _ ->
+                    //debug "[AssemblyContentProvider] Getting entities from %s." fileName
+                    let entities = getAssemblySignaturesContent contentType assemblies
+                    entityCache.[fileName] <- (assemblyWriteTime, contentType, entities)
+                    entities
         | None -> 
             //debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
             getAssemblySignaturesContent contentType assemblies
