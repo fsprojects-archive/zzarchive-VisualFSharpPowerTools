@@ -34,52 +34,53 @@ module Entity =
     let tryCreate (targetNamespace: Idents option, targetScope: Idents, partiallyQualifiedName: Idents, 
                    requiresQualifiedAccessParent: Idents option, autoOpenParent: Idents option, 
                    candidateNamespace: Idents option, candidate: Idents) =
-        if candidate.Length = 0 then [||]
-        else 
+        match candidate with
+        | [||] -> [||]
+        | _ ->
             partiallyQualifiedName
             |> Array.heads
             |> Array.choose (fun parts -> 
-                 if candidate |> Array.endsWith parts then Some (candidate, parts.Length)
-                 else None)
-        |> Array.choose (fun (candidate, identCount) ->
-            let fullOpenableNs, restIdents = 
-                let openableNsCount =
-                    match requiresQualifiedAccessParent with
-                    | Some parent -> min parent.Length candidate.Length
-                    | None -> candidate.Length
-                candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
-
-            let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
-             
-            let getRelativeNs ns =
-                match targetNamespace, candidateNamespace with
-                | Some targetNs, Some candidateNs when candidateNs = targetNs ->
-                    getRelativeNamespace targetScope ns
-                | None, _ -> getRelativeNamespace targetScope ns
-                | _ -> ns
-
-            let relativeNs = getRelativeNs openableNs
-
-            match relativeNs, restIdents with
-            | [||], [||] -> None
-            | [||], [|_|] -> None
-            | _ ->
-                let fullRelativeName = Array.append (getRelativeNs fullOpenableNs) restIdents
-                let ns = 
-                    match relativeNs with 
-                    | [||] -> None 
-                    | _ when identCount > 1 && relativeNs.Length >= identCount -> 
-                        Some (relativeNs.[0..relativeNs.Length - identCount] |> String.concat ".")
-                    | _ -> Some (relativeNs |> String.concat ".")
-                let qualifier = 
-                    if fullRelativeName.Length > 1 && fullRelativeName.Length >= identCount then
-                        fullRelativeName.[0..fullRelativeName.Length - identCount]  
-                    else fullRelativeName
-                Some 
-                    { FullRelativeName = String.concat "." fullRelativeName //.[0..fullRelativeName.Length - identCount - 1]
-                      Qualifier = String.concat "." qualifier
-                      Namespace = ns
-                      Name = match restIdents with [|_|] -> "" | _ -> String.concat "." restIdents }) 
+                if not (candidate |> Array.endsWith parts) then None
+                else 
+                  let identCount = parts.Length
+                  let fullOpenableNs, restIdents = 
+                      let openableNsCount =
+                          match requiresQualifiedAccessParent with
+                          | Some parent -> min parent.Length candidate.Length
+                          | None -> candidate.Length
+                      candidate.[0..openableNsCount - 2], candidate.[openableNsCount - 1..]
+              
+                  let openableNs = cutAutoOpenModules autoOpenParent fullOpenableNs
+                   
+                  let getRelativeNs ns =
+                      match targetNamespace, candidateNamespace with
+                      | Some targetNs, Some candidateNs when candidateNs = targetNs ->
+                          getRelativeNamespace targetScope ns
+                      | None, _ -> getRelativeNamespace targetScope ns
+                      | _ -> ns
+              
+                  let relativeNs = getRelativeNs openableNs
+              
+                  match relativeNs, restIdents with
+                  | [||], [||] -> None
+                  | [||], [|_|] -> None
+                  | _ ->
+                      let fullRelativeName = Array.append (getRelativeNs fullOpenableNs) restIdents
+                      let ns = 
+                          match relativeNs with 
+                          | [||] -> None 
+                          | _ when identCount > 1 && relativeNs.Length >= identCount -> 
+                              Some (relativeNs.[0..relativeNs.Length - identCount] |> String.concat ".")
+                          | _ -> Some (relativeNs |> String.concat ".")
+                      let qualifier = 
+                          if fullRelativeName.Length > 1 && fullRelativeName.Length >= identCount then
+                              fullRelativeName.[0..fullRelativeName.Length - identCount]  
+                          else fullRelativeName
+                      Some 
+                          { FullRelativeName = String.concat "." fullRelativeName //.[0..fullRelativeName.Length - identCount - 1]
+                            Qualifier = String.concat "." qualifier
+                            Namespace = ns
+                            Name = match restIdents with [|_|] -> "" | _ -> String.concat "." restIdents }) 
 
 type Pos = 
     { Line: int
