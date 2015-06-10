@@ -170,96 +170,106 @@ module OpenDeclarationGetter =
         |> longIdentToArray
 
     let getOpenDeclarations (ast: ParsedInput option) (entities: RawEntity list option) 
-                            (qualifyOpenDeclarations: Line -> EndColumn -> Idents -> RawOpenDeclaration list) =
+                            (qualifyOpenDeclarations: Line -> EndColumn -> Idents -> Async<RawOpenDeclaration list>) = async {
         match ast, entities with
         | Some (ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _))), Some entities ->
             let autoOpenModulesAndActivePatterns = 
                 getAutoOpenModules entities @ getActivePatterns entities
             //debug "All AutoOpen modules: %A" autoOpenModules
              
-            let rec walkModuleOrNamespace acc (decls, moduleRange) =
-                let openStatements =
-                    decls
-                    |> List.fold (fun acc -> 
-                        function
-                        | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
-                            walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
-                        | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openStatementRange) ->
-                            let identArray = processOpenDeclaration longIdent
-                            let rawOpenDeclarations =  
-                                identArray
-                                |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
+            let rec walkModuleOrNamespace acc (decls, moduleRange) = async {
+                let rec loop acc exprs = async {
+                    match exprs with
+                    | [] -> return acc
+                    | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) :: rest -> 
+                        let! acc' = walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
+                        return! loop acc' rest
+                    | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openStatementRange) :: rest ->
+                        let identArray = processOpenDeclaration longIdent
+                        let! rawOpenDeclarations =  
+                            identArray |> qualifyOpenDeclarations openStatementRange.StartLine openStatementRange.EndColumn
 
-                            for openDecl in rawOpenDeclarations do
-                                Debug.Assert (openDecl.Idents |> Array.endsWith identArray, 
-                                                sprintf "%A must be suffix for %A" identArray openDecl.Idents)
-                                for ident in openDecl.Idents do
-                                    Debug.Assert (IdentifierUtils.isIdentifier ident,
-                                                  sprintf "%s as part of %A must be an identifier" ident openDecl.Idents)
+                        for openDecl in rawOpenDeclarations do
+                            Debug.Assert (openDecl.Idents |> Array.endsWith identArray, 
+                                            sprintf "%A must be suffix for %A" identArray openDecl.Idents)
+                            for ident in openDecl.Idents do
+                                Debug.Assert (IdentifierUtils.isIdentifier ident,
+                                              sprintf "%s as part of %A must be an identifier" ident openDecl.Idents)
 
-                            (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
-                                children AutoOpen modules and so on until a non-AutoOpen module is met.
-                                Example:
-                                   
-                                module M =
-                                    [<AutoOpen>]                                  
-                                    module A1 =
-                                        [<AutoOpen>] 
-                                        module A2 =
-                                            module A3 = 
-                                                [<AutoOpen>] 
-                                                module A4 = ...
-                                         
-                                // this declaration actually open M, M.A1, M.A1.A2, but NOT M.A1.A2.A3 or M.A1.A2.A3.A4
-                                open M
-                            *)
+                        (* The idea that each open declaration can actually open itself and all direct AutoOpen modules,
+                            children AutoOpen modules and so on until a non-AutoOpen module is met.
+                            Example:
+                               
+                            module M =
+                                [<AutoOpen>]                                  
+                                module A1 =
+                                    [<AutoOpen>] 
+                                    module A2 =
+                                        module A3 = 
+                                            [<AutoOpen>] 
+                                            module A4 = ...
+                                     
+                            // this declaration actually open M, M.A1, M.A1.A2, but NOT M.A1.A2.A3 or M.A1.A2.A3.A4
+                            open M
+                        *)
 
-                            let rec loop acc maxLength =
-                                let newModules =
-                                    autoOpenModulesAndActivePatterns
-                                    |> List.filter (fun autoOpenModule -> 
-                                        autoOpenModule.Length = maxLength + 1
-                                        && acc |> List.exists (fun collectedAutoOpenModule ->
-                                            autoOpenModule |> Array.startsWith collectedAutoOpenModule))
-                                match newModules with
-                                | [] -> acc
-                                | _ -> loop (acc @ newModules) (maxLength + 1)
-                                
-                            let identsAndAutoOpens = 
-                                rawOpenDeclarations
-                                |> List.map (fun openDecl -> 
-                                        { Declarations = loop [openDecl.Idents] openDecl.Idents.Length 
-                                          Parent = openDecl.Parent
-                                          IsUsed = false })
+                        let rec loop' acc maxLength =
+                            let newModules =
+                                autoOpenModulesAndActivePatterns
+                                |> List.filter (fun autoOpenModule -> 
+                                    autoOpenModule.Length = maxLength + 1
+                                    && acc |> List.exists (fun collectedAutoOpenModule ->
+                                        autoOpenModule |> Array.startsWith collectedAutoOpenModule))
+                            match newModules with
+                            | [] -> acc
+                            | _ -> loop' (acc @ newModules) (maxLength + 1)
+                            
+                        let identsAndAutoOpens = 
+                            rawOpenDeclarations
+                            |> List.map (fun openDecl -> 
+                                    { Declarations = loop' [openDecl.Idents] openDecl.Idents.Length 
+                                      Parent = openDecl.Parent
+                                      IsUsed = false })
 
-                            (* For each module that has ModuleSuffix attribute value we add additional Idents "<Name>Module". For example:
-                                   
-                                module M =
-                                    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-                                    module M1 =
-                                        module M2 =
-                                            let func _ = ()
-                                open M.M1.M2
-                                The last line will produce two Idents: "M.M1.M2" and "M.M1Module.M2".
-                                The reason is that FCS return different FullName for entities declared in ModuleSuffix modules
-                                depending on whether the module is in the current project or not. 
-                            *)
-                            let finalOpenDecls = 
-                                identsAndAutoOpens
-                                |> Seq.distinct
-                                |> Seq.toList
+                        (* For each module that has ModuleSuffix attribute value we add additional Idents "<Name>Module". For example:
+                               
+                            module M =
+                                [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+                                module M1 =
+                                    module M2 =
+                                        let func _ = ()
+                            open M.M1.M2
+                            The last line will produce two Idents: "M.M1.M2" and "M.M1Module.M2".
+                            The reason is that FCS return different FullName for entities declared in ModuleSuffix modules
+                            depending on whether the module is in the current project or not. 
+                        *)
+                        let finalOpenDecls = 
+                            identsAndAutoOpens
+                            |> Seq.distinct
+                            |> Seq.toList
 
-                            { Declarations = finalOpenDecls
-                              DeclarationRange = openStatementRange
-                              ScopeRange = Range.mkRange openStatementRange.FileName openStatementRange.Start moduleRange.End
-                              IsUsed = false } :: acc
-                        | _ -> acc) [] 
-                openStatements @ acc
+                        let acc = { Declarations = finalOpenDecls
+                                    DeclarationRange = openStatementRange
+                                    ScopeRange = Range.mkRange openStatementRange.FileName openStatementRange.Start moduleRange.End
+                                    IsUsed = false } :: acc
 
-            modules
-            |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
-                    walkModuleOrNamespace acc (decls, moduleRange) @ acc) []       
-        | _ -> []
+                        return! loop acc rest
+                    | _ :: rest -> return! loop acc rest
+                }
+                let! openStatements = loop [] decls
+                return openStatements @ acc
+            }
+
+            let rec loop acc exprs = async {
+                match exprs with
+                | [] -> return acc
+                | SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange) :: rest ->
+                    let! acc' = walkModuleOrNamespace acc (decls, moduleRange)
+                    return! loop (acc' @ acc) rest
+            }
+            return! loop [] modules
+        | _ -> return []
+    }
 
     let getEffectiveOpenDeclarationsAtLocation (pos: pos) (ast: ParsedInput) =
         let openStatements =

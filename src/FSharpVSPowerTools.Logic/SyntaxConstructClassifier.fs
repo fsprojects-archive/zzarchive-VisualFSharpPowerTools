@@ -126,25 +126,28 @@ type SyntaxConstructClassifier
 
         do! Async.SwitchToThreadPool()
 
-        return pf.Time "getOpenDeclarations" <| fun _ ->
-            let qualifyOpenDeclarations line endCol idents = 
+        return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> async {
+            let qualifyOpenDeclarations line endCol idents = async { 
                 let lineStr = getTextLineOneBased (line - 1)
-                let tooltip =
+                let! tooltip =
                     vsLanguageService.GetOpenDeclarationTooltip(
                         line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, source)
-                    |> Async.RunSynchronously // todo remove RunSynchronous !!!!!!!!!!!!!!!!!!!!!
-                match tooltip with
-                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                | None -> []
+                return 
+                    match tooltip with
+                    | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                    | None -> []
+            }
 
-            entities
-            |> Option.map (fun entities -> 
-                 entities 
-                 |> Seq.groupBy (fun e -> e.FullName)
-                 |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                 |> Map.ofSeq),
-
-            OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
+            let! openDecls = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
+            return 
+                entities
+                |> Option.map (fun entities -> 
+                     entities 
+                     |> Seq.groupBy (fun e -> e.FullName)
+                     |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                     |> Map.ofSeq),
+                openDecls
+        }
     }
 
     let updateUnusedDeclarations() = 

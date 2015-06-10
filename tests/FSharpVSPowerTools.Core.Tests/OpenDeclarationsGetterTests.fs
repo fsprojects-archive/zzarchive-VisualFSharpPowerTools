@@ -199,14 +199,16 @@ let (=>) source (expected: (Line * (OpenDecl list)) list) =
         let entities = 
             languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             |> Async.RunSynchronously
-        let qualifyOpenDeclarations line endColumn idents = 
+        let qualifyOpenDeclarations line endColumn idents = async {
             let lineStr = sourceLines.[line - 1]
-            languageService.GetIdentTooltip (line, endColumn, lineStr, Array.toList idents, opts, fileName, source)
-            |> Async.RunSynchronously
-            |> function
-               | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-               | None -> []
+            let! tooltip = languageService.GetIdentTooltip (line, endColumn, lineStr, Array.toList idents, opts, fileName, source)
+            return 
+                match tooltip with
+                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                | None -> []
+        }
         OpenDeclarationGetter.getOpenDeclarations parseResults.ParseTree entities qualifyOpenDeclarations
+        |> Async.RunSynchronously
 
     let actual =
         expected

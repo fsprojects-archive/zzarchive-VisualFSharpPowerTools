@@ -29,10 +29,12 @@ module Array =
 
     /// Returns true if one array has trailing elements equal to another's.
     let endsWith (suffix: _ []) (whole: _ []) =
+        let suffixLength = suffix.Length
+        let wholeLength = whole.Length
         let rec loop step =
-            if step > suffix.Length then true
-            elif step > whole.Length then false
-            elif suffix.[suffix.Length - step] = whole.[whole.Length - step] then loop (step + 1)
+            if step > suffixLength then true
+            elif step > wholeLength then false
+            elif suffix.[suffixLength - step] = whole.[wholeLength - step] then loop (step + 1)
             else false
 
         if suffix.Length = 0 then true
