@@ -4,6 +4,7 @@
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
@@ -74,7 +75,7 @@ module ClausesAnalysisTests =
         |> Async.RunSynchronously
 
 
-    let private tryGetWrittenCases (pos: pos) (src: string) =
+    let tryGetWrittenCases (pos: pos) (src: string) =
         let codeGenService: ICodeGenerationService<_, _, _> = 
             upcast CodeGenerationTestService(LanguageService(), LanguageServiceTestHelper.args)
         src 
@@ -606,7 +607,7 @@ let f = function
 """
 
 [<Test>]
-let ``uses correct indenting when inserting new line, when first pattern starts on a new line`` () =
+let ``uses correct indenting when inserting new line when first pattern starts on a new line`` () =
     [
         """
 type Union = Case1 | Case2 | Case3
@@ -663,7 +664,7 @@ let f x =
     ]
 
 [<Test>]
-let ``uses correct indenting when inserting new line, when first pattern starts on the same line`` () =
+let ``uses correct indenting when inserting new line when first pattern starts on the same line`` () =
     [
         """
 type Union = Case1 | Case2 | Case3
@@ -715,6 +716,18 @@ let f x =
     match x with
     | Some 0 -> Case2"""
     |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 5 16))
+    |> assertSrcWasNotChangedAfterCodeGen
+
+[<Test>]
+let ``generation is not triggered when caret on nested patterns of a pattern match clause`` () =
+    """
+type A = A1 | A2
+type B = B1 | B2 of A
+let f x =
+    match x with
+    | B1 -> ()
+    | B2 (A1 | A2) -> ()"""
+    |> getSrcBeforeAndAfterCodeGen (insertCasesFromPos (Pos.fromZ 6 12))
     |> assertSrcWasNotChangedAfterCodeGen
 
 [<Test>]

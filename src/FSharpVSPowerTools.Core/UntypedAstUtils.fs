@@ -19,6 +19,10 @@ let rec (|Sequentials|_|) = function
         Some [e1; e2]
     | _ -> None
 
+let (|ConstructorPats|) = function
+    | SynConstructorArgs.Pats ps -> ps
+    | SynConstructorArgs.NamePatPairs(xs, _) -> List.map snd xs
+
 /// Returns all Idents and LongIdents found in an untyped AST.
 let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, Idents> =
     let identsByEndPos = Dictionary<Range.pos, Idents>()
@@ -39,10 +43,6 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
     
     let addIdent (ident: Ident) = 
         identsByEndPos.[ident.idRange.End] <- [|ident.idText|]
-
-    let (|ConstructorPats|) = function
-        | Pats ps -> ps
-        | NamePatPairs(xs, _) -> List.map snd xs
 
     let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
         List.iter walkSynModuleOrNamespace moduleOrNamespaceList
