@@ -368,7 +368,8 @@ type LanguageService (?fileSystem: IFileSystem) =
          | _ -> return None 
      }
 
-  member __.InvalidateConfiguration options = checkerInstance.InvalidateConfiguration options
+  member __.InvalidateConfiguration options =
+      checkerAsync <| fun checker -> async { checker.InvalidateConfiguration options }
 
   // additions
 

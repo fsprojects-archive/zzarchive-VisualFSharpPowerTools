@@ -132,7 +132,7 @@ type SyntaxConstructClassifier
                 let tooltip =
                     vsLanguageService.GetOpenDeclarationTooltip(
                         line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, source)
-                    |> Async.RunSynchronously
+                    |> Async.RunSynchronously // todo remove RunSynchronous !!!!!!!!!!!!!!!!!!!!!
                 match tooltip with
                 | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
                 | None -> []
