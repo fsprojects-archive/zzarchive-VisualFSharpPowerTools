@@ -34,24 +34,28 @@ type private Context = {
     Qualifier: string option
 }
 
-let private clauseIsCandidateForCodeGen (clause: SynMatchClause) =
+let private clauseIsCandidateForCodeGen (cursorPos: pos) (clause: SynMatchClause) =
+    //printfn "Checking pos (%+A) inside clause (%+A)..." cursorPos clause
     let rec patIsCandidate (pat: SynPat) =
         match pat with
         | SynPat.Paren(innerPat, _)
         | SynPat.Attrib(innerPat, _, _) -> patIsCandidate innerPat
-        | SynPat.Const(_, _) -> true
-        | SynPat.Wild(_) -> true
+        | SynPat.Const(_, _) -> false
+        | SynPat.Wild(_) -> false
         // TODO: check if we have to handle these cases
-        | SynPat.Typed(_, _, _)
-        | SynPat.Named(_, _, _, _, _)
+        | SynPat.Typed(innerPat, _, _)
+        | SynPat.Named(innerPat, _, _, _, _) ->
+            patIsCandidate innerPat
         | SynPat.OptionalVal(_, _) ->
             false
-        | SynPat.Or(leftPat, rightPat, _) -> patIsCandidate leftPat && patIsCandidate rightPat
-        | SynPat.Ands(innerPatList, _) -> List.forall patIsCandidate innerPatList
+        | SynPat.Or(leftPat, rightPat, _) -> patIsCandidate leftPat || patIsCandidate rightPat
+        | SynPat.Ands(innerPatList, _) -> List.exists patIsCandidate innerPatList
         // This is the 'hd :: tail -> ...' pattern
         | SynPat.LongIdent(LongIdentWithDots([ident], []), _, _, _, _, _)
             when ident.idText = "op_ColonColon" -> false
-        | SynPat.LongIdent(_, _, _, _, _, _) -> true
+        | SynPat.LongIdent(_, _, _, ConstructorPats nestedPats, _, r) -> 
+            // The cursor should not be in the nested patterns
+            rangeContainsPos r cursorPos && List.forall (not << patIsCandidate) nestedPats
         | SynPat.Tuple(_, _) -> false
         | SynPat.ArrayOrList(_, _, _) -> false
         | SynPat.Record(_, _) -> false
@@ -203,15 +207,16 @@ let private tryFindPatternMatchExprInParsedInput (pos: pos) (parsedInput: Parsed
                 synMatchClauseList
                 |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e)
                 |> Option.orTry (fun () ->
-                    if isExnMatch = false &&
-                       List.forall clauseIsCandidateForCodeGen synMatchClauseList &&
-                       List.exists (posIsInLhsOfClause pos) synMatchClauseList
-                    then
-                        { MatchWithOrFunctionRange = functionKeywordRange
-                          Expr = matchLambdaExpr
-                          Clauses = synMatchClauseList }
-                        |> Some
-                    else None
+                    if isExnMatch then
+                        None
+                    else
+                       let currentClause = List.tryFind (posIsInLhsOfClause pos) synMatchClauseList
+                       if currentClause |> Option.map (clauseIsCandidateForCodeGen pos) |> Option.getOrElse false then
+                            { MatchWithOrFunctionRange = functionKeywordRange
+                              Expr = matchLambdaExpr
+                              Clauses = synMatchClauseList }
+                            |> Some
+                       else None
                 )
 
             | SynExpr.Match(sequencePointInfoForBinding, synExpr, synMatchClauseList, isExnMatch, _range) as matchExpr ->
@@ -221,19 +226,20 @@ let private tryFindPatternMatchExprInParsedInput (pos: pos) (parsedInput: Parsed
                     |> List.tryPick (fun (Clause(_, _, e, _, _)) -> walkExpr e)
                 )
                 |> Option.orTry (fun () ->
-                    if isExnMatch = false &&
-                       List.forall clauseIsCandidateForCodeGen synMatchClauseList &&
-                       List.exists (posIsInLhsOfClause pos) synMatchClauseList
-                    then
-                        match sequencePointInfoForBinding with
-                        | SequencePointAtBinding range ->
-                            { MatchWithOrFunctionRange = range
-                              Expr = matchExpr 
-                              Clauses = synMatchClauseList }
-                            |> Some
-                        | _ -> None
-                    else
+                    if isExnMatch then
                         None
+                    else
+                       let currentClause = List.tryFind (posIsInLhsOfClause pos) synMatchClauseList
+                       if currentClause |> Option.map (clauseIsCandidateForCodeGen pos) |> Option.getOrElse false then
+                            match sequencePointInfoForBinding with
+                            | SequencePointAtBinding range ->
+                                { MatchWithOrFunctionRange = range
+                                  Expr = matchExpr 
+                                  Clauses = synMatchClauseList }
+                                |> Some
+                            | _ -> None
+                        else
+                            None
                 )
 
             | SynExpr.App(_exprAtomicFlag, _isInfix, synExpr1, synExpr2, _range) ->
@@ -555,7 +561,7 @@ let checkThatPatternMatchExprEndsWithCompleteClause (expr: PatternMatchExpr) =
 
             rhsExprExists && not (synExprContainsError expr.Expr)
 
-        | _ -> true && not (synExprContainsError expr.Expr)
+        | _ -> not (synExprContainsError expr.Expr)
 
 
 let tryFindCaseInsertionParamsAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
