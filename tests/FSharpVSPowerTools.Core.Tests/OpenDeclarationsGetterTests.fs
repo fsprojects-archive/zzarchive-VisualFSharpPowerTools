@@ -196,8 +196,15 @@ let (=>) source (expected: (Line * (OpenDecl list)) list) =
     let parseResults = languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
     let actualOpenDeclarations =
+        let withEntityCache = 
+            let cache =
+                { new AssemblyContentProvider.IAssemblyContentCache with
+                    member __.TryGet _ = None
+                    member __.Set assembly entry = () }
+            fun f -> f cache
+
         let entities = 
-            languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
+            languageService.GetAllEntitiesInProjectAndReferencedAssemblies withEntityCache (opts, fileName, source)
             |> Async.RunSynchronously
         let qualifyOpenDeclarations line endColumn idents = async {
             let lineStr = sourceLines.[line - 1]

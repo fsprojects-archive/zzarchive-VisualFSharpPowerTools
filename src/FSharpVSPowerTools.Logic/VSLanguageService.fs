@@ -9,10 +9,12 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open System
+open System.Collections.Generic
 open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
+open FSharpVSPowerTools.AssemblyContentProvider
 
 type FilePath = string
 
@@ -34,6 +36,18 @@ and IProjectProvider =
     abstract GetProjectCheckerOptions: LanguageService -> Async<FSharpProjectOptions>
 
 type ShowProgress = OperationState -> unit
+
+type EntityCache() =
+    let dic = Dictionary<AssemblyPath, AssemblyContentCacheEntry>()
+    interface IAssemblyContentCache with
+        member __.TryGet assembly =
+            match dic.TryGetValue assembly with
+            | true, entry -> Some entry
+            | _ -> None
+        member __.Set assembly entry = dic.[assembly] <- entry
+
+    member __.Clear() = dic.Clear()
+    member x.Locking f = lock dic <| fun _ -> f (x :> IAssemblyContentCache)
 
 [<Export>]
 type VSLanguageService
@@ -88,6 +102,10 @@ type VSLanguageService
             doc.Snapshot.TextBuffer = snapshot.TextBuffer
 
     static let initializationTime = DateTime.Now
+    let entityCache = EntityCache()
+
+    let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
+    do solutionBuildEventListener.ActiveConfigChanged.Add(fun _ -> entityCache.Clear())
 
     /// If we are on the strict mode, set project load time to that of the last recently-changed open document.
     /// When there is no open document, use initialization time as project load time.
@@ -290,7 +308,7 @@ type VSLanguageService
         async { 
             let! opts = project.GetProjectCheckerOptions instance
             try 
-                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
+                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies entityCache.Locking (opts, fileName, source)
             with e ->
                 debug "[Language Service] GetAllSymbols raises exception: %O" e
                 Logging.logExceptionWithMessage e "GetAllSymbols raises exception."
