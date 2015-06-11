@@ -104,9 +104,6 @@ type VSLanguageService
     static let initializationTime = DateTime.Now
     let entityCache = EntityCache()
 
-    let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
-    do solutionBuildEventListener.ActiveConfigChanged.Add(fun _ -> entityCache.Clear())
-
     /// If we are on the strict mode, set project load time to that of the last recently-changed open document.
     /// When there is no open document, use initialization time as project load time.
     let fixProjectLoadTime =
@@ -331,6 +328,7 @@ type VSLanguageService
     member __.ClearCaches() = 
         debug "[Language Service] Clearing FCS caches."
         instance.RawChecker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+        entityCache.Clear()
     
     member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
