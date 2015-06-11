@@ -308,7 +308,7 @@ type VSLanguageService
         async { 
             let! opts = project.GetProjectCheckerOptions instance
             try 
-                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies entityCache.Locking (opts, fileName, source)
+                return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source, entityCache.Locking)
             with e ->
                 debug "[Language Service] GetAllSymbols raises exception: %O" e
                 Logging.logExceptionWithMessage e "GetAllSymbols raises exception."

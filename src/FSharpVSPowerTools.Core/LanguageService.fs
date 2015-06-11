@@ -535,7 +535,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                         { su with IsUsed = notUsedSymbols |> Array.forall (fun s -> not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
         }
 
-    member x.GetAllEntitiesInProjectAndReferencedAssemblies withCache (projectOptions: FSharpProjectOptions, fileName, source) =
+    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source, ?withCache) =
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 

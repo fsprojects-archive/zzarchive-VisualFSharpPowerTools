@@ -200,24 +200,24 @@ module AssemblyContentProvider =
         |> Seq.concat
         |> Seq.toList
 
-    let getAssemblyContent (withCache: (IAssemblyContentCache -> _) -> _) contentType (fileName: string option) (assemblies: FSharpAssembly list) =
+    let getAssemblyContent (withCache: ((IAssemblyContentCache -> _) -> _) option) 
+                           contentType (fileName: string option) (assemblies: FSharpAssembly list) =
         match assemblies |> List.filter (fun x -> not x.IsProviderGenerated), fileName with
         | [], _ -> []
         | assemblies, Some fileName ->
             let fileWriteTime = FileInfo(fileName).LastWriteTime 
-            withCache <| fun cache ->
-                match contentType, cache.TryGet fileName with 
-                | _, Some entry
-                | Public, Some entry when entry.FileWriteTime = fileWriteTime -> 
-                    //debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
-                    entry.Entities
-                | _ ->
-                    //debug "[AssemblyContentProvider] Getting entities from %s." fileName
-                    let entities = getAssemblySignaturesContent contentType assemblies
-                    cache.Set fileName { FileWriteTime = fileWriteTime; ContentType = contentType; Entities = entities }
-                    entities
+            match withCache with
+            | Some withCache ->
+                withCache <| fun cache ->
+                    match contentType, cache.TryGet fileName with 
+                    | _, Some entry
+                    | Public, Some entry when entry.FileWriteTime = fileWriteTime -> entry.Entities
+                    | _ ->
+                        let entities = getAssemblySignaturesContent contentType assemblies
+                        cache.Set fileName { FileWriteTime = fileWriteTime; ContentType = contentType; Entities = entities }
+                        entities
+            | None -> getAssemblySignaturesContent contentType assemblies
         | assemblies, None -> 
-            //debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
             getAssemblySignaturesContent contentType assemblies
         |> List.filter (fun entity -> 
             match contentType, entity.IsPublic with

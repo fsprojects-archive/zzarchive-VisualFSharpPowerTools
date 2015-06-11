@@ -60,15 +60,8 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
         languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> Async.RunSynchronously
 
     let actualCategories =
-        let withEntityCache = 
-            let cache =
-                { new AssemblyContentProvider.IAssemblyContentCache with
-                    member __.TryGet _ = None
-                    member __.Set assembly entry = () }
-            fun f -> f cache
-
         let entities =
-            languageService.GetAllEntitiesInProjectAndReferencedAssemblies withEntityCache (opts, fileName, source)
+            languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
             |> Async.RunSynchronously
 
 //        entities |> Option.iter (fun es ->
