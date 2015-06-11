@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools
 
+open System.Linq
 open System.Windows
 open System.Windows.Shapes
 open System.Windows.Media
@@ -23,10 +24,11 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
     let mutable markerData = Unchecked.defaultof<_>
     let markerBrush = SolidColorBrush(Color.FromRgb(255uy, 165uy, 0uy))
 
-    let updateDisplay () =
-        protect (fun _ ->
-            if not textView.IsClosed then
-                let span = SnapshotSpan(textView.TextBuffer.CurrentSnapshot, 0, textView.TextBuffer.CurrentSnapshot.Length)
+    let updateDisplay () = 
+        if not textView.IsClosed then
+            let span = SnapshotSpan(textView.TextBuffer.CurrentSnapshot, 0, textView.TextBuffer.CurrentSnapshot.Length)
+            let ctx = System.Threading.SynchronizationContext.Current
+            async {
                 let data =
                     classifier.GetClassificationSpans(span)
                     |> Seq.choose (fun classification -> 
@@ -36,7 +38,9 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
                         else None)
                     |> Seq.distinctBy fst
                     |> Seq.toArray
+            
                 if markerData <> data then
+                    do! Async.SwitchToContext ctx
                     markerData <- data
                     children.Clear()
                     let totalLines = textView.TextSnapshot.LineCount
@@ -57,7 +61,8 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
                             let line = textView.TextSnapshot.GetLineFromLineNumber(lineNo)
                             textView.Caret.MoveTo(VirtualSnapshotPoint(textView.TextSnapshot, pos)) |> ignore
                             textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.ShowStart))
-                        children.Add(marker) |> ignore)
+                        children.Add(marker) |> ignore
+            } |> Async.StartInThreadPoolSafe
 
     let docEventListener = new DocumentEventListener ([ViewChange.viewportHeightEvent textView; ViewChange.classificationEvent classifier], 
                                    200us, updateDisplay)

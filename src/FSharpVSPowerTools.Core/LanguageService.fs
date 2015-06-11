@@ -535,7 +535,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                         { su with IsUsed = notUsedSymbols |> Array.forall (fun s -> not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
         }
 
-    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source) =
+    member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source, ?withCache) =
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
@@ -561,7 +561,7 @@ type LanguageService (?fileSystem: IFileSystem) =
 
                            for fileName, signatures in assembliesByFileName do
                                let contentType = Public // it's always Public for now since we don't support InternalsVisibleTo attribute yet
-                               yield! AssemblyContentProvider.getAssemblyContent contentType fileName signatures
+                               yield! AssemblyContentProvider.getAssemblyContent withCache contentType fileName signatures
                        | None -> () ]
         }
 

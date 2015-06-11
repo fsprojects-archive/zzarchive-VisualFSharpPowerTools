@@ -106,11 +106,11 @@
     <Compile Include="FileSystem.fs">
       <Link>ProjectSystem/FileSystem.fs</Link>
     </Compile>
-    <Compile Include="VSLanguageService.fs">
-      <Link>ProjectSystem/VSLanguageService.fs</Link>
-    </Compile>
     <Compile Include="SolutionBuildEventListener.fs">
       <Link>ProjectSystem/SolutionBuildEventListener.fs</Link>
+    </Compile>
+    <Compile Include="VSLanguageService.fs">
+      <Link>ProjectSystem/VSLanguageService.fs</Link>
     </Compile>
     <Compile Include="ShellEventListener.fs">
       <Link>ProjectSystem/ShellEventListener.fs</Link>

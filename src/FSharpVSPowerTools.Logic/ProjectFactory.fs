@@ -93,22 +93,19 @@ type ProjectFactory
     let signatureProjectData = Dictionary()
     let fsharpProjectsCache = ref None
 
-    let clearInternalCaches() =
+    let clearCaches() =
         signatureProjectData.Clear()
         fsharpProjectsCache := None
         cache.Clear()
+        vsLanguageService.ClearCaches()
 
     let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
     // When active configuration changes, all project providers are stale so we clear our own caches
-    do solutionBuildEventListener.ActiveConfigChanged.Add(fun _ -> 
-            clearInternalCaches())
+    do solutionBuildEventListener.ActiveConfigChanged.Add(fun _ -> clearCaches())
 
     do match events with
         | Some events ->
-            events.SolutionEvents.add_AfterClosing (fun _ -> 
-                clearInternalCaches()
-                vsLanguageService.ClearCaches())
-            
+            events.SolutionEvents.add_AfterClosing (fun _ -> clearCaches())
             events.ProjectItemsEvents.add_ItemRenamed (fun p _ -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemRemoved (fun p -> onProjectItemChanged p)
             events.ProjectItemsEvents.add_ItemAdded (fun p -> onProjectItemChanged p)

@@ -86,7 +86,16 @@ type Parent =
 
 module AssemblyContentProvider =
     open System.IO
-    open System.Collections.Concurrent
+
+    type AssemblyContentCacheEntry =
+        { FileWriteTime: DateTime 
+          ContentType: AssemblyContentType 
+          Entities: RawEntity list }
+
+    [<NoComparison; NoEquality>]
+    type IAssemblyContentCache =
+        abstract TryGet: AssemblyPath -> AssemblyContentCacheEntry option
+        abstract Set: AssemblyPath -> AssemblyContentCacheEntry -> unit
 
     let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
         parent.FormatEntityFullName entity
@@ -184,31 +193,31 @@ module AssemblyContentProvider =
             |> Seq.map (traverseEntity contentType Parent.Empty)
             |> Seq.concat
             |> Seq.distinct
-            |> Seq.toList
 
     let private getAssemblySignaturesContent contentType (assemblies: FSharpAssembly list) = 
         assemblies 
-        |> List.map (fun asm -> getAssemblySignatureContent contentType asm.Contents)
-        |> List.concat 
+        |> Seq.map (fun asm -> getAssemblySignatureContent contentType asm.Contents)
+        |> Seq.concat
+        |> Seq.toList
 
-    let private entityCache = ConcurrentDictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
-
-    let getAssemblyContent contentType (fileName: string option) (assemblies: FSharpAssembly list) =
-        match fileName with
-        | Some fileName ->
-            let assemblyWriteTime = FileInfo(fileName).LastWriteTime
-            match contentType, entityCache.TryGetValue fileName with
-            | _, (true, (cacheWriteTime, Full, entities))
-            | Public, (true, (cacheWriteTime, _, entities)) when cacheWriteTime = assemblyWriteTime -> 
-                //debug "[AssemblyContentProvider] Return entities from %s from cache." fileName
-                entities
-            | _ ->
-                //debug "[AssemblyContentProvider] Getting entities from %s." fileName
-                let entities = getAssemblySignaturesContent contentType assemblies
-                entityCache.[fileName] <- (assemblyWriteTime, contentType, entities)
-                entities
-        | None -> 
-            //debug "[AssemblyContentProvider] Getting entities from an assembly with no FileName: %s." asm.QualifiedName
+    let getAssemblyContent (withCache: ((IAssemblyContentCache -> _) -> _) option) 
+                           contentType (fileName: string option) (assemblies: FSharpAssembly list) =
+        match assemblies |> List.filter (fun x -> not x.IsProviderGenerated), fileName with
+        | [], _ -> []
+        | assemblies, Some fileName ->
+            let fileWriteTime = FileInfo(fileName).LastWriteTime 
+            match withCache with
+            | Some withCache ->
+                withCache <| fun cache ->
+                    match contentType, cache.TryGet fileName with 
+                    | _, Some entry
+                    | Public, Some entry when entry.FileWriteTime = fileWriteTime -> entry.Entities
+                    | _ ->
+                        let entities = getAssemblySignaturesContent contentType assemblies
+                        cache.Set fileName { FileWriteTime = fileWriteTime; ContentType = contentType; Entities = entities }
+                        entities
+            | None -> getAssemblySignaturesContent contentType assemblies
+        | assemblies, None -> 
             getAssemblySignaturesContent contentType assemblies
         |> List.filter (fun entity -> 
             match contentType, entity.IsPublic with
