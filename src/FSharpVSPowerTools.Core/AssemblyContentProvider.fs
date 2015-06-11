@@ -86,7 +86,6 @@ type Parent =
 
 module AssemblyContentProvider =
     open System.IO
-    open System.Collections.Concurrent
     open System.Collections.Generic
 
     let private createEntity ns (parent: Parent) (entity: FSharpEntity) =
@@ -194,8 +193,11 @@ module AssemblyContentProvider =
 
     let private entityCache = Dictionary<AssemblyPath, DateTime * AssemblyContentType * RawEntity list>()
 
+    let (|DynamicAssembly|_|) (fileName: string) = if fileName.StartsWith "tmp" then Some () else None
+
     let getAssemblyContent contentType (fileName: string option) (assemblies: FSharpAssembly list) =
         match fileName with
+        | Some DynamicAssembly -> []
         | Some fileName ->
             let assemblyWriteTime = FileInfo(fileName).LastWriteTime
             lock entityCache <| fun _ ->
