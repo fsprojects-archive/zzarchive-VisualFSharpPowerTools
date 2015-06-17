@@ -151,7 +151,7 @@ type Class () = class end
                 |> Seq.toList
                 |> assertEqual
                      [ (4, 3) => (4, 8);
-                       (2, 6) => (2, 20) ])
+                       (2, 6) => (2, 11) ])
 
     [<Test>]
     let ``should not generate highlight usage tags for keywords or whitespaces``() = 
