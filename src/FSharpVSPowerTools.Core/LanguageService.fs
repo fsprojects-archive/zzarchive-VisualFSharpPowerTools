@@ -158,7 +158,7 @@ type LanguageService (?fileSystem: IFileSystem) =
   // when its view of the prior-typechecking-state of the start of a file has changed, for example
   // when the background typechecker has "caught up" after some other file has been changed, 
   // and its time to re-typecheck the current file.
-  let checkerInstance = FSharpChecker.Create (projectCacheSize = 200, keepAllBackgroundResolutions = false)
+  let checkerInstance = FSharpChecker.Create (projectCacheSize = 50, keepAllBackgroundResolutions = false)
 
   let checkerAsync (f: FSharpChecker -> Async<'a>) = 
     let ctx = System.Threading.SynchronizationContext.Current
