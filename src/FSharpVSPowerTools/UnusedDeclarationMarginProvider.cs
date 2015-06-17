@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FSharpVSPowerTools.SyntaxColoring;
 
 namespace FSharpVSPowerTools
 {
@@ -21,7 +22,7 @@ namespace FSharpVSPowerTools
     public class UnusedDeclarationMarginProvider : IWpfTextViewMarginProvider
     {
         [Import]
-        internal IClassifierAggregatorService classifierAggregatorService = null;
+        internal IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
 
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
@@ -32,8 +33,8 @@ namespace FSharpVSPowerTools
             if (generalOptions == null || !(generalOptions.UnusedReferencesEnabled || generalOptions.UnusedOpensEnabled)) return null;
 
  	        var textView = wpfTextViewHost.TextView;
-            return new UnusedDeclarationMargin(textView, marginContainer,
-                           classifierAggregatorService.GetClassifier(textView.TextBuffer));
+            var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<UnusedDeclarationTag>(textView);
+            return new UnusedDeclarationMargin(textView, marginContainer, tagAggregator);
         }
     }
 }

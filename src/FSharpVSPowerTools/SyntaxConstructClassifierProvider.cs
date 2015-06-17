@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
+using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.Win32;
 using System;
@@ -418,11 +419,12 @@ namespace FSharpVSPowerTools
         }
     }
 
+    [Export(typeof(ITaggerProvider))]
+    [TagType(typeof(UnusedDeclarationTag))]
     [Export(typeof(IClassifierProvider))]
-    [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Document)]
-    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener, IDisposable
+    public class SyntaxConstructClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
     { 
         [Import]
         internal IClassificationTypeRegistryService classificationRegistry = null;
@@ -477,24 +479,9 @@ namespace FSharpVSPowerTools
             return null;
         }
 
-        public void SubjectBuffersConnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
+        public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
-        }
-
-        public void SubjectBuffersDisconnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
-        {
-            if (reason != ConnectionReason.TextViewLifetime) return;
-
-            IDisposable classifier;
-            foreach (ITextBuffer buffer in subjectBuffers)
-            {
-                if (buffer.Properties.TryGetProperty(serviceType, out classifier))
-                {
-                    bool success = buffer.Properties.RemoveProperty(serviceType);
-                    Debug.Assert(success, "Should be able to remove classifier from the buffer");
-                    classifier.Dispose();
-                }
-            }
+            return GetClassifier(buffer) as ITagger<T>;
         }
 
         public void Dispose()

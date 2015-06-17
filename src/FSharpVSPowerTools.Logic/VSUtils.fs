@@ -293,6 +293,8 @@ type ForegroundThreadGuard private() =
 
 [<RequireQualifiedAccess>]
 module ViewChange =    
+    open Microsoft.VisualStudio.Text.Tagging
+
     let layoutEvent (view: ITextView) = 
         view.LayoutChanged |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
     
@@ -305,8 +307,8 @@ module ViewChange =
     let bufferEvent (buffer: ITextBuffer) = 
         buffer.ChangedLowPriority |> Event.map (fun _ -> ())
 
-    let classificationEvent (classifier: IClassifier) = 
-        classifier.ClassificationChanged |> Event.map (fun _ -> ())
+    let tagsChanged (tagAggregator: ITagAggregator<_>) = 
+        tagAggregator.TagsChanged |> Event.map (fun _ -> ())
 
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
     // Start an async loop on the UI thread that will execute the update action after the delay

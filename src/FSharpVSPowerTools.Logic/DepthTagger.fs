@@ -6,13 +6,14 @@ open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open System.Threading
+open System.Diagnostics
 
 // The tag that carries metadata about F# color-regions.
 type DepthRegionTag(info: int * int * int * int) = 
     interface ITag
     // why are (line,startColumn,endColumn,depth) here, and not just depth?  
     // because we might have range info for indent coloring on a blank line, and there are no chars to tag there, so we put a tag in column 0 and carry all this info as metadata
-    member x.Info = info
+    member __.Info = info
 
 [<NoComparison>]
 type private DepthTaggerState =
@@ -27,7 +28,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
     let mutable state = None
     let tagsChanged = Event<_,_>()
     
-    let refreshFileImpl() = 
+    let refreshTags() = 
         let uiContext = SynchronizationContext.Current
         async { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
@@ -49,7 +50,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
                         (trackingSpan, info) :: res
                     with e -> 
                         Logging.logException e
-                        if (System.Diagnostics.Debugger.IsAttached) then System.Diagnostics.Debugger.Break()
+                        if Debugger.IsAttached then Debugger.Break()
                         res) []
                 |> List.rev
 
@@ -61,7 +62,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         } 
         |> Async.StartInThreadPoolSafe
     
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, refreshFileImpl) 
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, refreshTags) 
     
     let getTags (spans: NormalizedSnapshotSpanCollection) = 
         match spans |> Seq.toList, state with
