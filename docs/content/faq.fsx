@@ -7,6 +7,26 @@
 FAQ - Frequently Asked Questions
 ==============================
 
+VFPT is slow, what can I do speed it up?
+-----------------------
+
+Our suggestion is to disable automatic features including
+
+ - Highlight references
+ - Indent guides/Depth colorizer
+ - Syntax coloring
+ - Gray out unused declarations
+ - Gray out unused opens
+ - Implement interface
+ - Record stub generation
+ - Union pattern match case generation
+ - Resolve unopened namespaces
+ - Task List comments
+ - Quick info panel
+
+and enable them one by one to identify the features causing slowness. 
+If you found a scenario that is slow, please let us know on [the issue tracker](https://github.com/fsprojects/VisualFSharpPowerTools/issues).
+
 Why is unused declaration option divided into two separate options in v1.6.0?
 -----------------------
 
