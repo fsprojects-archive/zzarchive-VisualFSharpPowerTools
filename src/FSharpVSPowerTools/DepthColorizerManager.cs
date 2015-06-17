@@ -39,7 +39,6 @@ namespace FSharpVSPowerTools
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 return new DepthTagger(buffer, doc.FilePath, fsharpVsLanguageService) as ITagger<T>;
             }
 

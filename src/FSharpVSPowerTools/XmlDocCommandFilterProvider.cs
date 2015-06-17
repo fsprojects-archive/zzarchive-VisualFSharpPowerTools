@@ -44,7 +44,6 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, fsharpVsLanguageService);
             }
         }

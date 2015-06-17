@@ -45,7 +45,6 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 AddCommandFilter(textViewAdapter,
                     new RenameCommandFilter(doc, textView, fsharpVsLanguageService,
                                             serviceProvider, projectFactory));
