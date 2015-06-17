@@ -130,15 +130,24 @@ let fixInvalidSymbolSpans (snapshot: ITextSnapshot) (lastIdent: string) (spans: 
         spans
         |> Seq.choose (fun span -> 
             let newLastIdent = span.GetText()
-            let index = newLastIdent.LastIndexOf lastIdent
+            let index = newLastIdent.LastIndexOf(lastIdent, StringComparison.Ordinal)
             if index > 0 then 
-                // Sometimes FCS returns a composite identifier (x.Length) for short symbols (Length), so we truncate the prefix
+                // Sometimes FCS returns a composite identifier for a short symbol, so we truncate the prefix
+                // Example: newLastIdent --> "x.Length", lastIdent --> "Length"
                 Some (SnapshotSpan(snapshot, span.Start.Position + index, span.Length - index))
-            elif index = 0 && newLastIdent <> lastIdent then
-                // The returned symbol use is too long, we truncate the redundant suffix
+            elif index = 0 && newLastIdent.Length > lastIdent.Length then
+                // The returned symbol use is too long; we truncate its redundant suffix
+                // Example: newLastIdent --> "Length<'T>", lastIdent --> "Length"
                 Some (SnapshotSpan(snapshot, span.Start.Position, lastIdent.Length))
-            elif index = 0 then Some span
-            else None)
+            elif index = 0 then
+                Some span
+            else
+                // In the case of attributes, a returned symbol use may be a part of original text
+                // Example: newLastIdent --> "Sample", lastIdent --> "SampleAttribute"
+                let index = lastIdent.LastIndexOf(newLastIdent, StringComparison.Ordinal)
+                if index >= 0 then
+                    Some span
+                else None)
         |> Seq.distinctBy (fun span -> span.Start.Position)
         |> Seq.toList
 

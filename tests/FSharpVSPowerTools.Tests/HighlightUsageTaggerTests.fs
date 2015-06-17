@@ -112,6 +112,48 @@ module GenericClass =
                        (3, 10) => (3, 14) ])
 
     [<Test>]
+    let ``should generate correct tags for attributes from definitions``() = 
+        let content = """
+type SampleAttribute () =
+  inherit System.Attribute()
+[<Sample>]
+type Class () = class end
+"""
+        let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 7) |> ignore)
+            (fun () -> 
+                helper.TagsOf(buffer, tagger)                 
+                |> Seq.toList
+                |> assertEqual
+                     [ (2, 6) => (2, 20);
+                       (4, 3) => (4, 8) ])
+
+    [<Test>]
+    let ``should generate correct tags for attributes from usage``() = 
+        let content = """
+type SampleAttribute () =
+  inherit System.Attribute()
+[<Sample>]
+type Class () = class end
+"""
+        let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 7) |> ignore)
+            (fun () -> 
+                helper.TagsOf(buffer, tagger)                 
+                |> Seq.toList
+                |> assertEqual
+                     [ (4, 3) => (4, 8);
+                       (2, 6) => (2, 11) ])
+
+    [<Test>]
     let ``should not generate highlight usage tags for keywords or whitespaces``() = 
         let content = """
 do printfn "Hello world!"
