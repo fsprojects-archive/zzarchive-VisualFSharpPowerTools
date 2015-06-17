@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
+using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.Win32;
 using System;
@@ -418,6 +419,8 @@ namespace FSharpVSPowerTools
         }
     }
 
+    [Export(typeof(ITaggerProvider))]
+    [TagType(typeof(UnusedDeclarationTag))]
     [Export(typeof(IClassifierProvider))]
     [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
@@ -475,6 +478,11 @@ namespace FSharpVSPowerTools
             }
 
             return null;
+        }
+
+        public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
+        {
+            return GetClassifier(buffer) as ITagger<T>;
         }
 
         public void SubjectBuffersConnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)

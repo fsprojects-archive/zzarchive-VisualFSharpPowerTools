@@ -11,6 +11,7 @@ open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.AsyncMaybe
+open Microsoft.VisualStudio.Text.Tagging
 
 [<NoComparison>]
 type private CheckingProject =
@@ -39,6 +40,9 @@ type private SlowStageData =
 type private SlowStage =
     | NoData of isUpdating: bool
     | Data of SlowStageData
+
+type UnusedDeclarationTag() =
+    interface ITag
 
 type SyntaxConstructClassifier
     (
@@ -73,6 +77,9 @@ type SyntaxConstructClassifier
     let slowState = Atom (SlowStage.NoData false)
     let fastStageCancellationToken = Atom None
     let slowStageCancellationToken = Atom None
+
+    let unusedDeclarationChanged = Event<_,_>()
+    let unusedDeclarationState = Atom None
     
     let newCancellationToken (currentToken: Atom<CancellationTokenSource option>) = 
         let newToken = new CancellationTokenSource() 
@@ -119,6 +126,10 @@ type SyntaxConstructClassifier
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
         classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
         debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
+
+    let triggerUnusedDeclarationChanged snapshot =
+        let span = SnapshotSpan(snapshot, 0, snapshot.Length)
+        unusedDeclarationChanged.Trigger(self, SnapshotSpanEventArgs(span))
 
     let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
         let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
@@ -205,6 +216,9 @@ type SyntaxConstructClassifier
                 pf.Stop()
                 Logging.logInfo "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result
                 triggerClassificationChanged snapshot "UpdateUnusedDeclarations"
+
+                unusedDeclarationState.Swap(fun _ -> Some (snapshot, notUsedSpans |> Map.toArray |> Array.map fst)) |> ignore
+                triggerUnusedDeclarationChanged snapshot
             } |> Async.map ignore
 
         match getCurrentProject(), getCurrentSnapshot() with
@@ -403,6 +417,21 @@ type SyntaxConstructClassifier
 
         [<CLIEvent>]
         member __.ClassificationChanged = classificationChanged.Publish
+
+    interface ITagger<UnusedDeclarationTag> with
+        member __.GetTags spans = 
+            let getTags (_spans: NormalizedSnapshotSpanCollection) = 
+                unusedDeclarationState.Value
+                |> Option.map (fun (snapshot, data) ->
+                    data
+                    |> Array.choose (fun wordSpan ->
+                        fromRange snapshot (wordSpan.ToRange())
+                        |> Option.map (fun span -> TagSpan(span, UnusedDeclarationTag()) :> ITagSpan<_>)))
+                |> Option.getOrElse [||]
+            protectOrDefault (fun _ -> getTags spans :> _) Seq.empty
+
+        [<CLIEvent>]
+        member __.TagsChanged = unusedDeclarationChanged.Publish
 
     interface IDisposable with
         member __.Dispose() = 
