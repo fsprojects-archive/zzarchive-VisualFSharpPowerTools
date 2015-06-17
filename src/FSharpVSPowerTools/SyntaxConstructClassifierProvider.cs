@@ -422,10 +422,9 @@ namespace FSharpVSPowerTools
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(UnusedDeclarationTag))]
     [Export(typeof(IClassifierProvider))]
-    [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Document)]
-    public class SyntaxConstructClassifierProvider : IClassifierProvider, IWpfTextViewConnectionListener, IDisposable
+    public class SyntaxConstructClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
     { 
         [Import]
         internal IClassificationTypeRegistryService classificationRegistry = null;
@@ -483,26 +482,6 @@ namespace FSharpVSPowerTools
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             return GetClassifier(buffer) as ITagger<T>;
-        }
-
-        public void SubjectBuffersConnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
-        {
-        }
-
-        public void SubjectBuffersDisconnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)
-        {
-            if (reason != ConnectionReason.TextViewLifetime) return;
-
-            IDisposable classifier;
-            foreach (ITextBuffer buffer in subjectBuffers)
-            {
-                if (buffer.Properties.TryGetProperty(serviceType, out classifier))
-                {
-                    bool success = buffer.Properties.RemoveProperty(serviceType);
-                    Debug.Assert(success, "Should be able to remove classifier from the buffer");
-                    classifier.Dispose();
-                }
-            }
         }
 
         public void Dispose()
