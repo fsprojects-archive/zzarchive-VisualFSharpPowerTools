@@ -97,7 +97,6 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 var commandFilter = new GoToDefinitionFilter(doc, textView, editorOptionsFactory,
                                                              fsharpVsLanguageService, serviceProvider, projectFactory,
                                                              referenceSourceProvider, preference, fireNavigationEvent);

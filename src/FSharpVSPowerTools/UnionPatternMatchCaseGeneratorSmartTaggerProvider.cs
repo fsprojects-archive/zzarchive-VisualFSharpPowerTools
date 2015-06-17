@@ -45,7 +45,6 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 return new UnionPatternMatchCaseGeneratorSmartTagger(doc, textView,
                             undoHistoryRegistry.RegisterHistory(buffer),
                             fsharpVsLanguageService, serviceProvider,

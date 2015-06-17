@@ -48,7 +48,6 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 return new ImplementInterfaceSmartTagger(doc, textView,
                             editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer),
                             fsharpVsLanguageService, serviceProvider, projectFactory,

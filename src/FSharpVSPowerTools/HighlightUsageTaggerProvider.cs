@@ -41,7 +41,6 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                Debug.Assert(doc != null, "Text document shouldn't be null.");
                 return new HighlightUsageTagger(doc, textView, fsharpVsLanguageService,
                                                 serviceProvider, projectFactory) as ITagger<T>;
             }

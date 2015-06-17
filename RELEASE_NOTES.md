@@ -3,6 +3,8 @@
 * Fix UI freezes by moving computation to background threads ([#975](https://github.com/fsprojects/VisualFSharpPowerTools/issues/975))
 * Improve folder organization feature ([#969](https://github.com/fsprojects/VisualFSharpPowerTools/issues/969), [#986](https://github.com/fsprojects/VisualFSharpPowerTools/issues/986))
 * Fix source code formatting bugs ([fantomas#168](https://github.com/dungpa/fantomas/pull/168))
+* Optimize for better responsiveness ([#1001](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1001), [#1002](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1002))
+* Improve union pattern match case generation feature ([#1003](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1003))
 
 #### 1.8.0 - April 2 2015
 * Support operator coloring ([#936](https://github.com/fsprojects/VisualFSharpPowerTools/issues/936))
