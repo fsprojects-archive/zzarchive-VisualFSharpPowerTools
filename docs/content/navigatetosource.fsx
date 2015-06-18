@@ -9,8 +9,8 @@ Navigate to Source
 
 When the feature is enabled and users click Go to Definition (F12), Navigate to Source happens if:
 
- - current symbol originates from BCL libraries. The behaviour is to go to exact line in http://referencesource.microsoft.com/.
- - current symbol comes from an assembly with an associated source-indexed pdb file. The behaviour is to go to the source code provider that hosts associated source code.
+ - current symbol originates from BCL libraries. The behavior is to go to exact line in http://referencesource.microsoft.com/.
+ - current symbol comes from an assembly with an associated source-indexed pdb file. The behavior is to go to the source code provider that hosts associated source code.
 
 Here is a screencast of the feature in action:
 
