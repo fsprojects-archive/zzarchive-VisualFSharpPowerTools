@@ -2,7 +2,6 @@
 
 open System
 open System.IO
-open System.Diagnostics
 open System.Net.Http
 open System.Net.NetworkInformation
 open System.Windows.Threading
@@ -11,7 +10,6 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open System.Text
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open System.ComponentModel.Composition
 
 // Reference https://github.com/SLaks/Ref12/blob/master/Ref12/Services/ReferenceSourceProvider.cs
 

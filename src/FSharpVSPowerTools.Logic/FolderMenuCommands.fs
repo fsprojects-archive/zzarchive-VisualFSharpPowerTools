@@ -10,8 +10,6 @@ open System
 open System.IO
 open System.ComponentModel.Composition
 open System.ComponentModel.Design
-open System.Diagnostics
-open System.Windows
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Reflection

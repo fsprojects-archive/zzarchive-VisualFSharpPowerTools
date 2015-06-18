@@ -17,7 +17,6 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
-open SourceLink
 open SourceLink.SymbolStore
 open System.Diagnostics
 open System.Net.Http

@@ -273,7 +273,6 @@ let showDialog (wnd: Window) (shell: IVsUIShell) =
 
 open System.Threading
 open System.Windows.Threading
-open Microsoft.VisualStudio.Text.Classification
 open System.Windows.Input
 
 [<Literal>]
@@ -318,7 +317,7 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))
     let tokenSource = new CancellationTokenSource()
 
-    // This is none or forall option for unit testing purpose only
+    // This is none or for-all option for unit testing purpose only
     static let mutable skipTimerDelay = false
 
     let startNewTimer() = 
@@ -348,7 +347,7 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
        // Go ahead and synchronously get the first bit of info for the original rendering
        update()
 
-    /// Skip all timer events in order to test events instantineously
+    /// Skip all timer events in order to test events instantaneously
     static member internal SkipTimerDelay 
         with get () = skipTimerDelay
         and set v = skipTimerDelay <- v

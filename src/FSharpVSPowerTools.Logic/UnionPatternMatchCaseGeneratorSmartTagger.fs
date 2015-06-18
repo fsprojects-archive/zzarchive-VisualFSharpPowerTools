@@ -10,7 +10,6 @@ open System
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Threading

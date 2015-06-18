@@ -2,7 +2,6 @@
 
 open System
 open System.IO
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
@@ -10,7 +9,6 @@ open Microsoft.VisualStudio.Shell.Interop
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 
 [<NoComparison>]
 type FormattingResult = {

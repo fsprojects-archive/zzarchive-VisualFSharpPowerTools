@@ -18,7 +18,7 @@ type QuickInfoViewModel() as self =
     let quickInfo = self.Factory.Backing(<@@ self.QuickInfo @@>, "")
     member __.QuickInfo
         with get () = quickInfo.Value
-        and set (v) = quickInfo.Value <- v
+        and set v = quickInfo.Value <- v
 
 type QuickInfoMargin (textDocument: ITextDocument,
                       view: ITextView, 

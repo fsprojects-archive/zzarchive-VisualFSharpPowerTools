@@ -24,7 +24,7 @@ type internal ProjectProvider(project: Project,
             p.Events.ReferencesEvents.add_ReferenceAdded refAdded
             p.Events.ReferencesEvents.add_ReferenceChanged refChanged
             p.Events.ReferencesEvents.add_ReferenceRemoved refRemoved
-        | _ -> debug "[ProjectProvider] Cannot subsribe for ReferencesEvents"
+        | _ -> debug "[ProjectProvider] Cannot subscribe for ReferencesEvents"
     
     let getProperty (tag: string) =
         try 

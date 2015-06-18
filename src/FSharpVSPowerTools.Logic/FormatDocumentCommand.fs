@@ -14,7 +14,7 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
         use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
-    override x.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
+    override __.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
         let formattedText = formatSourceString isSignatureFile source config
 
         { OldTextStartIndex = 0

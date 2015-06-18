@@ -96,7 +96,7 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
         self.Factory.CommandAsyncParamChecked(wrappedWorkflow, (fun _ -> self.IsValid && self.Initialized), 
                                               [ <@@ self.IsValid @@>; <@@ self.Initialized @@> ], cts.Token)
     
-    // Cancelling the operation should cancel all async workflows and close us    
+    // Canceling the operation should cancel all async workflows and close us    
     let cancelCommand = self.Factory.CommandSync(fun _ -> cts.Cancel())
     
     // Generate the new name and show it on the textbox
@@ -156,7 +156,7 @@ type RenameDialogViewModel(originalName: string, initialContext: Async<RenameCon
     
     // Related to progress / status reporting
     member __.Progress = progress
-    // Handles lifecycle tracking (when things should be enabled, closed, etc)
+    // Handles life-cycle tracking (when things should be enabled, closed, etc)
     member __.Initialized = initialized.Value
     member __.RenameComplete = renameComplete.Value
     // The actual commands for the buttons

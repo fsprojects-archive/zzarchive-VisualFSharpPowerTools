@@ -20,7 +20,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
     [<VolatileField>]
     let mutable openDocuments = Map.empty
 
-    member x.RegisterView(view: IWpfTextView) = 
+    member __.RegisterView(view: IWpfTextView) = 
         ForegroundThreadGuard.CheckThread()
         match textDocumentFactoryService.TryGetTextDocument(view.TextBuffer) with
         | true, doc ->
@@ -42,8 +42,8 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
 
         | _ -> ()
     
-    member x.MapOpenDocuments f = 
+    member __.MapOpenDocuments f = 
         // use current collection snapshot
         Seq.map f openDocuments
 
-    member x.TryFindOpenDocument path = Map.tryFind path openDocuments
+    member __.TryFindOpenDocument path = Map.tryFind path openDocuments

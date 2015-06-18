@@ -58,7 +58,7 @@ type Logger [<ImportingConstructor>]
         let message = sprintf "Exception Message: %s\nStack Trace: %s" e.Message e.StackTrace
         x.Log LogType.Error message
                 
-    member x.MessageBox(logType, message) =
+    member __.MessageBox(logType, message) =
         let icon = getIcon logType
         let service = getShellService()
         let result = ref 0
