@@ -62,7 +62,7 @@ type ResolveUnopenedNamespaceSmartTagger
                         if not (point.InSpan newWord) then return! None
                         else
                             let! res = 
-                                vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
+                                vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.MatchingSource) |> liftAsync
                             
                             match res with
                             | Some _ -> return! None
