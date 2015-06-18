@@ -298,7 +298,7 @@ module ViewChange =
     let bufferEvent (buffer: ITextBuffer) = 
         buffer.ChangedLowPriority |> Event.map (fun _ -> ())
 
-    let tagsChanged (tagAggregator: ITagAggregator<_>) = 
+    let tagsEvent (tagAggregator: ITagAggregator<_>) = 
         tagAggregator.TagsChanged |> Event.map (fun _ -> ())
 
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =

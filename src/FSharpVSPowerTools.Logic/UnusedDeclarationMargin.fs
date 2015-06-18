@@ -62,7 +62,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
                         textView.ViewScroller.EnsureSpanVisible(SnapshotSpan(line.Start, 0), EnsureSpanVisibleOptions.ShowStart))
                     children.Add(marker) |> ignore
 
-    let docEventListener = new DocumentEventListener ([ViewChange.viewportHeightEvent textView; ViewChange.tagsChanged tagAggregator], 
+    let docEventListener = new DocumentEventListener ([ViewChange.viewportHeightEvent textView; ViewChange.tagsEvent tagAggregator], 
                                    200us, updateDisplay)
 
     interface IWpfTextViewMargin with
