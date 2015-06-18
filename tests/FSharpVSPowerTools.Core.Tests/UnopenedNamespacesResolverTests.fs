@@ -1024,7 +1024,7 @@ type Record =
 """
 
 [<Test>]
-let ``respects existing open statements identation``() =
+let ``respects existing open statements indentation``() =
     """
 namespace TopNs
 
@@ -1047,7 +1047,7 @@ namespace TopNs
 """
 
 [<Test>]
-let ``respects top level block identation in case where are no other open statements``() =
+let ``respects top level block indentation in case where are no other open statements``() =
     """
 namespace TopNs
 
@@ -1067,7 +1067,7 @@ namespace TopNs
 """
 
 [<Test>]
-let ``respects block identation in case where are no other open statements``() =
+let ``respects block indentation in case where are no other open statements``() =
     """
 namespace TopNs
 

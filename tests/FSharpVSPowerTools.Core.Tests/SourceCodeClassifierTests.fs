@@ -1311,7 +1311,7 @@ module M =
     => [ 5, [Cat.Unused, 9, 33 ]]
 
 [<Test>]
-let ``usage of an unqualified union case makes opening module in which it's defined not maked as unused``() =
+let ``usage of an unqualified union case doesn't make an opening module where it's defined to be marked as unused``() =
     """
 module M =
     type DU = Case1
@@ -1321,7 +1321,7 @@ let _ = Case1
     => [ 4, []]
 
 [<Test>]
-let ``usage of qualified union case makes opening module in which it's defined not maked as unused``() =
+let ``usage of qualified union case doesn't make an opening module where it's defined to be marked as unused``() =
     """
 module M =
     type DU = Case1
@@ -1562,7 +1562,7 @@ type DU = DU
          13, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]]
 
 [<Test>]
-let ``printf formatters in extention members``() =
+let ``printf formatters in extension members``() =
     """
 type System.Object with
     member __.M1 = 

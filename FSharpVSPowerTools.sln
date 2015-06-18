@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
 EndProject
@@ -65,7 +65,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test samples", "{CDFE262B-BF3B-4B13-B3E6-859CC2A82F0D}"
 	ProjectSection(SolutionItems) = preProject
 		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
+		tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
+		tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
 	EndProjectSection
 EndProject

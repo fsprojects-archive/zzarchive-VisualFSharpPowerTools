@@ -36,7 +36,7 @@ let ``should create XML Doc for type names``() =
     Set.contains (XmlDocable(86, 0, [])) output |> assertEqual true
 
 [<Test>]
-let ``should not create XML Doc for types which alredy have non-empty XML Docs``() =
+let ``should not create XML Doc for types which already have non-empty XML Docs``() =
     Set.contains (XmlDocable(89, 0, [])) output |> assertEqual false
 
 [<Test>]

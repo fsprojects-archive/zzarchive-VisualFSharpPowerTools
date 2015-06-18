@@ -100,7 +100,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
                 |> assertEqual [ ["open System"]; ["System.DateTime"] ])
 
     [<Test>]
-    let ``should generate correct labels for unopened namespace tags if single namespace contains multiple sutable quilified idents``() = 
+    let ``should generate correct labels for unopened namespace tags if a single namespace contains multiple suitable qualified idents``() = 
         let content = "empty"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
