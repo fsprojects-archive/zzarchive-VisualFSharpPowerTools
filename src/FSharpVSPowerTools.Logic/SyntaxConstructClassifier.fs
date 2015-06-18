@@ -135,8 +135,6 @@ type SyntaxConstructClassifier
         let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
             vsLanguageService.GetAllEntities(textDocument.FilePath, source, project)    
 
-        do! Async.SwitchToThreadPool()
-
         return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> async {
             let qualifyOpenDeclarations line endCol idents = async { 
                 let lineStr = getTextLineOneBased (line - 1)
@@ -160,6 +158,8 @@ type SyntaxConstructClassifier
                 openDecls
         }
     }
+
+    let uiContext = SynchronizationContext.Current
 
     let updateUnusedDeclarations() = 
         let worker (project, snapshot) =
@@ -217,6 +217,8 @@ type SyntaxConstructClassifier
                 Logging.logInfo "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result
                 triggerClassificationChanged snapshot "UpdateUnusedDeclarations"
 
+                // Switch back to UI thread before firing events
+                do! Async.SwitchToContext(uiContext) |> liftAsync
                 unusedDeclarationState.Swap(fun _ -> Some (snapshot, notUsedSpans |> Map.toArray |> Array.map fst)) |> ignore
                 triggerUnusedDeclarationChanged snapshot
             } |> Async.map ignore
