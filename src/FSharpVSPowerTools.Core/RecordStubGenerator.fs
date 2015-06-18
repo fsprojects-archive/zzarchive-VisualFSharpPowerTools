@@ -2,7 +2,6 @@
 
 open FSharpVSPowerTools
 open FSharpVSPowerTools.UntypedAstUtils
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range

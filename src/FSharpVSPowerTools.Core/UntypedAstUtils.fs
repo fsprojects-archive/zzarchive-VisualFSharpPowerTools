@@ -480,10 +480,7 @@ let getQuatationRanges ast =
             visitModulesAndNamespaces modules
         | _ -> ())
     quotationRanges
-    
-let private singleArgumentPrintfFunctions = set [ "printf"; "printfn"; "sprintf"; "failwithf"; "eprintf"; "eprintfn" ]
-let private twoArgumentsPrintfFunctions = set [ "fprintf"; "fprintfn"; "kprintf"; "ksprintf"; "bprintf" ]
-
+   
 /// Returns all string literal ranges
 let internal getStringLiterals ast : Range.range list =
     let result = ResizeArray() 

@@ -512,14 +512,14 @@ type IInsertContextDocument<'T> =
 
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module InsertContext =
-    /// Corrects insertion line number based on kind of scope and text surrounding the instertion point.
+    /// Corrects insertion line number based on kind of scope and text surrounding the insertion point.
     let adjustInsertionPoint state (doc: IInsertContextDocument<_>) ctx  =
         let getLineStr line = (doc.GetLineStr (state, line)).Trim()
         let line =
             match ctx.ScopeKind with
             | ScopeKind.TopModule ->
                 if ctx.Pos.Line > 1 then
-                    // it's an implicite module without any open declarations    
+                    // it's an implicit module without any open declarations    
                     let line = getLineStr (ctx.Pos.Line - 2)
                     let isImpliciteTopLevelModule = not (line.StartsWith "module" && not (line.EndsWith "="))
                     if isImpliciteTopLevelModule then 1 else ctx.Pos.Line

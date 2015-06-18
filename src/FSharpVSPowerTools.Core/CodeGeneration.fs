@@ -39,33 +39,33 @@ module internal Utils =
         let stringWriter = new StringWriter()
         let indentWriter = new IndentedTextWriter(stringWriter, " ")
 
-        member x.Write(s: string) =
+        member __.Write(s: string) =
             indentWriter.Write("{0}", s)
 
-        member x.Write(s: string, [<ParamArray>] objs: obj []) =
+        member __.Write(s: string, [<ParamArray>] objs: obj []) =
             indentWriter.Write(s, objs)
 
-        member x.WriteLine(s: string) =
+        member __.WriteLine(s: string) =
             indentWriter.WriteLine("{0}", s)
 
-        member x.WriteLine(s: string, [<ParamArray>] objs: obj []) =
+        member __.WriteLine(s: string, [<ParamArray>] objs: obj []) =
             indentWriter.WriteLine(s, objs)
 
         member x.WriteBlankLines count =
-            for i in 0 .. count - 1 do
+            for _ in 0 .. count - 1 do
                 x.WriteLine ""
 
-        member x.Indent i = 
+        member __.Indent i = 
             indentWriter.Indent <- indentWriter.Indent + i
 
-        member x.Unindent i = 
+        member __.Unindent i = 
             indentWriter.Indent <- max 0 (indentWriter.Indent - i)
 
-        member x.Dump() =
+        member __.Dump() =
             indentWriter.InnerWriter.ToString()
 
         interface IDisposable with
-            member x.Dispose() =
+            member __.Dispose() =
                 stringWriter.Dispose()
                 indentWriter.Dispose()
 

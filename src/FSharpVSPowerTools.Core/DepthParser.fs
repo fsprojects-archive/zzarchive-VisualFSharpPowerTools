@@ -321,7 +321,7 @@ module internal DepthParsing =
                 | End(sl,sc,el,ec,m) -> el,ec,sl,sc,m
 
     let qevComp = { new System.Collections.Generic.IComparer<QueueEvent> with
-                        member x.Compare(v1, v2) =
+                        member __.Compare(v1, v2) =
                             compare v1.UniqueInfo v2.UniqueInfo }
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -331,7 +331,7 @@ open System
 type DepthParser private () =
     let checker = lazy (FSharpChecker.Create())
 
-    member internal x.Checker = checker.Value
+    member internal __.Checker = checker.Value
 
     static member internal Instance = DepthParser()
 

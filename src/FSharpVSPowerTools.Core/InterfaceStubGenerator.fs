@@ -541,7 +541,7 @@ module InterfaceStubGenerator =
             missingMembers
             |> Seq.sortBy (fun (m, _) -> 
                 // Sort by normalized name and return type so that getters and setters of the same properties
-                // are guaranteed to be neighbouring.
+                // are guaranteed to be neighboring.
                 normalizePropertyName m, getReturnType m)
             |> Seq.toList
             |> loop
