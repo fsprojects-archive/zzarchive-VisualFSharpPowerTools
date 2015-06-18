@@ -169,7 +169,7 @@ type SyntaxConstructClassifier
                 
                 let! symbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                        snapshot, textDocument.FilePath, project, AllowStaleResults.MatchingSource, includeUnusedOpens(), pf) |> liftAsync
+                        snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf) |> liftAsync
                 
                 let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
                 
@@ -276,7 +276,7 @@ type SyntaxConstructClassifier
 
                     let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                         vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                            snapshot, textDocument.FilePath, currentProject, AllowStaleResults.MatchingSource, false, pf)
+                            snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, false, pf)
 
                     let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
