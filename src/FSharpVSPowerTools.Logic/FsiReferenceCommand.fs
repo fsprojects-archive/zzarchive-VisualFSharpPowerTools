@@ -3,7 +3,6 @@
 open FSharpVSPowerTools
 open EnvDTE80
 open Microsoft.VisualStudio.Shell
-open Microsoft.VisualStudio.Shell.Interop
 open System
 open EnvDTE
 open FSharpVSPowerTools.ProjectSystem

@@ -9,7 +9,6 @@ open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices

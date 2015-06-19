@@ -130,7 +130,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                 // First, yield back the word the cursor is under (if it overlaps)
                 if spans.OverlapsWith(NormalizedSnapshotSpanCollection word) then yield tagSpan word
                 // Second, yield all the other words in the file
-                // Note that we won't yield back the same word again in the wordspans collection;
+                // Note that we won't yield back the same word again in the word spans collection;
                 // the duplication is not expected.
                 for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) do
                     if span <> word then yield tagSpan span

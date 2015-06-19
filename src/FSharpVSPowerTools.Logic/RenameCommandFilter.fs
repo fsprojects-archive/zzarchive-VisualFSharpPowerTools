@@ -11,7 +11,6 @@ open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress
-open FSharpVSPowerTools.AsyncMaybe
 
 [<NoEquality; NoComparison>]
 type private DocumentState =

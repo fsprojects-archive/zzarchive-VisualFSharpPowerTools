@@ -4,7 +4,6 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio
 open System
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.TextManager.Interop
 open System.ComponentModel.Composition
 
 [<Export>]

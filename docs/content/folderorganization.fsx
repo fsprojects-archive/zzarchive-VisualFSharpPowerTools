@@ -39,7 +39,7 @@ Limitations
 -----------
 
 One of known issues causes problems when project contains two folders with the same name. 
-Our *New Folder* and *Rename Folder* dialogs validates folders names across entire project to prevent that problem from occuring.
+Our *New Folder* and *Rename Folder* dialogs validates folders names across entire project to prevent that problem from occurring.
 
 Other issues:
 
@@ -47,5 +47,5 @@ Other issues:
  - Renaming a file could make it jump out of the current folder. 
 It's a UI bug, if you close the project and reopen it, Solution Explorer shows correct folder structure again. 
 Alternatively you can move files out of the folder and move them into the folder again using menus.
- - Renaming a folder using standard F2 shortcut (inplace editing) is buggy due to issues inside F# project system. We advise you to use 'F# Power Tools --> Rename Folder' instead.
+ - Renaming a folder using standard F2 shortcut (in-place editing) is buggy due to issues inside F# project system. We advise you to use 'F# Power Tools --> Rename Folder' instead.
 *)

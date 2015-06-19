@@ -55,7 +55,7 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
                 |> List.rev
 
             lastResults.Swap (fun _ -> newResults) |> ignore
-            debug "[DepthTagger] Firing tagschanged"
+            debug "[DepthTagger] Firing tags changed"
             // Switch back to UI thread before firing events
             do! Async.SwitchToContext(uiContext)
             tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))

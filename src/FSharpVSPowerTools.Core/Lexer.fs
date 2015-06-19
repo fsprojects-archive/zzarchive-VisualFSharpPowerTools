@@ -94,23 +94,23 @@ module Lexer =
             | Parser.TOKEN_QUOTE -> GenericTypeParameterPrefix
             | Parser.TOKEN_INFIX_AT_HAT_OP ->
                  // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.
-                 // We have to check the char itself to distingush one from another.
+                 // We have to check the char itself to distinguish one from another.
                  if token.FullMatchedLength = 1 && lineStr.[token.LeftColumn] = '^' then 
                     StaticallyResolvedTypeParameterPrefix
                  else Other
             | _ -> Other
 
        
-        // Operators: Filter out overlapped oparators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
+        // Operators: Filter out overlapped operators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
         // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two).
         //
         // Generic type parameters: we convert QUOTE + IDENT tokens into single IDENT token, altering its LeftColumn 
         // and FullMathedLength (for "'type" which is tokenized as (QUOTE, left=2) + (IDENT, left=3, length=4) 
-        // we'll get (IDENT, left=2, lenght=5).
+        // we'll get (IDENT, left=2, length=5).
         //
         // Statically resolved type parameters: we convert INFIX_AT_HAT_OP + IDENT tokens into single IDENT token, altering its LeftColumn 
         // and FullMathedLength (for "^type" which is tokenized as (INFIX_AT_HAT_OP, left=2) + (IDENT, left=3, length=4) 
-        // we'll get (IDENT, left=2, lenght=5).
+        // we'll get (IDENT, left=2, length=5).
         let tokens = 
             tokens
             |> List.fold (fun (acc, lastToken) token ->
@@ -141,7 +141,7 @@ module Lexer =
             | SymbolLookupKind.ByRightColumn ->
                 tokens |> List.filter (fun x -> x.RightColumn = col)
     
-        // Select IDENT token. If failes, select OPERATOR token.
+        // Select IDENT token. If failed, select OPERATOR token.
         tokensUnderCursor
         |> List.tryFind (fun (x: DraftToken) -> 
             match x.Kind with 

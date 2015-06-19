@@ -1,9 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Folders
 
-open System
-open System.ComponentModel
-open FSharpVSPowerTools
-
 [<RequireQualifiedAccess>]
 module FolderMenuUI =
     let loadNewFolderDialog (viewModel: NewFolderNameDialogModel) =

@@ -139,7 +139,7 @@ let ``matched decl become Used, there is another already matched one below it``(
 (*** setOpenDeclsIsUsedFlag ***)
 
 [<Test>]
-let ``set IsUsed flag to all declarations wich have a given parent``() =
+let ``set IsUsed flag to all declarations which have a given parent``() =
     let decls =
         [ { openDecl [ { openDeclWithAutoOpens ["Top.Module.AlreadyUsed"] with IsUsed = true }] with IsUsed = true }
           openDecl [ openDeclWithAutoOpens ["Top.Module.NotUsed"]]

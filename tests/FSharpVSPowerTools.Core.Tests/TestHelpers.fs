@@ -22,7 +22,6 @@ limitations under the License.
 module TestHelpers
 
 open System
-open System.Collections.Generic
 open NUnit.Framework
 
 (* Fluent test helpers for use with NUnit and FsUnit. *)
@@ -60,8 +59,6 @@ let inline assertFalse condition =
 /// Assertion functions for collections.
 [<RequireQualifiedAccess>]
 module Collection =
-    open System.Collections
-
     /// Asserts that two collections are exactly equal.
     /// The collections must have the same count, and contain the exact same objects in the same order.
     let inline assertEqual<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =

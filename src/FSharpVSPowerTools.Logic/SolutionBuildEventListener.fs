@@ -39,5 +39,3 @@ type SolutionBuildEventListener(serviceProvider: IServiceProvider) as self =
     interface IDisposable with
         member __.Dispose() = 
             solutionBuildManager.UnadviseUpdateSolutionEvents(updateSolutionEventsCookie) |> ignore
-        
-

@@ -11,7 +11,7 @@ The feature is activated via a smart tagger on a union type or a union case cons
 When the cursor is placed on one of these identifiers, the smart tagger will suggest users to automatically generate pattern match clauses.
 
 Note that if the current line is `match x` or `function`, the code might not be parseable (i.e. no semantic highlighting for the current line).
-We recommend users to generate pattern match cases while the code is parsable e.g. after writing `match x with Case1 -> ()` or `function Case1 -> ()`.
+We recommend users to generate pattern match cases while the code is parseable e.g. after writing `match x with Case1 -> ()` or `function Case1 -> ()`.
 
 See the demo screencasts below.
 

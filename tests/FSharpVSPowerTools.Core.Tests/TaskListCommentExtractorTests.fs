@@ -28,7 +28,7 @@ let ``should match token case-insensitively``() =
     => [| (2, "tODo something", "File1.fs", 0, 3) |]
 
 [<Test>]
-let ``should match multiline comments``() = 
+let ``should match multi-line comments``() = 
     let lines = "(* TODO x *)(* TODO y *) let x = 1
                  (*
                  TODO other things
@@ -61,7 +61,7 @@ let ``line comments only allow asterisk, slash, parenthesis, or whitespace betwe
     => [| (2, "TODO stuff", "File1.fs", 0, 11); (2, "TODO other", "File1.fs", 2, 4); (2, "TODO full width space", "File1.fs", 4, 3) |]
 
 [<Test>]
-let ``multiline comments only allow asterisk, slash, parenthesis, or whitespace between line head and first other token``() =
+let ``multi-line comments only allow asterisk, slash, parenthesis, or whitespace between line head and first other token``() =
     (defaultOptions, "File1.fs", [| "(*(* // *) TODO stuff*)"
                                     "(*+ TODO something else *)"
                                     "(* *TODO other *)"

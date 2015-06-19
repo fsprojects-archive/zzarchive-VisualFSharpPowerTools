@@ -24,7 +24,7 @@ type CategorizedColumnSpan<'T> =
     { Category: Category
       WordSpan: WordSpan
       /// Snapshot for which the span was created.
-      /// None if the right Snapshot is maintained separatly
+      /// None if the right Snapshot is maintained separately
       Snapshot: 'T option }
 
 module private QuotationCategorizer =
@@ -235,7 +235,7 @@ module SourceCodeClassifier =
                         //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
                         match sym.Kind with
                         | SymbolKind.Ident ->
-                            // FCS returns inaccurate ranges for multiline method chains
+                            // FCS returns inaccurate ranges for multi-line method chains
                             // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
                             if r.StartLine < r.EndLine then
                                 Some (su, { SymbolKind = sym.Kind
@@ -274,9 +274,9 @@ module SourceCodeClassifier =
 
                 let span' = 
                     if (span.EndCol - span.StartCol) - symbolUse.SymbolUse.Symbol.DisplayName.Length > 0 then
-                        // The span is wider that the simbol's display name.
+                        // The span is wider that the symbol's display name.
                         // This means that we have not managed to extract last part of a long ident accurately.
-                        // Particulary, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
+                        // Particularly, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
                         // So we get ident from the lexer.
                         match lexer.GetSymbolAtLocation (span.Line - 1, span.EndCol - 1) with
                         | Some s -> 

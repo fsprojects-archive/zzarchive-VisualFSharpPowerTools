@@ -179,7 +179,7 @@ open XmlDocParsing
 type XmlDocParser private () =
     let checker = lazy (FSharpChecker.Create())
 
-    member internal x.Checker = checker.Value
+    member internal __.Checker = checker.Value
 
     static member internal Instance = XmlDocParser()
 

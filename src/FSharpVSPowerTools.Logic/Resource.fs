@@ -41,7 +41,7 @@ module Resource =
     let [<Literal>] findAllReferencesFindInProjectsMessage = "Finding symbol usages in projects..."
     
     let [<Literal>] findAllReferencesInvalidExpressionMessage = "The caret must be on a valid expression to find all references."
-    let [<Literal>] findAllReferencesIllformedExpressionMessage = "Can't find a symbol under cursor. Please make sure that the code is typechecked."
+    let [<Literal>] findAllReferencesIllformedExpressionMessage = "Can't find a symbol under cursor. Please make sure that the code is type-checked."
  
     let [<Literal>] implementInterfaceCommandName = "Explicitly implement interface"
     let [<Literal>] recordGenerationCommandName = "Generate record stubs"

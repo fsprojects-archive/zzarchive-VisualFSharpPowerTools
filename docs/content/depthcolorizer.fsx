@@ -17,7 +17,7 @@ And in the dark theme
 
 ![Depth Colorizer in the Dark theme](img/depth_colorizer_dark_theme.png)
 
-The default scheme used in Visual F# Power Tools only uses a grey border to indicate indentation in F# source code (as on the 
+The default scheme used in Visual F# Power Tools only uses a gray border to indicate indentation in F# source code (as on the 
 examples above).
 If you prefer original colorful themes, custom colors can be added to the registry as documented [here](http://lorgonblog.wordpress.com/2010/11/18/f-source-code-structural-colorizer-available/).
 

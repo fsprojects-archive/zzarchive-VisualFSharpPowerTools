@@ -297,7 +297,7 @@ module UnusedDeclarations =
             match symbol with
             | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
             // Determining that a record, DU or module is used anywhere requires
-            // inspecting all their inclosed entities (fields, cases and func / vals)
+            // inspecting all their enclosed entities (fields, cases and func / vals)
             // for usefulness, which is too expensive to do. Hence we never gray them out.
             | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
             // FCS returns inconsistent results for override members; we're going to skip these symbols.

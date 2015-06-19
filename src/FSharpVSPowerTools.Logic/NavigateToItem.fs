@@ -8,7 +8,6 @@ open Microsoft.VisualStudio.Language.NavigateTo.Interfaces
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools

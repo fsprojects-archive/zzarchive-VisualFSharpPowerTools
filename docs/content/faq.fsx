@@ -7,7 +7,7 @@
 FAQ - Frequently Asked Questions
 ==============================
 
-VFPT is slow, what can I do speed it up?
+VFPT is slow, what can I do to speed it up?
 -----------------------
 
 Our suggestion is to disable automatic features including
@@ -57,7 +57,7 @@ Why are object identifiers in members marked as unused?
 If object identifiers (`x` in `x.Member`) aren't referred anywhere in the member bodies, they are understood as unused values.
 In order to fix it, we recommend to use `__` or any identifier with `_` prefix (`_x` for example).
 
-Why are my VFPT key bindings overriden by ReSharper?
+Why are my VFPT key bindings overridden by ReSharper?
 -----------------------
 If you are using Visual F# Power Tools along side with ReSharper 8 or below, there is a [known issue](http://youtrack.jetbrains.com/issue/RSRP-409199) where some F# commands are hidden by ReSharper. 
 You can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -> Options -> Keyboard & Menus).

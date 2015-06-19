@@ -14,22 +14,22 @@ module Index =
 
     [<System.Diagnostics.DebuggerDisplay("{DebugString()}")>]
     type private IndexEntry(str: string, offset: int, item: NavigableItem, isOperator: bool) =
-        member x.String = str
-        member x.Offset = offset
-        member x.Length = str.Length - offset
-        member x.Item = item
-        member x.IsOperator = isOperator
+        member __.String = str
+        member __.Offset = offset
+        member __.Length = str.Length - offset
+        member __.Item = item
+        member __.IsOperator = isOperator
         member x.StartsWith (s: string) = 
             if s.Length > x.Length then 
                 false
             else
                 CultureInfo.CurrentCulture.CompareInfo.IndexOf(str, s, offset, s.Length, CompareOptions.IgnoreCase) = offset
-        member private x.DebugString() = sprintf "%s (offset %d) (%s)" (str.Substring offset) offset str
+        member private __.DebugString() = sprintf "%s (offset %d) (%s)" (str.Substring offset) offset str
 
     let private IndexEntryComparer =
         {
             new IComparer<IndexEntry> with
-                member x.Compare(a, b) = 
+                member __.Compare(a, b) = 
                     let res = CultureInfo.CurrentCulture.CompareInfo.Compare(a.String, a.Offset, b.String, b.Offset, CompareOptions.IgnoreCase)
                     if res = 0 then a.Offset.CompareTo(b.Offset) else res
         }
@@ -40,7 +40,7 @@ module Index =
     type Builder() =
         let entries = ResizeArray()
 
-        member x.Add(items: seq<NavigableItem>) =
+        member __.Add(items: seq<NavigableItem>) =
             for item in items do
                 let isOperator, name = 
                     if PrettyNaming.IsMangledOpName item.Name then 
@@ -50,11 +50,11 @@ module Index =
                 for i = 0 to name.Length - 1 do
                     entries.Add(IndexEntry(name, i, item, isOperator))
 
-        member x.BuildIndex() =
+        member __.BuildIndex() =
             entries.Sort(IndexEntryComparer)
             {
                 new IIndexedNavigableItems with
-                    member x.Find(searchValue, processor) =
+                    member __.Find(searchValue, processor) =
                         if entries.Count > 0 then 
                             let entryToFind = IndexEntry(searchValue, 0, Unchecked.defaultof<_>, Unchecked.defaultof<_>)
                             let initial = 

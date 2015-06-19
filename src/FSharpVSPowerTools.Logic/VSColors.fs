@@ -1,13 +1,12 @@
 ﻿namespace FSharpVSPowerTools.Common
 
-open System
 open System.Reflection
 open Microsoft.VisualStudio.Shell
 open FSharpVSPowerTools
 
-// A port from https://github.com/tomasr/viasfora/blob/master/Viasfora/Util/VsColors.cs
+// A port of https://github.com/tomasr/viasfora/blob/master/Viasfora/Util/VsColors.cs
 
-type VSColors () =
+type VSColors() =
     static let colorTypeOpt =
         try
             let vsShellAssembly = Assembly.Load("Microsoft.VisualStudio.Shell.11.0, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")

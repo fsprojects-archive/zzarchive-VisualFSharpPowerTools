@@ -4,8 +4,6 @@ open System
 open System.Diagnostics
 open System.IO
 open System.Configuration
-open System.Reflection
-open Microsoft.Win32
 open System.Runtime.InteropServices
 open System.Text.RegularExpressions
 
@@ -37,7 +35,7 @@ type internal FSharpCompilerVersion =
         | FSharp_2_0 -> "4.0.0.0"
         | FSharp_3_0 -> "4.3.0.0"
         | FSharp_3_1 -> "4.3.1.0"
-    /// The current requested language version can be overriden by the user using environment variable.
+    /// The current requested language version can be overridden by the user using environment variable.
     static member LatestKnown = 
         match System.Environment.GetEnvironmentVariable("FSHARP_PREFERRED_VERSION") with
         | null -> FSharp_3_1
@@ -195,7 +193,7 @@ module internal FSharpEnvironment =
       let reg = new Regex("mono.* (\/.*)\/fsi\.exe")
       let res = reg.Match(str)
       if res.Success then Some(res.Groups.[1].Value) else None
-    with e -> 
+    with _ -> 
       None
 
   let BackupInstallationProbePoints = 
@@ -241,7 +239,7 @@ module internal FSharpEnvironment =
       | None -> 
 
       // On Unix we probe 'bin' under various hardwired paths for the scripts 'fsharpc' and 'fsharpi'. 
-      // We then loko in the script to see the Mono location it is pointing to. 
+      // We then look in the script to see the Mono location it is pointing to. 
       // This is pretty fragile, e.g. the script lookup is done via a regular expression.
       // Really we should just search the path or otherwise resolve the 'mono' command?
       BackupInstallationProbePoints 
@@ -286,7 +284,7 @@ module internal FSharpEnvironment =
 
   let folderOfDefaultFSharpCore(reqLangVersion: FSharpCompilerVersion, targetFramework) = 
     try 
-      Debug.WriteLine(sprintf "Resolution: Determing folder of FSharp.Core for target framework '%A'" targetFramework)
+      Debug.WriteLine(sprintf "Resolution: Determining folder of FSharp.Core for target framework '%A'" targetFramework)
       let result = tryAppConfig "fsharp-core-location"
       match result with 
       | Some _ ->  result 
@@ -366,7 +364,7 @@ module internal FSharpEnvironment =
         | Some _ -> result
         | None -> None
 
-    with e -> 
+    with _ -> 
       Debug.Assert(false, "Error while determining default location of F# compiler")
       None
 

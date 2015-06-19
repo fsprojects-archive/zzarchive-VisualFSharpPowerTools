@@ -4,7 +4,6 @@ open System
 open System.Diagnostics
 open FSharpVSPowerTools
 open FSharpVSPowerTools.UntypedAstUtils
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
@@ -618,7 +617,7 @@ let private formatCase (ctxt: Context) (case: FSharpUnionCase) =
                             sprintf "%c%s" (Char.ToLower(field.Name.[0])) (field.Name.Substring(1))
                 |]
 
-            // Deduplicate field names if there are conflicts
+            // De-duplicate field names if there are conflicts
             let newFieldNames =
                 Seq.unfold (fun ((i, currentNamesWithIndices) as _state) ->
                     if i < fieldNames.Length then

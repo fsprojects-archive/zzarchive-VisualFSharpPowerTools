@@ -74,13 +74,13 @@ module LocalModule =
             and set(x) = ()
 
 ///
-let functionWithEmptyXmlDocComment x = ()			
+let functionWithEmptyXmlDocComment x = ()
 
 /// <
-let functionWithOpenSquareBracketOnlyXmlDocComment x = ()			
+let functionWithOpenSquareBracketOnlyXmlDocComment x = ()
 
 /// function
-let functionWithNormalXmlDocComment x = ()			
+let functionWithNormalXmlDocComment x = ()
 
 /// 
 type TypeWithEmptyXmlDocComment = class end
@@ -89,6 +89,5 @@ type TypeWithEmptyXmlDocComment = class end
 type TypeWithXmlDocComment() =
     ///
     member x.X = ()
-	/// member
-	member x.Y = ()
-	
+    /// member
+    member x.Y = ()

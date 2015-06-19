@@ -73,14 +73,14 @@ module OpenDeclarationGetter =
             let removePrefix prefix (str: string) =
                 if str.StartsWith prefix then Some (str.Substring(prefix.Length).Trim()) else None
 
-            (* Tooltip at this point is a bunch of lines. One or two lines corespond to each open statement.
+            (* Tooltip at this point is a bunch of lines. One or two lines correspond to each open statement.
                If an open statement is fully qualified, then a single line corresponds to it:
                "module My.Module" or "namespace My.Namespace" (for namespaces).
                If it's a relative module open statement, then two lines correspond to it:
                "module Module"
                "from My".
                If a relative module open statement is actually opens several modules (being a suffix of several parent 
-               modules / namespaces), then several "module/namespace + from" line pairs correspont to it:
+               modules / namespaces), then several "module/namespace + from" line pairs correspond to it:
                "module Module"
                "from My"
                "module Module"

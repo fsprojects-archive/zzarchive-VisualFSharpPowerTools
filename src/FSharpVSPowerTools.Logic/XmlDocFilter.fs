@@ -27,7 +27,7 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
     interface IOleCommandTarget with
-        member x.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
+        member __.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
                 match getTypedChar pvaIn with
                 | ('/' | '<') as lastChar ->
@@ -71,6 +71,6 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                 | _ -> ()
             passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
 
-        member x.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD [], pCmdText: IntPtr) =
+        member __.QueryStatus(pguidCmdGroup: byref<Guid>, cCmds: uint32, prgCmds: OLECMD [], pCmdText: IntPtr) =
             passThruToEditor.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText)
 
