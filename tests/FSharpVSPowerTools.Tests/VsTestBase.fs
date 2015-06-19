@@ -3,10 +3,6 @@
 open TestUtilities.Mocks
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open Foq
-open Microsoft.VisualStudio.Editor
-open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 
 /// Replace internal project providers by external ones for testing
@@ -85,4 +81,3 @@ type VsTestBase() =
             // Assume that this kind of project provider doesn't have referenced projects
             x.AddProject(project)
         x.SetActiveDocument(filePath)
-        

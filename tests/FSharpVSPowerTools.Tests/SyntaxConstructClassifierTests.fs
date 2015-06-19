@@ -54,12 +54,15 @@ module SyntaxConstructClassifierTests =
 #endif
     
     let helper = new SyntaxConstructClassifierHelper()
-    let fileName = getTempFileName ".fsx"
+    let mutable fileName = null 
 
     [<TestFixtureSetUp>]
-    let setUp() =
+    let fixtureSetUp() =
         TestUtilities.AssertListener.Initialize()
         DocumentEventListener.SkipTimerDelay <- true
+
+    [<SetUp>]
+    let setUp() = fileName <- getTempFileName ".fsx"
 
     [<Test>]
     let ``should return a syngle operator symbol if the code doesn't contain any other symbols``() = 
