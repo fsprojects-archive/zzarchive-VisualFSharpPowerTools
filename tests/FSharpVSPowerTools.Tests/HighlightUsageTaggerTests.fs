@@ -5,7 +5,6 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
-open System.IO
 
 type HighlightUsageTaggerHelper() =    
     inherit VsTestBase()
@@ -37,6 +36,8 @@ type HighlightUsageTaggerHelper() =
             (lineStart, colStart, lineEnd, colEnd - 1))
 
 module HighlightUsageTaggerTaggerTests =
+    open System.IO
+
 #if APPVEYOR
     let timeout = 60000<ms>
 #else
@@ -44,13 +45,19 @@ module HighlightUsageTaggerTaggerTests =
 #endif
 
     let helper = HighlightUsageTaggerHelper()
-    let fileName = getTempFileName ".fsx"
+    let mutable fileName = null
 
     [<TestFixtureSetUp>]
-    let setUp() =
+    let fixtureSetUp() =
         TestUtilities.AssertListener.Initialize()
         DocumentEventListener.SkipTimerDelay <- true
         Logger.GlobalServiceProvider <- helper.ServiceProvider
+
+    [<SetUp>]
+    let setUp() = 
+        // we must use unique name for each test because we use `AllowStaleResults.MatchingSource` 
+        // in HighlightUsageTagger
+        fileName <- getTempFileName ".fsx"
 
     [<Test>]
     let ``should not display tags if moving to a place without symbol``() = 
@@ -202,6 +209,7 @@ module Test =
 """
         let projectFileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project2.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project21.fs"
+        File.WriteAllText (fileName, content)
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let view = helper.GetView(buffer)

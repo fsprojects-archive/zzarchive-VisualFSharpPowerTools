@@ -1,4 +1,5 @@
-﻿namespace Project2
+
+namespace Project2
 
 module Test =
     let _ = Project1.Class11()
