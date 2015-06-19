@@ -10,6 +10,7 @@ using EnvDTE;
 using FSharpVSPowerTools.HighlightUsage;
 using FSharpVSPowerTools.ProjectSystem;
 using System;
+using EditorUtils;
 
 namespace FSharpVSPowerTools
 {
@@ -30,6 +31,8 @@ namespace FSharpVSPowerTools
         [Import]
         internal ProjectFactory projectFactory = null;
 
+        private readonly object key = new object();
+
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // Only provide highlighting on the top-level buffer
@@ -41,8 +44,12 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new HighlightUsageTagger(doc, textView, fsharpVsLanguageService,
-                                                serviceProvider, projectFactory) as ITagger<T>;
+                var tagger = EditorUtilsFactory.CreateBasicTagger<HighlightUsageTag>(
+                    textView.Properties,
+                    key,
+                    () => new HighlightUsageTagger(doc, textView, fsharpVsLanguageService,
+                                                   serviceProvider, projectFactory));
+                return (ITagger<T>)(object)tagger;
             }
 
             return null;
