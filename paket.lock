@@ -1,6 +1,7 @@
 NUGET
   remote: http://nuget.org/api/v2
   specs:
+    EditorUtils (1.4.0.0)
     Expression.Blend.Sdk (1.0.2)
     FAKE (3.35.2)
     Fantomas (1.7.0)
