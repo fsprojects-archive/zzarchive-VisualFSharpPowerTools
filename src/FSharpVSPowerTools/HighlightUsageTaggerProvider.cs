@@ -44,11 +44,12 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                EditorUtilsFactory.CreateBasicTagger<HighlightUsageTag>(
+                var tagger = EditorUtilsFactory.CreateBasicTagger<HighlightUsageTag>(
                     textView.Properties,
                     key,
                     () => new HighlightUsageTagger(doc, textView, fsharpVsLanguageService,
                                                    serviceProvider, projectFactory));
+                return (ITagger<T>)(object)tagger;
             }
 
             return null;

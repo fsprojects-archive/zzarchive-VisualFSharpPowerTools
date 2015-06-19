@@ -146,7 +146,4 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             
     interface IDisposable with
         member __.Dispose() = 
-            (docEventListener :> IDisposable).Dispose()
-
-    
-
+            (docEventListener :> IDisposable).Dispose() 
