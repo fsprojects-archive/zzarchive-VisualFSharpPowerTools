@@ -36,6 +36,8 @@ type HighlightUsageTaggerHelper() =
             (lineStart, colStart, lineEnd, colEnd - 1))
 
 module HighlightUsageTaggerTaggerTests =
+    open System.IO
+
 #if APPVEYOR
     let timeout = 60000<ms>
 #else
@@ -207,6 +209,7 @@ module Test =
 """
         let projectFileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project2.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project21.fs"
+        File.WriteAllText (fileName, content)
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let view = helper.GetView(buffer)

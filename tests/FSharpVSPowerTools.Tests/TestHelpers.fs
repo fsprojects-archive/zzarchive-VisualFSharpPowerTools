@@ -9,7 +9,11 @@ open Microsoft.VisualStudio.Text
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"
 
-let getTempFileName ext = Path.Combine(__SOURCE_DIRECTORY__, sprintf "test%O%s" (Guid.NewGuid()) ext) 
+let getTempFileName =
+    let counter = ref 0
+    fun ext ->
+        incr counter
+        Path.Combine(__SOURCE_DIRECTORY__, sprintf "test%i%s" !counter ext)
 
 let createMockTextBuffer content fileName = 
     MockTextBuffer(content, filename = fileName, contentType = "F#")
