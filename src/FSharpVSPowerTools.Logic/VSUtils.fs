@@ -316,6 +316,7 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
     let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))
     let tokenSource = new CancellationTokenSource()
+    let mutable disposed = false
 
     // This is a none or for-all option for unit testing purpose only
     static let mutable skipTimerDelay = false
@@ -354,9 +355,11 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
 
     interface IDisposable with
         member __.Dispose() =
-            tokenSource.Cancel()
-            tokenSource.Dispose()
-            timer.Stop()
+            if not disposed then
+                tokenSource.Cancel()
+                tokenSource.Dispose()
+                timer.Stop()
+                disposed <- true
          
 type Async with
     /// An equivalence of Async.StartImmediate which catches and logs raised exceptions
