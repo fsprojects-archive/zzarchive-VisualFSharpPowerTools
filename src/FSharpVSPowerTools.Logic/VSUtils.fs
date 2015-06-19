@@ -317,7 +317,7 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                                 Interval = TimeSpan.FromMilliseconds (float delayMillis))
     let tokenSource = new CancellationTokenSource()
 
-    // This is none or for-all option for unit testing purpose only
+    // This is a none or for-all option for unit testing purpose only
     static let mutable skipTimerDelay = false
 
     let startNewTimer() = 

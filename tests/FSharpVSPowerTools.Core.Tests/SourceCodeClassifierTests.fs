@@ -717,7 +717,7 @@ let tupleFunc (x: Tuple) : Tuple = x
          3, [ Cat.Function, 4, 13; Cat.ReferenceType, 18, 23; Cat.ReferenceType, 27, 32; Cat.Operator, 33, 34 ]]
 
 [<Test>]
-let ``multiline method chain``() = 
+let ``multi-line method chain``() = 
     """
 let _ =
     "string"
@@ -1132,7 +1132,7 @@ let x = Class()
     => [ 6, [ Cat.Unused, 5, 11 ]]
 
 [<Test>]
-let ``open declaration is not marked as unused if a type from it used in a constructor signarute``() =
+let ``open declaration is not marked as unused if one of its types is used in a constructor signature``() =
     """
 module M =
     type Class() = class end
@@ -1152,7 +1152,7 @@ type Site (x: int -> unit) = class end
     => [ 4, [ Cat.Unused, 5, 6 ] ]
 
 [<Test>]
-let ``static extension method applied to a type results that both namespaces /where the type is declared and where the extension is declared/ is not marked as unudes``() =
+let ``static extension method applied to a type results that both namespaces /where the type is declared and where the extension is declared/ is not marked as unused``() =
     """
 module Extensions =
     type System.DateTime with
@@ -1164,7 +1164,7 @@ let _ = DateTime.ExtensionMethod
     => [ 5, []; 6, []]
     
 [<Test>]
-let ``static extension property applied to a type results that both namespaces /where the type is declared and where the extension is declared/ is not marked as unudes``() =
+let ``static extension property applied to a type results that both namespaces /where the type is declared and where the extension is declared/ is not marked as unused``() =
     """
 module Extensions =
     type System.DateTime with
@@ -1583,7 +1583,7 @@ let ``printf formatters in triple-quoted string``() =
     => [ 1, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 19, 21 ]]
 
 [<Test>]
-let ``multiline printf formatters``() =
+let ``multi-line printf formatters``() =
     """
 let _ = printfn "foo %s %d
                  %A bar
@@ -1694,7 +1694,7 @@ let _ = "\n\r \t\b foo \\ \" \' \u08FF \U0102AABB \u012 \U01234"
               Cat.Escaped, 39, 49 ]]
 
 [<Test>]
-let ``escaped symbols in multiline string``() =
+let ``escaped symbols in multi-line string``() =
     """
 let _ = "\n
 \r" """
