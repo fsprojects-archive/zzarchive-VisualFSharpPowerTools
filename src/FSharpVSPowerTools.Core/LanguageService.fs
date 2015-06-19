@@ -537,7 +537,7 @@ type LanguageService (?fileSystem: IFileSystem) =
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source, ?withCache) =
         async {
-            let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.MatchingSource)
+            let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
                 Some [ match checkResults.GetPartialAssemblySignature() with
                        | Some signature -> 
@@ -567,7 +567,7 @@ type LanguageService (?fileSystem: IFileSystem) =
 
     member x.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, project: FSharpProjectOptions, file, source) =
         async {
-            let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.MatchingSource)
+            let! checkResults = x.ParseAndCheckFileInProject (project, file, source, AllowStaleResults.No)
             return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)
         }
 

@@ -136,7 +136,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             let! symbolUses = 
                 vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(
                     signature, filePath, signatureProject, 
-                    AllowStaleResults.MatchingSource, checkForUnusedOpens=false, profiler=Profiler())
+                    AllowStaleResults.No, checkForUnusedOpens=false, profiler=Profiler())
 
             /// Try to reconstruct fully qualified name for the purpose of matching symbols
             let rec tryGetFullyQualifiedName (symbol: FSharpSymbol) = 
