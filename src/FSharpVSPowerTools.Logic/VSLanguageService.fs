@@ -160,7 +160,7 @@ type VSLanguageService
     member __.ParseAndCheckFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
         async {
             let! opts = projectProvider.GetProjectCheckerOptions instance
-            return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.MatchingSource) 
+            return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) 
         }
 
     member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
