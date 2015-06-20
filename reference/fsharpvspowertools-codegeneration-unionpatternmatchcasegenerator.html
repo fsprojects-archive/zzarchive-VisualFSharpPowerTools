@@ -36,6 +36,9 @@
 
 
 <h1>UnionPatternMatchCaseGenerator</h1>
+<p>
+  <span>Namespace: FSharpVSPowerTools.CodeGeneration</span><br />
+</p>
 <div class="xmldoc">
 </div>
 
@@ -73,69 +76,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '148', 148)" onmouseover="showTip(event, '148', 148)">
+          <code onmouseout="hideTip(event, '151', 151)" onmouseover="showTip(event, '151', 151)">
             checkThatPatternMatchExprEndsWithCompleteClause (...)
           </code>
-          <div class="tip" id="148">
+          <div class="tip" id="151">
             <strong>Signature:</strong> expr:PatternMatchExpr -&gt; bool<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L543-543" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '149', 149)" onmouseover="showTip(event, '149', 149)">
-            formatMatchExpr (...)
-          </code>
-          <div class="tip" id="149">
-            <strong>Signature:</strong> insertionParams:UnionMatchCasesInsertionParams -&gt; caseDefaultValue:string -&gt; patMatchExpr:PatternMatchExpr -&gt; entity:FSharpEntity -&gt; string<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L641-641" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '150', 150)" onmouseover="showTip(event, '150', 150)">
-            getWrittenCases patMatchExpr
-          </code>
-          <div class="tip" id="150">
-            <strong>Signature:</strong> patMatchExpr:PatternMatchExpr -&gt; Set&lt;string * string list&gt;<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L340-340" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '151', 151)" onmouseover="showTip(event, '151', 151)">
-            shouldGenerateUnionPatternMatchCases (...)
-          </code>
-          <div class="tip" id="151">
-            <strong>Signature:</strong> patMatchExpr:PatternMatchExpr -&gt; entity:FSharpEntity -&gt; bool<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L424-424" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L548-548" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -146,14 +95,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '152', 152)" onmouseover="showTip(event, '152', 152)">
-            tryFindBarTokenLPosInRange (...)
+            formatMatchExpr (...)
           </code>
           <div class="tip" id="152">
-            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;Project,&#39;Pos,&#39;Range&gt; -&gt; project:&#39;Project -&gt; range:range -&gt; document:IDocument -&gt; (FSharpTokenInfo * pos) option<br />
-                          <strong>Type parameters:</strong> 'Project, 'Pos, 'Range          </div>
+            <strong>Signature:</strong> insertionParams:UnionMatchCasesInsertionParams -&gt; caseDefaultValue:string -&gt; patMatchExpr:PatternMatchExpr -&gt; entity:FSharpEntity -&gt; string<br />
+                      </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L441-441" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L643-643" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -164,14 +113,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '153', 153)" onmouseover="showTip(event, '153', 153)">
-            tryFindCaseInsertionParamsAtPos (...)
+            getWrittenCases patMatchExpr
           </code>
           <div class="tip" id="153">
-            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;Project,&#39;Pos,&#39;Range&gt; -&gt; project:&#39;Project -&gt; pos:&#39;Pos -&gt; document:IDocument -&gt; Async&lt;(PatternMatchExpr * UnionMatchCasesInsertionParams) option&gt;<br />
-                          <strong>Type parameters:</strong> 'Project, 'Pos, 'Range          </div>
+            <strong>Signature:</strong> patMatchExpr:PatternMatchExpr -&gt; Set&lt;string * string list&gt;<br />
+                      </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L561-561" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L345-345" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -182,14 +131,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '154', 154)" onmouseover="showTip(event, '154', 154)">
-            tryFindInsertionParams (...)
+            shouldGenerateUnionPatternMatchCases (...)
           </code>
           <div class="tip" id="154">
-            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;?20770,&#39;?20771,&#39;Range&gt; -&gt; project:&#39;?20770 -&gt; document:IDocument -&gt; patMatchExpr:PatternMatchExpr -&gt; UnionMatchCasesInsertionParams option<br />
-                          <strong>Type parameters:</strong> '?20770, '?20771, 'Range          </div>
+            <strong>Signature:</strong> patMatchExpr:PatternMatchExpr -&gt; entity:FSharpEntity -&gt; bool<br />
+                      </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L447-447" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L429-429" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -200,14 +149,14 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '155', 155)" onmouseover="showTip(event, '155', 155)">
-            tryFindPatternMatchExprInBufferAtPos (...)
+            tryFindBarTokenLPosInRange (...)
           </code>
           <div class="tip" id="155">
-            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;Project,&#39;Pos,&#39;Range&gt; -&gt; project:&#39;Project -&gt; pos:&#39;Pos -&gt; document:IDocument -&gt; Async&lt;PatternMatchExpr option&gt;<br />
+            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;Project,&#39;Pos,&#39;Range&gt; -&gt; project:&#39;Project -&gt; range:range -&gt; document:IDocument -&gt; (FSharpTokenInfo * pos) option<br />
                           <strong>Type parameters:</strong> 'Project, 'Pos, 'Range          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L431-431" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L446-446" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -218,14 +167,68 @@
         <td class="member-name">
 
           <code onmouseout="hideTip(event, '156', 156)" onmouseover="showTip(event, '156', 156)">
-            tryFindUnionDefinitionFromPos (...)
+            tryFindCaseInsertionParamsAtPos (...)
           </code>
           <div class="tip" id="156">
+            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;Project,&#39;Pos,&#39;Range&gt; -&gt; project:&#39;Project -&gt; pos:&#39;Pos -&gt; document:IDocument -&gt; Async&lt;(PatternMatchExpr * UnionMatchCasesInsertionParams) option&gt;<br />
+                          <strong>Type parameters:</strong> 'Project, 'Pos, 'Range          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L566-566" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '157', 157)" onmouseover="showTip(event, '157', 157)">
+            tryFindInsertionParams (...)
+          </code>
+          <div class="tip" id="157">
+            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;?42106,&#39;?42107,&#39;Range&gt; -&gt; project:&#39;?42106 -&gt; document:IDocument -&gt; patMatchExpr:PatternMatchExpr -&gt; UnionMatchCasesInsertionParams option<br />
+                          <strong>Type parameters:</strong> '?42106, '?42107, 'Range          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L452-452" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '158', 158)" onmouseover="showTip(event, '158', 158)">
+            tryFindPatternMatchExprInBufferAtPos (...)
+          </code>
+          <div class="tip" id="158">
+            <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;Project,&#39;Pos,&#39;Range&gt; -&gt; project:&#39;Project -&gt; pos:&#39;Pos -&gt; document:IDocument -&gt; Async&lt;PatternMatchExpr option&gt;<br />
+                          <strong>Type parameters:</strong> 'Project, 'Pos, 'Range          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L436-436" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '159', 159)" onmouseover="showTip(event, '159', 159)">
+            tryFindUnionDefinitionFromPos (...)
+          </code>
+          <div class="tip" id="159">
             <strong>Signature:</strong> codeGenService:ICodeGenerationService&lt;&#39;Project,&#39;Pos,&#39;Range&gt; -&gt; project:&#39;Project -&gt; pos:&#39;Pos -&gt; document:IDocument -&gt; Async&lt;(&#39;Range * PatternMatchExpr * FSharpEntity * UnionMatchCasesInsertionParams) option&gt;<br />
                           <strong>Type parameters:</strong> 'Project, 'Pos, 'Range          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L574-574" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/UnionPatternMatchCaseGenerator.fs#L577-577" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -271,6 +274,7 @@
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
                 <li><a href="./../generatereferences.html">Generate references for F# Interactive</a></li>
                 <li><a href="./../navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./../quickinfopanel.html">Quick info panel</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

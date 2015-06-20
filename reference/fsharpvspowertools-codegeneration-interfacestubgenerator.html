@@ -36,6 +36,9 @@
 
 
 <h1>InterfaceStubGenerator</h1>
+<p>
+  <span>Namespace: FSharpVSPowerTools.CodeGeneration</span><br />
+</p>
 <div class="xmldoc">
 </div>
 
@@ -50,10 +53,10 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '133', 133)" onmouseover="showTip(event, '133', 133)">
+          <code onmouseout="hideTip(event, '136', 136)" onmouseover="showTip(event, '136', 136)">
             formatInterface (...)
           </code>
-          <div class="tip" id="133">
+          <div class="tip" id="136">
             <strong>Signature:</strong> startColumn:int -&gt; indentation:int -&gt; typeInstances:string [] -&gt; objectIdent:string -&gt; methodBody:string -&gt; displayContext:FSharpDisplayContext -&gt; excludedMemberSignatures:Set&lt;string&gt; -&gt; e:FSharpEntity -&gt; string<br />
                       </div>
         </td>
@@ -64,15 +67,17 @@
             </a>
           <p>Generate stub implementation of an interface at a start column</p>
 
+
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '134', 134)" onmouseover="showTip(event, '134', 134)">
+          <code onmouseout="hideTip(event, '137', 137)" onmouseover="showTip(event, '137', 137)">
             getImplementedMemberSignatures (...)
           </code>
-          <div class="tip" id="134">
+          <div class="tip" id="137">
             <strong>Signature:</strong> getMemberByLocation:(string * range -&gt; Async&lt;FSharpSymbolUse option&gt;) -&gt; displayContext:FSharpDisplayContext -&gt; interfaceData:InterfaceData -&gt; Async&lt;Set&lt;string&gt;&gt;<br />
                       </div>
         </td>
@@ -87,15 +92,17 @@ Because it isn't, we implement a crude way of getting member signatures:
  (2) Check symbols of those members based on ranges
  (3) If any symbol found, capture its member signature</p>
 
+
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '135', 135)" onmouseover="showTip(event, '135', 135)">
+          <code onmouseout="hideTip(event, '138', 138)" onmouseover="showTip(event, '138', 138)">
             getInterfaceMembers e
           </code>
-          <div class="tip" id="135">
+          <div class="tip" id="138">
             <strong>Signature:</strong> e:FSharpEntity -&gt; seq&lt;FSharpMemberOrFunctionOrValue * seq&lt;FSharpGenericParameter * FSharpType&gt;&gt;<br />
                       </div>
         </td>
@@ -106,15 +113,17 @@ Because it isn't, we implement a crude way of getting member signatures:
             </a>
           <p>Get members in the decreasing order of inheritance chain</p>
 
+
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '136', 136)" onmouseover="showTip(event, '136', 136)">
+          <code onmouseout="hideTip(event, '139', 139)" onmouseover="showTip(event, '139', 139)">
             getMemberNameAndRanges _arg1
           </code>
-          <div class="tip" id="136">
+          <div class="tip" id="139">
             <strong>Signature:</strong> _arg1:InterfaceData -&gt; (string * range) list<br />
                       </div>
         </td>
@@ -127,15 +136,17 @@ Because it isn't, we implement a crude way of getting member signatures:
 In case of properties, intrinsic ranges might not be correct for the purpose of getting
 positions of 'member', which indicate the indentation for generating new members</p>
 
+
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '137', 137)" onmouseover="showTip(event, '137', 137)">
+          <code onmouseout="hideTip(event, '140', 140)" onmouseover="showTip(event, '140', 140)">
             hasNoInterfaceMember e
           </code>
-          <div class="tip" id="137">
+          <div class="tip" id="140">
             <strong>Signature:</strong> e:FSharpEntity -&gt; bool<br />
                       </div>
         </td>
@@ -146,15 +157,17 @@ positions of 'member', which indicate the indentation for generating new members
             </a>
           <p>Check whether an interface is empty</p>
 
+
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '138', 138)" onmouseover="showTip(event, '138', 138)">
+          <code onmouseout="hideTip(event, '141', 141)" onmouseover="showTip(event, '141', 141)">
             isInterface e
           </code>
-          <div class="tip" id="138">
+          <div class="tip" id="141">
             <strong>Signature:</strong> e:FSharpEntity -&gt; bool<br />
                       </div>
         </td>
@@ -165,15 +178,17 @@ positions of 'member', which indicate the indentation for generating new members
             </a>
           <p>Check whether an entity is an interface or type abbreviation of an interface</p>
 
+
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '139', 139)" onmouseover="showTip(event, '139', 139)">
+          <code onmouseout="hideTip(event, '142', 142)" onmouseover="showTip(event, '142', 142)">
             tryFindInterfaceDeclaration (...)
           </code>
-          <div class="tip" id="139">
+          <div class="tip" id="142">
             <strong>Signature:</strong> pos:pos -&gt; parsedInput:ParsedInput -&gt; InterfaceData option<br />
                       </div>
         </td>
@@ -183,6 +198,8 @@ positions of 'member', which indicate the indentation for generating new members
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
           <p>Find corresponding interface declaration at a given position</p>
+
+
 
         </td>
       </tr>
@@ -225,6 +242,7 @@ positions of 'member', which indicate the indentation for generating new members
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
                 <li><a href="./../generatereferences.html">Generate references for F# Interactive</a></li>
                 <li><a href="./../navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./../quickinfopanel.html">Quick info panel</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

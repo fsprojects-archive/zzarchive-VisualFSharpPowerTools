@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>OpenDeclarationGetter - Visual F# Power Tools</title>
+    <title>AssemblyContentCacheEntry - Visual F# Power Tools</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko, Denis Ok">
@@ -35,56 +35,31 @@
 
 
 
-<h1>OpenDeclarationGetter</h1>
+<h1>AssemblyContentCacheEntry</h1>
 <p>
   <span>Namespace: FSharpVSPowerTools</span><br />
+  <span>Parent Module: <a href="fsharpvspowertools-assemblycontentprovider.html">AssemblyContentProvider</a></span>
 </p>
 <div class="xmldoc">
 </div>
-
-<!-- Render nested types and modules, if there are any -->
-  <h2>Nested types and modules</h2>
-  <div>
-      <table class="table table-bordered type-list">
-    <thead>
-      <tr><td>Type</td><td>Description</td></tr>
-    </thead>
-    <tbody>
-        <tr>
-          <td class="type-name">
-            <a href="fsharpvspowertools-opendeclarationgetter-endcolumn.html">EndColumn</a>
-          </td>
-          <td class="xmldoc"></td>
-        </tr>
-        <tr>
-          <td class="type-name">
-            <a href="fsharpvspowertools-opendeclarationgetter-line.html">Line</a>
-          </td>
-          <td class="xmldoc"></td>
-        </tr>
-    </tbody>
-  </table>
-
-  </div>
-
-  <h3>Functions and values</h3>
+  <h3>Record Fields</h3>
   <table class="table table-bordered member-list">
     <thead>
-      <tr><td>Function or value</td><td>Description</td></tr>
+      <tr><td>Record Field</td><td>Description</td></tr>
     </thead>
     <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '35', 35)" onmouseover="showTip(event, '35', 35)">
-            getEffectiveOpenDeclarationsAtLocation (...)
+          <code onmouseout="hideTip(event, '162', 162)" onmouseover="showTip(event, '162', 162)">
+            ContentType
           </code>
-          <div class="tip" id="35">
-            <strong>Signature:</strong> pos:pos -&gt; ast:ParsedInput -&gt; string list<br />
+          <div class="tip" id="162">
+            <strong>Signature:</strong> AssemblyContentType<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L274-274" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs#L92-92" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -94,15 +69,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '36', 36)" onmouseover="showTip(event, '36', 36)">
-            getOpenDeclarations (...)
+          <code onmouseout="hideTip(event, '163', 163)" onmouseover="showTip(event, '163', 163)">
+            Entities
           </code>
-          <div class="tip" id="36">
-            <strong>Signature:</strong> ast:ParsedInput option -&gt; entities:RawEntity list option -&gt; qualifyOpenDeclarations:(Line -&gt; EndColumn -&gt; Idents -&gt; Async&lt;RawOpenDeclaration list&gt;) -&gt; Async&lt;OpenDeclaration list&gt;<br />
+          <div class="tip" id="163">
+            <strong>Signature:</strong> RawEntity list<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L172-172" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs#L93-93" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -112,87 +87,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '37', 37)" onmouseover="showTip(event, '37', 37)">
-            getUnusedOpenDeclarations (...)
+          <code onmouseout="hideTip(event, '164', 164)" onmouseover="showTip(event, '164', 164)">
+            FileWriteTime
           </code>
-          <div class="tip" id="37">
-            <strong>Signature:</strong> ast:ParsedInput option -&gt; allSymbolsUses:SymbolUse [] -&gt; openDeclarations:OpenDeclaration list -&gt; allEntities:Map&lt;string,Idents list&gt; option -&gt; OpenDeclaration list<br />
+          <div class="tip" id="164">
+            <strong>Signature:</strong> DateTime<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L444-444" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '38', 38)" onmouseover="showTip(event, '38', 38)">
-            parseTooltip arg1
-          </code>
-          <div class="tip" id="38">
-            <strong>Signature:</strong> FSharpToolTipText -&gt; RawOpenDeclaration list<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L63-63" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '39', 39)" onmouseover="showTip(event, '39', 39)">
-            setOpenDeclsIsUsedFlag idents openDecls
-          </code>
-          <div class="tip" id="39">
-            <strong>Signature:</strong> idents:Idents -&gt; openDecls:OpenDeclaration list -&gt; OpenDeclaration list<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L124-124" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '40', 40)" onmouseover="showTip(event, '40', 40)">
-            spreadIsUsedFlagToParents openDecls
-          </code>
-          <div class="tip" id="40">
-            <strong>Signature:</strong> openDecls:OpenDeclaration list -&gt; OpenDeclaration list<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L135-135" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '41', 41)" onmouseover="showTip(event, '41', 41)">
-            updateOpenDeclsWithSymbolPrefix (...)
-          </code>
-          <div class="tip" id="41">
-            <strong>Signature:</strong> symbolPrefix:Idents -&gt; symbolRange:range -&gt; openDecls:OpenDeclaration list -&gt; OpenDeclaration list<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs#L110-110" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs#L91-91" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>

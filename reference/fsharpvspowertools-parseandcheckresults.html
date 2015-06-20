@@ -36,10 +36,15 @@
 
 
 <h1>ParseAndCheckResults</h1>
+<p>
+  <span>Namespace: FSharpVSPowerTools</span><br />
+</p>
 <div class="xmldoc">
 <p>Wraps the result of type-checking and provides methods for implementing
 various IntelliSense functions (such as completion &amp; tool tips). Provides default
 empty/negative results if information is missing.</p>
+
+
 </div>
   <h3>Constructors</h3>
   <table class="table table-bordered member-list">
@@ -50,10 +55,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '268', 268)" onmouseover="showTip(event, '268', 268)">
+          <code onmouseout="hideTip(event, '279', 279)" onmouseover="showTip(event, '279', 279)">
             new(checkResults, parseResults)
           </code>
-          <div class="tip" id="268">
+          <div class="tip" id="279">
             <strong>Signature:</strong> (checkResults:FSharpCheckFileResults * parseResults:FSharpParseFileResults) -&gt; ParseAndCheckResults<br />
                       </div>
         </td>
@@ -76,10 +81,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '269', 269)" onmouseover="showTip(event, '269', 269)">
+          <code onmouseout="hideTip(event, '280', 280)" onmouseover="showTip(event, '280', 280)">
             GetAllUsesOfAllSymbolsInFile()
           </code>
-          <div class="tip" id="269">
+          <div class="tip" id="280">
             <strong>Signature:</strong> unit -&gt; Async&lt;FSharpSymbolUse []&gt;<br />
                       </div>
         </td>
@@ -94,10 +99,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '270', 270)" onmouseover="showTip(event, '270', 270)">
+          <code onmouseout="hideTip(event, '281', 281)" onmouseover="showTip(event, '281', 281)">
             GetDeclarationLocation(...)
           </code>
-          <div class="tip" id="270">
+          <div class="tip" id="281">
             <strong>Signature:</strong> (line:int * col:int * lineStr:string * ident:string * preferSignature:bool) -&gt; Async&lt;FSharpFindDeclResult&gt;<br />
                       </div>
         </td>
@@ -112,10 +117,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '271', 271)" onmouseover="showTip(event, '271', 271)">
+          <code onmouseout="hideTip(event, '282', 282)" onmouseover="showTip(event, '282', 282)">
             GetErrors()
           </code>
-          <div class="tip" id="271">
+          <div class="tip" id="282">
             <strong>Signature:</strong> unit -&gt; FSharpErrorInfo [] option<br />
                       </div>
         </td>
@@ -130,10 +135,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '272', 272)" onmouseover="showTip(event, '272', 272)">
+          <code onmouseout="hideTip(event, '283', 283)" onmouseover="showTip(event, '283', 283)">
             GetFormatSpecifierLocations()
           </code>
-          <div class="tip" id="272">
+          <div class="tip" id="283">
             <strong>Signature:</strong> unit -&gt; range [] option<br />
                       </div>
         </td>
@@ -148,10 +153,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '273', 273)" onmouseover="showTip(event, '273', 273)">
+          <code onmouseout="hideTip(event, '284', 284)" onmouseover="showTip(event, '284', 284)">
             GetIdentTooltip(...)
           </code>
-          <div class="tip" id="273">
+          <div class="tip" id="284">
             <strong>Signature:</strong> (line:int * colAtEndOfNames:int * lineText:string * names:string list) -&gt; Async&lt;ToolTipText option&gt;<br />
                       </div>
         </td>
@@ -166,10 +171,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '274', 274)" onmouseover="showTip(event, '274', 274)">
+          <code onmouseout="hideTip(event, '285', 285)" onmouseover="showTip(event, '285', 285)">
             GetNavigationItems()
           </code>
-          <div class="tip" id="274">
+          <div class="tip" id="285">
             <strong>Signature:</strong> unit -&gt; FSharpNavigationTopLevelDeclaration []<br />
                       </div>
         </td>
@@ -184,10 +189,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '275', 275)" onmouseover="showTip(event, '275', 275)">
+          <code onmouseout="hideTip(event, '286', 286)" onmouseover="showTip(event, '286', 286)">
             GetPartialAssemblySignature()
           </code>
-          <div class="tip" id="275">
+          <div class="tip" id="286">
             <strong>Signature:</strong> unit -&gt; FSharpAssemblySignature option<br />
                       </div>
         </td>
@@ -202,10 +207,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '276', 276)" onmouseover="showTip(event, '276', 276)">
+          <code onmouseout="hideTip(event, '287', 287)" onmouseover="showTip(event, '287', 287)">
             GetSymbolUseAtLocation(...)
           </code>
-          <div class="tip" id="276">
+          <div class="tip" id="287">
             <strong>Signature:</strong> (line:int * colAtEndOfNames:int * lineStr:string * identIsland:string list) -&gt; Async&lt;FSharpSymbolUse option&gt;<br />
                       </div>
         </td>
@@ -220,10 +225,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '277', 277)" onmouseover="showTip(event, '277', 277)">
+          <code onmouseout="hideTip(event, '288', 288)" onmouseover="showTip(event, '288', 288)">
             GetUntypedAst()
           </code>
-          <div class="tip" id="277">
+          <div class="tip" id="288">
             <strong>Signature:</strong> unit -&gt; ParsedInput option<br />
                       </div>
         </td>
@@ -238,10 +243,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '278', 278)" onmouseover="showTip(event, '278', 278)">
+          <code onmouseout="hideTip(event, '289', 289)" onmouseover="showTip(event, '289', 289)">
             GetUsesOfSymbolInFile(symbol)
           </code>
-          <div class="tip" id="278">
+          <div class="tip" id="289">
             <strong>Signature:</strong> symbol:FSharpSymbol -&gt; Async&lt;FSharpSymbolUse []&gt;<br />
                       </div>
         </td>
@@ -256,10 +261,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '279', 279)" onmouseover="showTip(event, '279', 279)">
+          <code onmouseout="hideTip(event, '290', 290)" onmouseover="showTip(event, '290', 290)">
             GetUsesOfSymbolInFileAtLocation(...)
           </code>
-          <div class="tip" id="279">
+          <div class="tip" id="290">
             <strong>Signature:</strong> (line:int * col:int * lineStr:string * ident:string) -&gt; Async&lt;(FSharpSymbol * string * FSharpSymbolUse []) option&gt;<br />
                       </div>
         </td>
@@ -274,10 +279,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '280', 280)" onmouseover="showTip(event, '280', 280)">
+          <code onmouseout="hideTip(event, '291', 291)" onmouseover="showTip(event, '291', 291)">
             ProjectContext
           </code>
-          <div class="tip" id="280">
+          <div class="tip" id="291">
             <strong>Signature:</strong> FSharpProjectContext option<br />
                       </div>
         </td>
@@ -300,10 +305,10 @@ empty/negative results if information is missing.</p>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '281', 281)" onmouseover="showTip(event, '281', 281)">
+          <code onmouseout="hideTip(event, '292', 292)" onmouseover="showTip(event, '292', 292)">
             Empty
           </code>
-          <div class="tip" id="281">
+          <div class="tip" id="292">
             <strong>Signature:</strong> ParseAndCheckResults<br />
                       </div>
         </td>
@@ -354,6 +359,7 @@ empty/negative results if information is missing.</p>
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
                 <li><a href="./../generatereferences.html">Generate references for F# Interactive</a></li>
                 <li><a href="./../navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./../quickinfopanel.html">Quick info panel</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

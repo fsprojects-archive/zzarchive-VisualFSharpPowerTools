@@ -35,6 +35,27 @@
           
 <h1><a name="FAQ-Frequently-Asked-Questions" class="anchor" href="#FAQ-Frequently-Asked-Questions">FAQ - Frequently Asked Questions</a></h1>
 
+<h2><a name="VFPT-is-slow-what-can-I-do-to-speed-it-up" class="anchor" href="#VFPT-is-slow-what-can-I-do-to-speed-it-up">VFPT is slow, what can I do to speed it up?</a></h2>
+
+<p>Our suggestion is to disable automatic features including</p>
+
+<ul>
+<li>Highlight references</li>
+<li>Indent guides/Depth colorizer</li>
+<li>Syntax coloring</li>
+<li>Gray out unused declarations</li>
+<li>Gray out unused opens</li>
+<li>Implement interface</li>
+<li>Record stub generation</li>
+<li>Union pattern match case generation</li>
+<li>Resolve unopened namespaces</li>
+<li>Task List comments</li>
+<li>Quick info panel</li>
+</ul>
+
+<p>and enable them one by one to identify the features causing slowness. 
+If you found a scenario that is slow, please let us know on <a href="https://github.com/fsprojects/VisualFSharpPowerTools/issues">the issue tracker</a>.</p>
+
 <h2><a name="Why-is-unused-declaration-option-divided-into-two-separate-options-in-v1-6-0" class="anchor" href="#Why-is-unused-declaration-option-divided-into-two-separate-options-in-v1-6-0">Why is unused declaration option divided into two separate options in v1.6.0?</a></h2>
 
 <p>There are some performance penalties on checking unused declarations. 
@@ -62,10 +83,10 @@ If you encounter any bug, please take some time to record diagnostics informatio
 <p>If object identifiers (<code>x</code> in <code>x.Member</code>) aren't referred anywhere in the member bodies, they are understood as unused values.
 In order to fix it, we recommend to use <code>__</code> or any identifier with <code>_</code> prefix (<code>_x</code> for example).</p>
 
-<h2><a name="Why-are-my-VFPT-key-bindings-overriden-by-ReSharper" class="anchor" href="#Why-are-my-VFPT-key-bindings-overriden-by-ReSharper">Why are my VFPT key bindings overriden by ReSharper?</a></h2>
+<h2><a name="Why-are-my-VFPT-key-bindings-overridden-by-ReSharper" class="anchor" href="#Why-are-my-VFPT-key-bindings-overridden-by-ReSharper">Why are my VFPT key bindings overridden by ReSharper?</a></h2>
 
 <p>If you are using Visual F# Power Tools along side with ReSharper 8 or below, there is a <a href="http://youtrack.jetbrains.com/issue/RSRP-409199">known issue</a> where some F# commands are hidden by ReSharper. 
-You can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -> Options -> Keyboard &amp; Menus).</p>
+You can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -&gt; Options -&gt; Keyboard &amp; Menus).</p>
 
 
         </div>
@@ -104,6 +125,7 @@ You can workaround by disabling the ReSharper option "Hide overridden Visual Stu
                 <li><a href="./tasklistcomments.html">Task List comments</a></li>
                 <li><a href="./generatereferences.html">Generate references for F# Interactive</a></li>
                 <li><a href="./navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./quickinfopanel.html">Quick info panel</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./reference/index.html">API Reference</a></li>

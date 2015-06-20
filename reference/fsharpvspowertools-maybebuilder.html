@@ -36,9 +36,14 @@
 
 
 <h1>MaybeBuilder</h1>
+<p>
+  <span>Namespace: FSharpVSPowerTools</span><br />
+</p>
 <div class="xmldoc">
 <p>Maybe computation expression builder, copied from ExtCore library
 <a href="https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs">https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs</a></p>
+
+
 </div>
   <h3>Constructors</h3>
   <table class="table table-bordered member-list">
@@ -49,15 +54,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '241', 241)" onmouseover="showTip(event, '241', 241)">
+          <code onmouseout="hideTip(event, '252', 252)" onmouseover="showTip(event, '252', 252)">
             new()
           </code>
-          <div class="tip" id="241">
+          <div class="tip" id="252">
             <strong>Signature:</strong> unit -&gt; MaybeBuilder<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L200-200" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L214-214" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -75,15 +80,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '242', 242)" onmouseover="showTip(event, '242', 242)">
+          <code onmouseout="hideTip(event, '253', 253)" onmouseover="showTip(event, '253', 253)">
             Bind(value, f)
           </code>
-          <div class="tip" id="242">
+          <div class="tip" id="253">
             <strong>Signature:</strong> (value:&#39;T option * f:(&#39;T -&gt; &#39;U option)) -&gt; &#39;U option<br />
                           <strong>Type parameters:</strong> 'T, 'U          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L234-234" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L248-248" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -93,102 +98,12 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '243', 243)" onmouseover="showTip(event, '243', 243)">
+          <code onmouseout="hideTip(event, '254', 254)" onmouseover="showTip(event, '254', 254)">
             Combine(r1, r2)
           </code>
-          <div class="tip" id="243">
+          <div class="tip" id="254">
             <strong>Signature:</strong> (r1:unit option * r2:&#39;T option) -&gt; &#39;T option<br />
                           <strong>Type parameters:</strong> 'T          </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L225-225" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '244', 244)" onmouseover="showTip(event, '244', 244)">
-            Delay(f)
-          </code>
-          <div class="tip" id="244">
-            <strong>Signature:</strong> (f:(unit -&gt; &#39;T option)) -&gt; &#39;T option<br />
-                          <strong>Type parameters:</strong> 'T          </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L218-218" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '245', 245)" onmouseover="showTip(event, '245', 245)">
-            For(sequence, body)
-          </code>
-          <div class="tip" id="245">
-            <strong>Signature:</strong> (sequence:seq&lt;&#39;T&gt; * body:(&#39;T -&gt; unit option)) -&gt; unit option<br />
-                          <strong>Type parameters:</strong> 'T          </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L258-258" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '246', 246)" onmouseover="showTip(event, '246', 246)">
-            Return(value)
-          </code>
-          <div class="tip" id="246">
-            <strong>Signature:</strong> value:&#39;T -&gt; &#39;T option<br />
-                          <strong>Type parameters:</strong> 'T          </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L203-203" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '247', 247)" onmouseover="showTip(event, '247', 247)">
-            ReturnFrom(value)
-          </code>
-          <div class="tip" id="247">
-            <strong>Signature:</strong> (value:&#39;T option) -&gt; &#39;T option<br />
-                          <strong>Type parameters:</strong> 'T          </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L208-208" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '248', 248)" onmouseover="showTip(event, '248', 248)">
-            Using(resource, body)
-          </code>
-          <div class="tip" id="248">
-            <strong>Signature:</strong> (resource:&#39;T * body:(&#39;T -&gt; &#39;?20211 option)) -&gt; &#39;?20211 option<br />
-                          <strong>Type parameters:</strong> 'T, '?20211          </div>
         </td>
         <td class="xmldoc">
             <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L239-239" class="github-link">
@@ -201,15 +116,15 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '249', 249)" onmouseover="showTip(event, '249', 249)">
-            While(guard, body)
+          <code onmouseout="hideTip(event, '255', 255)" onmouseover="showTip(event, '255', 255)">
+            Delay(f)
           </code>
-          <div class="tip" id="249">
-            <strong>Signature:</strong> (guard:(unit -&gt; bool) * body:unit option) -&gt; unit option<br />
-                      </div>
+          <div class="tip" id="255">
+            <strong>Signature:</strong> (f:(unit -&gt; &#39;T option)) -&gt; &#39;T option<br />
+                          <strong>Type parameters:</strong> 'T          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L247-247" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L232-232" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -219,15 +134,105 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '250', 250)" onmouseover="showTip(event, '250', 250)">
+          <code onmouseout="hideTip(event, '256', 256)" onmouseover="showTip(event, '256', 256)">
+            For(sequence, body)
+          </code>
+          <div class="tip" id="256">
+            <strong>Signature:</strong> (sequence:seq&lt;&#39;T&gt; * body:(&#39;T -&gt; unit option)) -&gt; unit option<br />
+                          <strong>Type parameters:</strong> 'T          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L272-272" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '257', 257)" onmouseover="showTip(event, '257', 257)">
+            Return(value)
+          </code>
+          <div class="tip" id="257">
+            <strong>Signature:</strong> value:&#39;T -&gt; &#39;T option<br />
+                          <strong>Type parameters:</strong> 'T          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L217-217" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '258', 258)" onmouseover="showTip(event, '258', 258)">
+            ReturnFrom(value)
+          </code>
+          <div class="tip" id="258">
+            <strong>Signature:</strong> (value:&#39;T option) -&gt; &#39;T option<br />
+                          <strong>Type parameters:</strong> 'T          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L222-222" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '259', 259)" onmouseover="showTip(event, '259', 259)">
+            Using(resource, body)
+          </code>
+          <div class="tip" id="259">
+            <strong>Signature:</strong> (resource:&#39;T * body:(&#39;T -&gt; &#39;?41540 option)) -&gt; &#39;?41540 option<br />
+                          <strong>Type parameters:</strong> 'T, '?41540          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L253-253" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '260', 260)" onmouseover="showTip(event, '260', 260)">
+            While(guard, body)
+          </code>
+          <div class="tip" id="260">
+            <strong>Signature:</strong> (guard:(unit -&gt; bool) * body:unit option) -&gt; unit option<br />
+                      </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L261-261" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '261', 261)" onmouseover="showTip(event, '261', 261)">
             Zero()
           </code>
-          <div class="tip" id="250">
+          <div class="tip" id="261">
             <strong>Signature:</strong> unit -&gt; unit option<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L213-213" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/Utils.fs#L227-227" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -273,6 +278,7 @@
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
                 <li><a href="./../generatereferences.html">Generate references for F# Interactive</a></li>
                 <li><a href="./../navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./../quickinfopanel.html">Quick info panel</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>

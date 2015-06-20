@@ -36,10 +36,36 @@
 
 
 <h1>AssemblyContentProvider</h1>
+<p>
+  <span>Namespace: FSharpVSPowerTools</span><br />
+</p>
 <div class="xmldoc">
 </div>
 
 <!-- Render nested types and modules, if there are any -->
+  <h2>Nested types and modules</h2>
+  <div>
+      <table class="table table-bordered type-list">
+    <thead>
+      <tr><td>Type</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td class="type-name">
+            <a href="fsharpvspowertools-assemblycontentprovider-assemblycontentcacheentry.html">AssemblyContentCacheEntry</a>
+          </td>
+          <td class="xmldoc"></td>
+        </tr>
+        <tr>
+          <td class="type-name">
+            <a href="fsharpvspowertools-assemblycontentprovider-iassemblycontentcache.html">IAssemblyContentCache</a>
+          </td>
+          <td class="xmldoc"></td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
 
   <h3>Functions and values</h3>
   <table class="table table-bordered member-list">
@@ -54,11 +80,11 @@
             getAssemblyContent (...)
           </code>
           <div class="tip" id="6">
-            <strong>Signature:</strong> contentType:AssemblyContentType -&gt; fileName:string option -&gt; assemblies:FSharpAssembly list -&gt; RawEntity list<br />
+            <strong>Signature:</strong> withCache:((IAssemblyContentCache -&gt; RawEntity list) -&gt; RawEntity list) option -&gt; contentType:AssemblyContentType -&gt; fileName:string option -&gt; assemblies:FSharpAssembly list -&gt; RawEntity list<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs#L197-197" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs#L203-203" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -72,11 +98,11 @@
             getAssemblySignatureContent (...)
           </code>
           <div class="tip" id="7">
-            <strong>Signature:</strong> contentType:AssemblyContentType -&gt; signature:FSharpAssemblySignature -&gt; RawEntity list<br />
+            <strong>Signature:</strong> contentType:AssemblyContentType -&gt; signature:FSharpAssemblySignature -&gt; seq&lt;RawEntity&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs#L182-182" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs#L191-191" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
@@ -122,6 +148,7 @@
                 <li><a href="./../tasklistcomments.html">Task List comments</a></li>
                 <li><a href="./../generatereferences.html">Generate references for F# Interactive</a></li>
                 <li><a href="./../navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./../quickinfopanel.html">Quick info panel</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>
