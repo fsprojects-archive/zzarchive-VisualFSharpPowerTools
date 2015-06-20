@@ -1,4 +1,4 @@
-#### 1.9.0 - Unreleased
+#### 1.9.0 - June 21 2015
 * Implement QuickInfo margin ([#973](https://github.com/fsprojects/VisualFSharpPowerTools/issues/973))
 * Fix UI freezes by moving computation to background threads ([#975](https://github.com/fsprojects/VisualFSharpPowerTools/issues/975))
 * Improve folder organization feature ([#969](https://github.com/fsprojects/VisualFSharpPowerTools/issues/969), [#986](https://github.com/fsprojects/VisualFSharpPowerTools/issues/986))
@@ -6,6 +6,7 @@
 * Optimize for better responsiveness ([#1001](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1001), [#1002](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1002))
 * Improve union pattern match case generation feature ([#1003](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1003))
 * Enhance unused declaration margin feature ([#1012](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1012))
+* Create a single HighlightUsageTagger for each document ([#1021](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1021))
 
 #### 1.8.0 - April 2 2015
 * Support operator coloring ([#936](https://github.com/fsprojects/VisualFSharpPowerTools/issues/936))
