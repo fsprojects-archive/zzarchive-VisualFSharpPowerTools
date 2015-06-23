@@ -12,7 +12,7 @@ namespace FSharpVSPowerTools
 
             _optionsPage = optionsPage;
         }
-        
+
         public CodeGenerationOptionsPage OptionsPage { get; set; }
 
         public string DefaultBody
@@ -56,6 +56,5 @@ namespace FSharpVSPowerTools
             DefaultBody = _optionsPage.DefaultBody;
             CodeGenerationOptions = _optionsPage.CodeGenerationOptions;
         }
-
     }
 }

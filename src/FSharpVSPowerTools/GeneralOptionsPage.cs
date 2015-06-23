@@ -12,7 +12,7 @@ namespace FSharpVSPowerTools
     [ClassInterface(ClassInterfaceType.AutoDual)]
     [Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")]
     public class GeneralOptionsPage : DialogPage, IGeneralOptions
-    {   
+    {
         private GeneralOptionsControl _optionsControl;
         private const string navBarConfig = "fsharp-navigationbar-enabled";
         private bool _navBarEnabledInAppConfig;
@@ -56,7 +56,7 @@ namespace FSharpVSPowerTools
                 bool result;
                 return configValue != null && bool.TryParse(configValue.Value, out result) ? result : false;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.LogException(ex);
                 return false;
@@ -92,7 +92,7 @@ namespace FSharpVSPowerTools
                     config.AppSettings.Settings.Remove(navBarConfig);
                     config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
                     config.Save(ConfigurationSaveMode.Minimal);
-                    
+
                     return true;
                 }
                 else
@@ -109,7 +109,7 @@ namespace FSharpVSPowerTools
             }
         }
 
-        // We are letting Visual Studio know that these property value needs to be persisted	       
+        // We are letting Visual Studio know that these property value needs to be persisted
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool XmlDocEnabled { get; set; }
@@ -162,7 +162,7 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool TaskListCommentsEnabled { get; set; }
 
-	    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GoToMetadataEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
@@ -173,7 +173,7 @@ namespace FSharpVSPowerTools
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool QuickInfoPanelEnabled { get; set; }
-        
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -184,8 +184,8 @@ namespace FSharpVSPowerTools
             }
         }
 
-        // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
-        // that Visual Studio saves it.        
+        // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so
+        // that Visual Studio saves it.
         protected override void OnApply(DialogPage.PageApplyEventArgs e)
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
