@@ -61,7 +61,14 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 tooltip 
                 |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|] 
                 |> Array.toList 
-                |> List.tryHead))
+                |> List.tryHead
+                |> Option.map (fun str ->
+                    if str.StartsWith("type ", StringComparison.Ordinal) then
+                        let index = str.LastIndexOf("=", StringComparison.Ordinal)
+                        if index > 0 then
+                            str.[0..index-1]
+                        else str
+                    else str)))
             |> Option.getOrElse ""
 
     let flattenLines (x: string) =
