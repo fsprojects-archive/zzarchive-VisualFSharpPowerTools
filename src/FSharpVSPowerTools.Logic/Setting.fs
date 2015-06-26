@@ -43,6 +43,7 @@ type CodeGenerationKinds =
 type ICodeGenerationOptions =
     abstract DefaultBody: string with get, set
     abstract CodeGenerationOptions: CodeGenerationKinds with get, set
+    abstract InterfaceMemberIdentifier: string with get, set
 
 type IGlobalOptions =
     abstract StrictMode: bool with get, set

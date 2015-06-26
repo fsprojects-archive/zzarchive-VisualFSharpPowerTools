@@ -21,6 +21,12 @@ namespace FSharpVSPowerTools
             set { tbxSourceCode.Text = value; }
         }
 
+        public string InterfaceMemberIdentifier
+        {
+            get { return tbxInterfaceMemberIdentifier.Text; }
+            set { tbxInterfaceMemberIdentifier.Text = value; }
+        }
+
         public CodeGenerationKinds CodeGenerationOptions
         {
             get
@@ -55,6 +61,7 @@ namespace FSharpVSPowerTools
         {
             DefaultBody = _optionsPage.DefaultBody;
             CodeGenerationOptions = _optionsPage.CodeGenerationOptions;
+            InterfaceMemberIdentifier = _optionsPage.InterfaceMemberIdentifier;
         }
     }
 }
