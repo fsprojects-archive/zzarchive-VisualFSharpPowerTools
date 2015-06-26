@@ -278,4 +278,6 @@
       </ItemGroup>
     </When>
   </Choose>
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.props')" Label="Paket" />
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.targets')" Label="Paket" />
 </Project>
