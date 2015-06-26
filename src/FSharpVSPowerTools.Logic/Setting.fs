@@ -75,6 +75,9 @@ module Setting =
         | CodeGenerationKinds.DefaultValue -> "Unchecked.defaultof<_>"
         | _ -> codeGenOptions.DefaultBody
 
+    let getInterfaceMemberIdentifier (codeGenOptions: ICodeGenerationOptions) =
+        IdentifierUtils.encapsulateIdentifier SymbolKind.Ident codeGenOptions.InterfaceMemberIdentifier
+
     let getGlobalOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGlobalOptions>()
 

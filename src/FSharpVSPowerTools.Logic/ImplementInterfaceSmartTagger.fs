@@ -31,6 +31,7 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
                                    vsLanguageService: VSLanguageService, 
                                    serviceProvider: IServiceProvider,
                                    projectFactory: ProjectFactory,
+                                   objectIdentifier: string,
                                    defaultBody: string) as self =
     let tagsChanged = Event<_, _>()
     let mutable currentWord: SnapshotSpan option = None
@@ -148,8 +149,9 @@ type ImplementInterfaceSmartTagger(textDocument: ITextDocument,
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let startColumn = inferStartColumn indentSize state
         let typeParams = state.InterfaceData.TypeParameters
-        let stub = InterfaceStubGenerator.formatInterface startColumn indentSize typeParams 
-                       "x" defaultBody displayContext implementedMemberSignatures entity
+        let stub = InterfaceStubGenerator.formatInterface 
+                       startColumn indentSize typeParams objectIdentifier defaultBody
+                       displayContext implementedMemberSignatures entity
         if String.IsNullOrEmpty stub then
             let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore

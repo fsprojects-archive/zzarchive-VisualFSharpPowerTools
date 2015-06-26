@@ -138,6 +138,7 @@
             this.tbxSourceCode.Size = new System.Drawing.Size(189, 20);
             this.tbxSourceCode.TabIndex = 4;
             this.tbxSourceCode.Text = "??";
+            this.ttpMain.SetToolTip(this.tbxSourceCode, "Declare a new value as default body");
             // 
             // rdbUncompilable
             // 

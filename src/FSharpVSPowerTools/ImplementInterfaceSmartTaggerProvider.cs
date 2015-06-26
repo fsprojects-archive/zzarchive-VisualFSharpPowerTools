@@ -51,6 +51,7 @@ namespace FSharpVSPowerTools
                 return new ImplementInterfaceSmartTagger(doc, textView,
                             editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer),
                             fsharpVsLanguageService, serviceProvider, projectFactory,
+                            Setting.getInterfaceMemberIdentifier(codeGenOptions),
                             Setting.getDefaultMemberBody(codeGenOptions)) as ITagger<T>;
             }
 

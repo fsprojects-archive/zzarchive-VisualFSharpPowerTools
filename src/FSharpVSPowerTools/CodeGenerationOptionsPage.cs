@@ -20,6 +20,7 @@ namespace FSharpVSPowerTools
         {
             DefaultBody = "??";
             CodeGenerationOptions = CodeGenerationKinds.Failwith;
+            InterfaceMemberIdentifier = "x";
         }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
@@ -49,6 +50,7 @@ namespace FSharpVSPowerTools
             {
                 this.DefaultBody = _optionsControl.DefaultBody;
                 this.CodeGenerationOptions = _optionsControl.CodeGenerationOptions;
+                this.InterfaceMemberIdentifier = _optionsControl.InterfaceMemberIdentifier;
             }
 
             base.OnApply(e);
