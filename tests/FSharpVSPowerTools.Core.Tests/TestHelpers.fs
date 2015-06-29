@@ -101,13 +101,15 @@ module LanguageServiceTestHelper =
           @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Numerics.dll";
           @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Windows.Forms.dll"|]
 
-    let projectOptions fileName =
-        let projFileName = @"C:\Project.fsproj"
-        { ProjectFileName = projFileName
-          ProjectFileNames = [| fileName |]
-          OtherOptions = args
-          ReferencedProjects = Array.empty
-          IsIncompleteTypeCheckEnvironment = false
-          UseScriptResolutionRules = true
-          LoadTime = DateTime.UtcNow
-          UnresolvedReferences = None }
+    let projectOptions =
+        let counter = ref 0
+        fun fileName ->
+            incr counter
+            { ProjectFileName = sprintf @"C:\Project%i.fsproj" !counter
+              ProjectFileNames = [| fileName |]
+              OtherOptions = args
+              ReferencedProjects = Array.empty
+              IsIncompleteTypeCheckEnvironment = false
+              UseScriptResolutionRules = true
+              LoadTime = DateTime.UtcNow
+              UnresolvedReferences = None }

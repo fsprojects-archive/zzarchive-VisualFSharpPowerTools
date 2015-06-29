@@ -29,20 +29,20 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.SignatureGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
+open LanguageServiceTestHelper
 open System
 open System.Xml.Linq
 open System.Collections.Generic
 open System.IO
 
 let languageService = LanguageService()
-let project() = LanguageServiceTestHelper.projectOptions @"C:\file.fs"
 let xmlFileCache = Dictionary()
 
 let tryGenerateDefinitionFromPos caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
     // We use .NET 4.5.1 that comes with VS 2013 in order that Xml documentation files are retrieved correctly.
-    let projectOptions = { project() with OtherOptions = LanguageServiceTestHelper.argsDotNET451 }
+    let projectOptions = { projectOptions document.FullName with OtherOptions = argsDotNET451 }
 
     asyncMaybe {
         let! _range, symbolAtPos = codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
@@ -1519,7 +1519,7 @@ let f = Patterns.(|AddressOf|_|)"""
 let generateFileNameForSymbol caretPos src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, LanguageServiceTestHelper.args)
-    let projectOptions = project()
+    let projectOptions = projectOptions document.FullName
 
     asyncMaybe {
         let! _range, symbolAtPos = codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)

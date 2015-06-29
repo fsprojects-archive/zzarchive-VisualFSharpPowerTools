@@ -1,11 +1,7 @@
 ﻿module FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
-open NUnit.Framework
 open System
-open System.IO
-open System.Collections.Generic
 open Microsoft.FSharp.Compiler
-open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
@@ -40,12 +36,12 @@ with
 
 type CodeGenerationTestService(languageService: LanguageService, compilerOptions: string[]) =
     interface ICodeGenerationService<FSharpProjectOptions, pos, Range> with
-        member x.TokenizeLine(_project, document: IDocument, line1: int<Line1>): FSharpTokenInfo list = 
+        member __.TokenizeLine(_project, document: IDocument, line1: int<Line1>): FSharpTokenInfo list = 
                 let line0 = int line1 - 1 
                 let line = document.GetLineText1(line1)
                 Lexer.tokenizeLine (document.GetText()) compilerOptions line0 line Lexer.queryLexState
         
-        member x.GetSymbolAtPosition(_project, snapshot, pos) =
+        member __.GetSymbolAtPosition(_project, snapshot, pos) =
             let lineText = snapshot.GetLineText0 pos.Line0
             let src = snapshot.GetText()
             maybe {
@@ -75,10 +71,10 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
                 | _ -> return! None
             }
 
-        member x.ParseFileInProject(snapshot, projectOptions) =
+        member __.ParseFileInProject(snapshot, projectOptions) =
             languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText())
 
-        member x.ExtractFSharpPos(pos) = pos
+        member __.ExtractFSharpPos(pos) = pos
 
 
 type MockDocument(src: string) =
@@ -86,11 +82,11 @@ type MockDocument(src: string) =
         ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
 
     interface IDocument with
-        member x.FullName = @"C:\file.fs"
-        member x.LineCount = lines.Count
-        member x.GetText() = src
-        member x.GetLineText0(line0: int<Line0>) = lines.[int line0]
-        member x.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
+        member __.FullName = sprintf @"C:\file.fs"
+        member __.LineCount = lines.Count
+        member __.GetText() = src
+        member __.GetLineText0(line0: int<Line0>) = lines.[int line0]
+        member __.GetLineText1(line1: int<Line1>) = lines.[int line1 - 1]
 
 
 [<AutoOpen>]
