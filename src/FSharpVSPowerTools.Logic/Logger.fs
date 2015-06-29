@@ -103,20 +103,20 @@ module Logging =
     let logWarning msg = log LogType.Warning msg
     let logError msg = log LogType.Error msg
 
-    // Specialized logging functions to be used in C#
-
-    let logInfoMessage (msg: string) = logInfo "%s" msg
-    let logWarningMessage (msg: string) = logWarning "%s" msg
-    let logErrorMessage (msg: string) = logError "%s" msg
-
-    let logExceptionWithMessage (ex: Exception) message = 
-        logError "Context: %s\nException Message: %s\nStack Trace: %s" message ex.Message ex.StackTrace
-
-    let logException (ex: Exception) = 
-        logError "Exception Message: %s\nStack Trace: %s" ex.Message ex.StackTrace
-        
     let internal messageBox logType msg = logger.Value.MessageBox(logType, msg) |> ignore
 
     let messageBoxInfo msg = messageBox LogType.Information msg
     let messageBoxWarning msg = messageBox LogType.Warning msg
     let messageBoxError msg = messageBox LogType.Error msg
+
+    // Specialized logging functions to be C#-friendly
+
+    let logInfoMessage (msg: string) = logInfo "%s" msg
+    let logWarningMessage (msg: string) = logWarning "%s" msg
+    let logErrorMessage (msg: string) = logError "%s" msg
+
+    let logExceptionWithContext(ex: Exception, context) = 
+        logError "Context: %s\nException Message: %s\nStack Trace: %s" context ex.Message ex.StackTrace
+
+    let logException (ex: Exception) = 
+        logError "Exception Message: %s\nStack Trace: %s" ex.Message ex.StackTrace
