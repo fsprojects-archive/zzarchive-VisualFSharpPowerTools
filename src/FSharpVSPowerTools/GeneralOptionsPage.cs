@@ -187,14 +187,22 @@ namespace FSharpVSPowerTools
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
             {
-                XmlDocEnabled = _optionsControl.XmlDocEnabled;
-                FormattingEnabled = _optionsControl.FormattingEnabled;
-
-                if (NavBarEnabled != _optionsControl.NavBarEnabled && SetNavigationBarConfig(_optionsControl.NavBarEnabled))
+                if (NavBarEnabled != _optionsControl.NavBarEnabled)
                 {
+                    if (!SetNavigationBarConfig(_optionsControl.NavBarEnabled))
+                    {
+                        // Keep the dialog open in the case of errors
+                        e.ApplyBehavior = ApplyKind.CancelNoNavigate;
+                        base.OnApply(e);
+                        return;
+                    }
+
                     NavBarEnabled = _optionsControl.NavBarEnabled;
                     _navBarEnabledInAppConfig = _optionsControl.NavBarEnabled;
                 }
+
+                XmlDocEnabled = _optionsControl.XmlDocEnabled;
+                FormattingEnabled = _optionsControl.FormattingEnabled;
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
                 RenameRefactoringEnabled = _optionsControl.RenameRefactoringEnabled;

@@ -62,7 +62,7 @@ namespace FSharpVSPowerTools
                 {
                     if (!isValidIdentifier(_optionsControl.InterfaceMemberIdentifier))
                     {
-                        // Keep the dialog open in the case of error
+                        // Keep the dialog open in the case of errors
                         e.ApplyBehavior = ApplyKind.CancelNoNavigate;
                         base.OnApply(e);
                         return;
