@@ -1,4 +1,6 @@
 #### 1.10.0 - Unreleased
+* Optimize dialog layouts for high DPI ([#1024](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1024))
+* Fix wrong size of unused markers in VS 2012 ([#1027](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1027))
 
 #### 1.9.0 - June 21 2015
 * Implement QuickInfo margin ([#973](https://github.com/fsprojects/VisualFSharpPowerTools/issues/973))
