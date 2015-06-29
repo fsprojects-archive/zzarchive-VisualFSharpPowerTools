@@ -42,15 +42,36 @@ namespace FSharpVSPowerTools
             }
         }
 
+        private bool isValidIdentifier(string ident)
+        {
+            bool valid = IdentifierUtils.isIdentifier(ident);
+            if (!valid)
+            {
+                LoggingModule.messageBoxError(Resource.invalidIdentifierMessage);
+            }
+            return valid;
+        }
+
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so         
         // that Visual Studio saves it.        
         protected override void OnApply(DialogPage.PageApplyEventArgs e)
         {
             if (e.ApplyBehavior == ApplyKind.Apply)
             {
-                this.DefaultBody = _optionsControl.DefaultBody;
-                this.CodeGenerationOptions = _optionsControl.CodeGenerationOptions;
-                this.InterfaceMemberIdentifier = _optionsControl.InterfaceMemberIdentifier;
+                if (InterfaceMemberIdentifier != _optionsControl.InterfaceMemberIdentifier)
+                {
+                    if (!isValidIdentifier(_optionsControl.InterfaceMemberIdentifier))
+                    {
+                        // Keep the dialog open in the case of error
+                        e.ApplyBehavior = ApplyKind.CancelNoNavigate;
+                        base.OnApply(e);
+                        return;
+                    }
+                    InterfaceMemberIdentifier = _optionsControl.InterfaceMemberIdentifier;
+                }
+
+                DefaultBody = _optionsControl.DefaultBody;
+                CodeGenerationOptions = _optionsControl.CodeGenerationOptions;
             }
 
             base.OnApply(e);
