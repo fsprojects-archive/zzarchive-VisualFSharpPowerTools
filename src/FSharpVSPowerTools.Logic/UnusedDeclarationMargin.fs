@@ -20,7 +20,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
     inherit Canvas()
 
     let children = base.Children
-    let verticalScrollMargin = marginContainer.GetTextViewMargin(PredefinedMarginNames.VerticalScrollBar)
+    let verticalScrollMargin = marginContainer.GetTextViewMargin(PredefinedMarginNames.VerticalScrollBar) :?> IWpfTextViewMargin
     let mutable markerData = Unchecked.defaultof<_>
     let markerBrush = SolidColorBrush(Color.FromRgb(255uy, 165uy, 0uy))
 
@@ -45,11 +45,18 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
                 let lineStart = verticalScrollBar.TrackSpanTop
                 let totalLines = textView.TextSnapshot.LineCount
                 let lineHeight = verticalScrollBar.TrackSpanHeight / float totalLines
+                let scrollBarWidth = 
+                    let tentativeWidth = verticalScrollMargin.VisualElement.Width
+                    // VS 2012's 'MarginSize' returns height of vertical scrollbar, we use 'VisualElement.Width' instead
+                    // Note that 'VisualElement.Width' is NaN in VS 2013
+                    if Double.IsNaN tentativeWidth then
+                        verticalScrollMargin.MarginSize
+                    else tentativeWidth
                 for (lineNo, pos) in markerData do               
                     let markerHeight = 3.0
                     let markerMargin = 2.0
                     // Ensure that marker width is non-negative, otherwise Rectangle.Width throws ArgumentException.
-                    let markerWidth = max 3.0 (verticalScrollMargin.MarginSize - markerMargin * 2.0)
+                    let markerWidth = max 3.0 (scrollBarWidth - markerMargin * 2.0)
                     let marker = Rectangle(Fill = Brushes.Orange, StrokeThickness = 0.5, Stroke = markerBrush,
                                             Height = markerHeight, Width = markerWidth,
                                             Cursor = Cursors.Hand, ToolTip = sprintf "Unused declaration(s) at line %i" (lineNo + 1))
