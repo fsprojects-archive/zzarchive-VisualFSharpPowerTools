@@ -36,7 +36,8 @@ let encapsulateIdentifier symbolKind newName =
     elif isKeyWord || not (isIdentifier newName) then DoubleBackTickDelimiter + newName + DoubleBackTickDelimiter
     else newName
 
-let isFixableIdentifier (s: string) = encapsulateIdentifier SymbolKind.Ident s |> isIdentifier
+let isFixableIdentifier (s: string) = 
+    not (String.IsNullOrEmpty s) && encapsulateIdentifier SymbolKind.Ident s |> isIdentifier
 
 let private forbiddenChars = ["."; "+"; "$"; "&"; "["; "]"; "/"; "\\"; "*"; "\""]
 

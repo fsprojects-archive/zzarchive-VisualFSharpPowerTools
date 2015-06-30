@@ -27,6 +27,8 @@ module Resource =
     let [<Literal>] navBarUnauthorizedMessage = "Unauthorized access to navigation bar configuration. Please try again after restarting Visual Studio from Administrator."
     let [<Literal>] navBarErrorMessage = "Error occurs while saving navigation bar configuration."
 
+    let [<Literal>] invalidIdentifierMessage = "Not a valid F# identifier. Please try again."
+
     let newFolderDialogTitle = vsPackageTitle + " - New Folder"
     let renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
 

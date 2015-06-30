@@ -168,7 +168,8 @@ namespace FSharpVSPowerTools
                 case VisualStudioTheme.Dark:
                     color = new FontColor(Color.FromRgb(220, 220, 220), Color.FromRgb(30, 30, 30));
                     success = themeColors[currentTheme].TryGetValue(category, out color);
-                    if (!success) Debug.WriteLine("Classification theme manager can't read colors correctly.");
+                    if (!success)
+                        LoggingModule.logWarningMessage(String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
 
                 case VisualStudioTheme.Light:
@@ -176,7 +177,8 @@ namespace FSharpVSPowerTools
                 default:
                     color = new FontColor(Colors.Black, Colors.White);
                     success = themeColors[currentTheme].TryGetValue(category, out color);
-                    if (!success) Debug.WriteLine("Classification theme manager can't read colors correctly.");
+                    if (!success)
+                        LoggingModule.logWarningMessage(String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
             }
         }

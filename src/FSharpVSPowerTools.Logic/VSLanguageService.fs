@@ -81,7 +81,7 @@ type VSLanguageService
                 fsharpLanguageService.LexStateOfColorState(colorState)
         with e ->
             debug "[Language Service] %O exception occurs while querying lexing states." e
-            Logging.logExceptionWithMessage e "Exception occurs while querying lexing states."
+            Logging.logExceptionWithContext(e, "Exception occurs while querying lexing states.")
             Lexer.queryLexState source defines line
 
     let filterSymbolUsesDuplicates (uses: FSharpSymbolUse[]) =
@@ -210,7 +210,7 @@ type VSLanguageService
                         symbol, lastIdent, filterSymbolUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while finding usages." e
-                Logging.logExceptionWithMessage e "Exception occurs while finding usages."
+                Logging.logExceptionWithContext(e, "Exception occurs while finding usages.")
                 return None }
 
     member __.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
@@ -224,7 +224,7 @@ type VSLanguageService
                 return res |> Option.map (fun (symbol, ident, refs) -> symbol, ident, filterSymbolUsesDuplicates refs)
             with e ->
                 debug "[Language Service] %O exception occurs while finding usages in file." e
-                Logging.logExceptionWithMessage e "Exception occurs while finding usages in file."
+                Logging.logExceptionWithContext(e, "Exception occurs while finding usages in file.")
                 return None
         }
 
@@ -307,8 +307,8 @@ type VSLanguageService
             try 
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source, entityCache.Locking)
             with e ->
-                debug "[Language Service] GetAllSymbols raises exception: %O" e
-                Logging.logExceptionWithMessage e "GetAllSymbols raises exception."
+                debug "[Language Service] GetAllSymbols raises an exception: %O" e
+                Logging.logExceptionWithContext(e, "GetAllSymbols raises an exception.")
                 return None
         }
 

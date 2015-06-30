@@ -43,6 +43,7 @@ type CodeGenerationKinds =
 type ICodeGenerationOptions =
     abstract DefaultBody: string with get, set
     abstract CodeGenerationOptions: CodeGenerationKinds with get, set
+    abstract InterfaceMemberIdentifier: string with get, set
 
 type IGlobalOptions =
     abstract StrictMode: bool with get, set
@@ -73,6 +74,9 @@ module Setting =
         | CodeGenerationKinds.NotImplementedYet -> "raise (System.NotImplementedException())"
         | CodeGenerationKinds.DefaultValue -> "Unchecked.defaultof<_>"
         | _ -> codeGenOptions.DefaultBody
+
+    let getInterfaceMemberIdentifier (codeGenOptions: ICodeGenerationOptions) =
+        IdentifierUtils.encapsulateIdentifier SymbolKind.Ident codeGenOptions.InterfaceMemberIdentifier
 
     let getGlobalOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGlobalOptions>()
