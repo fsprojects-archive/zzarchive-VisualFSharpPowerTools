@@ -30,3 +30,14 @@ let ``should be able to detect type names``() =
     isTypeNameIdent "My.Foo" |> assertFalse
     isTypeNameIdent "``My.Foo``" |> assertFalse
     isTypeNameIdent "``Case2[x]``" |> assertFalse
+
+[<Test>]
+let ``should be able to detect fixable identifiers``() = 
+    isFixableIdentifier "Type1" |> assertTrue
+    isFixableIdentifier "``Type 1``" |> assertTrue
+    isFixableIdentifier "->" |> assertTrue
+    isFixableIdentifier "x y" |> assertTrue
+    isFixableIdentifier "``X.Y``" |> assertTrue
+    isFixableIdentifier "My.Foo" |> assertTrue
+    isFixableIdentifier null |> assertFalse
+    isFixableIdentifier "" |> assertFalse

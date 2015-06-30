@@ -44,7 +44,7 @@ namespace FSharpVSPowerTools
 
         private bool isValidIdentifier(string ident)
         {
-            bool valid = IdentifierUtils.isIdentifier(ident);
+            bool valid = IdentifierUtils.isFixableIdentifier(ident);
             if (!valid)
             {
                 LoggingModule.messageBoxError(Resource.invalidIdentifierMessage);
