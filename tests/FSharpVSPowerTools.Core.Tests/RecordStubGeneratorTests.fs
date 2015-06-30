@@ -25,6 +25,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
+open TestHelpers.LanguageServiceTestHelper
 
 let args = 
     [|
@@ -39,17 +40,6 @@ let args =
     |]
 
 let languageService = LanguageService()
-let project() =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    { ProjectFileName = projFileName
-      ProjectFileNames = [| fileName |]
-      OtherOptions = args
-      ReferencedProjects = Array.empty
-      IsIncompleteTypeCheckEnvironment = false
-      UseScriptResolutionRules = false
-      LoadTime = DateTime.UtcNow
-      UnresolvedReferences = None }
 
 // [ ] write design doc
 // [x] Get the syntax construct that you're interested in
@@ -63,10 +53,10 @@ let project() =
 // [x] Handle pattern: let x = { Field1 = 0 }
 // [x] Handle copy-and-update expression
 // [x] Test that most unparseable expression don't trigger code gen
-// [ ] Handle record pattern maching: let { Field1 = _; Field2 = _ } = x
+// [ ] Handle record pattern matching: let { Field1 = _; Field2 = _ } = x
 
 let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument) =
-    tryFindRecordDefinitionFromPos codeGenInfra (project()) pos document
+    tryFindRecordDefinitionFromPos codeGenInfra (projectOptions document.FullName) pos document
     |> Async.RunSynchronously
 
 type CodeGenDiagnostic = {
@@ -78,7 +68,7 @@ type CodeGenDiagnostic = {
 let diagnoseCodeGenParams (pos: pos) src =
     let document: IDocument = upcast MockDocument(src)
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationTestService(languageService, args)
-    let project = project()
+    let project = projectOptions document.FullName
 
     let diagnostic = {
         Range = None

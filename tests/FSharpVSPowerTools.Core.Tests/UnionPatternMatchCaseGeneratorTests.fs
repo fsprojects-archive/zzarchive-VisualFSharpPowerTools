@@ -26,22 +26,12 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
+open TestHelpers.LanguageServiceTestHelper
 
 let languageService = LanguageService()
-let project() =
-    let fileName = @"C:\file.fs"
-    let projFileName = @"C:\Project.fsproj"
-    { ProjectFileName = projFileName
-      ProjectFileNames = [| fileName |]
-      OtherOptions = LanguageServiceTestHelper.args
-      ReferencedProjects = Array.empty
-      IsIncompleteTypeCheckEnvironment = false
-      UseScriptResolutionRules = false
-      LoadTime = DateTime.UtcNow
-      UnresolvedReferences = None }
 
 let tryFindUnionDefinition codeGenService (pos: pos) (document: IDocument) =
-    tryFindUnionDefinitionFromPos codeGenService (project()) pos document
+    tryFindUnionDefinitionFromPos codeGenService (projectOptions document.FullName) pos document
     |> Async.RunSynchronously
 
 let insertCasesFromPos caretPos src =
@@ -70,8 +60,10 @@ let insertCasesFromPos caretPos src =
             |> Array.reduce (fun line1 line2 -> line1 + "\n" + line2)
 
 module ClausesAnalysisTests =
+    open TestHelpers.LanguageServiceTestHelper
+
     let tryFindPatternMatchExpr codeGenService (pos: pos) (document: IDocument) =
-        tryFindPatternMatchExprInBufferAtPos codeGenService (project()) pos document
+        tryFindPatternMatchExprInBufferAtPos codeGenService (projectOptions document.FullName) pos document
         |> Async.RunSynchronously
 
 
