@@ -14,6 +14,7 @@ NUGET
       FSharp.Compiler.Service (>= 0.0.87)
       FSharpVSPowerTools.Core (1.8.0)
     FSharp.ViewModule.Core (0.9.9.1)
+    FSharpLint.Core (0.0.2)
     FSharpVSPowerTools.Core (1.8.0)
       FSharp.Compiler.Service (>= 0.0.87)
     FsXaml.Wpf (0.9.9)
@@ -36,5 +37,5 @@ NUGET
 GITHUB
   remote: fsharp/FAKE
   specs:
-    modules/Octokit/Octokit.fsx (98d8f2e57e8f9972703d4237dd62f8e13d6b8d7d)
+    modules/Octokit/Octokit.fsx (e473252a0711dfa765f7ba8819446c86f07c68c3)
       Octokit

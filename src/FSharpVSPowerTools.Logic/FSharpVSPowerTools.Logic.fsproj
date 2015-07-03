@@ -226,6 +226,9 @@
     <Compile Include="FsiReferenceCommand.fs">
       <Link>Reference/FsiReferenceCommand.fs</Link>
     </Compile>
+    <Compile Include="LintTagger.fs">
+      <Link>Linting/LintTagger.fs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -429,6 +432,38 @@
       </ItemGroup>
     </When>
   </Choose>
+  <ItemGroup>
+    <Reference Include="FParsec">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FParsec.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FParsecCS">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FParsecCS.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharp.Compiler.Service">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharp.Compiler.Service.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharpLint.Application">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Application.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharpLint.Framework">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Framework.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharpLint.Rules">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Rules.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+  </ItemGroup>
   <Choose>
     <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')) Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch')">
       <ItemGroup>

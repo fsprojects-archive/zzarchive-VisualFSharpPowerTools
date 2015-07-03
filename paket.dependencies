@@ -16,5 +16,6 @@ nuget Octokit
 nuget SourceLink.SymbolStore
 nuget VSSDK.IDE.11
 nuget VSSDK.IDE.Deploy.11
+nuget FSharpLint.Core
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx
