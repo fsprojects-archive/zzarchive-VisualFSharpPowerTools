@@ -11,9 +11,34 @@ using FSharpVSPowerTools.HighlightUsage;
 using FSharpVSPowerTools.ProjectSystem;
 using System;
 using FSharpVSPowerTools.Linting;
+using Microsoft.VisualStudio.Text.Classification;
+using System.Windows.Media;
+using Microsoft.VisualStudio.Text.Adornments;
 
 namespace FSharpVSPowerTools
 {
+    static class FormatDefinition
+    {
+        [Export(typeof(EditorFormatDefinition))]
+        [Name(Lint.TagErrorType)]
+        [Order(After = Priority.High)]
+        [UserVisible(true)]
+        internal class LintFormatDefinition : EditorFormatDefinition
+        {
+            public LintFormatDefinition()
+            {
+                this.ForegroundColor = Colors.Orange;
+                this.BackgroundCustomizable = false;
+                this.DisplayName = "F# Lint";
+            }
+        }
+
+        [Export(typeof(ErrorTypeDefinition))]
+        [Name(Lint.TagErrorType)]
+        [DisplayName(Lint.TagErrorType)]
+        static ErrorTypeDefinition LintErrorTypeDefinition = null;
+    }
+
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(LintTag))]

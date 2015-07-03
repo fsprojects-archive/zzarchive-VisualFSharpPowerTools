@@ -10,7 +10,12 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
 
-type LintTag(tooltip) = inherit ErrorTag("Lint", tooltip)
+module Lint =
+    [<Literal>]
+    let TagErrorType = "F# Lint"
+
+type LintTag(tooltip) = 
+    inherit ErrorTag(Lint.TagErrorType, tooltip)
 
 type LintTagger(textDocument: ITextDocument,
                 view: ITextView, 
@@ -58,7 +63,7 @@ type LintTagger(textDocument: ITextDocument,
             tagsChanged.Trigger(self, SnapshotSpanEventArgs span))
         |> Async.StartInThreadPoolSafe
 
-    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.bufferEvent view.TextBuffer], 200us, 
                                                       updateAtCaretPosition)
 
     let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<LintTag> list = 
