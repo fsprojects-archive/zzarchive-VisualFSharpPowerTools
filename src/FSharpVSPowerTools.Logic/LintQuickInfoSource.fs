@@ -7,6 +7,10 @@ open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
+open System.Reflection
+open System.Windows.Controls
+open System.Windows.Documents
+open System.Windows
 
 type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggregatorFactoryService) =
     let mutable disposed = false
@@ -25,6 +29,37 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggr
 //                |> Seq.toList
 //
 //    let docEventListener = new DocumentEventListener ([ViewChange.tagsEvent tagAggregator], 200us, update)
+    
+    let findColorResource name : obj =
+        let assembly = 
+            String.Format ("Microsoft.VisualStudio.Shell.{0}.0, Version={0}.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", 12)
+            |> Assembly.Load
+
+        if assembly <> null then
+            let ty = assembly.GetType "Microsoft.VisualStudio.PlatformUI.EnvironmentColors"
+            let prop = ty.GetProperty name
+            prop.GetValue(null, null)
+        else null
+
+    let createInfoText (tooltips: string list) : UIElement =
+        let textBlock = TextBlock()
+        tooltips |> List.iteri (fun i tooltip ->
+            textBlock.Inlines.Add (Bold (Run "Lint: "))
+            textBlock.Inlines.Add (Run tooltip)
+            if i < tooltips.Length - 1 then
+                textBlock.Inlines.Add (LineBreak()))
+             
+        let tooltipBrushKey = box <| findColorResource "ToolTipBrushKey"
+
+        if tooltipBrushKey <> null then
+            textBlock.SetResourceReference(TextBlock.BackgroundProperty, tooltipBrushKey)
+
+        let tooltipTextBrushKey = box <| findColorResource "ToolTipTextBrushKey"
+
+        if tooltipTextBrushKey <> null then
+            textBlock.SetResourceReference(TextBlock.ForegroundProperty, tooltipTextBrushKey);
+
+        upcast textBlock
 
     interface IQuickInfoSource with
         member __.AugmentQuickInfoSession (session: IQuickInfoSession, quickInfoContent: IList<obj>, 
@@ -47,8 +82,9 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggr
                 | [] -> ()
                 | (span, _) :: _ ->
                     applicableToSpan <- buffer.CurrentSnapshot.CreateTrackingSpan (span.Span, SpanTrackingMode.EdgeExclusive)
-                    for _, tooltip in res do
-                        quickInfoContent.Add tooltip
+                    res |> List.map snd |> createInfoText |> quickInfoContent.Add
+                    //for _, tooltip in res do
+                    //    quickInfoContent.Add tooltip
         
         member x.Dispose(): unit = 
             if not disposed then
