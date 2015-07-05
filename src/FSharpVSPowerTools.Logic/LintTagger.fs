@@ -10,12 +10,8 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
 
-module Lint =
-    [<Literal>]
-    let TagErrorType = "F# Lint"
-
 type LintTag(tooltip) = 
-    inherit ErrorTag(Lint.TagErrorType, tooltip)
+    inherit ErrorTag(Constants.LintTagErrorType, tooltip)
 
 type LintTagger(textDocument: ITextDocument,
                 view: ITextView, 
@@ -48,9 +44,12 @@ type LintTagger(textDocument: ITextDocument,
             return
                 match res with
                 | LintResult.Success warnings ->
-                    warnings |> List.choose (fun warn -> 
+                    warnings 
+                    |> Seq.distinctBy (fun warn -> warn.Range, warn.Info)
+                    |> Seq.choose (fun warn -> 
                         fromFSharpRange view.TextBuffer.CurrentSnapshot warn.Range
                         |> Option.map (fun span -> warn, span))
+                    |> Seq.toList
                 | LintResult.Failure _ -> []
         }
         |> Async.map (fun spans -> 

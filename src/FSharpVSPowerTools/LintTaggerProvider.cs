@@ -20,22 +20,22 @@ namespace FSharpVSPowerTools
     static class FormatDefinition
     {
         [Export(typeof(EditorFormatDefinition))]
-        [Name(Lint.TagErrorType)]
+        [Name(Constants.LintTagErrorType)]
         [Order(After = Priority.High)]
         [UserVisible(true)]
         internal class LintFormatDefinition : EditorFormatDefinition
         {
             public LintFormatDefinition()
             {
-                this.ForegroundColor = Colors.Orange;
+                this.ForegroundColor = Colors.LightGreen;
                 this.BackgroundCustomizable = false;
                 this.DisplayName = "F# Lint";
             }
         }
 
         [Export(typeof(ErrorTypeDefinition))]
-        [Name(Lint.TagErrorType)]
-        [DisplayName(Lint.TagErrorType)]
+        [Name(Constants.LintTagErrorType)]
+        [DisplayName(Constants.LintTagErrorType)]
         static ErrorTypeDefinition LintErrorTypeDefinition = null;
     }
 
@@ -60,11 +60,10 @@ namespace FSharpVSPowerTools
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
-            // Only provide highlighting on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            //var generalOptions = Setting.getGeneralOptions(serviceProvider);
-            //if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return null;
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            if (generalOptions == null || !generalOptions.LinterEnabled) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))

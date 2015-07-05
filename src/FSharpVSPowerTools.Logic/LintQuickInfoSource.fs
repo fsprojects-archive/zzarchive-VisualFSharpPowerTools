@@ -7,38 +7,14 @@ open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
-open System.Reflection
+open FSharpVSPowerTools.Common
 open System.Windows.Controls
 open System.Windows.Documents
 open System.Windows
 
 type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggregatorFactoryService) =
     let mutable disposed = false
-//    let mutable data = []
-//    
-//    let update () = 
-//        protect <| fun _ ->
-//            let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-//            
-//            data <-
-//                tagAggregator.GetTags(span)
-//                |> Seq.map (fun mappedSpan -> 
-//                    let tooltip = mappedSpan.Tag.ToolTipContent :?> string
-//                    mappedSpan.Span.GetSpans buffer |> Seq.map (fun span -> span, tooltip))
-//                |> Seq.concat
-//                |> Seq.toList
-//
-//    let docEventListener = new DocumentEventListener ([ViewChange.tagsEvent tagAggregator], 200us, update)
     
-    let findColorResource name =
-        String.Format ("Microsoft.VisualStudio.Shell.{0}.0, Version={0}.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", 12)
-        |> Assembly.Load
-        |> Option.ofNull
-        |> Option.map (fun assembly ->
-            let ty = assembly.GetType "Microsoft.VisualStudio.PlatformUI.EnvironmentColors"
-            let prop = ty.GetProperty name
-            prop.GetValue(null, null))
-
     let createInfoText (tooltips: string list) : UIElement =
         let textBlock = TextBlock()
         tooltips |> List.iteri (fun i tooltip ->
@@ -47,12 +23,8 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggr
             if i < tooltips.Length - 1 then
                 textBlock.Inlines.Add (LineBreak()))
              
-        findColorResource "ToolTipBrushKey"
-        |> Option.iter (fun key -> textBlock.SetResourceReference(TextBlock.BackgroundProperty, key))
-
-        findColorResource "ToolTipTextBrushKey"
-        |> Option.iter (fun key -> textBlock.SetResourceReference(TextBlock.ForegroundProperty, key))
-
+        textBlock.SetResourceReference(TextBlock.BackgroundProperty, VSColors.ToolTipBrushKey)
+        textBlock.SetResourceReference(TextBlock.ForegroundProperty, VSColors.ToolTipTextBrushKey)
         upcast textBlock
 
     interface IQuickInfoSource with
