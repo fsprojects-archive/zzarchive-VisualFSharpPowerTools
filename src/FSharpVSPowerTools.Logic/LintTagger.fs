@@ -46,7 +46,17 @@ type LintTagger(textDocument: ITextDocument,
                 | LintResult.Success warnings ->
                     warnings 
                     |> Seq.distinctBy (fun warn -> warn.Range, warn.Info)
-                    |> Seq.choose (fun warn -> 
+                    |> Seq.choose (fun warn ->
+//                        let r = warn.Range
+//                        let endCol =
+//                            if r.StartLine = r.EndLine then
+//                                max r.EndColumn (r.StartColumn + 2)
+//                            else r.StartColumn + 2
+//                        let r' =    
+//                            Range.mkRange "" 
+//                                (Range.mkPos r.StartLine r.StartColumn)
+//                                (Range.mkPos r.StartLine endCol)
+
                         fromFSharpRange view.TextBuffer.CurrentSnapshot warn.Range
                         |> Option.map (fun span -> warn, span))
                     |> Seq.toList
