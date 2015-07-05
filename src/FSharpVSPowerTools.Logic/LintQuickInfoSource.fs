@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Common
+open System.Reflection
 open System.Windows.Controls
 open System.Windows.Documents
 open System.Windows
@@ -54,4 +55,3 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggr
             if not disposed then
                 GC.SuppressFinalize x
                 disposed <- true
-                //(docEventListener :> IDisposable).Dispose()

@@ -62,8 +62,7 @@ type LintTagger(textDocument: ITextDocument,
             tagsChanged.Trigger(self, SnapshotSpanEventArgs span))
         |> Async.StartInThreadPoolSafe
 
-    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.bufferEvent view.TextBuffer], 200us, 
-                                                      updateAtCaretPosition)
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, updateAtCaretPosition)
 
     let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<LintTag> list = 
         [

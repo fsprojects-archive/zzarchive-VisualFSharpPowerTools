@@ -27,7 +27,7 @@ namespace FSharpVSPowerTools
         {
             public LintFormatDefinition()
             {
-                this.ForegroundColor = Colors.LightGreen;
+                this.ForegroundColor = Color.FromRgb(155, 155, 255);
                 this.BackgroundCustomizable = false;
                 this.DisplayName = "F# Lint";
             }
