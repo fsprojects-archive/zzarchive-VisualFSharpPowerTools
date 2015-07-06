@@ -26,12 +26,11 @@ type LintQuickInfoSource(buffer: ITextBuffer, viewTagAggregatorFactoryService: I
 
     let mutable tagAggregator = None
     let getTagAggregator textView =
-        match tagAggregator with
-        | None -> 
+        tagAggregator
+        |> Option.getOrTry (fun _ ->
             let aggregator = viewTagAggregatorFactoryService.CreateTagAggregator<LintTag> textView
             tagAggregator <- Some aggregator
-            aggregator
-        | Some x -> x
+            aggregator)
 
     interface IQuickInfoSource with
         member __.AugmentQuickInfoSession (session: IQuickInfoSession, quickInfoContent: IList<obj>, 
@@ -41,7 +40,7 @@ type LintQuickInfoSource(buffer: ITextBuffer, viewTagAggregatorFactoryService: I
             | Some point ->
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 let res =
-                    let tags = getTagAggregator(session.TextView).GetTags span
+                    let tags = getTagAggregator(session.TextView).GetTags(span)
                     tags
                     |> Seq.map (fun mappedSpan -> 
                         let tooltip = mappedSpan.Tag.ToolTipContent :?> string

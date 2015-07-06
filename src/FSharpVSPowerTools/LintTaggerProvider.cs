@@ -32,7 +32,7 @@ namespace FSharpVSPowerTools
         [Export(typeof(ErrorTypeDefinition))]
         [Name(Constants.LintTagErrorType)]
         [DisplayName(Constants.LintTagErrorType)]
-        static ErrorTypeDefinition LintErrorTypeDefinition = null;
+        internal static ErrorTypeDefinition LintErrorTypeDefinition = null;
     }
 
     [Export(typeof(IViewTaggerProvider))]
