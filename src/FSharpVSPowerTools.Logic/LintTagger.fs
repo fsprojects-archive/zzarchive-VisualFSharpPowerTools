@@ -9,6 +9,7 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
 open Microsoft.FSharp.Compiler
+open System.Threading
 
 type LintTag(tooltip) = 
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)
@@ -22,6 +23,7 @@ type LintTagger(textDocument: ITextDocument,
     let buffer = textDocument.TextBuffer
 
     let updateAtCaretPosition () =
+        let uiContext = SynchronizationContext.Current
         asyncMaybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
@@ -60,14 +62,14 @@ type LintTagger(textDocument: ITextDocument,
                     |> Seq.toList
                 | LintResult.Failure _ -> []
         }
-        |> Async.map (fun spans -> 
-            let spans = 
-                match spans with 
-                | Some x -> x
-                | None -> []
-            wordSpans <- spans
-            let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-            tagsChanged.Trigger(self, SnapshotSpanEventArgs span))
+        |> Async.bind (fun spans -> 
+            async {
+                let spans = spans |> Option.getOrElse []
+                wordSpans <- spans
+                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                do! Async.SwitchToContext uiContext
+                tagsChanged.Trigger(self, SnapshotSpanEventArgs span)
+            })
         |> Async.StartInThreadPoolSafe
 
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 200us, updateAtCaretPosition)
