@@ -11,11 +11,9 @@ open System.Windows.Controls
 open System.Windows.Documents
 open System.Windows
 
-type LintQuickInfoSource(buffer: ITextBuffer, tagAggregator: ITagAggregator<LintTag>) =
-    let mutable disposed = false
-    
+type LintQuickInfoSource(buffer: ITextBuffer, viewTagAggregatorFactoryService: IViewTagAggregatorFactoryService) =
     let createInfoText (tooltips: string list) : UIElement =
-        let textBlock = TextBlock()
+        let textBlock = TextBlock() 
         tooltips |> List.iteri (fun i tooltip ->
             textBlock.Inlines.Add (Bold (Run "Lint: "))
             textBlock.Inlines.Add (Run tooltip)
@@ -26,6 +24,15 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregator: ITagAggregator<Lint
         textBlock.SetResourceReference(TextBlock.ForegroundProperty, VSColors.ToolTipTextBrushKey)
         upcast textBlock
 
+    let mutable tagAggregator = None
+    let getTagAggregator textView =
+        match tagAggregator with
+        | None -> 
+            let aggregator = viewTagAggregatorFactoryService.CreateTagAggregator<LintTag> textView
+            tagAggregator <- Some aggregator
+            aggregator
+        | Some x -> x
+
     interface IQuickInfoSource with
         member __.AugmentQuickInfoSession (session: IQuickInfoSession, quickInfoContent: IList<obj>, 
                                            applicableToSpan: byref<ITrackingSpan>) = 
@@ -34,7 +41,8 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregator: ITagAggregator<Lint
             | Some point ->
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 let res =
-                    tagAggregator.GetTags span
+                    let tags = getTagAggregator(session.TextView).GetTags span
+                    tags
                     |> Seq.map (fun mappedSpan -> 
                         let tooltip = mappedSpan.Tag.ToolTipContent :?> string
                         mappedSpan.Span.GetSpans buffer |> Seq.map (fun span -> span, tooltip))
@@ -48,7 +56,4 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregator: ITagAggregator<Lint
                     applicableToSpan <- buffer.CurrentSnapshot.CreateTrackingSpan (span.Span, SpanTrackingMode.EdgeExclusive)
                     res |> List.map snd |> createInfoText |> quickInfoContent.Add
         
-        member __.Dispose(): unit = 
-            if not disposed then
-                tagAggregator.Dispose()
-                disposed <- true
+        member __.Dispose() = tagAggregator |> Option.iter (fun x -> x.Dispose())

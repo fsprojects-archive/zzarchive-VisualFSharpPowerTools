@@ -2,7 +2,7 @@ NUGET
   remote: http://nuget.org/api/v2
   specs:
     Expression.Blend.Sdk (1.0.2)
-    FAKE (3.35.2)
+    FAKE (3.35.5)
     Fantomas (1.7.0)
       FSharp.Compiler.Service (>= 0.0.73)
     Foq (1.7.1)
@@ -10,11 +10,12 @@ NUGET
       FSharp.Core (>= 3.1.2.1)
     FSharp.Compiler.Service (0.0.90)
     FSharp.Core (3.1.2.1)
-    FSharp.Formatting (2.9.8)
+    FSharp.Formatting (2.9.10)
       FSharp.Compiler.Service (>= 0.0.87)
       FSharpVSPowerTools.Core (1.8.0)
     FSharp.ViewModule.Core (0.9.9.1)
-    FSharpLint.Core (0.0.2)
+    FSharpLint.Core (0.0.3)
+      FSharp.Compiler.Service (>= 0.0.89)
     FSharpVSPowerTools.Core (1.8.0)
       FSharp.Compiler.Service (>= 0.0.87)
     FsXaml.Wpf (0.9.9)
@@ -28,9 +29,10 @@ NUGET
     NuGet.CommandLine (2.8.5)
     NUnit (2.6.4)
     NUnit.Runners (2.6.4)
-    Octokit (0.12.0)
+    Octokit (0.13.0)
       Microsoft.Net.Http
-    SourceLink.SymbolStore (0.5.0)
+    SourceLink.SymbolStore (1.0.0)
+      FSharp.Core (>= 3.1.2.1) - framework: >= net45
     VSSDK.IDE.11 (11.0.4)
     VSSDK.IDE.Deploy.11 (11.0.4)
       VSSDK.IDE.11 (>= 11.0.4 < 12.0.0)

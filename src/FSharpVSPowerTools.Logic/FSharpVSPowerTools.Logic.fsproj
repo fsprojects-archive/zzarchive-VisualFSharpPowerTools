@@ -447,11 +447,6 @@
       <Private>True</Private>
       <Paket>True</Paket>
     </Reference>
-    <Reference Include="FSharp.Compiler.Service">
-      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharp.Compiler.Service.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
     <Reference Include="FSharpLint.Application">
       <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Application.dll</HintPath>
       <Private>True</Private>

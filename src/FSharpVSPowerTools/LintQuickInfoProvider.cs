@@ -19,15 +19,14 @@ namespace FSharpVSPowerTools
         internal IServiceProvider serviceProvider = null;
 
         [Import]
-        internal IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService = null;
+        internal IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
 
         public IQuickInfoSource TryCreateQuickInfoSource(ITextBuffer textBuffer)
         {
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.LinterEnabled) return null;
 
-            var tagAggregator = bufferTagAggregatorFactoryService.CreateTagAggregator<LintTag>(textBuffer);
-            return new LintQuickInfoSource(textBuffer, tagAggregator);
+            return new LintQuickInfoSource(textBuffer, viewTagAggregatorFactoryService);
         }
     }
 }
