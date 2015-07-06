@@ -8,12 +8,11 @@ open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Common
-open System.Reflection
 open System.Windows.Controls
 open System.Windows.Documents
 open System.Windows
 
-type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggregatorFactoryService) =
+type LintQuickInfoSource(buffer: ITextBuffer, tagAggregator: ITagAggregator<LintTag>) =
     let mutable disposed = false
     
     let createInfoText (tooltips: string list) : UIElement =
@@ -34,10 +33,9 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggr
             match session.GetTriggerPoint buffer.CurrentSnapshot |> Option.ofNullable with
             | None -> ()
             | Some point ->
-                use tagAggregator = tagAggregatorService.CreateTagAggregator<LintTag> session.TextView
                 let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
                 let res =
-                    tagAggregator.GetTags(span)
+                    tagAggregator.GetTags span
                     |> Seq.map (fun mappedSpan -> 
                         let tooltip = mappedSpan.Tag.ToolTipContent :?> string
                         mappedSpan.Span.GetSpans buffer |> Seq.map (fun span -> span, tooltip))
@@ -51,7 +49,7 @@ type LintQuickInfoSource(buffer: ITextBuffer, tagAggregatorService: IViewTagAggr
                     applicableToSpan <- buffer.CurrentSnapshot.CreateTrackingSpan (span.Span, SpanTrackingMode.EdgeExclusive)
                     res |> List.map snd |> createInfoText |> quickInfoContent.Add
         
-        member x.Dispose(): unit = 
+        member __.Dispose(): unit = 
             if not disposed then
-                GC.SuppressFinalize x
+                tagAggregator.Dispose()
                 disposed <- true

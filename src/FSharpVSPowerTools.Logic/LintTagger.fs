@@ -2,7 +2,6 @@
 
 open System
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
@@ -14,14 +13,12 @@ type LintTag(tooltip) =
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)
 
 type LintTagger(textDocument: ITextDocument,
-                view: ITextView, 
                 vsLanguageService: VSLanguageService, 
                 serviceProvider: IServiceProvider,
                 projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let mutable wordSpans = []
-
-    let buffer = view.TextBuffer
+    let buffer = textDocument.TextBuffer
 
     let updateAtCaretPosition () =
         asyncMaybe {
@@ -57,7 +54,7 @@ type LintTagger(textDocument: ITextDocument,
 //                                (Range.mkPos r.StartLine r.StartColumn)
 //                                (Range.mkPos r.StartLine endCol)
 
-                        fromFSharpRange view.TextBuffer.CurrentSnapshot warn.Range
+                        fromFSharpRange buffer.CurrentSnapshot warn.Range
                         |> Option.map (fun span -> warn, span))
                     |> Seq.toList
                 | LintResult.Failure _ -> []
@@ -72,7 +69,7 @@ type LintTagger(textDocument: ITextDocument,
             tagsChanged.Trigger(self, SnapshotSpanEventArgs span))
         |> Async.StartInThreadPoolSafe
 
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, updateAtCaretPosition)
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 200us, updateAtCaretPosition)
 
     let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<LintTag> list = 
         [

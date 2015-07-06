@@ -65,7 +65,7 @@ namespace FSharpVSPowerTools
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(serviceType, 
-                    () => new LintTagger(doc, textView, fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>);
+                    () => new LintTagger(doc, fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>);
             }
 
             return null;
