@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
-open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Language.Intellisense
 open System.Collections.Generic

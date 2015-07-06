@@ -8,6 +8,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
+open Microsoft.FSharp.Compiler
 
 type LintTag(tooltip) = 
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)
@@ -44,17 +45,17 @@ type LintTagger(textDocument: ITextDocument,
                     warnings 
                     |> Seq.distinctBy (fun warn -> warn.Range, warn.Info)
                     |> Seq.choose (fun warn ->
-//                        let r = warn.Range
-//                        let endCol =
-//                            if r.StartLine = r.EndLine then
-//                                max r.EndColumn (r.StartColumn + 2)
-//                            else r.StartColumn + 2
-//                        let r' =    
-//                            Range.mkRange "" 
-//                                (Range.mkPos r.StartLine r.StartColumn)
-//                                (Range.mkPos r.StartLine endCol)
+                        let r = warn.Range
+                        let endCol =
+                            if r.StartLine = r.EndLine then
+                                min r.EndColumn (r.StartColumn + 2)
+                            else r.StartColumn + 2
+                        let r' =    
+                            Range.mkRange "" 
+                                (Range.mkPos r.StartLine r.StartColumn)
+                                (Range.mkPos r.StartLine endCol)
 
-                        fromFSharpRange buffer.CurrentSnapshot warn.Range
+                        fromFSharpRange buffer.CurrentSnapshot r' //warn.Range
                         |> Option.map (fun span -> warn, span))
                     |> Seq.toList
                 | LintResult.Failure _ -> []
