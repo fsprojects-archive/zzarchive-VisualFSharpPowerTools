@@ -1,19 +1,15 @@
-﻿using System.Diagnostics;
-using System.ComponentModel.Composition;
+﻿using FSharpVSPowerTools.Linting;
+using FSharpVSPowerTools.ProjectSystem;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Adornments;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Shell;
-using EnvDTE;
-using FSharpVSPowerTools.HighlightUsage;
-using FSharpVSPowerTools.ProjectSystem;
 using System;
-using FSharpVSPowerTools.Linting;
-using Microsoft.VisualStudio.Text.Classification;
+using System.ComponentModel.Composition;
 using System.Windows.Media;
-using Microsoft.VisualStudio.Text.Adornments;
 
 namespace FSharpVSPowerTools
 {

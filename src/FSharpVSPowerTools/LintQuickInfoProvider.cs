@@ -1,20 +1,11 @@
-﻿using System.Diagnostics;
-using System.ComponentModel.Composition;
+﻿using FSharpVSPowerTools.Linting;
+using Microsoft.VisualStudio.Language.Intellisense;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Shell;
-using EnvDTE;
-using FSharpVSPowerTools.HighlightUsage;
-using FSharpVSPowerTools.ProjectSystem;
 using System;
-using FSharpVSPowerTools.Linting;
-using Microsoft.VisualStudio.Text.Classification;
-using System.Windows.Media;
-using Microsoft.VisualStudio.Text.Adornments;
-using Microsoft.VisualStudio.Language.Intellisense;
+using System.ComponentModel.Composition;
 
 namespace FSharpVSPowerTools
 {
@@ -24,11 +15,16 @@ namespace FSharpVSPowerTools
     [ContentType("F#")]
     internal class LintQuickInfoProvider : IQuickInfoSourceProvider
     {
+        [Import(typeof(SVsServiceProvider))]
+        internal IServiceProvider serviceProvider = null;
+
         [Import]
         internal IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
 
         public IQuickInfoSource TryCreateQuickInfoSource(ITextBuffer textBuffer)
         {
+            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            if (generalOptions == null || !generalOptions.LinterEnabled) return null;
             return new LintQuickInfoSource(textBuffer, viewTagAggregatorFactoryService);
         }
     }
