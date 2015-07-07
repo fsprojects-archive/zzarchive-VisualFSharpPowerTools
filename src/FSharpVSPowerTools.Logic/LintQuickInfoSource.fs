@@ -26,34 +26,34 @@ type LintQuickInfoSource(buffer: ITextBuffer, viewTagAggregatorFactoryService: I
 
     let mutable tagAggregator = None
     let getTagAggregator textView =
-        match tagAggregator with
-        | None -> 
+        tagAggregator
+        |> Option.getOrTry (fun _ ->
             let aggregator = viewTagAggregatorFactoryService.CreateTagAggregator<LintTag> textView
             tagAggregator <- Some aggregator
-            aggregator
-        | Some x -> x
+            aggregator)
 
     interface IQuickInfoSource with
         member __.AugmentQuickInfoSession (session: IQuickInfoSession, quickInfoContent: IList<obj>, 
                                            applicableToSpan: byref<ITrackingSpan>) = 
-            match session.GetTriggerPoint buffer.CurrentSnapshot |> Option.ofNullable with
-            | None -> ()
-            | Some point ->
-                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
-                let res =
-                    let tags = getTagAggregator(session.TextView).GetTags span
-                    tags
-                    |> Seq.map (fun mappedSpan -> 
-                        let tooltip = mappedSpan.Tag.ToolTipContent :?> string
-                        mappedSpan.Span.GetSpans buffer |> Seq.map (fun span -> span, tooltip))
-                    |> Seq.concat
-                    |> Seq.toList
-                    |> List.filter (fun (span, _) -> point.InSpan span)
+            if session.TextView.TextBuffer = buffer then
+                match session.GetTriggerPoint buffer.CurrentSnapshot |> Option.ofNullable with
+                | None -> ()
+                | Some point ->
+                    let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                    let res =
+                        let tags = getTagAggregator(session.TextView).GetTags(span)
+                        tags
+                        |> Seq.map (fun mappedSpan -> 
+                            let tooltip = mappedSpan.Tag.ToolTipContent :?> string
+                            mappedSpan.Span.GetSpans buffer |> Seq.map (fun span -> span, tooltip))
+                        |> Seq.concat
+                        |> Seq.filter (fun (span, _) -> point.InSpan span)
+                        |> Seq.toList
 
-                match res with
-                | [] -> ()
-                | (span, _) :: _ ->
-                    applicableToSpan <- buffer.CurrentSnapshot.CreateTrackingSpan (span.Span, SpanTrackingMode.EdgeExclusive)
-                    res |> List.map snd |> createInfoText |> quickInfoContent.Add
+                    match res with
+                    | [] -> ()
+                    | (span, _) :: _ ->
+                        applicableToSpan <- buffer.CurrentSnapshot.CreateTrackingSpan (span.Span, SpanTrackingMode.EdgeExclusive)
+                        res |> List.map snd |> createInfoText |> quickInfoContent.Add
         
         member __.Dispose() = tagAggregator |> Option.iter (fun x -> x.Dispose())
