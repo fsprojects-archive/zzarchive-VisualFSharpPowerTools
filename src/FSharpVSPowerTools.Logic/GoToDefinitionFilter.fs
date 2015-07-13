@@ -334,12 +334,22 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                             replace m.Value (sprintf "blob/%s" m.Value) url
                         | _ -> url
                     let browserUrl =
-                        sprintf "%s#L%d"
-                            (url 
+
+                        let url = 
+                            url 
                              |> replace "raw.githubusercontent" "github" 
-                             |> replace "raw.github" "github" 
-                             |> replaceBlob m)
-                            r.StartLine
+                             |> replace "raw.github" "github"
+                             |> replace "/raw/" "/"  // bitbucket doesn't have a raw subdomain, instead we strip it from the url
+                             |> replaceBlob m
+
+                        let lineAnchor = 
+                            match url with
+                            | github when github.StartsWith("https://github.com") -> sprintf "#L%d" r.StartLine
+                            | bitbucket when bitbucket.StartsWith("https://bitbucket.org") -> sprintf "#cl-%d" r.StartLine
+                            | _ -> ""
+                        
+                        sprintf "%s%s" url lineAnchor
+
                     if fireNavigationEvent then
                         currentUrl <- Some url
                         urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                        
