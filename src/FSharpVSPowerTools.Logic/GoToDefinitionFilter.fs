@@ -339,7 +339,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                             url 
                              |> replace "raw.githubusercontent" "github" 
                              |> replace "raw.github" "github"
-                             |> replace "/raw/" "/"  // bitbucket doesn't have a raw subdomain, instead we strip it from the url
+                             |> replace "/raw/" "/src/"  // bitbucket doesn't have a raw subdomain, instead we replace it
                              |> replaceBlob m
 
                         let lineAnchor = 
