@@ -349,6 +349,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                         | String.StartsWith "https://bitbucket.org" _-> 
                             sprintf "%s#cl-%d" (url |> replace "/raw/" "/src/") r.StartLine
                         | String.Contains ".codebasehq.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
+                        | String.StartsWith "https://gitlab.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
                         | other -> other
 
                     if fireNavigationEvent then
