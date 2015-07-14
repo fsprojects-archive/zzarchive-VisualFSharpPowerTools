@@ -376,6 +376,20 @@ module String =
     let split options (separator: string[]) (value: string) = 
         match value with null -> null | x -> x.Split(separator, options)
 
+    let (|StartsWith|_|) pattern value =
+        if String.IsNullOrWhiteSpace(value) then
+            None
+        elif value.StartsWith(pattern) then
+            Some value
+        else None
+
+    let (|Contains|_|) pattern value =
+        if String.IsNullOrWhiteSpace(value) then
+            None
+        elif value.Contains(pattern) then
+            Some value
+        else None
+     
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
     open System.Diagnostics
