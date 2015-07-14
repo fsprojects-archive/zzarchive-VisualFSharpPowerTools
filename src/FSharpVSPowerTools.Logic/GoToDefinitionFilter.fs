@@ -343,11 +343,12 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                              r.StartLine
 
                         match url with
-                        | githubUserContent when githubUserContent.StartsWith("https://raw.githubusercontent.com") -> formattedGithubUrl
-                        | githubRaw when githubRaw.StartsWith("https://raw.github.com") -> formattedGithubUrl
-                        | github when github.StartsWith("https://github.com") -> formattedGithubUrl
-                        | bitbucket when bitbucket.StartsWith("https://bitbucket.org") -> 
+                        | String.StartsWith "https://raw.githubusercontent.com" _-> formattedGithubUrl
+                        | String.StartsWith "https://raw.github.com" _-> formattedGithubUrl
+                        | String.StartsWith "https://github.com" _-> formattedGithubUrl
+                        | String.StartsWith "https://bitbucket.org" _-> 
                             sprintf "%s#cl-%d" (url |> replace "/raw/" "/src/") r.StartLine
+                        | String.Contains ".codebasehq.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
                         | other -> other
 
                     if fireNavigationEvent then
