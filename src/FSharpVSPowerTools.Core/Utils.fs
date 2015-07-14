@@ -376,18 +376,18 @@ module String =
     let split options (separator: string[]) (value: string) = 
         match value with null -> null | x -> x.Split(separator, options)
 
-    let (|StartsWith|_|) value x =
-        if String.IsNullOrWhiteSpace(x) then
+    let (|StartsWith|_|) pattern value =
+        if String.IsNullOrWhiteSpace(value) then
             None
-        elif x.StartsWith(value) then
-            Some x
+        elif value.StartsWith(pattern) then
+            Some value
         else None
 
-    let (|Contains|_|) value x =
-        if String.IsNullOrWhiteSpace(x) then
+    let (|Contains|_|) pattern value =
+        if String.IsNullOrWhiteSpace(value) then
             None
-        elif x.StartsWith(value) then
-            Some x
+        elif value.Contains(pattern) then
+            Some value
         else None
      
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
