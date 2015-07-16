@@ -3,6 +3,7 @@
 * Fix wrong size of unused markers in VS 2012 ([#1027](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1027))
 * Add a new option for interface member identifiers ([#1029](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1029))
 * NavigateToSource now supports bitbucket, gitlab and codebasehq urls ([#1038](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1038))
+* Support F# 4.0 constructs ([#1047](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1047))
 
 #### 1.9.0 - June 21 2015
 * Implement QuickInfo margin ([#973](https://github.com/fsprojects/VisualFSharpPowerTools/issues/973))

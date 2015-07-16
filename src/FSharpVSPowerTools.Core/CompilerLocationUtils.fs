@@ -217,6 +217,7 @@ module internal FSharpEnvironment =
                 | FSharp_2_0 ->  @"Software\Microsoft\FSharp\2.0\Runtime\v4.0"
                 | FSharp_3_0 ->  @"Software\Microsoft\FSharp\3.0\Runtime\v4.0"
                 | FSharp_3_1 ->  @"Software\Microsoft\FSharp\3.1\Runtime\v4.0"
+                | FSharp_4_0 ->  @"Software\Microsoft\FSharp\4.0\Runtime\v4.0"
                 
     let key1,key2 = match fsharpCoreLibRunningVersion with 
                     | None -> key20,key40 
@@ -335,6 +336,7 @@ module internal FSharpEnvironment =
             | NET_2_0 | NET_3_0 | NET_3_5 -> "2.0"
             | NET_4_0 -> "4.0"
             | NET_4_5 -> "4.5"
+            | NET_4_6 -> "4.6"
 
         let result = 
             possibleInstallationPoints |> List.tryPick (fun possibleInstallationDir -> 
