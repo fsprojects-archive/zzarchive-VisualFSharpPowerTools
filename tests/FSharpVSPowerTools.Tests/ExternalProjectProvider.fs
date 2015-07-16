@@ -16,8 +16,9 @@ type ExternalProjectProvider(projectFileName) =
             | "v3.0" -> FSharpTargetFramework.NET_3_0
             | "v3.5" -> FSharpTargetFramework.NET_3_5
             | "v4.0" -> FSharpTargetFramework.NET_4_0
-            | _ -> FSharpTargetFramework.NET_4_5)
-        |> Option.getOrElse FSharpTargetFramework.NET_4_5
+            | "v4.5" -> FSharpTargetFramework.NET_4_5
+            | _ -> FSharpTargetFramework.NET_4_6)
+        |> Option.getOrElse FSharpTargetFramework.NET_4_6
     let compilerOptions = projectResolver.Options |> List.toArray
     let sourceFiles = projectResolver.CompileFiles |> List.toArray
     let outputPath = projectResolver.OutputFile

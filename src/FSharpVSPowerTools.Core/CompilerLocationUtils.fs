@@ -22,6 +22,7 @@ type FSharpTargetFramework =
     | NET_3_5
     | NET_4_0
     | NET_4_5
+    | NET_4_6
     
 type internal FSharpCompilerVersion = 
     // F# 2.0
@@ -30,19 +31,22 @@ type internal FSharpCompilerVersion =
     | FSharp_3_0
     // F# 3.1
     | FSharp_3_1
+    // F# 4.0
+    | FSharp_4_0
     override x.ToString() = 
         match x with
         | FSharp_2_0 -> "4.0.0.0"
         | FSharp_3_0 -> "4.3.0.0"
         | FSharp_3_1 -> "4.3.1.0"
+        | FSharp_4_0 -> "4.4.0.0"
     /// The current requested language version can be overridden by the user using environment variable.
     static member LatestKnown = 
         match System.Environment.GetEnvironmentVariable("FSHARP_PREFERRED_VERSION") with
-        | null -> FSharp_3_1
         | "4.0.0.0" -> FSharp_2_0
         | "4.3.0.0" -> FSharp_3_0
         | "4.3.1.0" -> FSharp_3_1
-        | _ -> FSharp_3_1
+        | "4.4.0.0" -> FSharp_4_0
+        | null | _  -> FSharp_4_0
 
 module internal FSharpEnvironment =
 
