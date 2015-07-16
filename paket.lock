@@ -14,7 +14,7 @@ NUGET
       FSharp.Compiler.Service (>= 0.0.87)
       FSharpVSPowerTools.Core (1.8.0)
     FSharp.ViewModule.Core (0.9.9.1)
-    FSharpLint.Core (0.0.3)
+    FSharpLint.Core (0.0.4)
       FSharp.Compiler.Service (>= 0.0.89)
     FSharpVSPowerTools.Core (1.8.0)
       FSharp.Compiler.Service (>= 0.0.87)
