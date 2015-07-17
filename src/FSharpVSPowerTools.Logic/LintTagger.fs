@@ -29,16 +29,16 @@ type LintTagger(textDocument: ITextDocument,
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
             let! project = projectFactory.CreateForDocument buffer doc
             let source = buffer.CurrentSnapshot.GetText()
-            let! checkResults = vsLanguageService.ParseAndCheckFileInProject (doc.FullName, source, project) |> liftAsync
-            let! ast = checkResults.GetUntypedAst()
+            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
+            let! ast = parseFileResults.ParseTree
             let res = 
-                Lint.lintParsedFile 
+                Lint.lintParsedFile
                     { FinishEarly = None
-                      Configuration = None //Configuration.defaultConfiguration
+                      Configuration = None
                       ReceivedWarning = None }
                     { Ast = ast
                       Source = source
-                      TypeCheckResults = checkResults.GetCheckResults() }
+                      TypeCheckResults = None }
                     doc.FullName
 
             return
