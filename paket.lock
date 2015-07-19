@@ -31,8 +31,7 @@ NUGET
     NUnit.Runners (2.6.4)
     Octokit (0.13.0)
       Microsoft.Net.Http
-    SourceLink.SymbolStore (1.0.0)
-      FSharp.Core (>= 3.1.2.1) - framework: >= net45
+    SourceLink.SymbolStore (0.5.0)
     VSSDK.IDE.11 (11.0.4)
     VSSDK.IDE.Deploy.11 (11.0.4)
       VSSDK.IDE.11 (>= 11.0.4 < 12.0.0)
