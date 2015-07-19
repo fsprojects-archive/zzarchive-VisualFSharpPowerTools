@@ -32,7 +32,7 @@ module FormattingCommandTests =
         TestUtilities.AssertListener.Initialize()
         DocumentEventListener.SkipTimerDelay <- true
 
-    [<Test; RequiresSTA; Ignore>]
+    [<Test; RequiresSTA>]
     let ``should be able to format document``() =
         let content = """
 type Type

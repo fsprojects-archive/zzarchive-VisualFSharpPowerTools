@@ -27,7 +27,7 @@ type InterfaceData =
                 | SynRationalConst.Integer i ->
                     string i
                 | SynRationalConst.Rational(numerator, denominator, _) ->
-                    sprintf "%i/%i" numerator denominator
+                    sprintf "(%i/%i)" numerator denominator
                 | SynRationalConst.Negate (RationalConst s) ->
                     sprintf "- %s" s
 
