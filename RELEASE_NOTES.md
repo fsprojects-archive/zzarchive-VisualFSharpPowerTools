@@ -2,7 +2,8 @@
 * Optimize dialog layouts for high DPI ([#1024](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1024))
 * Fix wrong size of unused markers in VS 2012 ([#1027](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1027))
 * Add a new option for interface member identifiers ([#1029](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1029))
-* NavigateToSource now supports bitbucket, gitlab and codebasehq urls ([#1038](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1038))
+* NavigateToSource now supports Bitbucket, GitLab and Codebasehq urls ([#1038](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1038))
+* Hide F# Power Tools menu on non-F# projects ([#1040](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1040))
 * Support F# 4.0 constructs ([#1047](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1047))
 
 #### 1.9.0 - June 21 2015
