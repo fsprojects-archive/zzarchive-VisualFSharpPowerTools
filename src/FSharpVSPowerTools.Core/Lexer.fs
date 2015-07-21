@@ -157,4 +157,8 @@ module Lexer =
     
     let getSymbol source line col lineStr lookupKind (args: string[]) queryLexState =
         let tokens = tokenizeLine source args line lineStr queryLexState
-        getSymbolFromTokens tokens line col lineStr lookupKind 
+        try
+            getSymbolFromTokens tokens line col lineStr lookupKind
+        with e ->
+            debug "Getting lex symbols failed with %O" e
+            None 
