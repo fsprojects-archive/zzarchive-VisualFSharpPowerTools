@@ -314,6 +314,8 @@ module internal FSharpEnvironment =
                 tryRegKey @"Software\Microsoft\.NETFramework\v4.5.50709\AssemblyFoldersEx\F# 3.0 Core Assemblies"
             | FSharp_3_1, NET_4_5 ->
                 tryRegKey @"Software\Microsoft\.NETFramework\v4.5.50709\AssemblyFoldersEx\F# 3.1 Core Assemblies"
+            | FSharp_4_0, NET_4_6 ->
+                tryRegKey @"Software\Microsoft\.NETFramework\v4.5.22816\AssemblyFoldersEx\F# 4.0 Core Assemblies"
             | _ -> None
         
         match result with 

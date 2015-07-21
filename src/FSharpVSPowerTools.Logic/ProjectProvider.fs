@@ -175,10 +175,13 @@ type internal ProjectProvider(project: Project,
                  p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
      
 /// A standalone project provider in order to represent script files                            
-type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) = 
+type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string, ?vsVersion) = 
     do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
     let source = buffer.CurrentSnapshot.GetText()
-    let targetFramework = FSharpTargetFramework.NET_4_5
+    let targetFramework = 
+        vsVersion
+        |> Option.map (function VisualStudioVersion.VS2015 -> FSharpTargetFramework.NET_4_6 | _ -> FSharpTargetFramework.NET_4_5)
+        |> Option.getOrElse FSharpTargetFramework.NET_4_5
     let projectFileName = filePath + ".fsproj"
     let flags = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
 
