@@ -6,9 +6,9 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyTitleAttribute("FSharpVSPowerTools.Core")>]
 [<assembly: AssemblyProductAttribute("FSharpVSPowerTools")>]
 [<assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")>]
-[<assembly: AssemblyVersionAttribute("1.10.0")>]
-[<assembly: AssemblyFileVersionAttribute("1.10.0")>]
+[<assembly: AssemblyVersionAttribute("2.0.0")>]
+[<assembly: AssemblyFileVersionAttribute("2.0.0")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "1.10.0"
+    let [<Literal>] Version = "2.0.0"

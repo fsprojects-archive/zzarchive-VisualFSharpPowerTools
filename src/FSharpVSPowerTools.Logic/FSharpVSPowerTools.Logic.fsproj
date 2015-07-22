@@ -82,6 +82,9 @@
     <Compile Include="VSUtils.fs">
       <Link>Common/VSUtils.fs</Link>
     </Compile>
+    <Compile Include="EventHandling.fs">
+      <Link>Common/EventHandling.fs</Link>
+    </Compile>
     <Compile Include="VSColors.fs">
       <Link>Common/VSColors.fs</Link>
     </Compile>

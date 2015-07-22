@@ -22,6 +22,7 @@ type FSharpTargetFramework =
     | NET_3_5
     | NET_4_0
     | NET_4_5
+    | NET_4_6
     
 type internal FSharpCompilerVersion = 
     // F# 2.0
@@ -30,19 +31,22 @@ type internal FSharpCompilerVersion =
     | FSharp_3_0
     // F# 3.1
     | FSharp_3_1
+    // F# 4.0
+    | FSharp_4_0
     override x.ToString() = 
         match x with
         | FSharp_2_0 -> "4.0.0.0"
         | FSharp_3_0 -> "4.3.0.0"
         | FSharp_3_1 -> "4.3.1.0"
+        | FSharp_4_0 -> "4.4.0.0"
     /// The current requested language version can be overridden by the user using environment variable.
     static member LatestKnown = 
         match System.Environment.GetEnvironmentVariable("FSHARP_PREFERRED_VERSION") with
-        | null -> FSharp_3_1
         | "4.0.0.0" -> FSharp_2_0
         | "4.3.0.0" -> FSharp_3_0
         | "4.3.1.0" -> FSharp_3_1
-        | _ -> FSharp_3_1
+        | "4.4.0.0" -> FSharp_4_0
+        | null | _  -> FSharp_4_0
 
 module internal FSharpEnvironment =
 
@@ -213,6 +217,7 @@ module internal FSharpEnvironment =
                 | FSharp_2_0 ->  @"Software\Microsoft\FSharp\2.0\Runtime\v4.0"
                 | FSharp_3_0 ->  @"Software\Microsoft\FSharp\3.0\Runtime\v4.0"
                 | FSharp_3_1 ->  @"Software\Microsoft\FSharp\3.1\Runtime\v4.0"
+                | FSharp_4_0 ->  @"Software\Microsoft\FSharp\4.0\Runtime\v4.0"
                 
     let key1,key2 = match fsharpCoreLibRunningVersion with 
                     | None -> key20,key40 
@@ -309,6 +314,8 @@ module internal FSharpEnvironment =
                 tryRegKey @"Software\Microsoft\.NETFramework\v4.5.50709\AssemblyFoldersEx\F# 3.0 Core Assemblies"
             | FSharp_3_1, NET_4_5 ->
                 tryRegKey @"Software\Microsoft\.NETFramework\v4.5.50709\AssemblyFoldersEx\F# 3.1 Core Assemblies"
+            | FSharp_4_0, NET_4_6 ->
+                tryRegKey @"Software\Microsoft\.NETFramework\v4.5.22816\AssemblyFoldersEx\F# 4.0 Core Assemblies"
             | _ -> None
         
         match result with 
@@ -331,6 +338,7 @@ module internal FSharpEnvironment =
             | NET_2_0 | NET_3_0 | NET_3_5 -> "2.0"
             | NET_4_0 -> "4.0"
             | NET_4_5 -> "4.5"
+            | NET_4_6 -> "4.6"
 
         let result = 
             possibleInstallationPoints |> List.tryPick (fun possibleInstallationDir -> 
