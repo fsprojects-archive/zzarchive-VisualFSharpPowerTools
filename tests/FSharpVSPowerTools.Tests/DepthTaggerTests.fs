@@ -31,7 +31,7 @@ type DepthTaggerHelper() =
 
 module DepthTaggerTests =
 #if APPVEYOR
-    let timeout = 60000<ms>
+    let timeout = 20000<ms>
 #else
     let timeout = 10000<ms>
 #endif

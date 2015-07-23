@@ -334,12 +334,24 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                             replace m.Value (sprintf "blob/%s" m.Value) url
                         | _ -> url
                     let browserUrl =
-                        sprintf "%s#L%d"
-                            (url 
+                        let formattedGithubUrl =  
+                            sprintf "%s#L%d" 
+                             (url 
                              |> replace "raw.githubusercontent" "github" 
-                             |> replace "raw.github" "github" 
+                             |> replace "raw.github" "github"
                              |> replaceBlob m)
-                            r.StartLine
+                             r.StartLine
+
+                        match url with
+                        | String.StartsWith "https://raw.githubusercontent.com" _-> formattedGithubUrl
+                        | String.StartsWith "https://raw.github.com" _-> formattedGithubUrl
+                        | String.StartsWith "https://github.com" _-> formattedGithubUrl
+                        | String.StartsWith "https://bitbucket.org" _-> 
+                            sprintf "%s#cl-%d" (url |> replace "/raw/" "/src/") r.StartLine
+                        | String.Contains ".codebasehq.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
+                        | String.StartsWith "https://gitlab.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
+                        | other -> other
+
                     if fireNavigationEvent then
                         currentUrl <- Some url
                         urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                        

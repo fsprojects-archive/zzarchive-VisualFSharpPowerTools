@@ -72,18 +72,20 @@ type internal ProjectProvider(project: Project,
 
     let targetFramework = lazy (
         match getProperty "TargetFrameworkMoniker" with
-        | null -> FSharpTargetFramework.NET_4_5
+        | null -> FSharpTargetFramework.NET_4_6
         | x -> 
             try
                 let frameworkName = new Runtime.Versioning.FrameworkName(x)
                 match frameworkName.Version.Major, frameworkName.Version.Minor with
+                | 4, 6 -> FSharpTargetFramework.NET_4_6
                 | 4, 5 -> FSharpTargetFramework.NET_4_5
                 | 4, 0 -> FSharpTargetFramework.NET_4_0
                 | 3, 5 -> FSharpTargetFramework.NET_3_5
                 | 3, 0 -> FSharpTargetFramework.NET_3_0
                 | 2, 0 -> FSharpTargetFramework.NET_2_0
                 | _ -> invalidArg "prop" "Unsupported .NET framework version" 
-            with :? ArgumentException -> FSharpTargetFramework.NET_4_5)
+            with :? ArgumentException -> 
+                FSharpTargetFramework.NET_4_6)
 
     let sourceFiles = lazy (
         match getSourcesAndFlags() with
@@ -173,10 +175,13 @@ type internal ProjectProvider(project: Project,
                  p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
      
 /// A standalone project provider in order to represent script files                            
-type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string) = 
+type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string, ?vsVersion) = 
     do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
     let source = buffer.CurrentSnapshot.GetText()
-    let targetFramework = FSharpTargetFramework.NET_4_5
+    let targetFramework = 
+        vsVersion
+        |> Option.map (function VisualStudioVersion.VS2015 -> FSharpTargetFramework.NET_4_6 | _ -> FSharpTargetFramework.NET_4_5)
+        |> Option.getOrElse FSharpTargetFramework.NET_4_5
     let projectFileName = filePath + ".fsproj"
     let flags = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
 

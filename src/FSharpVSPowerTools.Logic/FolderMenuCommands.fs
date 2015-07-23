@@ -402,29 +402,31 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         member __.QueryStatus(pguidCmdGroup: byref<Guid>, _cCmds: uint32, prgCmds: OLECMD [], _pCmdText: IntPtr): int = 
             if pguidCmdGroup = Constants.guidSolutionExplorerCmdSet &&
                 prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.fsPowerToolsSubMenuGroup) then
-                prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
+                if getActionInfo()
+                   |> Option.map (fun info -> isFSharpProject info.Project)
+                   |> Option.getOrElse false then
+                    prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
+                else
+                    // Hide the menu group on non-F# projects
+                    prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
                 VSConstants.S_OK
             elif pguidCmdGroup = Constants.guidOldStandardCmdSet && 
                 prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdStandardNewFolder) then
-                match getActionInfo() with
-                | Some info ->
-                    if isFSharpProject info.Project then
+                if getActionInfo()
+                   |> Option.map (fun info -> isFSharpProject info.Project)
+                   |> Option.getOrElse false then
                         prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
                         VSConstants.S_OK
-                    else
-                        int Constants.OLECMDERR_E_UNKNOWNGROUP
-                | None ->
+                else
                     int Constants.OLECMDERR_E_UNKNOWNGROUP
             elif pguidCmdGroup = Constants.guidOldStandardCmdSet && 
                 prgCmds |> Seq.exists (fun x -> x.cmdID = Constants.cmdStandardRenameFolder) then
-                match getActionInfo() with
-                | Some info ->
-                    if isFSharpProject info.Project && List.exists isPhysicalFolder info.Items then
-                        prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
-                        VSConstants.S_OK
-                    else
-                        int Constants.OLECMDERR_E_UNKNOWNGROUP
-                | None ->
+                if getActionInfo()
+                   |> Option.map (fun info -> isFSharpProject info.Project && List.exists isPhysicalFolder info.Items)
+                   |> Option.getOrElse false then
+                    prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_INVISIBLE)
+                    VSConstants.S_OK
+                else
                     int Constants.OLECMDERR_E_UNKNOWNGROUP
             else
                 int Constants.OLECMDERR_E_UNKNOWNGROUP

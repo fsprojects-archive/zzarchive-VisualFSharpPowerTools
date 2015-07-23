@@ -241,23 +241,33 @@ type LanguageService (?fileSystem: IFileSystem) =
                 
             let results =         
                 // The FSharpChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
-                if opts.OtherOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then opts
+                if opts.OtherOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then
+                    match targetFramework with
+                    | FSharpTargetFramework.NET_4_6 ->
+                        // Workaround wrong FSharp.Core resolution (https://github.com/fsharp/FSharp.Compiler.Service/issues/383)
+                        let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework)
+                        FSharpEnvironment.resolveAssembly dirs "FSharp.Core"
+                        |> Option.map (fun path -> 
+                            let fsharpCoreRef = sprintf "-r:%s" path
+                            { opts with OtherOptions = [| yield fsharpCoreRef
+                                                          yield! opts.OtherOptions |> Seq.filter (fun s -> not (s.Contains "FSharp.Core.dll")) |] })
+                        |> Option.getOrElse opts
+                    | _ -> opts
                 else 
                 // Add assemblies that may be missing in the standard assembly resolution
                 debug "GetScriptCheckerOptions: Adding missing core assemblies."
-                let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework )
-                {opts with OtherOptions =   [|  yield! opts.OtherOptions
+                let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework)
+                { opts with OtherOptions =  [|  yield! opts.OtherOptions
                                                 match FSharpEnvironment.resolveAssembly dirs "FSharp.Core" with
                                                 | Some fn -> yield sprintf "-r:%s" fn
                                                 | None -> debug "Resolution: FSharp.Core assembly resolution failed!"
                                                 match FSharpEnvironment.resolveAssembly dirs "FSharp.Compiler.Interactive.Settings" with
                                                 | Some fn -> yield sprintf "-r:%s" fn
-                                                | None -> debug "Resolution: FSharp.Compiler.Interactive.Settings assembly resolution failed!" |]}
+                                                | None -> debug "Resolution: FSharp.Compiler.Interactive.Settings assembly resolution failed!" |] }
               
             // Print contents of check option for debugging purposes
             debug "GetScriptCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-                                    opts.ProjectFileName opts.ProjectFileNames opts.OtherOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules
-        
+                                    results.ProjectFileName results.ProjectFileNames results.OtherOptions results.IsIncompleteTypeCheckEnvironment results.UseScriptResolutionRules        
             return results
         with e -> 
             return failwithf "Exception when getting check options for '%s'\n.Details: %A" fileName e
