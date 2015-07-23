@@ -55,9 +55,9 @@ namespace FSharpVSPowerTools
             this.chbGenerateReferences = new System.Windows.Forms.CheckBox();
             this.chbGoToSymbolSource = new System.Windows.Forms.CheckBox();
             this.chbQuickInfoPanel = new System.Windows.Forms.CheckBox();
+            this.chbLinter = new System.Windows.Forms.CheckBox();
             this.lblInformation = new System.Windows.Forms.Label();
             this.lblInfo = new System.Windows.Forms.Label();
-            this.chbLinter = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.tblLayoutPanel.SuspendLayout();
             this.flowLayoutPanel.SuspendLayout();
@@ -90,7 +90,7 @@ namespace FSharpVSPowerTools
             this.tblLayoutPanel.Controls.Add(this.lblInfo, 0, 2);
             this.tblLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tblLayoutPanel.Location = new System.Drawing.Point(1, 16);
-            this.tblLayoutPanel.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.tblLayoutPanel.Margin = new System.Windows.Forms.Padding(2);
             this.tblLayoutPanel.Name = "tblLayoutPanel";
             this.tblLayoutPanel.RowCount = 3;
             this.tblLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
@@ -144,7 +144,7 @@ namespace FSharpVSPowerTools
             this.flowLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.flowLayoutPanel.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this.flowLayoutPanel.Location = new System.Drawing.Point(2, 2);
-            this.flowLayoutPanel.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.flowLayoutPanel.Margin = new System.Windows.Forms.Padding(2);
             this.flowLayoutPanel.Name = "flowLayoutPanel";
             this.flowLayoutPanel.Size = new System.Drawing.Size(453, 258);
             this.flowLayoutPanel.TabIndex = 0;
@@ -458,27 +458,6 @@ namespace FSharpVSPowerTools
             this.chbQuickInfoPanel.Text = "Quick info panel";
             this.chbQuickInfoPanel.UseVisualStyleBackColor = true;
             // 
-            // lblInformation
-            // 
-            this.lblInformation.AutoSize = true;
-            this.lblInformation.Location = new System.Drawing.Point(3, 262);
-            this.lblInformation.Name = "lblInformation";
-            this.lblInformation.Padding = new System.Windows.Forms.Padding(5, 3, 5, 3);
-            this.lblInformation.Size = new System.Drawing.Size(149, 19);
-            this.lblInformation.TabIndex = 13;
-            this.lblInformation.Text = "*** Admin privileges required";
-            // 
-            // lblInfo
-            // 
-            this.lblInfo.AutoSize = true;
-            this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.lblInfo.Location = new System.Drawing.Point(3, 281);
-            this.lblInfo.Name = "lblInfo";
-            this.lblInfo.Padding = new System.Windows.Forms.Padding(5, 3, 5, 3);
-            this.lblInfo.Size = new System.Drawing.Size(341, 19);
-            this.lblInfo.TabIndex = 5;
-            this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
-            // 
             // chbLinter
             // 
             this.chbLinter.AutoSize = true;
@@ -492,6 +471,27 @@ namespace FSharpVSPowerTools
             this.chbLinter.TabIndex = 23;
             this.chbLinter.Text = "Linter";
             this.chbLinter.UseVisualStyleBackColor = true;
+            // 
+            // lblInformation
+            // 
+            this.lblInformation.AutoSize = true;
+            this.lblInformation.Location = new System.Drawing.Point(3, 262);
+            this.lblInformation.Name = "lblInformation";
+            this.lblInformation.Padding = new System.Windows.Forms.Padding(5, 3, 5, 3);
+            this.lblInformation.Size = new System.Drawing.Size(234, 19);
+            this.lblInformation.TabIndex = 13;
+            this.lblInformation.Text = "*** Admin privileges required to enable/disable";
+            // 
+            // lblInfo
+            // 
+            this.lblInfo.AutoSize = true;
+            this.lblInfo.ForeColor = System.Drawing.SystemColors.HotTrack;
+            this.lblInfo.Location = new System.Drawing.Point(3, 281);
+            this.lblInfo.Name = "lblInfo";
+            this.lblInfo.Padding = new System.Windows.Forms.Padding(5, 3, 5, 3);
+            this.lblInfo.Size = new System.Drawing.Size(341, 19);
+            this.lblInfo.TabIndex = 5;
+            this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
             // 
             // GeneralOptionsControl
             // 
