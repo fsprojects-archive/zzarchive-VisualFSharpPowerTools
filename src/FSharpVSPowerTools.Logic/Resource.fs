@@ -29,8 +29,8 @@ module Resource =
 
     let [<Literal>] invalidIdentifierMessage = "Not a valid F# identifier. Please try again."
 
-    let newFolderDialogTitle = vsPackageTitle + " - New Folder"
-    let renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
+    let [<Literal>] newFolderDialogTitle = vsPackageTitle + " - New Folder"
+    let [<Literal>] renameFolderDialogTitle = vsPackageTitle + " - Rename Folder"
 
     let [<Literal>] interfaceFilledStatusMessage = "All members of this interface have been implemented."
 
@@ -54,8 +54,6 @@ module Resource =
     let [<Literal>] goToDefinitionNoSourceSymbolMessage = "Can't navigate to source since there is no associated pdb file or it is not source indexed."
 
     let [<Literal>] languageServiceErrorMessage = """
-Internal language services have encountered severe errors.
-Syntax coloring or other features may stop working.
-If you experience such issues, they could be fixed as follows: (1) Clean current solution (2) Restart Visual Studio (3) Rebuild the solution.
-We're sorry for any inconvenience caused.
+Internal language services have encountered some errors.
+Please make sure that you have correct referenced assemblies and rebuild the solution.
 """
