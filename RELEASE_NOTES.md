@@ -1,4 +1,4 @@
-#### 2.0.0 - Unreleased
+#### 2.0.0-beta - July 26 2015
 * Optimize dialog layouts for high DPI ([#1024](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1024))
 * Fix wrong size of unused markers in VS 2012 ([#1027](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1027))
 * Add a new option for interface member identifiers ([#1029](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1029))
@@ -7,6 +7,7 @@
 * Support F# 4.0 constructs ([#1047](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1047))
 * Set explicit dependency on Visual F# Tools ([#1056](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1056))
 * Improve theme detection on VS 2015 ([#1058](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1058))
+* Drop officially support for VS 2012 ([#1060](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1060))
 
 #### 1.9.0 - June 21 2015
 * Implement QuickInfo margin ([#973](https://github.com/fsprojects/VisualFSharpPowerTools/issues/973))
