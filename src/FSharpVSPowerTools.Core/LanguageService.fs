@@ -50,6 +50,11 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
         | None -> None
         | Some (_, parseResults) -> parseResults.ParseTree
 
+    member __.GetCheckResults() =
+        match infoOpt with 
+        | None -> None
+        | Some (checkResults, _) -> Some checkResults
+
     member __.GetFormatSpecifierLocations() =
         match infoOpt with 
         | None -> None

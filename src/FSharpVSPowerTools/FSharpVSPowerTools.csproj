@@ -152,6 +152,8 @@
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </Compile>
     <Compile Include="HighlightUsageFilterProvider.cs" />
+    <Compile Include="LintQuickInfoProvider.cs" />
+    <Compile Include="LintTaggerProvider.cs" />
     <Compile Include="QuickInfoMarginProvider.cs" />
     <Compile Include="TaskListCommentFilterProvider.cs" />
     <Compile Include="UnusedDeclarationMarginProvider.cs" />

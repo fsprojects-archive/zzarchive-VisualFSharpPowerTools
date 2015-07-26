@@ -137,6 +137,12 @@ namespace FSharpVSPowerTools
             set { chbQuickInfoPanel.Checked = value; }
         }
 
+        public bool LinterEnabled
+        {
+            get { return chbLinter.Checked; }
+            set { chbLinter.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -160,6 +166,7 @@ namespace FSharpVSPowerTools
             GenerateReferencesEnabled = _optionsPage.GenerateReferencesEnabled;
             GoToSymbolSourceEnabled = _optionsPage.GoToSymbolSourceEnabled;
             QuickInfoPanelEnabled = _optionsPage.QuickInfoPanelEnabled;
+            LinterEnabled = _optionsPage.LinterEnabled;
         }
     }
 }

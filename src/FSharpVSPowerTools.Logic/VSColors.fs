@@ -3,6 +3,7 @@
 open System.Reflection
 open Microsoft.VisualStudio.Shell
 open FSharpVSPowerTools
+open System.Windows.Controls
 
 // A port of https://github.com/tomasr/viasfora/blob/master/Viasfora/Util/VsColors.cs
 
@@ -26,3 +27,5 @@ type VSColors() =
 
     static member CommandShelfBackgroundGradientBrushKey = tryGetOrElse "CommandShelfBackgroundGradientBrushKey" VsBrushes.CommandBarGradientBeginKey
     static member CommandBarTextActiveBrushKey = tryGetOrElse "CommandBarTextActiveBrushKey" VsBrushes.CommandBarTextActiveKey
+    static member ToolTipBrushKey = tryGetOrElse "ToolTipBrushKey" TextBlock.BackgroundProperty
+    static member ToolTipTextBrushKey = tryGetOrElse "ToolTipTextBrushKey" TextBlock.ForegroundProperty
