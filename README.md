@@ -18,6 +18,11 @@ Visual F# Power Tools is a community effort to bring useful F# VS extensions int
 This project is made possible by excellent work in [FSharp.Compiler.Service](https://github.com/fsharp/FSharp.Compiler.Service)
 and [FSharpBinding](https://github.com/fsharp/fsharpbinding).
 
+> **NOTE:** Since v2.0.0, we no longer officially support Visual Studio 2012.
+An archived v2.0.0 compatible with Visual Studio 2012 is kept at [AppVeyor deployment](https://ci.appveyor.com/project/dungpa/visualfsharppowertools/branch/vs2012/artifacts)
+ in case someone needs it.
+Alternatively, one can build [vs2012 branch](https://github.com/fsprojects/VisualFSharpPowerTools/tree/vs2012) for Visual Studio 2012 support.
+
 ### Currently supported features
  - Auto-generating XmlDoc (via [F# XmlDoc extension](http://lorgonblog.wordpress.com/2010/12/04/source-code-for-f-xmldoc-extension/))
  - Formatting document / Formatting selection (via [Fantomas extension](https://github.com/dungpa/fantomas))

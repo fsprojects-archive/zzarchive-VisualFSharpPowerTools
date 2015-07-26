@@ -5,6 +5,8 @@
 * NavigateToSource now supports Bitbucket, GitLab and Codebasehq urls ([#1038](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1038))
 * Hide F# Power Tools menu on non-F# projects ([#1040](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1040))
 * Support F# 4.0 constructs ([#1047](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1047))
+* Set explicit dependency on Visual F# Tools ([#1056](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1056))
+* Improve theme detection on VS 2015 ([#1058](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1058))
 
 #### 1.9.0 - June 21 2015
 * Implement QuickInfo margin ([#973](https://github.com/fsprojects/VisualFSharpPowerTools/issues/973))

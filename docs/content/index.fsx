@@ -5,8 +5,12 @@
 
 (**
 
-You can install this extension in Visual Studio 2015, Visual Studio 2013 and Visual Studio 2012 by searching for "FSharp Power Tools" in "Tools --> Extensions and Updates --> Online".
+You can install this extension in Visual Studio 2015 and Visual Studio 2013 by searching for "FSharp Power Tools" in "Tools --> Extensions and Updates --> Online".
 The extension is also available in the [Visual Studio Gallery](http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff).
+
+> **NOTE:** Since v2.0.0, we no longer officially support Visual Studio 2012.
+An archived v2.0.0 compatible with Visual Studio 2012 is kept at [AppVeyor deployment](https://ci.appveyor.com/project/dungpa/visualfsharppowertools/branch/vs2012/artifacts)
+ in case someone needs it.
 
 User guides
 -----------------------
