@@ -219,19 +219,19 @@ type LanguageService (?fileSystem: IFileSystem) =
       }
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
-  member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, targetFramework) =
+  member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, fscVersion) =
     let ext = Path.GetExtension(fileName)
     let opts = 
         if ext = ".fsx" || ext = ".fsscript" then
            // We are in a stand-alone file or we are in a project, but currently editing a script file
-           x.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework)
+           x.GetScriptCheckerOptions(fileName, projFilename, source, fscVersion)
           
         // We are in a project - construct options using current properties
         else async { return x.GetProjectCheckerOptions(projFilename, files, args, referencedProjects) }
     opts
 
   /// Constructs options for the interactive checker for the given script file in the project under the given configuration. 
-  member __.GetScriptCheckerOptions(fileName, projFilename, source, targetFramework) =
+  member __.GetScriptCheckerOptions(fileName, projFilename, source, fscVersion) =
       async {
         // We are in a stand-alone file or we are in a project, but currently editing a script file
         try 
@@ -242,10 +242,10 @@ type LanguageService (?fileSystem: IFileSystem) =
             let results =         
                 // The FSharpChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
                 if opts.OtherOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then
-                    match targetFramework with
-                    | FSharpTargetFramework.NET_4_6 ->
-                        // Workaround wrong FSharp.Core resolution (https://github.com/fsharp/FSharp.Compiler.Service/issues/383)
-                        let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework)
+                    match fscVersion with
+                    | FSharpCompilerVersion.FSharp_3_0
+                    | FSharpCompilerVersion.FSharp_3_1 ->
+                        let dirs = FSharpEnvironment.getDefaultDirectories(fscVersion, FSharpTargetFramework.NET_4_5)
                         FSharpEnvironment.resolveAssembly dirs "FSharp.Core"
                         |> Option.map (fun path -> 
                             let fsharpCoreRef = sprintf "-r:%s" path
@@ -256,7 +256,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                 else 
                 // Add assemblies that may be missing in the standard assembly resolution
                 debug "GetScriptCheckerOptions: Adding missing core assemblies."
-                let dirs = FSharpEnvironment.getDefaultDirectories (FSharpCompilerVersion.LatestKnown, targetFramework)
+                let dirs = FSharpEnvironment.getDefaultDirectories(fscVersion, FSharpTargetFramework.NET_4_5)
                 { opts with OtherOptions =  [|  yield! opts.OtherOptions
                                                 match FSharpEnvironment.resolveAssembly dirs "FSharp.Core" with
                                                 | Some fn -> yield sprintf "-r:%s" fn
@@ -304,23 +304,6 @@ type LanguageService (?fileSystem: IFileSystem) =
     match res with 
     | Some (untyped,typed,_) when typed.HasFullTypeCheckInfo  -> Some (ParseAndCheckResults(typed, untyped))
     | _ -> None
-
-(*
- // This is currently unused, but could be used in the future to ensure reactivity and analysis-responsiveness in some situations.
- // The method in the corresponding fsharpbinding code is used by Xamarin Studio.
-  member __.GetTypedParseResultWithTimeout(projectFilename, fileName:string, src, files, args, stale, timeout, targetFramework)  : ParseAndCheckResults = 
-    let opts = __.GetCheckerOptions(fileName, projectFilename, src, files, args, targetFramework)
-    debug "Parsing: Get typed parse result, fileName=%A" [|fileName|]
-    // Try to get recent results from the F# service
-    match __.TryGetStaleTypedParseResult(fileName, opts, src, stale)  with
-    | Some results ->
-        debug "Parsing: using stale results"
-        results
-    | None -> 
-        debug "Worker: Not using stale results - trying typecheck with timeout"
-        // If we didn't get a recent set of type checking results, we put in a request and wait for at most 'timeout' for a response
-        mbox.PostAndReply((fun reply -> (fileName, src, opts, reply)), timeout = timeout)
-*)
 
   /// Parses and checks the given file in the given project under the given configuration. Asynchronously
   /// returns the results of checking the file.
@@ -391,7 +374,7 @@ type LanguageService (?fileSystem: IFileSystem) =
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
-  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, targetFramework, parseTreeHandler, ct: System.Threading.CancellationToken) = 
+  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, fscVersion, parseTreeHandler, ct: System.Threading.CancellationToken) = 
       let rec loop i options = 
         async {
           if not ct.IsCancellationRequested && i < files.Length then
@@ -408,7 +391,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                         async {
                           match options with
                           | None -> 
-                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, [||], targetFramework)
+                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, [||], fscVersion)
                           | Some opts -> 
                               return opts
                         }

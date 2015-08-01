@@ -87,7 +87,7 @@ let x = 0
 x
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)            
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)            
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
 

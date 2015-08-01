@@ -68,7 +68,7 @@ module SyntaxConstructClassifierTests =
     let ``should return a single operator symbol if the code doesn't contain any other symbols``() = 
         let content = "let x = 0"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
             (fun () -> 
@@ -88,7 +88,7 @@ module Module1 =
     let x = ()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
         let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
@@ -123,7 +123,7 @@ let internal f() = ()
         // IsSymbolUsedForProject seems to require a file to exist on disks
         // If not, type checking fails with some weird errors
         File.WriteAllText(fileName, "")
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let classifier = helper.GetClassifier(buffer)
 
         // first event is raised when "fast computable" spans (without Unused declarations and opens) are ready

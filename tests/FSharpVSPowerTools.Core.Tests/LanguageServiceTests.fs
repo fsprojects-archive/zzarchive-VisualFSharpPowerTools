@@ -29,7 +29,7 @@ let args =
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
     @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
 
-let framework = FSharpTargetFramework.NET_4_5
+let compilerVersion = FSharpCompilerVersion.FSharp_3_1
 let languageService = LanguageService()
 let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, [||])
 #if INTERACTIVE
@@ -362,7 +362,7 @@ let ``ProcessParseTree should be called for all files in project``() =
         Map.empty, 
         [| f1.FilePath; f2.FilePath |], 
         args, 
-        framework, 
+        compilerVersion, 
         seen.Add,
         System.Threading.CancellationToken.None) |> Async.RunSynchronously
 
@@ -379,7 +379,7 @@ let ``ProcessParseTree should prefer open documents``() =
         [f1.FilePath, "module Bar"] |> Map.ofList, 
         [| f1.FilePath|], 
         args, 
-        framework, 
+        compilerVersion, 
         seen.Add,
         System.Threading.CancellationToken.None)
     |> Async.RunSynchronously
@@ -406,7 +406,7 @@ let ``ProcessParseTree should react on cancellation``() =
         Map.empty, 
         [| f1.FilePath|], 
         args, 
-        framework, 
+        compilerVersion, 
         seen.Add,
         cts.Token)
     |> Async.RunSynchronously

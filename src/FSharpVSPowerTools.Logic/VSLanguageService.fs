@@ -28,6 +28,7 @@ and IProjectProvider =
     abstract IsForStandaloneScript: bool
     abstract ProjectFileName: string
     abstract TargetFramework: FSharpTargetFramework
+    abstract CompilerVersion: FSharpCompilerVersion option
     abstract CompilerOptions: string []
     abstract SourceFiles: string []
     abstract FullOutputFilePath: string option
@@ -169,7 +170,7 @@ type VSLanguageService
             openDocuments, 
             projectProvider.SourceFiles, 
             projectProvider.CompilerOptions, 
-            projectProvider.TargetFramework, 
+            projectProvider.CompilerVersion |> Option.getOrElse FSharpCompilerVersion.FSharp_3_1, 
             (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
             ct)        
 
