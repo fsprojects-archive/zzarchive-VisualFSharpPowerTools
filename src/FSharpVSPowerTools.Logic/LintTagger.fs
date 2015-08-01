@@ -31,11 +31,27 @@ type LintTagger(textDocument: ITextDocument,
             let source = buffer.CurrentSnapshot.GetText()
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
             let! ast = parseFileResults.ParseTree
+
+            let config = 
+                match ConfigurationManagement.loadConfigurationForProject project.ProjectFileName with
+                | ConfigurationManagement.ConfigurationResult.Success(config) -> Some(config)
+                | ConfigurationManagement.ConfigurationResult.Failure(failure) -> 
+                    let failureMessage =
+                        match failure with
+                        | ConfigurationManagement.ConfigFailure.FailedToLoadConfig(message) -> message
+                        | ConfigurationManagement.ConfigFailure.RunTimeConfigError -> 
+                            "Failed when checking config at run time."
+
+                    Logging.logWarning 
+                        "Failed to load config for project %s. Failed because: %s" 
+                        project.ProjectFileName
+                        failureMessage
+
+                    None
+
             let res = 
                 Lint.lintParsedFile
-                    { FinishEarly = None
-                      Configuration = None
-                      ReceivedWarning = None }
+                    { Lint.OptionalLintParameters.Default with Configuration = config }
                     { Ast = ast
                       Source = source
                       TypeCheckResults = None }
@@ -45,7 +61,6 @@ type LintTagger(textDocument: ITextDocument,
                 match res with
                 | LintResult.Success warnings ->
                     warnings 
-                    //|> Seq.distinctBy (fun warn -> warn.Range, warn.Info)
                     |> Seq.choose (fun warn ->
                         let r = warn.Range
                         let endCol =
