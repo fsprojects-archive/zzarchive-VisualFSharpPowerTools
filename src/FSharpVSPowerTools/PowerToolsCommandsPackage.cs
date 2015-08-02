@@ -25,6 +25,7 @@ namespace FSharpVSPowerTools
     [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(CodeGenerationOptionsPage), Resource.vsPackageTitle, "Code Generation", 0, 0, true, 0)]
     [ProvideOptionPage(typeof(GlobalOptionsPage), Resource.vsPackageTitle, "Configuration", 0, 0, true, 0)]
+    [ProvideOptionPage(typeof(LintOptionsPage), Resource.vsPackageTitle, "Lint", 0, 0, true, 0)]
     [ProvideService(typeof(IGeneralOptions))]   
     [ProvideService(typeof(IFormattingOptions))]
     [ProvideService(typeof(ICodeGenerationOptions))]

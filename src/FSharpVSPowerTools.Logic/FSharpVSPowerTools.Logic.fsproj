@@ -67,6 +67,7 @@
     <Resource Include="MoveToFolderDialog.xaml">
     </Resource>
     <Resource Include="QuickInfoMargin.xaml" />
+    <Resource Include="LintOptionsPageControl.xaml" />
     <Compile Include="Resource.fs">
       <Link>Common/Resource.fs</Link>
     </Compile>
@@ -235,6 +236,10 @@
     <Compile Include="LintQuickInfoSource.fs">
       <Link>Linting/LintQuickInfoSource.fs</Link>
     </Compile>
+    <Compile Include="Linting\FileViewModel.fs" />
+    <Compile Include="Linting\RuleViewModel.fs" />
+    <Compile Include="Linting\OptionsViewModel.fs" />
+    <Compile Include="Linting\LintOptionsPageControl.xaml.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -242,6 +247,15 @@
     <Reference Include="EnvDTE80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
+    </Reference>
+    <Reference Include="FSharpLint.Application">
+      <HintPath>..\..\..\FSharpLint\src\FSharpLint.Application\bin\Debug\FSharpLint.Application.dll</HintPath>
+    </Reference>
+    <Reference Include="FSharpLint.Framework">
+      <HintPath>..\..\..\FSharpLint\src\FSharpLint.Application\bin\Debug\FSharpLint.Framework.dll</HintPath>
+    </Reference>
+    <Reference Include="FSharpLint.Rules">
+      <HintPath>..\..\..\FSharpLint\src\FSharpLint.Application\bin\Debug\FSharpLint.Rules.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
@@ -447,21 +461,6 @@
     </Reference>
     <Reference Include="FParsecCS">
       <HintPath>..\..\packages\FSharpLint.Core\lib\FParsecCS.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-    <Reference Include="FSharpLint.Application">
-      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Application.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-    <Reference Include="FSharpLint.Framework">
-      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Framework.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-    <Reference Include="FSharpLint.Rules">
-      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Rules.dll</HintPath>
       <Private>True</Private>
       <Paket>True</Paket>
     </Reference>
