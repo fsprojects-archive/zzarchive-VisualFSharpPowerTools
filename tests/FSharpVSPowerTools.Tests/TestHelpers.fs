@@ -6,6 +6,7 @@ open NUnit.Framework
 open System.IO
 open System
 open Microsoft.VisualStudio.Text
+open FSharpVSPowerTools.ProjectSystem
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"
 
@@ -20,6 +21,9 @@ let createMockTextBuffer content fileName =
 
 let createMockTextView buffer =
     MockTextView(buffer)
+
+let internal createVirtualProject(buffer, fileName) =
+    VirtualProjectProvider(buffer, fileName, VisualStudioVersion.VS2013)
 
 /// Tests that the specified condition is true.
 /// If not, calls Assert.Fail with a formatted string.

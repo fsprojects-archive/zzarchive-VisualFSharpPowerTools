@@ -8,7 +8,7 @@ NUGET
     Foq (1.7.1)
     FsCheck (2.0.3)
       FSharp.Core (>= 3.1.2.1)
-    FSharp.Compiler.Service (1.4.0-beta)
+    FSharp.Compiler.Service (1.4.0.1)
     FSharp.Core (3.1.2.5)
     FSharp.Formatting (2.9.10)
       FSharp.Compiler.Service (>= 0.0.87)
@@ -33,10 +33,13 @@ NUGET
       Microsoft.Net.Http
     SourceLink.SymbolStore (0.5.0)
     VSSDK.IDE.11 (11.0.4)
+    VSSDK.IDE.14 (14.0.4-preview)
     VSSDK.IDE.Deploy.11 (11.0.4)
       VSSDK.IDE.11 (>= 11.0.4 < 12.0.0)
+    VSSDK.IDE.Deploy.14 (14.0.4-preview)
+      VSSDK.IDE.14 (>= 14.0.4-preview < 15.0.0)
 GITHUB
   remote: fsharp/FAKE
   specs:
-    modules/Octokit/Octokit.fsx (67584fb9db30af11f16d9c1e7d36e1ca244a6f9c)
+    modules/Octokit/Octokit.fsx (69ef5a5ccc1ece211a241fa43781b53d49e58475)
       Octokit

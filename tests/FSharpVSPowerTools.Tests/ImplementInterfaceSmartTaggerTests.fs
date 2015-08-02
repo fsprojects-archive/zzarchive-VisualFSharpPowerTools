@@ -58,7 +58,7 @@ type Impl() =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -76,7 +76,7 @@ let _ =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -92,7 +92,7 @@ let _ =
         // Use separate file name since asynchronous action might fire a bit later
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -127,7 +127,7 @@ type Class() =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -172,7 +172,7 @@ type Class() =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout

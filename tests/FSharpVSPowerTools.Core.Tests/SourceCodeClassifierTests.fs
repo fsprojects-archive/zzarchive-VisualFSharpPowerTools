@@ -23,7 +23,7 @@ open FSharpVSPowerTools
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
-let framework = FSharpTargetFramework.NET_4_5
+let framework = FSharpCompilerVersion.FSharp_3_1
 let languageService = LanguageService()
 
 type private Cat = Category

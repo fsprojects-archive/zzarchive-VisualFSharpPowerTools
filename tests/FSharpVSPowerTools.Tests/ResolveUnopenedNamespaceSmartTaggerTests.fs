@@ -53,7 +53,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let ``return nothing if tags not found``() = 
         let content = "TimeDate"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -64,7 +64,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let ``should not display unopened namespace tags on known values``() = 
         let content = "System.DateTime.Now"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -77,7 +77,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         // Give an invalid path for active document
         let fileName = ""
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -88,7 +88,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let ``should generate correct labels for unopened namespace tags``() = 
         let content = "DateTime"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -103,7 +103,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let ``should generate correct labels for unopened namespace tags if a single namespace contains multiple suitable qualified idents``() = 
         let content = "empty"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -132,7 +132,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
 TimeSpan
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -159,7 +159,7 @@ TimeSpan
 DateTime
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout

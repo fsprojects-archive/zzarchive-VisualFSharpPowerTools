@@ -66,7 +66,7 @@ let x = 0
 x
 """     
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        helper.AddProject(createVirtualProject(buffer, fileName))
         helper.SetActiveDocument(fileName)        
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
@@ -84,7 +84,7 @@ let x = 0
 x
 """
         let buffer = createMockTextBuffer content fileName
-        helper.AddProject(VirtualProjectProvider(buffer, fileName))
+        helper.AddProject(createVirtualProject(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
@@ -106,7 +106,7 @@ module GenericClass =
     let _ = Type1<_,_>.Member1()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -127,7 +127,7 @@ type SampleAttribute () =
 type Class () = class end
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -148,7 +148,7 @@ type SampleAttribute () =
 type Class () = class end
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -166,7 +166,7 @@ type Class () = class end
 do printfn "Hello world!"
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)        
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
