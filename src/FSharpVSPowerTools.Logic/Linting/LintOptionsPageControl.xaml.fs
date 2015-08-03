@@ -8,8 +8,10 @@ type LintOptionsControlProvider = XAML<"LintOptionsPageControl.xaml", true>
 type LintOptionsPageControl() =
     inherit UserControlViewController<LintOptionsControlProvider>()
 
-    let viewModel = OptionsViewModel(Files = [FileViewModel(Name = "SomeFile")], 
-                                     Rules = [RuleViewModel(Name="SomeAnalyser", Rules =[RuleViewModel(Name="SomeRule")])])
+    let config = FSharpLint.Framework.Configuration.defaultConfiguration
+
+    let viewModel = OptionsViewModel(config,
+                                     Files = [FileViewModel(Name = "SomeFile")])
 
     let setParentRules (rules:RuleViewModel seq) =
         if rules <> null then

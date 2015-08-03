@@ -79,10 +79,12 @@
                                         Focusable="False" 
                                         IsChecked="{Binding IsChecked}" 
                                         VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        Width="30"
                                         />
                                         <ContentPresenter 
                                         Content="{Binding Name, Mode=OneTime}" 
-                                        Margin="2,0"
+                                        Margin="5,0"
                                         />
                                     </StackPanel>
                                 </DataTemplate>
@@ -91,6 +93,7 @@
                                         <TextBox
                                         Width="30"
                                         VerticalAlignment="Center"
+                                        Text="{Binding Value}"
                                         />
                                         <ContentPresenter 
                                         Content="{Binding Name, Mode=OneTime}" 
