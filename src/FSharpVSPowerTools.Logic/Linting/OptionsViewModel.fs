@@ -3,9 +3,9 @@
 open System.ComponentModel
 open FSharpLint.Framework.Configuration
 
-type BoolViewModel() =
-    let mutable name = ""
-    let mutable isChecked = false
+type BoolViewModel(name, initialValue) =
+    let mutable name = name
+    let mutable isChecked = initialValue
 
     member this.Name
         with set(value) = name <- value
@@ -15,9 +15,9 @@ type BoolViewModel() =
         with get() = isChecked
         and set(v) = isChecked <- v
 
-type IntViewModel() =
-    let mutable name = ""
-    let mutable value = 0
+type IntViewModel(name, initialValue) =
+    let mutable name = name
+    let mutable value = initialValue
 
     member this.Name
         with set(value) = name <- value
@@ -27,29 +27,51 @@ type IntViewModel() =
         with get() = value
         and set(v) = value <- v
 
-type HintsViewModel() =
-    let mutable name = ""
+type HintsViewModel(name, initialHints) =
+    let mutable name = name
+    let mutable value = initialHints
+
+    member this.Value
+        with get() = value
+        and set(v) = value <- v
 
     member this.Name
         with set(value) = name <- value
         and get() = name
+
+type AccessViewModel(name, initialValue) =
+    let mutable name = name
+    let mutable value = initialValue
+
+    member this.Value
+        with get() = value
+        and set(v) = value <- v
+
+    member this.Name
+        with set(value) = name <- value
+        and get() = name
+
+    member this.AccessValues
+        with get() =
+            System.Enum.GetValues(typeof<Access>)
+                |> Seq.cast<Access>
 
 module SetupViewModels =
     let getSettingsViewModelsFromRule (settings:Map<string, Setting>) =
         seq {
             for setting in settings do
                 match setting.Value with
-                | Lines(x) -> yield IntViewModel(Name = "Lines", Value = x) :> obj
-                | Depth(x) -> yield IntViewModel(Name = "Depth", Value = x) :> obj
-                | MaxItems(x) -> yield IntViewModel(Name = "MaxItems", Value = x) :> obj
-                | Length(x) -> yield IntViewModel(Name = "Length", Value = x) :> obj
-                | MaxCyclomaticComplexity(x) -> yield IntViewModel(Name = "MaxCyclomaticComplexity", Value = x) :> obj
-                | IncludeMatchStatements(x) -> yield BoolViewModel(Name = "IncludeMatchStatements", IsChecked = x) :> obj
-                | OneSpaceAllowedAfterOperator(x) -> yield BoolViewModel(Name = "OneSpaceAllowedAfterOperator", IsChecked = x) :> obj
-                | NumberOfSpacesAllowed(x) -> yield IntViewModel(Name = "NumberOfSpacesAllowed", Value = x) :> obj
-                | IgnoreBlankLines(x) -> yield BoolViewModel(Name = "IgnoreBlankLines", IsChecked = x) :> obj
-                | Hints(_) -> yield HintsViewModel(Name = "Hints") :> obj
-                | Access(_)
+                | Lines(value) -> yield IntViewModel("Lines", value) :> obj
+                | Depth(value) -> yield IntViewModel("Depth", value) :> obj
+                | MaxItems(value) -> yield IntViewModel("MaxItems", value) :> obj
+                | Length(value) -> yield IntViewModel("Length", value) :> obj
+                | MaxCyclomaticComplexity(value) -> yield IntViewModel("MaxCyclomaticComplexity", value) :> obj
+                | IncludeMatchStatements(value) -> yield BoolViewModel("IncludeMatchStatements", value) :> obj
+                | OneSpaceAllowedAfterOperator(value) -> yield BoolViewModel("OneSpaceAllowedAfterOperator", value) :> obj
+                | NumberOfSpacesAllowed(value) -> yield IntViewModel("NumberOfSpacesAllowed", value) :> obj
+                | IgnoreBlankLines(value) -> yield BoolViewModel("IgnoreBlankLines", value) :> obj
+                | Hints(value) -> yield HintsViewModel("Hints", value) :> obj
+                | Access(value) -> yield AccessViewModel("Access", value) :> obj
                 | Enabled(_) -> ()
         }
 

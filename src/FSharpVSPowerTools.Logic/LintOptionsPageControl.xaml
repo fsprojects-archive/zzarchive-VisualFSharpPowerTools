@@ -101,6 +101,18 @@
                                         />
                                     </StackPanel>
                                 </DataTemplate>
+                                <DataTemplate DataType="{x:Type local:AccessViewModel}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ComboBox 
+                                            SelectedItem="{Binding Value}" 
+                                            ItemsSource="{Binding AccessValues}" />
+                                        <ContentPresenter 
+                                        VerticalAlignment="Center"
+                                        Content="{Binding Name, Mode=OneTime}" 
+                                        Margin="5,0"
+                                        />
+                                    </StackPanel>
+                                </DataTemplate>
                             </ListView.Resources>
                         </ListView>
                     </Grid>
@@ -136,6 +148,17 @@
                         </HierarchicalDataTemplate>
                     </TreeView.Resources>
                 </TreeView>
+            </Grid>
+        </TabItem>
+        <TabItem Header="Ignore Files">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Margin="5">Files not to be linted:</TextBlock>
+                <TextBox Grid.Row="2" />
             </Grid>
         </TabItem>
     </TabControl>
