@@ -124,6 +124,55 @@
                 Text="Selected setting defined in: C:\Solution\" />
             </Grid>
         </TabItem>
+        <TabItem Header="Ignore Files">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Margin="5">Files not to be linted:</TextBlock>
+                <TextBox Grid.Row="1" Text="{Binding IgnoreFiles}" />
+            </Grid>
+        </TabItem>
+        <TabItem Header="Hints">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <CheckBox
+                        Focusable="False" 
+                        IsChecked="{Binding IsEnabled}" 
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Name="IsEnabledCheckBox" />
+                    <Label Content="Enabled" Margin="5,0" Target="{Binding ElementName=IsEnabledCheckBox}"/>
+                </StackPanel>
+
+                <TextBlock Margin="5, 0" Grid.Row="1">Hints:</TextBlock>
+                <ListView Margin="5, 0, 5, 0" Grid.Row="2" ItemsSource="{Binding Hints.Hints}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <Grid Grid.Row="3" Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Content="Add Hint" />
+                    <TextBox Margin="5,0" Grid.Column="2" />
+                </Grid>
+            </Grid>
+        </TabItem>
         <TabItem Header="Files">
             <Grid>
                 <Grid.RowDefinitions>
@@ -148,17 +197,6 @@
                         </HierarchicalDataTemplate>
                     </TreeView.Resources>
                 </TreeView>
-            </Grid>
-        </TabItem>
-        <TabItem Header="Ignore Files">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Margin="5">Files not to be linted:</TextBlock>
-                <TextBox Grid.Row="2" />
             </Grid>
         </TabItem>
     </TabControl>

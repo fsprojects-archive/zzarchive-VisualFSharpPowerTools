@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
+open System
 open System.ComponentModel
 open FSharpLint.Framework.Configuration
 
@@ -27,17 +28,32 @@ type IntViewModel(name, initialValue) =
         with get() = value
         and set(v) = value <- v
 
-type HintsViewModel(name, initialHints) =
-    let mutable name = name
-    let mutable value = initialHints
+type HintsViewModel(config:Configuration option) =
+    let hintSettings =
+        match config with
+        | Some(config) -> 
+            config.Analysers 
+                |> Seq.find (fun x -> x.Key = "Hints")
+                |> (fun x -> x.Value.Settings)
+                |> Seq.map (fun x -> Some(x.Value))
+        | None -> Seq.empty
 
-    member this.Value
-        with get() = value
-        and set(v) = value <- v
+    let mutable hints =
+        hintSettings 
+            |> Seq.pick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
+            |> List.toSeq
 
-    member this.Name
-        with set(value) = name <- value
-        and get() = name
+    let mutable isEnabled =
+        hintSettings 
+            |> Seq.find (function | Some(Enabled(enabled)) -> enabled | _ -> false)
+
+    member this.Hints
+        with get() = hints
+        and set(v) = hints <- v
+
+    member this.IsEnabled
+        with get() = isEnabled
+        and set(v) = isEnabled <- v
 
 type AccessViewModel(name, initialValue) =
     let mutable name = name
@@ -55,7 +71,7 @@ type AccessViewModel(name, initialValue) =
         with get() =
             System.Enum.GetValues(typeof<Access>)
                 |> Seq.cast<Access>
-
+                
 module SetupViewModels =
     let getSettingsViewModelsFromRule (settings:Map<string, Setting>) =
         seq {
@@ -70,8 +86,8 @@ module SetupViewModels =
                 | OneSpaceAllowedAfterOperator(value) -> yield BoolViewModel("OneSpaceAllowedAfterOperator", value) :> obj
                 | NumberOfSpacesAllowed(value) -> yield IntViewModel("NumberOfSpacesAllowed", value) :> obj
                 | IgnoreBlankLines(value) -> yield BoolViewModel("IgnoreBlankLines", value) :> obj
-                | Hints(value) -> yield HintsViewModel("Hints", value) :> obj
                 | Access(value) -> yield AccessViewModel("Access", value) :> obj
+                | Hints(_)
                 | Enabled(_) -> ()
         }
 
@@ -85,7 +101,7 @@ module SetupViewModels =
 
     let ruleViewModelsFromConfig config = 
         seq { 
-            for analyser in config.Analysers do 
+            for analyser in config.Analysers |> Seq.where (fun x -> x.Key <> "Hints") do 
                 let rules = seq { 
                     for rule in analyser.Value.Rules do 
                         yield RuleViewModel(Name = rule.Key,
@@ -105,6 +121,19 @@ type OptionsViewModel(?config:Configuration) =
     let propertyChanged = new Event<_, _>()
 
     let mutable (files:FileViewModel seq) = Seq.empty
+
+    let mutable hints = HintsViewModel(config)
+
+    let mutable ignoreFiles =
+        match config with
+        | Some(config) -> 
+            match config.IgnoreFiles with
+            | Some(x) -> 
+                x.Content.Split([|Environment.NewLine|], StringSplitOptions.RemoveEmptyEntries)
+                    |> Seq.map (fun x -> x.Trim())
+                    |> String.concat Environment.NewLine
+            | None -> ""
+        | None -> ""
 
     let mutable (rules:RuleViewModel seq) = 
         match config with
@@ -135,6 +164,14 @@ type OptionsViewModel(?config:Configuration) =
         with get() = files
         and set(value) = files <- value
     
+    member this.IgnoreFiles
+        with get() = ignoreFiles
+        and set(value) = ignoreFiles <- value
+    
     member this.Rules
         with get() = rules
         and set(value) = rules <- value
+
+    member this.Hints
+        with get() = hints
+        and set(value) = hints <- value
