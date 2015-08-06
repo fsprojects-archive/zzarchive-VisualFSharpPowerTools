@@ -9,47 +9,76 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
 open FSharpVSPowerTools.ProjectSystem
 open System.Threading.Tasks
+open FSharpVSPowerTools.Refactoring
+open Microsoft.VisualStudio.Shell
+open FSharpVSPowerTools
 
-//[<ExportWithMinimalVisualStudioVersion(typeof<ISuggestedActionsSourceProvider>, Version = VisualStudioVersion.VS2015)>]
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Resolve Unopened Namespaces Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
 type ResolveUnopenedNamespaceSuggestedActionsSourceProvider() =
-    [<Import(typeof<ITextStructureNavigatorSelectorService>); DefaultValue>]
-    val mutable NavigatorService: ITextStructureNavigatorSelectorService
+    [<Import; DefaultValue>]
+    val mutable fsharpVsLanguageService: VSLanguageService
+
+    [<Import; DefaultValue>]
+    val mutable textDocumentFactoryService: ITextDocumentFactoryService
+
+    [<Import; DefaultValue>]
+    val mutable serviceProvider: IServiceProvider
+
+    [<Import; DefaultValue>]
+    val mutable undoHistoryRegistry: ITextUndoHistoryRegistry
+
+    [<Import; DefaultValue>]
+    val mutable projectFactory: ProjectFactory
 
     interface ISuggestedActionsSourceProvider with
-        member x.CreateSuggestedActionsSource(textView: ITextView, textBuffer: ITextBuffer): ISuggestedActionsSource = 
-            if textBuffer = null && textView = null then null
-            else new ResolveUnopenedNamespaceSuggestedActionsSource(x, textView, textBuffer) :> _
+        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
+            if textView.TextBuffer <> buffer then null
+            else 
+                let generalOptions = Setting.getGeneralOptions x.serviceProvider
+                if obj.ReferenceEquals (generalOptions, null) || not generalOptions.ResolveUnopenedNamespacesEnabled then null
+                else
+                    match x.textDocumentFactoryService.TryGetTextDocument(buffer) with
+                    | true, doc -> 
+                        let resolver = 
+                            new UnopenedNamespaceResolver(doc, textView, x.undoHistoryRegistry.RegisterHistory(buffer),
+                                                          x.fsharpVsLanguageService, x.serviceProvider, x.projectFactory)
+                    
+                        new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
+                    | _ -> null
 
 and ResolveUnopenedNamespaceSuggestedActionsSource
     (
-        provider: ResolveUnopenedNamespaceSuggestedActionsSourceProvider,
-        textView: ITextView, 
-        textBuffer: ITextBuffer
-    ) =
+        resolver: UnopenedNamespaceResolver
+    ) as self =
     let actionsChanged = Event<_,_>()
+    do resolver.Updated.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
     interface ISuggestedActionsSource with
-        member __.Dispose() = ()
+        member __.Dispose() = (resolver :> IDisposable).Dispose()
         member __.GetSuggestedActions (requestedActionCategories, range, cancellationToken) = 
-            let action = { new ISuggestedAction with
-                               member __.DisplayText = "foo"
-                               member __.Dispose() = ()
-                               member __.GetActionSetsAsync ct = Task.FromResult <| seq []
-                               member __.GetPreviewAsync ct = Task.FromResult null
-                               member __.HasActionSets = false
-                               member __.HasPreview = false
-                               member __.IconAutomationText = "auto foo"
-                               member __.IconMoniker = Unchecked.defaultof<_>
-                               member __.InputGestureText = "gesture foo"
-                               member __.Invoke ct = ()
-                               member __.TryGetTelemetryId telemetryId = false }
-            
-            seq { yield SuggestedActionSet [action] }
+            match resolver.CurrentWord, resolver.Suggestions with
+            | Some word, Some suggestions ->
+                suggestions
+                |> List.map (fun s ->
+                     { new ISuggestedAction with
+                           member __.DisplayText = s.Text
+                           member __.Dispose() = ()
+                           member __.GetActionSetsAsync ct = Task.FromResult <| seq []
+                           member __.GetPreviewAsync ct = Task.FromResult null
+                           member __.HasActionSets = false
+                           member __.HasPreview = false
+                           member __.IconAutomationText = null
+                           member __.IconMoniker = Unchecked.defaultof<_>
+                           member __.InputGestureText = null
+                           member __.Invoke ct = s.Invoke()
+                           member __.TryGetTelemetryId telemetryId = false })
+            | _ -> []
+            |> fun xs -> [ SuggestedActionSet(xs) ] :> _
 
-        member __.HasSuggestedActionsAsync (requestedCategories, range, ct) = Task.FromResult true
+        member __.HasSuggestedActionsAsync (requestedCategories, range, ct) = 
+            Task.FromResult (resolver.Suggestions |> Option.getOrElse [] |> (List.isEmpty >> not))
 //            TextExtent extent
 //            if (TryGetWordUnderCaret(out extent) && extent.IsSignificant)
 //    {

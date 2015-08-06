@@ -221,6 +221,8 @@
     <ProjectReference Include="..\FSharpVSPowerTools.Logic.VS2015\FSharpVSPowerTools.Logic.VS2015.fsproj">
       <Project>{bb0c6f01-5e57-4575-a498-5de850d9fa6c}</Project>
       <Name>FSharpVSPowerTools.Logic.VS2015</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
     <ProjectReference Include="..\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
       <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
