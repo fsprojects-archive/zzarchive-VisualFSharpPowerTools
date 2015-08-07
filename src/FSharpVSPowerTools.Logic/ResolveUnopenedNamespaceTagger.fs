@@ -37,13 +37,12 @@ type UnopenedNamespaceResolver
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable suggestions: Suggestion list option = None 
-
     
     let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
         // first, replace the symbol with (potentially) partially qualified name
         let snapshot = 
-            if name <> "" then snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name)
+            if name <> "" then snapshotSpan.Snapshot.TextBuffer.Replace (snapshotSpan.Span, name) 
             else snapshotSpan.Snapshot
         
         let doc =
@@ -101,7 +100,8 @@ type UnopenedNamespaceResolver
             |> Seq.sort
             |> Seq.map (qualifiedSymbolAction snapshotSpan)
             
-        openNamespaceActions |> Seq.append qualifySymbolActions |> Seq.toList
+        [ yield! openNamespaceActions
+          yield! qualifySymbolActions ]
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with

@@ -9,12 +9,14 @@ using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
 using System.Diagnostics;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(ResolveUnopenedNamespaceSmartTag))]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
     public class ResolveUnopenedNamespaceSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
@@ -39,6 +41,10 @@ namespace FSharpVSPowerTools
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
             if (generalOptions == null || !generalOptions.ResolveUnopenedNamespacesEnabled) return null;
+
+            var dte = serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
+            var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+            if (vsVersion == VisualStudioVersion.VS2015) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
