@@ -3,8 +3,8 @@
 #r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
       "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
-      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
       "../../src/FSharpVSPowerTools.Core/Lexer.fs"
       "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
@@ -179,6 +179,14 @@ type Class() =
     member __.Prop = ()
 """
    => [ 3, [ Cat.Operator, 19, 20]]
+
+[<Test>]
+let ``ignore object identifiers``() = 
+ """
+type Class() =
+    member x.Prop = ()
+"""
+   => [ 3, [ Cat.Operator, 18, 19 ]]
 
 [<Test>]
 let ``static method``() = 
@@ -878,7 +886,7 @@ let ``unused self binding``() =
 type PublicClass() =
     member this.PublicMethod _ = ()
 """ 
-    => [ 3, [ Cat.Unused, 11, 15; Cat.Function, 16, 28; Cat.Operator, 31, 32 ]]
+    => [ 3, [ Cat.Function, 16, 28; Cat.Operator, 31, 32 ]]
 
 [<Test>]
 let ``used self binding``() =
