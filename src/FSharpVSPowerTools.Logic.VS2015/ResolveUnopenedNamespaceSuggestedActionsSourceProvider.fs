@@ -58,21 +58,23 @@ and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceR
             match resolver.CurrentWord, resolver.Suggestions with
             | Some _, Some suggestions ->
                 suggestions
-                |> List.map (fun s ->
-                     { new ISuggestedAction with
-                           member __.DisplayText = s.Text
-                           member __.Dispose() = ()
-                           member __.GetActionSetsAsync _ct = Task.FromResult <| seq []
-                           member __.GetPreviewAsync _ct = Task.FromResult null
-                           member __.HasActionSets = false
-                           member __.HasPreview = false
-                           member __.IconAutomationText = null
-                           member __.IconMoniker = Unchecked.defaultof<_>
-                           member __.InputGestureText = null
-                           member __.Invoke _ct = s.Invoke()
-                           member __.TryGetTelemetryId _telemetryId = false })
-            | _ -> []
-            |> fun xs -> [ SuggestedActionSet(xs) ] :> _
+                |> List.map (fun xs ->
+                    xs
+                    |> List.map (fun s ->
+                         { new ISuggestedAction with
+                               member __.DisplayText = s.Text
+                               member __.Dispose() = ()
+                               member __.GetActionSetsAsync _ct = Task.FromResult <| seq []
+                               member __.GetPreviewAsync _ct = Task.FromResult null
+                               member __.HasActionSets = false
+                               member __.HasPreview = false
+                               member __.IconAutomationText = null
+                               member __.IconMoniker = Unchecked.defaultof<_>
+                               member __.InputGestureText = null
+                               member __.Invoke _ct = s.Invoke()
+                               member __.TryGetTelemetryId _telemetryId = false })
+                     |> fun xs -> SuggestedActionSet xs) :> _
+            | _ -> Seq.empty
 
         member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
             Task.FromResult (resolver.Suggestions |> Option.getOrElse [] |> (List.isEmpty >> not))

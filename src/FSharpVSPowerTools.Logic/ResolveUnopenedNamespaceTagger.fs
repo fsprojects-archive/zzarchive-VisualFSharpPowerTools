@@ -20,6 +20,8 @@ type Suggestion =
       Invoke: unit -> unit
       NeedsIcon: bool }
 
+type SuggestionGroup = Suggestion list
+
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
@@ -36,7 +38,7 @@ type UnopenedNamespaceResolver
 
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable suggestions: Suggestion list option = None 
+    let mutable suggestions: SuggestionGroup list option = None 
     
     let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
@@ -74,7 +76,7 @@ type UnopenedNamespaceResolver
           Invoke = fun () -> replaceFullyQualifiedSymbol snapshotSpan qualifier
           NeedsIcon = false }
 
-    let getSuggestions (snapshotSpan: SnapshotSpan) (candidates: (Entity * InsertContext) list) =
+    let getSuggestions (snapshotSpan: SnapshotSpan) (candidates: (Entity * InsertContext) list) : SuggestionGroup list =
         let openNamespaceActions = 
             candidates
             |> Seq.choose (fun (entity, ctx) -> entity.Namespace |> Option.map (fun ns -> ns, entity.Name, ctx))
@@ -92,6 +94,7 @@ type UnopenedNamespaceResolver
             |> Seq.concat
             |> Seq.map (fun (ns, name, ctx, multipleNames) -> 
                 openNamespaceAction snapshotSpan ctx name ns multipleNames)
+            |> Seq.toList
             
         let qualifySymbolActions =
             candidates
@@ -99,9 +102,9 @@ type UnopenedNamespaceResolver
             |> Seq.distinct
             |> Seq.sort
             |> Seq.map (qualifiedSymbolAction snapshotSpan)
+            |> Seq.toList
             
-        [ yield! openNamespaceActions
-          yield! qualifySymbolActions ]
+        [ openNamespaceActions; qualifySymbolActions ]
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -222,15 +225,17 @@ type ResolveUnopenedNamespaceSmartTagger(buffer: ITextBuffer, serviceProvider: I
                     | Some word, Some suggestions ->
                         let actions =
                             suggestions
-                            |> List.map (fun s ->
-                                { new ISmartTagAction with
-                                    member __.ActionSets = null
-                                    member __.DisplayText = s.Text
-                                    member __.Icon = if s.NeedsIcon then openNamespaceIcon else null
-                                    member __.IsEnabled = true
-                                    member __.Invoke() = s.Invoke() })
-                            |> Seq.toReadOnlyCollection
-                            |> fun xs -> [ SmartTagActionSet xs ]
+                            |> List.map (fun xs ->
+                                xs 
+                                |> List.map (fun s ->
+                                    { new ISmartTagAction with
+                                        member __.ActionSets = null
+                                        member __.DisplayText = s.Text
+                                        member __.Icon = if s.NeedsIcon then openNamespaceIcon else null
+                                        member __.IsEnabled = true
+                                        member __.Invoke() = s.Invoke() })
+                                |> Seq.toReadOnlyCollection
+                                |> fun xs -> SmartTagActionSet xs)
                             |> Seq.toReadOnlyCollection
 
                         yield TagSpan<_>(word, ResolveUnopenedNamespaceSmartTag actions) :> _
