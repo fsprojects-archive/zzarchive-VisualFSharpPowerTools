@@ -80,7 +80,7 @@ and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceR
             | _ -> Seq.empty
 
         member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
-            Task.FromResult (resolver.Suggestions |> Option.getOrElse [] |> (List.isEmpty >> not))
+            Task.FromResult (Option.isSome resolver.CurrentWord && resolver.Suggestions |> Option.getOrElse [] |> (List.isEmpty >> not))
 
         [<CLIEvent>]
         member __.SuggestedActionsChanged: IEvent<EventHandler<EventArgs>, EventArgs> = actionsChanged.Publish
