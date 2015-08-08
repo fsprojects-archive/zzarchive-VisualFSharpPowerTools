@@ -70,7 +70,9 @@ and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceR
                                member __.HasActionSets = false
                                member __.HasPreview = false
                                member __.IconAutomationText = null
-                               member __.IconMoniker = ImageMoniker(Guid "{ae27a6b0-e345-4288-96df-5eaf394ee369}", 90)
+                               member __.IconMoniker =
+                                   if s.NeedsIcon then ImageMoniker(Guid=Guid "{ae27a6b0-e345-4288-96df-5eaf394ee369}", Id=90)
+                                   else Unchecked.defaultof<_>
                                member __.InputGestureText = null
                                member __.Invoke _ct = s.Invoke()
                                member __.TryGetTelemetryId _telemetryId = false })
