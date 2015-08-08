@@ -19,7 +19,7 @@ open FSharpVSPowerTools
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
 type ResolveUnopenedNamespaceSuggestedActionsSourceProvider() =
     [<Import; DefaultValue>]
-    val mutable FsharpVsLanguageService: VSLanguageService
+    val mutable FSharpVsLanguageService: VSLanguageService
 
     [<Import; DefaultValue>]
     val mutable TextDocumentFactoryService: ITextDocumentFactoryService
@@ -38,13 +38,13 @@ type ResolveUnopenedNamespaceSuggestedActionsSourceProvider() =
             if textView.TextBuffer <> buffer then null
             else
                 let generalOptions = Setting.getGeneralOptions x.ServiceProvider
-                if obj.ReferenceEquals (generalOptions, null) || not generalOptions.ResolveUnopenedNamespacesEnabled then null
+                if generalOptions == null || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
                     match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
                         let resolver = 
                             new UnopenedNamespaceResolver(doc, textView, x.UndoHistoryRegistry.RegisterHistory(buffer),
-                                                          x.FsharpVsLanguageService, x.ServiceProvider, x.ProjectFactory)
+                                                          x.FSharpVsLanguageService, x.ServiceProvider, x.ProjectFactory)
                     
                         new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
                     | _ -> null
