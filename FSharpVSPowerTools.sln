@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
 EndProject
@@ -74,6 +74,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUtilities", "tests\TestUtilities\TestUtilities.csproj", "{C6800510-FCD0-4301-9890-36E41DFB29BB}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Tests", "tests\FSharpVSPowerTools.Tests\FSharpVSPowerTools.Tests.fsproj", "{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic.VS2015", "src\FSharpVSPowerTools.Logic.VS2015\FSharpVSPowerTools.Logic.VS2015.fsproj", "{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -163,6 +165,16 @@ Global
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Release|x86.ActiveCfg = Release|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
