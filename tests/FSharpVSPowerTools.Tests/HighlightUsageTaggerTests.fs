@@ -29,10 +29,10 @@ type HighlightUsageTaggerHelper() =
             // Use 1-based position for intuitive comparison
             let lineStart = snapshot.GetLineNumberFromPosition(span.Span.Start.Position) + 1 
             let lineEnd = snapshot.GetLineNumberFromPosition(span.Span.End.Position) + 1
-            let startLine = snapshot.GetLineFromPosition(span.Span.Start.Position)
-            let endLine = snapshot.GetLineFromPosition(span.Span.End.Position)
-            let colStart = span.Span.Start.Position - startLine.Start.Position + 1
-            let colEnd = span.Span.End.Position - endLine.Start.Position + 1
+            let firstLine = snapshot.GetLineFromPosition(span.Span.Start.Position)
+            let lastLine = snapshot.GetLineFromPosition(span.Span.End.Position)
+            let colStart = span.Span.Start.Position - firstLine.Start.Position + 1
+            let colEnd = span.Span.End.Position - lastLine.Start.Position + 1
             (lineStart, colStart, lineEnd, colEnd - 1))
 
 module HighlightUsageTaggerTaggerTests =
