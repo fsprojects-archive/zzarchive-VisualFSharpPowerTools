@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
 using System.Diagnostics;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
 {
@@ -44,6 +45,10 @@ namespace FSharpVSPowerTools
             if (generalOptions == null || !generalOptions.InterfaceImplementationEnabled) return null;
             var codeGenOptions = Setting.getCodeGenerationOptions(serviceProvider);
             if (codeGenOptions == null) return null;
+
+            var dte = serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
+            var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+            if (vsVersion == VisualStudioVersion.VS2015) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
