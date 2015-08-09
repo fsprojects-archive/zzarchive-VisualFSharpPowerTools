@@ -105,7 +105,9 @@ type UnopenedNamespaceResolver
             |> Seq.map (qualifiedSymbolAction snapshotSpan)
             |> Seq.toList
             
-        [ openNamespaceActions; qualifySymbolActions ]
+        match openNamespaceActions, qualifySymbolActions with
+        | [], [] -> []
+        | _ -> [ openNamespaceActions; qualifySymbolActions ]
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
