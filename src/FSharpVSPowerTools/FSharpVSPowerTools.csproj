@@ -122,6 +122,11 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Resources\FSharpVSPowerTools.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>FSharpVSPowerTools.resx</DependentUpon>
+    </Compile>
     <Compile Include="UI\CodeGenerationOptionsControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -138,11 +143,6 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Commands\GoToDefinitionFilterProvider.cs" />
-    <Compile Include="FSharpVSPowerTools.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>FSharpVSPowerTools.resx</DependentUpon>
-    </Compile>
     <Compile Include="UI\GeneralOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -233,7 +233,7 @@
     <EmbeddedResource Include="UI\CodeGenerationOptionsControl.resx">
       <DependentUpon>CodeGenerationOptionsControl.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="FSharpVSPowerTools.resx">
+    <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <MergeWithCTO>true</MergeWithCTO>

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace FSharpVSPowerTools {
+namespace FSharpVSPowerTools.Resources {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace FSharpVSPowerTools {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("FSharpVSPowerTools.FSharpVSPowerTools", typeof(FSharpVSPowerTools).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("FSharpVSPowerTools.Resources.FSharpVSPowerTools", typeof(FSharpVSPowerTools).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
