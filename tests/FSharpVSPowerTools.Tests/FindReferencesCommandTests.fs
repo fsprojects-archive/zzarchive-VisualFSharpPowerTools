@@ -68,12 +68,6 @@ module FindReferencesCommandTests =
     let helper = FindReferencesCommandHelper()
     let fileName = getTempFileName ".fs"
 
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-        Logger.GlobalServiceProvider <- helper.ServiceProvider
-
     [<Test>]
     let ``should be able to find all references in a single document``() =
         let content = """

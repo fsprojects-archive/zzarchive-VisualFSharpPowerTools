@@ -51,11 +51,6 @@ module SyntaxConstructClassifierTests =
     let helper = new SyntaxConstructClassifierHelper()
     let mutable fileName = null 
 
-    [<TestFixtureSetUp>]
-    let fixtureSetUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-
     [<SetUp>]
     let setUp() = fileName <- getTempFileName ".fsx"
 

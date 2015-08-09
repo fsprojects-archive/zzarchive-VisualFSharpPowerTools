@@ -39,11 +39,6 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let helper = ResolveUnopenedNamespaceSmartTaggerHelper()
     let fileName = getTempFileName ".fsx"
 
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-
     [<Test>]
     let ``return nothing if tags not found``() = 
         let content = "TimeDate"

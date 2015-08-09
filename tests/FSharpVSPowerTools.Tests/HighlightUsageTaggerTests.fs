@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -40,12 +39,6 @@ module HighlightUsageTaggerTaggerTests =
 
     let helper = HighlightUsageTaggerHelper()
     let mutable fileName = null
-
-    [<TestFixtureSetUp>]
-    let fixtureSetUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-        Logger.GlobalServiceProvider <- helper.ServiceProvider
 
     [<SetUp>]
     let setUp() = 

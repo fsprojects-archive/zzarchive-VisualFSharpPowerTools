@@ -39,11 +39,6 @@ module ImplementInterfaceSmartTaggerTests =
 
     let helper = ImplementInterfaceSmartTaggerHelper()
     
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-
     [<Test>]
     let ``return nothing if interfaces are empty``() = 
         let content = """

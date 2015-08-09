@@ -6,7 +6,6 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
-open Microsoft.VisualStudio.Language.Intellisense
 
 type LintTaggerHelper() =    
     inherit VsTestBase()
@@ -41,11 +40,6 @@ module LintTaggerTests =
 
     let helper = LintTaggerHelper()
     let fileName = getTempFileName ".fs"
-
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
 
     [<Test>]
     let ``should generate lint tags``() = 

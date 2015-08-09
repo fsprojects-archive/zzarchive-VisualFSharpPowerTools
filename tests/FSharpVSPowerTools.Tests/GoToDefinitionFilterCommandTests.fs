@@ -27,12 +27,6 @@ module GoToDefinitionCommandTests =
 
     let helper = GoToDefinitionCommandHelper()
    
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-        Logger.GlobalServiceProvider <- helper.ServiceProvider
-
     let internal getCommandFilter content filePath projectPath =
         let projectFileName = fullPathBasedOnSourceDir projectPath
         let fileName = fullPathBasedOnSourceDir filePath
