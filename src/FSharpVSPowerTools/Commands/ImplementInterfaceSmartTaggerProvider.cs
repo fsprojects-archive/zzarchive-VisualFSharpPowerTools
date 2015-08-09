@@ -48,11 +48,13 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new ImplementInterfaceSmartTagger(doc, textView,
-                            editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer),
-                            fsharpVsLanguageService, serviceProvider, projectFactory,
-                            Setting.getInterfaceMemberIdentifier(codeGenOptions),
-                            Setting.getDefaultMemberBody(codeGenOptions)) as ITagger<T>;
+                var implementInterface = 
+                    new ImplementInterface(doc, textView,
+                        editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer),
+                        fsharpVsLanguageService, serviceProvider, projectFactory,
+                        Setting.getInterfaceMemberIdentifier(codeGenOptions),
+                        Setting.getDefaultMemberBody(codeGenOptions));
+                return new ImplementInterfaceSmartTagger(buffer, implementInterface) as ITagger<T>;
             }
 
             return null;

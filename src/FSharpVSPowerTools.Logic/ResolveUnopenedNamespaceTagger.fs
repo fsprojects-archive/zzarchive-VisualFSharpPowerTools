@@ -14,13 +14,6 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler
 open System.Threading
 
-type ISuggestion =
-    abstract Text: string
-    abstract Invoke: unit -> unit
-    abstract NeedsIcon: bool
-
-type SuggestionGroup = ISuggestion list
-
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
@@ -63,7 +56,7 @@ type UnopenedNamespaceResolver
 
     let fixUnderscoresInMenuText (text: string) = text.Replace("_", "__")
 
-    let openNamespaceAction snapshot ctx name ns multipleNames =
+    let openNamespaceAction snapshot ctx name ns multipleNames = 
         let displayText = "open " + ns + if multipleNames then " (" + name + ")" else ""
 
         { new ISuggestion with
