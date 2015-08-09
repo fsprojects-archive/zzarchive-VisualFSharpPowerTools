@@ -2,11 +2,13 @@
 
 open System
 open System.ComponentModel
+open System.Collections.ObjectModel
 open FSharpLint.Framework.Configuration
+open FSharp.ViewModule
 
-type BoolViewModel(name, initialValue) =
+type BoolViewModel(name, isChecked) =
     let mutable name = name
-    let mutable isChecked = initialValue
+    let mutable isChecked = isChecked
 
     member this.Name
         with set(value) = name <- value
@@ -29,31 +31,70 @@ type IntViewModel(name, initialValue) =
         and set(v) = value <- v
 
 type HintsViewModel(config:Configuration option) =
+    inherit ViewModelBase()
+
+    let mutable selectedHintIndex = 0
+
+    let mutable newHint = ""
+
+    let propertyChanged = new Event<_, _>()
+
     let hintSettings =
         match config with
         | Some(config) -> 
             config.Analysers 
-                |> Seq.find (fun x -> x.Key = "Hints")
-                |> (fun x -> x.Value.Settings)
-                |> Seq.map (fun x -> Some(x.Value))
+                |> Seq.tryFind (fun x -> x.Key = "Hints")
+                |> (function 
+                    | Some(x) -> x.Value.Settings |> Seq.map (fun x -> Some(x.Value)) 
+                    | None -> Seq.empty)
         | None -> Seq.empty
 
-    let mutable hints =
+    let hints =
         hintSettings 
-            |> Seq.pick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
-            |> List.toSeq
+            |> Seq.tryPick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
+            |> (function | Some(x) -> ObservableCollection<_>(x) | None -> ObservableCollection<_>())
 
     let mutable isEnabled =
         hintSettings 
-            |> Seq.find (function | Some(Enabled(enabled)) -> enabled | _ -> false)
+            |> Seq.tryPick (function | Some(Enabled(enabled)) -> Some(enabled) | _ -> None)
+            |> (function | Some(enabled) -> enabled | None -> false)
 
-    member this.Hints
-        with get() = hints
-        and set(v) = hints <- v
+    interface INotifyPropertyChanged with
+        [<CLIEvent>]
+        member this.PropertyChanged = propertyChanged.Publish
+
+    member private this.OnPropertyChanged(propertyName:string) =
+        propertyChanged.Trigger(this, PropertyChangedEventArgs(propertyName))
+
+    member this.Hints with get() = hints
 
     member this.IsEnabled
         with get() = isEnabled
         and set(v) = isEnabled <- v
+
+    member this.AddHintCommand = 
+        this.Factory.CommandSync(fun _ -> 
+            if String.IsNullOrEmpty this.NewHint |> not then
+                hints.Add(this.NewHint)
+                this.NewHint <- ""
+                this.SelectedHintIndex <- hints.Count - 1)
+
+    member this.RemoveHintCommand = 
+        this.Factory.CommandSyncParam(fun (selectedItem:obj) ->
+            if selectedItem <> null && selectedItem :? string then
+                hints.Remove(selectedItem :?> string) |> ignore)
+
+    member this.SelectedHintIndex
+        with get() = selectedHintIndex
+        and set(v) = 
+            selectedHintIndex <- v
+            this.OnPropertyChanged("SelectedHintIndex")
+
+    member this.NewHint
+        with get() = newHint
+        and set(v) = 
+            newHint <- v
+            this.OnPropertyChanged("NewHint")
 
 type AccessViewModel(name, initialValue) =
     let mutable name = name
@@ -74,22 +115,32 @@ type AccessViewModel(name, initialValue) =
                 
 module SetupViewModels =
     let getSettingsViewModelsFromRule (settings:Map<string, Setting>) =
-        seq {
+        [
             for setting in settings do
                 match setting.Value with
-                | Lines(value) -> yield IntViewModel("Lines", value) :> obj
-                | Depth(value) -> yield IntViewModel("Depth", value) :> obj
-                | MaxItems(value) -> yield IntViewModel("MaxItems", value) :> obj
-                | Length(value) -> yield IntViewModel("Length", value) :> obj
-                | MaxCyclomaticComplexity(value) -> yield IntViewModel("MaxCyclomaticComplexity", value) :> obj
-                | IncludeMatchStatements(value) -> yield BoolViewModel("IncludeMatchStatements", value) :> obj
-                | OneSpaceAllowedAfterOperator(value) -> yield BoolViewModel("OneSpaceAllowedAfterOperator", value) :> obj
-                | NumberOfSpacesAllowed(value) -> yield IntViewModel("NumberOfSpacesAllowed", value) :> obj
-                | IgnoreBlankLines(value) -> yield BoolViewModel("IgnoreBlankLines", value) :> obj
-                | Access(value) -> yield AccessViewModel("Access", value) :> obj
+                | Lines(value) -> 
+                    yield IntViewModel("Lines", value) :> obj
+                | Depth(value) -> 
+                    yield IntViewModel("Depth", value) :> obj
+                | MaxItems(value) -> 
+                    yield IntViewModel("MaxItems", value) :> obj
+                | Length(value) -> 
+                    yield IntViewModel("Length", value) :> obj
+                | MaxCyclomaticComplexity(value) -> 
+                    yield IntViewModel("MaxCyclomaticComplexity", value) :> obj
+                | IncludeMatchStatements(value) -> 
+                    yield BoolViewModel("IncludeMatchStatements", value) :> obj
+                | OneSpaceAllowedAfterOperator(value) -> 
+                    yield BoolViewModel("OneSpaceAllowedAfterOperator", value) :> obj
+                | NumberOfSpacesAllowed(value) -> 
+                    yield IntViewModel("NumberOfSpacesAllowed", value) :> obj
+                | IgnoreBlankLines(value) -> 
+                    yield BoolViewModel("IgnoreBlankLines", value) :> obj
+                | Access(value) -> 
+                    yield AccessViewModel("Access", value) :> obj
                 | Hints(_)
                 | Enabled(_) -> ()
-        }
+        ]
 
     let isRuleEnabled (settings:Map<string, Setting>) =
         if settings.ContainsKey "Enabled" then
@@ -116,6 +167,8 @@ module SetupViewModels =
         }
 
 type OptionsViewModel(?config:Configuration) =
+    inherit ViewModelBase()
+
     let mutable selectedRule:RuleViewModel = null
 
     let propertyChanged = new Event<_, _>()
@@ -124,6 +177,8 @@ type OptionsViewModel(?config:Configuration) =
 
     let mutable hints = HintsViewModel(config)
 
+    let mutable newIgnoreFile = ""
+
     let mutable ignoreFiles =
         match config with
         | Some(config) -> 
@@ -131,9 +186,11 @@ type OptionsViewModel(?config:Configuration) =
             | Some(x) -> 
                 x.Content.Split([|Environment.NewLine|], StringSplitOptions.RemoveEmptyEntries)
                     |> Seq.map (fun x -> x.Trim())
-                    |> String.concat Environment.NewLine
-            | None -> ""
-        | None -> ""
+                    |> (fun x -> ObservableCollection<_>(x))
+            | None -> ObservableCollection<string>()
+        | None -> ObservableCollection<string>()
+
+    let mutable selectedIgnoreFileIndex = 0
 
     let mutable (rules:RuleViewModel seq) = 
         match config with
@@ -144,19 +201,14 @@ type OptionsViewModel(?config:Configuration) =
         [<CLIEvent>]
         member this.PropertyChanged = propertyChanged.Publish
 
-    member this.OnPropertyChanged(e:PropertyChangedEventArgs) =
-        propertyChanged.Trigger(this, e)
-
-    member this.OnPropertyChanged(propertyName:string) =
-        this.OnPropertyChanged(PropertyChangedEventArgs(propertyName))
+    member private this.OnPropertyChanged(propertyName:string) =
+        propertyChanged.Trigger(this, PropertyChangedEventArgs(propertyName))
 
     member this.SelectedRule 
         with get() = selectedRule
         and set (value) = 
             selectedRule <- value
             this.OnPropertyChanged("SelectedRule")
-    
-    member val SelectedFileName:int = 0 with get, set
     
     member val FileNames:string seq = null with get, set
     
@@ -175,3 +227,27 @@ type OptionsViewModel(?config:Configuration) =
     member this.Hints
         with get() = hints
         and set(value) = hints <- value
+
+    member this.AddIgnoreFileCommand = 
+        this.Factory.CommandSync(fun _ -> 
+            if String.IsNullOrEmpty this.NewIgnoreFile |> not then
+                ignoreFiles.Add(this.NewIgnoreFile)
+                this.NewIgnoreFile <- ""
+                this.SelectedIgnoreFileIndex <- ignoreFiles.Count - 1)
+
+    member this.RemoveIgnoreFileCommand = 
+        this.Factory.CommandSyncParam(fun (selectedItem:obj) ->
+            if selectedItem <> null && selectedItem :? string then
+                ignoreFiles.Remove(selectedItem :?> string) |> ignore)
+
+    member this.SelectedIgnoreFileIndex
+        with get() = selectedIgnoreFileIndex
+        and set(v) = 
+            selectedIgnoreFileIndex <- v
+            this.OnPropertyChanged("SelectedIgnoreFileIndex")
+
+    member this.NewIgnoreFile
+        with get() = newIgnoreFile
+        and set(v) = 
+            newIgnoreFile <- v
+            this.OnPropertyChanged("NewIgnoreFile")

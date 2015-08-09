@@ -10,18 +10,17 @@
              fsxaml:ViewController.Custom="{x:Type local:LintOptionsPageControl}"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
-    <TabControl>
-        <TabItem Header="Rules">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-                <ComboBox SelectedIndex="{Binding SelectedFileName}" ItemsSource="{Binding FileNames}"></ComboBox>
+        <ComboBox Margin="0,0,0,5" SelectedIndex="{Binding SelectedFileName}" ItemsSource="{Binding FileNames}"></ComboBox>
 
-                <Grid Grid.Row="1">
+        <TabControl Grid.Row="1">
+            <TabItem Header="Rules">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="55*"/>
                         <ColumnDefinition Width="45*"/>
@@ -44,7 +43,7 @@
                         Width="{Binding ActualWidth}">
                             <TreeView.Resources>
                                 <HierarchicalDataTemplate DataType="{x:Type local:RuleViewModel}" 
-                                                      ItemsSource="{Binding Rules}">
+                                                        ItemsSource="{Binding Rules}">
                                     <StackPanel Orientation="Horizontal">
                                         <CheckBox
                                         Focusable="False" 
@@ -71,34 +70,38 @@
                         Padding="5"
                         Text="Detailed Settings" />
 
-                        <ListView Margin="5, 0, 5, 0" Grid.Row="1" ItemsSource="{Binding SelectedRule.Settings}">
+                        <ListView 
+                            Grid.Row="1"
+                            Name="SettingsListView"
+                            Margin="5, 0, 5, 0" 
+                            ItemsSource="{Binding SelectedRule.Settings}">
                             <ListView.Resources>
                                 <DataTemplate DataType="{x:Type local:BoolViewModel}">
                                     <StackPanel Orientation="Horizontal">
                                         <CheckBox
-                                        Focusable="False" 
-                                        IsChecked="{Binding IsChecked}" 
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Width="30"
-                                        />
+                                            Focusable="False" 
+                                            IsChecked="{Binding IsChecked}" 
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Width="30"
+                                            />
                                         <ContentPresenter 
-                                        Content="{Binding Name, Mode=OneTime}" 
-                                        Margin="5,0"
-                                        />
+                                            Content="{Binding Name, Mode=OneTime}" 
+                                            Margin="5,0"
+                                            />
                                     </StackPanel>
                                 </DataTemplate>
                                 <DataTemplate DataType="{x:Type local:IntViewModel}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBox
-                                        Width="30"
-                                        VerticalAlignment="Center"
-                                        Text="{Binding Value}"
-                                        />
+                                            Width="30"
+                                            VerticalAlignment="Center"
+                                            Text="{Binding Value}"
+                                            />
                                         <ContentPresenter 
-                                        Content="{Binding Name, Mode=OneTime}" 
-                                        Margin="5,0"
-                                        />
+                                            Content="{Binding Name, Mode=OneTime}" 
+                                            Margin="5,0"
+                                            />
                                     </StackPanel>
                                 </DataTemplate>
                                 <DataTemplate DataType="{x:Type local:AccessViewModel}">
@@ -107,97 +110,146 @@
                                             SelectedItem="{Binding Value}" 
                                             ItemsSource="{Binding AccessValues}" />
                                         <ContentPresenter 
-                                        VerticalAlignment="Center"
-                                        Content="{Binding Name, Mode=OneTime}" 
-                                        Margin="5,0"
-                                        />
+                                            VerticalAlignment="Center"
+                                            Content="{Binding Name, Mode=OneTime}" 
+                                            Margin="5,0"
+                                            />
                                     </StackPanel>
                                 </DataTemplate>
                             </ListView.Resources>
                         </ListView>
                     </Grid>
                 </Grid>
+            </TabItem>
+            <TabItem Header="Ignore Files">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <TextBlock
-                Grid.Row="2"
-                Padding="5"
-                Text="Selected setting defined in: C:\Solution\" />
-            </Grid>
-        </TabItem>
-        <TabItem Header="Ignore Files">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                    <TextBlock Margin="5">Files not to be linted:</TextBlock>
+                    <ListView 
+                        Margin="5, 0, 5, 0" 
+                        Grid.Row="1" 
+                        Name="IgnoreFilesListView"
+                        ItemsSource="{Binding IgnoreFiles}" 
+                        SelectionMode="Single"
+                        SelectedIndex="{Binding SelectedIgnoreFileIndex}"
+                        HorizontalContentAlignment="Stretch">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                <TextBlock Margin="5">Files not to be linted:</TextBlock>
-                <TextBox Grid.Row="1" Text="{Binding IgnoreFiles}" />
-            </Grid>
-        </TabItem>
-        <TabItem Header="Hints">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+                                    <TextBlock Text="{Binding}" />
 
-                <StackPanel Orientation="Horizontal" Margin="5">
-                    <CheckBox
-                        Focusable="False" 
-                        IsChecked="{Binding IsEnabled}" 
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Name="IsEnabledCheckBox" />
-                    <Label Content="Enabled" Margin="5,0" Target="{Binding ElementName=IsEnabledCheckBox}"/>
-                </StackPanel>
+                                    <Button Grid.Column="1" Content="Remove" FontSize="10" 
+                                            CommandParameter="{Binding}"
+                                            Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListView}, Path=DataContext.RemoveIgnoreFileCommand}" 
+                                            />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
 
-                <TextBlock Margin="5, 0" Grid.Row="1">Hints:</TextBlock>
-                <ListView Margin="5, 0, 5, 0" Grid.Row="2" ItemsSource="{Binding Hints.Hints}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" />
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-
-                <Grid Grid.Row="3" Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Button Content="Add Hint" />
-                    <TextBox Margin="5,0" Grid.Column="2" />
+                    <Grid Grid.Row="2" Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Command="{Binding AddIgnoreFileCommand}" Content="Add Ignore File Glob" />
+                        <TextBox Margin="5,0" Text="{Binding NewIgnoreFile}" Grid.Column="2" />
+                    </Grid>
                 </Grid>
-            </Grid>
-        </TabItem>
-        <TabItem Header="Files">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            </TabItem>
+            <TabItem Header="Hints">
+                <Grid DataContext="{Binding Hints}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <TextBlock Margin="5">Configuration Files Loaded For Open Solution</TextBlock>
-                <TreeView 
-                    Grid.Row="1" 
-                    Margin="5"
-                    ItemsSource="{Binding Files}">
-                    <TreeView.ItemContainerStyle>
-                        <Style TargetType="{x:Type TreeViewItem}">
-                            <Setter Property="IsExpanded" Value="True" />
-                        </Style>
-                    </TreeView.ItemContainerStyle>
-                    <TreeView.Resources>
-                        <HierarchicalDataTemplate DataType="{x:Type local:FileViewModel}" 
-                                                          ItemsSource="{Binding Files}">
-                            <TextBlock Text="{Binding Name}"></TextBlock>
-                        </HierarchicalDataTemplate>
-                    </TreeView.Resources>
-                </TreeView>
-            </Grid>
-        </TabItem>
-    </TabControl>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <CheckBox
+                            Focusable="False" 
+                            IsChecked="{Binding IsEnabled}" 
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Name="IsEnabledCheckBox" />
+                        <Label Content="Enabled" Margin="5,0" Target="{Binding ElementName=IsEnabledCheckBox}"/>
+                    </StackPanel>
+
+                    <TextBlock Margin="5, 0" Grid.Row="1">Hints:</TextBlock>
+                    <ListView 
+                        Margin="5, 0, 5, 0" 
+                        Grid.Row="2" 
+                        Name="HintsListView"
+                        SelectionMode="Single"
+                        ItemsSource="{Binding Hints}" 
+                        SelectedIndex="{Binding SelectedHintIndex}"
+                        HorizontalContentAlignment="Stretch">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="{Binding}" />
+
+                                    <Button Grid.Column="1" Content="Remove" FontSize="10" 
+                                            CommandParameter="{Binding}"
+                                            Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListView}, Path=DataContext.RemoveHintCommand}" 
+                                            />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <Grid Grid.Row="3" Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Command="{Binding AddHintCommand}" Content="Add Hint" />
+                        <TextBox Margin="5,0" Text="{Binding NewHint}" Grid.Column="2" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Files">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Margin="5">Configuration Files Loaded For Open Solution</TextBlock>
+                    <TreeView 
+                        Grid.Row="1" 
+                        Margin="5"
+                        ItemsSource="{Binding Files}">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="{x:Type TreeViewItem}">
+                                <Setter Property="IsExpanded" Value="True" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.Resources>
+                            <HierarchicalDataTemplate DataType="{x:Type local:FileViewModel}" 
+                                                              ItemsSource="{Binding Files}">
+                                <TextBlock Text="{Binding Name}"></TextBlock>
+                            </HierarchicalDataTemplate>
+                        </TreeView.Resources>
+                    </TreeView>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
 </UserControl>
