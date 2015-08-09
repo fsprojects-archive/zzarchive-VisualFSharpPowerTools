@@ -11,13 +11,12 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Threading
 
 type UnionPatternMatchCaseGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type UnionPatternMatchCaseGeneratorSmartTagger
+type UnionPatternMatchCaseGenerator
         (textDocument: ITextDocument,
          view: ITextView,
          textUndoHistory: ITextUndoHistory,
@@ -25,12 +24,40 @@ type UnionPatternMatchCaseGeneratorSmartTagger
          serviceProvider: IServiceProvider,
          projectFactory: ProjectFactory,
          defaultBody: string) as self =
-    let tagsChanged = Event<_, _>()
+    let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable unionDefinition = None
+    let mutable suggestion: ISuggestion option = None
 
     let buffer = view.TextBuffer
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
+
+    let handleGenerateUnionPatternMatchCases
+        (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr)
+        insertionParams entity = 
+        use transaction = textUndoHistory.CreateTransaction(Resource.unionPatternMatchCaseCommandName)
+
+        let stub = UnionPatternMatchCaseGenerator.formatMatchExpr
+                       insertionParams
+                       defaultBody
+                       patMatchExpr
+                       entity
+        let insertionPos = insertionParams.InsertionPos
+        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Line-1).Start.Position + insertionPos.Column
+
+        buffer.Insert(currentLine, stub) |> ignore
+
+        transaction.Complete()
+
+    let getSuggestion snapshot (patMatchExpr, entity, insertionParams) =
+        { new ISuggestion with
+              member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionParams entity
+              member __.NeedsIcon = false
+              member __.Text = Resource.unionPatternMatchCaseCommandName }
+
+//    member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
+//        let actions = [ generateUnionPatternMatchCase snapshot expression insertionPos entity ]
+//        [ SmartTagActionSet(Seq.toReadOnlyCollection actions) ]
+//        |> Seq.toReadOnlyCollection
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -61,7 +88,7 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                             tryFindUnionDefinitionFromPos codeGenService project point vsDocument
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
-                        if point.InSpan symbolRange then
+                        if point.InSpan symbolRange && shouldGenerateUnionPatternMatchCases patMatchExpr unionTypeDefinition then
                             return! Some(patMatchExpr, unionTypeDefinition, insertionPos)
                         else
                             return! None
@@ -70,68 +97,60 @@ type UnionPatternMatchCaseGeneratorSmartTagger
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            unionDefinition <- result
+                            suggestion <- result |> Option.map (getSuggestion newWord.Snapshot)
                             currentWord <- Some newWord
-                            buffer.TriggerTagsChanged self tagsChanged
+                            changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
             | _ -> 
                 currentWord <- None
-                buffer.TriggerTagsChanged self tagsChanged
+                changed.Trigger self
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    500us, updateAtCaretPosition)
+                                                      500us, updateAtCaretPosition)
 
-    let handleGenerateUnionPatternMatchCases
-        (snapshot: ITextSnapshot) (patMatchExpr: PatternMatchExpr)
-        insertionParams entity = 
-        use transaction = textUndoHistory.CreateTransaction(Resource.unionPatternMatchCaseCommandName)
+    member __.Changed = changed.Publish
+    member __.CurrentWord = 
+        currentWord |> Option.map (fun word ->
+            if buffer.CurrentSnapshot = word.Snapshot then word
+            else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive))
+    member __.Suggestions = suggestion |> Option.map (fun x -> [x])
 
-        let stub = UnionPatternMatchCaseGenerator.formatMatchExpr
-                       insertionParams
-                       defaultBody
-                       patMatchExpr
-                       entity
-        let insertionPos = insertionParams.InsertionPos
-        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.Line-1).Start.Position + insertionPos.Column
+    interface IDisposable with
+        member __.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()
 
-        buffer.Insert(currentLine, stub) |> ignore
-
-        transaction.Complete()
-
-    let generateUnionPatternMatchCase snapshot patMatchExpr insertionPos entity =
-        { new ISmartTagAction with
-            member __.ActionSets = null
-            member __.DisplayText = Resource.unionPatternMatchCaseCommandName
-            member __.Icon = null
-            member __.IsEnabled = true
-            member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionPos entity }
-
-    member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
-        let actions = [ generateUnionPatternMatchCase snapshot expression insertionPos entity ]
-        [ SmartTagActionSet(Seq.toReadOnlyCollection actions) ]
-        |> Seq.toReadOnlyCollection
-
+type UnionPatternMatchCaseGeneratorSmartTagger(buffer: ITextBuffer, generator: UnionPatternMatchCaseGenerator) as self =
+    let tagsChanged = Event<_,_>()
+    do generator.Changed.Add (fun _ -> buffer.TriggerTagsChanged self tagsChanged)
     interface ITagger<UnionPatternMatchCaseGeneratorSmartTag> with
-        member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<UnionPatternMatchCaseGeneratorSmartTag> seq =
+        member __.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<UnionPatternMatchCaseGeneratorSmartTag> seq =
             protectOrDefault (fun _ ->
                 seq {
-                    match currentWord, unionDefinition with
-                    | Some word, Some (expression, entity, insertionPos) when shouldGenerateUnionPatternMatchCases expression entity ->
-                        let word = 
-                            let currentSnapshot = buffer.CurrentSnapshot
-                            if currentSnapshot = word.Snapshot then word
-                            else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
-                        yield TagSpan<_>(word, 
-                                         UnionPatternMatchCaseGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
-                              :> _
+                    match generator.CurrentWord, generator.Suggestions with
+                    | Some word, Some suggestions ->
+                        let actions =
+                            suggestions
+                            |> List.map (fun s ->
+                                 { new ISmartTagAction with
+                                     member __.ActionSets = null
+                                     member __.DisplayText = s.Text
+                                     member __.Icon = null
+                                     member __.IsEnabled = true
+                                     member __.Invoke() = s.Invoke() })
+                            |> Seq.toReadOnlyCollection
+                            |> fun xs -> [ SmartTagActionSet xs ]
+                            |> Seq.toReadOnlyCollection
+
+                        yield TagSpan<_>(word, UnionPatternMatchCaseGeneratorSmartTag actions) :> _
                     | _ -> ()
                 }) 
                 Seq.empty
 
         [<CLIEvent>]
-        member x.TagsChanged = tagsChanged.Publish
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member x.Dispose() = 
-            (docEventListener :> IDisposable).Dispose()
+        member __.Dispose() = 
+            (generator :> IDisposable).Dispose()
+    
