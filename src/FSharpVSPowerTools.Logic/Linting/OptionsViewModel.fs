@@ -35,9 +35,10 @@ type HintsViewModel(config:Configuration) as this =
 
     let validateHint hint =
         [
-            match FParsec.CharParsers.run FSharpLint.Framework.HintParser.phint hint with
-                    | FParsec.CharParsers.Success(_) -> ()
-                    | FParsec.CharParsers.Failure(message, _, _) -> yield message
+            if hint <> "" then
+                match FParsec.CharParsers.run FSharpLint.Framework.HintParser.phint hint with
+                | FParsec.CharParsers.Success(_) -> ()
+                | FParsec.CharParsers.Failure(message, _, _) -> yield message
         ]
 
     let newHint = this.Factory.Backing(<@ this.NewHint @>, "", validateHint)
@@ -80,7 +81,7 @@ type HintsViewModel(config:Configuration) as this =
 
     member this.RemoveHintCommand = 
         this.Factory.CommandSyncParam(fun (selectedItem:obj) ->
-            if selectedItem <> null && selectedItem :? string then
+            if selectedItem :? string then
                 hints.Remove(selectedItem :?> string) |> ignore)
 
     member this.SelectedHintIndex
@@ -204,7 +205,7 @@ type OptionsViewModel(config:Configuration, files:FileViewModel seq) as this =
 
     member this.RemoveIgnoreFileCommand = 
         this.Factory.CommandSyncParam(fun (selectedItem:obj) ->
-            if selectedItem <> null && selectedItem :? string then
+            if selectedItem :? string then
                 ignoreFiles.Remove(selectedItem :?> string) |> ignore)
 
     member this.SelectedIgnoreFileIndex

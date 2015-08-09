@@ -10,6 +10,18 @@
              fsxaml:ViewController.Custom="{x:Type local:LintOptionsPageControl}"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
+    <UserControl.Resources>
+        <Style x:Key="ValidationErrorTooltipStyle" TargetType="TextBox">
+            <Style.Triggers>
+                <Trigger Property="Validation.HasError" Value="True">
+                    <Trigger.Setters>
+                        <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self},Path=(Validation.Errors)[0].ErrorContent}"/>
+                    </Trigger.Setters>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -228,6 +240,7 @@
                         <Button Command="{Binding AddHintCommand}" Content="Add Hint" />
                         <TextBox Margin="5,0" 
                                  Text="{Binding NewHint}" 
+                                 Style="{StaticResource ValidationErrorTooltipStyle}"
                                  Grid.Column="2" />
                     </Grid>
                 </Grid>
