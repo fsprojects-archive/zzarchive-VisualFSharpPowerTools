@@ -120,7 +120,11 @@ type SyntaxConstructClassifier
                 && isCurrentProjectForStandaloneScript())
 
     let isSlowStageEnabled() = includeUnusedOpens() || includeUnusedReferences()
-    let getCurrentSnapshot() = if textDocument <> null then Some textDocument.TextBuffer.CurrentSnapshot else None
+    let getCurrentSnapshot() = 
+        maybe {
+            let! doc = Option.ofNull textDocument
+            let! buffer = Option.ofNull doc.TextBuffer
+            return buffer.CurrentSnapshot }
 
     let triggerClassificationChanged snapshot reason =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
