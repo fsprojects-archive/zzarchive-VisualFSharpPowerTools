@@ -65,12 +65,6 @@ type FindReferencesCommandHelper() =
 module FindReferencesCommandTests =
     open System.IO
 
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
-
     let helper = FindReferencesCommandHelper()
     let fileName = getTempFileName ".fs"
 

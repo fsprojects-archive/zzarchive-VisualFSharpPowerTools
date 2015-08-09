@@ -47,11 +47,6 @@ type SyntaxConstructClassifierHelper() =
             classifierProvider.Dispose()
 
 module SyntaxConstructClassifierTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
     
     let helper = new SyntaxConstructClassifierHelper()
     let mutable fileName = null 

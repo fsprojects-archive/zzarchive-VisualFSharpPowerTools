@@ -24,13 +24,6 @@ type GoToDefinitionCommandHelper() =
         command.RegisterCommandFilter(wpfTextView, fireNavigationEvent = true)
 
 module GoToDefinitionCommandTests =
-    open System.IO
-
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = GoToDefinitionCommandHelper()
    

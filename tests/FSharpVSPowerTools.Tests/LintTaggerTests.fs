@@ -33,16 +33,11 @@ type LintTaggerHelper() =
                     let lineStart = snapshot.GetLineNumberFromPosition(span.Span.Start.Position) + 1
                     let firstLine = snapshot.GetLineFromPosition(span.Span.Start.Position) 
                     let colStart = span.Span.Start.Position - firstLine.Start.Position + 1
-                    Some ((lineStart, colStart), tag.ToolTipContent)
+                    Some ((lineStart, colStart), tag.ToolTipContent.ToString())
                 | _ -> 
                     None)
 
 module LintTaggerTests =
-#if APPVEYOR
-    let timeout = 30000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = LintTaggerHelper()
     let fileName = getTempFileName ".fs"
@@ -55,7 +50,7 @@ module LintTaggerTests =
     [<Test>]
     let ``should generate lint tags``() = 
         let content = """
-let f () = List.iter (fun _ -> ()) 
+let f () = List.iter (fun _ -> ())
 """
         let buffer = createMockTextBuffer content fileName
         let view = helper.GetView(buffer)
@@ -67,7 +62,7 @@ let f () = List.iter (fun _ -> ())
                 helper.TagsOf(buffer, tagger)                 
                 |> Seq.toList 
                 |> assertEqual 
-                    [ ])
+                    [((2, 23), "fun _ -> () can be refactored into ignore")])
 
 
 

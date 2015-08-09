@@ -35,11 +35,6 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
         |> Seq.concat
 
 module ResolveUnopenedNamespaceSmartTaggerTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = ResolveUnopenedNamespaceSmartTaggerHelper()
     let fileName = getTempFileName ".fsx"

@@ -36,11 +36,6 @@ type ImplementInterfaceSmartTaggerHelper() =
         |> Seq.concat
 
 module ImplementInterfaceSmartTaggerTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = ImplementInterfaceSmartTaggerHelper()
     
