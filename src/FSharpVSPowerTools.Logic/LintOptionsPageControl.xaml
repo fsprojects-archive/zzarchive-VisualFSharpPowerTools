@@ -219,8 +219,16 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
+                        
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        
                         <Button Command="{Binding AddHintCommand}" Content="Add Hint" />
-                        <TextBox Margin="5,0" Text="{Binding NewHint}" Grid.Column="2" />
+                        <TextBox Margin="5,0" 
+                                 Text="{Binding NewHint}" 
+                                 Grid.Column="2" />
                     </Grid>
                 </Grid>
             </TabItem>

@@ -6,78 +6,77 @@ open System.Collections.ObjectModel
 open FSharpLint.Framework.Configuration
 open FSharp.ViewModule
 
-type BoolViewModel(name, isChecked) =
-    let mutable name = name
-    let mutable isChecked = isChecked
-
-    member this.Name
-        with set(value) = name <- value
-        and get() = name
-
-    member this.IsChecked
-        with get() = isChecked
-        and set(v) = isChecked <- v
-
-type IntViewModel(name, initialValue) =
-    let mutable name = name
-    let mutable value = initialValue
-
-    member this.Name
-        with set(value) = name <- value
-        and get() = name
-
-    member this.Value
-        with get() = value
-        and set(v) = value <- v
-
-type HintsViewModel(config:Configuration option) =
+type BoolViewModel(name, isChecked) as this =
     inherit ViewModelBase()
 
-    let mutable selectedHintIndex = 0
+    let isChecked = this.Factory.Backing(<@ this.IsChecked @>, isChecked)
 
-    let mutable newHint = ""
+    member this.Name
+        with get() = name
 
-    let propertyChanged = new Event<_, _>()
+    member this.IsChecked
+        with get() = isChecked.Value
+        and set(v) = isChecked.Value <- v
+
+type IntViewModel(name, initialValue) as this =
+    inherit ViewModelBase()
+
+    let value = this.Factory.Backing(<@ this.Value @>, initialValue)
+
+    member this.Name
+        with get() = name
+
+    member this.Value
+        with get() = value.Value
+        and set(v) = value.Value <- v
+
+type HintsViewModel(config:Configuration) as this =
+    inherit ViewModelBase()
+
+    let validateHint hint =
+        [
+            match FParsec.CharParsers.run FSharpLint.Framework.HintParser.phint hint with
+                    | FParsec.CharParsers.Success(_) -> ()
+                    | FParsec.CharParsers.Failure(message, _, _) -> yield message
+        ]
+
+    let newHint = this.Factory.Backing(<@ this.NewHint @>, "", validateHint)
+    let selectedHintIndex = this.Factory.Backing(<@ this.SelectedHintIndex @>, 0)
 
     let hintSettings =
-        match config with
-        | Some(config) -> 
-            config.Analysers 
-                |> Seq.tryFind (fun x -> x.Key = "Hints")
-                |> (function 
-                    | Some(x) -> x.Value.Settings |> Seq.map (fun x -> Some(x.Value)) 
-                    | None -> Seq.empty)
-        | None -> Seq.empty
+        config.Analysers 
+            |> Seq.tryFind (fun x -> x.Key = "Hints")
+            |> (function 
+                | Some(x) -> x.Value.Settings |> Seq.map (fun x -> Some(x.Value)) 
+                | None -> Seq.empty)
 
     let hints =
         hintSettings 
             |> Seq.tryPick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
             |> (function | Some(x) -> ObservableCollection<_>(x) | None -> ObservableCollection<_>())
 
-    let mutable isEnabled =
+    let isEnabled =
         hintSettings 
             |> Seq.tryPick (function | Some(Enabled(enabled)) -> Some(enabled) | _ -> None)
             |> (function | Some(enabled) -> enabled | None -> false)
 
-    interface INotifyPropertyChanged with
-        [<CLIEvent>]
-        member this.PropertyChanged = propertyChanged.Publish
-
-    member private this.OnPropertyChanged(propertyName:string) =
-        propertyChanged.Trigger(this, PropertyChangedEventArgs(propertyName))
+    let isEnabled = this.Factory.Backing(<@ this.IsEnabled @>, isEnabled)
 
     member this.Hints with get() = hints
 
     member this.IsEnabled
-        with get() = isEnabled
-        and set(v) = isEnabled <- v
+        with get() = isEnabled.Value
+        and set(v) = isEnabled.Value <- v
 
     member this.AddHintCommand = 
         this.Factory.CommandSync(fun _ -> 
             if String.IsNullOrEmpty this.NewHint |> not then
-                hints.Add(this.NewHint)
-                this.NewHint <- ""
-                this.SelectedHintIndex <- hints.Count - 1)
+                match FParsec.CharParsers.run FSharpLint.Framework.HintParser.phint this.NewHint with
+                | FParsec.CharParsers.Success(_) -> 
+                    hints.Add(this.NewHint)
+                    this.NewHint <- ""
+                    this.SelectedHintIndex <- hints.Count - 1
+                | FParsec.CharParsers.Failure(_) -> ())
 
     member this.RemoveHintCommand = 
         this.Factory.CommandSyncParam(fun (selectedItem:obj) ->
@@ -85,33 +84,27 @@ type HintsViewModel(config:Configuration option) =
                 hints.Remove(selectedItem :?> string) |> ignore)
 
     member this.SelectedHintIndex
-        with get() = selectedHintIndex
-        and set(v) = 
-            selectedHintIndex <- v
-            this.OnPropertyChanged("SelectedHintIndex")
+        with get() = selectedHintIndex.Value
+        and set(v) = selectedHintIndex.Value <- v
 
     member this.NewHint
-        with get() = newHint
-        and set(v) = 
-            newHint <- v
-            this.OnPropertyChanged("NewHint")
+        with get() = newHint.Value
+        and set(v) = newHint.Value <- v
 
-type AccessViewModel(name, initialValue) =
-    let mutable name = name
-    let mutable value = initialValue
+type AccessViewModel(name, initialValue) as this =
+    inherit ViewModelBase()
+
+    let value = this.Factory.Backing(<@ this.Value @>, initialValue)
 
     member this.Value
-        with get() = value
-        and set(v) = value <- v
+        with get() = value.Value
+        and set(v) = value.Value <- v
 
     member this.Name
-        with set(value) = name <- value
-        and get() = name
+        with get() = name
 
     member this.AccessValues
-        with get() =
-            System.Enum.GetValues(typeof<Access>)
-                |> Seq.cast<Access>
+        with get() = Enum.GetValues(typeof<Access>) |> Seq.cast<Access>
                 
 module SetupViewModels =
     let getSettingsViewModelsFromRule (settings:Map<string, Setting>) =
@@ -166,67 +159,41 @@ module SetupViewModels =
                                     IsChecked = isRuleEnabled analyser.Value.Settings) 
         }
 
-type OptionsViewModel(?config:Configuration) =
+type OptionsViewModel(config:Configuration, files:FileViewModel seq) as this =
     inherit ViewModelBase()
 
-    let mutable selectedRule:RuleViewModel = null
+    let hints = HintsViewModel(config)
+    
+    let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, null :> RuleViewModel)
+    let newIgnoreFile = this.Factory.Backing(<@ this.NewIgnoreFile @>, "")
 
-    let propertyChanged = new Event<_, _>()
-
-    let mutable (files:FileViewModel seq) = Seq.empty
-
-    let mutable hints = HintsViewModel(config)
-
-    let mutable newIgnoreFile = ""
-
-    let mutable ignoreFiles =
-        match config with
-        | Some(config) -> 
-            match config.IgnoreFiles with
-            | Some(x) -> 
-                x.Content.Split([|Environment.NewLine|], StringSplitOptions.RemoveEmptyEntries)
-                    |> Seq.map (fun x -> x.Trim())
-                    |> (fun x -> ObservableCollection<_>(x))
-            | None -> ObservableCollection<string>()
+    let ignoreFiles =
+        match config.IgnoreFiles with
+        | Some(x) -> 
+            x.Content.Split([|Environment.NewLine|], StringSplitOptions.RemoveEmptyEntries)
+                |> Seq.map (fun x -> x.Trim())
+                |> (fun x -> ObservableCollection<_>(x))
         | None -> ObservableCollection<string>()
 
-    let mutable selectedIgnoreFileIndex = 0
+    let selectedIgnoreFileIndex = this.Factory.Backing(<@ this.SelectedIgnoreFileIndex @>, 0)
 
-    let mutable (rules:RuleViewModel seq) = 
-        match config with
-        | Some(config) -> SetupViewModels.ruleViewModelsFromConfig config
-        | None -> Seq.empty
-
-    interface INotifyPropertyChanged with
-        [<CLIEvent>]
-        member this.PropertyChanged = propertyChanged.Publish
-
-    member private this.OnPropertyChanged(propertyName:string) =
-        propertyChanged.Trigger(this, PropertyChangedEventArgs(propertyName))
+    let rules = SetupViewModels.ruleViewModelsFromConfig config
 
     member this.SelectedRule 
-        with get() = selectedRule
-        and set (value) = 
-            selectedRule <- value
-            this.OnPropertyChanged("SelectedRule")
-    
-    member val FileNames:string seq = null with get, set
+        with get() = selectedRule.Value
+        and set (value) = selectedRule.Value <- value
     
     member this.Files
         with get() = files
-        and set(value) = files <- value
     
     member this.IgnoreFiles
         with get() = ignoreFiles
-        and set(value) = ignoreFiles <- value
     
     member this.Rules
         with get() = rules
-        and set(value) = rules <- value
 
     member this.Hints
         with get() = hints
-        and set(value) = hints <- value
 
     member this.AddIgnoreFileCommand = 
         this.Factory.CommandSync(fun _ -> 
@@ -241,13 +208,9 @@ type OptionsViewModel(?config:Configuration) =
                 ignoreFiles.Remove(selectedItem :?> string) |> ignore)
 
     member this.SelectedIgnoreFileIndex
-        with get() = selectedIgnoreFileIndex
-        and set(v) = 
-            selectedIgnoreFileIndex <- v
-            this.OnPropertyChanged("SelectedIgnoreFileIndex")
+        with get() = selectedIgnoreFileIndex.Value
+        and set(v) = selectedIgnoreFileIndex.Value <- v
 
     member this.NewIgnoreFile
-        with get() = newIgnoreFile
-        and set(v) = 
-            newIgnoreFile <- v
-            this.OnPropertyChanged("NewIgnoreFile")
+        with get() = newIgnoreFile.Value
+        and set(v) = newIgnoreFile.Value <- v
