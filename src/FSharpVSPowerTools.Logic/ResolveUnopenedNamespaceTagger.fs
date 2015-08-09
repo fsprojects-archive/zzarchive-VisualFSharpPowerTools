@@ -190,13 +190,13 @@ type UnopenedNamespaceResolver
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             suggestions <- result
-                            changed.Trigger self // buffer.TriggerTagsChanged self tagsChanged
+                            changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
                     
             | _ -> 
                 currentWord <- None 
-                changed.Trigger self // buffer.TriggerTagsChanged self tagsChanged
+                changed.Trigger self
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       100us, updateAtCaretPosition)
