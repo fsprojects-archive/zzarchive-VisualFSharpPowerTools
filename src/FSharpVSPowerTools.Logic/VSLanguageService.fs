@@ -328,7 +328,7 @@ type VSLanguageService
 
     member __.ClearCaches() = 
         debug "[Language Service] Clearing FCS caches."
-        instance.RawChecker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()
+        instance.RawChecker.InvalidateAll()
         entityCache.Clear()
     
     member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
