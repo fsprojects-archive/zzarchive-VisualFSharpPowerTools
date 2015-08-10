@@ -32,13 +32,12 @@ type LintTagger(textDocument: ITextDocument,
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
             let! ast = parseFileResults.ParseTree
             let res = 
-                Lint.lintParsedFile
-                    { FinishEarly = None
-                      Configuration = None
-                      ReceivedWarning = None }
+                let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
+                Lint.lintParsedFile OptionalLintParameters.Default
                     { Ast = ast
                       Source = source
-                      TypeCheckResults = None }
+                      TypeCheckResults = None
+                      FSharpVersion = version }
                     doc.FullName
 
             return
