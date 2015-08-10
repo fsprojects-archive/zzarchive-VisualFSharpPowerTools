@@ -217,11 +217,11 @@ type ImplementInterface
         member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()
 
-type ImplementInterfaceSmartTagger(buffer: ITextBuffer, implementInterface: ImplementInterface) as self =
+type ImplementInterfaceSmartTagger(buffer: ITextBuffer, implementInterface: ImplementInterface) =
     let tagsChanged = Event<_, _>()
     do implementInterface.Changed.Add (fun x -> buffer.TriggerTagsChanged x tagsChanged)
     interface ITagger<ImplementInterfaceSmartTag> with
-        member x.GetTags _: ITagSpan<ImplementInterfaceSmartTag> seq =
+        member __.GetTags _: ITagSpan<ImplementInterfaceSmartTag> seq =
             protectOrDefault (fun _ ->
                 seq {
                     match implementInterface.CurrentWord, implementInterface.Suggestions with

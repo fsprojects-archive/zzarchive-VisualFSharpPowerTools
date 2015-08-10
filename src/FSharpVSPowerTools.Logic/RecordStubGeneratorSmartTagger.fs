@@ -124,7 +124,7 @@ type RecordStubGeneratorSmartTagger(buffer: ITextBuffer, generator: RecordStubGe
     let tagsChanged = Event<_,_>()
     do generator.Changed.Add (fun _ -> buffer.TriggerTagsChanged self tagsChanged)
     interface ITagger<RecordStubGeneratorSmartTag> with
-        member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
+        member __.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             protectOrDefault (fun _ ->
                 seq {
                     match generator.CurrentWord, generator.Suggestions with

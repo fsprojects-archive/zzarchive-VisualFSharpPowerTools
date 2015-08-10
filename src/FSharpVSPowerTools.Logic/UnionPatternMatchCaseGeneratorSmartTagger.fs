@@ -54,11 +54,6 @@ type UnionPatternMatchCaseGenerator
               member __.NeedsIcon = false
               member __.Text = Resource.unionPatternMatchCaseCommandName }
 
-//    member x.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
-//        let actions = [ generateUnionPatternMatchCase snapshot expression insertionPos entity ]
-//        [ SmartTagActionSet(Seq.toReadOnlyCollection actions) ]
-//        |> Seq.toReadOnlyCollection
-
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
         | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
