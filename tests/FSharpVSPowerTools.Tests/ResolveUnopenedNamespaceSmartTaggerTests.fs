@@ -35,19 +35,9 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
         |> Seq.concat
 
 module ResolveUnopenedNamespaceSmartTaggerTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = ResolveUnopenedNamespaceSmartTaggerHelper()
     let fileName = getTempFileName ".fsx"
-
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
 
     [<Test>]
     let ``return nothing if tags not found``() = 
