@@ -17,19 +17,47 @@ open System.Threading
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
-                                    view: ITextView,
-                                    textUndoHistory: ITextUndoHistory,
-                                    vsLanguageService: VSLanguageService,
-                                    serviceProvider: IServiceProvider,
-                                    projectFactory: ProjectFactory,
-                                    defaultBody: string) as self =
-    let tagsChanged = Event<_, _>()
+type RecordStubGenerator(textDocument: ITextDocument,
+                         view: ITextView,
+                         textUndoHistory: ITextUndoHistory,
+                         vsLanguageService: VSLanguageService,
+                         serviceProvider: IServiceProvider,
+                         projectFactory: ProjectFactory,
+                         defaultBody: string) as self =
+    let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable recordDefinition = None
+    let mutable suggestion: ISuggestion option = None
     
     let buffer = view.TextBuffer
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
+
+    // Check whether the record has been fully defined
+    let shouldGenerateRecordStub (recordExpr: RecordExpr) (entity: FSharpEntity) =
+        let fieldCount = entity.FSharpFields.Count
+        let writtenFieldCount = recordExpr.FieldExprList.Length
+        fieldCount > 0 && writtenFieldCount < fieldCount
+
+    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordExpr: RecordExpr) (insertionPos: _) entity = 
+        let fieldsWritten = recordExpr.FieldExprList
+
+        use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
+
+        let stub = RecordStubGenerator.formatRecord
+                       insertionPos
+                       defaultBody
+                       entity
+                       fieldsWritten
+        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
+
+        buffer.Insert(currentLine, stub) |> ignore
+
+        transaction.Complete()
+
+    let getSuggestion snapshot (recordExpr, entity, insertionParams) =
+        { new ISuggestion with
+              member __.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionParams entity
+              member __.NeedsIcon = false
+              member __.Text = Resource.recordGenerationCommandName }
 
     // Try to:
     // - Identify record expression binding
@@ -61,7 +89,7 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                             tryFindRecordDefinitionFromPos codeGenService project point vsDocument
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
-                        if point.InSpan symbolRange then
+                        if point.InSpan symbolRange && shouldGenerateRecordStub recordExpression recordDefinition then
                             return! Some (recordExpression, recordDefinition, insertionPos)
                         else
                             return! None
@@ -70,68 +98,51 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            recordDefinition <- result
+                            suggestion <- result |> Option.map (getSuggestion newWord.Snapshot)
                             currentWord <- Some newWord
-                            buffer.TriggerTagsChanged self tagsChanged
+                            changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
             | _ -> 
                 currentWord <- None 
-                buffer.TriggerTagsChanged self tagsChanged
+                changed.Trigger self
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
-                                    500us, updateAtCaretPosition)
+                                                      500us, updateAtCaretPosition)
+    member __.Changed = changed.Publish
+    member __.CurrentWord = 
+        currentWord |> Option.map (fun word ->
+            if buffer.CurrentSnapshot = word.Snapshot then word
+            else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive))
+    member __.Suggestions = suggestion |> Option.map (fun x -> [x])
 
-    // Check whether the record has been fully defined
-    let shouldGenerateRecordStub (recordExpr: RecordExpr) (entity: FSharpEntity) =
-        let fieldCount = entity.FSharpFields.Count
-        let writtenFieldCount = recordExpr.FieldExprList.Length
-        fieldCount > 0 && writtenFieldCount < fieldCount
+    interface IDisposable with
+        member __.Dispose() = 
+            (docEventListener :> IDisposable).Dispose()
 
-    let handleGenerateRecordStub (snapshot: ITextSnapshot) (recordExpr: RecordExpr) (insertionPos: _) entity = 
-        let fieldsWritten = recordExpr.FieldExprList
-
-        use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
-
-        let stub = RecordStubGenerator.formatRecord
-                       insertionPos
-                       defaultBody
-                       entity
-                       fieldsWritten
-        let currentLine = snapshot.GetLineFromLineNumber(insertionPos.InsertionPos.Line-1).Start.Position + insertionPos.InsertionPos.Column
-
-        buffer.Insert(currentLine, stub) |> ignore
-
-        transaction.Complete()
-
-    let generateRecordStub snapshot recordExpr insertionPos entity =
-        { new ISmartTagAction with
-            member __.ActionSets = null
-            member __.DisplayText = Resource.recordGenerationCommandName
-            member __.Icon = null
-            member __.IsEnabled = true
-            member __.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionPos entity }
-
-    member __.GetSmartTagActions(snapshot, expression, insertionPos, entity: FSharpEntity) =
-        let actions = [ generateRecordStub snapshot expression insertionPos entity ]
-        [ SmartTagActionSet(Seq.toReadOnlyCollection actions) ]
-        |> Seq.toReadOnlyCollection
-
+type RecordStubGeneratorSmartTagger(buffer: ITextBuffer, generator: RecordStubGenerator) as self =
+    let tagsChanged = Event<_,_>()
+    do generator.Changed.Add (fun _ -> buffer.TriggerTagsChanged self tagsChanged)
     interface ITagger<RecordStubGeneratorSmartTag> with
-        member x.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
+        member __.GetTags(_spans: NormalizedSnapshotSpanCollection): ITagSpan<RecordStubGeneratorSmartTag> seq =
             protectOrDefault (fun _ ->
                 seq {
-                    match currentWord, recordDefinition with
-                    | Some word, Some (expression, entity, insertionPos) when shouldGenerateRecordStub expression entity ->
-                        let word = 
-                            let currentSnapshot = buffer.CurrentSnapshot
-                            if currentSnapshot = word.Snapshot then word
-                            else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
-                        yield TagSpan<_>(word, 
-                                         RecordStubGeneratorSmartTag(x.GetSmartTagActions(word.Snapshot, expression, insertionPos, entity)))
-                              :> _
-                    | _ -> ()
-                })
+                    match generator.CurrentWord, generator.Suggestions with
+                    | Some word, Some suggestions ->
+                        let actions =
+                            suggestions
+                            |> List.map (fun s ->
+                                 { new ISmartTagAction with
+                                     member __.ActionSets = null
+                                     member __.DisplayText = s.Text
+                                     member __.Icon = null
+                                     member __.IsEnabled = true
+                                     member __.Invoke() = s.Invoke() })
+                            |> Seq.toReadOnlyCollection
+                            |> fun xs -> [ SmartTagActionSet xs ]
+                            |> Seq.toReadOnlyCollection
+                        yield TagSpan<_>(word, RecordStubGeneratorSmartTag(actions)) :> _
+                    | _ -> () })
                 Seq.empty
 
         [<CLIEvent>]
@@ -139,4 +150,4 @@ type RecordStubGeneratorSmartTagger(textDocument: ITextDocument,
 
     interface IDisposable with
         member __.Dispose() = 
-            (docEventListener :> IDisposable).Dispose()
+            (generator :> IDisposable).Dispose()

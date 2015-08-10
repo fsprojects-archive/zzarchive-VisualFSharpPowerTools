@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
 using System.Diagnostics;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
 {
@@ -42,13 +43,18 @@ namespace FSharpVSPowerTools
             var codeGenOptions = Setting.getCodeGenerationOptions(serviceProvider);
             if (codeGenOptions == null) return null;
 
+            var dte = serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
+            var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+            if (vsVersion == VisualStudioVersion.VS2015) return null;
+
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new UnionPatternMatchCaseGeneratorSmartTagger(doc, textView,
+                var generator = new UnionPatternMatchCaseGenerator(doc, textView,
                             undoHistoryRegistry.RegisterHistory(buffer),
                             fsharpVsLanguageService, serviceProvider,
-                            projectFactory, Setting.getDefaultMemberBody(codeGenOptions)) as ITagger<T>;
+                            projectFactory, Setting.getDefaultMemberBody(codeGenOptions));
+                return new UnionPatternMatchCaseGeneratorSmartTagger(buffer, generator) as ITagger<T>;
             }
             
             return null;
