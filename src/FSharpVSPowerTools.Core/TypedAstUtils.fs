@@ -302,6 +302,8 @@ module UnusedDeclarations =
             | Entity ((Record | UnionType | Interface | FSharpModule), _, _) -> None
             // FCS returns inconsistent results for override members; we're going to skip these symbols.
             | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
+            // Ignore object identifiers i.e. 'this' since graying them out could be annoying. 
+            | MemberFunctionOrValue func when func.IsMemberThisValue -> None
             // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
             | Parameter -> None
             | _ ->
