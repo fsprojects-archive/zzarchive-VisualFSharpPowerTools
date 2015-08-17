@@ -96,7 +96,7 @@ type ImplementInterface
         let typeParams = state.InterfaceData.TypeParameters
         let stub = InterfaceStubGenerator.formatInterface 
                        startColumn indentSize typeParams objectIdentifier defaultBody
-                       displayContext implementedMemberSignatures entity
+                       displayContext implementedMemberSignatures entity false
         if String.IsNullOrEmpty stub then
             let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore

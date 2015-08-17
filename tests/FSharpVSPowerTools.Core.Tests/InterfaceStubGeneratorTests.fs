@@ -106,20 +106,20 @@ let getInterfaceStub typeParams line col lineStr idents =
     | Some s when (s.Symbol :? FSharpEntity) ->
         let entity = s.Symbol :?> FSharpEntity
         if InterfaceStubGenerator.isInterface entity then
-            Some (InterfaceStubGenerator.formatInterface 0 4 typeParams 
-                    "x" "raise (System.NotImplementedException())" s.DisplayContext Set.empty entity)
+            Some (InterfaceStubGenerator.formatInterface 0 4 typeParams
+                    "x" "raise (System.NotImplementedException())" s.DisplayContext Set.empty entity true)
         else 
             None
     | _ -> None
 
 let checkInterfaceStub line col lineStr idents (expected: string) =
-    getInterfaceStub [|"'a"|] line col lineStr idents 
+    getInterfaceStub [|"'a"|] line col lineStr idents
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> Option.get
     |> assertEqual (expected.Replace("\r\n", "\n"))
 
 let checkInterfaceStubWith typeParams line col lineStr idents (expected: string) =
-    getInterfaceStub typeParams line col lineStr idents 
+    getInterfaceStub typeParams line col lineStr idents
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> Option.get
     |> assertEqual (expected.Replace("\r\n", "\n"))
