@@ -148,8 +148,8 @@ type ImplementInterface
                               return handleImplementInterface word.Snapshot state displayContext implementedMemberSignatures entity verboseMode
                           } |> Async.StartInThreadPoolSafe }
 
-                [ createSuggestion Resource.implementInterfaceCommandName false
-                  createSuggestion Resource.implementInterfaceVerboseCommandName true ]
+                [ createSuggestion Resource.implementInterfaceCommandName true
+                  createSuggestion Resource.implementInterfaceVerboseCommandName false ]
             else []
 
     let updateAtCaretPosition() =
