@@ -406,3 +406,21 @@ type Derived() =
     inherit Base ({new System.IDisposable with 
                        member x.Dispose(): unit =
                            raise (System.NotImplementedException())})
+
+type IOverloaded =
+    abstract member Foo: num:int -> int
+    abstract member Foo: num:bool -> bool
+    abstract member Bar: thing:string -> string
+
+type Overloaded =
+    interface IOverloaded with
+        member x.Foo(num:int): int =
+            raise (System.NotImplementedException())
+        member x.Foo(num:bool): bool =
+            raise (System.NotImplementedException())
+        member x.Bar(thing) = raise (System.NotImplementedException())
+
+type LightweightInfrastructure() =
+    interface Infrastructure with
+        member x.Serialize(sb) = raise (System.NotImplementedException())
+        member x.ToXml() = raise (System.NotImplementedException())

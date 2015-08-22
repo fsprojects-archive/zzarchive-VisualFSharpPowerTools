@@ -318,6 +318,7 @@ module InterfaceStubGenerator =
                     if verboseMode then writer.Write(": {0}): unit", retType)
                     else writer.Write(")")
                     writer.Write(" = ")
+                    if verboseMode then writer.WriteLine("")
 
                 writer |> writeImplementation
                 writer.Unindent ctx.Indentation

@@ -90,7 +90,7 @@ let ``should find abbreviated interface declaration``() =
 let ``should not find interface declaration in object expression if the base type is class``() = 
     isInterfaceDeclarationAt 51 18 |> assertFalse
 
-let getInterfaceStub typeParams line col lineStr idents =
+let getInterfaceStub typeParams line col lineStr idents verboseMode =
     let results = 
         vsLanguageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.MatchingSource)
         |> Async.RunSynchronously
@@ -107,19 +107,21 @@ let getInterfaceStub typeParams line col lineStr idents =
         let entity = s.Symbol :?> FSharpEntity
         if InterfaceStubGenerator.isInterface entity then
             Some (InterfaceStubGenerator.formatInterface 0 4 typeParams
-                    "x" "raise (System.NotImplementedException())" s.DisplayContext Set.empty entity true)
+                    "x" "raise (System.NotImplementedException())" s.DisplayContext Set.empty entity verboseMode)
         else 
             None
     | _ -> None
 
-let checkInterfaceStub line col lineStr idents (expected: string) =
-    getInterfaceStub [|"'a"|] line col lineStr idents
+let checkInterfaceStubFull verbose line col lineStr idents (expected: string) =
+    getInterfaceStub [|"'a"|] line col lineStr idents verbose
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> Option.get
     |> assertEqual (expected.Replace("\r\n", "\n"))
 
+let checkInterfaceStub = checkInterfaceStubFull true
+
 let checkInterfaceStubWith typeParams line col lineStr idents (expected: string) =
-    getInterfaceStub typeParams line col lineStr idents
+    getInterfaceStub typeParams line col lineStr idents true
     |> Option.map (fun s -> s.Replace("\r\n", "\n"))
     |> Option.get
     |> assertEqual (expected.Replace("\r\n", "\n"))
@@ -150,10 +152,8 @@ let ``should generate stubs for composite interface``() =
     checkInterfaceStub 31 25 "    interface Interface3 with " ["Interface3"] """
 member x.Method1(arg1: int): int = 
     raise (System.NotImplementedException())
-
 member x.Method2(arg1: int): int = 
     raise (System.NotImplementedException())
-
 member x.Method3(arg1: int): int = 
     raise (System.NotImplementedException())
 """
@@ -164,10 +164,8 @@ let ``should generate stubs for interfaces with multiple properties``() =
 member x.Item
     with set (v: float): unit = 
         raise (System.NotImplementedException())
-
 member x.Item: int = 
     raise (System.NotImplementedException())
-
 member x.Item
     with get (): string = 
         raise (System.NotImplementedException())
@@ -180,43 +178,31 @@ let ``should generate stubs for interfaces with non-F# properties``() =
     checkInterfaceStub 119 38 "    { new System.Collections.Generic.IList<'a> with" ["IList"] """
 member x.Add(item: 'a): unit = 
     raise (System.NotImplementedException())
-
 member x.Clear(): unit = 
     raise (System.NotImplementedException())
-
 member x.Contains(item: 'a): bool = 
     raise (System.NotImplementedException())
-
 member x.CopyTo(array: 'a [], arrayIndex: int): unit = 
     raise (System.NotImplementedException())
-
 member x.Count: int = 
     raise (System.NotImplementedException())
-
 member x.GetEnumerator(): IEnumerator<'a> = 
     raise (System.NotImplementedException())
-
 member x.GetEnumerator(): System.Collections.IEnumerator = 
     raise (System.NotImplementedException())
-
 member x.IndexOf(item: 'a): int = 
     raise (System.NotImplementedException())
-
 member x.Insert(index: int, item: 'a): unit = 
     raise (System.NotImplementedException())
-
 member x.IsReadOnly: bool = 
     raise (System.NotImplementedException())
-
 member x.Item
     with get (index: int): 'a = 
         raise (System.NotImplementedException())
     and set (index: int) (v: 'a): unit = 
         raise (System.NotImplementedException())
-
 member x.Remove(item: 'a): bool = 
     raise (System.NotImplementedException())
-
 member x.RemoveAt(index: int): unit = 
     raise (System.NotImplementedException())
 """
@@ -281,52 +267,37 @@ let ``should replace generic parameters on interfaces``() =
     checkInterfaceStubWith [|"string"; "int"|] 290 15 "let _ = { new IDictionary<string, int> with" ["IDictionary"] """
 member x.Add(key: string, value: int): unit = 
     raise (System.NotImplementedException())
-
 member x.Add(item: KeyValuePair<string,int>): unit = 
     raise (System.NotImplementedException())
-
 member x.Clear(): unit = 
     raise (System.NotImplementedException())
-
 member x.Contains(item: KeyValuePair<string,int>): bool = 
     raise (System.NotImplementedException())
-
 member x.ContainsKey(key: string): bool = 
     raise (System.NotImplementedException())
-
 member x.CopyTo(array: KeyValuePair<string,int> [], arrayIndex: int): unit = 
     raise (System.NotImplementedException())
-
 member x.Count: int = 
     raise (System.NotImplementedException())
-
 member x.GetEnumerator(): IEnumerator<KeyValuePair<string,int>> = 
     raise (System.NotImplementedException())
-
 member x.GetEnumerator(): System.Collections.IEnumerator = 
     raise (System.NotImplementedException())
-
 member x.IsReadOnly: bool = 
     raise (System.NotImplementedException())
-
 member x.Item
     with get (key: string): int = 
         raise (System.NotImplementedException())
     and set (key: string) (v: int): unit = 
         raise (System.NotImplementedException())
-
 member x.Keys: ICollection<string> = 
     raise (System.NotImplementedException())
-
 member x.Remove(key: string): bool = 
     raise (System.NotImplementedException())
-
 member x.Remove(item: KeyValuePair<string,int>): bool = 
     raise (System.NotImplementedException())
-
 member x.TryGetValue(key: string, value: byref<int>): bool = 
     raise (System.NotImplementedException())
-
 member x.Values: ICollection<int> = 
     raise (System.NotImplementedException())
 """
@@ -368,7 +339,6 @@ member x.ReadWriteProp
         raise (System.NotImplementedException())
     and set (v: int): unit = 
         raise (System.NotImplementedException())
-
 member x.ReadonlyProp: int = 
     raise (System.NotImplementedException())
 """
@@ -379,6 +349,25 @@ let ``should ensure .NET event handlers are generated correctly``() =
 [<CLIEvent>]
 member x.PropertyChanged: IEvent<System.ComponentModel.PropertyChangedEventHandler,System.ComponentModel.PropertyChangedEventArgs> = 
     raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``should always use verbose mode on overloaded methods``() =
+    checkInterfaceStubFull false 416 31 "type Overloaded =
+    interface IOverloaded with" ["IOverloaded"] """
+member x.Bar(thing) = raise (System.NotImplementedException())
+member x.Foo(num: bool): bool = 
+    raise (System.NotImplementedException())
+member x.Foo(num: int): int = 
+    raise (System.NotImplementedException())
+"""
+
+[<Test>]
+let ``when verbose syntax is not requested use lightweight syntax``() =
+    checkInterfaceStubFull false 423 15 "type LightweightInfrastructure() =
+    interface Infrastructure with" ["Infrastructure"] """
+member x.Serialize(arg1) = raise (System.NotImplementedException())
+member x.ToXml() = raise (System.NotImplementedException())
 """
 
 open System
