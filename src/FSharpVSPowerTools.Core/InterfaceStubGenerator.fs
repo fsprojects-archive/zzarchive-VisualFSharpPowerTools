@@ -247,14 +247,13 @@ module InterfaceStubGenerator =
 
         // A couple of helper methods for emitting close declarations of members and stub method bodies.
         let closeDeclaration (returnType:string) (writer:ColumnIndentedTextWriter) =
-            if verboseMode then writer.Write(": {0}")
+            if verboseMode then writer.Write(": {0}", returnType)
             writer.Write(" = ", returnType)
             if verboseMode then writer.WriteLine("")
         let writeImplementation (ctx:Context) (writer:ColumnIndentedTextWriter) =
             match verboseMode, ctx.MethodBody with
             | false, [| singleLine |] -> writer.WriteLine(singleLine)
-            | true, lines
-            | false, lines ->
+            | _, lines ->
                 writer.Indent ctx.Indentation
                 for line in lines do
                     writer.WriteLine(line)
@@ -267,7 +266,6 @@ module InterfaceStubGenerator =
             let writeImplementation = writeImplementation ctx
             let (_, _, setterArgInfos, _) = preprocess ctx setter
             let writer = ctx.Writer
-            if verboseMode then writer.WriteLine("")
             writer.Write("member ")
             for modifier in modifiers do
                 writer.Write("{0} ", modifier)
@@ -297,7 +295,6 @@ module InterfaceStubGenerator =
             let closeDeclaration = closeDeclaration retType
             let writeImplementation = writeImplementation ctx
             let writer = ctx.Writer
-            if verboseMode then writer.WriteLine("")
             if isEventMember v then
                 writer.WriteLine("[<CLIEvent>]")
             writer.Write("member ")
@@ -483,7 +480,7 @@ module InterfaceStubGenerator =
     /// Generate stub implementation of an interface at a start column
     let formatInterface startColumn indentation (typeInstances: string []) objectIdent
             (methodBody: string) (displayContext: FSharpDisplayContext) excludedMemberSignatures
-            (e: FSharpEntity) withExplicitTypes =
+            (e: FSharpEntity) verboseMode =
         Debug.Assert(isInterface e, "The entity should be an interface.")
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
         use writer = new ColumnIndentedTextWriter()
@@ -531,6 +528,12 @@ module InterfaceStubGenerator =
         else
             writer.Indent startColumn
             writer.WriteLine("")
+            let duplicatedMembers =
+                missingMembers
+                |> Seq.countBy(fun (m, insts) -> m.DisplayName, insts |> Seq.length)
+                |> Seq.filter (snd >> (<) 1)
+                |> Seq.map (fst >> fst)
+                |> Set
 
             let getReturnType v = snd (getArgTypes ctx v)
             let rec loop (members : (FSharpMemberOrFunctionOrValue * _) list) =
@@ -544,10 +547,12 @@ module InterfaceStubGenerator =
                     getter.IsPropertyGetterMethod && setter.IsPropertySetterMethod &&
                     normalizePropertyName getter = normalizePropertyName setter &&
                     getReturnType getter = getReturnType setter ->
-                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.PropertyGetSet(getter, setter)) withExplicitTypes
+                    let useVerboseMode = verboseMode || duplicatedMembers.Contains (fst members.Head).DisplayName
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.PropertyGetSet(getter, setter)) useVerboseMode
                     loop otherMembers
-                | (m, insts) :: otherMembers -> 
-                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m) withExplicitTypes
+                | (m, insts) :: otherMembers ->
+                    let useVerboseMode = verboseMode || duplicatedMembers.Contains m.DisplayName
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m) useVerboseMode
                     loop otherMembers
                 | [] -> ()
 
