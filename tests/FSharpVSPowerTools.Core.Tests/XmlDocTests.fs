@@ -1,6 +1,6 @@
 ﻿#if INTERACTIVE
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../bin/FSharpVSPowerTools.Core.dll"
+#load "../../src/FSharpVSPowerTools.Core/XmlDocParser.fs"
 #r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
@@ -45,6 +45,10 @@ let ``should create XML Doc for members``() =
     Set.contains (XmlDocable(27, 4, [])) output |> assertEqual true
     Set.contains (XmlDocable(33, 4, ["x"; "y"])) output |> assertEqual true
     Set.contains (XmlDocable(91, 4, [])) output |> assertEqual true
+
+[<Test>]
+let ``should create XML Doc for let bindings of anonymous functions``() =
+    Set.contains (XmlDocable(97, 0, [ "x"; "y"])) output |> assertEqual true
 
 [<Test>]
 let ``should not create XML Doc for members which already have non-empty XML Docs``() =
