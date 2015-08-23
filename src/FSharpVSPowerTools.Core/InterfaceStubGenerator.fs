@@ -537,24 +537,24 @@ module InterfaceStubGenerator =
                 |> Set
 
             let getReturnType v = snd (getArgTypes ctx v)
-            let rec loop (members : (FSharpMemberOrFunctionOrValue * _) list) =
+            let rec formatMembers (members : (FSharpMemberOrFunctionOrValue * _) list) =
                 match members with
                 // Since there is no unified source of information for properties,
                 // we try to merge getters and setters when they seem to match.
                 // Assume that getter and setter come right after each other.
                 // They belong to the same property if names and return types are the same
-                | (getter, insts) :: (setter, _) :: otherMembers
-                | (setter, _) :: (getter, insts) :: otherMembers when
+                | (getter as first, insts) :: (setter, _) :: otherMembers
+                | (setter as first, _) :: (getter, insts) :: otherMembers when
                     getter.IsPropertyGetterMethod && setter.IsPropertySetterMethod &&
                     normalizePropertyName getter = normalizePropertyName setter &&
                     getReturnType getter = getReturnType setter ->
-                    let useVerboseMode = verboseMode || duplicatedMembers.Contains (fst members.Head).DisplayName
+                    let useVerboseMode = verboseMode || duplicatedMembers.Contains first.DisplayName
                     formatMember { ctx with ArgInstantiations = insts } (MemberInfo.PropertyGetSet(getter, setter)) useVerboseMode
-                    loop otherMembers
+                    formatMembers otherMembers
                 | (m, insts) :: otherMembers ->
                     let useVerboseMode = verboseMode || duplicatedMembers.Contains m.DisplayName
                     formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m) useVerboseMode
-                    loop otherMembers
+                    formatMembers otherMembers
                 | [] -> ()
 
             missingMembers
@@ -563,7 +563,7 @@ module InterfaceStubGenerator =
                 // are guaranteed to be neighboring.
                 normalizePropertyName m, getReturnType m)
             |> Seq.toList
-            |> loop
+            |> formatMembers
             writer.Dump()
 
     /// Find corresponding interface declaration at a given position

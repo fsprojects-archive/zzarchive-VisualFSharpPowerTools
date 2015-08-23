@@ -66,7 +66,7 @@ and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInter
         member __.Dispose() = (implementInterface :> IDisposable).Dispose()
         member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) = 
             match implementInterface.CurrentWord, implementInterface.Suggestions with
-            | Some _, suggestions when suggestions.Length > 0  ->
+            | Some _, (_ :: _ as suggestions)  ->
                 suggestions
                 |> List.map (fun s ->
                      { new ISuggestedAction with
@@ -87,7 +87,7 @@ and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInter
         member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
             Task.FromResult(
                 Option.isSome implementInterface.CurrentWord &&
-                implementInterface.Suggestions.Length > 0)
+                not (List.isEmpty implementInterface.Suggestions))
 
         [<CLIEvent>]
         member __.SuggestedActionsChanged: IEvent<EventHandler<EventArgs>, EventArgs> = actionsChanged.Publish
