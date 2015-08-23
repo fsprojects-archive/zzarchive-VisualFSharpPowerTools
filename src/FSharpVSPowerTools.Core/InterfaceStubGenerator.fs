@@ -534,7 +534,7 @@ module InterfaceStubGenerator =
                 |> Seq.countBy(fun (m, insts) -> m.DisplayName, insts |> Seq.length)
                 |> Seq.filter (snd >> (<) 1)
                 |> Seq.map (fst >> fst)
-                |> Set
+                |> Set.ofSeq
 
             let getReturnType v = snd (getArgTypes ctx v)
             let rec formatMembers (members : (FSharpMemberOrFunctionOrValue * _) list) =
