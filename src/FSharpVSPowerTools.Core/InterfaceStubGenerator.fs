@@ -205,14 +205,14 @@ module InterfaceStubGenerator =
     let internal isEventMember (m: FSharpMemberOrFunctionOrValue) =
         m.IsEvent || hasAttribute<CLIEventAttribute> m.Attributes
     
-    let internal formatMember (ctx: Context) m = 
+    let internal formatMember (ctx: Context) m verboseMode = 
         let getParamArgs (argInfos: FSharpParameter list list) (ctx: Context) (v: FSharpMemberOrFunctionOrValue) = 
             let args, namesWithIndices =
                 match argInfos with
                 | [[x]] when v.IsPropertyGetterMethod && x.Name.IsNone 
                                 && x.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" -> 
                     "", Map.ofList [ctx.ObjectIdent, Set.empty]
-                | _  -> formatArgsUsage ctx true v argInfos
+                | _  -> formatArgsUsage ctx verboseMode v argInfos
              
             if String.IsNullOrWhiteSpace(args) then "" 
             elif args.StartsWith("(") then args
@@ -245,12 +245,27 @@ module InterfaceStubGenerator =
             let usage = buildUsage argInfos
             usage, modifiers, argInfos, retType
 
+        // A couple of helper methods for emitting close declarations of members and stub method bodies.
+        let closeDeclaration (returnType:string) (writer:ColumnIndentedTextWriter) =
+            if verboseMode then writer.Write(": {0}", returnType)
+            writer.Write(" = ", returnType)
+            if verboseMode then writer.WriteLine("")
+        let writeImplementation (ctx:Context) (writer:ColumnIndentedTextWriter) =
+            match verboseMode, ctx.MethodBody with
+            | false, [| singleLine |] -> writer.WriteLine(singleLine)
+            | _, lines ->
+                writer.Indent ctx.Indentation
+                for line in lines do
+                    writer.WriteLine(line)
+                writer.Unindent ctx.Indentation
+
         match m with
         | MemberInfo.PropertyGetSet(getter, setter) ->
             let (usage, modifiers, getterArgInfos, retType) = preprocess ctx getter
+            let closeDeclaration = closeDeclaration retType
+            let writeImplementation = writeImplementation ctx
             let (_, _, setterArgInfos, _) = preprocess ctx setter
             let writer = ctx.Writer
-            writer.WriteLine("")
             writer.Write("member ")
             for modifier in modifiers do
                 writer.Write("{0} ", modifier)
@@ -260,30 +275,26 @@ module InterfaceStubGenerator =
             writer.WriteLine(usage)
             writer.Indent ctx.Indentation
             match getParamArgs getterArgInfos ctx getter with
-            | "", _ | "()", _ ->
-                writer.WriteLine("with get (): {0} = ", retType)
-            | args, _ ->
-                writer.WriteLine("with get {0}: {1} = ", args, retType)
-            writer.Indent ctx.Indentation
-            for line in ctx.MethodBody do
-                writer.WriteLine(line)
-            writer.Unindent ctx.Indentation
+            | "", _ | "()", _ -> writer.Write("with get ()")
+            | args, _ -> writer.Write("with get {0}", args)
+            writer |> closeDeclaration
+            writer |> writeImplementation
             match getParamArgs setterArgInfos ctx setter with
             | "", _ | "()", _ ->
-                writer.WriteLine("and set (v: {0}): unit = ", retType)
+                if verboseMode then writer.WriteLine("and set (v: {0}): unit = ", retType)
+                else writer.Write("and set v = ")
             | args, namesWithIndices ->
                 let valueArgName, _ = normalizeArgName namesWithIndices "v"
-                writer.WriteLine("and set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
-            writer.Indent ctx.Indentation
-            for line in ctx.MethodBody do
-                writer.WriteLine(line)
-            writer.Unindent ctx.Indentation
+                if verboseMode then writer.WriteLine("and set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
+                else writer.Write("and set {0} {1} = ", args, valueArgName)
+            writer |> writeImplementation
             writer.Unindent ctx.Indentation
 
         | MemberInfo.Member v ->
             let (usage, modifiers, argInfos, retType) = preprocess ctx v
+            let closeDeclaration = closeDeclaration retType
+            let writeImplementation = writeImplementation ctx
             let writer = ctx.Writer
-            writer.WriteLine("")
             if isEventMember v then
                 writer.WriteLine("[<CLIEvent>]")
             writer.Write("member ")
@@ -293,11 +304,8 @@ module InterfaceStubGenerator =
         
             if v.IsEvent then
                 writer.Write(usage)
-                writer.WriteLine(": {0} = ", retType)
-                writer.Indent ctx.Indentation
-                for line in ctx.MethodBody do
-                    writer.WriteLine(line)
-                writer.Unindent ctx.Indentation
+                writer |> closeDeclaration
+                writer |> writeImplementation
             elif v.IsPropertySetterMethod then
                 writer.WriteLine(usage)
                 writer.Indent ctx.Indentation
@@ -306,38 +314,31 @@ module InterfaceStubGenerator =
                     writer.WriteLine("with set (v: {0}): unit = ", retType)
                 | args, namesWithIndices ->
                     let valueArgName, _ = normalizeArgName namesWithIndices "v"
-                    writer.WriteLine("with set {0} ({1}: {2}): unit = ", args, valueArgName, retType)
-                writer.Indent ctx.Indentation
-                for line in ctx.MethodBody do
-                    writer.WriteLine(line)
-                writer.Unindent ctx.Indentation
+                    writer.Write("with set {0} ({1}", args, valueArgName)
+                    if verboseMode then writer.Write(": {0}): unit", retType)
+                    else writer.Write(")")
+                    writer.Write(" = ")
+                    if verboseMode then writer.WriteLine("")
+
+                writer |> writeImplementation
                 writer.Unindent ctx.Indentation
             elif v.IsPropertyGetterMethod then
                 writer.Write(usage)
                 match getParamArgs argInfos ctx v with
                 | "", _ | "()", _ ->
                     // Use the short-hand notation for getters without arguments
-                    writer.WriteLine(": {0} = ", retType)
-                    writer.Indent ctx.Indentation
-                    for line in ctx.MethodBody do
-                        writer.WriteLine(line)
-                    writer.Unindent ctx.Indentation
+                    writer |> closeDeclaration
+                    writer |> writeImplementation
                 | args, _ ->
-                    writer.WriteLine("")
+                    if verboseMode then writer.WriteLine("")
                     writer.Indent ctx.Indentation
-                    writer.WriteLine("with get {0}: {1} = ", args, retType)
-                    writer.Indent ctx.Indentation
-                    for line in ctx.MethodBody do
-                        writer.WriteLine(line)
-                    writer.Unindent ctx.Indentation
-                    writer.Unindent ctx.Indentation
+                    writer.Write("with get {0}", args)
+                    writer |> closeDeclaration
+                    writer |> writeImplementation
             else
                 writer.Write(usage)
-                writer.WriteLine(": {0} = ", retType)
-                writer.Indent ctx.Indentation
-                for line in ctx.MethodBody do
-                    writer.WriteLine(line)
-                writer.Unindent ctx.Indentation
+                writer |> closeDeclaration
+                writer |> writeImplementation
 
     let rec internal getNonAbbreviatedType (typ: FSharpType) =
         if typ.HasTypeDefinition && typ.TypeDefinition.IsFSharpAbbreviation then
@@ -478,8 +479,9 @@ module InterfaceStubGenerator =
         e.IsInterface || (e.IsFSharpAbbreviation && isInterface e.AbbreviatedType.TypeDefinition)
 
     /// Generate stub implementation of an interface at a start column
-    let formatInterface startColumn indentation (typeInstances: string []) objectIdent 
-            (methodBody: string) (displayContext: FSharpDisplayContext) excludedMemberSignatures (e: FSharpEntity) =
+    let formatInterface startColumn indentation (typeInstances: string []) objectIdent
+            (methodBody: string) (displayContext: FSharpDisplayContext) excludedMemberSignatures
+            (e: FSharpEntity) verboseMode =
         Debug.Assert(isInterface e, "The entity should be an interface.")
         let lines = methodBody.Replace("\r\n", "\n").Split('\n')
         use writer = new ColumnIndentedTextWriter()
@@ -526,6 +528,13 @@ module InterfaceStubGenerator =
             String.Empty
         else
             writer.Indent startColumn
+            writer.WriteLine("")
+            let duplicatedMembers =
+                missingMembers
+                |> Seq.countBy(fun (m, insts) -> m.DisplayName, insts |> Seq.length)
+                |> Seq.filter (snd >> (<) 1)
+                |> Seq.map (fst >> fst)
+                |> Set
 
             let getReturnType v = snd (getArgTypes ctx v)
             let rec loop (members : (FSharpMemberOrFunctionOrValue * _) list) =
@@ -539,10 +548,12 @@ module InterfaceStubGenerator =
                     getter.IsPropertyGetterMethod && setter.IsPropertySetterMethod &&
                     normalizePropertyName getter = normalizePropertyName setter &&
                     getReturnType getter = getReturnType setter ->
-                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.PropertyGetSet(getter, setter))
+                    let useVerboseMode = verboseMode || duplicatedMembers.Contains (fst members.Head).DisplayName
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.PropertyGetSet(getter, setter)) useVerboseMode
                     loop otherMembers
-                | (m, insts) :: otherMembers -> 
-                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m)
+                | (m, insts) :: otherMembers ->
+                    let useVerboseMode = verboseMode || duplicatedMembers.Contains m.DisplayName
+                    formatMember { ctx with ArgInstantiations = insts } (MemberInfo.Member m) useVerboseMode
                     loop otherMembers
                 | [] -> ()
 

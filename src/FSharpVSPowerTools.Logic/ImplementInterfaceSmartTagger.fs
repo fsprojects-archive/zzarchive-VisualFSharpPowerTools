@@ -37,7 +37,7 @@ type ImplementInterface
 
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable suggestion: ISuggestion option = None 
+    let mutable suggestions: ISuggestion list = []
     //let mutable state = None
 
     let buffer = view.TextBuffer
@@ -89,14 +89,14 @@ type ImplementInterface
                 // There is no reference point, we indent the content at the start column of the interface
                 |> Option.getOrElse iface.Range.StartColumn
 
-    let handleImplementInterface (snapshot: ITextSnapshot) state displayContext implementedMemberSignatures entity = 
+    let handleImplementInterface (snapshot: ITextSnapshot) state displayContext implementedMemberSignatures entity verboseMode = 
         let editorOptions = editorOptionsFactory.GetOptions(buffer)
         let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)
         let startColumn = inferStartColumn indentSize state
         let typeParams = state.InterfaceData.TypeParameters
         let stub = InterfaceStubGenerator.formatInterface 
                        startColumn indentSize typeParams objectIdentifier defaultBody
-                       displayContext implementedMemberSignatures entity
+                       displayContext implementedMemberSignatures entity verboseMode
         if String.IsNullOrEmpty stub then
             let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore
@@ -113,8 +113,8 @@ type ImplementInterface
                 buffer.Insert(currentPos + 5, stub + new String(' ', startColumn)) |> ignore
             transaction.Complete()
 
-    let getSuggestion (word: SnapshotSpan) (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
-        if InterfaceStubGenerator.hasNoInterfaceMember entity then None
+    let getSuggestions (word: SnapshotSpan) (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
+        if InterfaceStubGenerator.hasNoInterfaceMember entity then []
         else
             let membersAndRanges = InterfaceStubGenerator.getMemberNameAndRanges state.InterfaceData
             let interfaceMembers = InterfaceStubGenerator.getInterfaceMembers entity
@@ -129,25 +129,28 @@ type ImplementInterface
                     if currentSnapshot = word.Snapshot then word
                     else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
 
-                { new ISuggestion with
-                      member __.NeedsIcon = false
-                      member __.Text = Resource.implementInterfaceCommandName
-                      member __.Invoke() = 
-                        let uiContext = SynchronizationContext.Current
-                        async {
-                            let getMemberByLocation(name, range: range) =
-                                let lineStr = 
-                                    match fromFSharpRange word.Snapshot range with
-                                    | Some span -> span.End.GetContainingLine().GetText()
-                                    | None -> String.Empty
-                                results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])
-                            let! implementedMemberSignatures = InterfaceStubGenerator.getImplementedMemberSignatures 
-                                                                    getMemberByLocation displayContext state.InterfaceData
-                            do! Async.SwitchToContext uiContext
-                            return handleImplementInterface word.Snapshot state displayContext implementedMemberSignatures entity
-                        }
-                        |> Async.StartInThreadPoolSafe } |> Some
-            else None
+                let createSuggestion name verboseMode =
+                    { new ISuggestion with
+                        member __.NeedsIcon = false
+                        member __.Text = name
+                        member __.Invoke() = 
+                          let uiContext = SynchronizationContext.Current
+                          async {
+                              let getMemberByLocation(name, range: range) =
+                                  let lineStr = 
+                                      match fromFSharpRange word.Snapshot range with
+                                      | Some span -> span.End.GetContainingLine().GetText()
+                                      | None -> String.Empty
+                                  results.GetSymbolUseAtLocation(range.EndLine, range.EndColumn, lineStr, [name])
+                              let! implementedMemberSignatures =
+                                InterfaceStubGenerator.getImplementedMemberSignatures getMemberByLocation displayContext state.InterfaceData
+                              do! Async.SwitchToContext uiContext
+                              return handleImplementInterface word.Snapshot state displayContext implementedMemberSignatures entity verboseMode
+                          } |> Async.StartInThreadPoolSafe }
+
+                [ createSuggestion Resource.implementInterfaceCommandName true
+                  createSuggestion Resource.implementInterfaceVerboseCommandName false ]
+            else []
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -194,7 +197,7 @@ type ImplementInterface
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            suggestion <- result |> Option.bind (getSuggestion newWord)
+                            suggestions <- result |> Option.map (getSuggestions newWord) |> defaultArg <| []
                             currentWord <- Some newWord
                             changed.Trigger self // buffer.TriggerTagsChanged self changed
                         })
@@ -211,7 +214,7 @@ type ImplementInterface
         currentWord |> Option.map (fun word ->
             if buffer.CurrentSnapshot = word.Snapshot then word
             else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive))
-    member __.Suggestions = suggestion |> Option.map (fun x -> [x])
+    member __.Suggestions = suggestions
 
     interface IDisposable with
         member __.Dispose() = 
@@ -225,7 +228,9 @@ type ImplementInterfaceSmartTagger(buffer: ITextBuffer, implementInterface: Impl
             protectOrDefault (fun _ ->
                 seq {
                     match implementInterface.CurrentWord, implementInterface.Suggestions with
-                    | Some word, Some suggestions ->
+                    | None, _
+                    | _, [] -> ()
+                    | Some word, suggestions ->
                         let actions =
                             suggestions
                             |> List.map (fun s ->
@@ -240,7 +245,7 @@ type ImplementInterfaceSmartTagger(buffer: ITextBuffer, implementInterface: Impl
                             |> Seq.toReadOnlyCollection
 
                         yield TagSpan<_>(word, ImplementInterfaceSmartTag actions) :> ITagSpan<_>
-                    | _ -> () }) Seq.empty
+                }) Seq.empty
 
         [<CLIEvent>]
         member __.TagsChanged = tagsChanged.Publish
