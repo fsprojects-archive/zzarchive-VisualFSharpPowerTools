@@ -58,7 +58,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test samples", "{CDFE262B-BF3B-4B13-B3E6-859CC2A82F0D}"
 	ProjectSection(SolutionItems) = preProject
 		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
+		tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
+		tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
 	EndProjectSection
 EndProject
