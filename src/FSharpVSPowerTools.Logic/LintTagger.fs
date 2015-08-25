@@ -50,12 +50,13 @@ type LintTagger(textDocument: ITextDocument,
                     None
 
             let res = 
+                let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                 Lint.lintParsedFile
                     { Lint.OptionalLintParameters.Default with Configuration = config }
                     { Ast = ast
                       Source = source
                       TypeCheckResults = None
-                      FSharpVersion = System.Version(3, 1) }
+                      FSharpVersion = version }
                     doc.FullName
 
             return
