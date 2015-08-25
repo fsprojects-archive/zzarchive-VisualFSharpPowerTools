@@ -24,22 +24,9 @@ type GoToDefinitionCommandHelper() =
         command.RegisterCommandFilter(wpfTextView, fireNavigationEvent = true)
 
 module GoToDefinitionCommandTests =
-    open System.IO
-
-#if APPVEYOR
-    let timeout = 20000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = GoToDefinitionCommandHelper()
    
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-        Logger.GlobalServiceProvider <- helper.ServiceProvider
-
     let internal getCommandFilter content filePath projectPath =
         let projectFileName = fullPathBasedOnSourceDir projectPath
         let fileName = fullPathBasedOnSourceDir filePath

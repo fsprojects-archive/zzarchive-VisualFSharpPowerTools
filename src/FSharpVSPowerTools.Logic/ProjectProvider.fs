@@ -159,6 +159,9 @@ type internal ProjectProvider(project: Project,
         member __.IsForStandaloneScript = false
         member __.ProjectFileName = projectFileName.Value
         member __.TargetFramework = targetFramework.Value
+        member __.CompilerVersion =
+            // This option is only relevant in scripts
+            None
         member __.CompilerOptions = compilerOptions.Value
         member __.SourceFiles = sourceFiles.Value
         member __.FullOutputFilePath = fullOutputPath.Value
@@ -175,27 +178,29 @@ type internal ProjectProvider(project: Project,
                  p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
      
 /// A standalone project provider in order to represent script files                            
-type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string, ?vsVersion) = 
+type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string, vsVersion) = 
     do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
     let source = buffer.CurrentSnapshot.GetText()
-    let targetFramework = 
-        vsVersion
-        |> Option.map (function VisualStudioVersion.VS2015 -> FSharpTargetFramework.NET_4_6 | _ -> FSharpTargetFramework.NET_4_5)
-        |> Option.getOrElse FSharpTargetFramework.NET_4_5
+    let compilerVersion = 
+        match vsVersion with
+        | VisualStudioVersion.VS2012 -> FSharpCompilerVersion.FSharp_3_0
+        | VisualStudioVersion.VS2013 -> FSharpCompilerVersion.FSharp_3_1 
+        | _ -> FSharpCompilerVersion.FSharp_4_0
     let projectFileName = filePath + ".fsproj"
     let flags = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
 
     interface IProjectProvider with
         member __.IsForStandaloneScript = true
         member __.ProjectFileName = projectFileName
-        member __.TargetFramework = targetFramework
+        member __.TargetFramework = FSharpTargetFramework.NET_4_5
+        member __.CompilerVersion = Some compilerVersion
         member __.CompilerOptions = flags
         member __.SourceFiles = [| filePath |]
         member __.FullOutputFilePath = Some (Path.ChangeExtension(projectFileName, ".dll"))
         member __.GetReferencedProjects() = []
         member __.GetAllReferencedProjectFileNames() = []
         member __.GetProjectCheckerOptions languageService =
-            languageService.GetScriptCheckerOptions (filePath, projectFileName, source, targetFramework)
+            languageService.GetScriptCheckerOptions (filePath, projectFileName, source, compilerVersion)
 
 /// An ad-hoc project provider in order to integrate generated signatures into the project system
 type internal SignatureProjectProvider (filePath: string, attachedProject: IProjectProvider) = 
@@ -208,6 +213,7 @@ type internal SignatureProjectProvider (filePath: string, attachedProject: IProj
         member __.IsForStandaloneScript = true
         member __.ProjectFileName = projectFileName
         member __.TargetFramework = attachedProject.TargetFramework
+        member __.CompilerVersion = attachedProject.CompilerVersion
         member __.CompilerOptions = flags
         member __.SourceFiles = sourceFiles
         member __.FullOutputFilePath = Some (Path.ChangeExtension(projectFileName, ".dll"))

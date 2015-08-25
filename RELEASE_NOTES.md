@@ -1,4 +1,10 @@
 #### 2.1.0 - Unreleased
+* Fix fonts and colors' appearance on VS 2015 ([#1064](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1064))
+* Implement FSharpLint integration ([#1034](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1034))
+* Support relevant FSharp.Core.dll based on VS versions ([#1065](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1065))
+* Show Lightbulb instead of SmartTag on VS 2015 ([#1069](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1069))
+* Faster closing of VS solutions ([#1076](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1076))
+* Support lightweight interface implementation ([#1091](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1091))
 
 #### 2.0.0 - July 26 2015
 * Optimize dialog layouts for high DPI ([#1024](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1024))

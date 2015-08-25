@@ -9,13 +9,15 @@ using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
 using System.Diagnostics;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
-    [TagType(typeof(UnionPatternMatchCaseGeneratorSmartTag))]
-    public class UnionPatternMatchCaseGeneratorSmartTaggerProvider : IViewTaggerProvider
+    [TagType(typeof(ResolveUnopenedNamespaceSmartTag))]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    public class ResolveUnopenedNamespaceSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
         internal VSLanguageService fsharpVsLanguageService = null;
@@ -38,17 +40,18 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
-            if (generalOptions == null || !generalOptions.UnionPatternMatchCaseGenerationEnabled) return null;
-            var codeGenOptions = Setting.getCodeGenerationOptions(serviceProvider);
-            if (codeGenOptions == null) return null;
+            if (generalOptions == null || !generalOptions.ResolveUnopenedNamespacesEnabled) return null;
+
+            var dte = serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
+            var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+            if (vsVersion == VisualStudioVersion.VS2015) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new UnionPatternMatchCaseGeneratorSmartTagger(doc, textView,
-                            undoHistoryRegistry.RegisterHistory(buffer),
-                            fsharpVsLanguageService, serviceProvider,
-                            projectFactory, Setting.getDefaultMemberBody(codeGenOptions)) as ITagger<T>;
+                var resolver = new UnopenedNamespaceResolver(doc, textView, undoHistoryRegistry.RegisterHistory(buffer),
+                     fsharpVsLanguageService, serviceProvider, projectFactory);
+                return new ResolveUnopenedNamespaceSmartTagger(buffer, serviceProvider, resolver) as ITagger<T>;
             }
             
             return null;

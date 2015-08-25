@@ -32,6 +32,7 @@ type ExternalProjectProvider(projectFileName) =
         member __.ProjectFileName = fullProjectFileName
         member __.TargetFramework = frameworkVersion
         member __.CompilerOptions = compilerOptions
+        member __.CompilerVersion = None
         member __.SourceFiles = sourceFiles
         member __.FullOutputFilePath = outputPath
         member __.GetReferencedProjects() = referencedProjects

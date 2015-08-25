@@ -45,6 +45,7 @@ Alternatively, one can build [vs2012 branch](https://github.com/fsprojects/Visua
  - Generate references for F# Interactive (see [this article](http://apollo13cn.blogspot.dk/2012/08/f-add-reference-addon.html))
  - Navigate to source
  - Quick info panel
+ - FSharpLint integration
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 

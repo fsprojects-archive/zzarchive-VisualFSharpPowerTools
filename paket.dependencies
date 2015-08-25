@@ -2,6 +2,7 @@ source http://nuget.org/api/v2
 
 nuget FAKE
 nuget NUnit.Runners
+nuget FSharp.Core 3.1.2.5
 nuget FSharp.Formatting
 nuget FSharp.Compiler.Service
 nuget Fantomas
@@ -17,5 +18,6 @@ nuget SourceLink.SymbolStore 0.5.0
 nuget VSSDK.IDE.11
 nuget VSSDK.IDE.Deploy.11
 nuget FSharpLint.Core
+nuget VSSDK.IDE.Deploy.14
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx

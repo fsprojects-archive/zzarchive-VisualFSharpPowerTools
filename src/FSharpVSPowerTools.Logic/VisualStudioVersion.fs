@@ -19,7 +19,7 @@ type ExportWithMinimalVisualStudioVersionAttribute(contractType: Type) =
     member val Version = VisualStudioVersion.Unknown with get,set
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module VisualStudioVersion =    
+module VisualStudioVersion =
     let fromDTEVersion(s: string) =
         if String.IsNullOrEmpty s then 
             VisualStudioVersion.Unknown
@@ -40,3 +40,8 @@ module VisualStudioVersion =
     let toString(version: VisualStudioVersion) =
         version.ToString("d")
 
+    let toBestMatchFSharpVersion = function
+        | VisualStudioVersion.VS2012 -> Version(3, 0)
+        | VisualStudioVersion.VS2013 -> Version(3, 1)
+        | VisualStudioVersion.VS2015 -> Version(4, 0)
+        | version -> failwithf "Unsupported Visual Studio version: %A" version

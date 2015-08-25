@@ -65,20 +65,8 @@ type FindReferencesCommandHelper() =
 module FindReferencesCommandTests =
     open System.IO
 
-#if APPVEYOR
-    let timeout = 20000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
-
     let helper = FindReferencesCommandHelper()
     let fileName = getTempFileName ".fs"
-
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-        Logger.GlobalServiceProvider <- helper.ServiceProvider
 
     [<Test>]
     let ``should be able to find all references in a single document``() =
@@ -87,7 +75,7 @@ let x = 0
 x
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)            
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)            
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
 

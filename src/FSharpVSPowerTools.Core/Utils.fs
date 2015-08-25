@@ -401,7 +401,9 @@ module Pervasive =
     Debug.Listeners.Add(new TextWriterTraceListener(System.Console.Out)) |> ignore
     Debug.AutoFlush <- true
 #endif
-
+    /// obj.ReferenceEquals
+    let inline (==) a b = obj.ReferenceEquals(a, b)
+    /// LanguagePrimitives.PhysicalEquality
     let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
     let inline debug msg = Printf.kprintf Debug.WriteLine msg
     let inline fail msg = Printf.kprintf Debug.Fail msg

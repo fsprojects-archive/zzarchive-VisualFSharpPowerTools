@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
 EndProject
@@ -58,13 +58,17 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test samples", "{CDFE262B-BF3B-4B13-B3E6-859CC2A82F0D}"
 	ProjectSection(SolutionItems) = preProject
 		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
+		tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
+		tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUtilities", "tests\TestUtilities\TestUtilities.csproj", "{C6800510-FCD0-4301-9890-36E41DFB29BB}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Tests", "tests\FSharpVSPowerTools.Tests\FSharpVSPowerTools.Tests.fsproj", "{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic.VS2015", "src\FSharpVSPowerTools.Logic.VS2015\FSharpVSPowerTools.Logic.VS2015.fsproj", "{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -104,6 +108,10 @@ Global
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

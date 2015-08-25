@@ -36,19 +36,9 @@ type ImplementInterfaceSmartTaggerHelper() =
         |> Seq.concat
 
 module ImplementInterfaceSmartTaggerTests =
-#if APPVEYOR
-    let timeout = 20000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = ImplementInterfaceSmartTaggerHelper()
     
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-
     [<Test>]
     let ``return nothing if interfaces are empty``() = 
         let content = """
@@ -58,7 +48,7 @@ type Impl() =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -76,7 +66,7 @@ let _ =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -92,7 +82,7 @@ let _ =
         // Use separate file name since asynchronous action might fire a bit later
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -127,7 +117,7 @@ type Class() =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -149,7 +139,6 @@ type Class() =
     interface Interface with
         member x.Method2(arg1: int): int = 
             failwith "Not implemented yet"
-        
         member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
          
@@ -172,7 +161,7 @@ type Class() =
 """
         let fileName = getTempFileName ".fsx"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(VirtualProjectProvider(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -198,7 +187,6 @@ type Class() =
     interface Interface3 with
         member x.Method(arg1: int): int = 
             failwith "Not implemented yet"
-        
         member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
         

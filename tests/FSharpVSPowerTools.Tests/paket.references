@@ -2,3 +2,5 @@ Foq
 FSharp.Compiler.Service
 FSharp.ViewModule.Core
 NUnit
+FSharpLint.Core
+FSharp.Core
