@@ -249,13 +249,13 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="FSharpLint.Application">
-      <HintPath>..\..\..\FSharpLint\src\FSharpLint.Application\bin\Debug\FSharpLint.Application.dll</HintPath>
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Application.dll</HintPath>
     </Reference>
     <Reference Include="FSharpLint.Framework">
-      <HintPath>..\..\..\FSharpLint\src\FSharpLint.Application\bin\Debug\FSharpLint.Framework.dll</HintPath>
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Framework.dll</HintPath>
     </Reference>
     <Reference Include="FSharpLint.Rules">
-      <HintPath>..\..\..\FSharpLint\src\FSharpLint.Application\bin\Debug\FSharpLint.Rules.dll</HintPath>
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Rules.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>

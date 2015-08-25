@@ -54,7 +54,8 @@ type LintTagger(textDocument: ITextDocument,
                     { Lint.OptionalLintParameters.Default with Configuration = config }
                     { Ast = ast
                       Source = source
-                      TypeCheckResults = None }
+                      TypeCheckResults = None
+                      FSharpVersion = System.Version(3, 1) }
                     doc.FullName
 
             return
