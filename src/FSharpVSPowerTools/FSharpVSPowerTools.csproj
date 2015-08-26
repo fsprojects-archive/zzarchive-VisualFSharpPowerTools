@@ -163,9 +163,6 @@
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </Compile>
     <Compile Include="Commands\HighlightUsageFilterProvider.cs" />
-    <Compile Include="LintOptionsPage.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="Commands\LintQuickInfoProvider.cs" />
     <Compile Include="Commands\LintTaggerProvider.cs" />
     <Compile Include="Commands\QuickInfoMarginProvider.cs" />

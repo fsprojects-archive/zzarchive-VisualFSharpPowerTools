@@ -50,6 +50,10 @@ type IGlobalOptions =
     abstract StrictMode: bool with get, set
     abstract DiagnosticMode: bool with get, set
 
+type ILintOptions =
+    abstract UpdateDirectories: System.Collections.Generic.IEnumerable<string> -> unit
+    abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
+
 [<AutoOpen>]
 module Utils =
     type System.IServiceProvider with
@@ -81,4 +85,6 @@ module Setting =
 
     let getGlobalOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGlobalOptions>()
-
+        
+    let getLintOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.GetService<ILintOptions>()
