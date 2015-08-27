@@ -12,18 +12,16 @@ type LintOptionsPageControl() =
 
     let config = FSharpLint.Framework.Configuration.defaultConfiguration
 
-    let viewModel = OptionsViewModel(config, [FileViewModel(Name = "SomeFile")])
+    let viewModel = OptionsViewModel(config, [FileViewModel("SomeFile", [])])
 
     let setParentRules (rules:RuleViewModel seq) =
-        if rules <> null then
-            for rule in rules do
-                if rule.Rules <> null then
-                    for child in rule.Rules do
-                        child.ParentRule <- rule
+        for rule in rules do
+            for child in rule.Rules do
+                child.ParentRule <- Some(rule)
 
     let rulesTreeViewSelectedItemChanged =
         RoutedPropertyChangedEventHandler(fun _ (e:RoutedPropertyChangedEventArgs<obj>) ->
-            viewModel.SelectedRule <- e.NewValue :?> RuleViewModel)
+            viewModel.SelectedRule <- Some(e.NewValue))
 
     let selectionChanged =
         SelectionChangedEventHandler(fun control _ -> 

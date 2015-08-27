@@ -1,56 +1,47 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
 open System.ComponentModel
+open FSharp.ViewModule
 
-[<AllowNullLiteral>]
-type RuleViewModel() =
-    let mutable isChecked = false
+type RuleViewModel(name:string, rules:RuleViewModel seq, settings:obj seq) as this =
+    inherit ViewModelBase()
 
-    let propertyChanged = new Event<_, _>()
-    
-    interface INotifyPropertyChanged with
-        [<CLIEvent>]
-        member this.PropertyChanged = propertyChanged.Publish
-
-    member this.OnPropertyChanged(e:PropertyChangedEventArgs) =
-        propertyChanged.Trigger(this, e)
-
-    member this.OnPropertyChanged(propertyName:string) =
-        this.OnPropertyChanged(PropertyChangedEventArgs(propertyName))
+    let isChecked = this.Factory.Backing(<@ this.IsChecked @>, false)
             
-    member val Name:string = null with get, set
-    
-    member val Description:string = null with get, set
+    member this.Name
+        with get() = name
 
     member this.IsChecked
-        with get () = isChecked
+        with get () = isChecked.Value
         and set (value) = 
-            isChecked <- value;
-            this.OnPropertyChanged("IsChecked")
+            isChecked.Value <- value
 
-            let isChild = this.ParentRule <> null
+            match this.ParentRule with
+            | Some(parentRule:RuleViewModel) ->
+                let allSiblingsNotChecked = 
+                    parentRule.Rules |> Seq.forall (fun (x:RuleViewModel) -> not x.IsChecked)
 
-            let allSiblingsNotChecked = isChild && 
-                                        this.ParentRule.Rules |> Seq.forall (fun x -> not x.IsChecked)
+                let anySiblingsChecked = not allSiblingsNotChecked
 
-            let anySiblingsChecked = isChild && not allSiblingsNotChecked
+                if allSiblingsNotChecked && parentRule.IsChecked then
+                    parentRule.IsChecked <- false
+                else if anySiblingsChecked && not parentRule.IsChecked then
+                    parentRule.IsChecked <- true
 
-            if allSiblingsNotChecked && this.ParentRule.IsChecked then
-                this.ParentRule.IsChecked <- false
-            else if anySiblingsChecked && not this.ParentRule.IsChecked then
-                this.ParentRule.IsChecked <- true
+                let isParentAndUnchecked = (Seq.isEmpty >> not) rules && not isChecked.Value
 
-            let isParentAndUnchecked = this.Rules <> null && not isChecked
-
-            if isParentAndUnchecked then
-                for rule in this.Rules |> Seq.filter (fun x -> x.IsChecked) do
-                    rule.IsChecked <- false
+                if isParentAndUnchecked then
+                    for rule in rules |> Seq.filter (fun x -> x.IsChecked) do
+                        rule.IsChecked <- false
+            | None -> ()
     
-    member val ParentRule:RuleViewModel = null with get, set
+    member val ParentRule:RuleViewModel option = None with get, set
     
-    member val Rules:RuleViewModel seq = null with get, set
+    member this.Rules
+        with get() = rules
 
     member this.HasAnySettings
-        with get () = this.Settings = null || Seq.isEmpty this.Settings
+        with get() = Seq.isEmpty settings
     
-    member val Settings:obj seq = null with get, set
+    member this.Settings
+        with get() = settings

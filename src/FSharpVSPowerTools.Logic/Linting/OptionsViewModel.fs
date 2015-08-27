@@ -149,14 +149,15 @@ module SetupViewModels =
             for analyser in config.Analysers |> Seq.where (fun x -> x.Key <> "Hints") do 
                 let rules = seq { 
                     for rule in analyser.Value.Rules do 
-                        yield RuleViewModel(Name = rule.Key,
-                                            Settings = getSettingsViewModelsFromRule rule.Value.Settings,
+                        yield RuleViewModel(rule.Key,
+                                            [],
+                                            getSettingsViewModelsFromRule rule.Value.Settings,
                                             IsChecked = isRuleEnabled rule.Value.Settings) 
                 }
 
-                yield RuleViewModel(Name = analyser.Key, 
-                                    Rules = rules, 
-                                    Settings = getSettingsViewModelsFromRule analyser.Value.Settings,
+                yield RuleViewModel(analyser.Key, 
+                                    rules, 
+                                    getSettingsViewModelsFromRule analyser.Value.Settings,
                                     IsChecked = isRuleEnabled analyser.Value.Settings) 
         }
 
@@ -165,7 +166,7 @@ type OptionsViewModel(config:Configuration, files:FileViewModel seq) as this =
 
     let hints = HintsViewModel(config)
     
-    let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, null :> RuleViewModel)
+    let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, None)
     let newIgnoreFile = this.Factory.Backing(<@ this.NewIgnoreFile @>, "")
 
     let ignoreFiles =

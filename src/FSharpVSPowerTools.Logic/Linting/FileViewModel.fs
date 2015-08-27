@@ -1,6 +1,8 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
-type FileViewModel() =
-    member val Name:string = null with get, set
+type FileViewModel(name:string, files:FileViewModel seq) =
+    member this.Name
+        with get() = name
 
-    member val Files:FileViewModel seq = null with get, set
+    member this.Files
+        with get() = files
