@@ -36,4 +36,4 @@ type LintOptionsPage() =
         // TODO: Load configuration
         ()
 
-    override this.Child with get() = lintOptionsPageControl.Value
+    override this.Child = lintOptionsPageControl.Value

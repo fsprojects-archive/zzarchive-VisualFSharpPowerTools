@@ -14,28 +14,27 @@ type LintOptionsPageControl() =
 
     let viewModel = OptionsViewModel(config, [FileViewModel("SomeFile", [])])
 
-    let setParentRules (rules:RuleViewModel seq) =
-        for rule in rules do
-            for child in rule.Rules do
-                child.ParentRule <- Some(rule)
-
     let rulesTreeViewSelectedItemChanged =
-        RoutedPropertyChangedEventHandler(fun _ (e:RoutedPropertyChangedEventArgs<obj>) ->
+        RoutedPropertyChangedEventHandler(fun _ (e:RoutedPropertyChangedEventArgs<_>) ->
             viewModel.SelectedRule <- Some(e.NewValue))
 
     let selectionChanged =
         SelectionChangedEventHandler(fun control _ -> 
-            let control = control :?> ListView
-            control.ScrollIntoView(control.SelectedItem))
+            match control with
+            | :? ListView as control ->
+                control.ScrollIntoView(control.SelectedItem)
+            | _ -> ())
 
     let onKeydown (command:FSharp.ViewModule.INotifyCommand) =
         Input.KeyEventHandler(fun control e -> 
             if e.Key = Input.Key.Delete then
-                let control = control :?> ListView
-                let selectedItem = control.SelectedItem
+                match control with 
+                | :? ListView as control ->
+                    let selectedItem = control.SelectedItem
 
-                if command.CanExecute(selectedItem) then
-                    command.Execute(selectedItem))
+                    if command.CanExecute(selectedItem) then
+                        command.Execute(selectedItem)
+                | _ -> ())
 
     let ignoreFilesOnKeyDown = onKeydown viewModel.RemoveIgnoreFileCommand
 
@@ -51,8 +50,6 @@ type LintOptionsPageControl() =
         control.HintsListView.KeyDown.AddHandler(hintsOnKeyDown)
 
         control.DataContext <- viewModel
-
-        setParentRules viewModel.Rules
 
     override this.OnUnloaded control =
         control.RulesTreeView.SelectedItemChanged.RemoveHandler(rulesTreeViewSelectedItemChanged)

@@ -3,6 +3,7 @@
 open System
 open System.ComponentModel
 open System.Collections.ObjectModel
+open FSharpVSPowerTools
 open FSharpLint.Framework
 open Configuration
 open FParsec
@@ -13,10 +14,9 @@ type BoolViewModel(name, isChecked) as this =
 
     let isChecked = this.Factory.Backing(<@ this.IsChecked @>, isChecked)
 
-    member this.Name
-        with get() = name
+    member __.Name = name
 
-    member this.IsChecked
+    member __.IsChecked
         with get() = isChecked.Value
         and set(v) = isChecked.Value <- v
 
@@ -25,14 +25,13 @@ type IntViewModel(name, initialValue) as this =
 
     let value = this.Factory.Backing(<@ this.Value @>, initialValue)
 
-    member this.Name
-        with get() = name
+    member __.Name = name
 
-    member this.Value
+    member __.Value
         with get() = value.Value
         and set(v) = value.Value <- v
 
-type HintsViewModel(config:Configuration) as this =
+type HintsViewModel(config) as this =
     inherit ViewModelBase()
 
     let validateHint hint =
@@ -58,20 +57,17 @@ type HintsViewModel(config:Configuration) as this =
             |> Seq.tryPick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
             |> (function | Some(x) -> ObservableCollection<_>(x) | None -> ObservableCollection<_>())
 
-    let isEnabled =
-        hintSettings 
-            |> Seq.tryPick (function | Some(Enabled(enabled)) -> Some(enabled) | _ -> None)
-            |> (function | Some(enabled) -> enabled | None -> false)
+    let isEnabled = hintSettings |> Seq.exists (fun x -> x = Some(Enabled(true)))
 
     let isEnabled = this.Factory.Backing(<@ this.IsEnabled @>, isEnabled)
 
-    member this.Hints with get() = hints
+    member __.Hints = hints
 
-    member this.IsEnabled
+    member __.IsEnabled
         with get() = isEnabled.Value
         and set(v) = isEnabled.Value <- v
 
-    member this.AddHintCommand = 
+    member __.AddHintCommand = 
         this.Factory.CommandSync(fun _ -> 
             if String.IsNullOrEmpty this.NewHint |> not then
                 match CharParsers.run HintParser.phint this.NewHint with
@@ -81,15 +77,14 @@ type HintsViewModel(config:Configuration) as this =
                     this.SelectedHintIndex <- hints.Count - 1
                 | CharParsers.Failure(_) -> ())
 
-    member this.RemoveHintCommand = 
-        this.Factory.CommandSyncParam(fun selectedItem ->
-            hints.Remove(selectedItem) |> ignore)
+    member __.RemoveHintCommand = 
+        this.Factory.CommandSyncParam(hints.Remove >> ignore)
 
-    member this.SelectedHintIndex
+    member __.SelectedHintIndex
         with get() = selectedHintIndex.Value
         and set(v) = selectedHintIndex.Value <- v
 
-    member this.NewHint
+    member __.NewHint
         with get() = newHint.Value
         and set(v) = newHint.Value <- v
 
@@ -98,18 +93,16 @@ type AccessViewModel(name, initialValue) as this =
 
     let value = this.Factory.Backing(<@ this.Value @>, initialValue)
 
-    member this.Value
+    member __.Value
         with get() = value.Value
         and set(v) = value.Value <- v
 
-    member this.Name
-        with get() = name
+    member __.Name = name
 
-    member this.AccessValues
-        with get() = Enum.GetValues(typeof<Access>) |> Seq.cast<Access>
+    member __.AccessValues = Enum.GetValues(typeof<Access>) |> Seq.cast<Access>
                 
 module SetupViewModels =
-    let getSettingsViewModelsFromRule (settings:Map<string, Setting>) =
+    let getSettingsViewModelsFromRule (settings:Map<_, _>) =
         [
             for setting in settings do
                 match setting.Value with
@@ -137,29 +130,26 @@ module SetupViewModels =
                 | Enabled(_) -> ()
         ]
 
-    let isRuleEnabled (settings:Map<string, Setting>) =
-        match settings.TryFind "Enabled" with
-        | Some(Enabled(e)) -> e
-        | _ -> false
+    let isRuleEnabled settings = Map.tryFind "Enabled" settings = Some(Enabled(true))
 
     let ruleViewModelsFromConfig config = 
         seq { 
-            for analyser in config.Analysers |> Seq.where (fun x -> x.Key <> "Hints") do 
+            for analyser in config.Analysers |> Seq.filter (fun x -> x.Key <> "Hints") do 
                 let rules = seq { 
                     for rule in analyser.Value.Rules do 
                         yield RuleViewModel(rule.Key,
                                             [],
                                             getSettingsViewModelsFromRule rule.Value.Settings,
-                                            IsChecked = isRuleEnabled rule.Value.Settings) 
+                                            isRuleEnabled rule.Value.Settings) 
                 }
 
                 yield RuleViewModel(analyser.Key, 
                                     rules, 
                                     getSettingsViewModelsFromRule analyser.Value.Settings,
-                                    IsChecked = isRuleEnabled analyser.Value.Settings) 
+                                    isRuleEnabled analyser.Value.Settings) 
         }
 
-type OptionsViewModel(config:Configuration, files:FileViewModel seq) as this =
+type OptionsViewModel(config, files) as this =
     inherit ViewModelBase()
 
     let hints = HintsViewModel(config)
@@ -168,48 +158,44 @@ type OptionsViewModel(config:Configuration, files:FileViewModel seq) as this =
     let newIgnoreFile = this.Factory.Backing(<@ this.NewIgnoreFile @>, "")
 
     let ignoreFiles =
-        match config.IgnoreFiles with
-        | Some(x) -> 
-            x.Content.Split([|Environment.NewLine|], StringSplitOptions.RemoveEmptyEntries)
-                |> Seq.map (fun x -> x.Trim())
-                |> (fun x -> ObservableCollection<_>(x))
-        | None -> ObservableCollection<string>()
+        ObservableCollection(
+            match config.IgnoreFiles with
+            | Some x -> 
+                x.Content 
+                |> String.split StringSplitOptions.RemoveEmptyEntries [| Environment.NewLine |]
+                |> Array.map String.trim
+            | None -> [||])
 
     let selectedIgnoreFileIndex = this.Factory.Backing(<@ this.SelectedIgnoreFileIndex @>, 0)
 
     let rules = SetupViewModels.ruleViewModelsFromConfig config
 
-    member this.SelectedRule 
+    member __.SelectedRule 
         with get() = selectedRule.Value
         and set (value) = selectedRule.Value <- value
     
-    member this.Files
-        with get() = files
+    member __.Files = files
     
-    member this.IgnoreFiles
-        with get() = ignoreFiles
+    member __.IgnoreFiles = ignoreFiles
     
-    member this.Rules
-        with get() = rules
+    member __.Rules = rules
 
-    member this.Hints
-        with get() = hints
+    member __.Hints = hints
 
-    member this.AddIgnoreFileCommand = 
+    member __.AddIgnoreFileCommand = 
         this.Factory.CommandSync(fun _ -> 
-            if String.IsNullOrEmpty this.NewIgnoreFile |> not then
+            if (String.IsNullOrEmpty >> not) this.NewIgnoreFile then
                 ignoreFiles.Add(this.NewIgnoreFile)
                 this.NewIgnoreFile <- ""
                 this.SelectedIgnoreFileIndex <- ignoreFiles.Count - 1)
 
-    member this.RemoveIgnoreFileCommand = 
-        this.Factory.CommandSyncParam(fun selectedItem ->
-            ignoreFiles.Remove(selectedItem) |> ignore)
+    member __.RemoveIgnoreFileCommand = 
+        this.Factory.CommandSyncParam(ignoreFiles.Remove >> ignore)
 
-    member this.SelectedIgnoreFileIndex
+    member __.SelectedIgnoreFileIndex
         with get() = selectedIgnoreFileIndex.Value
         and set(v) = selectedIgnoreFileIndex.Value <- v
 
-    member this.NewIgnoreFile
+    member __.NewIgnoreFile
         with get() = newIgnoreFile.Value
         and set(v) = newIgnoreFile.Value <- v
