@@ -3,7 +3,9 @@
 open System
 open System.ComponentModel
 open System.Collections.ObjectModel
-open FSharpLint.Framework.Configuration
+open FSharpLint.Framework
+open Configuration
+open FParsec
 open FSharp.ViewModule
 
 type BoolViewModel(name, isChecked) as this =
@@ -36,9 +38,9 @@ type HintsViewModel(config:Configuration) as this =
     let validateHint hint =
         [
             if hint <> "" then
-                match FParsec.CharParsers.run FSharpLint.Framework.HintParser.phint hint with
-                | FParsec.CharParsers.Success(_) -> ()
-                | FParsec.CharParsers.Failure(message, _, _) -> yield message
+                match CharParsers.run HintParser.phint hint with
+                | CharParsers.Success(_) -> ()
+                | CharParsers.Failure(message, _, _) -> yield message
         ]
 
     let newHint = this.Factory.Backing(<@ this.NewHint @>, "", validateHint)
@@ -72,17 +74,16 @@ type HintsViewModel(config:Configuration) as this =
     member this.AddHintCommand = 
         this.Factory.CommandSync(fun _ -> 
             if String.IsNullOrEmpty this.NewHint |> not then
-                match FParsec.CharParsers.run FSharpLint.Framework.HintParser.phint this.NewHint with
-                | FParsec.CharParsers.Success(_) -> 
+                match CharParsers.run HintParser.phint this.NewHint with
+                | CharParsers.Success(_) -> 
                     hints.Add(this.NewHint)
                     this.NewHint <- ""
                     this.SelectedHintIndex <- hints.Count - 1
-                | FParsec.CharParsers.Failure(_) -> ())
+                | CharParsers.Failure(_) -> ())
 
     member this.RemoveHintCommand = 
-        this.Factory.CommandSyncParam(fun (selectedItem:obj) ->
-            if selectedItem :? string then
-                hints.Remove(selectedItem :?> string) |> ignore)
+        this.Factory.CommandSyncParam(fun selectedItem ->
+            hints.Remove(selectedItem) |> ignore)
 
     member this.SelectedHintIndex
         with get() = selectedHintIndex.Value
@@ -137,12 +138,9 @@ module SetupViewModels =
         ]
 
     let isRuleEnabled (settings:Map<string, Setting>) =
-        if settings.ContainsKey "Enabled" then
-            match settings.["Enabled"] with
-            | Enabled(e) -> e
-            | _ -> false
-        else
-            false
+        match settings.TryFind "Enabled" with
+        | Some(Enabled(e)) -> e
+        | _ -> false
 
     let ruleViewModelsFromConfig config = 
         seq { 
@@ -205,9 +203,8 @@ type OptionsViewModel(config:Configuration, files:FileViewModel seq) as this =
                 this.SelectedIgnoreFileIndex <- ignoreFiles.Count - 1)
 
     member this.RemoveIgnoreFileCommand = 
-        this.Factory.CommandSyncParam(fun (selectedItem:obj) ->
-            if selectedItem :? string then
-                ignoreFiles.Remove(selectedItem :?> string) |> ignore)
+        this.Factory.CommandSyncParam(fun selectedItem ->
+            ignoreFiles.Remove(selectedItem) |> ignore)
 
     member this.SelectedIgnoreFileIndex
         with get() = selectedIgnoreFileIndex.Value

@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
 open System
+open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Shell.Interop
@@ -9,7 +10,7 @@ open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
 open Microsoft.FSharp.Compiler
-open System.Threading
+open ConfigurationManagement
 
 type LintTag(tooltip) = 
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)
@@ -33,13 +34,13 @@ type LintTagger(textDocument: ITextDocument,
             let! ast = parseFileResults.ParseTree
 
             let config = 
-                match ConfigurationManagement.loadConfigurationForProject project.ProjectFileName with
-                | ConfigurationManagement.ConfigurationResult.Success(config) -> Some(config)
-                | ConfigurationManagement.ConfigurationResult.Failure(failure) -> 
+                match loadConfigurationForProject project.ProjectFileName with
+                | ConfigurationResult.Success(config) -> Some(config)
+                | ConfigurationResult.Failure(failure) -> 
                     let failureMessage =
                         match failure with
-                        | ConfigurationManagement.ConfigFailure.FailedToLoadConfig(message) -> message
-                        | ConfigurationManagement.ConfigFailure.RunTimeConfigError -> 
+                        | FailedToLoadConfig(message) -> message
+                        | RunTimeConfigError -> 
                             "Failed when checking config at run time."
 
                     Logging.logWarning 
