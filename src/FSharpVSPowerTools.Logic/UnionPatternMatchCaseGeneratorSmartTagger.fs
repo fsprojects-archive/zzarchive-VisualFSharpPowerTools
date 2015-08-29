@@ -26,7 +26,7 @@ type UnionPatternMatchCaseGenerator
          defaultBody: string) as self =
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable suggestion: ISuggestion option = None
+    let mutable suggestions: ISuggestion list = []
 
     let buffer = view.TextBuffer
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
@@ -48,11 +48,13 @@ type UnionPatternMatchCaseGenerator
 
         transaction.Complete()
 
-    let getSuggestion snapshot (patMatchExpr, entity, insertionParams) =
-        { new ISuggestion with
-              member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionParams entity
-              member __.NeedsIcon = false
-              member __.Text = Resource.unionPatternMatchCaseCommandName }
+    let getSuggestions snapshot (patMatchExpr, entity, insertionParams) =
+        [
+            { new ISuggestion with
+                  member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionParams entity
+                  member __.NeedsIcon = false
+                  member __.Text = Resource.unionPatternMatchCaseCommandName }
+        ]
 
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -92,7 +94,7 @@ type UnionPatternMatchCaseGenerator
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            suggestion <- result |> Option.map (getSuggestion newWord.Snapshot)
+                            suggestions <- result |> Option.map (getSuggestions newWord.Snapshot) |> Option.getOrElse []
                             currentWord <- Some newWord
                             changed.Trigger self
                         })
@@ -109,7 +111,7 @@ type UnionPatternMatchCaseGenerator
         currentWord |> Option.map (fun word ->
             if buffer.CurrentSnapshot = word.Snapshot then word
             else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive))
-    member __.Suggestions = suggestion |> Option.map (fun x -> [x])
+    member __.Suggestions = suggestions
 
     interface IDisposable with
         member __.Dispose() = 
@@ -123,7 +125,9 @@ type UnionPatternMatchCaseGeneratorSmartTagger(buffer: ITextBuffer, generator: U
             protectOrDefault (fun _ ->
                 seq {
                     match generator.CurrentWord, generator.Suggestions with
-                    | Some word, Some suggestions ->
+                    | None, _
+                    | _, [] -> ()
+                    | Some word, suggestions ->
                         let actions =
                             suggestions
                             |> List.map (fun s ->
@@ -138,7 +142,6 @@ type UnionPatternMatchCaseGeneratorSmartTagger(buffer: ITextBuffer, generator: U
                             |> Seq.toReadOnlyCollection
 
                         yield TagSpan<_>(word, UnionPatternMatchCaseGeneratorSmartTag actions) :> _
-                    | _ -> ()
                 }) 
                 Seq.empty
 

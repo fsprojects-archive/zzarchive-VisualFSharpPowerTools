@@ -38,8 +38,7 @@ type ImplementInterface
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable suggestions: ISuggestion list = []
-    //let mutable state = None
-
+    
     let buffer = view.TextBuffer
 
     let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
@@ -149,7 +148,7 @@ type ImplementInterface
                           } |> Async.StartInThreadPoolSafe }
 
                 [ createSuggestion Resource.implementInterfaceCommandName true
-                  createSuggestion Resource.implementInterfaceVerboseCommandName false ]
+                  createSuggestion Resource.implementInterfaceLightweightCommandName false ]
             else []
 
     let updateAtCaretPosition() =
@@ -197,9 +196,9 @@ type ImplementInterface
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            suggestions <- result |> Option.map (getSuggestions newWord) |> defaultArg <| []
+                            suggestions <- result |> Option.map (getSuggestions newWord) |> Option.getOrElse []
                             currentWord <- Some newWord
-                            changed.Trigger self // buffer.TriggerTagsChanged self changed
+                            changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
             | _ -> 

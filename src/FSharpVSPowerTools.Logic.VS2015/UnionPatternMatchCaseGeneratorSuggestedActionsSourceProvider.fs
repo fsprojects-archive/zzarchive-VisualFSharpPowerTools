@@ -62,7 +62,10 @@ and UnionPatternMatchCaseGeneratorSuggestedActionsSource (generator: UnionPatter
         member __.Dispose() = (generator :> IDisposable).Dispose()
         member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) = 
             match generator.CurrentWord, generator.Suggestions with
-            | Some _, Some suggestions ->
+            | None, _
+            | _, [] ->
+                Seq.empty
+            | Some _, suggestions ->
                 suggestions
                 |> List.map (fun s ->
                      { new ISuggestedAction with
@@ -78,13 +81,13 @@ and UnionPatternMatchCaseGeneratorSuggestedActionsSource (generator: UnionPatter
                            member __.Invoke _ct = s.Invoke()
                            member __.TryGetTelemetryId _telemetryId = false })
                 |> fun xs -> [ SuggestedActionSet xs ] :> _
-            | _ -> Seq.empty
 
         member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
             Task.FromResult(
-                Option.isSome generator.CurrentWord && generator.Suggestions 
-                |> Option.getOrElse [] 
-                |> (List.isEmpty >> not))
+                Option.isSome generator.CurrentWord && 
+                generator.Suggestions 
+                |> List.isEmpty 
+                |> not)
 
         [<CLIEvent>]
         member __.SuggestedActionsChanged: IEvent<EventHandler<EventArgs>, EventArgs> = actionsChanged.Publish

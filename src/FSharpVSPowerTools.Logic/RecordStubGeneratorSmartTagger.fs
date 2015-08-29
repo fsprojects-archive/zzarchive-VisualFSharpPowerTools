@@ -26,7 +26,7 @@ type RecordStubGenerator(textDocument: ITextDocument,
                          defaultBody: string) as self =
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable suggestion: ISuggestion option = None
+    let mutable suggestions: ISuggestion list = []
     
     let buffer = view.TextBuffer
     let codeGenService: ICodeGenerationService<_, _, _> = upcast CodeGenerationService(vsLanguageService, buffer)
@@ -53,11 +53,13 @@ type RecordStubGenerator(textDocument: ITextDocument,
 
         transaction.Complete()
 
-    let getSuggestion snapshot (recordExpr, entity, insertionParams) =
-        { new ISuggestion with
-              member __.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionParams entity
-              member __.NeedsIcon = false
-              member __.Text = Resource.recordGenerationCommandName }
+    let getSuggestions snapshot (recordExpr, entity, insertionParams) =
+        [ 
+            { new ISuggestion with
+                  member __.Invoke() = handleGenerateRecordStub snapshot recordExpr insertionParams entity
+                  member __.NeedsIcon = false
+                  member __.Text = Resource.recordGenerationCommandName }
+        ]
 
     // Try to:
     // - Identify record expression binding
@@ -98,7 +100,7 @@ type RecordStubGenerator(textDocument: ITextDocument,
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            suggestion <- result |> Option.map (getSuggestion newWord.Snapshot)
+                            suggestions <- result |> Option.map (getSuggestions newWord.Snapshot) |> Option.getOrElse []
                             currentWord <- Some newWord
                             changed.Trigger self
                         })
@@ -114,7 +116,7 @@ type RecordStubGenerator(textDocument: ITextDocument,
         currentWord |> Option.map (fun word ->
             if buffer.CurrentSnapshot = word.Snapshot then word
             else word.TranslateTo(buffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive))
-    member __.Suggestions = suggestion |> Option.map (fun x -> [x])
+    member __.Suggestions = suggestions
 
     interface IDisposable with
         member __.Dispose() = 
@@ -128,7 +130,9 @@ type RecordStubGeneratorSmartTagger(buffer: ITextBuffer, generator: RecordStubGe
             protectOrDefault (fun _ ->
                 seq {
                     match generator.CurrentWord, generator.Suggestions with
-                    | Some word, Some suggestions ->
+                    | None, _
+                    | _, [] -> ()
+                    | Some word, suggestions ->
                         let actions =
                             suggestions
                             |> List.map (fun s ->
@@ -141,8 +145,7 @@ type RecordStubGeneratorSmartTagger(buffer: ITextBuffer, generator: RecordStubGe
                             |> Seq.toReadOnlyCollection
                             |> fun xs -> [ SmartTagActionSet xs ]
                             |> Seq.toReadOnlyCollection
-                        yield TagSpan<_>(word, RecordStubGeneratorSmartTag(actions)) :> _
-                    | _ -> () })
+                        yield TagSpan<_>(word, RecordStubGeneratorSmartTag(actions)) :> _ })
                 Seq.empty
 
         [<CLIEvent>]
