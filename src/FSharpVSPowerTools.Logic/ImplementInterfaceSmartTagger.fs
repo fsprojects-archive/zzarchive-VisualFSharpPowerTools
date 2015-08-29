@@ -122,7 +122,7 @@ type ImplementInterface
                 | Some errors -> errors |> Array.exists (fun e -> e.Severity = FSharpErrorSeverity.Error)
                 | None -> false
             // This comparison is a bit expensive
-            if hasTypeCheckError || List.length membersAndRanges <> Seq.length interfaceMembers then
+            if hasTypeCheckError && List.length membersAndRanges <> Seq.length interfaceMembers then
                 let word = 
                     let currentSnapshot = buffer.CurrentSnapshot
                     if currentSnapshot = word.Snapshot then word
@@ -172,6 +172,8 @@ type ImplementInterface
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    currentWord <- Some newWord
+                    suggestions <- []
                     let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         match symbol.Kind with
@@ -197,7 +199,6 @@ type ImplementInterface
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             suggestions <- result |> Option.map (getSuggestions newWord) |> Option.getOrElse []
-                            currentWord <- Some newWord
                             changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe

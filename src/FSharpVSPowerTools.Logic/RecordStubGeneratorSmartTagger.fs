@@ -84,6 +84,8 @@ type RecordStubGenerator(textDocument: ITextDocument,
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    currentWord <- Some newWord
+                    suggestions <- []
                     let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         let vsDocument = VSDocument(doc, point.Snapshot)
@@ -101,7 +103,6 @@ type RecordStubGenerator(textDocument: ITextDocument,
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
                             suggestions <- result |> Option.map (getSuggestions newWord.Snapshot) |> Option.getOrElse []
-                            currentWord <- Some newWord
                             changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
