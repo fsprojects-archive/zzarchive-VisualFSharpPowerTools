@@ -30,19 +30,9 @@ type DepthTaggerHelper() =
                     None)
 
 module DepthTaggerTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = DepthTaggerHelper()
     let fileName = getTempFileName ".fs"
-
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
 
     [<Test>]
     let ``should generate correct depth colorizer tags``() = 

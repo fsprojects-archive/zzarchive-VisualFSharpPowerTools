@@ -14,13 +14,6 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler
 open System.Threading
 
-type ISuggestion =
-    abstract Text: string
-    abstract Invoke: unit -> unit
-    abstract NeedsIcon: bool
-
-type SuggestionGroup = ISuggestion list
-
 type ResolveUnopenedNamespaceSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
@@ -37,7 +30,7 @@ type UnopenedNamespaceResolver
 
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
-    let mutable suggestions: SuggestionGroup list option = None 
+    let mutable suggestions: SuggestionGroup list = [] 
     
     let openNamespace (snapshotSpan: SnapshotSpan) (ctx: InsertContext) ns name = 
         use transaction = textUndoHistory.CreateTransaction(Resource.recordGenerationCommandName)
@@ -63,7 +56,7 @@ type UnopenedNamespaceResolver
 
     let fixUnderscoresInMenuText (text: string) = text.Replace("_", "__")
 
-    let openNamespaceAction snapshot ctx name ns multipleNames =
+    let openNamespaceAction snapshot ctx name ns multipleNames = 
         let displayText = "open " + ns + if multipleNames then " (" + name + ")" else ""
 
         { new ISuggestion with
@@ -130,7 +123,7 @@ type UnopenedNamespaceResolver
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
                     currentWord <- Some newWord
-                    suggestions <- None
+                    suggestions <- []
                     let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         let! newWord, sym = vsLanguageService.GetSymbol (point, project)
@@ -191,7 +184,7 @@ type UnopenedNamespaceResolver
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            suggestions <- result
+                            suggestions <- result |> Option.getOrElse []
                             changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
@@ -225,7 +218,9 @@ type ResolveUnopenedNamespaceSmartTagger(buffer: ITextBuffer, serviceProvider: I
             protectOrDefault (fun _ ->
                 seq {
                     match resolver.CurrentWord, resolver.Suggestions with
-                    | Some word, Some suggestions ->
+                    | None, _ 
+                    | _, [] -> ()
+                    | Some word, suggestions ->
                         let actions =
                             suggestions
                             |> List.map (fun xs ->
@@ -242,7 +237,6 @@ type ResolveUnopenedNamespaceSmartTagger(buffer: ITextBuffer, serviceProvider: I
                             |> Seq.toReadOnlyCollection
 
                         yield TagSpan<_>(word, ResolveUnopenedNamespaceSmartTag actions) :> _
-                    | _ -> ()
                 })
                 Seq.empty
              

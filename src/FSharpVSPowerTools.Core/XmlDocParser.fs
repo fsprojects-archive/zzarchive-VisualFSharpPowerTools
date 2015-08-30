@@ -64,9 +64,20 @@ module internal XmlDocParsing =
                 let indent = indentOf line
                 [ for SynBinding.Binding(_, _, _, _, _, _, synValData, synPat, _, _, _, _) in synBindingList do
                       match synValData with
-                      | SynValData(_memberFlagsOpt, SynValInfo(args, _), _) when args.Length > 0 -> 
-                          let paramNames = digNamesFrom synPat
-                          yield! paramNames
+                      | SynValData(_memberFlagsOpt, SynValInfo(args, _), _) when not (List.isEmpty args) -> 
+                          let parameters =
+                              args 
+                              |> List.collect (
+                                    List.collect (fun (SynArgInfo(_, _, ident)) -> 
+                                        match ident with 
+                                        | Some ident -> [ident.idText]
+                                        | None -> []))
+                          match parameters with
+                          | [] ->
+                              let paramNames = digNamesFrom synPat
+                              yield! paramNames
+                          | _ :: _ ->
+                             yield! parameters
                       | _ -> () ]
                 |> fun paramNames -> [ XmlDocable(line,indent,paramNames) ]
             | SynModuleDecl.Types(synTypeDefnList, _) -> (synTypeDefnList |> List.collect getXmlDocablesSynTypeDefn)

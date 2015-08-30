@@ -56,6 +56,12 @@ let inline assertFalse condition =
 
 type [<Measure>] ms
 
+#if APPVEYOR
+let timeout = 40000<ms>
+#else
+let timeout = 10000<ms>
+#endif
+
 let (=>) (startLine, startCol) (endLine, endCol) =
         (startLine, startCol, endLine, endCol)
         

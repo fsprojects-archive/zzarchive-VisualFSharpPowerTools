@@ -47,19 +47,9 @@ type SyntaxConstructClassifierHelper() =
             classifierProvider.Dispose()
 
 module SyntaxConstructClassifierTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
     
     let helper = new SyntaxConstructClassifierHelper()
     let mutable fileName = null 
-
-    [<TestFixtureSetUp>]
-    let fixtureSetUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
 
     [<SetUp>]
     let setUp() = fileName <- getTempFileName ".fsx"

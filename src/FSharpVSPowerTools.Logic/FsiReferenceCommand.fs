@@ -195,11 +195,15 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
                 generateFile project)        
 
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildDoneEventHandler (fun _ _ ->
+            Logging.logInfo "Checking projects after build done..."
             dte2.Solution.Projects
             |> Seq.cast<Project>
             |> Seq.iter (fun project ->
-                if isFSharpProject project && containsReferenceScript project then
-                    generateFile project))
+                if isFSharpProject project then
+                    Logging.logInfo "Checking F# project '%s'..." project.Name
+                    if containsReferenceScript project then
+                        Logging.logInfo "Re-generating reference scripts for '%s'..." project.Name
+                        generateFile project))
 
     let events = dte2.Events.BuildEvents
     do events.add_OnBuildDone onBuildDoneHandler

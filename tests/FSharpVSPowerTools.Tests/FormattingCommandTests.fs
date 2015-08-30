@@ -27,11 +27,6 @@ module FormattingCommandTests =
     let helper = FormattingCommandHelper()
     let fileName = getTempFileName ".fs"
 
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-
     [<Test; RequiresSTA>]
     let ``should be able to format document``() =
         let content = """

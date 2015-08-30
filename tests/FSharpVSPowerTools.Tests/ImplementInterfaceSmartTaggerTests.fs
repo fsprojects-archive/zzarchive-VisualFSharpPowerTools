@@ -36,19 +36,9 @@ type ImplementInterfaceSmartTaggerHelper() =
         |> Seq.concat
 
 module ImplementInterfaceSmartTaggerTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = ImplementInterfaceSmartTaggerHelper()
     
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-
     [<Test>]
     let ``return nothing if interfaces are empty``() = 
         let content = """
@@ -149,7 +139,6 @@ type Class() =
     interface Interface with
         member x.Method2(arg1: int): int = 
             failwith "Not implemented yet"
-        
         member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
          
@@ -198,7 +187,6 @@ type Class() =
     interface Interface3 with
         member x.Method(arg1: int): int = 
             failwith "Not implemented yet"
-        
         member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
         

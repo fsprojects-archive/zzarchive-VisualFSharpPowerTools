@@ -467,9 +467,9 @@ namespace FSharpVSPowerTools
             this.chbLinter.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbLinter.Name = "chbLinter";
             this.chbLinter.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.chbLinter.Size = new System.Drawing.Size(62, 17);
+            this.chbLinter.Size = new System.Drawing.Size(139, 17);
             this.chbLinter.TabIndex = 23;
-            this.chbLinter.Text = "Linter";
+            this.chbLinter.Text = "FSharpLint integration";
             this.chbLinter.UseVisualStyleBackColor = true;
             // 
             // lblInformation

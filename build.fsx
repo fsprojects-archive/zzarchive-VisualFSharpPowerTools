@@ -84,7 +84,7 @@ Target "AssemblyInfo" (fun _ ->
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs ["bin"; "bin/vsix"; "temp"; "nuget"]
+    CleanDirs ["bin"; "temp"; "nuget"]
 )
 
 Target "CleanDocs" (fun _ ->
