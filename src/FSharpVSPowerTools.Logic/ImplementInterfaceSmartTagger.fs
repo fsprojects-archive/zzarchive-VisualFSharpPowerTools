@@ -38,8 +38,7 @@ type ImplementInterface
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable suggestions: ISuggestion list = []
-    //let mutable state = None
-
+    
     let buffer = view.TextBuffer
 
     let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
@@ -123,7 +122,7 @@ type ImplementInterface
                 | Some errors -> errors |> Array.exists (fun e -> e.Severity = FSharpErrorSeverity.Error)
                 | None -> false
             // This comparison is a bit expensive
-            if hasTypeCheckError || List.length membersAndRanges <> Seq.length interfaceMembers then
+            if hasTypeCheckError && List.length membersAndRanges <> Seq.length interfaceMembers then
                 let word = 
                     let currentSnapshot = buffer.CurrentSnapshot
                     if currentSnapshot = word.Snapshot then word
@@ -149,7 +148,7 @@ type ImplementInterface
                           } |> Async.StartInThreadPoolSafe }
 
                 [ createSuggestion Resource.implementInterfaceCommandName true
-                  createSuggestion Resource.implementInterfaceVerboseCommandName false ]
+                  createSuggestion Resource.implementInterfaceLightweightCommandName false ]
             else []
 
     let updateAtCaretPosition() =
@@ -173,6 +172,8 @@ type ImplementInterface
                     | None -> true
                     | Some oldWord -> newWord <> oldWord
                 if wordChanged then
+                    currentWord <- Some newWord
+                    suggestions <- []
                     let uiContext = SynchronizationContext.Current
                     asyncMaybe {
                         match symbol.Kind with
@@ -197,9 +198,8 @@ type ImplementInterface
                         async {
                             // Switch back to UI thread before firing events
                             do! Async.SwitchToContext uiContext
-                            suggestions <- result |> Option.map (getSuggestions newWord) |> defaultArg <| []
-                            currentWord <- Some newWord
-                            changed.Trigger self // buffer.TriggerTagsChanged self changed
+                            suggestions <- result |> Option.map (getSuggestions newWord) |> Option.getOrElse []
+                            changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
             | _ -> 

@@ -46,7 +46,7 @@ module Resource =
     let [<Literal>] findAllReferencesIllformedExpressionMessage = "Can't find a symbol under cursor. Please make sure that the code is type-checked."
  
     let [<Literal>] implementInterfaceCommandName = "Explicitly implement interface"
-    let [<Literal>] implementInterfaceVerboseCommandName = "Explicitly implement interface (verbose)"
+    let [<Literal>] implementInterfaceLightweightCommandName = "Explicitly implement interface (lightweight)"
     let [<Literal>] recordGenerationCommandName = "Generate record stubs"
     let [<Literal>] unionPatternMatchCaseCommandName = "Generate union pattern match cases"
 
