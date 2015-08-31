@@ -15,9 +15,20 @@ module Seq =
 module List =
     let tryHead = function [] -> None | h :: _ -> Some h
 
+    let rec skipWhile p xs =
+        match xs with
+        | head :: tail when p head -> skipWhile p tail
+        | _ -> xs
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Array =
+    let inline private checkNonNull argName arg = 
+        match box arg with 
+        | null -> nullArg argName 
+        | _ -> ()
+
+
     /// Returns true if one array has another as its subset from index 0.
     let startsWith (prefix: _ []) (whole: _ []) =
         let rec loop index =
@@ -62,6 +73,24 @@ module Array =
         for i = 0 to len - 1 do
             state <- folder state i array.[i]
         state
+
+    open System.Collections.Generic
+
+    /// Returns an array that contains no duplicate entries according to generic hash and
+    /// equality comparisons on the entries.
+    /// If an element occurs multiple times in the array then the later occurrences are discarded.
+    let distinct (array:'T[]) =
+        checkNonNull "array" array
+        let temp = Array.zeroCreate array.Length
+        let mutable i = 0
+
+        let hashSet = HashSet<'T>(HashIdentity.Structural<'T>)
+        for v in array do 
+            if hashSet.Add(v) then
+                temp.[i] <- v
+                i <- i + 1
+
+        Array.sub temp 0 i 
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -207,6 +236,8 @@ module Async =
         /// Async implementation of List.map.
         let map (mapping : 'T -> Async<'U>) (list : 'T list) : Async<'U list> =
             mapImpl (mapping, [], list)
+
+
 
 /// Maybe computation expression builder, copied from ExtCore library
 /// https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs
