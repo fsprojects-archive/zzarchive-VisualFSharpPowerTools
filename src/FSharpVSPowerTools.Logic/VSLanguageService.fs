@@ -59,7 +59,7 @@ type VSLanguageService
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    let instance = LanguageService (fileSystem)
+    let instance = LanguageService fileSystem
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
     /// Clean up instructions are displayed on status bar.
@@ -68,7 +68,9 @@ type VSLanguageService
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
                 
-    do instance.SetCriticalErrorHandler(suggestRecoveryAfterFailure)
+    do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure
+       openDocumentsTracker.DocumentChanged.Add instance.FileChanged
+       openDocumentsTracker.DocumentClosed.Add instance.FileClosed
 
     let mutable skipLexCache = false
 
