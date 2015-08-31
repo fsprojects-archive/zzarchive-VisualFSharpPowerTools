@@ -195,7 +195,7 @@ type LanguageService (?fileSystem: IFileSystem) =
 
   let files = ConcurrentDictionary<string, FileState>()
   
-  let isResultAbsolete fileName = 
+  let isResultObsolete fileName = 
       match files.TryGetValue fileName with
       | true, Cancelled -> true
       | _ -> false
@@ -217,7 +217,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                    debug "[LanguageService] Change state for %s to `BeingChecked`" filePath
                    debug "[LanguageService] Parse and typecheck source..."
                    return! x.ParseAndCheckFileInProject (fixedFilePath, 0, source, options, 
-                                                         IsResultObsolete (fun _ -> isResultAbsolete filePath), null) 
+                                                         IsResultObsolete (fun _ -> isResultObsolete filePath), null) 
               finally 
                    if files.TryUpdate (filePath, Checked, BeingChecked) then
                        debug "[LanguageService] %s: BeingChecked => Checked" filePath
@@ -245,18 +245,16 @@ type LanguageService (?fileSystem: IFileSystem) =
           return results
       }
 
-  member __.FileChanged filePath = 
+  member __.OnFileChanged filePath = 
     files.AddOrUpdate (filePath, NeedChecking, (fun _ oldState -> 
-        let newState = 
-            match oldState with
-            | BeingChecked -> Cancelled
-            | Cancelled -> Cancelled
-            | NeedChecking -> NeedChecking
-            | Checked -> NeedChecking
-        newState))
+        match oldState with
+        | BeingChecked -> Cancelled
+        | Cancelled -> Cancelled
+        | NeedChecking -> NeedChecking
+        | Checked -> NeedChecking))
     |> debug "[LanguageService] %s changed: set status to %A" filePath
 
-  member __.FileClosed filePath = 
+  member __.OnFileClosed filePath = 
     match files.TryRemove filePath with
     | true, _ -> debug "[LanguageService] %s was removed from `files` dictionary" filePath
     | _ -> ()

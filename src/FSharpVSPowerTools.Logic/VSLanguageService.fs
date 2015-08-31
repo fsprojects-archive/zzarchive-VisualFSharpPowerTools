@@ -69,8 +69,8 @@ type VSLanguageService
         statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
                 
     do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure
-       openDocumentsTracker.DocumentChanged.Add instance.FileChanged
-       openDocumentsTracker.DocumentClosed.Add instance.FileClosed
+       openDocumentsTracker.DocumentChanged.Add instance.OnFileChanged
+       openDocumentsTracker.DocumentClosed.Add instance.OnFileClosed
 
     let mutable skipLexCache = false
 
