@@ -117,7 +117,7 @@ module AssemblyContentProvider =
 
     let private traverseMemberFunctionAndValues ns (parent: Parent) (membersFunctionsAndValues: seq<FSharpMemberOrFunctionOrValue>) =
         membersFunctionsAndValues
-        |> Seq.map (fun func ->
+        |> Seq.collect (fun func ->
             let processIdents fullName idents = 
                 { FullName = fullName
                   CleanedIdents = parent.FixParentModuleSuffix idents
@@ -144,7 +144,6 @@ module AssemblyContentProvider =
                      |> Option.map (fun fullCompiledIdents ->
                           processIdents (fullCompiledIdents |> String.concat ".") fullCompiledIdents)
                      |> Option.toList ])
-        |> Seq.concat
 
     let rec private traverseEntity contentType (parent: Parent) (entity: FSharpEntity) = 
 
@@ -190,14 +189,12 @@ module AssemblyContentProvider =
 
     let getAssemblySignatureContent contentType (signature: FSharpAssemblySignature) =
             signature.TryGetEntities()
-            |> Seq.map (traverseEntity contentType Parent.Empty)
-            |> Seq.concat
+            |> Seq.collect (traverseEntity contentType Parent.Empty)
             |> Seq.distinct
 
     let private getAssemblySignaturesContent contentType (assemblies: FSharpAssembly list) = 
         assemblies 
-        |> Seq.map (fun asm -> getAssemblySignatureContent contentType asm.Contents)
-        |> Seq.concat
+        |> Seq.collect (fun asm -> getAssemblySignatureContent contentType asm.Contents)
         |> Seq.toList
 
     let getAssemblyContent (withCache: ((IAssemblyContentCache -> _) -> _) option) 
