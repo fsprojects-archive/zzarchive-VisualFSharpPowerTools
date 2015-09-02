@@ -91,11 +91,10 @@ type VSLanguageService
         uses
         |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
         |> Seq.groupBy (fst >> Path.GetFullPathSafe)
-        |> Seq.map (fun (_, symbolUses) -> 
+        |> Seq.collect (fun (_, symbolUses) -> 
             symbolUses 
             |> Seq.map snd 
             |> Seq.distinctBy (fun s -> s.RangeAlternate))
-        |> Seq.concat
         |> Seq.toArray
 
     let mayReferToSameBuffer (snapshot: ITextSnapshot) filePath =
