@@ -45,11 +45,10 @@ module OpenDeclarationGetter =
     open System.Diagnostics
 
     let private getAutoOpenModules entities =
-        entities 
-        |> List.fold( fun acc e -> 
+        List.foldBack( fun e acc -> 
              match e.Kind with
              | EntityKind.Module { IsAutoOpen = true } -> e.CleanedIdents::acc
-             | _ -> acc) []
+             | _ -> acc) entities []
 
 
     let private getActivePatterns entities =
