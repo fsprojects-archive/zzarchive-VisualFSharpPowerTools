@@ -53,11 +53,10 @@ module OpenDeclarationGetter =
 
 
     let private getActivePatterns entities =
-        entities 
-        |> List.foldBack(fun acc e -> 
+        List.foldBack( fun e acc -> 
              match e.Kind with
              | EntityKind.FunctionOrValue true -> e.CleanedIdents::acc
-             | _ -> acc) []
+             | _ -> acc) entities  []
 
     let parseTooltip (FSharpToolTipText elems): RawOpenDeclaration list =
         elems
