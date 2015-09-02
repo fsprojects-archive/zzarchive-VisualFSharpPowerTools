@@ -9,7 +9,7 @@ type internal ShortIdent = string
 type internal Idents = ShortIdent[]
 
 let internal longIdentToArray (longIdent: LongIdent): Idents =
-    Array.init longIdent.Length (fun i -> string longIdent.[i])
+    longIdent |> Seq.map string |> Seq.toArray
 
     /// An recursive pattern that collect all sequential expressions to avoid StackOverflowException
 let rec (|Sequentials|_|) = function
