@@ -54,7 +54,7 @@ module OpenDeclarationGetter =
 
     let private getActivePatterns entities =
         entities 
-        |> List.fold(fun acc e -> 
+        |> List.foldBack(fun acc e -> 
              match e.Kind with
              | EntityKind.FunctionOrValue true -> e.CleanedIdents::acc
              | _ -> acc) []
