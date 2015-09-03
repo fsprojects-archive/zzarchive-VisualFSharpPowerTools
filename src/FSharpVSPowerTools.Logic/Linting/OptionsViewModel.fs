@@ -31,6 +31,9 @@ type IntViewModel(name, initialValue) as this =
         with get() = value.Value
         and set(v) = value.Value <- v
 
+type IRemovable =
+    abstract RemoveManyCommand : INotifyCommand 
+
 type HintsViewModel(config) as this =
     inherit ViewModelBase()
 
@@ -76,8 +79,12 @@ type HintsViewModel(config) as this =
                     this.NewHint <- ""
                     this.SelectedHintIndex <- hints.Count - 1
                 | CharParsers.Failure(_) -> ())
-
-    member __.RemoveHintCommand = 
+                
+    interface IRemovable with
+        member __.RemoveManyCommand = 
+            this.Factory.CommandSyncParam(Seq.iter (hints.Remove >> ignore))
+                
+    member __.RemoveCommand = 
         this.Factory.CommandSyncParam(hints.Remove >> ignore)
 
     member __.SelectedHintIndex
@@ -149,13 +156,8 @@ module SetupViewModels =
                                     isRuleEnabled analyser.Value.Settings) 
         }
 
-type OptionsViewModel(config, files) as this =
+type IgnoreFilesModel(config) as this =
     inherit ViewModelBase()
-
-    let hints = HintsViewModel(config)
-    
-    let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, None)
-    let newIgnoreFile = this.Factory.Backing(<@ this.NewIgnoreFile @>, "")
 
     let ignoreFiles =
         ObservableCollection(
@@ -167,20 +169,10 @@ type OptionsViewModel(config, files) as this =
             | None -> [||])
 
     let selectedIgnoreFileIndex = this.Factory.Backing(<@ this.SelectedIgnoreFileIndex @>, 0)
-
-    let rules = SetupViewModels.ruleViewModelsFromConfig config
-
-    member __.SelectedRule 
-        with get() = selectedRule.Value
-        and set (value) = selectedRule.Value <- value
     
-    member __.Files = files
+    let newIgnoreFile = this.Factory.Backing(<@ this.NewIgnoreFile @>, "")
     
     member __.IgnoreFiles = ignoreFiles
-    
-    member __.Rules = rules
-
-    member __.Hints = hints
 
     member __.AddIgnoreFileCommand = 
         this.Factory.CommandSync(fun _ -> 
@@ -188,8 +180,12 @@ type OptionsViewModel(config, files) as this =
                 ignoreFiles.Add(this.NewIgnoreFile)
                 this.NewIgnoreFile <- ""
                 this.SelectedIgnoreFileIndex <- ignoreFiles.Count - 1)
-
-    member __.RemoveIgnoreFileCommand = 
+                
+    interface IRemovable with
+        member __.RemoveManyCommand = 
+            this.Factory.CommandSyncParam(Seq.iter (ignoreFiles.Remove >> ignore))
+                
+    member __.RemoveCommand = 
         this.Factory.CommandSyncParam(ignoreFiles.Remove >> ignore)
 
     member __.SelectedIgnoreFileIndex
@@ -199,3 +195,33 @@ type OptionsViewModel(config, files) as this =
     member __.NewIgnoreFile
         with get() = newIgnoreFile.Value
         and set(v) = newIgnoreFile.Value <- v
+
+type OptionsViewModel(config, files, fileNames:string seq, selectedFile:string) as this =
+    inherit ViewModelBase()
+
+    let hints = HintsViewModel(config)
+    let ignoreFiles = IgnoreFilesModel(config)
+    let rules = SetupViewModels.ruleViewModelsFromConfig config
+    
+    let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, None)
+
+    let selectedFilename = this.Factory.Backing(<@ this.SelectedFileName @>, selectedFile)
+
+    member __.SelectedRule 
+        with get() = selectedRule.Value
+        and set (value) = selectedRule.Value <- value
+
+    member __.SelectedRuleChanged = 
+        this.Factory.CommandSyncParam(fun p -> this.SelectedRule <- Some(p))
+
+    member __.SelectedFileName = selectedFilename.Value
+    
+    member __.Files = files
+
+    member __.FileNames = fileNames
+    
+    member __.Rules = rules
+
+    member __.Hints = hints
+
+    member __.IgnoreFiles = ignoreFiles

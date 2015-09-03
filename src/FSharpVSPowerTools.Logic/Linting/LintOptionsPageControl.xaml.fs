@@ -10,14 +10,6 @@ type LintOptionsControlProvider = XAML<"LintOptionsPageControl.xaml", true>
 type LintOptionsPageControl() =
     inherit UserControlViewController<LintOptionsControlProvider>()
 
-    let config = FSharpLint.Framework.Configuration.defaultConfiguration
-
-    let viewModel = OptionsViewModel(config, [FileViewModel("SomeFile", [])])
-
-    let rulesTreeViewSelectedItemChanged =
-        RoutedPropertyChangedEventHandler(fun _ (e:RoutedPropertyChangedEventArgs<_>) ->
-            viewModel.SelectedRule <- Some(e.NewValue))
-
     let selectionChanged =
         SelectionChangedEventHandler(fun control _ -> 
             match control with
@@ -25,37 +17,29 @@ type LintOptionsPageControl() =
                 control.ScrollIntoView(control.SelectedItem)
             | _ -> ())
 
-    let onKeydown (command:FSharp.ViewModule.INotifyCommand) =
+    let onKeydown =
         Input.KeyEventHandler(fun control e -> 
             if e.Key = Input.Key.Delete then
                 match control with 
                 | :? ListView as control ->
-                    let selectedItem = control.SelectedItem
-
-                    if command.CanExecute(selectedItem) then
-                        command.Execute(selectedItem)
+                    match control.DataContext with
+                    | :? IRemovable as viewModel ->
+                        let selectedItems = control.SelectedItems |> Seq.cast<string> |> Seq.toList
+                        if viewModel.RemoveManyCommand.CanExecute(selectedItems) then
+                            viewModel.RemoveManyCommand.Execute(selectedItems)
+                    | _ -> ()
                 | _ -> ())
-
-    let ignoreFilesOnKeyDown = onKeydown viewModel.RemoveIgnoreFileCommand
-
-    let hintsOnKeyDown = onKeydown viewModel.Hints.RemoveHintCommand
     
     override this.OnLoaded control = 
-        control.RulesTreeView.SelectedItemChanged.AddHandler(rulesTreeViewSelectedItemChanged)
-
         control.HintsListView.SelectionChanged.AddHandler(selectionChanged)
-        control.IgnoreFilesListView.KeyDown.AddHandler(ignoreFilesOnKeyDown)
+        control.IgnoreFilesListView.KeyDown.AddHandler(onKeydown)
 
         control.IgnoreFilesListView.SelectionChanged.AddHandler(selectionChanged)
-        control.HintsListView.KeyDown.AddHandler(hintsOnKeyDown)
-
-        control.DataContext <- viewModel
+        control.HintsListView.KeyDown.AddHandler(onKeydown)
 
     override this.OnUnloaded control =
-        control.RulesTreeView.SelectedItemChanged.RemoveHandler(rulesTreeViewSelectedItemChanged)
-
         control.HintsListView.SelectionChanged.RemoveHandler(selectionChanged)
-        control.IgnoreFilesListView.KeyDown.RemoveHandler(ignoreFilesOnKeyDown)
+        control.IgnoreFilesListView.KeyDown.RemoveHandler(onKeydown)
 
         control.IgnoreFilesListView.SelectionChanged.RemoveHandler(selectionChanged)
-        control.HintsListView.KeyDown.RemoveHandler(hintsOnKeyDown)
+        control.HintsListView.KeyDown.RemoveHandler(onKeydown)

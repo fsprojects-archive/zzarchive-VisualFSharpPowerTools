@@ -28,7 +28,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ComboBox Margin="0,0,0,5" SelectedIndex="{Binding SelectedFileName}" ItemsSource="{Binding FileNames}"></ComboBox>
+        <Label Margin="0,0,0,5" Content="{Binding SelectedFileName}" />
 
         <TabControl Grid.Row="1">
             <TabItem Header="Rules">
@@ -53,6 +53,14 @@
                         Grid.Row="1" 
                         ItemsSource="{Binding Rules}"
                         Width="{Binding ActualWidth}">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="SelectedItemChanged">
+                                    <i:InvokeCommandAction 
+                                        Command="{Binding SelectedRuleChanged}" 
+                                        CommandParameter="{Binding ElementName=RulesTreeView, Path=SelectedItem}"/>
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+
                             <TreeView.Resources>
                                 <HierarchicalDataTemplate DataType="{x:Type local:RuleViewModel}" 
                                                         ItemsSource="{Binding Rules}">
@@ -134,7 +142,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Ignore Files">
-                <Grid>
+                <Grid DataContext="{Binding IgnoreFiles}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -147,7 +155,6 @@
                         Grid.Row="1" 
                         Name="IgnoreFilesListView"
                         ItemsSource="{Binding IgnoreFiles}" 
-                        SelectionMode="Single"
                         SelectedIndex="{Binding SelectedIgnoreFileIndex}"
                         HorizontalContentAlignment="Stretch">
                         <ListView.ItemTemplate>
@@ -162,7 +169,7 @@
 
                                     <Button Grid.Column="1" Content="Remove" FontSize="10" 
                                             CommandParameter="{Binding}"
-                                            Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListView}, Path=DataContext.RemoveIgnoreFileCommand}" 
+                                            Command="{Binding ElementName=IgnoreFilesListView, Path=DataContext.RemoveCommand}" 
                                             />
                                 </Grid>
                             </DataTemplate>
@@ -203,7 +210,6 @@
                         Margin="5, 0, 5, 0" 
                         Grid.Row="2" 
                         Name="HintsListView"
-                        SelectionMode="Single"
                         ItemsSource="{Binding Hints}" 
                         SelectedIndex="{Binding SelectedHintIndex}"
                         HorizontalContentAlignment="Stretch">
@@ -219,7 +225,7 @@
 
                                     <Button Grid.Column="1" Content="Remove" FontSize="10" 
                                             CommandParameter="{Binding}"
-                                            Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ListView}, Path=DataContext.RemoveHintCommand}" 
+                                            Command="{Binding ElementName=HintsListView, Path=DataContext.RemoveCommand}" 
                                             />
                                 </Grid>
                             </DataTemplate>
@@ -265,7 +271,16 @@
                         <TreeView.Resources>
                             <HierarchicalDataTemplate DataType="{x:Type local:FileViewModel}" 
                                                               ItemsSource="{Binding Files}">
-                                <TextBlock Text="{Binding Name}"></TextBlock>
+                                <HierarchicalDataTemplate.Resources>
+                                    <Style TargetType="{x:Type TextBlock}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasConfigFile}" Value="False">
+                                                <Setter Property="TextBlock.Foreground" Value="LightGray"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </HierarchicalDataTemplate.Resources>
+                                <TextBlock Text="{Binding Name}" />
                             </HierarchicalDataTemplate>
                         </TreeView.Resources>
                     </TreeView>

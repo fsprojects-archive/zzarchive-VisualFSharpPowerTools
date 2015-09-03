@@ -242,6 +242,7 @@
     <Compile Include="Linting\FileViewModel.fs" />
     <Compile Include="Linting\RuleViewModel.fs" />
     <Compile Include="Linting\OptionsViewModel.fs" />
+    <Compile Include="Linting\LintUtils.fs" />
     <Compile Include="Linting\LintOptionsPageControl.xaml.fs" />
     <Compile Include="Linting\LintOptionsPage.fs" />
   </ItemGroup>
