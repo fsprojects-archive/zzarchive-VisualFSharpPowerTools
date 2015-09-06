@@ -378,7 +378,7 @@ type Args = Args of string list
 let allUnderscores (arg: string) = arg.ToCharArray() |> Array.forall (fun c -> c = '_')
 
 let keywords = 
-    Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
+    Keywords.keywordNames
     |> List.filter (not << allUnderscores)
 
 type Generators =

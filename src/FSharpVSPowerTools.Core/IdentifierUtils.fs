@@ -28,7 +28,7 @@ let isOperator (s: string) =
 
 /// Encapsulates identifiers for rename operations if needed
 let encapsulateIdentifier symbolKind newName =
-    let isKeyWord = List.exists ((=) newName) Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames    
+    let isKeyWord = List.exists ((=) newName) Keywords.keywordNames
     let isAlreadyEncapsulated = newName.StartsWith DoubleBackTickDelimiter && newName.EndsWith DoubleBackTickDelimiter
 
     if isAlreadyEncapsulated then newName

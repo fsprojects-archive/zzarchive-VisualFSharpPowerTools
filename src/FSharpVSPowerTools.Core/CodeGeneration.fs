@@ -124,7 +124,7 @@ module internal Utils =
     /// Represent environment where a captured identifier should be renamed
     type NamesWithIndices = Map<string, Set<int>>
 
-    let keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
+    let keywordSet = set Keywords.keywordNames
 
     /// Rename a given argument if the identifier has been used
     let normalizeArgName (namesWithIndices: NamesWithIndices) nm =

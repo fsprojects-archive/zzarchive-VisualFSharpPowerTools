@@ -148,11 +148,11 @@ module private OperatorCategorizer =
                     tokens
                     // pick only =, :> and :?> operators
                     |> Seq.choose (fun t -> 
-                        match Parser.tokenTagToTokenId t.Tag with 
-                        | Parser.TOKEN_EQUALS 
-                        | Parser.TOKEN_COLON_GREATER
-                        | Parser.TOKEN_COLON_QMARK_GREATER 
-                        | Parser.TOKEN_COLON_QMARK -> 
+                        match t.Tag with 
+                        | 69
+                        | 79
+                        | 80 
+                        | 81 -> 
                             Some (t.LeftColumn, t.RightColumn + 1)
                         | _ -> None)
                     // pick tokens which are not overlapped with any symbols

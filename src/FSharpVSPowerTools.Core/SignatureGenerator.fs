@@ -6,7 +6,6 @@ open System.Collections.Generic
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.PrettyNaming
-open Microsoft.FSharp.Compiler.Lexhelp.Keywords
 open System.IO
 open System.Text.RegularExpressions
 
@@ -191,6 +190,16 @@ let private formatType ctx (typ: FSharpType) =
 let private isStaticallyResolved (param: FSharpGenericParameter) =
     param.Constraints
     |> Seq.exists (fun c -> c.IsMemberConstraint)
+
+let keywordTable = Set Keywords.keywordNames
+
+let QuoteIdentifierIfNeeded (s : string) : string =
+        if not (String.forall IsIdentifierPartCharacter s)              // if it has funky chars
+            || s.Length > 0 && (not(IsIdentifierFirstCharacter s.[0]))  // or if it starts with a non-(letter-or-underscore)
+            || keywordTable.Contains s                                  // or if it's a language keyword like "type"
+        then "``"+s+"``"  // then it needs to be ``quoted``
+        else s
+
 
 let private formatValueOrMemberName name =
     let newName = QuoteIdentifierIfNeeded name

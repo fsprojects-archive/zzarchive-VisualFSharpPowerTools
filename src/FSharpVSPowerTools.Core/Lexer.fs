@@ -89,10 +89,10 @@ module Lexer =
         let isIdentifier t = t.CharClass = FSharpTokenCharKind.Identifier
         let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
     
-        let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) token =
-            match Parser.tokenTagToTokenId token.Tag with
-            | Parser.TOKEN_QUOTE -> GenericTypeParameterPrefix
-            | Parser.TOKEN_INFIX_AT_HAT_OP ->
+        let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) (token: FSharpTokenInfo) =
+            match token.Tag with
+            | 90 -> GenericTypeParameterPrefix
+            | 185 ->
                  // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.
                  // We have to check the char itself to distinguish one from another.
                  if token.FullMatchedLength = 1 && lineStr.[token.LeftColumn] = '^' then 
