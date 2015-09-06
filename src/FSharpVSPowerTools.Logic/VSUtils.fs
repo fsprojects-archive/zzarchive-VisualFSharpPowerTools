@@ -402,3 +402,17 @@ let isSourceExtension ext =
 
 let isSignatureExtension ext =
     String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase)
+
+let listFSharpProjectsInSolution (dte: DTE) =
+    let rec handleProject (p: Project) = 
+        if p === null then []
+        elif isFSharpProject p then [ p ]
+        elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
+        else []  
+        
+    and handleProjectItems (items: ProjectItems) = 
+        [ for pi in items do
+                yield! handleProject pi.SubProject ]
+
+    [ for p in dte.Solution.Projects do
+        yield! handleProject p ]
