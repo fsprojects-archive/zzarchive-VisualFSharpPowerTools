@@ -92,7 +92,7 @@ x
                     [| sprintf "%s - (%i, %i) : val x" prefix 2 4;
                        sprintf "%s - (%i, %i) : val x" prefix 3 0 |])
 
-    [<Test; Category "AppVeyorLongRunning">]
+    [<Test>]
     let ``should be able to find all references in multiple documents``() = 
         let content = """
 module Sample
@@ -107,12 +107,10 @@ val func : int -> int
         let command = helper.GetCommand(textView)
 
         let prefix = Path.GetFullPath(fileName)
-        
-        testEventTrigger helper.ReferencesChanged "Timed out before being able to find all references" timeout
-            (fun () -> 
-                textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 6) |> ignore
-                command.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidFindReferences, 
-                    0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
+        textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 6) |> ignore
+        command.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidFindReferences, 
+            0u, IntPtr.Zero, IntPtr.Zero) |> ignore
+        testEvent helper.ReferencesChanged "Timed out before being able to find all references" timeout
             (fun () -> 
                 helper.ReferencesResults 
                 |> assertEqual 

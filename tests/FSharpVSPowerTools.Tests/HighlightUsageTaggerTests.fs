@@ -185,7 +185,7 @@ let _ = Project.GetSample()
                 |> assertEqual
                      [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
 
-    [<Test; Category "AppVeyorLongRunning">]
+    [<Test>]
     let ``should generate highlight usage tags for multi-project symbols``() = 
         let content = """
 namespace Project2
@@ -200,9 +200,9 @@ module Test =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
         let view = helper.GetView(buffer)
+        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 22) |> ignore
         let tagger = helper.GetTagger(buffer, view)        
-        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 22) |> ignore)
+        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
                 helper.TagsOf(buffer, tagger)                 
                 |> Seq.toList
