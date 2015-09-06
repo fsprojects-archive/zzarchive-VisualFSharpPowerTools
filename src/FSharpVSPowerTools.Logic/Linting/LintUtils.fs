@@ -94,3 +94,8 @@ module LintUtils =
             | firstProject::_ ->
                 Some(fromNormalisedPath firstProject)
             | [] -> None
+
+    let getConfigForDirectory loadedConfigs directory =
+        match getConfig loadedConfigs (normalisePath directory) with
+        | Some(config) -> config
+        | None -> defaultConfiguration

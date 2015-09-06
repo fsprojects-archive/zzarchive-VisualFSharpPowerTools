@@ -196,8 +196,10 @@ type IgnoreFilesModel(config) as this =
         with get() = newIgnoreFile.Value
         and set(v) = newIgnoreFile.Value <- v
 
-type OptionsViewModel(config, files, fileNames:string seq, selectedFile:string) as this =
+type OptionsViewModel(getConfigForDirectory, files, fileNames:string seq, selectedFile:string) as this =
     inherit ViewModelBase()
+
+    let config = getConfigForDirectory selectedFile
 
     let hints = HintsViewModel(config)
     let ignoreFiles = IgnoreFilesModel(config)
@@ -225,3 +227,8 @@ type OptionsViewModel(config, files, fileNames:string seq, selectedFile:string) 
     member __.Hints = hints
 
     member __.IgnoreFiles = ignoreFiles
+
+type LintViewModel(viewmodel:OptionsViewModel option) =
+    member __.LoadedConfig = Option.isSome viewmodel
+
+    member __.ViewModel = viewmodel

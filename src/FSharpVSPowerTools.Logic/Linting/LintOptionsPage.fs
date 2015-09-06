@@ -19,17 +19,15 @@ type LintOptionsPage() =
 
     let mutable loadedConfigs = LoadedConfigs.Empty
 
-    let config = defaultConfiguration
-
     let lintOptionsPageControl = lazy LintOptionsControlProvider()
 
     interface ILintOptions with
         member this.UpdateDirectories(_) =
             ()
 
-        member this.GetConfigurationForDirectory(_) =
-            config
-
+        member this.GetConfigurationForDirectory(dir) =
+            getConfigForDirectory loadedConfigs dir
+            
     override this.OnApply(_) = 
         // TODO: Save updates to configuration
         ()
@@ -37,18 +35,19 @@ type LintOptionsPage() =
     override this.OnActivate(_) = 
         loadedConfigs <- updateLoadedConfigs loadedConfigs
 
-        let initiallySelectedConfig = 
+        let lintOptions =
             match getInitialPath loadedConfigs with
-            | Some(x) -> sprintf "%s%c%s" x Path.DirectorySeparatorChar SettingsFileName
-            | None -> "No Projects Open"
+            | Some(path) -> 
+                OptionsViewModel(
+                    getConfigForDirectory loadedConfigs,
+                    getFileHierarchy loadedConfigs, 
+                    [], 
+                    path) |> Some
+            | None -> 
+                None
 
-        lintOptionsPageControl.Value.DataContext <- 
-            OptionsViewModel(
-                config, 
-                getFileHierarchy loadedConfigs, 
-                [], 
-                initiallySelectedConfig)
-
+        lintOptionsPageControl.Value.DataContext <- LintViewModel(lintOptions)
+            
     override this.Child = 
         let control = lintOptionsPageControl.Value
         control :> UIElement
