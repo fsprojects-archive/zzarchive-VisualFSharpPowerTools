@@ -1,8 +1,10 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
 open System
+open System.Diagnostics
 open System.IO
 open FSharpLint.Framework.Configuration
+open IgnoreFiles
 open Management
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Shell
@@ -99,3 +101,54 @@ module LintUtils =
         match getConfig loadedConfigs (normalisePath directory) with
         | Some(config) -> config
         | None -> defaultConfiguration
+
+    let private settingFromObject (settingObj:obj) = 
+        match settingObj with
+        | :? BoolViewModel as x -> 
+            match x.Name with
+            | "IncludeMatchStatements" -> Some(x.Name, IncludeMatchStatements(x.IsChecked))
+            | "OneSpaceAllowedAfterOperator" -> Some(x.Name, OneSpaceAllowedAfterOperator(x.IsChecked))
+            | "IgnoreBlankLines" -> Some(x.Name, IgnoreBlankLines(x.IsChecked))
+            | _ -> None
+        | :? IntViewModel as x -> 
+            match x.Name with
+            | "Lines" -> Some(x.Name, Lines(x.Value))
+            | "Depth" -> Some(x.Name, Depth(x.Value))
+            | "MaxItems" -> Some(x.Name, MaxItems(x.Value))
+            | "Length" -> Some(x.Name, Length(x.Value))
+            | "MaxCyclomaticComplexity" -> Some(x.Name, MaxCyclomaticComplexity(x.Value))
+            | "NumberOfSpacesAllowed" -> Some(x.Name, NumberOfSpacesAllowed(x.Value))
+            | _ -> None
+        | :? AccessViewModel as x -> Some("Access", Access(x.Value))
+        | _ -> None
+
+    let private settingsFromRuleViewModel (viewModel:RuleViewModel) =
+        let settings = 
+            [ for settingObj in viewModel.Settings do 
+                match settingFromObject settingObj with 
+                | Some(setting) -> yield setting 
+                | None -> Debug.Assert(false, "Unknown lint setting.") ]
+
+        ("Enabled", Enabled(viewModel.IsChecked))::settings |> Map.ofList
+
+    let private ruleViewModelToRule (viewModel:RuleViewModel) =
+        (viewModel.Name, { Rule.Settings = settingsFromRuleViewModel viewModel })
+
+    let private ruleViewModelToAnalyser (viewModel:RuleViewModel) =
+        let analyser =
+            { Settings = settingsFromRuleViewModel viewModel
+              Rules = viewModel.Rules |> Seq.map ruleViewModelToRule |> Map.ofSeq }
+
+        (viewModel.Name, analyser)
+
+    let viewModelToConfig (viewModel:OptionsViewModel) =
+        { UseTypeChecker = None
+          IgnoreFiles = 
+            { Update = IgnoreFilesUpdate.Overwrite
+              Files = []
+              Content = viewModel.IgnoreFiles.IgnoreFiles 
+                |> String.concat Environment.NewLine } |> Some
+          Analysers = 
+            viewModel.Rules
+                |> Seq.map ruleViewModelToAnalyser
+                |> Map.ofSeq }
