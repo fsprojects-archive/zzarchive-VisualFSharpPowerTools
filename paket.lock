@@ -8,7 +8,7 @@ NUGET
     Foq (1.7.1)
     FsCheck (2.0.5)
       FSharp.Core (>= 3.1.2.5)
-    FSharp.Compiler.Service (1.4.0.1)
+    FSharp.Compiler.Service (1.4.0.4)
     FSharp.Core (3.1.2.5)
     FSharp.Formatting (2.10.0)
       FSharp.Compiler.Service (>= 0.0.87)
