@@ -173,7 +173,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
             Some (createProjectProvider project :> IProjectProvider)
         new ProjectProvider(project, getProjectProvider, (fun _ -> ()), id)
 
-    let generateFile (project: Project) =
+    let generateReferenceFiles (project: Project) =
         Option.ofNull project
         |> Option.iter (fun project ->
             let loadRefsFileName = "load-references.fsx"
@@ -187,30 +187,28 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
             let content = generateLoadScriptContent(project, projectProvider, loadRefsFileName)
             addFileToActiveProject(project, "load-project.fsx", content))
 
-    let generateReferencesForFsi() =
+    let generateFsiReferences() =
         getActiveProject()
         |> Option.iter (fun project ->
             // Generate script files
             if isFSharpProject project then
-                generateFile project)        
+                generateReferenceFiles project)        
 
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildDoneEventHandler (fun _ _ ->
             Logging.logInfo "Checking projects after build done..."
-            dte2.Solution.Projects
-            |> Seq.cast<Project>
+            let dte = dte2 :?> DTE
+            listFSharpProjectsInSolution dte
             |> Seq.iter (fun project ->
-                if isFSharpProject project then
-                    Logging.logInfo "Checking F# project '%s'..." project.Name
-                    if containsReferenceScript project then
-                        Logging.logInfo "Re-generating reference scripts for '%s'..." project.Name
-                        generateFile project))
+                if containsReferenceScript project then
+                    Logging.logInfo "Re-generating reference scripts for '%s'..." project.Name
+                    generateReferenceFiles project))
 
     let events = dte2.Events.BuildEvents
     do events.add_OnBuildDone onBuildDoneHandler
 
     member __.SetupCommands() =
         let menuCommandID = CommandID(Constants.guidGenerateReferencesForFsiCmdSet, int Constants.cmdidGenerateReferencesForFsi)
-        let menuCommand = OleMenuCommand((fun _ _ -> generateReferencesForFsi()), menuCommandID)
+        let menuCommand = OleMenuCommand((fun _ _ -> generateFsiReferences()), menuCommandID)
         menuCommand.BeforeQueryStatus.Add (fun _ -> 
             let visibility = getActiveProject() |> Option.map isFSharpProject |> Option.getOrElse false
             menuCommand.Visible <- visibility)
