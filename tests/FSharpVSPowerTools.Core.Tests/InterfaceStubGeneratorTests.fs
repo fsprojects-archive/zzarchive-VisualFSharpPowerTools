@@ -372,13 +372,14 @@ member x.ToXml() = raise (System.NotImplementedException())
 
 open System
 open FsCheck
+open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
 
 type Args = Args of string list
 
 let allUnderscores (arg: string) = arg.ToCharArray() |> Array.forall (fun c -> c = '_')
 
 let keywords = 
-    Keywords.keywordNames
+    KeywordNames
     |> List.filter (not << allUnderscores)
 
 type Generators =
