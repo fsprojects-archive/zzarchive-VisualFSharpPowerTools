@@ -90,7 +90,7 @@ module Lexer =
         let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
     
         let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) (token: FSharpTokenInfo) =
-            match token.Tag with
+            if token.Tag = FSharpTokenTag.
             | 90 -> GenericTypeParameterPrefix
             | 185 ->
                  // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.

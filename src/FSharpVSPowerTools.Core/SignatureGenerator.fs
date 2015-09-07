@@ -8,6 +8,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.PrettyNaming
 open System.IO
 open System.Text.RegularExpressions
+open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
 
 type OpenDeclaration = string
 type XmlDocSig = string
@@ -191,7 +192,7 @@ let private isStaticallyResolved (param: FSharpGenericParameter) =
     param.Constraints
     |> Seq.exists (fun c -> c.IsMemberConstraint)
 
-let keywordTable = Set Keywords.keywordNames
+let keywordTable = Set KeywordNames
 
 let QuoteIdentifierIfNeeded (s : string) : string =
         if not (String.forall IsIdentifierPartCharacter s)              // if it has funky chars

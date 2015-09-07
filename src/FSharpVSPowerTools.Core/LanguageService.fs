@@ -106,7 +106,7 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
         asyncMaybe {
             match infoOpt with
             | Some (checkResults, _) -> 
-                let tokenTag = 188
+                let tokenTag = FSharpTokenTag.IDENT
                 return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
             | None -> return! None
         }

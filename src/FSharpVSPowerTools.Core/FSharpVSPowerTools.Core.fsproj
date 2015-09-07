@@ -67,7 +67,6 @@
     <Compile Include="DepthParser.fs" />
     <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="NavigateToIndex.fs" />
-    <Compile Include="Keywords.fs" />
     <Compile Include="IdentifierUtils.fs" />
     <Compile Include="OpenDeclarationsGetter.fs" />
     <Compile Include="SourceCodeClassifier.fs" />

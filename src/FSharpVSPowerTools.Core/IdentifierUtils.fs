@@ -3,6 +3,7 @@
 open System
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.PrettyNaming
+open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
 
 let DoubleBackTickDelimiter = "``"
 
@@ -28,7 +29,7 @@ let isOperator (s: string) =
 
 /// Encapsulates identifiers for rename operations if needed
 let encapsulateIdentifier symbolKind newName =
-    let isKeyWord = List.exists ((=) newName) Keywords.keywordNames
+    let isKeyWord = List.exists ((=) newName) KeywordNames
     let isAlreadyEncapsulated = newName.StartsWith DoubleBackTickDelimiter && newName.EndsWith DoubleBackTickDelimiter
 
     if isAlreadyEncapsulated then newName
