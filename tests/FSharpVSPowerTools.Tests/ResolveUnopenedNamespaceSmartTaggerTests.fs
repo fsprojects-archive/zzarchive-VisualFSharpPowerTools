@@ -143,16 +143,14 @@ TimeSpan
                     |> Seq.concat
                     |> Seq.tryFind (fun action -> action.DisplayText = "open System")
                     |> Option.get
-                testEventTrigger buffer.Changed "Timed out before buffer updated" timeout
-                    (fun () -> tagToInsert.Invoke())
-                    (fun () -> 
-                        buffer.CurrentSnapshot.GetText() |> assertEquivString """
+                tagToInsert.Invoke()
+                buffer.CurrentSnapshot.GetText() |> assertEquivString """
 #r "System.dll"
 
 open System
 
 TimeSpan
-"""))
+""" )
 
     [<Test>]
     let ``should insert namespace prefix at correct positions``() = 
@@ -172,10 +170,8 @@ DateTime
                     |> Seq.concat
                     |> Seq.tryFind (fun action -> action.DisplayText = "System.DateTime")
                     |> Option.get
-                testEventTrigger buffer.Changed "Timed out before buffer updated" timeout
-                    (fun () -> tagToInsert.Invoke())
-                    (fun () -> 
-                        buffer.CurrentSnapshot.GetText() |> assertEquivString """
+                tagToInsert.Invoke()
+                buffer.CurrentSnapshot.GetText() |> assertEquivString """
 #r "System.dll"
 System.DateTime
-"""))
+""" )
