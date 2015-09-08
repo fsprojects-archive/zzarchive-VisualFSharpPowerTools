@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
 open System
+open System.IO
 open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
@@ -33,27 +34,14 @@ type LintTagger(textDocument: ITextDocument,
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
             let! ast = parseFileResults.ParseTree
 
-            let config = 
-                match loadConfigurationForProject project.ProjectFileName with
-                | ConfigurationResult.Success(config) -> Some(config)
-                | ConfigurationResult.Failure(failure) -> 
-                    let failureMessage =
-                        match failure with
-                        | FailedToLoadConfig(message) -> message
-                        | RunTimeConfigError -> 
-                            "Failed when checking config at run time."
-
-                    Logging.logWarning 
-                        "Failed to load config for project %s. Failed because: %s" 
-                        project.ProjectFileName
-                        failureMessage
-
-                    None
+            let lintOptions = Setting.getLintOptions serviceProvider
+            lintOptions.UpdateDirectories()
+            let config = Path.GetDirectoryName doc.FullName |> lintOptions.GetConfigurationForDirectory
 
             let res = 
                 let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                 Lint.lintParsedFile
-                    { Lint.OptionalLintParameters.Default with Configuration = config }
+                    { Lint.OptionalLintParameters.Default with Configuration = Some config }
                     { Ast = ast
                       Source = source
                       TypeCheckResults = None

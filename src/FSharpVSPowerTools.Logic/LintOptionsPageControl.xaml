@@ -141,7 +141,7 @@
                                             <TextBox
                                                 Width="30"
                                                 VerticalAlignment="Center"
-                                                Text="{Binding Value}"
+                                                Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                 />
                                             <ContentPresenter 
                                                 Content="{Binding Name, Mode=OneTime}" 

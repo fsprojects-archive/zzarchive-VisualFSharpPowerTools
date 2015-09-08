@@ -119,7 +119,7 @@ module LintUtils =
             | "MaxCyclomaticComplexity" -> Some(x.Name, MaxCyclomaticComplexity(x.Value))
             | "NumberOfSpacesAllowed" -> Some(x.Name, NumberOfSpacesAllowed(x.Value))
             | _ -> None
-        | :? AccessViewModel as x -> Some("Access", Access(x.Value))
+        | :? AccessViewModel as x -> Some(x.Name, Access(x.Value))
         | _ -> None
 
     let private settingsFromRuleViewModel (viewModel:RuleViewModel) =
@@ -141,6 +141,16 @@ module LintUtils =
 
         (viewModel.Name, analyser)
 
+    let private ruleViewModelToHintAnalyser (viewModel:HintsViewModel) =
+        let analyser =
+            { Settings = 
+                Map.ofList 
+                    [("Enabled", Enabled(viewModel.IsEnabled))
+                     ("Hints", Hints(viewModel.Hints |> Seq.toList))]
+              Rules = Map.ofList [] }
+        
+        ("Hints", analyser)
+
     let viewModelToConfig (viewModel:OptionsViewModel) =
         { UseTypeChecker = None
           IgnoreFiles = 
@@ -151,4 +161,38 @@ module LintUtils =
           Analysers = 
             viewModel.Rules
                 |> Seq.map ruleViewModelToAnalyser
-                |> Map.ofSeq }
+                |> Seq.toList
+                |> (fun x -> (ruleViewModelToHintAnalyser viewModel.Hints)::x)
+                |> Map.ofList }
+
+    let saveViewModelToLoadedConfigs loadedConfigs (viewModel:OptionsViewModel) =
+        let config = viewModelToConfig viewModel
+        let directory = viewModel.SelectedFileName
+        let normalisedDir = normalisePath directory
+
+        let existing = getConfigForDirectory loadedConfigs directory
+
+        let existingPartial = 
+            match getPartialConfig loadedConfigs normalisedDir with
+            | Some(x) -> x
+            | None -> 
+                { UseTypeChecker = None
+                  IgnoreFiles = None
+                  Analysers = Map.ofList [] }
+
+        let updatedPartial = updateConfigMap config existing existingPartial
+
+        updateConfig loadedConfigs normalisedDir (Some updatedPartial)
+
+    let saveViewModel loadedConfigs (viewModel:OptionsViewModel) =
+        let directory = viewModel.SelectedFileName
+        let filepath = sprintf "%s%c%s" directory Path.DirectorySeparatorChar SettingsFileName
+    
+        match getPartialConfig loadedConfigs (normalisePath directory) with
+        | Some(config) -> 
+            try
+                config.ToXmlDocument().Save(filepath)
+            with e -> 
+                Logging.logExceptionWithContext(e, sprintf "Failed to save config file to %s" filepath)
+        | None -> ()
+        

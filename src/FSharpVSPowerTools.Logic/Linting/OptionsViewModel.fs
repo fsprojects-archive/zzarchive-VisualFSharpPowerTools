@@ -110,51 +110,46 @@ type AccessViewModel(name, initialValue) as this =
                 
 module SetupViewModels =
     let getSettingsViewModelsFromRule (settings:Map<_, _>) =
-        [
-            for setting in settings do
-                match setting.Value with
-                | Lines(value) -> 
-                    yield IntViewModel("Lines", value) :> obj
-                | Depth(value) -> 
-                    yield IntViewModel("Depth", value) :> obj
-                | MaxItems(value) -> 
-                    yield IntViewModel("MaxItems", value) :> obj
-                | Length(value) -> 
-                    yield IntViewModel("Length", value) :> obj
-                | MaxCyclomaticComplexity(value) -> 
-                    yield IntViewModel("MaxCyclomaticComplexity", value) :> obj
-                | IncludeMatchStatements(value) -> 
-                    yield BoolViewModel("IncludeMatchStatements", value) :> obj
-                | OneSpaceAllowedAfterOperator(value) -> 
-                    yield BoolViewModel("OneSpaceAllowedAfterOperator", value) :> obj
-                | NumberOfSpacesAllowed(value) -> 
-                    yield IntViewModel("NumberOfSpacesAllowed", value) :> obj
-                | IgnoreBlankLines(value) -> 
-                    yield BoolViewModel("IgnoreBlankLines", value) :> obj
-                | Access(value) -> 
-                    yield AccessViewModel("Access", value) :> obj
-                | Hints(_)
-                | Enabled(_) -> ()
-        ]
+        [ for setting in settings do
+            match setting.Value with
+            | Lines(value) -> 
+                yield IntViewModel("Lines", value) :> obj
+            | Depth(value) -> 
+                yield IntViewModel("Depth", value) :> obj
+            | MaxItems(value) -> 
+                yield IntViewModel("MaxItems", value) :> obj
+            | Length(value) -> 
+                yield IntViewModel("Length", value) :> obj
+            | MaxCyclomaticComplexity(value) -> 
+                yield IntViewModel("MaxCyclomaticComplexity", value) :> obj
+            | IncludeMatchStatements(value) -> 
+                yield BoolViewModel("IncludeMatchStatements", value) :> obj
+            | OneSpaceAllowedAfterOperator(value) -> 
+                yield BoolViewModel("OneSpaceAllowedAfterOperator", value) :> obj
+            | NumberOfSpacesAllowed(value) -> 
+                yield IntViewModel("NumberOfSpacesAllowed", value) :> obj
+            | IgnoreBlankLines(value) -> 
+                yield BoolViewModel("IgnoreBlankLines", value) :> obj
+            | Access(value) -> 
+                yield AccessViewModel("Access", value) :> obj
+            | Hints(_)
+            | Enabled(_) -> () ]
 
     let isRuleEnabled settings = Map.tryFind "Enabled" settings = Some(Enabled(true))
 
     let ruleViewModelsFromConfig config = 
-        seq { 
-            for analyser in config.Analysers |> Seq.filter (fun x -> x.Key <> "Hints") do 
-                let rules = seq { 
-                    for rule in analyser.Value.Rules do 
-                        yield RuleViewModel(rule.Key,
-                                            [],
-                                            getSettingsViewModelsFromRule rule.Value.Settings,
-                                            isRuleEnabled rule.Value.Settings) 
-                }
+        [ for analyser in config.Analysers |> Seq.filter (fun x -> x.Key <> "Hints") do
+            let rules = [
+                for rule in analyser.Value.Rules do 
+                    yield RuleViewModel(rule.Key,
+                                        [],
+                                        getSettingsViewModelsFromRule rule.Value.Settings,
+                                        isRuleEnabled rule.Value.Settings) ]
 
-                yield RuleViewModel(analyser.Key, 
-                                    rules, 
-                                    getSettingsViewModelsFromRule analyser.Value.Settings,
-                                    isRuleEnabled analyser.Value.Settings) 
-        }
+            yield RuleViewModel(analyser.Key, 
+                                rules, 
+                                getSettingsViewModelsFromRule analyser.Value.Settings,
+                                isRuleEnabled analyser.Value.Settings) ]
 
 type IgnoreFilesModel(config) as this =
     inherit ViewModelBase()

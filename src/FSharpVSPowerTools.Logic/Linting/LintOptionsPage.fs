@@ -22,18 +22,25 @@ type LintOptionsPage() =
     let lintOptionsPageControl = lazy LintOptionsControlProvider()
 
     interface ILintOptions with
-        member this.UpdateDirectories(_) =
-            ()
+        member this.UpdateDirectories() =
+            loadedConfigs <- updateLoadedConfigs loadedConfigs
 
         member this.GetConfigurationForDirectory(dir) =
             getConfigForDirectory loadedConfigs dir
             
     override this.OnApply(_) = 
-        // TODO: Save updates to configuration
-        ()
+        match lintOptionsPageControl.Value.DataContext with
+        | :? LintViewModel as viewModel ->
+            match viewModel.ViewModel with
+            | Some(optionsViewModel) -> 
+                loadedConfigs <- saveViewModelToLoadedConfigs loadedConfigs optionsViewModel
+                saveViewModel loadedConfigs optionsViewModel
+            | None -> ()
+        | _ -> ()
 
     override this.OnActivate(_) = 
         loadedConfigs <- updateLoadedConfigs loadedConfigs
+        loadedConfigs <- refresh tryLoadConfig loadedConfigs
 
         let lintOptions =
             match getInitialPath loadedConfigs with

@@ -51,7 +51,7 @@ type IGlobalOptions =
     abstract DiagnosticMode: bool with get, set
 
 type ILintOptions =
-    abstract UpdateDirectories: System.Collections.Generic.IEnumerable<string> -> unit
+    abstract UpdateDirectories: unit -> unit
     abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
 
 [<AutoOpen>]

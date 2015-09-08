@@ -233,18 +233,18 @@
     <Compile Include="FsiReferenceCommand.fs">
       <Link>Reference/FsiReferenceCommand.fs</Link>
     </Compile>
-    <Compile Include="LintTagger.fs">
-      <Link>Linting/LintTagger.fs</Link>
-    </Compile>
-    <Compile Include="LintQuickInfoSource.fs">
-      <Link>Linting/LintQuickInfoSource.fs</Link>
-    </Compile>
     <Compile Include="Linting\FileViewModel.fs" />
     <Compile Include="Linting\RuleViewModel.fs" />
     <Compile Include="Linting\OptionsViewModel.fs" />
     <Compile Include="Linting\LintUtils.fs" />
     <Compile Include="Linting\LintOptionsPageControl.xaml.fs" />
     <Compile Include="Linting\LintOptionsPage.fs" />
+    <Compile Include="LintTagger.fs">
+      <Link>Linting/LintTagger.fs</Link>
+    </Compile>
+    <Compile Include="LintQuickInfoSource.fs">
+      <Link>Linting/LintQuickInfoSource.fs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
