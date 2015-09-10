@@ -35,6 +35,8 @@ type ICodeGenerationService<'Project, 'Pos, 'Range> =
 
 [<AutoOpen>]
 module internal Utils =
+    open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
+
     type ColumnIndentedTextWriter() =
         let stringWriter = new StringWriter()
         let indentWriter = new IndentedTextWriter(stringWriter, " ")
@@ -124,7 +126,7 @@ module internal Utils =
     /// Represent environment where a captured identifier should be renamed
     type NamesWithIndices = Map<string, Set<int>>
 
-    let keywordSet = set Microsoft.FSharp.Compiler.Lexhelp.Keywords.keywordNames
+    let keywordSet = set KeywordNames
 
     /// Rename a given argument if the identifier has been used
     let normalizeArgName (namesWithIndices: NamesWithIndices) nm =

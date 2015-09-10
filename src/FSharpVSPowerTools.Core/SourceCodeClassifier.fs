@@ -148,13 +148,12 @@ module private OperatorCategorizer =
                     tokens
                     // pick only =, :> and :?> operators
                     |> Seq.choose (fun t -> 
-                        match Parser.tokenTagToTokenId t.Tag with 
-                        | Parser.TOKEN_EQUALS 
-                        | Parser.TOKEN_COLON_GREATER
-                        | Parser.TOKEN_COLON_QMARK_GREATER 
-                        | Parser.TOKEN_COLON_QMARK -> 
-                            Some (t.LeftColumn, t.RightColumn + 1)
-                        | _ -> None)
+                        if t.Tag = FSharpTokenTag.EQUALS 
+                           || t.Tag = FSharpTokenTag.COLON_GREATER
+                           || t.Tag = FSharpTokenTag.COLON_QMARK_GREATER 
+                           || t.Tag = FSharpTokenTag.COLON_QMARK 
+                        then Some (t.LeftColumn, t.RightColumn + 1)
+                        else None)
                     // pick tokens which are not overlapped with any symbols
                     |> Seq.filter (fun (lCol, rCol) ->
                         match spansByLine |> Map.tryFind (line + 1) with
