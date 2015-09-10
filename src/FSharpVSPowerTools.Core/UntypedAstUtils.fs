@@ -443,7 +443,15 @@ let getQuatationRanges ast =
 
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
     and visitBindindgs = List.iter visitBinding
-    and visitMatch (SynMatchClause.Clause (_, _, expr, _, _)) = visitExpr expr
+
+    and visitPattern = function
+        | SynPat.QuoteExpr (expr, _) -> visitExpr expr
+        | _ -> ()
+
+    and visitMatch (SynMatchClause.Clause (pat, _, expr, _, _)) = 
+        visitPattern pat
+        visitExpr expr
+
     and visitMatches = List.iter visitMatch
     
     let visitMember = function
