@@ -708,6 +708,21 @@ async {
        ]
 
 [<Test>]
+let ``quotation in pattern matching``() = 
+    """
+let _ = 
+    match obj() with
+    | <@ 1 @> -> <@@ 2 @@>
+    | _ -> <@@ () @@>
+let _ =
+    match None with
+    | Some <@ 1 @> -> ()
+    | _ -> ()
+"""
+    => [ 4, [ Cat.Quotation, 6, 13; Cat.Quotation, 17, 26 ]
+         8, [ Cat.Quotation, 11, 18 ]]
+
+[<Test>]
 let ``tuple alias``() = 
     """
 type Tuple = int * string
