@@ -445,7 +445,20 @@ let getQuatationRanges ast =
     and visitBindindgs = List.iter visitBinding
 
     and visitPattern = function
-        | SynPat.QuoteExpr (expr, _) -> visitExpr expr
+        | SynPat.QuoteExpr(expr, _) -> visitExpr expr
+        | SynPat.Named(pat, _, _, _, _) -> visitPattern pat
+        | SynPat.Typed(pat, _, _) -> visitPattern pat
+        | SynPat.Or(pat1, pat2, _) -> visitPattern pat1; visitPattern pat2
+        | SynPat.Ands(pats, _) -> List.iter visitPattern pats
+        | SynPat.LongIdent(_, _, _, ctorArgs, _, _) -> 
+            match ctorArgs with
+            | SynConstructorArgs.Pats pats -> List.iter visitPattern pats
+            | SynConstructorArgs.NamePatPairs(xs, _) -> 
+                xs |> List.map snd |> List.iter visitPattern
+        | SynPat.Tuple(pats, _) -> List.iter visitPattern pats
+        | SynPat.Paren(pat, _) -> visitPattern pat
+        | SynPat.ArrayOrList(_, pats, _) -> List.iter visitPattern pats
+        | SynPat.Record(xs, _) -> xs |> List.map snd |> List.iter visitPattern
         | _ -> ()
 
     and visitMatch (SynMatchClause.Clause (pat, _, expr, _, _)) = 

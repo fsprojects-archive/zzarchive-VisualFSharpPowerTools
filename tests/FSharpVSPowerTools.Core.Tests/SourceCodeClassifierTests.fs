@@ -710,11 +710,17 @@ async {
 [<Test>]
 let ``quotation in pattern matching``() = 
     """
-match obj() with
-| <@ 1 @> -> <@@ 2 @@>
-| _ -> <@@ () @@>
+let _ = 
+    match obj() with
+    | <@ 1 @> -> <@@ 2 @@>
+    | _ -> <@@ () @@>
+let _ =
+    match None with
+    | Some <@ 1 @> -> ()
+    | _ -> ()
 """
-    => [ 3, [ Cat.Quotation, 2, 9; Cat.Quotation, 13, 22 ]]
+    => [ 4, [ Cat.Quotation, 6, 13; Cat.Quotation, 17, 26 ]
+         8, [ Cat.Quotation, 11, 18 ]]
 
 [<Test>]
 let ``tuple alias``() = 
