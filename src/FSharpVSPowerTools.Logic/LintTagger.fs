@@ -10,6 +10,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
+open FSharpLint.Framework.Configuration
 open Microsoft.FSharp.Compiler
 open ConfigurationManagement
 
@@ -38,35 +39,46 @@ type LintTagger(textDocument: ITextDocument,
             lintOptions.UpdateDirectories()
             let config = Path.GetDirectoryName doc.FullName |> lintOptions.GetConfigurationForDirectory
 
-            let res = 
-                let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
-                Lint.lintParsedFile
-                    { Lint.OptionalLintParameters.Default with Configuration = Some config }
-                    { Ast = ast
-                      Source = source
-                      TypeCheckResults = None
-                      FSharpVersion = version }
-                    doc.FullName
+            let shouldFileBeIgnored =
+                match config.IgnoreFiles with
+                | Some(ignoreFiles) ->
+                    IgnoreFiles.shouldFileBeIgnored
+                        ignoreFiles.Files
+                        textDocument.FilePath
+                | None -> false
 
-            return
-                match res with
-                | LintResult.Success warnings ->
-                    warnings 
-                    |> Seq.choose (fun warn ->
-                        let r = warn.Range
-                        let endCol =
-                            if r.StartLine = r.EndLine then
-                                min r.EndColumn (r.StartColumn + 2)
-                            else r.StartColumn + 2
-                        let range =
-                            Range.mkRange "" 
-                                (Range.mkPos r.StartLine r.StartColumn)
-                                (Range.mkPos r.StartLine endCol)
+            if not shouldFileBeIgnored then
+                let res = 
+                    let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
+                    Lint.lintParsedFile
+                        { Lint.OptionalLintParameters.Default with Configuration = Some config }
+                        { Ast = ast
+                          Source = source
+                          TypeCheckResults = None
+                          FSharpVersion = version }
+                        doc.FullName
 
-                        fromFSharpRange buffer.CurrentSnapshot range
-                        |> Option.map (fun span -> warn, span))
-                    |> Seq.toList
-                | LintResult.Failure _ -> []
+                return
+                    match res with
+                    | LintResult.Success warnings ->
+                        warnings 
+                        |> Seq.choose (fun warn ->
+                            let r = warn.Range
+                            let endCol =
+                                if r.StartLine = r.EndLine then
+                                    min r.EndColumn (r.StartColumn + 2)
+                                else r.StartColumn + 2
+                            let range =
+                                Range.mkRange "" 
+                                    (Range.mkPos r.StartLine r.StartColumn)
+                                    (Range.mkPos r.StartLine endCol)
+
+                            fromFSharpRange buffer.CurrentSnapshot range
+                            |> Option.map (fun span -> warn, span))
+                        |> Seq.toList
+                    | LintResult.Failure _ -> []
+                else
+                    return []
         }
         |> Async.bind (fun spans -> 
             async {

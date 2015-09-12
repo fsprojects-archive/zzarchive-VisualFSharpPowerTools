@@ -246,7 +246,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock Text="{Binding}" />
+                                        <TextBlock Text="{Binding Hint}" />
 
                                         <Button Grid.Column="1" Content="Remove" FontSize="10" 
                                                 CommandParameter="{Binding}"

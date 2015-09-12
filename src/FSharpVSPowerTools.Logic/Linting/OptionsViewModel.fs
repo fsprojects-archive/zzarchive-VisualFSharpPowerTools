@@ -58,7 +58,9 @@ type HintsViewModel(config) as this =
     let hints =
         hintSettings 
             |> Seq.tryPick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
-            |> (function | Some(x) -> ObservableCollection<_>(x) | None -> ObservableCollection<_>())
+            |> (function 
+                | Some(hints) -> ObservableCollection<_>(hints) 
+                | None -> ObservableCollection<_>())
 
     let isEnabled = hintSettings |> Seq.exists (fun x -> x = Some(Enabled(true)))
 
@@ -74,8 +76,8 @@ type HintsViewModel(config) as this =
         this.Factory.CommandSync(fun _ -> 
             if String.IsNullOrEmpty this.NewHint |> not then
                 match CharParsers.run HintParser.phint this.NewHint with
-                | CharParsers.Success(_) -> 
-                    hints.Add(this.NewHint)
+                | CharParsers.Success(parsedHint, _, _) -> 
+                    hints.Add({ Hint = this.NewHint; ParsedHint = parsedHint })
                     this.NewHint <- ""
                     this.SelectedHintIndex <- hints.Count - 1
                 | CharParsers.Failure(_) -> ())
@@ -159,7 +161,7 @@ type IgnoreFilesModel(config) as this =
             match config.IgnoreFiles with
             | Some x -> 
                 x.Content 
-                |> String.split StringSplitOptions.RemoveEmptyEntries [| Environment.NewLine |]
+                |> String.split StringSplitOptions.RemoveEmptyEntries [| "\n" |]
                 |> Array.map String.trim
             | None -> [||])
 
