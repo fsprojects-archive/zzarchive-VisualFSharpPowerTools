@@ -3,8 +3,8 @@ NUGET
   specs:
     Expression.Blend.Sdk (1.0.2)
     FAKE (4.0.3)
-    Fantomas (1.10.0)
-      FSharp.Compiler.Service (>= 1.4.0.1)
+    Fantomas (1.11.0)
+      FSharp.Compiler.Service (>= 1.4.0.5)
     Foq (1.7.1)
     FsCheck (2.0.5)
       FSharp.Core (>= 3.1.2.5)
