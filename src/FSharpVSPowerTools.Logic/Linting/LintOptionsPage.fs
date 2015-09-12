@@ -14,7 +14,7 @@ open Management
 open LintUtils
 
 [<Guid("f0bb4785-e75a-485f-86e8-e382dd5934a4")>]
-type LintOptionsPage() =
+type LintOptionsPage(?dte:EnvDTE.DTE) =
     inherit UIElementDialogPage()
 
     let mutable loadedConfigs = LoadedConfigs.Empty
@@ -23,10 +23,15 @@ type LintOptionsPage() =
 
     interface ILintOptions with
         member this.UpdateDirectories() =
-            loadedConfigs <- updateLoadedConfigs loadedConfigs
+            loadedConfigs <- updateLoadedConfigs (this.GetDte()) loadedConfigs
 
         member this.GetConfigurationForDirectory(dir) =
             getConfigForDirectory loadedConfigs dir
+
+    member private this.GetDte() =
+        match dte with
+        | Some(dte) -> dte
+        | None -> this.GetService(typeof<EnvDTE.DTE>) :?> EnvDTE.DTE
             
     override this.OnApply(_) = 
         match lintOptionsPageControl.Value.DataContext with
@@ -39,11 +44,13 @@ type LintOptionsPage() =
         | _ -> ()
 
     override this.OnActivate(_) = 
-        loadedConfigs <- updateLoadedConfigs loadedConfigs
+        let dte = this.GetDte()
+
+        loadedConfigs <- updateLoadedConfigs dte loadedConfigs
         loadedConfigs <- refresh tryLoadConfig loadedConfigs
 
         let lintOptions =
-            match getInitialPath loadedConfigs with
+            match getInitialPath dte loadedConfigs with
             | Some(path) -> 
                 OptionsViewModel(
                     getConfigForDirectory loadedConfigs,

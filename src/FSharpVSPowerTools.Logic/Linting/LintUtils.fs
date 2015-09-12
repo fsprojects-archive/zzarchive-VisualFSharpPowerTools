@@ -11,17 +11,15 @@ open Microsoft.VisualStudio.Shell
 
 module LintUtils =
 
-    let private dte = lazy (Package.GetGlobalService(typeof<EnvDTE.DTE>) :?> EnvDTE.DTE)
-
-    let getProjectPaths () =
-        [ for project in dte.Value.Solution.Projects do 
+    let getProjectPaths (dte:EnvDTE.DTE) =
+        [ for project in dte.Solution.Projects do 
             let projectFilePath = project.FullName
             if (String.IsNullOrEmpty >> not) projectFilePath then 
                 let projectDirectoryPath = Path.GetDirectoryName projectFilePath
                 yield normalisePath projectDirectoryPath ]
 
-    let getSolutionPath () =
-        let solutionFilePath = dte.Value.Solution.FullName
+    let getSolutionPath (dte:EnvDTE.DTE) =
+        let solutionFilePath = dte.Solution.FullName
         if (String.IsNullOrEmpty >> not) solutionFilePath then 
             let solutionDirectoryPath = Path.GetDirectoryName solutionFilePath
             Some(normalisePath solutionDirectoryPath)
@@ -47,11 +45,11 @@ module LintUtils =
         else
             None
 
-    let updateLoadedConfigs loadedConfigs =
-        updatePaths tryLoadConfig loadedConfigs (getProjectPaths())
+    let updateLoadedConfigs dte loadedConfigs =
+        updatePaths tryLoadConfig loadedConfigs (getProjectPaths dte)
 
-    let getInitialLoadedConfigs () =
-        updateLoadedConfigs LoadedConfigs.Empty
+    let getInitialLoadedConfigs dte =
+        updateLoadedConfigs dte LoadedConfigs.Empty
 
     let private directorySeparator = Path.DirectorySeparatorChar.ToString()
 
@@ -82,8 +80,8 @@ module LintUtils =
                                     hasConfig)
             | _ -> () ]
                     
-    let getInitialPath loadedConfigs =
-        match getSolutionPath() with
+    let getInitialPath dte loadedConfigs =
+        match getSolutionPath dte with
         | Some(solutionPath) ->
             let normalisedSolutionPath = fromNormalisedPath solutionPath
             let commonToAllProjects = commonPath loadedConfigs solutionPath
@@ -92,7 +90,7 @@ module LintUtils =
             | Some(x) -> Some(fromNormalisedPath x)
             | None -> Some(normalisedSolutionPath)
         | None ->
-            match getProjectPaths() with
+            match getProjectPaths dte with
             | firstProject::_ ->
                 Some(fromNormalisedPath firstProject)
             | [] -> None
