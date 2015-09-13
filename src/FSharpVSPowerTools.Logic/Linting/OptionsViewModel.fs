@@ -196,7 +196,9 @@ type IgnoreFilesModel(config) as this =
 type OptionsViewModel(getConfigForDirectory, files, selectedFile:FileViewModel) as this =
     inherit ViewModelBase()
 
-    let config = getConfigForDirectory (selectedFile.GetDirectory())
+    let selectedDirectory = selectedFile.GetDirectory()
+
+    let config = getConfigForDirectory selectedDirectory
 
     let hints = HintsViewModel(config)
     let ignoreFiles = IgnoreFilesModel(config)
@@ -204,7 +206,7 @@ type OptionsViewModel(getConfigForDirectory, files, selectedFile:FileViewModel) 
     
     let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, None)
 
-    let currentFilePath = this.Factory.Backing(<@ this.CurrentFilePath @>, selectedFile.GetDirectory())
+    let currentFilePath = this.Factory.Backing(<@ this.CurrentFilePath @>, selectedDirectory)
     
     let selectedFile = this.Factory.Backing(<@ this.SelectedFile @>, selectedFile)
 
@@ -231,7 +233,7 @@ type OptionsViewModel(getConfigForDirectory, files, selectedFile:FileViewModel) 
 
     member __.GetConfigForDirectory = getConfigForDirectory
 
-type LintViewModel(viewmodel:OptionsViewModel option) as this =
+type LintViewModel(viewmodel:OptionsViewModel option, onConfigChanged) as this =
     inherit ViewModelBase()
     
     let viewmodel = this.Factory.Backing(<@ this.ViewModel @>, viewmodel)
@@ -244,6 +246,8 @@ type LintViewModel(viewmodel:OptionsViewModel option) as this =
         let execute () =
             match viewmodel.Value with
             | Some(optionsViewModel) -> 
+                onConfigChanged this
+
                 viewmodel.Value <-
                     OptionsViewModel(
                         optionsViewModel.GetConfigForDirectory,

@@ -22,6 +22,13 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
 
     let lintOptionsPageControl = lazy LintOptionsControlProvider()
 
+    let saveViewModel (viewModel:LintViewModel) =
+        match viewModel.ViewModel with
+        | Some(optionsViewModel) -> 
+            loadedConfigs <- saveViewModelToLoadedConfigs loadedConfigs optionsViewModel
+            saveViewModel loadedConfigs optionsViewModel
+        | None -> ()
+
     new (dte) = new LintOptionsPage(Some dte)
 
     new () = new LintOptionsPage(None)
@@ -40,12 +47,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
             
     override this.OnApply(_) = 
         match lintOptionsPageControl.Value.DataContext with
-        | :? LintViewModel as viewModel ->
-            match viewModel.ViewModel with
-            | Some(optionsViewModel) -> 
-                loadedConfigs <- saveViewModelToLoadedConfigs loadedConfigs optionsViewModel
-                saveViewModel loadedConfigs optionsViewModel
-            | None -> ()
+        | :? LintViewModel as viewModel -> saveViewModel viewModel
         | _ -> ()
 
     override this.OnActivate(_) = 
@@ -69,7 +71,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
                 match getFileViewModel files with
                 | Some(file) ->
                     OptionsViewModel(
-                        getConfigForDirectory loadedConfigs,
+                        (fun dir -> getConfigForDirectory loadedConfigs dir),
                         files,
                         file) |> Some
                 | None -> 
@@ -78,7 +80,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
             | None -> 
                 None
 
-        lintOptionsPageControl.Value.DataContext <- LintViewModel(lintOptions)
+        lintOptionsPageControl.Value.DataContext <- LintViewModel(lintOptions, saveViewModel)
             
     override this.Child = 
         let control = lintOptionsPageControl.Value
