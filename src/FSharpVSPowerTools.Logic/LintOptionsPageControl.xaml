@@ -53,7 +53,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <Label Margin="0,0,0,5" Content="{Binding SelectedFileName}" />
+            <Label Margin="0,0,0,5" Content="{Binding CurrentFilePath}" />
 
             <TabControl Grid.Row="1">
                 <TabItem Header="Rules">
@@ -281,13 +281,15 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Margin="5">Configuration Files Loaded For Open Solution</TextBlock>
                         <TreeView 
                             Grid.Row="1" 
                             Margin="5"
-                            ItemsSource="{Binding Files}">
+                            ItemsSource="{Binding Files}"
+                            Name="FilesTreeView">
                             <TreeView.ItemContainerStyle>
                                 <Style TargetType="{x:Type TreeViewItem}">
                                     <Setter Property="IsExpanded" Value="True" />
@@ -309,6 +311,9 @@
                                 </HierarchicalDataTemplate>
                             </TreeView.Resources>
                         </TreeView>
+
+                        <Button Command="{Binding ElementName=RootGrid, Path=DataContext.ChangeConfigCommand}" 
+                                Content="Switch To Selected Directory" Grid.Row="2" />
                     </Grid>
                 </TabItem>
             </TabControl>

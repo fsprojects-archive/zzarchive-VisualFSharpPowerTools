@@ -3,6 +3,7 @@
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Shell
 open System.ComponentModel
+open System.Diagnostics
 open System.IO
 open System.Runtime.InteropServices
 open System.Windows
@@ -14,12 +15,16 @@ open Management
 open LintUtils
 
 [<Guid("f0bb4785-e75a-485f-86e8-e382dd5934a4")>]
-type LintOptionsPage(?dte:EnvDTE.DTE) =
+type LintOptionsPage private (dte:EnvDTE.DTE option) =
     inherit UIElementDialogPage()
 
     let mutable loadedConfigs = LoadedConfigs.Empty
 
     let lintOptionsPageControl = lazy LintOptionsControlProvider()
+
+    new (dte) = new LintOptionsPage(Some dte)
+
+    new () = new LintOptionsPage(None)
 
     interface ILintOptions with
         member this.UpdateDirectories() =
@@ -51,12 +56,25 @@ type LintOptionsPage(?dte:EnvDTE.DTE) =
 
         let lintOptions =
             match getInitialPath dte loadedConfigs with
-            | Some(path) -> 
-                OptionsViewModel(
-                    getConfigForDirectory loadedConfigs,
-                    getFileHierarchy loadedConfigs, 
-                    [], 
-                    path) |> Some
+            | Some(path) ->
+                let files = getFileHierarchy loadedConfigs
+
+                let rec getFileViewModel (files:FileViewModel seq) =
+                    let getFile (file:FileViewModel) =
+                        if file.Path = path then Some(file) 
+                        else getFileViewModel file.Files
+
+                    Seq.tryPick getFile files
+
+                match getFileViewModel files with
+                | Some(file) ->
+                    OptionsViewModel(
+                        getConfigForDirectory loadedConfigs,
+                        files,
+                        file) |> Some
+                | None -> 
+                    Debug.Assert(false, "No file view model for the initial file found.")
+                    None
             | None -> 
                 None
 

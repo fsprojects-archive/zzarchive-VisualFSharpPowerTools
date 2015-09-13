@@ -193,10 +193,10 @@ type IgnoreFilesModel(config) as this =
         with get() = newIgnoreFile.Value
         and set(v) = newIgnoreFile.Value <- v
 
-type OptionsViewModel(getConfigForDirectory, files, fileNames:string seq, selectedFile:string) as this =
+type OptionsViewModel(getConfigForDirectory, files, selectedFile:FileViewModel) as this =
     inherit ViewModelBase()
 
-    let config = getConfigForDirectory selectedFile
+    let config = getConfigForDirectory (selectedFile.GetDirectory())
 
     let hints = HintsViewModel(config)
     let ignoreFiles = IgnoreFilesModel(config)
@@ -204,7 +204,9 @@ type OptionsViewModel(getConfigForDirectory, files, fileNames:string seq, select
     
     let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, None)
 
-    let selectedFilename = this.Factory.Backing(<@ this.SelectedFileName @>, selectedFile)
+    let currentFilePath = this.Factory.Backing(<@ this.CurrentFilePath @>, selectedFile.GetDirectory())
+    
+    let selectedFile = this.Factory.Backing(<@ this.SelectedFile @>, selectedFile)
 
     member __.SelectedRule 
         with get() = selectedRule.Value
@@ -213,11 +215,13 @@ type OptionsViewModel(getConfigForDirectory, files, fileNames:string seq, select
     member __.SelectedRuleChanged = 
         this.Factory.CommandSyncParam(fun p -> this.SelectedRule <- Some(p))
 
-    member __.SelectedFileName = selectedFilename.Value
+    member __.CurrentFilePath = currentFilePath.Value
     
     member __.Files = files
 
-    member __.FileNames = fileNames
+    member __.SelectedFile 
+        with get() = selectedFile.Value
+        and set(v) = selectedFile.Value <- v
     
     member __.Rules = rules
 
@@ -225,7 +229,26 @@ type OptionsViewModel(getConfigForDirectory, files, fileNames:string seq, select
 
     member __.IgnoreFiles = ignoreFiles
 
-type LintViewModel(viewmodel:OptionsViewModel option) =
-    member __.LoadedConfig = Option.isSome viewmodel
+    member __.GetConfigForDirectory = getConfigForDirectory
 
-    member __.ViewModel = viewmodel
+type LintViewModel(viewmodel:OptionsViewModel option) as this =
+    inherit ViewModelBase()
+    
+    let viewmodel = this.Factory.Backing(<@ this.ViewModel @>, viewmodel)
+
+    member __.LoadedConfig = Option.isSome viewmodel.Value
+
+    member __.ViewModel = viewmodel.Value
+
+    member this.ChangeConfigCommand = 
+        let execute () =
+            match viewmodel.Value with
+            | Some(optionsViewModel) -> 
+                viewmodel.Value <-
+                    OptionsViewModel(
+                        optionsViewModel.GetConfigForDirectory,
+                        optionsViewModel.Files,
+                        optionsViewModel.SelectedFile) |> Some
+            | None -> ()
+
+        this.Factory.CommandSync(execute)

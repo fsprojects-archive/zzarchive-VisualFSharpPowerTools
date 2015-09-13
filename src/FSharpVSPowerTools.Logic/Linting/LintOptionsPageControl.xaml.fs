@@ -29,6 +29,16 @@ type LintOptionsPageControl() =
                             viewModel.RemoveManyCommand.Execute(selectedItems)
                     | _ -> ()
                 | _ -> ())
+
+    let selectedFileChanged =
+        RoutedPropertyChangedEventHandler(fun control _ -> 
+            match control with
+            | :? TreeView as control ->
+                match control.DataContext, control.SelectedItem with
+                | (:? OptionsViewModel as viewModel), (:? FileViewModel as selected) ->
+                    viewModel.SelectedFile <- selected
+                | _ -> ()
+            | _ -> ())
     
     override this.OnLoaded control = 
         control.HintsListView.SelectionChanged.AddHandler(selectionChanged)
@@ -37,9 +47,13 @@ type LintOptionsPageControl() =
         control.IgnoreFilesListView.SelectionChanged.AddHandler(selectionChanged)
         control.HintsListView.KeyDown.AddHandler(onKeydown)
 
+        control.FilesTreeView.SelectedItemChanged.AddHandler(selectedFileChanged)
+
     override this.OnUnloaded control =
         control.HintsListView.SelectionChanged.RemoveHandler(selectionChanged)
         control.IgnoreFilesListView.KeyDown.RemoveHandler(onKeydown)
 
         control.IgnoreFilesListView.SelectionChanged.RemoveHandler(selectionChanged)
         control.HintsListView.KeyDown.RemoveHandler(onKeydown)
+
+        control.FilesTreeView.SelectedItemChanged.RemoveHandler(selectedFileChanged)

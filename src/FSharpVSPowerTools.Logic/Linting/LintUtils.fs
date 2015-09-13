@@ -53,8 +53,6 @@ module LintUtils =
 
     let private directorySeparator = Path.DirectorySeparatorChar.ToString()
 
-    let fromNormalisedPath = String.concat directorySeparator
-
     let rec private listStartsWith = function
     | (_, []) -> true
     | (x::list, y::startsWithList) when x = y ->
@@ -69,13 +67,14 @@ module LintUtils =
                 if List.length path = List.length currentPath + 1 && listStartsWith (path, currentPath) then
                     let lastSegment = Seq.last path + directorySeparator
                     let hasConfig = Option.isSome config
-                    yield FileViewModel(lastSegment, createFileViewModel path, hasConfig)]
+                    yield FileViewModel(lastSegment, path, createFileViewModel path, hasConfig)]
 
         [ for (path, config) in files do
             match path with
             | [root] -> 
                 let hasConfig = Option.isSome config
                 yield FileViewModel(root + directorySeparator, 
+                                    path,
                                     createFileViewModel path, 
                                     hasConfig)
             | _ -> () ]
@@ -83,16 +82,15 @@ module LintUtils =
     let getInitialPath dte loadedConfigs =
         match getSolutionPath dte with
         | Some(solutionPath) ->
-            let normalisedSolutionPath = fromNormalisedPath solutionPath
             let commonToAllProjects = commonPath loadedConfigs solutionPath
 
             match commonToAllProjects with
-            | Some(x) -> Some(fromNormalisedPath x)
-            | None -> Some(normalisedSolutionPath)
+            | Some(x) -> Some(x)
+            | None -> Some(solutionPath)
         | None ->
             match getProjectPaths dte with
             | firstProject::_ ->
-                Some(fromNormalisedPath firstProject)
+                Some(firstProject)
             | [] -> None
 
     let getConfigForDirectory loadedConfigs directory =
@@ -165,7 +163,7 @@ module LintUtils =
 
     let saveViewModelToLoadedConfigs loadedConfigs (viewModel:OptionsViewModel) =
         let config = viewModelToConfig viewModel
-        let directory = viewModel.SelectedFileName
+        let directory = viewModel.CurrentFilePath
         let normalisedDir = normalisePath directory
 
         let existing = getConfigForDirectory loadedConfigs directory
@@ -183,8 +181,8 @@ module LintUtils =
         updateConfig loadedConfigs normalisedDir (Some updatedPartial)
 
     let saveViewModel loadedConfigs (viewModel:OptionsViewModel) =
-        let directory = viewModel.SelectedFileName
-        let filepath = sprintf "%s%c%s" directory Path.DirectorySeparatorChar SettingsFileName
+        let directory = viewModel.CurrentFilePath
+        let filepath = Path.Combine(directory, SettingsFileName)
     
         match getPartialConfig loadedConfigs (normalisePath directory) with
         | Some(config) -> 
