@@ -653,3 +653,112 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
     |> Seq.concat
     |> Seq.map (fun ident -> ident.idText)
     |> String.concat "."  
+
+
+module HashDirectiveInfo =
+    
+    type IncludeDirective =
+        | ResolvedDirectory of string
+
+    type LoadDirective =
+        | ExistingFile of string
+        | UnresolvableFile of string * (* previous includes *) string array
+
+    [<NoComparison>]
+    type Directive =
+        | Include of IncludeDirective * range
+        | Load of LoadDirective * range
+
+    /// returns an array of LoadScriptResolutionEntries
+    /// based on #I and #load directives
+    let getIncludeAndLoadDirectives ast =
+        // the Load items are resolved using fallback resolution relying on previously parsed #I directives
+        // (this behaviour is undocumented in F# but it seems to be how it works).
+        
+        // list of #I directives so far (populated while encountering those in order)
+        let includesSoFar = new System.Collections.Generic.List<_>()
+        let pushInclude = includesSoFar.Add
+
+        // those might need to be abstracted away from real filesystem operations
+        let fileExists = System.IO.File.Exists
+        let directoryExists = System.IO.Directory.Exists
+        let isPathRooted = System.IO.Path.IsPathRooted
+        let getDirectoryOfFile filename = (new System.IO.FileInfo(filename)).Directory.FullName
+        let getRootedDirectory dirname = (new System.IO.DirectoryInfo(dirname)).FullName
+        let combinePaths p1 p2 = System.IO.Path.Combine(p1, p2)
+        let makeRootedDirectoryIfNecessary directory =
+            if not (isPathRooted directory) then
+                getRootedDirectory directory
+            else
+                directory
+
+        // separate function to reduce nesting one level
+        let parseDirectives modules file =
+            [|
+            let baseDirectory = getDirectoryOfFile file
+            for (SynModuleOrNamespace(_, _, declarations, _, _, _, _)) in modules do
+                for decl in declarations do
+                    match decl with
+                    | SynModuleDecl.HashDirective(ParsedHashDirective("I",[directory],range),_) ->
+                        let directory = makeRootedDirectoryIfNecessary directory
+
+                        if directoryExists directory then
+                            let includeDirective = ResolvedDirectory(directory)
+                            pushInclude includeDirective
+                            yield Include (includeDirective, range)
+
+                    | SynModuleDecl.HashDirective(ParsedHashDirective("load",files,range),_) ->
+                        for f in files do
+                            if isPathRooted f && fileExists f then
+
+                                // this is absolute reference to an existing script, easiest case
+                                yield Load (ExistingFile f, range)
+
+                            else
+
+                                // I'm not sure if the order is correct, first checking relative to file containing the #load directive
+                                // then checking for undocumented resolution using previously parsed #I directives
+                                let fileRelativeToCurrentFile = combinePaths baseDirectory f
+                                if fileExists fileRelativeToCurrentFile then
+
+                                    // this is existing file relative to current file
+                                    yield Load (ExistingFile fileRelativeToCurrentFile, range)
+
+                                else
+
+                                    // match first include which seemingly have the file found
+                                    let maybeDirectory =
+                                        includesSoFar 
+                                        |> Seq.tryFind (
+                                            function
+                                            | ResolvedDirectory d -> combinePaths d f |> fileExists
+                                            | _ -> false                                      
+                                        )
+                                    match maybeDirectory with
+                                    | None -> () // can't load this file even using any of the #I directives...
+                                    | Some (ResolvedDirectory d) ->
+                                        yield Load ((ExistingFile (combinePaths d f), range))
+
+                    | _ -> ()
+            |]
+
+        match ast with
+        | ParsedInput.ImplFile(ParsedImplFileInput(fn,_,_,_,_,modules,_)) -> parseDirectives modules fn
+        | _ -> [||]
+
+    /// returns the Some (complete file name of a resolved #load directive at position) or None
+    let getHashLoadDirectiveResolvedPathAtPosition (pos: pos) (ast: ParsedInput) : string option =
+        let l = pos.Line
+        let directive = 
+            getIncludeAndLoadDirectives ast
+            |> Array.tryFind (function
+                | Load(ExistingFile _, range) 
+                  // check the line is within the range 
+                  // (doesn't work when there are multiple files given to a single #load directive)
+                  when range.StartLine <= l && range.EndLine >= l 
+                    -> true
+                | _ -> false
+            )
+        match directive with
+        | Some ( Load( ExistingFile f, _) ) -> Some f
+        | _ -> None
