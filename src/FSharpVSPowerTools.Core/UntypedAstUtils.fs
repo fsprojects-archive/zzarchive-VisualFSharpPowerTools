@@ -686,9 +686,9 @@ module HashDirectiveInfo =
         let isPathRooted = Path.IsPathRooted
         let getDirectoryOfFile = Path.GetFullPathSafe >> Path.GetDirectoryName
         let getRootedDirectory = Path.GetFullPathSafe
-        let makeRootedDirectoryIfNecessary directory =
+        let makeRootedDirectoryIfNecessary baseDirectory directory =
             if not (isPathRooted directory) then
-                getRootedDirectory directory
+                getRootedDirectory (baseDirectory </> directory)
             else
                 directory
 
@@ -700,8 +700,8 @@ module HashDirectiveInfo =
                 for decl in declarations do
                     match decl with
                     | SynModuleDecl.HashDirective(ParsedHashDirective("I",[directory],range),_) ->
-                        let directory = makeRootedDirectoryIfNecessary directory
-
+                        let directory = makeRootedDirectoryIfNecessary (getDirectoryOfFile file) directory
+                        
                         if directoryExists directory then
                             let includeDirective = ResolvedDirectory(directory)
                             pushInclude includeDirective

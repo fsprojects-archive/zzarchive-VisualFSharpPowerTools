@@ -69,10 +69,14 @@
     <Compile Include="RecordStubGeneratorTests.fs" />
     <Compile Include="UnionPatternMatchCaseGeneratorTests.fs" />
     <Compile Include="GoToDefinitionTests.fs" />
+    <Compile Include="GoToDefinitionTests.LoadDirective.fs" />
     <Compile Include="UnopenedNamespacesResolverTests.fs" />
     <Compile Include="TaskListCommentExtractorTests.fs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="FSharp.Management">
+      <HintPath>..\..\packages\FSharp.Management\lib\net40\FSharp.Management.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
