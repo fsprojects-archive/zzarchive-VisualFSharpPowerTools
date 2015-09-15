@@ -656,13 +656,13 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
 
 
 module HashDirectiveInfo =
-    
+    open System.IO
     type IncludeDirective =
         | ResolvedDirectory of string
 
     type LoadDirective =
         | ExistingFile of string
-        | UnresolvableFile of string * (* previous includes *) string array
+        | UnresolvableFile of string * previousIncludes : string array
 
     [<NoComparison>]
     type Directive =
@@ -676,16 +676,16 @@ module HashDirectiveInfo =
         // (this behaviour is undocumented in F# but it seems to be how it works).
         
         // list of #I directives so far (populated while encountering those in order)
+        // TODO: replace by List.fold if possible
         let includesSoFar = new System.Collections.Generic.List<_>()
         let pushInclude = includesSoFar.Add
 
         // those might need to be abstracted away from real filesystem operations
-        let fileExists = System.IO.File.Exists
-        let directoryExists = System.IO.Directory.Exists
-        let isPathRooted = System.IO.Path.IsPathRooted
-        let getDirectoryOfFile filename = (new System.IO.FileInfo(filename)).Directory.FullName
-        let getRootedDirectory dirname = (new System.IO.DirectoryInfo(dirname)).FullName
-        let combinePaths p1 p2 = System.IO.Path.Combine(p1, p2)
+        let fileExists = File.Exists
+        let directoryExists = Directory.Exists
+        let isPathRooted = Path.IsPathRooted
+        let getDirectoryOfFile = Path.GetFullPathSafe >> Path.GetDirectoryName
+        let getRootedDirectory = Path.GetFullPathSafe
         let makeRootedDirectoryIfNecessary directory =
             if not (isPathRooted directory) then
                 getRootedDirectory directory
@@ -718,7 +718,7 @@ module HashDirectiveInfo =
 
                                 // I'm not sure if the order is correct, first checking relative to file containing the #load directive
                                 // then checking for undocumented resolution using previously parsed #I directives
-                                let fileRelativeToCurrentFile = combinePaths baseDirectory f
+                                let fileRelativeToCurrentFile = baseDirectory </> f
                                 if fileExists fileRelativeToCurrentFile then
 
                                     // this is existing file relative to current file
@@ -726,18 +726,18 @@ module HashDirectiveInfo =
 
                                 else
 
-                                    // match first include which seemingly have the file found
-                                    let maybeDirectory =
-                                        includesSoFar 
-                                        |> Seq.tryFind (
-                                            function
-                                            | ResolvedDirectory d -> combinePaths d f |> fileExists
-                                            | _ -> false                                      
+                                    // match file against first include which seemingly have it found
+                                    let maybeFile =
+                                        includesSoFar
+                                        |> Seq.tryPick (function
+                                            | (ResolvedDirectory d) ->
+                                                let filePath = d </> f
+                                                if fileExists filePath then Some filePath else None
                                         )
-                                    match maybeDirectory with
+                                    match maybeFile with
                                     | None -> () // can't load this file even using any of the #I directives...
-                                    | Some (ResolvedDirectory d) ->
-                                        yield Load ((ExistingFile (combinePaths d f), range))
+                                    | Some f ->
+                                        yield Load (ExistingFile f, range)
 
                     | _ -> ()
             |]
@@ -749,13 +749,13 @@ module HashDirectiveInfo =
     /// returns the Some (complete file name of a resolved #load directive at position) or None
     let getHashLoadDirectiveResolvedPathAtPosition (pos: pos) (ast: ParsedInput) : string option =
         let l = pos.Line
-        let directive = 
+        let directive =
             getIncludeAndLoadDirectives ast
             |> Array.tryFind (function
-                | Load(ExistingFile _, range) 
-                  // check the line is within the range 
+                | Load(ExistingFile _, range)
+                  // check the line is within the range
                   // (doesn't work when there are multiple files given to a single #load directive)
-                  when range.StartLine <= l && range.EndLine >= l 
+                  when range.StartLine <= l && range.EndLine >= l
                     -> true
                 | _ -> false
             )
