@@ -97,6 +97,8 @@
     <Compile Include="ImplementInterfaceSmartTaggerTests.fs" />
     <Compile Include="GoToDefinitionFilterCommandTests.fs" />
     <Compile Include="LintTaggerTests.fs" />
+    <None Include="Scripts\load-references.fsx" />
+    <None Include="Scripts\load-project.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />

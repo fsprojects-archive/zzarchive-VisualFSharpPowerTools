@@ -314,6 +314,18 @@ type VSLanguageService
                 return None
         }
 
+    member __.GetLoadDirectiveFileNameAtCursor (fileName, view: Microsoft.VisualStudio.Text.Editor.ITextView, project) =
+        async {
+            let source = view.TextBuffer.CurrentSnapshot.GetText()
+            let! parseResult = __.ParseFileInProject(fileName, source, project)
+            return maybe {
+                let! pos = view.posAtCaretPosition()
+                let! ast = parseResult.ParseTree
+                let! result = UntypedAstUtils.HashDirectiveInfo.getHashLoadDirectiveResolvedPathAtPosition pos ast
+                return result
+            }
+        }
+
     member __.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =
         async {
             let! opts = project.GetProjectCheckerOptions instance

@@ -87,6 +87,20 @@ type ITextBuffer with
         let span = SnapshotSpan(x.CurrentSnapshot, 0, x.CurrentSnapshot.Length)
         event.Trigger(sender, SnapshotSpanEventArgs(span))
 
+type ITextView with
+    member x.GetCaretPosition () =
+        maybe {
+          let! point = x.TextBuffer.GetSnapshotPoint x.Caret.Position
+          let line = point.Snapshot.GetLineNumberFromPosition point.Position
+          let col = point.Position - point.GetContainingLine().Start.Position
+          return (line, col)
+        }
+    member x.posAtCaretPosition () =
+        maybe {
+          let! line, col = x.GetCaretPosition()
+          return Microsoft.FSharp.Compiler.Range.mkPos (line+1) (col+1)
+        }
+
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Editor
