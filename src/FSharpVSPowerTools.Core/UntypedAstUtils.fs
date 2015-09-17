@@ -756,7 +756,7 @@ module HashDirectiveInfo =
             | Load(ExistingFile f, range) 
                 // check the line is within the range
                 // (doesn't work when there are multiple files given to a single #load directive)
-                when range.StartLine <= l && range.EndLine >= l
+                when rangeContainsPos range pos
                     -> Some f
             | _     -> None
         )
