@@ -1,4 +1,4 @@
-﻿module GoToDefinitionTests
+﻿module FSharpVSPowerTools.Core.Tests.GoToDefinition.LoadDirectiveTests
 
 open System.IO
 open Microsoft.FSharp.Compiler.Range
@@ -18,7 +18,7 @@ let canonicalizeFilename filename = Path.GetFullPathSafe filename //(new FileInf
 let getAst filename = 
     let contents = File.ReadAllText(filename)
 
-      // Get compiler options for the 'project' implied by a single script file
+    // Get compiler options for the 'project' implied by a single script file
     let projOptions = 
         checker.GetProjectOptionsFromScript(filename, contents)
         |> Async.RunSynchronously
@@ -41,6 +41,7 @@ let ``test1.fsx: verify parsed #load directives``() =
        [
        Some <| FileInfo(dataFolder.ParseLoadDirectives.includes.``a.fs``).FullName
        Some <| FileInfo(dataFolder.ParseLoadDirectives.includes.``b.fs``).FullName
+       Some <| FileInfo(dataFolder.ParseLoadDirectives.includes.``b.fs``).FullName
        ]
    
    let results =
@@ -49,6 +50,7 @@ let ``test1.fsx: verify parsed #load directives``() =
           | Load(ExistingFile(filename), _) -> Some ((new FileInfo(filename)).FullName)
           | _ -> None
        )
+       |> Seq.filter (Option.isSome)
        |> Seq.toList
    
    Assert.AreEqual(expectedMatches, results)
