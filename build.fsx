@@ -52,7 +52,7 @@ let msBuildVersionToTry = ["12.0";"14.0"]
 
 let maybeVersion =
     msBuildVersionToTry
-    |> Seq.map (fun v -> ProgramFilesX86 @@ (sprintf @"\MSbuild\%s\Bin\MSbuild.exe"))
+    |> Seq.map (fun v -> ProgramFilesX86 @@ (sprintf @"\MSbuild\%s\Bin\MSbuild.exe" v))
     |> Seq.tryFind File.Exists
     
 match maybeVersion with
