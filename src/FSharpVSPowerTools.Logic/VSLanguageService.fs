@@ -319,7 +319,7 @@ type VSLanguageService
             let source = view.TextBuffer.CurrentSnapshot.GetText()
             let! parseResult = __.ParseFileInProject(fileName, source, project)
             return maybe {
-                let! pos = view.posAtCaretPosition()
+                let! pos = view.PosAtCaretPosition()
                 let! ast = parseResult.ParseTree
                 let! result = UntypedAstUtils.HashDirectiveInfo.getHashLoadDirectiveResolvedPathAtPosition pos ast
                 return result

@@ -88,6 +88,8 @@ type ITextBuffer with
         event.Trigger(sender, SnapshotSpanEventArgs(span))
 
 type ITextView with
+    /// Return a simple zero-based (line, column) tuple from 
+    /// actual caret position in this ITextView
     member x.GetCaretPosition () =
         maybe {
           let! point = x.TextBuffer.GetSnapshotPoint x.Caret.Position
@@ -95,7 +97,11 @@ type ITextView with
           let col = point.Position - point.GetContainingLine().Start.Position
           return (line, col)
         }
-    member x.posAtCaretPosition () =
+
+    /// Return Microsoft.FSharp.Compiler.Range.pos from actual 
+    /// caret position in this ITextView taking care of off by 
+    /// 1 indexing between VS and FCS
+    member x.PosAtCaretPosition () =
         maybe {
           let! line, col = x.GetCaretPosition()
           return Microsoft.FSharp.Compiler.Range.mkPos (line+1) (col+1)
