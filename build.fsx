@@ -47,9 +47,6 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
-// Ensure to use MSBuild 12 for the main solution if it exists, otherwise use version 14
-let msBuildVersionToTry = ["12.0";"14.0"]
-
 // Default to MSBuild 12 if present
 let msBuildPath = (ProgramFilesX86 @@ @"\MSBuild\12.0\Bin\MSBuild.exe")
 if File.Exists msBuildPath then
