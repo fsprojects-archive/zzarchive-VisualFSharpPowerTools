@@ -2,8 +2,8 @@
 
 open System.IO
 open Microsoft.FSharp.Compiler.Range
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open NUnit.Framework
+open FSharpVSPowerTools
 open FSharpVSPowerTools.Pervasive
 open FSharpVSPowerTools.UntypedAstUtils.HashDirectiveInfo
 
@@ -11,20 +11,21 @@ open FSharpVSPowerTools.UntypedAstUtils.HashDirectiveInfo
 let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
 type dataFolder = FSharp.Management.FileSystem<dataFolderName>
 
-let checker = FSharpChecker.Create()
+let languageService = LanguageService()
+
 
 let canonicalizeFilename filename = Path.GetFullPathSafe filename //(new FileInfo(filename)).FullName
 
 let getAst filename = 
     let contents = File.ReadAllText(filename)
-
+    
     // Get compiler options for the 'project' implied by a single script file
     let projOptions = 
-        checker.GetProjectOptionsFromScript(filename, contents)
+        languageService.GetScriptCheckerOptions(filename, filename + ".fsproj", contents, FSharpCompilerVersion.FSharp_3_1)
         |> Async.RunSynchronously
 
     let parseFileResults = 
-        checker.ParseFileInProject(filename, contents, projOptions) 
+        languageService.ParseFileInProject(projOptions, filename, contents) 
         |> Async.RunSynchronously
 
     match parseFileResults.ParseTree with
@@ -53,7 +54,7 @@ let ``test1.fsx: verify parsed #load directives``() =
        |> Seq.filter (Option.isSome)
        |> Seq.toList
    
-   Assert.AreEqual(expectedMatches, results)
+   assertEqual expectedMatches results
 
 [<Test>]
 let ``test1.fsx: verify parsed position lookup of individual #load directives``() =
@@ -79,4 +80,4 @@ let ``test1.fsx: verify parsed position lookup of individual #load directives``(
        )
        |> Seq.toList
    
-   Assert.AreEqual(expectations, results)
+   assertEqual expectations results
