@@ -749,16 +749,14 @@ module HashDirectiveInfo =
     /// returns the Some (complete file name of a resolved #load directive at position) or None
     let getHashLoadDirectiveResolvedPathAtPosition (pos: pos) (ast: ParsedInput) : string option =
         let l = pos.Line
-        let directive =
-            getIncludeAndLoadDirectives ast
-            |> Array.tryFind (function
-                | Load(ExistingFile _, range)
-                  // check the line is within the range
-                  // (doesn't work when there are multiple files given to a single #load directive)
-                  when range.StartLine <= l && range.EndLine >= l
-                    -> true
-                | _ -> false
-            )
-        match directive with
-        | Some ( Load( ExistingFile f, _) ) -> Some f
-        | _ -> None
+
+        getIncludeAndLoadDirectives ast
+        |> Array.tryPick (
+            function
+            | Load(ExistingFile f, range) 
+                // check the line is within the range
+                // (doesn't work when there are multiple files given to a single #load directive)
+                when range.StartLine <= l && range.EndLine >= l
+                    -> Some f
+            | _     -> None
+        )
