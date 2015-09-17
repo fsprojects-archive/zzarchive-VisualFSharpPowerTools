@@ -50,14 +50,10 @@ let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 // Ensure to use MSBuild 12 for the main solution if it exists, otherwise use version 14
 let msBuildVersionToTry = ["12.0";"14.0"]
 
-let maybeVersion =
-    msBuildVersionToTry
-    |> Seq.map (fun v -> ProgramFilesX86 @@ (sprintf @"\MSbuild\%s\Bin\MSbuild.exe" v))
-    |> Seq.tryFind File.Exists
-    
-match maybeVersion with
-| None -> failwithf "couldn't find MSBuild"
-| Some msBuildPath -> setEnvironVar "MSBuild" msBuildPath
+// Default to MSBuild 12 if present
+let msBuildPath = (ProgramFilesX86 @@ @"\MSBuild\12.0\Bin\MSBuild.exe")
+if File.Exists msBuildPath then
+    setEnvironVar "MSBuild" msBuildPath
 
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
