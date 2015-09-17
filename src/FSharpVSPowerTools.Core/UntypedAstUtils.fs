@@ -748,8 +748,6 @@ module HashDirectiveInfo =
 
     /// returns the Some (complete file name of a resolved #load directive at position) or None
     let getHashLoadDirectiveResolvedPathAtPosition (pos: pos) (ast: ParsedInput) : string option =
-        let l = pos.Line
-
         getIncludeAndLoadDirectives ast
         |> Array.tryPick (
             function
