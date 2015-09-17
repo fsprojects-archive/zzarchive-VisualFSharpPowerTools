@@ -7,7 +7,7 @@ open System.Collections
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open System.Collections.Generic
-open FSharpVSPowerTools.Tests.TestHelpers
+
 /// Create a simple mock DTE for an F#-only solution
 type MockDTE() =
     let projects = Dictionary()
