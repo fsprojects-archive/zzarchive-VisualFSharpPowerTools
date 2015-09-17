@@ -51,10 +51,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             let filepath = textDocument.FilePath
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetCurrentDocument(filepath)
-            let! project = maybe {
-                let! project = projectFactory.CreateForDocument view.TextBuffer doc
-                return project
-            }
+            let! project = projectFactory.CreateForDocument view.TextBuffer doc
             return (filepath, project, doc)
         }
 
