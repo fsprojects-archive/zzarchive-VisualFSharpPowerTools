@@ -430,11 +430,11 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 | Some (_, _, _, _, FSharpFindDeclResult.DeclFound _) 
                 | None ->
                     // no FSharpSymbol found, here we look at #load directive
-                    let directive = maybe {
-                        let! filepath, project, _ = getCurrentFilePathProjectAndDoc()
-                        let! directive = Async.RunSynchronously <| vsLanguageService.GetLoadDirectiveFileNameAtCursor(filepath, view, project)
-                        return directive
-                    }
+                    let! directive = 
+                        asyncMaybe {
+                            let! filepath, project, _ = getCurrentFilePathProjectAndDoc()
+                            return! vsLanguageService.GetLoadDirectiveFileNameAtCursor(filepath, view, project)
+                        }
                     match directive with
                     | Some fileToOpen ->
                         // directive found, navigate to the file at first line
