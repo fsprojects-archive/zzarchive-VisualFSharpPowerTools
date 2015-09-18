@@ -1,6 +1,7 @@
 source http://nuget.org/api/v2
 
 nuget FAKE
+nuget FSharp.Management
 nuget NUnit.Runners
 nuget FSharp.Core 3.1.2.5
 nuget FSharp.Formatting
