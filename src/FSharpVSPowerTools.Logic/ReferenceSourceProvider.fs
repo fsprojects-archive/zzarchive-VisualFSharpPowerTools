@@ -25,7 +25,8 @@ type ReferenceSourceProvider(baseUrl: string) =
             use http = new HttpClient(handler)
             let! assemblyList = http.GetStringAsync(baseUrl + "/assemblies.txt") |> Async.AwaitTask
             let assemblies = 
-                assemblyList.Split([|'\r'; '\n'|], StringSplitOptions.RemoveEmptyEntries)
+                assemblyList 
+                |> String.getNonEmptyLines
                 |> Array.map (fun s -> s.Remove(s.IndexOf(';')))
                 |> Set.ofArray
             return availableAssemblies <- assemblies

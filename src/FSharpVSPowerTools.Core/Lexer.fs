@@ -42,7 +42,7 @@ module Lexer =
                     loop lineTokenizer newLexState
 
             let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
-            let lines = source.Replace("\r\n","\n").Split('\r', '\n')
+            let lines = String.getLines source
             let lexState = ref 0L
             for line in lines do 
                 yield !lexState

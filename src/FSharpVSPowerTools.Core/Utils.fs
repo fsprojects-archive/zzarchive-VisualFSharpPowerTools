@@ -420,7 +420,28 @@ module String =
         elif value.Contains(pattern) then
             Some value
         else None
-     
+    
+    open System.IO
+
+    let getLines (str: string) =
+        use reader = new StringReader(str)
+        [|
+        let line = ref (reader.ReadLine())
+        while (!line |> function | null -> false | _ -> true) do
+            yield !line
+            line := reader.ReadLine()
+        |]
+
+    let getNonEmptyLines (str: string) =
+        use reader = new StringReader(str)
+        [|
+        let line = ref (reader.ReadLine())
+        while ( !line |> function | null -> false | _ -> true ) do
+            if (!line).Length > 0 then
+                yield !line
+            line := reader.ReadLine()
+        |]
+
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
     open System.Diagnostics
