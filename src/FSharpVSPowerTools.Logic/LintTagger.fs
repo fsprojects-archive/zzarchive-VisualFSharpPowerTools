@@ -12,7 +12,6 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
 open FSharpLint.Framework.Configuration
 open Microsoft.FSharp.Compiler
-open ConfigurationManagement
 
 type LintTag(tooltip) = 
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)

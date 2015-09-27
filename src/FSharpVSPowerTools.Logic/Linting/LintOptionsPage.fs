@@ -2,14 +2,9 @@
 
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Shell
-open System.ComponentModel
 open System.Diagnostics
-open System.IO
 open System.Runtime.InteropServices
 open System.Windows
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio.OLE.Interop
-open System.Collections.Generic
 open FSharpLint.Framework.Configuration
 open Management
 open LintUtils
@@ -37,7 +32,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
         member this.UpdateDirectories() =
             loadedConfigs <- updateLoadedConfigs (this.GetDte()) loadedConfigs
 
-        member this.GetConfigurationForDirectory(dir) =
+        member __.GetConfigurationForDirectory(dir) =
             getConfigForDirectory loadedConfigs dir
 
     member private this.GetDte() =
@@ -45,7 +40,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
         | Some(dte) -> dte
         | None -> this.GetService(typeof<EnvDTE.DTE>) :?> EnvDTE.DTE
             
-    override this.OnApply(_) = 
+    override __.OnApply(_) = 
         match lintOptionsPageControl.Value.DataContext with
         | :? LintViewModel as viewModel -> saveViewModel viewModel
         | _ -> ()
@@ -82,6 +77,6 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
 
         lintOptionsPageControl.Value.DataContext <- LintViewModel(lintOptions, saveViewModel)
             
-    override this.Child = 
+    override __.Child = 
         let control = lintOptionsPageControl.Value
         control :> UIElement

@@ -3,6 +3,7 @@
 open System.IO
 open FSharpLint.Framework.Configuration
 open FSharpLint.Framework.Configuration.Management
+open FSharpVSPowerTools
 
 type FileViewModel(name:string, path:Path, files:FileViewModel seq, hasConfigFile:bool) =
     member __.Name = name
@@ -18,4 +19,4 @@ type FileViewModel(name:string, path:Path, files:FileViewModel seq, hasConfigFil
         String.concat directorySeparator path
 
     member this.GetFilePath() =
-        Path.Combine(this.GetDirectory(), SettingsFileName)
+        this.GetDirectory() </> SettingsFileName

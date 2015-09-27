@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
 open System
-open System.ComponentModel
 open System.Collections.ObjectModel
 open FSharpVSPowerTools
 open FSharpLint.Framework
@@ -38,29 +37,27 @@ type HintsViewModel(config) as this =
     inherit ViewModelBase()
 
     let validateHint hint =
-        [
-            if hint <> "" then
-                match CharParsers.run HintParser.phint hint with
-                | CharParsers.Success(_) -> ()
-                | CharParsers.Failure(message, _, _) -> yield message
-        ]
+        [ if hint <> "" then
+            match CharParsers.run HintParser.phint hint with
+            | CharParsers.Success(_) -> ()
+            | CharParsers.Failure(message, _, _) -> yield message ]
 
     let newHint = this.Factory.Backing(<@ this.NewHint @>, "", validateHint)
     let selectedHintIndex = this.Factory.Backing(<@ this.SelectedHintIndex @>, 0)
 
     let hintSettings =
         config.Analysers 
-            |> Seq.tryFind (fun x -> x.Key = "Hints")
-            |> (function 
-                | Some(x) -> x.Value.Settings |> Seq.map (fun x -> Some(x.Value)) 
-                | None -> Seq.empty)
+        |> Seq.tryFind (fun x -> x.Key = "Hints")
+        |> (function 
+            | Some(x) -> x.Value.Settings |> Seq.map (fun x -> Some(x.Value)) 
+            | None -> Seq.empty)
 
     let hints =
         hintSettings 
-            |> Seq.tryPick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
-            |> (function 
-                | Some(hints) -> ObservableCollection<_>(hints) 
-                | None -> ObservableCollection<_>())
+        |> Seq.tryPick (function | Some(Hints(hints)) -> Some(hints) | _ -> None)
+        |> (function 
+            | Some(hints) -> ObservableCollection<_>(hints) 
+            | None -> ObservableCollection<_>())
 
     let isEnabled = hintSettings |> Seq.exists (fun x -> x = Some(Enabled(true)))
 

@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
-open System.ComponentModel
 open FSharp.ViewModule
 
 type RuleViewModel(name:string, rules:RuleViewModel seq, settings, isChecked:bool) as this =

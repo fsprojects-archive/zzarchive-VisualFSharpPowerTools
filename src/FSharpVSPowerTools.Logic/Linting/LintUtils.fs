@@ -7,7 +7,6 @@ open FSharpLint.Framework.Configuration
 open IgnoreFiles
 open Management
 open FSharpVSPowerTools
-open Microsoft.VisualStudio.Shell
 
 module LintUtils =
 
@@ -29,8 +28,8 @@ module LintUtils =
     let tryLoadConfig path = 
         let filename = 
             path 
-                |> String.concat (Path.DirectorySeparatorChar.ToString())
-                |> fun x -> Path.Combine(x, SettingsFileName)
+            |> String.concat (Path.DirectorySeparatorChar.ToString())
+            |> fun x -> x </> SettingsFileName
 
         if File.Exists(filename) then
             try
@@ -54,10 +53,10 @@ module LintUtils =
     let private directorySeparator = Path.DirectorySeparatorChar.ToString()
 
     let rec private listStartsWith = function
-    | (_, []) -> true
-    | (x::list, y::startsWithList) when x = y ->
-        listStartsWith (list, startsWithList)
-    | _ -> false
+        | (_, []) -> true
+        | (x::list, y::startsWithList) when x = y ->
+            listStartsWith (list, startsWithList)
+        | _ -> false
 
     let getFileHierarchy loadedConfigs =
         let files = Map.toSeq loadedConfigs.LoadedConfigs
@@ -156,10 +155,10 @@ module LintUtils =
                 |> String.concat Environment.NewLine } |> Some
           Analysers = 
             viewModel.Rules
-                |> Seq.map ruleViewModelToAnalyser
-                |> Seq.toList
-                |> (fun x -> (ruleViewModelToHintAnalyser viewModel.Hints)::x)
-                |> Map.ofList }
+            |> Seq.map ruleViewModelToAnalyser
+            |> Seq.toList
+            |> (fun x -> (ruleViewModelToHintAnalyser viewModel.Hints)::x)
+            |> Map.ofList }
 
     let saveViewModelToLoadedConfigs loadedConfigs (viewModel:OptionsViewModel) =
         let config = viewModelToConfig viewModel
@@ -182,7 +181,7 @@ module LintUtils =
 
     let saveViewModel loadedConfigs (viewModel:OptionsViewModel) =
         let directory = viewModel.CurrentFilePath
-        let filepath = Path.Combine(directory, SettingsFileName)
+        let filepath = directory </> SettingsFileName
     
         match getPartialConfig loadedConfigs (normalisePath directory) with
         | Some(config) -> 

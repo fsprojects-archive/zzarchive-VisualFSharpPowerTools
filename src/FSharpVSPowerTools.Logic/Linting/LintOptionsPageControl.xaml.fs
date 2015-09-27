@@ -1,6 +1,5 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
-open System.Linq
 open System.Windows
 open System.Windows.Controls
 open FsXaml
@@ -40,7 +39,7 @@ type LintOptionsPageControl() =
                 | _ -> ()
             | _ -> ())
     
-    override this.OnLoaded control = 
+    override __.OnLoaded control = 
         control.HintsListView.SelectionChanged.AddHandler(selectionChanged)
         control.IgnoreFilesListView.KeyDown.AddHandler(onKeydown)
 
@@ -49,7 +48,7 @@ type LintOptionsPageControl() =
 
         control.FilesTreeView.SelectedItemChanged.AddHandler(selectedFileChanged)
 
-    override this.OnUnloaded control =
+    override __.OnUnloaded control =
         control.HintsListView.SelectionChanged.RemoveHandler(selectionChanged)
         control.IgnoreFilesListView.KeyDown.RemoveHandler(onKeydown)
 
