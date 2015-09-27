@@ -51,12 +51,13 @@ let f () = List.iter (fun _ -> ())
         helper.AddProject(createVirtualProject(buffer, fileName))
         helper.SetActiveDocument(fileName)
         let tagger = helper.GetTagger(buffer, view)
+
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
                 helper.TagsOf(buffer, tagger)                 
                 |> Seq.toList 
                 |> assertEqual 
-                    [((2, 23), "fun _ -> () can be refactored into ignore")])
+                    [((2, 23), "`fun _ -> ()` might be able to be refactored into `ignore`.")])
 
 
 
