@@ -59,7 +59,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 |> String.concat " ")
             |> Option.orElse (tooltip |> Option.bind (fun tooltip ->
                 tooltip 
-                |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|] 
+                |> String.getNonEmptyLines
                 |> Array.toList 
                 |> List.tryHead
                 |> Option.map (fun str ->
@@ -76,7 +76,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | null -> ""
         | x ->
             x 
-            |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|]
+            |> String.getNonEmptyLines
             |> Array.mapi (fun i x -> 
                 if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then ". " + (String.trim x) 
                 else " " + (String.trim x))

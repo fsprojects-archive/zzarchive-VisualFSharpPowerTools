@@ -1,6 +1,7 @@
 ﻿module FSharpVSPowerTools.Core.Tests.TaskListCommentExtractorTests
 
 open NUnit.Framework
+open FSharpVSPowerTools
 open FSharpVSPowerTools.TaskList
 open System
 
@@ -32,7 +33,8 @@ let ``should match multi-line comments``() =
     let lines = "(* TODO x *)(* TODO y *) let x = 1
                  (*
                  TODO other things
-                 *)".Split(newlines, StringSplitOptions.None)
+                 *)"
+                 |> String.getLines
 
     (defaultOptions, "File1.fs", lines)
     => [|
@@ -115,7 +117,8 @@ let ``comments within strings are not considered``() =
                  let str2 = \"
                      (* TODO work *)
                      // TODO other stuff
-                 \"".Split(newlines, StringSplitOptions.None)
+                 \""
+                 |> String.getLines
 
     (defaultOptions, "File1.fs", lines)
     => [||]

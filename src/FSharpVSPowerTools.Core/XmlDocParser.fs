@@ -196,6 +196,6 @@ type XmlDocParser private () =
 
     /// Get the list of Xml documentation from current source code
     static member GetXmlDocables(sourceCodeOfTheFile: string, filename, ?checker) =
-        let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split [|'\n'|]
+        let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
         let checker = defaultArg checker XmlDocParser.Instance.Checker
         getXmlDocablesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)

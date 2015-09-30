@@ -79,7 +79,7 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
 
 type MockDocument(src: string) =
     let lines =
-        ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
+        ResizeArray<_>(String.getLines src)
 
     interface IDocument with
         member __.FullName = sprintf @"C:\file.fs"
@@ -92,7 +92,7 @@ type MockDocument(src: string) =
 [<AutoOpen>]
 module Helpers =
     let srcToLineArray (src: string) = 
-        src.Split([|"\r\n"; "\n"|], StringSplitOptions.None)
+        String.getLines src
         |> Array.map (fun line -> if line.Trim() = "" then "" else line)
 
     let assertSrcAreEqual expectedSrc actualSrc =

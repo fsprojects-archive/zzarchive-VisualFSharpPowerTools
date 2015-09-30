@@ -59,8 +59,8 @@ type FindReferencesCommandHelper() =
     member __.ReferencesChanged = findReferencesBuffer.Changed
 
     member __.ReferencesResults = 
-        findReferencesBuffer.CurrentSnapshot.GetText().Split([|Environment.NewLine|], StringSplitOptions.RemoveEmptyEntries)
-        
+        findReferencesBuffer.CurrentSnapshot.GetText()
+        |> String.getNonEmptyLines
 
 module FindReferencesCommandTests =
     open System.IO
