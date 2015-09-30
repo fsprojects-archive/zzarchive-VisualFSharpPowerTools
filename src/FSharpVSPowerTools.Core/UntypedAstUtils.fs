@@ -652,7 +652,7 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
     |> List.rev
     |> Seq.concat
     |> Seq.map (fun ident -> ident.idText)
-    |> String.concat "."  
+    |> String.concat "."
 
 
 module HashDirectiveInfo =

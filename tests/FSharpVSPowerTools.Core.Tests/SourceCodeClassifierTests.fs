@@ -832,6 +832,15 @@ type ArrayAlias = byte[]
 """
     => [ 2, [ Cat.ReferenceType, 5, 15; Cat.Operator, 16, 17; Cat.ValueType, 18, 22 ]]
 
+[<Test>]
+let ``function type alias``() =
+    """
+type FuncAlias = unit -> unit
+let _: FuncAlias = fun () -> ()
+"""
+    => [ 2, [ Cat.ReferenceType, 5, 14; Cat.Operator, 15, 16; Cat.ReferenceType, 17, 21; Cat.ReferenceType, 25, 29 ]
+         3, [ Cat.ReferenceType, 7, 16; Cat.Operator, 17, 18 ]]
+
 [<Test; Ignore "Lexer cannot recognize (|P|_|) as an Ident at position of the last bar">]
 let ``active pattern``() =
     """

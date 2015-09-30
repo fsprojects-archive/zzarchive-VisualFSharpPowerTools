@@ -214,6 +214,10 @@ module TypedAstPatterns =
             def.IsFSharpRecord && def.FullName = "Microsoft.FSharp.Core.FSharpRef`1" -> Some() 
         | _ -> None
 
+    let (|FunctionType|_|) (ty: FSharpType) = 
+        if ty.IsFunctionType then Some() 
+        else None
+
     let (|Pattern|_|) (symbol: FSharpSymbol) =
         match symbol with
         | :? FSharpUnionCase
