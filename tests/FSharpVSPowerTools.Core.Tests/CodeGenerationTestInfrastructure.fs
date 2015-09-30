@@ -79,7 +79,7 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
 
 type MockDocument(src: string) =
     let lines =
-        ResizeArray<_>(src.Split([|"\r\n"; "\n"|], StringSplitOptions.None))
+        ResizeArray<_>(String.getLines src)
 
     interface IDocument with
         member __.FullName = sprintf @"C:\file.fs"
