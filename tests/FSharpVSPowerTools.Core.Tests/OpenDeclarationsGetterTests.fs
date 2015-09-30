@@ -192,7 +192,7 @@ type OpenDecl = Parent option * Decl list
 
 let (=>) source (expected: (Line * (OpenDecl list)) list) = 
     let opts = opts source
-    let sourceLines = source.Replace("\r\n", "\n").Split('\n')
+    let sourceLines = String.getLines source
     let parseResults = languageService.ParseFileInProject(opts, fileName, source) |> Async.RunSynchronously
 
     let actualOpenDeclarations =

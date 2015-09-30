@@ -37,7 +37,7 @@ let opts source =
 let (=>) source (expected: (int * ((Cat * int * int) list)) list) = 
     let opts = opts source
     
-    let sourceLines = source.Replace("\r\n", "\n").Split('\n')
+    let sourceLines = String.getLines source
 
     let lexer = 
         { new LexerBase() with
