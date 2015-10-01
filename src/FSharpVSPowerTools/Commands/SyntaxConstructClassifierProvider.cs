@@ -322,7 +322,7 @@ namespace FSharpVSPowerTools
         [ClassificationType(ClassificationTypeNames = ClassificationTypes.FSharpQuotation)]
         [Name(ClassificationTypes.FSharpQuotation)]
         [UserVisible(true)]
-        [Order(After = PredefinedClassificationTypeNames.String)]
+        [Order(Before = PredefinedClassificationTypeNames.String)]
         internal sealed class FSharpQuotationFormat : ClassificationFormatDefinition
         {
             [ImportingConstructor]
