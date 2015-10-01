@@ -47,8 +47,10 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
 
-// Ensure to use MSBuild 12 for the main solution
-setEnvironVar "MSBuild" (ProgramFilesX86 @@ @"\MSBuild\12.0\Bin\MSBuild.exe")
+// Default to MSBuild 12 if present
+let msBuildPath = (ProgramFilesX86 @@ @"\MSBuild\12.0\Bin\MSBuild.exe")
+if File.Exists msBuildPath then
+    setEnvironVar "MSBuild" msBuildPath
 
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__

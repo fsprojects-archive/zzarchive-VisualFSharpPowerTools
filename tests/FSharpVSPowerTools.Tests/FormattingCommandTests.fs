@@ -27,7 +27,7 @@ module FormattingCommandTests =
     let helper = FormattingCommandHelper()
     let fileName = getTempFileName ".fs"
 
-    [<Test; RequiresSTA; Ignore "Fantomas does not play well with FCS 1.4.0.4">]
+    [<Test; RequiresSTA>]
     let ``should be able to format document``() =
         let content = """
 type Type
@@ -59,7 +59,7 @@ type Type =
         | TyCon(s, ts) -> s
 """
 
-    [<Test; RequiresSTA; Ignore "Fantomas does not play well with FCS 1.4.0.4">]
+    [<Test; RequiresSTA>]
     let ``should be able to format selection``() =
         let content = """
 let rangeTest testValue mid size =

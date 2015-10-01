@@ -46,13 +46,21 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
     let mutable currentUrl = None
 
+    let getCurrentFilePathProjectAndDoc () =
+        maybe {
+            let filepath = textDocument.FilePath
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = dte.GetCurrentDocument(filepath)
+            let! project = projectFactory.CreateForDocument view.TextBuffer doc
+            return (filepath, project, doc)
+        }
+
     let getDocumentState () =
         async {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            
             let projectItems = maybe {
+                let! _, project, doc = getCurrentFilePathProjectAndDoc()
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
                 return doc.FullName, project, span, symbol }
 
@@ -421,10 +429,21 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 match symbolResult with
                 | Some (_, _, _, _, FSharpFindDeclResult.DeclFound _) 
                 | None ->
-                    // Run the operation on UI thread since continueCommandChain may access UI components.
-                    do! Async.SwitchToContext uiContext
-                    // Declaration location might exist so let Visual F# Tools handle it. 
-                    return continueCommandChain()
+                    // no FSharpSymbol found, here we look at #load directive
+                    let! directive = 
+                        asyncMaybe {
+                            let! filepath, project, _ = getCurrentFilePathProjectAndDoc()
+                            return! vsLanguageService.GetLoadDirectiveFileNameAtCursor(filepath, view, project)
+                        }
+                    match directive with
+                    | Some fileToOpen ->
+                        // directive found, navigate to the file at first line
+                        serviceProvider.NavigateTo(fileToOpen, 0, 0, 0, 0)
+                    | None ->
+                        // Run the operation on UI thread since continueCommandChain may access UI components.
+                        do! Async.SwitchToContext uiContext
+                        // Declaration location might exist so let Visual F# Tools handle it. 
+                        return continueCommandChain()
                 | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
                     match navigationPreference with
                     | NavigationPreference.Metadata ->
