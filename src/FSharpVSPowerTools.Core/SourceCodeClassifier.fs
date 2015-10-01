@@ -179,11 +179,14 @@ module private OperatorCategorizer =
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
-        | Entity (_, ValueType, _) -> Category.ValueType
-        | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module 
-        | Entity (_, _, Tuple) -> Category.ReferenceType
-        | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
+        | Entity e ->
+            match e with
+            | _, ValueType, _ -> Category.ValueType
+            | Class -> Category.ReferenceType
+            | _, FSharpModule, _ -> Category.Module 
+            | _, _, Tuple -> Category.ReferenceType
+            | _, (FSharpType | ProvidedType | ByRef | Array), _ -> Category.ReferenceType
+            | _ -> Category.Other 
         | _ -> Category.Other 
 
     let internal getCategory (symbolUse: FSharpSymbolUse) =

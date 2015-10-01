@@ -279,7 +279,7 @@ module TypedAstPatterns =
         else None
 
     let (|Function|_|) excluded (func: FSharpMemberOrFunctionOrValue) =
-        match func.FullTypeSafe with
+        match func.FullTypeSafe |> Option.map getAbbreviatedType with
         | Some typ when typ.IsFunctionType
                        && not func.IsPropertyGetterMethod 
                        && not func.IsPropertySetterMethod
