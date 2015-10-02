@@ -723,6 +723,15 @@ let _ =
          8, [ Cat.Quotation, 11, 18 ]]
 
 [<Test>]
+let ``nested multiline quotation``() =
+    """
+let _ = <@ <@ 1 @>, 2
+            @>
+"""
+    => [2, [ Cat.Operator, 6, 7; Cat.Quotation, 8, 21 ]
+        3, [ Cat.Quotation, 12, 14 ]]
+
+[<Test>]
 let ``tuple alias``() = 
     """
 type Tuple = int * string

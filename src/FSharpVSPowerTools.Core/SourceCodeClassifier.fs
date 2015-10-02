@@ -44,19 +44,17 @@ module private QuotationCategorizer =
             else
                 [r.StartLine..r.EndLine]
                 |> Seq.choose (fun line ->
-                     let tokens = lexer.TokenizeLine (line - 1)
+                     let tokens = lexer.TokenizeLine (line - 1) 
 
                      let tokens =
-                        match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
-                        | Some rquote -> 
-                            tokens
-                            |> List.rev
-                            |> List.skipWhile ((<>) rquote)
-                            |> List.rev
-                        | _ -> 
-                            match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
-                            | Some lquote -> tokens |> List.skipWhile (fun t -> t <> lquote) 
-                            | _ -> tokens 
+                         if line = r.StartLine then
+                             tokens |> List.skipWhile (fun t -> t.LeftColumn < r.StartColumn)
+                         elif line = r.EndLine then
+                             tokens
+                             |> List.rev
+                             |> List.skipWhile (fun t -> t.RightColumn > r.EndColumn)
+                             |> List.rev
+                         else tokens
 
                      let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
                      
