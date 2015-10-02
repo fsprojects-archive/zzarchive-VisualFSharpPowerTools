@@ -50,10 +50,7 @@ module private QuotationCategorizer =
                          if line = r.StartLine then
                              tokens |> List.skipWhile (fun t -> t.LeftColumn < r.StartColumn)
                          elif line = r.EndLine then
-                             tokens
-                             |> List.rev
-                             |> List.skipWhile (fun t -> t.RightColumn > r.EndColumn)
-                             |> List.rev
+                             tokens |> List.takeWhile (fun t -> t.RightColumn <= r.EndColumn)
                          else tokens
 
                      let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
