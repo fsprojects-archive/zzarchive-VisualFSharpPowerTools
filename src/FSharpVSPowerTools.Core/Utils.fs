@@ -20,6 +20,13 @@ module List =
         | head :: tail when p head -> skipWhile p tail
         | _ -> xs
 
+    let takeWhile p xs =
+        let rec loop acc xs =
+            match xs with
+            | head :: tail when p head -> loop (head :: acc) tail
+            | _ -> List.rev acc
+        loop [] xs
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Array =
