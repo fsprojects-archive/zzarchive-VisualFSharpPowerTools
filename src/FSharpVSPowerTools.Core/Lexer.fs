@@ -127,33 +127,33 @@ module Lexer =
                               Tag = FSharpTokenTag.IDENT }
                         draftToken :: acc, []
                     | _, _ ->
-                        let draftToken =
+                        let draftToken, lastTokens =
                             match token, lastTokens with
                             | IdentToken, GenericTypeParameterPrefix :: _ ->
                                 { Kind = GenericTypeParameter
-                                  LeftColumn = token.LeftColumn - 1  
-                                  RightColumn = token.LeftColumn + token.FullMatchedLength
-                                  Tag = token.Tag }
+                                  LeftColumn = token.LeftColumn - 1
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1
+                                  Tag = token.Tag }, []
                             | IdentToken, StaticallyResolvedTypeParameterPrefix lineStr :: _ ->
                                 { Kind = StaticallyResolvedTypeParameter 
-                                  LeftColumn = token.LeftColumn
-                                  RightColumn = token.LeftColumn + token.FullMatchedLength
-                                  Tag = token.Tag }
+                                  LeftColumn = token.LeftColumn - 1
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1
+                                  Tag = token.Tag }, []
                             | IdentToken, _ -> 
                                 { Kind = Ident 
                                   LeftColumn = token.LeftColumn
                                   RightColumn = token.LeftColumn + token.FullMatchedLength - 1
-                                  Tag = token.Tag }
+                                  Tag = token.Tag }, lastTokens
                             | OperatorToken, _ -> 
                                 { Kind = Operator
                                   LeftColumn = token.LeftColumn
                                   RightColumn = token.LeftColumn + token.FullMatchedLength - 1
-                                  Tag = token.Tag }
+                                  Tag = token.Tag }, lastTokens
                             | _, _ -> 
-                                { Kind = Ident 
+                                { Kind = Other 
                                   LeftColumn = token.LeftColumn
                                   RightColumn = token.LeftColumn + token.FullMatchedLength - 1
-                                  Tag = token.Tag }
+                                  Tag = token.Tag }, lastTokens
                         draftToken :: acc, lastTokens
                 ) ([], [])
             |> fst
