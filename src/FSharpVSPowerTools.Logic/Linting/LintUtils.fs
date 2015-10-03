@@ -179,6 +179,10 @@ module LintUtils =
 
         updateConfig loadedConfigs normalisedDir (Some updatedPartial)
 
+    type SaveConfigResult =
+    | Success
+    | Failure of reason:string
+
     let saveViewModel loadedConfigs (viewModel:OptionsViewModel) =
         let directory = viewModel.CurrentFilePath
         let filepath = directory </> SettingsFileName
@@ -187,7 +191,8 @@ module LintUtils =
         | Some(config) -> 
             try
                 config.ToXmlDocument().Save(filepath)
+                Success
             with e -> 
                 Logging.logExceptionWithContext(e, sprintf "Failed to save config file to %s" filepath)
-        | None -> ()
-        
+                Failure e.Message
+        | None -> Success

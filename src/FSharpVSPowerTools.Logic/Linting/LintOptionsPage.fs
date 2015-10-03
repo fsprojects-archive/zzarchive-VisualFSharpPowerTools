@@ -1,7 +1,10 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
+open System
 open FSharpVSPowerTools
+open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Shell.Interop
 open System.Diagnostics
 open System.Runtime.InteropServices
 open System.Windows
@@ -13,15 +16,26 @@ open LintUtils
 type LintOptionsPage private (dte:EnvDTE.DTE option) =
     inherit UIElementDialogPage()
 
+    [<Literal>]
+    let MessageBoxRetryButtonClicked = 4
+
     let mutable loadedConfigs = LoadedConfigs.Empty
 
     let lintOptionsPageControl = lazy LintOptionsControlProvider()
 
-    let saveViewModel (viewModel:LintViewModel) =
+    let saveViewModel promptRetryDialog (viewModel:LintViewModel) =
         match viewModel.ViewModel with
         | Some(optionsViewModel) -> 
             loadedConfigs <- saveViewModelToLoadedConfigs loadedConfigs optionsViewModel
-            saveViewModel loadedConfigs optionsViewModel
+
+            let rec trySave () =
+                match saveViewModel loadedConfigs optionsViewModel with
+                | Success -> ()
+                | Failure(reason) -> 
+                    match promptRetryDialog reason with
+                    | MessageBoxRetryButtonClicked -> trySave ()
+                    | _ -> ()
+            trySave ()
         | None -> ()
 
     new (dte) = new LintOptionsPage(Some dte)
@@ -39,10 +53,34 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
         match dte with
         | Some(dte) -> dte
         | None -> this.GetService(typeof<EnvDTE.DTE>) :?> EnvDTE.DTE
+
+    member private this.GetVsUiShell() =
+        this.GetService(typeof<SVsUIShell>) :?> IVsUIShell
+
+    member private this.RetrySaveDialog(failedToSaveReason) =
+        let result = ref 0
+
+        let successfullyShown =
+            this.GetVsUiShell().ShowMessageBox(
+                0u,
+                ref Guid.Empty,
+                "Unable To Apply Changes",
+                sprintf "Unable to save config changes: %s." failedToSaveReason,
+                "",
+                0u,
+                OLEMSGBUTTON.OLEMSGBUTTON_RETRYCANCEL,
+                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST,
+                OLEMSGICON.OLEMSGICON_INFO,
+                0,
+                result) = VSConstants.S_OK
+        
+        if successfullyShown then !result
+        else 0
             
-    override __.OnApply(_) = 
+    override this.OnApply(_) = 
         match lintOptionsPageControl.Value.DataContext with
-        | :? LintViewModel as viewModel -> saveViewModel viewModel
+        | :? LintViewModel as viewModel -> 
+            saveViewModel this.RetrySaveDialog viewModel
         | _ -> ()
 
     override this.OnActivate(_) = 
@@ -75,7 +113,8 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
             | None -> 
                 None
 
-        lintOptionsPageControl.Value.DataContext <- LintViewModel(lintOptions, saveViewModel)
+        lintOptionsPageControl.Value.DataContext <- 
+            LintViewModel(lintOptions, saveViewModel this.RetrySaveDialog)
             
     override __.Child = 
         let control = lintOptionsPageControl.Value
