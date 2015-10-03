@@ -93,12 +93,12 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 let! project = projectFactory.CreateForDocument buffer doc
                 let! tooltip =
                     asyncMaybe {
-                        let! newWord, symbol = vsLanguageService.GetSymbol (point, project)
+                        let! newWord, longIdent = vsLanguageService.GetLongIdentSymbol (point, project)
                         let lineStr = point.GetContainingLine().GetText()
-
+                        let idents = String.split StringSplitOptions.None [|"."|] longIdent.Text |> Array.toList
                         let! (FSharpToolTipText tooltip) =
                             vsLanguageService.GetOpenDeclarationTooltip(
-                                symbol.Line + 1, symbol.RightColumn, lineStr, [symbol.Text], project, 
+                                longIdent.Line + 1, longIdent.RightColumn, lineStr, idents, project, 
                                 textDocument.FilePath, newWord.Snapshot.GetText())
                         return!
                             tooltip

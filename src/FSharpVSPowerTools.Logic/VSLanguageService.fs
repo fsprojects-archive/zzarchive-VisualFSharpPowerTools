@@ -103,6 +103,21 @@ type VSLanguageService
         | Some doc ->
             doc.Snapshot.TextBuffer = snapshot.TextBuffer
 
+    let getSymbolUsing kind (point: SnapshotPoint) (projectProvider: IProjectProvider) =
+        let source = point.Snapshot.GetText()
+        let line = point.Snapshot.GetLineNumberFromPosition point.Position
+        let col = point.Position - point.GetContainingLine().Start.Position
+        let lineStr = point.GetContainingLine().GetText()                
+        let args = projectProvider.CompilerOptions
+        let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
+            let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+            let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+            SnapshotSpan(snapshot, startPos, endPos - startPos)
+                                
+        Lexer.getSymbol source line col lineStr kind args (buildQueryLexState point.Snapshot.TextBuffer)
+        |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
+
+
     static let initializationTime = DateTime.Now
     let entityCache = EntityCache()
 
@@ -133,19 +148,11 @@ type VSLanguageService
 
     member __.FixProjectLoadTime opts = fixProjectLoadTime opts
         
-    member __.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
-        let source = point.Snapshot.GetText()
-        let line = point.Snapshot.GetLineNumberFromPosition point.Position
-        let col = point.Position - point.GetContainingLine().Start.Position
-        let lineStr = point.GetContainingLine().GetText()                
-        let args = projectProvider.CompilerOptions
-        let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
-            let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-            let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
-            SnapshotSpan(snapshot, startPos, endPos - startPos)
-                                
-        Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args (buildQueryLexState point.Snapshot.TextBuffer)
-        |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
+    member __.GetSymbol(point, projectProvider) =
+        getSymbolUsing SymbolLookupKind.Fuzzy point projectProvider
+
+    member __.GetLongIdentSymbol(point, projectProvider) =
+        getSymbolUsing SymbolLookupKind.ByLongIdent point projectProvider
 
     member __.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
         let snapshot = textBuffer.CurrentSnapshot
