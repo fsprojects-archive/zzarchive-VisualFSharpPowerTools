@@ -174,11 +174,14 @@ module private OperatorCategorizer =
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
-        | Entity (_, ValueType, _) -> Category.ValueType
-        | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module 
-        | Entity (_, _, Tuple) -> Category.ReferenceType
-        | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
+        | Entity e ->
+            match e with
+            | _, ValueType, _ -> Category.ValueType
+            | Class -> Category.ReferenceType
+            | _, FSharpModule, _ -> Category.Module 
+            | _, _, Tuple -> Category.ReferenceType
+            | _, (FSharpType | ProvidedType | ByRef | Array), _ -> Category.ReferenceType
+            | _ -> Category.Other 
         | _ -> Category.Other 
 
     let internal getCategory (symbolUse: FSharpSymbolUse) =
@@ -186,19 +189,25 @@ module SourceCodeClassifier =
         | Field (MutableVar, _)
         | Field (_, RefCell) -> Category.MutableVar
         | Pattern -> Category.PatternCase
-        | Entity (_, ValueType, _) -> Category.ValueType
-        | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module
-        | Entity (_, _, Tuple) -> Category.ReferenceType
-        | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
-        | MemberFunctionOrValue (Constructor ValueType) -> Category.ValueType
-        | MemberFunctionOrValue (Constructor _) -> Category.ReferenceType
-        | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression) -> Category.Function
-        | MemberFunctionOrValue MutableVar -> Category.MutableVar
-        | MemberFunctionOrValue func ->
-            match func.FullTypeSafe with
-            | Some RefCell -> Category.MutableVar
+        | Entity e ->
+            match e with
+            | (_, ValueType, _) -> Category.ValueType
+            | Class -> Category.ReferenceType
+            | (_, FSharpModule, _) -> Category.Module
+            | (_, _, Tuple) -> Category.ReferenceType
+            | (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
+            | (_, _, Some FunctionType) -> Category.ReferenceType
             | _ -> Category.Other
+        | MemberFunctionOrValue f ->
+            match f with
+            | Constructor ValueType -> Category.ValueType
+            | Constructor _ -> Category.ReferenceType
+            | Function symbolUse.IsFromComputationExpression -> Category.Function
+            | MutableVar -> Category.MutableVar
+            | func ->
+                match func.FullTypeSafe with
+                | Some RefCell -> Category.MutableVar
+                | _ -> Category.Other
         | _ -> Category.Other 
 
     // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".

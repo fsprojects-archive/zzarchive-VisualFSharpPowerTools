@@ -214,6 +214,10 @@ module TypedAstPatterns =
             def.IsFSharpRecord && def.FullName = "Microsoft.FSharp.Core.FSharpRef`1" -> Some() 
         | _ -> None
 
+    let (|FunctionType|_|) (ty: FSharpType) = 
+        if ty.IsFunctionType then Some() 
+        else None
+
     let (|Pattern|_|) (symbol: FSharpSymbol) =
         match symbol with
         | :? FSharpUnionCase
@@ -275,7 +279,7 @@ module TypedAstPatterns =
         else None
 
     let (|Function|_|) excluded (func: FSharpMemberOrFunctionOrValue) =
-        match func.FullTypeSafe with
+        match func.FullTypeSafe |> Option.map getAbbreviatedType with
         | Some typ when typ.IsFunctionType
                        && not func.IsPropertyGetterMethod 
                        && not func.IsPropertySetterMethod
