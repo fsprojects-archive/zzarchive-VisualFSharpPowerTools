@@ -863,14 +863,14 @@ let func1: FuncAliasOfAlias = fun () -> ()
          4, [ Cat.ReferenceType, 5, 21; Cat.Operator, 22, 23; Cat.ReferenceType, 24, 33 ]
          5, [ Cat.Function, 4, 9; Cat.ReferenceType, 11, 27; Cat.Operator, 28, 29 ]]
 
-[<Test; Ignore "Lexer cannot recognize (|P|_|) as an Ident at position of the last bar">]
+[<Test>] //; Ignore "Lexer cannot recognize (|P|_|) as an Ident at position of the last bar">]
 let ``active pattern``() =
     """
 let (|ActivePattern|_|) x = Some x
 let _ = (|ActivePattern|_|) 1
 """
-    => [ 2, [ Cat.PatternCase, 6, 19; Cat.PatternCase, 28, 32 ]
-         3, [ Cat.Function, 8, 27 ]]
+    => [ 2, [ Cat.PatternCase, 6, 19; Cat.Operator, 26, 27; Cat.PatternCase, 28, 32 ]
+         3, [ Cat.Operator, 6, 7; Cat.Function, 9, 26 ]]
 
 [<Test>]
 let ``non public module``() =
