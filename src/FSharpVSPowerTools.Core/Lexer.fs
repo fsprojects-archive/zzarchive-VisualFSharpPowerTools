@@ -26,10 +26,8 @@ type SymbolLookupKind =
 
 type internal DraftToken =
     { Kind: SymbolKind
-      Token: FSharpTokenInfo 
+      LeftColumn: int
       RightColumn: int }
-    static member Create kind token = 
-        { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
 
 module Lexer =
     /// Get the array of all lex states in current source
@@ -83,22 +81,22 @@ module Lexer =
             | _ -> List.rev acc
         loop (queryLexState source defines line) []
 
+    let (|IdentToken|_|) (t: FSharpTokenInfo) = if t.CharClass = FSharpTokenCharKind.Identifier then Some() else None
+    let (|OperatorToken|_|) (t: FSharpTokenInfo) = if t.ColorClass = FSharpTokenColorKind.Operator then Some() else None
+    let (|GenericTypeParameterPrefix|_|) (t: FSharpTokenInfo) = if t.Tag = FSharpTokenTag.QUOTE then Some() else None
+    let (|LeftParenToken|_|) (t: FSharpTokenInfo) = if t.Tag = FSharpTokenTag.LPAREN then Some() else None
+    let (|RightParenToken|_|) (t: FSharpTokenInfo) = if t.Tag = FSharpTokenTag.RPAREN then Some() else None
+    let (|BarToken|_|) (t: FSharpTokenInfo) = if t.Tag = 56 then Some() else None
+    let (|StaticallyResolvedTypeParameterPrefix|_|) (lineStr: string) (t: FSharpTokenInfo) =
+        if t.Tag = FSharpTokenTag.INFIX_AT_HAT_OP then
+             // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.
+             // We have to check the char itself to distinguish one from another.
+             if t.FullMatchedLength = 1 && lineStr.[t.LeftColumn] = '^' then Some()
+             else None
+        else None
+
     // Returns symbol at a given position.
     let getSymbolFromTokens (tokens: FSharpTokenInfo list) line col (lineStr: string) lookupKind: Symbol option =
-        let isIdentifier t = t.CharClass = FSharpTokenCharKind.Identifier
-        let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
-    
-        let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) (token: FSharpTokenInfo) =
-            if token.Tag = FSharpTokenTag.QUOTE then GenericTypeParameterPrefix
-            elif token.Tag = FSharpTokenTag.INFIX_AT_HAT_OP then
-                 // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.
-                 // We have to check the char itself to distinguish one from another.
-                 if token.FullMatchedLength = 1 && lineStr.[token.LeftColumn] = '^' then 
-                    StaticallyResolvedTypeParameterPrefix
-                 else Other
-            else Other
-
-       
         // Operators: Filter out overlapped operators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
         // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two).
         //
@@ -109,35 +107,57 @@ module Lexer =
         // Statically resolved type parameters: we convert INFIX_AT_HAT_OP + IDENT tokens into single IDENT token, altering its LeftColumn 
         // and FullMathedLength (for "^type" which is tokenized as (INFIX_AT_HAT_OP, left=2) + (IDENT, left=3, length=4) 
         // we'll get (IDENT, left=2, length=5).
-        let tokens = 
+        let tokens2 = 
             tokens
-            |> List.fold (fun (acc, lastToken) token ->
-                match lastToken with
-                | Some t when token.LeftColumn <= t.RightColumn -> acc, lastToken
+            |> List.fold (fun (acc, lastTokens: FSharpTokenInfo list) token ->
+                match lastTokens with
+                | t :: _ when token.LeftColumn <= t.RightColumn -> acc, lastTokens
                 | _ ->
-                    match token with
-                    | GenericTypeParameterPrefix -> acc, Some (DraftToken.Create GenericTypeParameter token)
-                    | StaticallyResolvedTypeParameterPrefix -> acc, Some (DraftToken.Create StaticallyResolvedTypeParameter token)
-                    | Other ->
+                    match token, lastTokens with
+                    | GenericTypeParameterPrefix, _ -> acc, [ token ]
+                    | StaticallyResolvedTypeParameterPrefix lineStr, _ -> acc, [ token ]
+                    | LeftParenToken, _ -> acc, [ token ]
+                    | BarToken, LeftParenToken :: _ -> acc, token :: lastTokens
+                    | RightParenToken, BarToken :: (LeftParenToken as start) :: _ ->
                         let draftToken =
-                            match lastToken with
-                            | Some { Kind = GenericTypeParameter | StaticallyResolvedTypeParameter as kind } when isIdentifier token ->
-                                DraftToken.Create kind { token with LeftColumn = token.LeftColumn - 1
-                                                                    FullMatchedLength = token.FullMatchedLength + 1 }
-                            | _ -> 
-                                let kind = if isOperator token then Operator elif isIdentifier token then Ident else Other
-                                DraftToken.Create kind token
-                        draftToken :: acc, Some draftToken
-                ) ([], None)
+                            { Kind = Ident 
+                              LeftColumn = start.LeftColumn
+                              RightColumn = token.RightColumn }
+                        draftToken :: acc, []
+                    | _, _ ->
+                        let draftToken =
+                            match token, lastTokens with
+                            | IdentToken, GenericTypeParameterPrefix :: _ ->
+                                { Kind = GenericTypeParameter
+                                  LeftColumn = token.LeftColumn - 1  
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength }
+                            | IdentToken, StaticallyResolvedTypeParameterPrefix lineStr :: _ ->
+                                { Kind = StaticallyResolvedTypeParameter 
+                                  LeftColumn = token.LeftColumn
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength }
+                            | IdentToken, _ -> 
+                                { Kind = Ident 
+                                  LeftColumn = token.LeftColumn
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+                            | OperatorToken, _ -> 
+                                { Kind = Operator
+                                  LeftColumn = token.LeftColumn
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+                            | _, _ -> 
+                                { Kind = Ident 
+                                  LeftColumn = token.LeftColumn
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+                        draftToken :: acc, lastTokens
+                ) ([], [])
             |> fst
            
         // One or two tokens that in touch with the cursor (for "let x|(g) = ()" the tokens will be "x" and "(")
         let tokensUnderCursor = 
             match lookupKind with
             | SymbolLookupKind.Fuzzy ->
-                tokens |> List.filter (fun x -> x.Token.LeftColumn <= col && x.RightColumn + 1 >= col)
+                tokens2 |> List.filter (fun x -> x.LeftColumn <= col && x.RightColumn + 1 >= col)
             | SymbolLookupKind.ByRightColumn ->
-                tokens |> List.filter (fun x -> x.RightColumn = col)
+                tokens2 |> List.filter (fun x -> x.RightColumn = col)
             | SymbolLookupKind.ByLongIdent ->
                 tokens |> List.filter (fun x -> x.Token.LeftColumn <= col)
                 
@@ -186,9 +206,9 @@ module Lexer =
             |> Option.map (fun token ->
                 { Kind = token.Kind
                   Line = line
-                  LeftColumn = token.Token.LeftColumn
+              LeftColumn = token.LeftColumn
                   RightColumn = token.RightColumn + 1
-                  Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
+              Text = lineStr.[token.LeftColumn..token.RightColumn] })
     
     let getSymbol source line col lineStr lookupKind (args: string[]) queryLexState =
         let tokens = tokenizeLine source args line lineStr queryLexState
