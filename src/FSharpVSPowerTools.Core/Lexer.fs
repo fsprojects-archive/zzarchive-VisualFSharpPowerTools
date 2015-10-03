@@ -120,10 +120,11 @@ module Lexer =
                     | LeftParenToken, _ -> acc, [ token ]
                     | BarToken, LeftParenToken :: _ -> acc, token :: lastTokens
                     | RightParenToken, BarToken :: (LeftParenToken as start) :: _ ->
+                        // do not include `(` and `)` since `FSharpSymbolUse` does not include them either.
                         let draftToken =
                             { Kind = Ident 
-                              LeftColumn = start.LeftColumn
-                              RightColumn = token.RightColumn
+                              LeftColumn = start.LeftColumn - 1
+                              RightColumn = token.RightColumn - 1
                               Tag = FSharpTokenTag.IDENT }
                         draftToken :: acc, []
                     | _, _ ->
