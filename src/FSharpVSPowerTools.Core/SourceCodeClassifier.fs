@@ -229,30 +229,40 @@ module SourceCodeClassifier =
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
             |> Seq.collect (fun (line, sus) ->
                 let tokens = tokensByLine.[line - 1]
-                sus |> Seq.choose (fun su ->
-                    let r = su.SymbolUse.RangeAlternate
-                    lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) |> Option.bind (fun sym -> 
-                        //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
-                        match sym.Kind with
-                        | SymbolKind.Ident ->
-                            // FCS returns inaccurate ranges for multi-line method chains
-                            // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
-                            if r.StartLine < r.EndLine then
+                sus 
+                |> Seq.choose (fun su ->
+                    let fsSymbolUse = su.SymbolUse
+                    let r = fsSymbolUse.RangeAlternate
+                    match fsSymbolUse.Symbol with
+                    | MemberFunctionOrValue func when func.IsActivePattern && not fsSymbolUse.IsFromDefinition ->
+                        Some (su, { SymbolKind = SymbolKind.Ident
+                                    Line = r.End.Line
+                                    StartCol = r.Start.Column
+                                    EndCol = r.End.Column })
+                    | _ ->
+                        lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) 
+                        |> Option.bind (fun sym -> 
+                            //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
+                            match sym.Kind with
+                            | SymbolKind.Ident ->
+                                // FCS returns inaccurate ranges for multi-line method chains
+                                // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+                                if r.StartLine < r.EndLine then
+                                    Some (su, { SymbolKind = sym.Kind
+                                                Line = r.End.Line
+                                                StartCol = r.End.Column - sym.Text.Length
+                                                EndCol = r.End.Column })
+                                else 
+                                    Some (su, { SymbolKind = sym.Kind
+                                                Line = r.End.Line
+                                                StartCol = r.Start.Column
+                                                EndCol = r.End.Column })
+                            | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
                                 Some (su, { SymbolKind = sym.Kind
-                                            Line = r.End.Line
-                                            StartCol = r.End.Column - sym.Text.Length
-                                            EndCol = r.End.Column })
-                            else 
-                                Some (su, { SymbolKind = sym.Kind
-                                            Line = r.End.Line
+                                            Line = r.End.Line 
                                             StartCol = r.Start.Column
                                             EndCol = r.End.Column })
-                        | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
-                            Some (su, { SymbolKind = sym.Kind
-                                        Line = r.End.Line 
-                                        StartCol = r.Start.Column
-                                        EndCol = r.End.Column })
-                        | _ -> None)))
+                            | _ -> None)))
             |> Seq.toArray
        
         // index all symbol usages by LineNumber 
