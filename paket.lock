@@ -2,7 +2,7 @@ NUGET
   remote: http://nuget.org/api/v2
   specs:
     Expression.Blend.Sdk (1.0.2)
-    FAKE (4.4.4)
+    FAKE (4.0.3)
     Fantomas (1.11.0)
       FSharp.Compiler.Service (>= 1.4.0.5)
     Foq (1.7.1)
@@ -42,5 +42,5 @@ NUGET
 GITHUB
   remote: fsharp/FAKE
   specs:
-    modules/Octokit/Octokit.fsx (64e3ffe38f09f2c4cf39610327ad6825cc1b42cc)
+    modules/Octokit/Octokit.fsx (4915c909c91e6f715b340d2b368e1601348a362a)
       Octokit
