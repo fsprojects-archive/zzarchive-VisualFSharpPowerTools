@@ -66,5 +66,5 @@ let lexer =
     getLexer """open A.B.C.D
 """
 
-let tokens = lexer.TokenizeAll();;
-let symbol = lexer.GetSymbolFromTokensAtLocation([], 0, 11);;
+//let tokens = lexer.TokenizeAll();;
+let symbol = lexer.GetSymbolFromTokensAtLocation([], 0, 6);;

@@ -140,7 +140,8 @@ module Lexer =
                 tokens |> List.filter (fun x -> x.RightColumn = col)
             | SymbolLookupKind.ByLongIdent ->
                 tokens |> List.filter (fun x -> x.Token.LeftColumn <= col)
-  
+                
+        //printfn "Filtered tokens: %+A" tokensUnderCursor
         match lookupKind with
         | SymbolLookupKind.ByLongIdent ->
             // Try to find start column of the long identifiers
@@ -148,7 +149,6 @@ module Lexer =
             let rec tryFindStartColumn tokens =
                match tokens with
                | {Kind = Ident; Token = t1} :: {Kind = Operator; Token = t2} :: remainingTokens ->
-                    printfn "t2:%+A" t2
                     if t2.Tag = FSharpTokenTag.DOT then
                         tryFindStartColumn remainingTokens
                     else
@@ -157,13 +157,18 @@ module Lexer =
                    Some t.LeftColumn
                | _ :: _ | [] ->
                    None
-            match tokensUnderCursor with
+            let decreasingTokens =
+                match tokensUnderCursor |> List.sortBy (fun token -> - token.Token.LeftColumn) with
+                // Skip the first dot if it is the start of the identifier
+                | {Kind = Operator; Token = t} :: remainingTokens when t.Tag = FSharpTokenTag.DOT ->
+                    remainingTokens
+                | newTokens -> newTokens
+            
+            match decreasingTokens with
             | [] -> None
-            | (first :: _) as revTokens ->
-                printfn "rev: %+A" revTokens
-                tryFindStartColumn revTokens
+            | first :: _ ->
+                tryFindStartColumn decreasingTokens
                 |> Option.map (fun leftCol ->
-                    printfn "leftCol:%A" leftCol 
                     { Kind = Ident
                       Line = line
                       LeftColumn = leftCol
