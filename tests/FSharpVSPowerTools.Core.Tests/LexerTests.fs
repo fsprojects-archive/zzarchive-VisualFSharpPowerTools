@@ -63,3 +63,14 @@ let ``should find statically resolved type parameters``() =
 let ``should find active patterns``() =
     checkGetSymbol 744 10 "    let (|A|Bb|Ccc|) (x: int) =" (Some ("A", (744, 10), (744, 11), Ident))
     checkGetSymbol 744 12 "    let (|A|Bb|Ccc|) (x: int) =" (Some ("Bb", (744, 12), (744, 14), Ident))
+
+let checkGetLongSymbol line col lineStr expected =
+    Lexer.getSymbol lineStr line col lineStr SymbolLookupKind.ByLongIdent args Lexer.queryLexState
+    |> Option.map (fun { Line = line; LeftColumn = leftCol; RightColumn = rightCol; Text = text; Kind = kind } ->
+        text, (line, leftCol), (line, rightCol), kind)
+    |> assertEqual expected
+
+[<Test>]
+let ``should find long identifiers``() =
+    checkGetLongSymbol 0 11 "open A.B.C.D" (Some ("A.B.C.D", (1, 6), (1, 12), Ident))
+    checkGetLongSymbol 0 30 "type t = Microsoft.FSharp.Quotations.Expr" (Some ("Microsoft.FSharp.Quotations.Expr", (1, 6), (1, 12), Ident))

@@ -22,6 +22,7 @@ type Symbol =
 type SymbolLookupKind =
     | Fuzzy
     | ByRightColumn
+    | ByLongIdent
 
 type internal DraftToken =
     { Kind: SymbolKind
@@ -73,7 +74,7 @@ module Lexer =
     let tokenizeLine source (args: string[]) line lineStr queryLexState =
         let defines =
             args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
-                    |> Seq.toList
+                 |> Seq.toList
         let sourceTokenizer = SourceTokenizer(defines, "/tmp.fsx")
         let lineTokenizer = sourceTokenizer.CreateLineTokenizer lineStr
         let rec loop lexState acc =
@@ -137,20 +138,52 @@ module Lexer =
                 tokens |> List.filter (fun x -> x.Token.LeftColumn <= col && x.RightColumn + 1 >= col)
             | SymbolLookupKind.ByRightColumn ->
                 tokens |> List.filter (fun x -> x.RightColumn = col)
-    
-        // Select IDENT token. If failed, select OPERATOR token.
-        tokensUnderCursor
-        |> List.tryFind (fun (x: DraftToken) -> 
-            match x.Kind with 
-            | Ident | GenericTypeParameter | StaticallyResolvedTypeParameter -> true 
-            | _ -> false) 
-        |> Option.orElse (tokensUnderCursor |> List.tryFind (fun (x: DraftToken) -> x.Kind = Operator))
-        |> Option.map (fun token ->
-            { Kind = token.Kind
-              Line = line
-              LeftColumn = token.Token.LeftColumn
-              RightColumn = token.RightColumn + 1
-              Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
+            | SymbolLookupKind.ByLongIdent ->
+                tokens |> List.filter (fun x -> x.Token.LeftColumn <= col)
+  
+        match lookupKind with
+        | SymbolLookupKind.ByLongIdent ->
+            // Try to find start column of the long identifiers
+            // Assume that tokens are ordered in an decreasing order of start columns
+            let rec tryFindStartColumn tokens =
+               match tokens with
+               | {Kind = Ident; Token = t1} :: {Kind = Operator; Token = t2} :: remainingTokens ->
+                    printfn "t2:%+A" t2
+                    if t2.Tag = FSharpTokenTag.DOT then
+                        tryFindStartColumn remainingTokens
+                    else
+                        Some t1.LeftColumn
+               | {Kind = Ident; Token = t} :: _ ->
+                   Some t.LeftColumn
+               | _ :: _ | [] ->
+                   None
+            match tokensUnderCursor with
+            | [] -> None
+            | (first :: _) as revTokens ->
+                printfn "rev: %+A" revTokens
+                tryFindStartColumn revTokens
+                |> Option.map (fun leftCol ->
+                    printfn "leftCol:%A" leftCol 
+                    { Kind = Ident
+                      Line = line
+                      LeftColumn = leftCol
+                      RightColumn = first.RightColumn + 1
+                      Text = lineStr.[leftCol..first.RightColumn] })
+        | SymbolLookupKind.Fuzzy 
+        | SymbolLookupKind.ByRightColumn ->
+            // Select IDENT token. If failed, select OPERATOR token.
+            tokensUnderCursor
+            |> List.tryFind (fun { DraftToken.Kind = k } -> 
+                match k with 
+                | Ident | GenericTypeParameter | StaticallyResolvedTypeParameter -> true 
+                | _ -> false) 
+            |> Option.orTry (fun _ -> tokensUnderCursor |> List.tryFind (fun { DraftToken.Kind = k } -> k = Operator))
+            |> Option.map (fun token ->
+                { Kind = token.Kind
+                  Line = line
+                  LeftColumn = token.Token.LeftColumn
+                  RightColumn = token.RightColumn + 1
+                  Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
     
     let getSymbol source line col lineStr lookupKind (args: string[]) queryLexState =
         let tokens = tokenizeLine source args line lineStr queryLexState
