@@ -27,7 +27,8 @@ type SymbolLookupKind =
 type internal DraftToken =
     { Kind: SymbolKind
       LeftColumn: int
-      RightColumn: int }
+      RightColumn: int
+      Tag: int }
 
 module Lexer =
     /// Get the array of all lex states in current source
@@ -122,7 +123,8 @@ module Lexer =
                         let draftToken =
                             { Kind = Ident 
                               LeftColumn = start.LeftColumn
-                              RightColumn = token.RightColumn }
+                              RightColumn = token.RightColumn
+                              Tag = FSharpTokenTag.IDENT }
                         draftToken :: acc, []
                     | _, _ ->
                         let draftToken =
@@ -130,23 +132,28 @@ module Lexer =
                             | IdentToken, GenericTypeParameterPrefix :: _ ->
                                 { Kind = GenericTypeParameter
                                   LeftColumn = token.LeftColumn - 1  
-                                  RightColumn = token.LeftColumn + token.FullMatchedLength }
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength
+                                  Tag = token.Tag }
                             | IdentToken, StaticallyResolvedTypeParameterPrefix lineStr :: _ ->
                                 { Kind = StaticallyResolvedTypeParameter 
                                   LeftColumn = token.LeftColumn
-                                  RightColumn = token.LeftColumn + token.FullMatchedLength }
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength
+                                  Tag = token.Tag }
                             | IdentToken, _ -> 
                                 { Kind = Ident 
                                   LeftColumn = token.LeftColumn
-                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1
+                                  Tag = token.Tag }
                             | OperatorToken, _ -> 
                                 { Kind = Operator
                                   LeftColumn = token.LeftColumn
-                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1
+                                  Tag = token.Tag }
                             | _, _ -> 
                                 { Kind = Ident 
                                   LeftColumn = token.LeftColumn
-                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+                                  RightColumn = token.LeftColumn + token.FullMatchedLength - 1
+                                  Tag = token.Tag }
                         draftToken :: acc, lastTokens
                 ) ([], [])
             |> fst
@@ -159,7 +166,7 @@ module Lexer =
             | SymbolLookupKind.ByRightColumn ->
                 tokens2 |> List.filter (fun x -> x.RightColumn = col)
             | SymbolLookupKind.ByLongIdent ->
-                tokens |> List.filter (fun x -> x.Token.LeftColumn <= col)
+                tokens2 |> List.filter (fun x -> x.LeftColumn <= col)
                 
         //printfn "Filtered tokens: %+A" tokensUnderCursor
         match lookupKind with
@@ -168,19 +175,18 @@ module Lexer =
             // Assume that tokens are ordered in an decreasing order of start columns
             let rec tryFindStartColumn tokens =
                match tokens with
-               | {Kind = Ident; Token = t1} :: {Kind = Operator; Token = t2} :: remainingTokens ->
-                    if t2.Tag = FSharpTokenTag.DOT then
+               | ({ DraftToken.Kind = Ident } as token1) :: ({ DraftToken.Kind = Operator } as token2) :: remainingTokens ->
+                    if token2.Tag = FSharpTokenTag.DOT then
                         tryFindStartColumn remainingTokens
                     else
-                        Some t1.LeftColumn
-               | {Kind = Ident; Token = t} :: _ ->
-                   Some t.LeftColumn
+                        Some token1.LeftColumn
+               | ({ DraftToken.Kind = Ident } as token) :: _ -> Some token.LeftColumn
                | _ :: _ | [] ->
                    None
             let decreasingTokens =
-                match tokensUnderCursor |> List.sortBy (fun token -> - token.Token.LeftColumn) with
+                match tokensUnderCursor |> List.sortBy (fun token -> - token.LeftColumn) with
                 // Skip the first dot if it is the start of the identifier
-                | {Kind = Operator; Token = t} :: remainingTokens when t.Tag = FSharpTokenTag.DOT ->
+                | ({ DraftToken.Kind = Operator } as token) :: remainingTokens when token.Tag = FSharpTokenTag.DOT ->
                     remainingTokens
                 | newTokens -> newTokens
             
@@ -206,9 +212,9 @@ module Lexer =
             |> Option.map (fun token ->
                 { Kind = token.Kind
                   Line = line
-              LeftColumn = token.LeftColumn
+                  LeftColumn = token.LeftColumn
                   RightColumn = token.RightColumn + 1
-              Text = lineStr.[token.LeftColumn..token.RightColumn] })
+                  Text = lineStr.[token.LeftColumn..token.RightColumn] })
     
     let getSymbol source line col lineStr lookupKind (args: string[]) queryLexState =
         let tokens = tokenizeLine source args line lineStr queryLexState

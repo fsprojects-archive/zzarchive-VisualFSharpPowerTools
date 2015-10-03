@@ -127,7 +127,8 @@ module private StringCategorizers =
             |> Seq.collect (categorize Category.Escaped escapingSymbolsRegex getTextLine) 
                                               
 module private OperatorCategorizer = 
-    let getSpans (symbolUses: (SymbolUse * WordSpan) []) (spansByLine: Map<int, seq<WordSpan>>) tokensByLine =
+    let getSpans (symbolUses: (SymbolUse * WordSpan) []) (spansByLine: Map<int, seq<WordSpan>>) 
+                 (tokensByLine: FSharpTokenInfo list []) =
         let spansBasedOnSymbolUse =
             symbolUses
             |> Array.choose (fun (_, span) -> 
