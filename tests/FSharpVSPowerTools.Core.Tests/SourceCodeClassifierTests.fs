@@ -732,6 +732,15 @@ let _ = <@ <@ 1 @>, 2
         3, [ Cat.Quotation, 12, 14 ]]
 
 [<Test>]
+let ``quotation in static members``() =
+    """
+type EqualOp = EqualOp with
+    static member inline f = 
+        <@ 1 @>
+"""
+    => [4, [ Cat.Quotation, 8, 15 ]]
+
+[<Test>]
 let ``tuple alias``() = 
     """
 type Tuple = int * string
