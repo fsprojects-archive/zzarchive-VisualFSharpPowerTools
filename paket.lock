@@ -23,7 +23,7 @@ NUGET
       Expression.Blend.Sdk (>= 1.0.2) - framework: >= net45
     Microsoft.Bcl (1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
-    Microsoft.Bcl.Build (1.0.21)
+    Microsoft.Bcl.Build (1.0.21) - import_targets: false
     Microsoft.Net.Http (2.2.29)
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
