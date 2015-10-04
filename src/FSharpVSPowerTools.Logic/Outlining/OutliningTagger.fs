@@ -42,19 +42,15 @@ let visitAst tree =
         | _ -> ()
     }
 
+type SnapshotPoint with
+    static member OfPos(snapshot: ITextSnapshot, p: pos) =
+        snapshot.GetLineFromLineNumber(p.Line - 1).Start.Add(p.Column)
+
 type SnapshotSpan with
     static member OfRange(snapshot: ITextSnapshot, r: range) =
-        let sstart =
-            snapshot
-                .GetLineFromLineNumber(r.StartLine - 1)
-                .Start.Add(r.StartColumn)
-
-        let send =
-            snapshot
-                .GetLineFromLineNumber(r.EndLine - 1).Start
-                .Add(r.EndColumn - 1)
-
-        SnapshotSpan(sstart, send)
+        SnapshotSpan(
+            SnapshotPoint.OfPos(snapshot,r.Start),
+            SnapshotPoint.OfPos(snapshot, r.End))
 
 type Tagger
     ( buffer: ITextBuffer
@@ -66,10 +62,8 @@ type Tagger
     let tagsChanged = Event<_,_>()
     let mutable ranges : SnapshotSpan [] = [||]
 
-    let triggerUpdate newRanges =
-        let snapshot = buffer.CurrentSnapshot
+    let triggerUpdate snapshot newRanges =
         ranges <- Array.map (fun x -> SnapshotSpan.OfRange(snapshot, x)) newRanges
-
         tagsChanged.Trigger(
             self,
             SnapshotSpanEventArgs(
@@ -91,44 +85,54 @@ type Tagger
             })
 
     let getTags (nssc: NormalizedSnapshotSpanCollection) =
-        match ranges with
-        | [| |] -> Seq.empty
-        | arr ->
-            arr
+        if Seq.isEmpty nssc || Array.isEmpty ranges then Seq.empty
+        else
+            let newSnapshot = (Seq.head nssc).Snapshot
+            if newSnapshot.Version <> ranges.[0].Snapshot.Version then
+                ranges <- ranges |> Array.map (fun x -> x.TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive))
+            ranges
             |> Seq.filter nssc.IntersectsWith
             |> Seq.map (createTagSpan)
             |> Seq.cast<ITagSpan<_>>
 
+    let mutable cts = new CancellationTokenSource()
+
     let doUpdate () =
         let uiContext = SynchronizationContext.Current
-        asyncMaybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-            let! project = projectFactory.CreateForDocument buffer doc
-            let source = buffer.CurrentSnapshot.GetText()
-            let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> Async.map Some
-            return! parseFileResults.ParseTree
-        }
-        |> Async.bind (fun ast -> async {
-            return ast |> Option.map (fun tree ->
-                tree
-                |> visitAst 
-                |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
-                |> Array.ofSeq)
-           })
-        |> Async.bind (fun ranges -> async {
-                do! Async.SwitchToContext uiContext
-                match ranges with
-                | Some(r) -> triggerUpdate r
-                | None -> ()
-           })
-        |> Async.StartInThreadPoolSafe
+        let worker =
+            asyncMaybe {
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let snapshot = buffer.CurrentSnapshot
+                let source = snapshot.GetText()
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                let! project = projectFactory.CreateForDocument buffer doc
+                let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> Async.map Some
+                let! ast = parseFileResults.ParseTree
+                let ranges =
+                    ast
+                    |> visitAst 
+                    |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
+                    |> Array.ofSeq
+                return (snapshot, ranges)
+            } |> Async.bind (fun x -> async {
+                 do! Async.SwitchToContext uiContext
+                 match x with
+                 | Some(snapshot, r) -> triggerUpdate snapshot r
+                 | None -> ()
+            })
+
+        cts.Dispose()
+        cts <- new CancellationTokenSource()
+        Async.StartInThreadPoolSafe(worker, cts.Token)
 
     let docEventListener =
         new DocumentEventListener(
             [ViewChange.bufferEvent buffer],
             200us,
             doUpdate)
+
+    do
+        doUpdate ()
 
     interface ITagger<IOutliningRegionTag> with
 
