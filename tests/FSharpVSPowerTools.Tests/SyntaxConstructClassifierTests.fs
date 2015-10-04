@@ -100,7 +100,7 @@ module Module1 =
               { Classification = "FSharp.Module"; Span = (7, 8) => (7, 14) } 
               { Classification = "FSharp.Operator"; Span = (7, 16) => (7, 16) }
               { Classification = "FSharp.Operator"; Span = (8, 11) => (8, 11) }] 
-        CollectionAssert.AreEquivalent(expected, actual)
+        actual |> assertEqual expected
 
     [<Test>]
     let ``should be able to get classification spans for unused items``() = 
@@ -132,7 +132,7 @@ let internal f() = ()
                   { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) }
                   { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) }
                   {Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
-            CollectionAssert.AreEquivalent(expected, actual)
+            actual |> assertEqual expected
         File.Delete(fileName)
         
 
@@ -181,4 +181,4 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
                   { Classification = "FSharp.Function"; Span = (7, 59, 7, 67) }
                   { Classification = "FSharp.Operator"; Span = (7, 71, 7, 72) } 
                   { Classification = "FSharp.Function"; Span = (7, 74, 7, 79) } ]
-            CollectionAssert.AreEquivalent(expected, actual)
+            actual |> assertEqual expected
