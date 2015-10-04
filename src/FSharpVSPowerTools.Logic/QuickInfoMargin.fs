@@ -87,10 +87,14 @@ type QuickInfoMargin (textDocument: ITextDocument,
         let caretPos = view.Caret.Position
         match buffer.GetSnapshotPoint caretPos with
         | Some point ->
+            let project =
+                maybe {
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                    let! project = projectFactory.CreateForDocument buffer doc
+                    return project }
             asyncMaybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument buffer doc
+                let! project = project
                 let! tooltip =
                     asyncMaybe {
                         let! newWord, longIdent = vsLanguageService.GetLongIdentSymbol (point, project)

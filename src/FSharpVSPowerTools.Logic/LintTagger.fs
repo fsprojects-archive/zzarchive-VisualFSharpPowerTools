@@ -24,15 +24,19 @@ type LintTagger(textDocument: ITextDocument,
 
     let updateAtCaretPosition () =
         let uiContext = SynchronizationContext.Current
-        asyncMaybe {
+        let res = maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-            let! project = projectFactory.CreateForDocument buffer doc
+            let! project = projectFactory.CreateForDocument buffer doc 
+            return doc, project, dte.Version }
+
+        asyncMaybe {
+            let! doc, project, dteVersion = res
             let source = buffer.CurrentSnapshot.GetText()
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
             let! ast = parseFileResults.ParseTree
             let res = 
-                let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
+                let version = dteVersion |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                 Lint.lintParsedFile OptionalLintParameters.Default
                     { Ast = ast
                       Source = source
