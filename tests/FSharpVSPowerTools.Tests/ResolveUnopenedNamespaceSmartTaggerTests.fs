@@ -45,14 +45,13 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () -> 
-                helper.TagsOf(buffer, tagger) 
-                |> Seq.concat 
-                |> Seq.toList 
-                |> assertEqual [])
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.concat 
+                       |> Seq.toList 
+                       |> assertEqual [])
 
     [<Test>]
     let ``should not display unopened namespace tags on known values``() = 
@@ -60,13 +59,12 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 17) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () -> 
-                helper.TagsOf(buffer, tagger) 
-                |> Seq.toList 
-                |> assertEqual [])
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 17) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.toList 
+                       |> assertEqual [])
 
     [<Test>]
     let ``should not fail if active document raises exceptions``() = 
@@ -76,13 +74,12 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 10) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () -> 
-                helper.TagsOf(buffer, tagger) 
-                |> Seq.toList 
-                |> assertEqual [])
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 10) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.toList 
+                       |> assertEqual [])
 
     [<Test>]
     let ``should generate correct labels for unopened namespace tags``() = 
@@ -90,9 +87,9 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger) 
                 |> Seq.map (Seq.map (fun action -> action.DisplayText) >> Seq.toList)
@@ -105,9 +102,9 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger) 
                 |> Seq.map (Seq.map (fun action -> action.DisplayText) >> Seq.toList)
@@ -134,9 +131,9 @@ TimeSpan
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
@@ -144,7 +141,8 @@ TimeSpan
                     |> Seq.tryFind (fun action -> action.DisplayText = "open System")
                     |> Option.get
                 tagToInsert.Invoke()
-                buffer.CurrentSnapshot.GetText() |> assertEquivString """
+                buffer.CurrentSnapshot.GetText() 
+                |> assertEquivString """
 #r "System.dll"
 
 open System
@@ -161,9 +159,9 @@ DateTime
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
@@ -171,7 +169,8 @@ DateTime
                     |> Seq.tryFind (fun action -> action.DisplayText = "System.DateTime")
                     |> Option.get
                 tagToInsert.Invoke()
-                buffer.CurrentSnapshot.GetText() |> assertEquivString """
+                buffer.CurrentSnapshot.GetText() 
+                |> assertEquivString """
 #r "System.dll"
 System.DateTime
-""" )
+""")
