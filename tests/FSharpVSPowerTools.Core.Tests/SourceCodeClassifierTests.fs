@@ -870,7 +870,7 @@ let (|ActivePattern|_|) x = Some x
 let _ = (|ActivePattern|_|) 1
 """
     => [ 2, [(Cat.PatternCase, 6, 19); (Cat.Operator, 26, 27); (Cat.PatternCase, 28, 32)]
-         3, [(Cat.Operator, 6, 7); (Cat.Function, 9, 26)] ]
+         3, [(Cat.Operator, 6, 7); (Cat.Function, 8, 27)] ]
 
 [<Test>]
 let ``total active patterns``() =
@@ -879,7 +879,7 @@ let (|A|B|) _ = failwith ""
 let _ = (|A|B|) 1
 """
     => [ 2, [(Cat.PatternCase, 6, 7); (Cat.PatternCase, 8, 9); (Cat.Operator, 14, 15); (Cat.Function, 16, 24)]
-         3, [(Cat.Operator, 6, 7); (Cat.Function, 9, 14)] ]
+         3, [(Cat.Operator, 6, 7); (Cat.Function, 8, 15)] ]
 
 
 [<Test>]

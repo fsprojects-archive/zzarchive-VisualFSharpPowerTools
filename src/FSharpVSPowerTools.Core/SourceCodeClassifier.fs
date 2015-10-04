@@ -235,10 +235,12 @@ module SourceCodeClassifier =
                     let r = fsSymbolUse.RangeAlternate
                     match fsSymbolUse.Symbol with
                     | MemberFunctionOrValue func when func.IsActivePattern && not fsSymbolUse.IsFromDefinition ->
+                        // Usage of Active Patterns '(|A|_|)' has the range of '|A|_|',
+                        // so we expand the ranges in order to include parentheses into the results
                         Some (su, { SymbolKind = SymbolKind.Ident
                                     Line = r.End.Line
-                                    StartCol = r.Start.Column
-                                    EndCol = r.End.Column })
+                                    StartCol = r.Start.Column - 1 
+                                    EndCol = r.End.Column + 1})
                     | _ ->
                         lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) 
                         |> Option.bind (fun sym -> 
