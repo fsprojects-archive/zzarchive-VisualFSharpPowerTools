@@ -30,12 +30,12 @@ type CodeGenerationService(languageService: VSLanguageService, textBuffer: IText
                 let x = x :> ICodeGenerationService<_, _, _>
                 let! range, symbol = x.GetSymbolAtPosition(project, document, pos)
 
-                match symbol.Kind with
-                | k when k = kind ->
+                if symbol.Kind = kind then
                     let! symbolUse, _ =
                         languageService.GetFSharpSymbolUse(range, symbol, document.FullName, project, AllowStaleResults.MatchingSource)
                     return range, symbol, symbolUse
-                | _ -> return! None
+                else
+                    return! None
             }
 
         member __.ParseFileInProject(document, project) =
