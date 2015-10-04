@@ -74,12 +74,21 @@ type Tagger
 
     let createTagSpan (ss: SnapshotSpan) =
         let line = ss.Snapshot.GetLineFromPosition(ss.Start.Position)
-        let lineText = lazy line.GetText()
+
+        let lineText =
+            lazy match Option.ofNullable (SnapshotSpan(line.Start, line.End).Intersection(ss)) with
+                 | Some(ss) -> ss.GetText()
+                 | None -> ""
+
+        let maxHintLength = 500
+        let hintText =
+            lazy (if ss.Length > maxHintLength then SnapshotSpan(ss.Start, maxHintLength) else ss).GetText()
+
         TagSpan(
             ss,
             { new IOutliningRegionTag with
                 member x.CollapsedForm      = lineText.Force() :> obj
-                member x.CollapsedHintForm  = lineText.Force() :> obj
+                member x.CollapsedHintForm  = hintText.Force() :> obj
                 member x.IsDefaultCollapsed = false
                 member x.IsImplementation   = false
             })
