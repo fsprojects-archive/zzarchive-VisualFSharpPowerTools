@@ -11,6 +11,11 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open System.Threading
 
+[<Literal>]
+let UpdateDelay = 200us
+[<Literal>]
+let MaxTooltipLines = 30
+
 let visitBinding (Binding(_, _, _, _, _, _, _, _, _, _, range, _)) =
     range
 
@@ -46,11 +51,9 @@ type SnapshotPoint with
     static member OfPos(snapshot: ITextSnapshot, p: pos) =
         snapshot.GetLineFromLineNumber(p.Line - 1).Start.Add(p.Column)
 
-type SnapshotSpan with
-    static member OfRange(snapshot: ITextSnapshot, r: range) =
-        SnapshotSpan(
-            SnapshotPoint.OfPos(snapshot,r.Start),
-            SnapshotPoint.OfPos(snapshot, r.End))
+let rangeToProperOutlineSnapshotSpan (snapshot: ITextSnapshot) (r:range) =
+    let firstLine = snapshot.GetLineFromPosition(SnapshotPoint.OfPos(snapshot, r.Start).Position)
+    SnapshotSpan(firstLine.End, SnapshotPoint.OfPos(snapshot, r.End))
 
 type Tagger
     ( buffer: ITextBuffer
@@ -63,7 +66,7 @@ type Tagger
     let mutable ranges : SnapshotSpan [] = [||]
 
     let triggerUpdate snapshot newRanges =
-        ranges <- Array.map (fun x -> SnapshotSpan.OfRange(snapshot, x)) newRanges
+        ranges <- Array.map (fun x -> rangeToProperOutlineSnapshotSpan snapshot x) newRanges
         tagsChanged.Trigger(
             self,
             SnapshotSpanEventArgs(
@@ -73,21 +76,28 @@ type Tagger
                     buffer.CurrentSnapshot.Length - 1)))
 
     let createTagSpan (ss: SnapshotSpan) =
-        let line = ss.Snapshot.GetLineFromPosition(ss.Start.Position)
+        let snapshot = ss.Snapshot
+        let firstLine = snapshot.GetLineFromPosition(ss.Start.Position)
+        let mutable lastLine = snapshot.GetLineFromPosition(ss.End.Position)
 
-        let lineText =
-            lazy match Option.ofNullable (SnapshotSpan(line.Start, line.End).Intersection(ss)) with
-                 | Some(ss) -> ss.GetText()
-                 | None -> ""
+        let nlines = lastLine.LineNumber - firstLine.LineNumber + 1
+        if nlines > MaxTooltipLines then
+            lastLine <- snapshot.GetLineFromLineNumber(firstLine.LineNumber + MaxTooltipLines - 1)
 
-        let maxHintLength = 500
-        let hintText =
-            lazy (if ss.Length > maxHintLength then SnapshotSpan(ss.Start, maxHintLength) else ss).GetText()
+        let missingLinesCount = Math.Max(nlines - MaxTooltipLines, 0)
+
+        let hintText = lazy(
+            // substring(2) ignores newline
+            let text = SnapshotSpan(ss.Start, lastLine.End).GetText().Substring(2)
+            match missingLinesCount with
+            | 0 -> text
+            | n -> text + sprintf "\n+ %d lines..." n
+        )
 
         TagSpan(
             ss,
             { new IOutliningRegionTag with
-                member x.CollapsedForm      = lineText.Force() :> obj
+                member x.CollapsedForm      = "..." :> obj
                 member x.CollapsedHintForm  = hintText.Force() :> obj
                 member x.IsDefaultCollapsed = false
                 member x.IsImplementation   = false
@@ -137,7 +147,7 @@ type Tagger
     let docEventListener =
         new DocumentEventListener(
             [ViewChange.bufferEvent buffer],
-            200us,
+            UpdateDelay,
             doUpdate)
 
     do
