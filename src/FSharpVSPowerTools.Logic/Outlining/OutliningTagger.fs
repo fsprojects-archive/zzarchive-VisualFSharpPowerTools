@@ -10,6 +10,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open System.Threading
+open System.Diagnostics
 
 [<Literal>]
 let UpdateDelay = 200us
@@ -34,7 +35,6 @@ let rec visitDeclaration decl =
 let visitModuleOrNamespace moduleOrNs =
     seq {
         let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
-        yield moduleOrNs.Range
         yield! Seq.collect visitDeclaration decls
     }
 
