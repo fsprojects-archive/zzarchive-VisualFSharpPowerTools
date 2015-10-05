@@ -77,18 +77,19 @@ type Tagger
 
     let createTagSpan (ss: SnapshotSpan) =
         let snapshot = ss.Snapshot
-        let firstLine = snapshot.GetLineFromPosition(ss.Start.Position)
+        let firstLineNumber = snapshot.GetLineNumberFromPosition(ss.Start.Position)
         let mutable lastLine = snapshot.GetLineFromPosition(ss.End.Position)
 
-        let nlines = lastLine.LineNumber - firstLine.LineNumber + 1
+        let nlines = lastLine.LineNumber - firstLineNumber + 1
         if nlines > MaxTooltipLines then
-            lastLine <- snapshot.GetLineFromLineNumber(firstLine.LineNumber + MaxTooltipLines - 1)
+            lastLine <- snapshot.GetLineFromLineNumber(firstLineNumber + MaxTooltipLines - 1)
 
+        let hintSnapshotSpan = SnapshotSpan(ss.Start, lastLine.End)
         let missingLinesCount = Math.Max(nlines - MaxTooltipLines, 0)
 
         let hintText = lazy(
             // substring(2) ignores newline
-            let text = SnapshotSpan(ss.Start, lastLine.End).GetText().Substring(2)
+            let text = hintSnapshotSpan.GetText().Substring(2)
             match missingLinesCount with
             | 0 -> text
             | n -> text + sprintf "\n+ %d lines..." n
