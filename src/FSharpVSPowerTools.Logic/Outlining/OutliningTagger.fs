@@ -123,6 +123,11 @@ type Tagger
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let snapshot = buffer.CurrentSnapshot
                 let source = snapshot.GetText()
+
+                Debug.Assert(
+                    String.getLines source |> Array.length = snapshot.LineCount,
+                    "Expected line counts to match")
+
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
                 let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> Async.map Some
