@@ -17,15 +17,40 @@ let UpdateDelay = 200us
 [<Literal>]
 let MaxTooltipLines = 30
 
-let visitBinding (Binding(_, _, _, _, _, _, _, _, _, _, range, _)) =
+let visitLetBinding (Binding(_, _, _, _, _, _, _, _, _, _, range, _)) =
     range
 
-let rec visitDeclaration decl = 
+let rec visitSynMemberDefn d =
+    seq {
+        match d with
+        | SynMemberDefn.Member _ -> yield d.Range
+        | SynMemberDefn.LetBindings(lets, _, _, _) ->
+            yield! Seq.map visitLetBinding lets
+        | SynMemberDefn.AbstractSlot _ -> yield d.Range
+        | SynMemberDefn.Interface(_, mmembers, _) ->
+            yield d.Range
+            match mmembers with
+            | Some members -> yield! Seq.collect visitSynMemberDefn members
+            | None -> ()
+        | SynMemberDefn.NestedType(nt, _, _) ->
+            yield! visitTypeDecl nt
+        | _ -> ()
+    }
+
+and visitTypeDecl (TypeDefn(_, _, members, range)) =
+    seq {
+        yield range
+        yield! Seq.collect visitSynMemberDefn members
+    }
+
+let rec visitDeclaration (decl: SynModuleDecl) = 
     seq {
         match decl with
         | SynModuleDecl.Let(_, bindings, _) ->
             yield decl.Range
-            yield! Seq.map visitBinding bindings
+            yield! Seq.map visitLetBinding bindings
+        | SynModuleDecl.Types(types, _) ->
+            yield! Seq.collect visitTypeDecl types
         | SynModuleDecl.NestedModule(_, decls, _, _) ->
             yield decl.Range
             yield! Seq.collect visitDeclaration decls
@@ -115,8 +140,6 @@ type Tagger
             |> Seq.map (createTagSpan)
             |> Seq.cast<ITagSpan<_>>
 
-    let mutable cts = new CancellationTokenSource()
-
     let doUpdate () =
         let uiContext = SynchronizationContext.Current
         let worker =
@@ -146,9 +169,7 @@ type Tagger
                  | None -> ()
             })
 
-        cts.Dispose()
-        cts <- new CancellationTokenSource()
-        Async.StartInThreadPoolSafe(worker, cts.Token)
+        Async.StartInThreadPoolSafe worker
 
     let docEventListener =
         new DocumentEventListener(
