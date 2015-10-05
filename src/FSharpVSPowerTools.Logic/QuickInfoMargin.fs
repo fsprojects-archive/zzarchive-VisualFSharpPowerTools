@@ -134,7 +134,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
             } 
             |> Async.map (Option.getOrElse (None, None) >> updateQuickInfo)
             |> Async.StartInThreadPoolSafe
-        | _ -> updateQuickInfo (None, None)
+        | None -> updateQuickInfo (None, None)
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, updateAtCaretPosition)
 

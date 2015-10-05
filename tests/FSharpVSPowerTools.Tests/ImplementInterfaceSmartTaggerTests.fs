@@ -50,14 +50,13 @@ type Impl() =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 15) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () -> 
-                helper.TagsOf(buffer, tagger) 
-                |> Seq.concat 
-                |> Seq.toList 
-                |> assertEqual [])
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 15) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.concat 
+                       |> Seq.toList 
+                       |> assertEqual [])
 
     [<Test>]
     let ``return nothing if all members have been implemented and there is no type error``() = 
@@ -72,14 +71,13 @@ let _ =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () -> 
-                helper.TagsOf(buffer, tagger) 
-                |> Seq.concat 
-                |> Seq.toList 
-                |> assertEqual [])
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore)
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.concat 
+                       |> Seq.toList 
+                       |> assertEqual [])
 
     [<Test>]
     let ``should insert all members if no member has been implemented``() = 
@@ -92,9 +90,9 @@ let _ =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
@@ -127,9 +125,9 @@ type Class() =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 7 16) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 7 16) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
@@ -171,9 +169,9 @@ type Class() =
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 11 16) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 11 16) |> ignore)
             (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)

@@ -81,7 +81,7 @@ type LintTagger(textDocument: ITextDocument,
         [
             match wordSpans with
             | [] -> ()
-            | _ ->
+            | _ :: _ ->
                 let currentSnapshot = spans.[0].Snapshot
                 let wordSpans = 
                     if currentSnapshot = (snd wordSpans.[0]).Snapshot then

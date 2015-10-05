@@ -154,7 +154,7 @@ type ImplementInterface
     let updateAtCaretPosition() =
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
         | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
-        | _ ->
+        | (Some _ | None), _ ->
             let res =
                 maybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
@@ -202,7 +202,7 @@ type ImplementInterface
                             changed.Trigger self
                         })
                     |> Async.StartInThreadPoolSafe
-            | _ -> 
+            | None -> 
                 currentWord <- None 
                 changed.Trigger self
 

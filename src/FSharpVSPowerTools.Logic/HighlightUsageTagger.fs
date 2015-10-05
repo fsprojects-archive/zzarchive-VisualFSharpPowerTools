@@ -108,7 +108,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             }
             |> Async.map (Option.iter id)
             |> Async.StartInThreadPoolSafe
-        | _ -> ()
+        | None, _ -> ()
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
                                                       updateAtCaretPosition)
@@ -139,7 +139,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                 // the duplication is not expected.
                 for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) do
                     if span <> word then yield tagSpan span
-            | _ -> ()
+            | Some _ | None -> ()
         ]
 
     interface ITagger<HighlightUsageTag> with
