@@ -59,7 +59,7 @@ type VSLanguageService
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    let instance = LanguageService (fileSystem)
+    let instance = LanguageService fileSystem
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
     /// Clean up instructions are displayed on status bar.
@@ -68,7 +68,9 @@ type VSLanguageService
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
                 
-    do instance.SetCriticalErrorHandler(suggestRecoveryAfterFailure)
+    do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure
+       openDocumentsTracker.DocumentChanged.Add instance.OnFileChanged
+       openDocumentsTracker.DocumentClosed.Add instance.OnFileClosed
 
     let mutable skipLexCache = false
 
@@ -89,11 +91,10 @@ type VSLanguageService
         uses
         |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
         |> Seq.groupBy (fst >> Path.GetFullPathSafe)
-        |> Seq.map (fun (_, symbolUses) -> 
+        |> Seq.collect (fun (_, symbolUses) -> 
             symbolUses 
             |> Seq.map snd 
             |> Seq.distinctBy (fun s -> s.RangeAlternate))
-        |> Seq.concat
         |> Seq.toArray
 
     let mayReferToSameBuffer (snapshot: ITextSnapshot) filePath =
@@ -101,6 +102,21 @@ type VSLanguageService
         | None -> true
         | Some doc ->
             doc.Snapshot.TextBuffer = snapshot.TextBuffer
+
+    let getSymbolUsing kind (point: SnapshotPoint) (projectProvider: IProjectProvider) =
+        let source = point.Snapshot.GetText()
+        let line = point.Snapshot.GetLineNumberFromPosition point.Position
+        let col = point.Position - point.GetContainingLine().Start.Position
+        let lineStr = point.GetContainingLine().GetText()                
+        let args = projectProvider.CompilerOptions
+        let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
+            let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+            let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+            SnapshotSpan(snapshot, startPos, endPos - startPos)
+                                
+        Lexer.getSymbol source line col lineStr kind args (buildQueryLexState point.Snapshot.TextBuffer)
+        |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
+
 
     static let initializationTime = DateTime.Now
     let entityCache = EntityCache()
@@ -132,19 +148,11 @@ type VSLanguageService
 
     member __.FixProjectLoadTime opts = fixProjectLoadTime opts
         
-    member __.GetSymbol(point: SnapshotPoint, projectProvider: IProjectProvider) =
-        let source = point.Snapshot.GetText()
-        let line = point.Snapshot.GetLineNumberFromPosition point.Position
-        let col = point.Position - point.GetContainingLine().Start.Position
-        let lineStr = point.GetContainingLine().GetText()                
-        let args = projectProvider.CompilerOptions
-        let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
-            let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-            let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
-            SnapshotSpan(snapshot, startPos, endPos - startPos)
-                                
-        Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args (buildQueryLexState point.Snapshot.TextBuffer)
-        |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
+    member __.GetSymbol(point, projectProvider) =
+        getSymbolUsing SymbolLookupKind.Fuzzy point projectProvider
+
+    member __.GetLongIdentSymbol(point, projectProvider) =
+        getSymbolUsing SymbolLookupKind.ByLongIdent point projectProvider
 
     member __.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
         let snapshot = textBuffer.CurrentSnapshot
@@ -311,6 +319,18 @@ type VSLanguageService
                 debug "[Language Service] GetAllSymbols raises an exception: %O" e
                 Logging.logExceptionWithContext(e, "GetAllSymbols raises an exception.")
                 return None
+        }
+
+    member __.GetLoadDirectiveFileNameAtCursor (fileName, view: Microsoft.VisualStudio.Text.Editor.ITextView, project) =
+        async {
+            let source = view.TextBuffer.CurrentSnapshot.GetText()
+            let! parseResult = __.ParseFileInProject(fileName, source, project)
+            return maybe {
+                let! pos = view.PosAtCaretPosition()
+                let! ast = parseResult.ParseTree
+                let! result = UntypedAstUtils.HashDirectiveInfo.getHashLoadDirectiveResolvedPathAtPosition pos ast
+                return result
+            }
         }
 
     member __.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =

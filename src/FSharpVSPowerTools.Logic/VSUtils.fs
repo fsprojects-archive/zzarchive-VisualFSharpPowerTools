@@ -87,6 +87,26 @@ type ITextBuffer with
         let span = SnapshotSpan(x.CurrentSnapshot, 0, x.CurrentSnapshot.Length)
         event.Trigger(sender, SnapshotSpanEventArgs(span))
 
+type ITextView with
+    /// Return a simple zero-based (line, column) tuple from 
+    /// actual caret position in this ITextView
+    member x.GetCaretPosition () =
+        maybe {
+          let! point = x.TextBuffer.GetSnapshotPoint x.Caret.Position
+          let line = point.Snapshot.GetLineNumberFromPosition point.Position
+          let col = point.Position - point.GetContainingLine().Start.Position
+          return (line, col)
+        }
+
+    /// Return Microsoft.FSharp.Compiler.Range.pos from actual 
+    /// caret position in this ITextView taking care of off by 
+    /// 1 indexing between VS and FCS
+    member x.PosAtCaretPosition () =
+        maybe {
+          let! line, col = x.GetCaretPosition()
+          return Microsoft.FSharp.Compiler.Range.mkPos (line+1) (col+1)
+        }
+
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Editor
@@ -402,3 +422,17 @@ let isSourceExtension ext =
 
 let isSignatureExtension ext =
     String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase)
+
+let listFSharpProjectsInSolution (dte: DTE) =
+    let rec handleProject (p: Project) = 
+        if p === null then []
+        elif isFSharpProject p then [ p ]
+        elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
+        else []  
+        
+    and handleProjectItems (items: ProjectItems) = 
+        [ for pi in items do
+                yield! handleProject pi.SubProject ]
+
+    [ for p in dte.Solution.Projects do
+        yield! handleProject p ]

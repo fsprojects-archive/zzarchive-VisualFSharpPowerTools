@@ -67,7 +67,7 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                                 ()
                         } 
                         |> Async.StartImmediateSafe
-                    | _ -> ()
+                    | Some _ | None -> ()
                 | _ -> ()
             passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
 

@@ -40,8 +40,9 @@ type DepthColorizerAdornment(view: IWpfTextView,
 
     // Amount to increase the adornment height to ensure there aren't gaps between adornments
     // due to the way that layout rounding changes the placement of these adornments.
-    // Can see the bug if you set this to zero and scale the editor window to e.g. 91%, though for now I don't care
-    let adornmentHeightFudgeFactor = 0.0 
+    // Can see the bug if you set this to zero and scale the editor window to e.g. 91%.
+    // Through trial and error, 0.2 seems to be the lowest number to eliminate the gap completely.
+    let adornmentHeightFudgeFactor = 0.2
     
     let mutable colors = [||]
     let mutable edgeColors = [||]

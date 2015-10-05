@@ -1,6 +1,7 @@
 source http://nuget.org/api/v2
 
 nuget FAKE
+nuget FSharp.Management
 nuget NUnit.Runners
 nuget FSharp.Core 3.1.2.5
 nuget FSharp.Formatting
@@ -15,8 +16,6 @@ nuget Foq
 nuget Nuget.CommandLine
 nuget Octokit
 nuget SourceLink.SymbolStore 0.5.0
-nuget VSSDK.IDE.11
-nuget VSSDK.IDE.Deploy.11
 nuget FSharpLint.Core
 nuget VSSDK.IDE.Deploy.14
 

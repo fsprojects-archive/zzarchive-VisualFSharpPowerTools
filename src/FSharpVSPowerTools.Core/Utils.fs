@@ -15,9 +15,27 @@ module Seq =
 module List =
     let tryHead = function [] -> None | h :: _ -> Some h
 
+    let rec skipWhile p xs =
+        match xs with
+        | head :: tail when p head -> skipWhile p tail
+        | _ -> xs
+
+    let takeWhile p xs =
+        let rec loop acc xs =
+            match xs with
+            | head :: tail when p head -> loop (head :: acc) tail
+            | _ -> List.rev acc
+        loop [] xs
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Array =
+    let inline private checkNonNull argName arg = 
+        match box arg with 
+        | null -> nullArg argName 
+        | _ -> ()
+
+
     /// Returns true if one array has another as its subset from index 0.
     let startsWith (prefix: _ []) (whole: _ []) =
         let rec loop index =
@@ -62,6 +80,24 @@ module Array =
         for i = 0 to len - 1 do
             state <- folder state i array.[i]
         state
+
+    open System.Collections.Generic
+
+    /// Returns an array that contains no duplicate entries according to generic hash and
+    /// equality comparisons on the entries.
+    /// If an element occurs multiple times in the array then the later occurrences are discarded.
+    let distinct (array:'T[]) =
+        checkNonNull "array" array
+        let temp = Array.zeroCreate array.Length
+        let mutable i = 0
+
+        let hashSet = HashSet<'T>(HashIdentity.Structural<'T>)
+        for v in array do 
+            if hashSet.Add(v) then
+                temp.[i] <- v
+                i <- i + 1
+
+        Array.sub temp 0 i 
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -208,6 +244,8 @@ module Async =
         let map (mapping : 'T -> Async<'U>) (list : 'T list) : Async<'U list> =
             mapImpl (mapping, [], list)
 
+
+
 /// Maybe computation expression builder, copied from ExtCore library
 /// https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/Control.fs
 [<Sealed>]
@@ -344,52 +382,6 @@ module AsyncMaybe =
     let inline liftAsync (async : Async<'T>) : Async<_ option> =
         async |> Async.map Some
 
-[<RequireQualifiedAccess>]
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module String =
-    let lowerCaseFirstChar (str: string) =
-        match str with
-        | null -> null
-        | str ->
-            match str.ToCharArray() |> Array.toList with
-            | [] -> str
-            | h :: t when Char.IsUpper h -> String (Char.ToLower h :: t |> List.toArray)
-            | _ -> str
-
-    let extractTrailingIndex (str: string) =
-        match str with
-        | null -> null, None
-        | _ ->
-            str 
-            |> Seq.toList 
-            |> List.rev 
-            |> Seq.takeWhile Char.IsDigit 
-            |> Seq.toArray 
-            |> Array.rev
-            |> fun chars -> String(chars)
-            |> function
-               | "" -> str, None
-               | index -> str.Substring (0, str.Length - index.Length), Some (int index)
-
-    let trim (value: string) = match value with null -> null | x -> x.Trim()
-    
-    let split options (separator: string[]) (value: string) = 
-        match value with null -> null | x -> x.Split(separator, options)
-
-    let (|StartsWith|_|) pattern value =
-        if String.IsNullOrWhiteSpace(value) then
-            None
-        elif value.StartsWith(pattern) then
-            Some value
-        else None
-
-    let (|Contains|_|) pattern value =
-        if String.IsNullOrWhiteSpace(value) then
-            None
-        elif value.Contains(pattern) then
-            Some value
-        else None
-     
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
     open System.Diagnostics
@@ -407,6 +399,9 @@ module Pervasive =
     let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
     let inline debug msg = Printf.kprintf Debug.WriteLine msg
     let inline fail msg = Printf.kprintf Debug.Fail msg
+    let inline isNull v = match v with | null -> true | _ -> false
+    let inline isNotNull v = v |> (not << isNull)
+
     let maybe = MaybeBuilder()
     let asyncMaybe = AsyncMaybeBuilder()
     
@@ -483,6 +478,77 @@ module Pervasive =
 
     /// Path.Combine
     let (</>) path1 path2 = Path.Combine (path1, path2)
+
+[<RequireQualifiedAccess>]
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module String =
+    let lowerCaseFirstChar (str: string) =
+        match str with
+        | null -> null
+        | str ->
+            match str.ToCharArray() |> Array.toList with
+            | [] -> str
+            | h :: t when Char.IsUpper h -> String (Char.ToLower h :: t |> List.toArray)
+            | _ -> str
+
+    let extractTrailingIndex (str: string) =
+        match str with
+        | null -> null, None
+        | _ ->
+            str 
+            |> Seq.toList 
+            |> List.rev 
+            |> Seq.takeWhile Char.IsDigit 
+            |> Seq.toArray 
+            |> Array.rev
+            |> fun chars -> String(chars)
+            |> function
+               | "" -> str, None
+               | index -> str.Substring (0, str.Length - index.Length), Some (int index)
+
+    let trim (value: string) = match value with null -> null | x -> x.Trim()
+    
+    let split options (separator: string[]) (value: string) = 
+        match value with null -> null | x -> x.Split(separator, options)
+
+    let (|StartsWith|_|) pattern value =
+        if String.IsNullOrWhiteSpace(value) then
+            None
+        elif value.StartsWith(pattern) then
+            Some value
+        else None
+
+    let (|Contains|_|) pattern value =
+        if String.IsNullOrWhiteSpace(value) then
+            None
+        elif value.Contains(pattern) then
+            Some value
+        else None
+    
+    open System.IO
+
+    let getLines (str: string) =
+        use reader = new StringReader(str)
+        [|
+        let line = ref (reader.ReadLine())
+        while isNotNull (!line) do
+            yield !line
+            line := reader.ReadLine()
+        if str.EndsWith("\n") then
+            // last trailing space not returned
+            // http://stackoverflow.com/questions/19365404/stringreader-omits-trailing-linebreak
+            yield String.Empty
+        |]
+
+    let getNonEmptyLines (str: string) =
+        use reader = new StringReader(str)
+        [|
+        let line = ref (reader.ReadLine())
+        while isNotNull (!line) do
+            if (!line).Length > 0 then
+                yield !line
+            line := reader.ReadLine()
+        |]
 
 module Reflection =
     open System.Reflection

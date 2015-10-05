@@ -9,7 +9,6 @@ open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open System
 open System.IO
-open System.Text.RegularExpressions
 
 // Information about the project are used
 //  - for version and project name in generated AssemblyInfo file
@@ -47,6 +46,11 @@ let gitHome = "https://github.com/" + gitOwner
 // The name of the project on GitHub
 let gitName = "VisualFSharpPowerTools"
 let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
+
+// Default to MSBuild 12 if present
+let msBuildPath = (ProgramFilesX86 @@ @"\MSBuild\12.0\Bin\MSBuild.exe")
+if File.Exists msBuildPath then
+    setEnvironVar "MSBuild" msBuildPath
 
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
@@ -195,36 +199,22 @@ Target "ReleaseDocs" (fun _ ->
 #load "paket-files/fsharp/FAKE/modules/Octokit/Octokit.fsx"
 open Octokit
 
-let readString prompt echo : string =
-  let rec loop cs =
-    let key = Console.ReadKey(not echo)
-    match key.Key with
-    | ConsoleKey.Backspace -> match cs with
-                              | [] -> loop []
-                              | _::cs -> loop cs
-    | ConsoleKey.Enter -> cs
-    | _ -> loop (key.KeyChar :: cs)
-
-  printf "%s" prompt
-  let input =
-    loop []
-    |> List.rev
-    |> Array.ofList
-    |> fun cs -> new String(cs)
-  if not echo then
-    printfn ""
-  input
-
 Target "Release" (fun _ ->
+    let user =
+        match getBuildParam "github-user" with
+        | s when not (String.IsNullOrWhiteSpace s) -> s
+        | _ -> getUserInput "Username: "
+    let pw =
+        match getBuildParam "github-pw" with
+        | s when not (String.IsNullOrWhiteSpace s) -> s
+        | _ -> getUserPassword "Password: "
+
     StageAll ""
     Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
     Branches.push ""
 
     Branches.tag "" release.NugetVersion
     Branches.pushTag "" "origin" release.NugetVersion
-
-    let user = readString "Username: " true
-    let pw = readString "Password: " false
 
     // release on github
     createClient user pw
