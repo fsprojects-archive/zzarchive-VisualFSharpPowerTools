@@ -94,7 +94,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
             | Some(path) ->
                 let files = getFileHierarchy loadedConfigs
 
-                let rec getFileViewModel (files:FileViewModel seq) =
+                let rec getFileViewModel files =
                     let getFile (file:FileViewModel) =
                         if file.Path = path then Some(file) 
                         else getFileViewModel file.Files
