@@ -12,10 +12,8 @@ open Microsoft.FSharp.Compiler.Range
 open System.Threading
 open System.Diagnostics
 
-[<Literal>]
-let UpdateDelay = 200us
-[<Literal>]
-let MaxTooltipLines = 10
+let [<Literal>] UpdateDelay = 200us
+let [<Literal>] MaxTooltipLines = 25
 
 let visitBinding (b: SynBinding) =
     let r1 = b.RangeOfBindingSansRhs
@@ -111,33 +109,26 @@ type Tagger
         try
             let snapshot = ss.Snapshot
             let firstLine = snapshot.GetLineFromPosition(ss.Start.Position)
-            let firstLineNumber = firstLine.LineNumber
             let mutable lastLine = snapshot.GetLineFromPosition(ss.End.Position)
 
-            let firstHintLine = snapshot.GetLineFromLineNumber(firstLineNumber + 1)
-            let nHintLines = lastLine.LineNumber - firstHintLine.LineNumber + 1
+            let nHintLines = lastLine.LineNumber - firstLine.LineNumber + 1
             if nHintLines > MaxTooltipLines then
-                lastLine <- snapshot.GetLineFromLineNumber(firstHintLine.LineNumber + MaxTooltipLines - 1)
-
-            let hintSnapshotSpan =
-                SnapshotSpan(
-                    firstHintLine.Start,
-                    lastLine.End)
+                lastLine <- snapshot.GetLineFromLineNumber(firstLine.LineNumber + MaxTooltipLines - 1)
 
             let missingLinesCount = Math.Max(nHintLines - MaxTooltipLines, 0)
-            let collapsedText = lazy (SnapshotSpan(ss.Start, firstLine.End).GetText() + " ...")
 
+            let hintSnapshotSpan = SnapshotSpan(firstLine.Start, lastLine.End)
             let hintText = lazy(
                 let text = hintSnapshotSpan.GetText()
                 match missingLinesCount with
                 | 0 -> text
-                | n -> text + sprintf "\n\n +%d lines..." n
+                | n -> text + sprintf "\n...\n\n +%d lines" n
             )
 
             TagSpan(
                 ss,
                 { new IOutliningRegionTag with
-                    member __.CollapsedForm      = collapsedText.Force() :> obj
+                    member __.CollapsedForm      = "..." :> obj
                     member __.CollapsedHintForm  = hintText.Force() :> obj
                     member __.IsDefaultCollapsed = false
                     member __.IsImplementation   = false })
