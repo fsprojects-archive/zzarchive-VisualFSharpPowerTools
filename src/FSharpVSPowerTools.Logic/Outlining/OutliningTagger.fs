@@ -15,44 +15,45 @@ open System.Diagnostics
 [<Literal>]
 let UpdateDelay = 200us
 [<Literal>]
-let MaxTooltipLines = 30
+let MaxTooltipLines = 10
 
-let visitLetBinding (Binding(_, _, _, _, _, _, _, _, _, _, range, _)) =
-    range
+let visitBinding (b: SynBinding) =
+    let r1 = b.RangeOfBindingSansRhs
+    let r2 = b.RangeOfBindingAndRhs
+    mkFileIndexRange r1.FileIndex r1.End r2.End
 
 let rec visitSynMemberDefn d =
     seq {
         match d with
-        | SynMemberDefn.Member _ -> yield d.Range
-        | SynMemberDefn.LetBindings(lets, _, _, _) ->
-            yield! Seq.map visitLetBinding lets
-        | SynMemberDefn.AbstractSlot _ -> yield d.Range
+        | SynMemberDefn.Member (binding, _) -> yield visitBinding binding
+        | SynMemberDefn.LetBindings (bindings, _, _, _) ->
+            yield! Seq.map visitBinding bindings
         | SynMemberDefn.Interface(_, mmembers, _) ->
             yield d.Range
             match mmembers with
             | Some members -> yield! Seq.collect visitSynMemberDefn members
             | None -> ()
         | SynMemberDefn.NestedType(nt, _, _) ->
-            yield! visitTypeDecl nt
+            yield! visitTypeDefn nt
         | _ -> ()
     }
 
-and visitTypeDecl (TypeDefn(_, _, members, range)) =
+and visitTypeDefn (TypeDefn(componentInfo, objectModel, members, range)) =
     seq {
-        yield range
-        yield! Seq.collect visitSynMemberDefn members
+        yield mkFileIndexRange range.FileIndex componentInfo.Range.End range.End
+        match objectModel with
+        | ObjectModel(_, members, _) -> yield! Seq.collect visitSynMemberDefn members
+        | Simple _ -> yield! Seq.collect visitSynMemberDefn members
     }
 
 let rec visitDeclaration (decl: SynModuleDecl) = 
     seq {
         match decl with
         | SynModuleDecl.Let(_, bindings, _) ->
-            yield decl.Range
-            yield! Seq.map visitLetBinding bindings
+            yield! Seq.map visitBinding bindings
         | SynModuleDecl.Types(types, _) ->
-            yield! Seq.collect visitTypeDecl types
+            yield! Seq.collect visitTypeDefn types
         | SynModuleDecl.NestedModule(_, decls, _, _) ->
-            yield decl.Range
             yield! Seq.collect visitDeclaration decls
         | _ -> ()
     }
@@ -74,11 +75,13 @@ let visitAst tree =
 
 type SnapshotPoint with
     static member OfPos(snapshot: ITextSnapshot, p: pos) =
-        snapshot.GetLineFromLineNumber(p.Line - 1).Start.Add(p.Column)
+        let (line, column) = Pos.toZ(p)
+        snapshot.GetLineFromLineNumber(line).Start.Add(column)
 
 let rangeToProperOutlineSnapshotSpan (snapshot: ITextSnapshot) (r:range) =
-    let firstLine = snapshot.GetLineFromPosition(SnapshotPoint.OfPos(snapshot, r.Start).Position)
-    SnapshotSpan(firstLine.End, SnapshotPoint.OfPos(snapshot, r.End))
+    SnapshotSpan(
+        SnapshotPoint.OfPos(snapshot, r.Start),
+        SnapshotPoint.OfPos(snapshot, r.End))
 
 type Tagger
     ( buffer: ITextBuffer
@@ -91,43 +94,55 @@ type Tagger
     let mutable ranges : SnapshotSpan [] = [||]
 
     let triggerUpdate snapshot newRanges =
-        ranges <- Array.map (fun x -> rangeToProperOutlineSnapshotSpan snapshot x) newRanges
-        tagsChanged.Trigger(
-            self,
-            SnapshotSpanEventArgs(
-                SnapshotSpan(
-                    buffer.CurrentSnapshot,
-                    0,
-                    buffer.CurrentSnapshot.Length - 1)))
+        try
+            ranges <- newRanges |> Array.map (fun x ->
+                rangeToProperOutlineSnapshotSpan snapshot x)
+            tagsChanged.Trigger(
+                self,
+                SnapshotSpanEventArgs(
+                    SnapshotSpan(
+                        buffer.CurrentSnapshot,
+                        0,
+                        buffer.CurrentSnapshot.Length - 1)))
+        with
+            | :? ArgumentOutOfRangeException -> ()
 
     let createTagSpan (ss: SnapshotSpan) =
-        let snapshot = ss.Snapshot
-        let firstLineNumber = snapshot.GetLineNumberFromPosition(ss.Start.Position)
-        let mutable lastLine = snapshot.GetLineFromPosition(ss.End.Position)
+        try
+            let snapshot = ss.Snapshot
+            let firstLine = snapshot.GetLineFromPosition(ss.Start.Position)
+            let firstLineNumber = firstLine.LineNumber
+            let mutable lastLine = snapshot.GetLineFromPosition(ss.End.Position)
 
-        let nlines = lastLine.LineNumber - firstLineNumber + 1
-        if nlines > MaxTooltipLines then
-            lastLine <- snapshot.GetLineFromLineNumber(firstLineNumber + MaxTooltipLines - 1)
+            let firstHintLine = snapshot.GetLineFromLineNumber(firstLineNumber + 1)
+            let nHintLines = lastLine.LineNumber - firstHintLine.LineNumber + 1
+            if nHintLines > MaxTooltipLines then
+                lastLine <- snapshot.GetLineFromLineNumber(firstHintLine.LineNumber + MaxTooltipLines - 1)
 
-        let hintSnapshotSpan = SnapshotSpan(ss.Start, lastLine.End)
-        let missingLinesCount = Math.Max(nlines - MaxTooltipLines, 0)
+            let hintSnapshotSpan =
+                SnapshotSpan(
+                    firstHintLine.Start,
+                    lastLine.End)
 
-        let hintText = lazy(
-            // substring(2) ignores newline
-            let text = hintSnapshotSpan.GetText().Substring(2)
-            match missingLinesCount with
-            | 0 -> text
-            | n -> text + sprintf "\n+ %d lines..." n
-        )
+            let missingLinesCount = Math.Max(nHintLines - MaxTooltipLines, 0)
+            let collapsedText = lazy (SnapshotSpan(ss.Start, firstLine.End).GetText() + " ...")
 
-        TagSpan(
-            ss,
-            { new IOutliningRegionTag with
-                member x.CollapsedForm      = "..." :> obj
-                member x.CollapsedHintForm  = hintText.Force() :> obj
-                member x.IsDefaultCollapsed = false
-                member x.IsImplementation   = false
-            })
+            let hintText = lazy(
+                let text = hintSnapshotSpan.GetText()
+                match missingLinesCount with
+                | 0 -> text
+                | n -> text + sprintf "\n\n +%d lines..." n
+            )
+
+            TagSpan(
+                ss,
+                { new IOutliningRegionTag with
+                    member __.CollapsedForm      = collapsedText.Force() :> obj
+                    member __.CollapsedHintForm  = hintText.Force() :> obj
+                    member __.IsDefaultCollapsed = false
+                    member __.IsImplementation   = false })
+        with
+            | :? ArgumentOutOfRangeException -> null
 
     let getTags (nssc: NormalizedSnapshotSpanCollection) =
         if Seq.isEmpty nssc || Array.isEmpty ranges then Seq.empty
