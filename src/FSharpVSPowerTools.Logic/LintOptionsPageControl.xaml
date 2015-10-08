@@ -226,8 +226,8 @@
                                 IsChecked="{Binding IsEnabled}" 
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
-                                Name="IsEnabledCheckBox" />
-                            <Label Content="Enabled" Margin="5,0" Target="{Binding ElementName=IsEnabledCheckBox}"/>
+                                Name="IsEnabledCheckBox"
+                                Content="Enabled"/>
                         </StackPanel>
 
                         <TextBlock Margin="5, 0" Grid.Row="1">Hints:</TextBlock>
