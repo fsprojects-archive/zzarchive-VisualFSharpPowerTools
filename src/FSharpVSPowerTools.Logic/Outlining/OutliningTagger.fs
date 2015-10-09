@@ -26,8 +26,8 @@ let rec visitSynMemberDefn d =
         | SynMemberDefn.Member (binding, _) -> yield visitBinding binding
         | SynMemberDefn.LetBindings (bindings, _, _, _) ->
             yield! Seq.map visitBinding bindings
-        | SynMemberDefn.Interface(_, mmembers, _) ->
-            yield d.Range
+        | SynMemberDefn.Interface(tp, mmembers, _) ->
+            yield mkFileIndexRange d.Range.FileIndex tp.Range.End d.Range.End
             match mmembers with
             | Some members -> yield! Seq.collect visitSynMemberDefn members
             | None -> ()
@@ -76,10 +76,11 @@ type SnapshotPoint with
         let (line, column) = Pos.toZ(p)
         snapshot.GetLineFromLineNumber(line).Start.Add(column)
 
-let rangeToProperOutlineSnapshotSpan (snapshot: ITextSnapshot) (r:range) =
-    SnapshotSpan(
-        SnapshotPoint.OfPos(snapshot, r.Start),
-        SnapshotPoint.OfPos(snapshot, r.End))
+type SnapshotSpan with
+    static member OfRange(snapshot: ITextSnapshot, r: range) =
+        SnapshotSpan(
+            SnapshotPoint.OfPos(snapshot, r.Start),
+            SnapshotPoint.OfPos(snapshot, r.End))
 
 type Tagger
     ( buffer: ITextBuffer
@@ -89,21 +90,17 @@ type Tagger
     , languageService: VSLanguageService) as self = 
 
     let tagsChanged = Event<_,_>()
-    let mutable ranges : SnapshotSpan [] = [||]
+    let mutable snapshotSpans : SnapshotSpan [] = [||]
 
-    let triggerUpdate snapshot newRanges =
-        try
-            ranges <- newRanges |> Array.map (fun x ->
-                rangeToProperOutlineSnapshotSpan snapshot x)
-            tagsChanged.Trigger(
-                self,
-                SnapshotSpanEventArgs(
-                    SnapshotSpan(
-                        buffer.CurrentSnapshot,
-                        0,
-                        buffer.CurrentSnapshot.Length - 1)))
-        with
-            | :? ArgumentOutOfRangeException -> ()
+    let triggerUpdate newSnapshotSpans =
+        snapshotSpans <- newSnapshotSpans
+        tagsChanged.Trigger(
+            self,
+            SnapshotSpanEventArgs(
+                SnapshotSpan(
+                    buffer.CurrentSnapshot,
+                    0,
+                    buffer.CurrentSnapshot.Length - 1)))
 
     let createTagSpan (ss: SnapshotSpan) =
         try
@@ -136,12 +133,12 @@ type Tagger
             | :? ArgumentOutOfRangeException -> null
 
     let getTags (nssc: NormalizedSnapshotSpanCollection) =
-        if Seq.isEmpty nssc || Array.isEmpty ranges then Seq.empty
+        if Seq.isEmpty nssc || Array.isEmpty snapshotSpans then Seq.empty
         else
             let newSnapshot = (Seq.head nssc).Snapshot
-            if newSnapshot.Version <> ranges.[0].Snapshot.Version then
-                ranges <- ranges |> Array.map (fun x -> x.TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive))
-            ranges
+            if newSnapshot.Version <> snapshotSpans.[0].Snapshot.Version then
+                snapshotSpans <- snapshotSpans |> Array.map (fun x -> x.TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive))
+            snapshotSpans
             |> Seq.filter nssc.IntersectsWith
             |> Seq.map (createTagSpan)
             |> Seq.cast<ITagSpan<_>>
@@ -171,7 +168,12 @@ type Tagger
             } |> Async.bind (fun x -> async {
                  do! Async.SwitchToContext uiContext
                  match x with
-                 | Some(snapshot, r) -> triggerUpdate snapshot r
+                 | Some(snapshot, r) ->
+                    try
+                        let ss = r |> Array.map (fun x -> SnapshotSpan.OfRange(snapshot, x))
+                        triggerUpdate ss
+                    with
+                        | :? ArgumentOutOfRangeException -> ()
                  | None -> ()
             })
 
@@ -182,9 +184,6 @@ type Tagger
             [ViewChange.bufferEvent buffer],
             UpdateDelay,
             doUpdate)
-
-    do
-        doUpdate ()
 
     interface ITagger<IOutliningRegionTag> with
 
