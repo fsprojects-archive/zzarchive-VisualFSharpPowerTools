@@ -16,7 +16,7 @@ type FileViewModel(name:string, path:Path, files:FileViewModel seq, hasConfigFil
 
     member __.GetDirectory() =
         let directorySeparator = Path.DirectorySeparatorChar.ToString()
-        String.concat directorySeparator path
+        (String.concat directorySeparator path) + directorySeparator
 
     member this.GetFilePath() =
         this.GetDirectory() </> SettingsFileName
