@@ -11,7 +11,7 @@ An [F# linter](http://fsprojects.github.io/FSharpLint/) runs as you modify your 
 
 ### Rules
 
-When a broken lint rule is discovered the first three characters of the code in question are underlined in orange, a mouse-over of these characters will show the lint's suggestion in a tooltip:
+When a broken lint rule is discovered the first two characters of the code in question are underlined in orange, a mouse-over of these characters will show the lint's suggestion in a tooltip:
 
 ![Example of a broken lint rule](img/lint_rule_warning.gif)
 
