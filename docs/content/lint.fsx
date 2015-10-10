@@ -15,7 +15,7 @@ When a broken lint rule is discovered the first two characters of the code in qu
 
 ![Example of a broken lint rule](img/lint_rule_warning.gif)
 
-Each rule can be turned off in the F# Power Tools lint settings under the rules tab, the checkboxes indicate whether a rule is enabled/disabled. Some rules are grouped in a collection under an analyser, disabling the analyser will disable all of its rules, to enable/disable specific rules expand the analyser to view its rules:
+Each rule can be turned off in the F# Power Tools lint settings under the `Rules` tab, the checkboxes indicate whether a rule is enabled/disabled. Some rules are grouped in a collection under an analyser, disabling the analyser will disable all of its rules, to enable/disable specific rules expand the analyser to view its rules:
 
 ![Example of disabling a lint rule](img/lint_disable_rule.gif)
 
@@ -27,6 +27,8 @@ Some rules and analysers have additional settings, these can be viewed and updat
 
 ### Configuration Files
 
+Lint settings are all stored on disk on a per directory basis, lint setting changes from within F# Power Tools will be written out to a lint configuration file titled `Settings.FSharpLint`. The directory the settings are written to will attempt to default to a directory common to all open projects; under the `Files` tab you can choose to view/modify the settings for another directory - when you change directory any outstanding changes will be saved.
 
+When the lint runs it picks up the settings from the directory the source file is in and its ancestors, the settings in subdirectories taking precedence over any settings found in ancestor directories - this enables solution wide settings which can be overridden with project specific settings.
 
 *)
