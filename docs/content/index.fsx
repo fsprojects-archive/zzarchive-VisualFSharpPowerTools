@@ -42,6 +42,7 @@ Here are currently supported features:
  * [Generate references for F# Interactive](generatereferences.html)
  * [Navigate to source](navigatetosource.html)
  * [Quick info panel](quickinfopanel.html)
+ * [Lint](lint.html)
   
 Default Keymap
 --------------
