@@ -31,8 +31,8 @@ let rec visitSynMemberDefn d =
             match mmembers with
             | Some members -> yield! Seq.collect visitSynMemberDefn members
             | None -> ()
-        | SynMemberDefn.NestedType(nt, _, _) ->
-            yield! visitTypeDefn nt
+        | SynMemberDefn.NestedType(td, _, _) ->
+            yield! visitTypeDefn td
         | _ -> ()
     }
 
@@ -151,11 +151,6 @@ type Tagger
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let snapshot = buffer.CurrentSnapshot
                 let source = snapshot.GetText()
-
-                Debug.Assert(
-                    String.getLines source |> Array.length = snapshot.LineCount,
-                    "Expected line counts to match")
-
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
                 let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> Async.map Some
