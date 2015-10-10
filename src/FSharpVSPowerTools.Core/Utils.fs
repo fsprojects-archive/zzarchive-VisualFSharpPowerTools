@@ -377,6 +377,14 @@ type AsyncMaybeBuilder () =
         x.Using (sequence.GetEnumerator (), fun enum ->
             x.While (enum.MoveNext, x.Delay (fun () -> body enum.Current)))
 
+    [<DebuggerStepThrough>]
+    member inline __.TryWith (computation : Async<'T option>, catchHandler : exn -> Async<'T option>) : Async<'T option> =
+            async.TryWith (computation, catchHandler)
+
+    [<DebuggerStepThrough>]
+    member inline __.TryFinally (computation : Async<'T option>, compensation : unit -> unit) : Async<'T option> =
+            async.TryFinally (computation, compensation)
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AsyncMaybe =
     let inline liftAsync (async : Async<'T>) : Async<_ option> =

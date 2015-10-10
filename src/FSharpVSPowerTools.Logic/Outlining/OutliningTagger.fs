@@ -146,36 +146,28 @@ type Tagger
 
     let doUpdate () =
         let uiContext = SynchronizationContext.Current
-        let worker =
-            asyncMaybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let snapshot = buffer.CurrentSnapshot
-                let source = snapshot.GetText()
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument buffer doc
-                let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> Async.map Some
-                let! ast = parseFileResults.ParseTree
-                let ranges =
-                    ast
-                    |> visitAst 
-                    |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
-                    |> Array.ofSeq
-                return (snapshot, ranges)
-            } |> Async.bind (fun x -> async {
-                 do! Async.SwitchToContext uiContext
-                 match x with
-                 | Some(snapshot, r) ->
-                    try
-                        let ss = r |> Array.map (fun x -> SnapshotSpan.OfRange(snapshot, x))
-                        triggerUpdate ss
-                    with
-                        | :? ArgumentOutOfRangeException ->
-                            Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.doUpdate"
-                            ()
-                 | None -> ()
-            })
-
-        Async.StartInThreadPoolSafe worker
+        asyncMaybe {
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let snapshot = buffer.CurrentSnapshot
+            let source = snapshot.GetText()
+            let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+            let! project = projectFactory.CreateForDocument buffer doc
+            let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
+            let! ast = parseFileResults.ParseTree
+            let ranges =
+                ast
+                |> visitAst 
+                |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
+                |> Array.ofSeq
+            do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
+            try
+               let ss = ranges |> Array.map (fun x -> SnapshotSpan.OfRange(snapshot, x))
+               triggerUpdate ss
+            with
+                | :? ArgumentOutOfRangeException ->
+                    Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.doUpdate"
+                    ()
+        } |> Async.Ignore |> Async.StartInThreadPoolSafe
 
     let docEventListener =
         new DocumentEventListener(
