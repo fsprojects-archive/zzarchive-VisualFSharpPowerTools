@@ -6,6 +6,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
+open FSharpVSPowerTools.UntypedAstUtils.Outlining
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
@@ -14,74 +15,6 @@ open System.Diagnostics
 
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
-
-let visitBinding (b: SynBinding) =
-    let r1 = b.RangeOfBindingSansRhs
-    let r2 = b.RangeOfBindingAndRhs
-    mkFileIndexRange r1.FileIndex r1.End r2.End
-
-let rec visitSynMemberDefn d =
-    seq {
-        match d with
-        | SynMemberDefn.Member (binding, _) -> yield visitBinding binding
-        | SynMemberDefn.LetBindings (bindings, _, _, _) ->
-            yield! Seq.map visitBinding bindings
-        | SynMemberDefn.Interface(tp, mmembers, _) ->
-            yield mkFileIndexRange d.Range.FileIndex tp.Range.End d.Range.End
-            match mmembers with
-            | Some members -> yield! Seq.collect visitSynMemberDefn members
-            | None -> ()
-        | SynMemberDefn.NestedType(td, _, _) ->
-            yield! visitTypeDefn td
-        | _ -> ()
-    }
-
-and visitTypeDefn (TypeDefn(componentInfo, objectModel, members, range)) =
-    seq {
-        yield mkFileIndexRange range.FileIndex componentInfo.Range.End range.End
-        match objectModel with
-        | ObjectModel(_, members, _) -> yield! Seq.collect visitSynMemberDefn members
-        | Simple _ -> yield! Seq.collect visitSynMemberDefn members
-    }
-
-let rec visitDeclaration (decl: SynModuleDecl) = 
-    seq {
-        match decl with
-        | SynModuleDecl.Let(_, bindings, _) ->
-            yield! Seq.map visitBinding bindings
-        | SynModuleDecl.Types(types, _) ->
-            yield! Seq.collect visitTypeDefn types
-        | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
-            yield mkFileIndexRange decl.Range.FileIndex cmpInfo.Range.End decl.Range.End
-            yield! Seq.collect visitDeclaration decls
-        | _ -> ()
-    }
-
-let visitModuleOrNamespace moduleOrNs =
-    seq {
-        let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
-        yield! Seq.collect visitDeclaration decls
-    }
-
-let visitAst tree =
-    seq {
-        match tree with
-        | ParsedInput.ImplFile(implFile) ->
-            let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
-            yield! Seq.collect visitModuleOrNamespace modules
-        | _ -> ()
-    }
-
-type SnapshotPoint with
-    static member OfPos(snapshot: ITextSnapshot, p: pos) =
-        let (line, column) = Pos.toZ(p)
-        snapshot.GetLineFromLineNumber(line).Start.Add(column)
-
-type SnapshotSpan with
-    static member OfRange(snapshot: ITextSnapshot, r: range) =
-        SnapshotSpan(
-            SnapshotPoint.OfPos(snapshot, r.Start),
-            SnapshotPoint.OfPos(snapshot, r.End))
 
 type Tagger
     (buffer: ITextBuffer,
@@ -158,15 +91,13 @@ type Tagger
                 ast
                 |> visitAst 
                 |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
+                |> Seq.map (fun r -> fromFSharpRange snapshot r)
+                |> Seq.choose id
                 |> Array.ofSeq
+
             do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
-            try
-               let ss = ranges |> Array.map (fun x -> SnapshotSpan.OfRange(snapshot, x))
-               triggerUpdate ss
-            with
-                | :? ArgumentOutOfRangeException ->
-                    Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.doUpdate"
-                    ()
+            triggerUpdate ranges
+
         } |> Async.Ignore |> Async.StartInThreadPoolSafe
 
     let docEventListener =
