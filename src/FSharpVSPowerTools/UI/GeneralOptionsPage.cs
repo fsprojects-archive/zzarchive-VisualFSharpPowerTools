@@ -43,6 +43,7 @@ namespace FSharpVSPowerTools
             GoToSymbolSourceEnabled = true;
             QuickInfoPanelEnabled = true;
             LinterEnabled = true;
+            OutliningEnabled = false;
         }
 
         private bool GetNavigationBarConfig()
@@ -175,6 +176,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool LinterEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool OutliningEnabled { get; set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -227,6 +231,7 @@ namespace FSharpVSPowerTools
                 GoToSymbolSourceEnabled = _optionsControl.GoToSymbolSourceEnabled;
                 QuickInfoPanelEnabled = _optionsControl.QuickInfoPanelEnabled;
                 LinterEnabled = _optionsControl.LinterEnabled;
+                OutliningEnabled = _optionsControl.OutliningEnabled;
             }
 
             base.OnApply(e);

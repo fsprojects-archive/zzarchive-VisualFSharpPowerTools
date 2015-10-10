@@ -31,6 +31,10 @@ namespace FSharpVSPowerTools {
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (generalOptions == null || generalOptions.OutliningEnabled == false)
+                return null;
+
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
