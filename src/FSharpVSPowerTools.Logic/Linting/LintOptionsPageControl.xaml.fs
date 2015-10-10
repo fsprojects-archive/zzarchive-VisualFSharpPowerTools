@@ -3,6 +3,7 @@
 open System.Windows
 open System.Windows.Controls
 open FsXaml
+open FSharpLint.Framework.Configuration
 
 type LintOptionsControlProvider = XAML<"LintOptionsPageControl.xaml", true>
        
@@ -23,7 +24,11 @@ type LintOptionsPageControl() =
                 | :? ListView as control ->
                     match control.DataContext with
                     | :? IRemovable as viewModel ->
-                        let selectedItems = control.SelectedItems |> Seq.cast<string> |> Seq.toList
+                        let selectedItems = 
+                            control.SelectedItems 
+                            |> Seq.cast<Hint>
+                            |> Seq.toList
+
                         if viewModel.RemoveManyCommand.CanExecute(selectedItems) then
                             viewModel.RemoveManyCommand.Execute(selectedItems)
                     | _ -> ()
