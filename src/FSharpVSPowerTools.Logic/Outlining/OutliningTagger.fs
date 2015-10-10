@@ -12,8 +12,8 @@ open Microsoft.FSharp.Compiler.Range
 open System.Threading
 open System.Diagnostics
 
-let [<Literal>] UpdateDelay = 200us
-let [<Literal>] MaxTooltipLines = 25
+let [<Literal>] private UpdateDelay = 200us
+let [<Literal>] private MaxTooltipLines = 25
 
 let visitBinding (b: SynBinding) =
     let r1 = b.RangeOfBindingSansRhs
@@ -84,11 +84,11 @@ type SnapshotSpan with
             SnapshotPoint.OfPos(snapshot, r.End))
 
 type Tagger
-    ( buffer: ITextBuffer
-    , textDocument: ITextDocument
-    , serviceProvider : IServiceProvider
-    , projectFactory: ProjectFactory
-    , languageService: VSLanguageService) as self = 
+    (buffer: ITextBuffer,
+     textDocument: ITextDocument,
+     serviceProvider : IServiceProvider,
+     projectFactory: ProjectFactory,
+     languageService: VSLanguageService) as self = 
 
     let tagsChanged = Event<_,_>()
     let mutable snapshotSpans : SnapshotSpan [] = [||]
@@ -103,35 +103,35 @@ type Tagger
                     0,
                     buffer.CurrentSnapshot.Length - 1)))
 
-    let createTagSpan (ss: SnapshotSpan) =
+    let createTagSpan (snapshotSpan: SnapshotSpan) =
         try
-            let snapshot = ss.Snapshot
-            let firstLine = snapshot.GetLineFromPosition(ss.Start.Position)
-            let mutable lastLine = snapshot.GetLineFromPosition(ss.End.Position)
+            let snapshot = snapshotSpan.Snapshot
+            let firstLine = snapshot.GetLineFromPosition(snapshotSpan.Start.Position)
+            let mutable lastLine = snapshot.GetLineFromPosition(snapshotSpan.End.Position)
 
             let nHintLines = lastLine.LineNumber - firstLine.LineNumber + 1
             if nHintLines > MaxTooltipLines then
                 lastLine <- snapshot.GetLineFromLineNumber(firstLine.LineNumber + MaxTooltipLines - 1)
 
             let missingLinesCount = Math.Max(nHintLines - MaxTooltipLines, 0)
-
             let hintSnapshotSpan = SnapshotSpan(firstLine.Start, lastLine.End)
-            let hintText = lazy(
-                let text = hintSnapshotSpan.GetText()
-                match missingLinesCount with
-                | 0 -> text
-                | n -> text + sprintf "\n...\n\n +%d lines" n
-            )
 
             TagSpan(
-                ss,
+                snapshotSpan,
                 { new IOutliningRegionTag with
                     member __.CollapsedForm      = "..." :> obj
-                    member __.CollapsedHintForm  = hintText.Force() :> obj
                     member __.IsDefaultCollapsed = false
-                    member __.IsImplementation   = false })
+                    member __.IsImplementation   = false
+                    member __.CollapsedHintForm  =
+                        let text = hintSnapshotSpan.GetText()
+                        match missingLinesCount with
+                        | 0 -> text :> obj
+                        | n -> sprintf "%s\n...\n\n +%d lines" text n :> obj
+                    })
         with
-            | :? ArgumentOutOfRangeException -> null
+            | :? ArgumentOutOfRangeException ->
+                Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan"
+                null
 
     let getTags (nssc: NormalizedSnapshotSpanCollection) =
         if Seq.isEmpty nssc || Array.isEmpty snapshotSpans then Seq.empty
@@ -169,7 +169,9 @@ type Tagger
                         let ss = r |> Array.map (fun x -> SnapshotSpan.OfRange(snapshot, x))
                         triggerUpdate ss
                     with
-                        | :? ArgumentOutOfRangeException -> ()
+                        | :? ArgumentOutOfRangeException ->
+                            Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.doUpdate"
+                            ()
                  | None -> ()
             })
 
@@ -181,12 +183,9 @@ type Tagger
             UpdateDelay,
             doUpdate)
 
-    do
-        doUpdate ()
-
     interface ITagger<IOutliningRegionTag> with
 
-        member __.GetTags nssc  = getTags nssc
+        member __.GetTags spans = getTags spans
 
         [<CLIEvent>]
         member __.TagsChanged : IEvent<_,_> = tagsChanged.Publish
