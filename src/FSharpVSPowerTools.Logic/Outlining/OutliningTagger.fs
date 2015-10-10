@@ -181,6 +181,9 @@ type Tagger
             UpdateDelay,
             doUpdate)
 
+    do
+        doUpdate ()
+
     interface ITagger<IOutliningRegionTag> with
 
         member __.GetTags nssc  = getTags nssc
