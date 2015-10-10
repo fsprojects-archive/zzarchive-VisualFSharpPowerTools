@@ -25,6 +25,12 @@ Some rules and analysers have additional settings, these can be viewed and updat
 
 ### Hints
 
+Hints in the linter provide a way for new rules to easily be added by modifying the configuration alone. They are written in a DSL that appears as a subset of F#, in the format of `match expression ===> suggest expression or suggest message`. [Further documentation on writing hints](http://fsprojects.github.io/FSharpLint/Hints.html).
+
+Under the `Hints` tab in the F# Power Tools lint settings existing hints can be viewed, and new hints can be added. When adding a new hints it will be parsed to check for any errors before adding it to the configuration, if the hint could not be parsed the textbox will be highlighted red and a mouse-over will show the parse error.
+
+![Example of adding a hint](img/lint_add_hint.gif)
+
 ### Configuration Files
 
 Lint settings are all stored on disk on a per directory basis, lint setting changes from within F# Power Tools will be written out to a lint configuration file titled `Settings.FSharpLint`. The directory the settings are written to will attempt to default to a directory common to all open projects; under the `Files` tab you can choose to view/modify the settings for another directory - when you change directory any outstanding changes will be saved.
