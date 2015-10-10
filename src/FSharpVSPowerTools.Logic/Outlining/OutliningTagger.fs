@@ -51,7 +51,8 @@ let rec visitDeclaration (decl: SynModuleDecl) =
             yield! Seq.map visitBinding bindings
         | SynModuleDecl.Types(types, _) ->
             yield! Seq.collect visitTypeDefn types
-        | SynModuleDecl.NestedModule(_, decls, _, _) ->
+        | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
+            yield mkFileIndexRange decl.Range.FileIndex cmpInfo.Range.End decl.Range.End
             yield! Seq.collect visitDeclaration decls
         | _ -> ()
     }
