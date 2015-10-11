@@ -770,16 +770,26 @@ module Outlining =
             mkFileIndexRange r1.FileIndex r1.End r2.End
 
     let private visitBinding (b: SynBinding) =
-        let r1 = b.RangeOfBindingSansRhs
-        let r2 = b.RangeOfBindingAndRhs
-        Range.endToEnd r1 r2
+        let (Binding(_, kind, _, _, _, _, _, _, _, _, range, _)) = b
+        match kind with
+        | NormalBinding ->
+            let r1 = b.RangeOfBindingSansRhs
+            let r2 = b.RangeOfBindingAndRhs
+            Some (Range.endToEnd r1 r2)
+        | DoBinding ->
+            let doEnd = mkPos range.Start.Line (range.Start.Column + 2)
+            Some (mkFileIndexRange range.FileIndex doEnd range.End)
+        | _ -> None
 
     let rec private visitSynMemberDefn d =
         seq {
             match d with
-            | SynMemberDefn.Member (binding, _) -> yield visitBinding binding
+            | SynMemberDefn.Member (binding, _) ->
+                match visitBinding binding with
+                | Some(r) -> yield r
+                | _ -> ()
             | SynMemberDefn.LetBindings (bindings, _, _, _) ->
-                yield! Seq.map visitBinding bindings
+                yield! Seq.choose visitBinding bindings
             | SynMemberDefn.Interface(tp, mmembers, _) ->
                 yield Range.endToEnd tp.Range d.Range
                 match mmembers with
@@ -802,7 +812,7 @@ module Outlining =
         seq {
             match decl with
             | SynModuleDecl.Let(_, bindings, _) ->
-                yield! Seq.map visitBinding bindings
+                yield! Seq.choose visitBinding bindings
             | SynModuleDecl.Types(types, _) ->
                 yield! Seq.collect visitTypeDefn types
             | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->

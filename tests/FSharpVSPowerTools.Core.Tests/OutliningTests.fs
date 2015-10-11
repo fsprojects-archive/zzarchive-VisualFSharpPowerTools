@@ -103,6 +103,19 @@ let ``parsing a record with interface correctly``() =
     => [ (2,10); (8,10); (9,10) ]
 
 [<Test>]
+let ``parsing a type with a do block correctly``() =
+    """
+    type Color() =        // 2
+        let foo() =
+            ()
+
+        do
+            foo()
+            ()          // 8
+    """
+    => [ (2,8); (3,4); (6,8) ]
+
+[<Test>]
 let ``complex outlining test``() =
     """
     module MyModule =       // 2
