@@ -45,7 +45,7 @@ let gitHome = "https://github.com/" + gitOwner
 
 // The name of the project on GitHub
 let gitName = "VisualFSharpPowerTools"
-let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
+let cloneUrl = "https://github.com/fsprojects/VisualFSharpPowerTools.git"
 
 // Default to MSBuild 12 if present
 let msBuildPath = (ProgramFilesX86 @@ @"\MSBuild\12.0\Bin\MSBuild.exe")
