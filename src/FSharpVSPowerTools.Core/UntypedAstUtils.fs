@@ -765,16 +765,16 @@ module HashDirectiveInfo =
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
 
-    module Range =
+    module private Range =
         let endToEnd (r1: range) (r2: range) =
             mkFileIndexRange r1.FileIndex r1.End r2.End
 
-    let visitBinding (b: SynBinding) =
+    let private visitBinding (b: SynBinding) =
         let r1 = b.RangeOfBindingSansRhs
         let r2 = b.RangeOfBindingAndRhs
         Range.endToEnd r1 r2
 
-    let rec visitSynMemberDefn d =
+    let rec private visitSynMemberDefn d =
         seq {
             match d with
             | SynMemberDefn.Member (binding, _) -> yield visitBinding binding
@@ -790,7 +790,7 @@ module Outlining =
             | _ -> ()
         }
 
-    and visitTypeDefn (TypeDefn(componentInfo, objectModel, members, range)) =
+    and private visitTypeDefn (TypeDefn(componentInfo, objectModel, members, range)) =
         seq {
             yield Range.endToEnd componentInfo.Range range
             match objectModel with
@@ -798,7 +798,7 @@ module Outlining =
             | Simple _ -> yield! Seq.collect visitSynMemberDefn members
         }
 
-    let rec visitDeclaration (decl: SynModuleDecl) = 
+    let rec private visitDeclaration (decl: SynModuleDecl) = 
         seq {
             match decl with
             | SynModuleDecl.Let(_, bindings, _) ->
@@ -811,13 +811,13 @@ module Outlining =
             | _ -> ()
         }
 
-    let visitModuleOrNamespace moduleOrNs =
+    let private visitModuleOrNamespace moduleOrNs =
         seq {
             let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
             yield! Seq.collect visitDeclaration decls
         }
 
-    let visitAst tree =
+    let getOutliningRanges tree =
         seq {
             match tree with
             | ParsedInput.ImplFile(implFile) ->

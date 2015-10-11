@@ -89,7 +89,7 @@ type Tagger
             let! ast = parseFileResults.ParseTree
             let ranges =
                 ast
-                |> visitAst 
+                |> getOutliningRanges 
                 |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
                 |> Seq.map (fun r -> fromFSharpRange snapshot r)
                 |> Seq.choose id
