@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 // Builds the documentation from `.fsx` and `.md` files in the 'docs/content' directory
 // (the generated documentation is stored in the 'docs/output' directory)
 // --------------------------------------------------------------------------------------
@@ -22,8 +22,8 @@ let info =
 // For typical project, no changes are needed below
 // --------------------------------------------------------------------------------------
 
-#load "../../packages/FSharp.Formatting/FSharp.Formatting.fsx"
-#r "../../packages/FAKE/tools/FakeLib.dll"
+#load "../../packages/build/FSharp.Formatting/FSharp.Formatting.fsx"
+#r "../../packages/build/FAKE/tools/FakeLib.dll"
 
 open Fake
 open System.IO

@@ -1,22 +1,30 @@
 source http://nuget.org/api/v2
 
-nuget FAKE
 nuget FSharp.Management
-nuget NUnit.Runners
-nuget FSharp.Core 3.1.2.5
-nuget FSharp.Formatting
+nuget FSharp.Core 3.1.2.5 redirects:on
 nuget FSharp.Compiler.Service
 nuget Fantomas
 nuget Expression.Blend.Sdk
 nuget FSharp.ViewModule.Core
 nuget FsXaml.Wpf
-nuget FsCheck
+nuget SourceLink.SymbolStore 0.5.0
+nuget FSharpLint.Core prerelease
+nuget VSSDK.IDE.Deploy.14
+
+group Test
+source http://nuget.org/api/v2
+
+nuget NUnit.Runners
 nuget NUnit
 nuget Foq
+nuget FsCheck
+nuget FSharp.Core 3.1.2.5 redirects:on
+
+group Build
+source http://nuget.org/api/v2
+
+nuget FSharp.Formatting
+nuget FAKE
 nuget Nuget.CommandLine
-nuget Octokit
-nuget SourceLink.SymbolStore 0.5.0
-nuget FSharpLint.Core
-nuget VSSDK.IDE.Deploy.14
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx
