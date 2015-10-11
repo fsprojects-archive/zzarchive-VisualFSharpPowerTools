@@ -72,6 +72,7 @@
     <Compile Include="GoToDefinitionTests.LoadDirective.fs" />
     <Compile Include="UnopenedNamespacesResolverTests.fs" />
     <Compile Include="TaskListCommentExtractorTests.fs" />
+    <Compile Include="OutliningTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Management">
