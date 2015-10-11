@@ -1,4 +1,4 @@
-#### 2.1.0 - Unreleased
+#### 2.1.0 - October 11 2015
 * Fix fonts and colors' appearance on VS 2015 ([#1064](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1064))
 * Implement FSharpLint integration ([#1034](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1034))
 * Support relevant FSharp.Core.dll based on VS versions ([#1065](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1065))
