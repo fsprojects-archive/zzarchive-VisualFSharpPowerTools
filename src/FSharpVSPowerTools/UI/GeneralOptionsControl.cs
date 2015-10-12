@@ -143,6 +143,12 @@ namespace FSharpVSPowerTools
             set { chbLinter.Checked = value; }
         }
 
+        public bool OutliningEnabled
+        {
+            get { return chbOutlining.Checked; }
+            set { chbOutlining.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -167,6 +173,7 @@ namespace FSharpVSPowerTools
             GoToSymbolSourceEnabled = _optionsPage.GoToSymbolSourceEnabled;
             QuickInfoPanelEnabled = _optionsPage.QuickInfoPanelEnabled;
             LinterEnabled = _optionsPage.LinterEnabled;
+            OutliningEnabled = _optionsPage.OutliningEnabled;
         }
     }
 }

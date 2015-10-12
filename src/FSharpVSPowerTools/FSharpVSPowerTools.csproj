@@ -132,6 +132,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\OutliningTaggerProvider.cs" />
     <Compile Include="Resources\FSharpVSPowerTools.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

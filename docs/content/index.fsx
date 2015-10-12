@@ -43,6 +43,7 @@ Here are currently supported features:
  * [Navigate to source](navigatetosource.html)
  * [Quick info panel](quickinfopanel.html)
  * [Lint](lint.html)
+ * [Outlining](outlining.html)
   
 Default Keymap
 --------------
