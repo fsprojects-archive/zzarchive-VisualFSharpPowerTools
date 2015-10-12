@@ -843,7 +843,7 @@ and internal writeDocs writer docs getXmlDocSig xmlDocBySig =
         else docs :> seq<_>
 
     xmlDocs
-    |> Seq.collect (fun line -> line.Replace("\r\n", "\n").Split('\r', '\n'))
+    |> Seq.collect String.getLines
     |> Seq.iter (fun line -> writer.WriteLine("/// {0}", line.TrimStart()))
 
 and internal writeActivePattern ctx (case: FSharpActivePatternCase) =

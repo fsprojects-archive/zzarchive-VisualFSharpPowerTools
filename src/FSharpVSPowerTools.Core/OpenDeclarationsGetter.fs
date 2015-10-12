@@ -87,7 +87,7 @@ module OpenDeclarationGetter =
             |> List.choose (fun (s: string) ->
                  maybe {
                     let! name, from = 
-                        match s.Split ([|'\n'|], StringSplitOptions.RemoveEmptyEntries) with
+                        match String.getNonEmptyLines s with
                         | [|name; from|] -> Some (name, Some from)
                         | [|name|] -> Some (name, None)
                         | _ -> None

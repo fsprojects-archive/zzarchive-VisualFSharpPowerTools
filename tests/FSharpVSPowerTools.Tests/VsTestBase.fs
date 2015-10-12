@@ -29,6 +29,8 @@ type VsTestBase() =
     static do serviceProvider.Services.[nameOf<SDTE>] <- dte
     static do serviceProvider.Services.[nameOf<SVsResourceManager>] <- Mocks.createSVsResourceManager()
 
+    static do serviceProvider.Services.[nameOf<ILintOptions>] <- new Linting.LintOptionsPage(dte)
+
     let vsEditorAdaptersFactoryService = Mocks.createVsEditorAdaptersFactoryService()
     let classificationRegistry = Mocks.createClassificationTypeRegistryService()
     let documentFactoryService = Mocks.createDocumentFactoryService()

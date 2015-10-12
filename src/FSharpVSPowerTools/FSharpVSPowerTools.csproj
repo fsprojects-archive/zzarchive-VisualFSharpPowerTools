@@ -57,6 +57,13 @@
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="envdte80, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="FsXaml.Wpf, Version=0.9.9.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="FsXaml.Wpf.TypeProvider">
+      <HintPath>..\..\packages\FsXaml.Wpf\lib\net45\FsXaml.Wpf.TypeProvider.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.VisualStudio.ComponentModelHost, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
@@ -125,6 +132,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\OutliningTaggerProvider.cs" />
     <Compile Include="Resources\FSharpVSPowerTools.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -290,8 +298,6 @@
       </ItemGroup>
     </When>
   </Choose>
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.props')" Label="Paket" />
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.11\build\VSSDK.IDE.Deploy.11.targets')" Label="Paket" />
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
 </Project>

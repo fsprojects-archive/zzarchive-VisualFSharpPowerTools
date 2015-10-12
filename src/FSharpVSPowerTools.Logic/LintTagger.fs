@@ -1,6 +1,8 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
 open System
+open System.IO
+open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Shell.Interop
@@ -8,8 +10,8 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
+open FSharpLint.Framework.Configuration
 open Microsoft.FSharp.Compiler
-open System.Threading
 
 type LintTag(tooltip) = 
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)
@@ -24,42 +26,62 @@ type LintTagger(textDocument: ITextDocument,
 
     let updateAtCaretPosition () =
         let uiContext = SynchronizationContext.Current
-        asyncMaybe {
+        let res = maybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-            let! project = projectFactory.CreateForDocument buffer doc
+            let! project = projectFactory.CreateForDocument buffer doc 
+            return doc, project, dte.Version }
+
+        asyncMaybe {
+            let! doc, project, dteVersion = res
             let source = buffer.CurrentSnapshot.GetText()
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
             let! ast = parseFileResults.ParseTree
-            let res = 
-                let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
-                Lint.lintParsedFile OptionalLintParameters.Default
-                    { Ast = ast
-                      Source = source
-                      TypeCheckResults = None
-                      FSharpVersion = version }
-                    doc.FullName
 
-            return
-                match res with
-                | LintResult.Success warnings ->
-                    warnings 
-                    //|> Seq.distinctBy (fun warn -> warn.Range, warn.Info)
-                    |> Seq.choose (fun warn ->
-                        let r = warn.Range
-                        let endCol =
-                            if r.StartLine = r.EndLine then
-                                min r.EndColumn (r.StartColumn + 2)
-                            else r.StartColumn + 2
-                        let range =
-                            Range.mkRange "" 
-                                (Range.mkPos r.StartLine r.StartColumn)
-                                (Range.mkPos r.StartLine endCol)
+            let lintOptions = Setting.getLintOptions serviceProvider
+            lintOptions.UpdateDirectories()
+            let config = Path.GetDirectoryName doc.FullName |> lintOptions.GetConfigurationForDirectory
 
-                        fromFSharpRange buffer.CurrentSnapshot range
-                        |> Option.map (fun span -> warn, span))
-                    |> Seq.toList
-                | LintResult.Failure _ -> []
+            let shouldFileBeIgnored =
+                match config.IgnoreFiles with
+                | Some(ignoreFiles) ->
+                    IgnoreFiles.shouldFileBeIgnored
+                        ignoreFiles.Files
+                        textDocument.FilePath
+                | None -> false
+
+            if not shouldFileBeIgnored then
+                let res = 
+                    let version = dteVersion |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
+                    Lint.lintParsedFile
+                        { Lint.OptionalLintParameters.Default with Configuration = Some config }
+                        { Ast = ast
+                          Source = source
+                          TypeCheckResults = None
+                          FSharpVersion = version }
+                        doc.FullName
+
+                return
+                    match res with
+                    | LintResult.Success warnings ->
+                        warnings 
+                        |> Seq.choose (fun warn ->
+                            let r = warn.Range
+                            let endCol =
+                                if r.StartLine = r.EndLine then
+                                    min r.EndColumn (r.StartColumn + 2)
+                                else r.StartColumn + 2
+                            let range =
+                                Range.mkRange "" 
+                                    (Range.mkPos r.StartLine r.StartColumn)
+                                    (Range.mkPos r.StartLine endCol)
+
+                            fromFSharpRange buffer.CurrentSnapshot range
+                            |> Option.map (fun span -> warn, span))
+                        |> Seq.toList
+                    | LintResult.Failure _ -> []
+                else
+                    return []
         }
         |> Async.bind (fun spans -> 
             async {
@@ -77,7 +99,7 @@ type LintTagger(textDocument: ITextDocument,
         [
             match wordSpans with
             | [] -> ()
-            | _ ->
+            | _ :: _ ->
                 let currentSnapshot = spans.[0].Snapshot
                 let wordSpans = 
                     if currentSnapshot = (snd wordSpans.[0]).Snapshot then

@@ -37,7 +37,7 @@ let opts source =
 let (=>) source (expected: (int * ((Cat * int * int) list)) list) = 
     let opts = opts source
     
-    let sourceLines = source.Replace("\r\n", "\n").Split('\n')
+    let sourceLines = String.getLines source
 
     let lexer = 
         { new LexerBase() with
@@ -723,6 +723,24 @@ let _ =
          8, [ Cat.Quotation, 11, 18 ]]
 
 [<Test>]
+let ``nested multiline quotation``() =
+    """
+let _ = <@ <@ 1 @>, 2
+            @>
+"""
+    => [2, [ Cat.Operator, 6, 7; Cat.Quotation, 8, 21 ]
+        3, [ Cat.Quotation, 12, 14 ]]
+
+[<Test>]
+let ``quotation in static members``() =
+    """
+type EqualOp = EqualOp with
+    static member inline f = 
+        <@ 1 @>
+"""
+    => [4, [ Cat.Quotation, 8, 15 ]]
+
+[<Test>]
 let ``tuple alias``() = 
     """
 type Tuple = int * string
@@ -832,14 +850,37 @@ type ArrayAlias = byte[]
 """
     => [ 2, [ Cat.ReferenceType, 5, 15; Cat.Operator, 16, 17; Cat.ValueType, 18, 22 ]]
 
-[<Test; Ignore "Lexer cannot recognize (|P|_|) as an Ident at position of the last bar">]
-let ``active pattern``() =
+[<Test>]
+let ``function type alias``() =
+    """
+type FuncAlias = unit -> unit
+let func: FuncAlias = fun () -> ()
+type FuncAliasOfAlias = FuncAlias
+let func1: FuncAliasOfAlias = fun () -> ()
+"""
+    => [ 2, [ Cat.ReferenceType, 5, 14; Cat.Operator, 15, 16; Cat.ReferenceType, 17, 21; Cat.ReferenceType, 25, 29 ]
+         3, [ Cat.Function, 4, 8; Cat.ReferenceType, 10, 19; Cat.Operator, 20, 21 ]
+         4, [ Cat.ReferenceType, 5, 21; Cat.Operator, 22, 23; Cat.ReferenceType, 24, 33 ]
+         5, [ Cat.Function, 4, 9; Cat.ReferenceType, 11, 27; Cat.Operator, 28, 29 ]]
+
+[<Test>]
+let ``partial active patterns``() =
     """
 let (|ActivePattern|_|) x = Some x
 let _ = (|ActivePattern|_|) 1
 """
-    => [ 2, [ Cat.PatternCase, 6, 19; Cat.PatternCase, 28, 32 ]
-         3, [ Cat.Function, 8, 27 ]]
+    => [ 2, [(Cat.PatternCase, 6, 19); (Cat.Operator, 26, 27); (Cat.PatternCase, 28, 32)]
+         3, [(Cat.Operator, 6, 7); (Cat.Function, 8, 27)] ]
+
+[<Test>]
+let ``total active patterns``() =
+    """
+let (|A|B|) _ = failwith ""
+let _ = (|A|B|) 1
+"""
+    => [ 2, [(Cat.PatternCase, 6, 7); (Cat.PatternCase, 8, 9); (Cat.Operator, 14, 15); (Cat.Function, 16, 24)]
+         3, [(Cat.Operator, 6, 7); (Cat.Function, 8, 15)] ]
+
 
 [<Test>]
 let ``non public module``() =

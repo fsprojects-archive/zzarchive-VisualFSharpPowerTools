@@ -44,19 +44,14 @@ module private QuotationCategorizer =
             else
                 [r.StartLine..r.EndLine]
                 |> Seq.choose (fun line ->
-                     let tokens = lexer.TokenizeLine (line - 1)
+                     let tokens = lexer.TokenizeLine (line - 1) 
 
                      let tokens =
-                        match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
-                        | Some rquote -> 
-                            tokens
-                            |> List.rev
-                            |> List.skipWhile ((<>) rquote)
-                            |> List.rev
-                        | _ -> 
-                            match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
-                            | Some lquote -> tokens |> List.skipWhile (fun t -> t <> lquote) 
-                            | _ -> tokens 
+                         if line = r.StartLine then
+                             tokens |> List.skipWhile (fun t -> t.LeftColumn < r.StartColumn)
+                         elif line = r.EndLine then
+                             tokens |> List.takeWhile (fun t -> t.RightColumn <= r.EndColumn)
+                         else tokens
 
                      let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
                      
@@ -179,11 +174,14 @@ module private OperatorCategorizer =
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
-        | Entity (_, ValueType, _) -> Category.ValueType
-        | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module 
-        | Entity (_, _, Tuple) -> Category.ReferenceType
-        | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
+        | Entity e ->
+            match e with
+            | _, ValueType, _ -> Category.ValueType
+            | Class -> Category.ReferenceType
+            | _, FSharpModule, _ -> Category.Module 
+            | _, _, Tuple -> Category.ReferenceType
+            | _, (FSharpType | ProvidedType | ByRef | Array), _ -> Category.ReferenceType
+            | _ -> Category.Other 
         | _ -> Category.Other 
 
     let internal getCategory (symbolUse: FSharpSymbolUse) =
@@ -191,19 +189,25 @@ module SourceCodeClassifier =
         | Field (MutableVar, _)
         | Field (_, RefCell) -> Category.MutableVar
         | Pattern -> Category.PatternCase
-        | Entity (_, ValueType, _) -> Category.ValueType
-        | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module
-        | Entity (_, _, Tuple) -> Category.ReferenceType
-        | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
-        | MemberFunctionOrValue (Constructor ValueType) -> Category.ValueType
-        | MemberFunctionOrValue (Constructor _) -> Category.ReferenceType
-        | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression) -> Category.Function
-        | MemberFunctionOrValue MutableVar -> Category.MutableVar
-        | MemberFunctionOrValue func ->
-            match func.FullTypeSafe with
-            | Some RefCell -> Category.MutableVar
+        | Entity e ->
+            match e with
+            | (_, ValueType, _) -> Category.ValueType
+            | Class -> Category.ReferenceType
+            | (_, FSharpModule, _) -> Category.Module
+            | (_, _, Tuple) -> Category.ReferenceType
+            | (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
+            | (_, _, Some FunctionType) -> Category.ReferenceType
             | _ -> Category.Other
+        | MemberFunctionOrValue f ->
+            match f with
+            | Constructor ValueType -> Category.ValueType
+            | Constructor _ -> Category.ReferenceType
+            | Function symbolUse.IsFromComputationExpression -> Category.Function
+            | MutableVar -> Category.MutableVar
+            | func ->
+                match func.FullTypeSafe with
+                | Some RefCell -> Category.MutableVar
+                | _ -> Category.Other
         | _ -> Category.Other 
 
     // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
@@ -225,30 +229,42 @@ module SourceCodeClassifier =
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
             |> Seq.collect (fun (line, sus) ->
                 let tokens = tokensByLine.[line - 1]
-                sus |> Seq.choose (fun su ->
-                    let r = su.SymbolUse.RangeAlternate
-                    lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) |> Option.bind (fun sym -> 
-                        //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
-                        match sym.Kind with
-                        | SymbolKind.Ident ->
-                            // FCS returns inaccurate ranges for multi-line method chains
-                            // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
-                            if r.StartLine < r.EndLine then
+                sus 
+                |> Seq.choose (fun su ->
+                    let fsSymbolUse = su.SymbolUse
+                    let r = fsSymbolUse.RangeAlternate
+                    match fsSymbolUse.Symbol with
+                    | MemberFunctionOrValue func when func.IsActivePattern && not fsSymbolUse.IsFromDefinition ->
+                        // Usage of Active Patterns '(|A|_|)' has the range of '|A|_|',
+                        // so we expand the ranges in order to include parentheses into the results
+                        Some (su, { SymbolKind = SymbolKind.Ident
+                                    Line = r.End.Line
+                                    StartCol = r.Start.Column - 1 
+                                    EndCol = r.End.Column + 1})
+                    | _ ->
+                        lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) 
+                        |> Option.bind (fun sym -> 
+                            //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
+                            match sym.Kind with
+                            | SymbolKind.Ident ->
+                                // FCS returns inaccurate ranges for multi-line method chains
+                                // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+                                if r.StartLine < r.EndLine then
+                                    Some (su, { SymbolKind = sym.Kind
+                                                Line = r.End.Line
+                                                StartCol = r.End.Column - sym.Text.Length
+                                                EndCol = r.End.Column })
+                                else 
+                                    Some (su, { SymbolKind = sym.Kind
+                                                Line = r.End.Line
+                                                StartCol = r.Start.Column
+                                                EndCol = r.End.Column })
+                            | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
                                 Some (su, { SymbolKind = sym.Kind
-                                            Line = r.End.Line
-                                            StartCol = r.End.Column - sym.Text.Length
-                                            EndCol = r.End.Column })
-                            else 
-                                Some (su, { SymbolKind = sym.Kind
-                                            Line = r.End.Line
+                                            Line = r.End.Line 
                                             StartCol = r.Start.Column
                                             EndCol = r.End.Column })
-                        | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
-                            Some (su, { SymbolKind = sym.Kind
-                                        Line = r.End.Line 
-                                        StartCol = r.Start.Column
-                                        EndCol = r.End.Column })
-                        | _ -> None)))
+                            | _ -> None)))
             |> Seq.toArray
        
         // index all symbol usages by LineNumber 

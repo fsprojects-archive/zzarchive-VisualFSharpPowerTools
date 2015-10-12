@@ -189,3 +189,4 @@ tests/data/*/*.xml
 tests/data/*/*.pdb
 
 _NCrunch_*
+build_PRIVATE.cmd

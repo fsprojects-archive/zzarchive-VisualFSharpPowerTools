@@ -474,11 +474,12 @@ let getQuatationRanges ast =
         | _ -> () 
 
     let visitType ty =
-        let (SynTypeDefn.TypeDefn (_, repr, _, _)) = ty
+        let (SynTypeDefn.TypeDefn (_, repr, defns, _)) = ty
         match repr with
         | SynTypeDefnRepr.ObjectModel (_, defns, _) ->
             for d in defns do visitMember d
         | _ -> ()
+        for d in defns do visitMember d
 
     let rec visitDeclarations decls = 
         for declaration in decls do
@@ -652,7 +653,7 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
     |> List.rev
     |> Seq.concat
     |> Seq.map (fun ident -> ident.idText)
-    |> String.concat "."  
+    |> String.concat "."
 
 
 module HashDirectiveInfo =
@@ -758,3 +759,79 @@ module HashDirectiveInfo =
                     -> Some f
             | _     -> None
         )
+
+
+/// Set of visitor utilies, designed for the express purpose of fetching ranges
+/// from an untyped AST for the purposes of outlining.
+module Outlining =
+
+    module private Range =
+        let endToEnd (r1: range) (r2: range) =
+            mkFileIndexRange r1.FileIndex r1.End r2.End
+
+    let private visitBinding (b: SynBinding) =
+        let (Binding(_, kind, _, _, _, _, _, _, _, _, range, _)) = b
+        match kind with
+        | NormalBinding ->
+            let r1 = b.RangeOfBindingSansRhs
+            let r2 = b.RangeOfBindingAndRhs
+            Some (Range.endToEnd r1 r2)
+        | DoBinding ->
+            let doEnd = mkPos range.Start.Line (range.Start.Column + 2)
+            Some (mkFileIndexRange range.FileIndex doEnd range.End)
+        | _ -> None
+
+    let rec private visitSynMemberDefn d =
+        seq {
+            match d with
+            | SynMemberDefn.Member (binding, _) ->
+                match visitBinding binding with
+                | Some(r) -> yield r
+                | _ -> ()
+            | SynMemberDefn.LetBindings (bindings, _, _, _) ->
+                yield! Seq.choose visitBinding bindings
+            | SynMemberDefn.Interface(tp, mmembers, _) ->
+                yield Range.endToEnd tp.Range d.Range
+                match mmembers with
+                | Some members -> yield! Seq.collect visitSynMemberDefn members
+                | None -> ()
+            | SynMemberDefn.NestedType(td, _, _) ->
+                yield! visitTypeDefn td
+            | _ -> ()
+        }
+
+    and private visitTypeDefn (TypeDefn(componentInfo, objectModel, members, range)) =
+        seq {
+            yield Range.endToEnd componentInfo.Range range
+            match objectModel with
+            | ObjectModel(_, members, _) -> yield! Seq.collect visitSynMemberDefn members
+            | Simple _ -> yield! Seq.collect visitSynMemberDefn members
+        }
+
+    let rec private visitDeclaration (decl: SynModuleDecl) = 
+        seq {
+            match decl with
+            | SynModuleDecl.Let(_, bindings, _) ->
+                yield! Seq.choose visitBinding bindings
+            | SynModuleDecl.Types(types, _) ->
+                yield! Seq.collect visitTypeDefn types
+            | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
+                yield Range.endToEnd cmpInfo.Range decl.Range
+                yield! Seq.collect visitDeclaration decls
+            | _ -> ()
+        }
+
+    let private visitModuleOrNamespace moduleOrNs =
+        seq {
+            let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
+            yield! Seq.collect visitDeclaration decls
+        }
+
+    let getOutliningRanges tree =
+        seq {
+            match tree with
+            | ParsedInput.ImplFile(implFile) ->
+                let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
+                yield! Seq.collect visitModuleOrNamespace modules
+            | _ -> ()
+        }

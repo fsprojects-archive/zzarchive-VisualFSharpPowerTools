@@ -649,6 +649,18 @@ let _ = System.Foo.empty
          2, 16, None
          2, 20, None ]
 
+[<Test>]
+let ``exception type in "with" block``() =
+    """
+module M = 
+    exception Exn
+module N =
+    try raise (Exn())
+    with
+    | :? Exn -> ()
+"""
+    ==> [6, 10, Some Type ]
+
 // open declaration insertion integration tests
 
 let forLine (line: Line) (source: Source) = source, line

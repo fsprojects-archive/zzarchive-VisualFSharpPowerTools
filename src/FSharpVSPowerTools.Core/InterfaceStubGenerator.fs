@@ -483,7 +483,7 @@ module InterfaceStubGenerator =
             (methodBody: string) (displayContext: FSharpDisplayContext) excludedMemberSignatures
             (e: FSharpEntity) verboseMode =
         Debug.Assert(isInterface e, "The entity should be an interface.")
-        let lines = methodBody.Replace("\r\n", "\n").Split('\n')
+        let lines = String.getLines methodBody
         use writer = new ColumnIndentedTextWriter()
         let typeParams = Seq.map getTypeParameterName e.GenericParameters
         let instantiations = 

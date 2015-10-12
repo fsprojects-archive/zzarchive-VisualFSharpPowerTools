@@ -3,6 +3,7 @@
 open System
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
+open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 
 type TaskListCommentFilter(view: IWpfTextView,
@@ -10,14 +11,13 @@ type TaskListCommentFilter(view: IWpfTextView,
                            taskListManager: TaskListManager) =
     let optionsReader = OptionsReader(serviceProvider)
 
-    static let newLines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
     let handleTextChanged (newText: string) =
         match view.TextBuffer.Properties.TryGetProperty(typeof<ITextDocument>) with
         | true, x ->
             match box x with
             | :? ITextDocument as textDocument ->
                 let filePath = textDocument.FilePath
-                let lines = newText.Split(newLines, StringSplitOptions.None)
+                let lines = String.getLines newText
 
                 let comments = getComments (optionsReader.GetOptions()) filePath lines
                 taskListManager.MergeTaskListComments(filePath, comments)

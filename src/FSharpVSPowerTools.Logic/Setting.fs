@@ -23,6 +23,7 @@ type IGeneralOptions =
     abstract GoToSymbolSourceEnabled: bool with get, set
     abstract QuickInfoPanelEnabled: bool with get, set
     abstract LinterEnabled: bool with get, set
+    abstract OutliningEnabled: bool with get, set
 
 type IFormattingOptions =
     abstract PageWidth: int with get, set
@@ -49,6 +50,10 @@ type ICodeGenerationOptions =
 type IGlobalOptions =
     abstract StrictMode: bool with get, set
     abstract DiagnosticMode: bool with get, set
+
+type ILintOptions =
+    abstract UpdateDirectories: unit -> unit
+    abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
 
 [<AutoOpen>]
 module Utils =
@@ -81,4 +86,6 @@ module Setting =
 
     let getGlobalOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGlobalOptions>()
-
+        
+    let getLintOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.GetService<ILintOptions>()
