@@ -119,6 +119,37 @@
     </When>
   </Choose>
   <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')">
+      <ItemGroup>
+        <Reference Include="FSharp.Management.PowerShell.ExternalRuntime">
+          <HintPath>..\..\packages\FSharp.Management\lib\net40\FSharp.Management.PowerShell.ExternalRuntime.exe</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FSharp.Management.PowerShell">
+          <HintPath>..\..\packages\FSharp.Management\lib\net40\FSharp.Management.PowerShell.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FSharp.Management.WMI.DesignTime">
+          <HintPath>..\..\packages\FSharp.Management\lib\net40\FSharp.Management.WMI.DesignTime.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FSharp.Management.WMI">
+          <HintPath>..\..\packages\FSharp.Management\lib\net40\FSharp.Management.WMI.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Management.Automation">
+          <HintPath>..\..\packages\FSharp.Management\lib\net40\System.Management.Automation.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')">
       <ItemGroup>
         <Reference Include="FsCheck">
@@ -215,37 +246,6 @@
       <ItemGroup>
         <Reference Include="FSharp.Core">
           <HintPath>..\..\packages\test\FSharp.Core\lib\portable-net45+netcore45+wpa81+wp8\FSharp.Core.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')">
-      <ItemGroup>
-        <Reference Include="FSharp.Management.PowerShell.ExternalRuntime">
-          <HintPath>..\..\packages\test\FSharp.Management\lib\net40\FSharp.Management.PowerShell.ExternalRuntime.exe</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="FSharp.Management.PowerShell">
-          <HintPath>..\..\packages\test\FSharp.Management\lib\net40\FSharp.Management.PowerShell.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="FSharp.Management.WMI.DesignTime">
-          <HintPath>..\..\packages\test\FSharp.Management\lib\net40\FSharp.Management.WMI.DesignTime.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="FSharp.Management.WMI">
-          <HintPath>..\..\packages\test\FSharp.Management\lib\net40\FSharp.Management.WMI.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="System.Management.Automation">
-          <HintPath>..\..\packages\test\FSharp.Management\lib\net40\System.Management.Automation.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
