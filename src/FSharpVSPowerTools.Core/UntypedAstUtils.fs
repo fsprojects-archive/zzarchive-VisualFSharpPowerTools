@@ -765,8 +765,7 @@ module HashDirectiveInfo =
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
     module private Range =
-        let endToEnd (r1: range) (r2: range) =
-            mkFileIndexRange r1.FileIndex r1.End r2.End
+        let endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End r2.End
 
     let rec private visitExpr e = 
         seq {
@@ -796,8 +795,34 @@ module Outlining =
             | SynExpr.ArrayOrListOfSeqExpr (_, e, _) ->
                 yield! visitExpr e
             | SynExpr.ObjExpr (_, _, bindings, _, newRange, wholeRange) ->
-                yield Range.endToEnd newRange wholeRange
+                yield mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
                 yield! visitBindings bindings
+            | SynExpr.TryWith (e, _, matchClauses, tryRange, withRange, tryPoint, withPoint) ->
+                match tryPoint with
+                | SequencePointAtTry r -> yield Range.endToEnd r tryRange
+                | _ -> ()
+                match withPoint with
+                | SequencePointAtWith r -> yield Range.endToEnd r withRange
+                | _ -> ()
+                yield! visitExpr e
+                yield! visitMatchClauses matchClauses
+            | SynExpr.TryFinally (tryExpr, finallyExpr, r, tryPoint, finallyPoint) ->
+                match tryPoint with
+                | SequencePointAtTry tryRange ->
+                    yield Range.endToEnd tryRange r
+                | _ -> ()
+                match finallyPoint with
+                | SequencePointAtFinally finallyRange ->
+                    yield Range.endToEnd finallyRange r
+                | _ -> ()
+                yield! visitExpr tryExpr
+                yield! visitExpr finallyExpr
+            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) ->
+                yield! visitExpr e1
+                yield! visitExpr e2
+                match e3 with
+                | Some e -> yield! visitExpr e
+                | None -> ()
             | _ -> ()
         }
 
