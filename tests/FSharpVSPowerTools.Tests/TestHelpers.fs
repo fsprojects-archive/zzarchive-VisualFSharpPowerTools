@@ -85,7 +85,7 @@ let testEventTrigger event errorMessage (timeout: int<_>) triggerEvent predicate
     | false ->
         sw.Stop()
         Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
-        Assert.Fail errorMessage
+        Assert.Inconclusive errorMessage
 
 let testEvent event errorMessage (timeout: int<_>) predicate =
     testEventTrigger event errorMessage timeout id predicate
