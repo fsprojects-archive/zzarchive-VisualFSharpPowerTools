@@ -5,7 +5,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:FSharpVSPowerTools.Linting;assembly=FSharpVSPowerTools.Logic"
              xmlns:fsxaml="http://github.com/fsprojects/FsXaml" 
-             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"   
              xmlns:fsx="clr-namespace:FsXaml;assembly=FsXaml.Wpf"
              fsxaml:ViewController.Custom="{x:Type local:LintOptionsPageControl}"
              mc:Ignorable="d" 
@@ -47,7 +46,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            
+
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -78,14 +77,6 @@
                             Grid.Row="1" 
                             ItemsSource="{Binding Rules}"
                             Width="{Binding ActualWidth}">
-                                <i:Interaction.Triggers>
-                                    <i:EventTrigger EventName="SelectedItemChanged">
-                                        <i:InvokeCommandAction 
-                                            Command="{Binding SelectedRuleChanged}" 
-                                            CommandParameter="{Binding ElementName=RulesTreeView, Path=SelectedItem}"/>
-                                    </i:EventTrigger>
-                                </i:Interaction.Triggers>
-
                                 <TreeView.Resources>
                                     <HierarchicalDataTemplate DataType="{x:Type local:RuleViewModel}" 
                                                             ItemsSource="{Binding Rules}">
@@ -262,12 +253,12 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                        
+
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                        
+
                             <Button Command="{Binding AddHintCommand}" Content="Add Hint" />
                             <TextBox Margin="5,0" 
                                      Text="{Binding NewHint}" 
