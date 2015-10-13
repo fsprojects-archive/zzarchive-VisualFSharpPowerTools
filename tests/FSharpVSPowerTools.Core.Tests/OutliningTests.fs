@@ -43,7 +43,7 @@ let (=>) (source: string) (expectedRanges: (Line * Col * Line * Col) list) =
                 |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
                 |> Seq.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
                 |> List.ofSeq
-            assertEqual (List.sort expectedRanges) (List.sort actualRanges)
+            CollectionAssert.AreEquivalent (List.sort expectedRanges, List.sort actualRanges)
         | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
     with _ ->
         debug "AST:\n%+A" ast
@@ -292,3 +292,13 @@ let _ =
 """
   => [ 2, 5, 4, 9
        3, 6, 4, 7 ]
+
+[<Test>]
+let ``object expressions``() =
+    """
+let _ =
+    { new System.IDisposable with
+        member __.Dispose() = () }
+"""
+    => [ 2, 5, 4, 34
+         3, 28, 4, 34 ]

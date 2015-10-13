@@ -795,6 +795,9 @@ module Outlining =
                 yield! visitExpr e
             | SynExpr.ArrayOrListOfSeqExpr (_, e, _) ->
                 yield! visitExpr e
+            | SynExpr.ObjExpr (_, _, bindings, _, newRange, wholeRange) ->
+                yield Range.endToEnd newRange wholeRange
+                yield! visitBindings bindings
             | _ -> ()
         }
 
