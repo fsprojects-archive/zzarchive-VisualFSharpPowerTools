@@ -69,8 +69,10 @@ type LintTagger(textDocument: ITextDocument,
                             let r = warn.Range
                             let endCol =
                                 if r.StartLine = r.EndLine then
-                                    min r.EndColumn (r.StartColumn + 2)
-                                else r.StartColumn + 2
+                                    r.EndColumn
+                                else
+                                    let line = buffer.CurrentSnapshot.GetLineFromLineNumber(r.StartLine - 1).GetText()
+                                    line.Length
                             let range =
                                 Range.mkRange "" 
                                     (Range.mkPos r.StartLine r.StartColumn)
