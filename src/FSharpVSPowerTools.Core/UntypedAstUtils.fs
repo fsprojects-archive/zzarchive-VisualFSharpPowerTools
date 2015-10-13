@@ -765,30 +765,98 @@ module HashDirectiveInfo =
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
     module private Range =
-        let endToEnd (r1: range) (r2: range) =
-            mkFileIndexRange r1.FileIndex r1.End r2.End
+        let endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End r2.End
 
-    let private visitBinding (b: SynBinding) =
-        let (Binding(_, kind, _, _, _, _, _, _, _, _, range, _)) = b
-        match kind with
-        | NormalBinding ->
-            let r1 = b.RangeOfBindingSansRhs
-            let r2 = b.RangeOfBindingAndRhs
-            Some (Range.endToEnd r1 r2)
-        | DoBinding ->
-            let doEnd = mkPos range.Start.Line (range.Start.Column + 2)
-            Some (mkFileIndexRange range.FileIndex doEnd range.End)
-        | _ -> None
+    let rec private visitExpr e = 
+        seq {
+            match e with
+            | SynExpr.LetOrUse (_, _, bindings, body, _) ->
+                yield! visitBindings bindings
+                yield! visitExpr body
+            | SynExpr.Match (seqPointAtBinding, e, clauses, _, r) ->
+                match seqPointAtBinding with
+                | SequencePointAtBinding pr ->
+                    yield Range.endToEnd pr r
+                | _ -> ()
+                yield! visitExpr e
+                yield! visitMatchClauses clauses
+            | SynExpr.App (_, _, _, e, _) ->
+                yield! visitExpr e
+            | SynExpr.CompExpr (_, _, e, r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.Sequential (_, _, e1, e2, _) ->
+                yield! visitExpr e1
+                yield! visitExpr e2
+            | SynExpr.YieldOrReturn (_, e, _) ->
+                yield! visitExpr e
+            | SynExpr.YieldOrReturnFrom (_, e, _) ->
+                yield! visitExpr e
+            | SynExpr.ArrayOrListOfSeqExpr (_, e, _) ->
+                yield! visitExpr e
+            | SynExpr.ObjExpr (_, _, bindings, _, newRange, wholeRange) ->
+                yield mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
+                yield! visitBindings bindings
+            | SynExpr.TryWith (e, _, matchClauses, tryRange, withRange, tryPoint, withPoint) ->
+                match tryPoint with
+                | SequencePointAtTry r -> yield Range.endToEnd r tryRange
+                | _ -> ()
+                match withPoint with
+                | SequencePointAtWith r -> yield Range.endToEnd r withRange
+                | _ -> ()
+                yield! visitExpr e
+                yield! visitMatchClauses matchClauses
+            | SynExpr.TryFinally (tryExpr, finallyExpr, r, tryPoint, finallyPoint) ->
+                match tryPoint with
+                | SequencePointAtTry tryRange ->
+                    yield Range.endToEnd tryRange r
+                | _ -> ()
+                match finallyPoint with
+                | SequencePointAtFinally finallyRange ->
+                    yield Range.endToEnd finallyRange r
+                | _ -> ()
+                yield! visitExpr tryExpr
+                yield! visitExpr finallyExpr
+            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) ->
+                yield! visitExpr e1
+                yield! visitExpr e2
+                match e3 with
+                | Some e -> yield! visitExpr e
+                | None -> ()
+            | _ -> ()
+        }
 
-    let rec private visitSynMemberDefn d =
+    and private visitMatchClause (SynMatchClause.Clause (_, _, e, r, _) ) = 
+        seq {
+            yield r
+            yield! visitExpr e
+        }
+
+    and private visitMatchClauses = Seq.collect visitMatchClause
+
+    and private visitBinding (Binding(_, kind, _, _, _, _, _, _, _, e, range, _) as b) =
+        seq {
+            match kind with
+            | NormalBinding ->
+                let r1 = b.RangeOfBindingSansRhs
+                let r2 = b.RangeOfBindingAndRhs
+                yield Range.endToEnd r1 r2
+            | DoBinding ->
+                let doEnd = mkPos range.Start.Line (range.Start.Column + 2)
+                yield mkFileIndexRange range.FileIndex doEnd range.End
+            | _ -> ()
+            yield! visitExpr e
+        }
+
+    and private visitBindings = Seq.collect visitBinding 
+
+    and private visitSynMemberDefn d =
         seq {
             match d with
             | SynMemberDefn.Member (binding, _) ->
-                match visitBinding binding with
-                | Some(r) -> yield r
-                | _ -> ()
+                yield! visitBinding binding
             | SynMemberDefn.LetBindings (bindings, _, _, _) ->
-                yield! Seq.choose visitBinding bindings
+                yield! visitBindings bindings
             | SynMemberDefn.Interface(tp, mmembers, _) ->
                 yield Range.endToEnd tp.Range d.Range
                 match mmembers with
@@ -833,19 +901,27 @@ module Outlining =
                 Some (Range.mkRange "" firstRange.Start lastRange.End))
 
     let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
-    let collectHashDirectives = getConsecutiveModuleDecls (function SynModuleDecl.HashDirective (_, r) -> Some r | _ -> None)
+    let collectHashDirectives = 
+        getConsecutiveModuleDecls(
+            function 
+            | SynModuleDecl.HashDirective (ParsedHashDirective(directive, _, _), r) ->
+                let prefixLength = "#".Length + directive.Length + " ".Length
+                Some (Range.mkRange "" (Range.mkPos r.StartLine prefixLength) r.End)
+            | _ -> None)
 
     let rec private visitDeclaration (decl: SynModuleDecl) = 
         seq {
             match decl with
             | SynModuleDecl.Let(_, bindings, _) ->
-                yield! Seq.choose visitBinding bindings
+                yield! visitBindings bindings
             | SynModuleDecl.Types(types, _) ->
                 yield! Seq.collect visitTypeDefn types
             | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
                 yield Range.endToEnd cmpInfo.Range decl.Range
                 yield! collectOpens decls
                 yield! Seq.collect visitDeclaration decls
+            | SynModuleDecl.DoExpr(_, e, _) ->
+                yield! visitExpr e
             | _ -> ()
         }
 
