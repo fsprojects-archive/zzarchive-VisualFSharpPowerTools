@@ -764,7 +764,6 @@ module HashDirectiveInfo =
 /// Set of visitor utilies, designed for the express purpose of fetching ranges
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
-
     module private Range =
         let endToEnd (r1: range) (r2: range) =
             mkFileIndexRange r1.FileIndex r1.End r2.End
@@ -808,6 +807,32 @@ module Outlining =
             | Simple _ -> yield! Seq.collect visitSynMemberDefn members
         }
 
+    let private collectOpens (decls: SynModuleDecls) =
+        let mergeRanges (ranges: range list) = 
+            match ranges with
+            | last :: _ :: _ ->
+                let first = List.rev ranges |> List.head
+                Some (Range.mkRange "" first.Start last.End)
+            | _ -> None
+
+        decls
+        |> List.choose (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
+        |> List.fold (fun (res, currentRanges) r ->
+            match currentRanges with
+            | [] -> res, [r]
+            | lastRange :: _ when r.StartLine = lastRange.EndLine + 1 -> res, r :: currentRanges
+            | _ ->
+                match mergeRanges currentRanges with
+                | Some mergedRange -> mergedRange :: res, [r]
+                | None -> res, [r]
+            | _ -> res, [r]
+           ) ([], [])
+        |> fun (res, lastRanges) ->
+            match mergeRanges lastRanges with
+            | Some mergedRanges -> mergedRanges :: res
+            | None -> res
+        |> List.rev
+
     let rec private visitDeclaration (decl: SynModuleDecl) = 
         seq {
             match decl with
@@ -817,6 +842,7 @@ module Outlining =
                 yield! Seq.collect visitTypeDefn types
             | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
                 yield Range.endToEnd cmpInfo.Range decl.Range
+                yield! collectOpens decls
                 yield! Seq.collect visitDeclaration decls
             | _ -> ()
         }
@@ -824,6 +850,7 @@ module Outlining =
     let private visitModuleOrNamespace moduleOrNs =
         seq {
             let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
+            yield! collectOpens decls
             yield! Seq.collect visitDeclaration decls
         }
 
