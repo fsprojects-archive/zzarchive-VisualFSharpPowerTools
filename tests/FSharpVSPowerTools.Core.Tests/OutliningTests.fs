@@ -33,17 +33,17 @@ let parseSource source =
 type Line = int
 type Col = int
 
-let (=>) (source: string) (ranges: (Line * Col * Line * Col) list) =
+let (=>) (source: string) (expectedRanges: (Line * Col * Line * Col) list) =
     let ast = (parseSource source).ParseTree
     try
         match ast with
         | Some tree ->
-            let multilineRanges =
+            let actualRanges =
                 getOutliningRanges tree
                 |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
                 |> Seq.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
                 |> List.ofSeq
-            CollectionAssert.AreEquivalent (List.sort ranges, List.sort multilineRanges)
+            assertEqual (List.sort expectedRanges) (List.sort actualRanges)
         | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
     with _ ->
         debug "AST:\n%+A" ast
@@ -282,3 +282,13 @@ seq {              // 2
     => [ 2, 4, 8, 1
          4, 11, 5, 10
          6, 15, 7, 18 ]
+
+[<Test>]
+let ``list``() =
+    """
+let _ = 
+    [ 1; 2
+      3 ]
+"""
+  => [ 2, 5, 4, 9
+       3, 6, 4, 7 ]

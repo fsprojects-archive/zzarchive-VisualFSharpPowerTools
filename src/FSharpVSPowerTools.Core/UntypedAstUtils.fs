@@ -793,6 +793,8 @@ module Outlining =
                 yield! visitExpr e
             | SynExpr.YieldOrReturnFrom (_, e, _) ->
                 yield! visitExpr e
+            | SynExpr.ArrayOrListOfSeqExpr (_, e, _) ->
+                yield! visitExpr e
             | _ -> ()
         }
 
