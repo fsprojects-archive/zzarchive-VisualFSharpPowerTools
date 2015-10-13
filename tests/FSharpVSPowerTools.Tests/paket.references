@@ -1,8 +1,8 @@
 FSharp.Compiler.Service
 FSharp.ViewModule.Core
 FSharpLint.Core
-FSharp.Core
 
 group Test
 Foq
 NUnit
+FSharp.Core

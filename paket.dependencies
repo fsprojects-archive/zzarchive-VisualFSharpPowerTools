@@ -1,7 +1,5 @@
 source http://nuget.org/api/v2
 
-nuget FSharp.Management
-nuget FSharp.Core 3.1.2.5 redirects:on
 nuget FSharp.Compiler.Service
 nuget Fantomas
 nuget Expression.Blend.Sdk
@@ -10,6 +8,7 @@ nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
 nuget FSharpLint.Core prerelease
 nuget VSSDK.IDE.Deploy.14
+nuget FSharp.Management
 
 group Test
 source http://nuget.org/api/v2
@@ -19,6 +18,7 @@ nuget NUnit
 nuget Foq
 nuget FsCheck
 nuget FSharp.Core 3.1.2.5 redirects:on
+nuget FAKE 4.0.3
 
 group Build
 source http://nuget.org/api/v2
