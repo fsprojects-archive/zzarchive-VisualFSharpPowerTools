@@ -32,15 +32,19 @@ let parseSource source =
 
 let (=>) (source: string) (lineRanges: (int * int) list) =
     let ast = (parseSource source).ParseTree
-    match ast with
-    | Some tree ->
-        let multilineRanges =
-            getOutliningRanges tree
-            |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
-            |> Seq.map (fun r -> r.StartLine, r.EndLine)
-            |> List.ofSeq
-        assertEqual lineRanges multilineRanges
-    | None -> failwithf "Expected there to be a parse tree for source:\n%s" ""
+    try
+        match ast with
+        | Some tree ->
+            let multilineRanges =
+                getOutliningRanges tree
+                |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
+                |> Seq.map (fun r -> r.StartLine, r.EndLine)
+                |> List.ofSeq
+            CollectionAssert.AreEquivalent (List.sort lineRanges, List.sort multilineRanges)
+        | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
+    with _ ->
+        debug "AST:\n%+A" ast
+        reraise()
 
 [<Test>]
 let ``parsing an empty file doesn't emit any ranges``() =
@@ -155,3 +159,73 @@ let ``complex outlining test``() =
          (25,27)
          (26,27)
        ]
+
+[<Test>]
+let ``open statements``() =
+    """
+open M             // 2
+open N             // 3
+                   // 4
+module M =         // 5
+    let x = 1      // 6
+                   // 7
+    open M         // 8
+    open N         // 9
+                   // 10
+    module M =     // 11
+        open M     // 12
+                   // 13
+        let x = 1  // 14
+                   // 15
+    module M =     // 16
+        open M     // 17
+        open N     // 18
+        let x = 1  // 19
+                   // 20
+open M             // 21
+open N             // 22
+open H             // 23
+                   // 24
+open G             // 25
+open H             // 26
+"""
+    => [ 2, 3
+         5, 19
+         8, 9
+         11, 14
+         16, 19
+         17, 18
+         21, 23
+         25, 26 ]
+
+[<Test>]
+let ``hash directives``() =
+    """
+#r @"a"   // 2
+#r "b"    // 3
+          // 4
+#r "c"    // 5
+          // 6
+#r "d"    // 7
+#r "e"    // 8
+let x = 1 // 9
+          // 10
+#r "f"    // 11
+#r "g"    // 12
+#load "x" // 13
+#r "y"    // 14
+          // 15 
+#load "a" // 16
+      "b" // 17
+      "c" // 18
+          // 19
+#load "a" // 20
+      "b" // 21
+      "c" // 22
+#r "d"    // 23
+"""
+    => [ 2, 3
+         7, 8
+         11, 14
+         16, 18
+         20, 23 ]

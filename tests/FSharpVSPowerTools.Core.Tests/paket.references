@@ -1,8 +1,8 @@
 FSharp.Compiler.Service
 FSharp.Management
-FSharp.Core
 
 group Test
 
 FsCheck
 NUnit
+FSharp.Core
