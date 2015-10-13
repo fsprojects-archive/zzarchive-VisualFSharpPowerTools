@@ -807,31 +807,30 @@ module Outlining =
             | Simple _ -> yield! Seq.collect visitSynMemberDefn members
         }
 
-    let private collectOpens (decls: SynModuleDecls) =
-        let mergeRanges (ranges: range list) = 
-            match ranges with
-            | last :: _ :: _ ->
-                let first = List.rev ranges |> List.head
-                Some (Range.mkRange "" first.Start last.End)
-            | _ -> None
+    let private getConsecutiveModuleDecls (predicate: SynModuleDecl -> range option) (decls: SynModuleDecls) =
+        let groupConsecutiveDecls input =
+            let rec loop (input: range list) (res: range list list) currentBulk =
+                match input, currentBulk with
+                | [], [] -> List.rev res
+                | [], _ -> currentBulk :: res |> List.rev
+                | r :: rest, [] -> loop rest res [r]
+                | r :: rest, last :: _ when r.StartLine = last.EndLine + 1 -> 
+                    loop rest res (r :: currentBulk)
+                | r :: rest, _ -> loop rest (currentBulk :: res) [r]
+            loop input [] []
 
-        decls
-        |> List.choose (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
-        |> List.fold (fun (res, currentRanges) r ->
-            match currentRanges with
-            | [] -> res, [r]
-            | lastRange :: _ when r.StartLine = lastRange.EndLine + 1 -> res, r :: currentRanges
-            | _ ->
-                match mergeRanges currentRanges with
-                | Some mergedRange -> mergedRange :: res, [r]
-                | None -> res, [r]
-            | _ -> res, [r]
-           ) ([], [])
-        |> fun (res, lastRanges) ->
-            match mergeRanges lastRanges with
-            | Some mergedRanges -> mergedRanges :: res
-            | None -> res
-        |> List.rev
+
+        decls 
+        |> List.choose predicate
+        |> groupConsecutiveDecls
+        |> List.filter (fun x -> x.Length > 1)
+        |> List.map (fun ranges ->
+            let last = List.head ranges
+            let first = List.rev ranges |> List.head
+            Range.mkRange "" first.Start last.End)
+
+    let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
+    let collectHashDirectives = getConsecutiveModuleDecls (function SynModuleDecl.HashDirective (_, r) -> Some r | _ -> None)
 
     let rec private visitDeclaration (decl: SynModuleDecl) = 
         seq {
@@ -850,6 +849,7 @@ module Outlining =
     let private visitModuleOrNamespace moduleOrNs =
         seq {
             let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
+            yield! collectHashDirectives decls
             yield! collectOpens decls
             yield! Seq.collect visitDeclaration decls
         }
