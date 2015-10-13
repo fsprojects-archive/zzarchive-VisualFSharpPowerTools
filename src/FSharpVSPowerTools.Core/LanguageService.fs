@@ -106,7 +106,7 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
         asyncMaybe {
             match infoOpt with
             | Some (checkResults, _) -> 
-                let tokenTag = Parser.tagOfToken (Parser.token.IDENT "")
+                let tokenTag = FSharpTokenTag.IDENT
                 return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
             | None -> return! None
         }
@@ -147,6 +147,13 @@ type LexerBase() =
     member x.TokenizeAll() = [|0..x.LineCount-1|] |> Array.map x.TokenizeLine
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
+open System.Collections.Concurrent
+
+type FileState =
+    | Checked
+    | NeedChecking
+    | BeingChecked
+    | Cancelled
 
 // --------------------------------------------------------------------------------------
 // Language service 
@@ -178,45 +185,79 @@ type LanguageService (?fileSystem: IFileSystem) =
   /// has a name //foo.fsx, and as a result 'Path.GetFullPath' throws in the F#
   /// language service - this fixes the issue by inventing nicer file name.
   let fixFileName path = 
-    if (try Path.GetFullPath(path) |> ignore; true
-        with _ -> false) then path
+    if (try Path.GetFullPath path |> ignore; true with _ -> false) then path
     else 
-      let dir = 
-        if Environment.OSVersion.Platform = PlatformID.Unix ||  
-           Environment.OSVersion.Platform = PlatformID.MacOSX then
-          Environment.GetEnvironmentVariable("HOME") 
-        else
-          Environment.ExpandEnvironmentVariables("%HOMEDRIVE%%HOMEPATH%")
-      Path.Combine(dir, Path.GetFileName(path))
-   
-  let parseAndCheckFileInProject(fileName, source, options) =
+        match Environment.OSVersion.Platform with
+        | PlatformID.Unix 
+        | PlatformID.MacOSX -> Environment.GetEnvironmentVariable "HOME"
+        | _ -> Environment.ExpandEnvironmentVariables "%HOMEDRIVE%%HOMEPATH%"
+        </> Path.GetFileName path
+
+  let files = ConcurrentDictionary<string, FileState>()
+  
+  let isResultObsolete fileName = 
+      match files.TryGetValue fileName with
+      | true, Cancelled -> true
+      | _ -> false
+  
+  let parseAndCheckFileInProject(filePath, source, options) =
       async { 
-          debug "Worker: Awaiting request"
-          let fileName = fixFileName (fileName)
-          debug "Worker: Parse and typecheck source..."
-          let! res = 
-              Async.Catch (checkerAsync (fun x -> 
-                x.ParseAndCheckFileInProject (fileName, 0, source, options, IsResultObsolete(fun () -> false), null)))
-          debug "Worker: Parse completed"
+          debug "[LanguageService] ParseAndCheckFileInProject - enter"
+          let fixedFilePath = fixFileName filePath
+          let! res = Async.Catch (checkerAsync <| fun x -> async {
+              try
+                   // wait until the previous checking completed
+                   while files.ContainsKey filePath &&
+                         (not (files.TryUpdate (filePath, BeingChecked, Checked)
+                               || files.TryUpdate (filePath, BeingChecked, NeedChecking))) do
+                       let state = files.[filePath]
+                       debug "[LanguageService] %s is in state = %A, waiting for Checked or NeedChecking..." filePath state
+                       do! Async.Sleep 200
+                   
+                   debug "[LanguageService] Change state for %s to `BeingChecked`" filePath
+                   debug "[LanguageService] Parse and typecheck source..."
+                   return! x.ParseAndCheckFileInProject (fixedFilePath, 0, source, options, 
+                                                         IsResultObsolete (fun _ -> isResultObsolete filePath), null) 
+              finally 
+                   if files.TryUpdate (filePath, Checked, BeingChecked) then
+                       debug "[LanguageService] %s: BeingChecked => Checked" filePath
+                   elif files.TryUpdate (filePath, Checked, Cancelled) then
+                       debug "[LanguageService] %s: Cancelled => Checked" filePath })
+
+          debug "[LanguageService]: Parse completed"
           // Construct new typed parse result if the task succeeded
           let results = 
               match res with
-              | Choice1Of2 (parseResults, FSharpCheckFileAnswer.Succeeded(checkResults)) ->
+              | Choice1Of2 (parseResults, FSharpCheckFileAnswer.Succeeded checkResults) ->
                   // Handle errors on the GUI thread
-                  debug "[LanguageService] Update typed info - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo
-                  debug "[LanguageService] Update typed info - Errors? %A" checkResults.Errors
+                  debug "[LanguageService] ParseAndCheckFileInProject - HasFullTypeCheckInfo? %b" checkResults.HasFullTypeCheckInfo
+                  debug "[LanguageService] ParseAndCheckFileInProject - Errors? %A" checkResults.Errors
                   ParseAndCheckResults(checkResults, parseResults)
-              | Choice1Of2 _ ->
-                  debug "[LanguageService] Update typed info - failed"
+              | Choice1Of2 (_, FSharpCheckFileAnswer.Aborted) ->
+                  debug "[LanguageService] ParseAndCheckFileInProject - Aborted"
                   ParseAndCheckResults.Empty
               | Choice2Of2 e -> 
-                  fail "[LanguageService] Unexpected type checking errors occurred for '%s' with %A" fileName options
+                  fail "[LanguageService] Unexpected type checking errors occurred for '%s' with %A" fixedFilePath options
                   fail "[LanguageService] Calling checker.ParseAndCheckFileInProject failed: %A" e
-                  debug "[LanguageService] Type checking fails for '%s' with content=%A and %A.\nResulting exception: %A" fileName source options e
-                  handleCriticalErrors e fileName source options
-                  ParseAndCheckResults.Empty  
+                  debug "[LanguageService] Type checking fails for '%s' with content=%A and %A.\nResulting exception: %A" fixedFilePath source options e
+                  handleCriticalErrors e fixedFilePath source options
+                  ParseAndCheckResults.Empty
           return results
       }
+
+  member __.OnFileChanged filePath = 
+    files.AddOrUpdate (filePath, NeedChecking, (fun _ oldState -> 
+        match oldState with
+        | BeingChecked -> Cancelled
+        | Cancelled -> Cancelled
+        | NeedChecking -> NeedChecking
+        | Checked -> NeedChecking))
+    |> debug "[LanguageService] %s changed: set status to %A" filePath
+
+  member __.OnFileClosed filePath = 
+    match files.TryRemove filePath with
+    | true, _ -> debug "[LanguageService] %s was removed from `files` dictionary" filePath
+    | _ -> ()
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, fscVersion) =

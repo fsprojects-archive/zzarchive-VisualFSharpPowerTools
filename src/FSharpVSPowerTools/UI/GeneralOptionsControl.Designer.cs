@@ -58,6 +58,7 @@ namespace FSharpVSPowerTools
             this.chbLinter = new System.Windows.Forms.CheckBox();
             this.lblInformation = new System.Windows.Forms.Label();
             this.lblInfo = new System.Windows.Forms.Label();
+            this.chbOutlining = new System.Windows.Forms.CheckBox();
             this.grbOptions.SuspendLayout();
             this.tblLayoutPanel.SuspendLayout();
             this.flowLayoutPanel.SuspendLayout();
@@ -141,6 +142,7 @@ namespace FSharpVSPowerTools
             this.flowLayoutPanel.Controls.Add(this.chbGoToSymbolSource);
             this.flowLayoutPanel.Controls.Add(this.chbQuickInfoPanel);
             this.flowLayoutPanel.Controls.Add(this.chbLinter);
+            this.flowLayoutPanel.Controls.Add(this.chbOutlining);
             this.flowLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.flowLayoutPanel.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this.flowLayoutPanel.Location = new System.Drawing.Point(2, 2);
@@ -467,9 +469,9 @@ namespace FSharpVSPowerTools
             this.chbLinter.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbLinter.Name = "chbLinter";
             this.chbLinter.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.chbLinter.Size = new System.Drawing.Size(62, 17);
+            this.chbLinter.Size = new System.Drawing.Size(139, 17);
             this.chbLinter.TabIndex = 23;
-            this.chbLinter.Text = "Linter";
+            this.chbLinter.Text = "FSharpLint integration";
             this.chbLinter.UseVisualStyleBackColor = true;
             // 
             // lblInformation
@@ -492,6 +494,18 @@ namespace FSharpVSPowerTools
             this.lblInfo.Size = new System.Drawing.Size(341, 19);
             this.lblInfo.TabIndex = 5;
             this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
+            // 
+            // chbOutlining
+            // 
+            this.chbOutlining.AutoSize = true;
+            this.chbOutlining.Location = new System.Drawing.Point(207, 213);
+            this.chbOutlining.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
+            this.chbOutlining.Name = "chbOutlining";
+            this.chbOutlining.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.chbOutlining.Size = new System.Drawing.Size(105, 17);
+            this.chbOutlining.TabIndex = 23;
+            this.chbOutlining.Text = "Code Outlining";
+            this.chbOutlining.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -543,5 +557,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.TableLayoutPanel tblLayoutPanelSyntax;
         private System.Windows.Forms.Label lblInfo;
         private System.Windows.Forms.CheckBox chbLinter;
+        private System.Windows.Forms.CheckBox chbOutlining;
     }
 }

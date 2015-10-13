@@ -177,22 +177,11 @@ type ProjectFactory
         else 
             None
 
-    member __.ListFSharpProjectsInSolution (dte: DTE) =
-        let rec handleProject (p: Project) = 
-            if p === null then []
-            elif isFSharpProject p then [ p ]
-            elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-            else []  
-        
-        and handleProjectItems (items: ProjectItems) = 
-            [ for pi in items do
-                    yield! handleProject pi.SubProject ]
-
+    member __.ListFSharpProjectsInSolution dte =
         match !fsharpProjectsCache with
         | Some x -> x
         | None ->
-            let res = [ for p in dte.Solution.Projects do
-                            yield! handleProject p ]
+            let res = listFSharpProjectsInSolution dte
             fsharpProjectsCache := Some res
             res
 

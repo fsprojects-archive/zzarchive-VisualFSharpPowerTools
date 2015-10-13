@@ -2,14 +2,13 @@
 // FAKE build script 
 // --------------------------------------------------------------------------------------
 
-#r @"packages/FAKE/tools/FakeLib.dll"
+#r @"packages/build/FAKE/tools/FakeLib.dll"
 open Fake 
 open Fake.Git
 open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open System
 open System.IO
-open System.Text.RegularExpressions
 
 // Information about the project are used
 //  - for version and project name in generated AssemblyInfo file
@@ -46,8 +45,12 @@ let gitHome = "https://github.com/" + gitOwner
 
 // The name of the project on GitHub
 let gitName = "VisualFSharpPowerTools"
-let cloneUrl = "git@github.com:fsprojects/VisualFSharpPowerTools.git"
+let cloneUrl = "https://github.com/fsprojects/VisualFSharpPowerTools.git"
 
+// Default to MSBuild 12 if present
+let msBuildPath = (ProgramFilesX86 @@ @"\MSBuild\12.0\Bin\MSBuild.exe")
+if File.Exists msBuildPath then
+    setEnvironVar "MSBuild" msBuildPath
 // Read additional information from the release notes document
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
@@ -77,14 +80,17 @@ Target "AssemblyInfo" (fun _ ->
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2013/AssemblyInfo.fs"
-      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared) 
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2013" :: shared)
+      
+  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2015/AssemblyInfo.fs"
+      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2015" :: shared) 
 )
 
 // --------------------------------------------------------------------------------------
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs ["bin"; "bin/vsix"; "temp"; "nuget"]
+    CleanDirs ["bin"; "temp"; "nuget"]
 )
 
 Target "CleanDocs" (fun _ ->
@@ -192,7 +198,7 @@ Target "ReleaseDocs" (fun _ ->
     Branches.push tempDocsDir
 )
 
-#load "paket-files/fsharp/FAKE/modules/Octokit/Octokit.fsx"
+#load "paket-files/build/fsharp/FAKE/modules/Octokit/Octokit.fsx"
 open Octokit
 
 let readString prompt echo : string =

@@ -13,21 +13,23 @@ type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte:
 
 /// A base class for initializing necessary VS services
 type VsTestBase() =
-    let serviceProvider = MockServiceProvider()        
+    static let serviceProvider = MockServiceProvider()        
     
-    do serviceProvider.Services.[nameOf<SVsActivityLog>] <- MockActivityLog()
-    do serviceProvider.Services.[nameOf<SVsShell>] <- MockVsShell()
-    do serviceProvider.Services.[nameOf<SVsStatusbar>] <- Mocks.createSVsStatusbar()
-    do serviceProvider.Services.[nameOf<SVsSolutionBuildManager>] <- Mocks.createVsSolutionBuildManager2()
-    do serviceProvider.Services.[nameOf<IGeneralOptions>] <- Mocks.createGeneralOptionsPage()
-    do serviceProvider.Services.[nameOf<IFormattingOptions>] <- new FantomasOptionsPage()
-    do serviceProvider.Services.[nameOf<ICodeGenerationOptions>] <- new CodeGenerationOptionsPage()
-    do serviceProvider.Services.[nameOf<IGlobalOptions>] <- new GlobalOptionsPage()
+    static do serviceProvider.Services.[nameOf<SVsActivityLog>] <- MockActivityLog()
+    static do serviceProvider.Services.[nameOf<SVsShell>] <- MockVsShell()
+    static do serviceProvider.Services.[nameOf<SVsStatusbar>] <- Mocks.createSVsStatusbar()
+    static do serviceProvider.Services.[nameOf<SVsSolutionBuildManager>] <- Mocks.createVsSolutionBuildManager2()
+    static do serviceProvider.Services.[nameOf<IGeneralOptions>] <- Mocks.createGeneralOptionsPage()
+    static do serviceProvider.Services.[nameOf<IFormattingOptions>] <- new FantomasOptionsPage()
+    static do serviceProvider.Services.[nameOf<ICodeGenerationOptions>] <- new CodeGenerationOptionsPage()
+    static do serviceProvider.Services.[nameOf<IGlobalOptions>] <- new GlobalOptionsPage()
 
-    let dte = MockDTE()
-    do serviceProvider.Services.[nameOf<EnvDTE.DTE>] <- dte
-    do serviceProvider.Services.[nameOf<SDTE>] <- dte
-    do serviceProvider.Services.[nameOf<SVsResourceManager>] <- Mocks.createSVsResourceManager()
+    static let dte = MockDTE()
+    static do serviceProvider.Services.[nameOf<EnvDTE.DTE>] <- dte
+    static do serviceProvider.Services.[nameOf<SDTE>] <- dte
+    static do serviceProvider.Services.[nameOf<SVsResourceManager>] <- Mocks.createSVsResourceManager()
+
+    static do serviceProvider.Services.[nameOf<ILintOptions>] <- new Linting.LintOptionsPage(dte)
 
     let vsEditorAdaptersFactoryService = Mocks.createVsEditorAdaptersFactoryService()
     let classificationRegistry = Mocks.createClassificationTypeRegistryService()
@@ -50,7 +52,9 @@ type VsTestBase() =
     // Ensure that the timer is activated before running tests
     do if not referenceSourceProvider.IsActivated then referenceSourceProvider.Activate()
 
+    static member GlobalServiceProvider = serviceProvider
     member __.ServiceProvider = serviceProvider
+
     member __.ShellEventListener = shellEventListener
     member __.FSharpLanguageService = fsharpLanguageService
     member __.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService

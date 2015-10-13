@@ -30,10 +30,10 @@ type CategorizedColumnSpan<'T> =
 module private QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
         let trimWhitespaces = 
-            Seq.skipWhile (fun t -> t.CharClass = FSharpTokenCharKind.WhiteSpace) >> Seq.toList
+            List.skipWhile (fun t -> t.CharClass = FSharpTokenCharKind.WhiteSpace) 
 
         ranges
-        |> Seq.map (fun (r: Range.range) -> 
+        |> Seq.collect(fun (r: Range.range) -> 
             if r.EndLine = r.StartLine then
                 seq [ { Category = Category.Quotation
                         WordSpan = { SymbolKind = SymbolKind.Other
@@ -44,20 +44,14 @@ module private QuotationCategorizer =
             else
                 [r.StartLine..r.EndLine]
                 |> Seq.choose (fun line ->
-                     let tokens = lexer.TokenizeLine (line - 1)
+                     let tokens = lexer.TokenizeLine (line - 1) 
 
                      let tokens =
-                        match tokens |> List.tryFind (fun t -> t.TokenName = "RQUOTE") with
-                        | Some rquote -> 
-                            tokens
-                            |> List.rev
-                            |> Seq.skipWhile ((<>) rquote)
-                            |> Seq.toList
-                            |> List.rev
-                        | _ -> 
-                            match tokens |> List.tryFind (fun t -> t.TokenName = "LQUOTE") with
-                            | Some lquote -> tokens |> Seq.skipWhile (fun t -> t <> lquote) |> Seq.toList
-                            | _ -> tokens 
+                         if line = r.StartLine then
+                             tokens |> List.skipWhile (fun t -> t.LeftColumn < r.StartColumn)
+                         elif line = r.EndLine then
+                             tokens |> List.takeWhile (fun t -> t.RightColumn <= r.EndColumn)
+                         else tokens
 
                      let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
                      
@@ -76,7 +70,6 @@ module private QuotationCategorizer =
                                             StartCol = minCol
                                             EndCol = maxCol }
                                Snapshot = None }))
-        |> Seq.concat
 
     let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
 
@@ -86,7 +79,7 @@ module private StringCategorizers =
     let categorize category (regex: Regex) (getTextLine: int -> string) (r: Range.range) =
         let lines =
             [r.StartLine..r.EndLine]
-            |> List.map (fun line ->
+            |> Seq.map (fun line ->
                 let lineStr = getTextLine (line - 1)
                 if line = r.StartLine && line = r.EndLine && r.StartColumn + 1 <= r.EndColumn - 1 && lineStr.Length > r.EndColumn - 1 then
                     lineStr.[r.StartColumn + 1 .. r.EndColumn - 1], line, r.StartColumn + 1
@@ -97,11 +90,12 @@ module private StringCategorizers =
                 else lineStr, line, 0)
 
         lines
-        |> List.map (fun (str, line, startColumn) ->
+        |> Seq.collect (fun (str, line, startColumn) ->
              regex.Matches str 
              |> Seq.cast<Match> 
-             |> Seq.filter (fun m -> m.Value <> "")
              |> Seq.fold (fun acc (m: Match) -> 
+                if m.Value = "" then acc
+                else
                   let category =
                       { Category = category
                         WordSpan = 
@@ -112,7 +106,6 @@ module private StringCategorizers =
                         Snapshot = None }
                   category :: acc  
                 ) [])
-        |> Seq.concat 
          
     module EscapedChars =
         let private escapingSymbolsRegex = Regex """\\(n|r|t|b|\\|"|'|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})"""
@@ -131,9 +124,8 @@ module private StringCategorizers =
         let getCategories ast getTextLine = 
             UntypedAstUtils.getStringLiterals ast 
             |> List.filter (fun r -> isRegularString r getTextLine)
-            |> List.map (categorize Category.Escaped escapingSymbolsRegex getTextLine) 
-            |> Seq.concat
-
+            |> Seq.collect (categorize Category.Escaped escapingSymbolsRegex getTextLine) 
+                                              
 module private OperatorCategorizer = 
     let getSpans (symbolUses: (SymbolUse * WordSpan) []) (spansByLine: Map<int, seq<WordSpan>>) tokensByLine =
         let spansBasedOnSymbolUse =
@@ -150,16 +142,15 @@ module private OperatorCategorizer =
                 let operatorTokens = 
                     tokens
                     // pick only =, :> and :?> operators
-                    |> List.choose (fun t -> 
-                        match Parser.tokenTagToTokenId t.Tag with 
-                        | Parser.TOKEN_EQUALS 
-                        | Parser.TOKEN_COLON_GREATER
-                        | Parser.TOKEN_COLON_QMARK_GREATER 
-                        | Parser.TOKEN_COLON_QMARK -> 
-                            Some (t.LeftColumn, t.RightColumn + 1)
-                        | _ -> None)
+                    |> Seq.choose (fun t -> 
+                        if t.Tag = FSharpTokenTag.EQUALS 
+                           || t.Tag = FSharpTokenTag.COLON_GREATER
+                           || t.Tag = FSharpTokenTag.COLON_QMARK_GREATER 
+                           || t.Tag = FSharpTokenTag.COLON_QMARK 
+                        then Some (t.LeftColumn, t.RightColumn + 1)
+                        else None)
                     // pick tokens which are not overlapped with any symbols
-                    |> List.filter (fun (lCol, rCol) ->
+                    |> Seq.filter (fun (lCol, rCol) ->
                         match spansByLine |> Map.tryFind (line + 1) with
                         | Some spans -> 
                             spans 
@@ -168,7 +159,7 @@ module private OperatorCategorizer =
                                 (s.StartCol <= rCol && s.EndCol >= rCol))
                             |> not
                         | None -> true)
-                    |> List.map (fun (lCol, rCol) ->
+                    |> Seq.map (fun (lCol, rCol) ->
                         { Category = Category.Operator
                           WordSpan = 
                             { SymbolKind = SymbolKind.Operator
@@ -179,15 +170,18 @@ module private OperatorCategorizer =
                 acc.AddRange(operatorTokens)
                 acc) (ResizeArray())
 
-        Array.append spansBasedOnSymbolUse (spansBasedOnLexer.ToArray()) |> Seq.distinct |> Seq.toArray
+        Array.append spansBasedOnSymbolUse (spansBasedOnLexer.ToArray()) |> Array.distinct 
 
 module SourceCodeClassifier =
     let getIdentifierCategory = function
-        | Entity (_, ValueType, _) -> Category.ValueType
-        | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module 
-        | Entity (_, _, Tuple) -> Category.ReferenceType
-        | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType    
+        | Entity e ->
+            match e with
+            | _, ValueType, _ -> Category.ValueType
+            | Class -> Category.ReferenceType
+            | _, FSharpModule, _ -> Category.Module 
+            | _, _, Tuple -> Category.ReferenceType
+            | _, (FSharpType | ProvidedType | ByRef | Array), _ -> Category.ReferenceType
+            | _ -> Category.Other 
         | _ -> Category.Other 
 
     let internal getCategory (symbolUse: FSharpSymbolUse) =
@@ -195,19 +189,25 @@ module SourceCodeClassifier =
         | Field (MutableVar, _)
         | Field (_, RefCell) -> Category.MutableVar
         | Pattern -> Category.PatternCase
-        | Entity (_, ValueType, _) -> Category.ValueType
-        | Entity Class -> Category.ReferenceType
-        | Entity (_, FSharpModule, _) -> Category.Module
-        | Entity (_, _, Tuple) -> Category.ReferenceType
-        | Entity (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
-        | MemberFunctionOrValue (Constructor ValueType) -> Category.ValueType
-        | MemberFunctionOrValue (Constructor _) -> Category.ReferenceType
-        | MemberFunctionOrValue (Function symbolUse.IsFromComputationExpression) -> Category.Function
-        | MemberFunctionOrValue MutableVar -> Category.MutableVar
-        | MemberFunctionOrValue func ->
-            match func.FullTypeSafe with
-            | Some RefCell -> Category.MutableVar
+        | Entity e ->
+            match e with
+            | (_, ValueType, _) -> Category.ValueType
+            | Class -> Category.ReferenceType
+            | (_, FSharpModule, _) -> Category.Module
+            | (_, _, Tuple) -> Category.ReferenceType
+            | (_, (FSharpType | ProvidedType | ByRef | Array), _) -> Category.ReferenceType
+            | (_, _, Some FunctionType) -> Category.ReferenceType
             | _ -> Category.Other
+        | MemberFunctionOrValue f ->
+            match f with
+            | Constructor ValueType -> Category.ValueType
+            | Constructor _ -> Category.ReferenceType
+            | Function symbolUse.IsFromComputationExpression -> Category.Function
+            | MutableVar -> Category.MutableVar
+            | func ->
+                match func.FullTypeSafe with
+                | Some RefCell -> Category.MutableVar
+                | _ -> Category.Other
         | _ -> Category.Other 
 
     // If "what" span is entirely included in "from" span, then truncate "from" to the end of "what".
@@ -227,33 +227,44 @@ module SourceCodeClassifier =
         let allSymbolsUses2 =
             allSymbolsUses
             |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
-            |> Seq.map (fun (line, sus) ->
+            |> Seq.collect (fun (line, sus) ->
                 let tokens = tokensByLine.[line - 1]
-                sus |> Seq.choose (fun su ->
-                    let r = su.SymbolUse.RangeAlternate
-                    lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) |> Option.bind (fun sym -> 
-                        //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
-                        match sym.Kind with
-                        | SymbolKind.Ident ->
-                            // FCS returns inaccurate ranges for multi-line method chains
-                            // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
-                            if r.StartLine < r.EndLine then
+                sus 
+                |> Seq.choose (fun su ->
+                    let fsSymbolUse = su.SymbolUse
+                    let r = fsSymbolUse.RangeAlternate
+                    match fsSymbolUse.Symbol with
+                    | MemberFunctionOrValue func when func.IsActivePattern && not fsSymbolUse.IsFromDefinition ->
+                        // Usage of Active Patterns '(|A|_|)' has the range of '|A|_|',
+                        // so we expand the ranges in order to include parentheses into the results
+                        Some (su, { SymbolKind = SymbolKind.Ident
+                                    Line = r.End.Line
+                                    StartCol = r.Start.Column - 1 
+                                    EndCol = r.End.Column + 1})
+                    | _ ->
+                        lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) 
+                        |> Option.bind (fun sym -> 
+                            //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
+                            match sym.Kind with
+                            | SymbolKind.Ident ->
+                                // FCS returns inaccurate ranges for multi-line method chains
+                                // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+                                if r.StartLine < r.EndLine then
+                                    Some (su, { SymbolKind = sym.Kind
+                                                Line = r.End.Line
+                                                StartCol = r.End.Column - sym.Text.Length
+                                                EndCol = r.End.Column })
+                                else 
+                                    Some (su, { SymbolKind = sym.Kind
+                                                Line = r.End.Line
+                                                StartCol = r.Start.Column
+                                                EndCol = r.End.Column })
+                            | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
                                 Some (su, { SymbolKind = sym.Kind
-                                            Line = r.End.Line
-                                            StartCol = r.End.Column - sym.Text.Length
-                                            EndCol = r.End.Column })
-                            else 
-                                Some (su, { SymbolKind = sym.Kind
-                                            Line = r.End.Line
+                                            Line = r.End.Line 
                                             StartCol = r.Start.Column
                                             EndCol = r.End.Column })
-                        | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
-                            Some (su, { SymbolKind = sym.Kind
-                                        Line = r.End.Line 
-                                        StartCol = r.Start.Column
-                                        EndCol = r.End.Column })
-                        | _ -> None)))
-            |> Seq.concat
+                            | _ -> None)))
             |> Seq.toArray
        
         // index all symbol usages by LineNumber 
@@ -261,7 +272,6 @@ module SourceCodeClassifier =
             allSymbolsUses2
             |> Seq.map (fun (_, span) -> span)
             |> Seq.groupBy (fun span -> span.Line)
-            |> Seq.map (fun (line, ranges) -> line, ranges)
             |> Map.ofSeq
 
         let spansBasedOnSymbolsUses = 
@@ -336,7 +346,7 @@ module SourceCodeClassifier =
 
         let unusedOpenDeclarationSpans =
             OpenDeclarationGetter.getUnusedOpenDeclarations ast allSymbolsUses openDeclarations allEntities
-            |> List.map (fun decl -> 
+            |> Seq.map (fun decl -> 
                 { Category = Category.Unused
                   WordSpan = { SymbolKind = SymbolKind.Other
                                Line = decl.DeclarationRange.StartLine 

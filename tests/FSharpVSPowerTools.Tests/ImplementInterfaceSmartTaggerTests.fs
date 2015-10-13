@@ -36,19 +36,9 @@ type ImplementInterfaceSmartTaggerHelper() =
         |> Seq.concat
 
 module ImplementInterfaceSmartTaggerTests =
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
 
     let helper = ImplementInterfaceSmartTaggerHelper()
     
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-
     [<Test>]
     let ``return nothing if interfaces are empty``() = 
         let content = """
@@ -63,7 +53,10 @@ type Impl() =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 15) |> ignore)
-            (fun () -> helper.TagsOf(buffer, tagger) |> Seq.concat |> Seq.toList |> assertEqual [])
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.concat 
+                       |> Seq.toList 
+                       |> assertEqual [])
 
     [<Test>]
     let ``return nothing if all members have been implemented and there is no type error``() = 
@@ -81,7 +74,10 @@ let _ =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore)
-            (fun () -> helper.TagsOf(buffer, tagger) |> Seq.concat |> Seq.toList |> assertEqual [])
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.concat 
+                       |> Seq.toList 
+                       |> assertEqual [])
 
     [<Test>]
     let ``should insert all members if no member has been implemented``() = 
@@ -149,14 +145,13 @@ type Class() =
     interface Interface with
         member x.Method2(arg1: int): int = 
             failwith "Not implemented yet"
-        
         member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
          
         member __.Method1(n) = 2 * n
 """))
 
-    [<Test; Category "AppVeyorLongRunning">]
+    [<Test>]
     let ``should insert duplicated members once``() = 
         let content = """
 type Interface1 =
@@ -198,7 +193,6 @@ type Class() =
     interface Interface3 with
         member x.Method(arg1: int): int = 
             failwith "Not implemented yet"
-        
         member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
         

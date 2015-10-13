@@ -372,7 +372,7 @@ type DepthParser private () =
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
     static member GetRanges(sourceCodeOfTheFile: string, filename, ?checker: FSharpChecker) =
-        let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split [|'\n'|]
+        let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
         DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
 
     /////////////////////////////////////////////////////
@@ -386,7 +386,7 @@ type DepthParser private () =
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
     static member GetNonoverlappingDepthRanges(sourceCodeOfTheFile: string, filename, ?checker: FSharpChecker) =
         async {
-            let sourceCodeLinesOfTheFile = sourceCodeOfTheFile.Split([|"\r\n";"\n"|], StringSplitOptions.None)
+            let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
             let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
             let len line = lineLens.[line-1]  // line #s are 1-based
             let! nestedRanges = DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)

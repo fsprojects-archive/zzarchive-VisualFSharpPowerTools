@@ -91,3 +91,9 @@ type TypeWithXmlDocComment() =
     member x.X = ()
     /// member
     member x.Y = ()
+
+let f = 0
+
+let func : int -> int -> int list =
+    fun x y ->
+        List.append [x] [y]

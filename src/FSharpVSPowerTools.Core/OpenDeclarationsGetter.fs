@@ -45,24 +45,21 @@ module OpenDeclarationGetter =
     open System.Diagnostics
 
     let private getAutoOpenModules entities =
-        entities 
-        |> List.filter (fun e -> 
+        List.foldBack( fun e acc -> 
              match e.Kind with
-             | EntityKind.Module { IsAutoOpen = true } -> true
-             | _ -> false)
-        |> List.map (fun e -> e.CleanedIdents)
+             | EntityKind.Module { IsAutoOpen = true } -> e.CleanedIdents::acc
+             | _ -> acc) entities []
+
 
     let private getActivePatterns entities =
-        entities 
-        |> List.filter (fun e -> 
+        List.foldBack( fun e acc -> 
              match e.Kind with
-             | EntityKind.FunctionOrValue true -> true
-             | _ -> false)
-        |> List.map (fun e -> e.CleanedIdents)
+             | EntityKind.FunctionOrValue true -> e.CleanedIdents::acc
+             | _ -> acc) entities  []
 
     let parseTooltip (FSharpToolTipText elems): RawOpenDeclaration list =
         elems
-        |> List.map (fun e -> 
+        |> List.collect (fun e -> 
             let rawStrings =
                 match e with
                 | FSharpToolTipElement.Single (s, _) -> [s]
@@ -90,7 +87,7 @@ module OpenDeclarationGetter =
             |> List.choose (fun (s: string) ->
                  maybe {
                     let! name, from = 
-                        match s.Split ([|'\n'|], StringSplitOptions.RemoveEmptyEntries) with
+                        match String.getNonEmptyLines s with
                         | [|name; from|] -> Some (name, Some from)
                         | [|name|] -> Some (name, None)
                         | _ -> None
@@ -105,7 +102,6 @@ module OpenDeclarationGetter =
                     return { RawOpenDeclaration.Idents = fullName.Split '.'
                              Parent = from |> Option.map (fun from -> from.Split '.') }
                 }))
-        |> List.concat
 
     let updateOpenDeclsWithSymbolPrefix symbolPrefix symbolRange openDecls = 
         openDecls 
@@ -377,7 +373,7 @@ module OpenDeclarationGetter =
             | _ -> sUse, None)
         |> Seq.groupBy (fun (_, longIdent) -> longIdent)
         |> Seq.map (fun (longIdent, sUses) -> longIdent, sUses |> Seq.map fst)
-        |> Seq.map (fun (longIdent, symbolUses) ->
+        |> Seq.collect (fun (longIdent, symbolUses) ->
             match longIdent with
             | Some _ -> 
                 (* Find all longest SymbolUses which has unique roots. For example:
@@ -416,7 +412,6 @@ module OpenDeclarationGetter =
                     |> List.toSeq
                 res
             | None -> symbolUses)
-        |> Seq.concat
         |> Seq.toArray
 
     let private getFullPrefix (longIdents: IDictionary<_,_>) fullName (endPos: Range.pos): Idents option =
@@ -452,7 +447,7 @@ module OpenDeclarationGetter =
             //|> printSymbolUses "SymbolUsesWithModuleSuffixedRemoved"
             |> filterNestedSymbolUses longIdentsByEndPos
             //|> printSymbolUses "SymbolUses without nested"
-            |> Array.map (fun symbolUse ->
+            |> Array.collect(fun symbolUse ->
                 let sUseRange = symbolUse.SymbolUse.RangeAlternate
                 symbolUse.FullNames
                 |> Array.choose (fun fullName ->
@@ -460,7 +455,6 @@ module OpenDeclarationGetter =
                     |> Option.bind (function
                          | [||] -> None
                          | prefix -> Some (sUseRange, prefix)))) 
-            |> Array.concat
 
         //debug "[SourceCodeClassifier] Symbols prefixes:\n%A,\nOpen declarations:\n%A" symbolPrefixes openDeclarations
         

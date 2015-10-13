@@ -1,2 +1,5 @@
+group Build
 Octokit
+
+group Test
 FAKE

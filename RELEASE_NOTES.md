@@ -1,14 +1,23 @@
-#### 2.1.0 - Unreleased
+#### 2.2.0 - Unreleased
+* Implement outlining support ([#1147](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1147))
+
+#### 2.1.0 - October 11 2015
 * Fix fonts and colors' appearance on VS 2015 ([#1064](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1064))
 * Implement FSharpLint integration ([#1034](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1034))
 * Support relevant FSharp.Core.dll based on VS versions ([#1065](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1065))
-* Show Lightbulb instead of SmartTag on VS 2015 ([#1069](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1069))
+* Show LightBulb instead of SmartTag on VS 2015 ([#1069](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1069))
+* Faster closing of VS solutions ([#1076](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1076))
+* Support lightweight interface implementation ([#1091](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1091))
+* Use forward slashes in FSI generated references ([#1099](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1099))
+* Changing open document forces FCS to stop current checking ([#1100](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1100))
+* Handle #load directives in Go to Definition ([#1117](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1117))
+* Add FSharpLint options dialog ([#1097](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1097))
 
 #### 2.0.0 - July 26 2015
 * Optimize dialog layouts for high DPI ([#1024](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1024))
 * Fix wrong size of unused markers in VS 2012 ([#1027](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1027))
 * Add a new option for interface member identifiers ([#1029](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1029))
-* NavigateToSource now supports Bitbucket, GitLab and Codebasehq urls ([#1038](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1038))
+* NavigateToSource now supports BitBucket, GitLab and Codebasehq urls ([#1038](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1038))
 * Hide F# Power Tools menu on non-F# projects ([#1040](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1040))
 * Support F# 4.0 constructs ([#1047](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1047))
 * Set explicit dependency on Visual F# Tools ([#1056](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1056))

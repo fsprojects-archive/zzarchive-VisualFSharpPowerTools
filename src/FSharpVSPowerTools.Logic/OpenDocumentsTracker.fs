@@ -19,22 +19,27 @@ type OpenDocument =
 type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: ITextDocumentFactoryService) =
     [<VolatileField>]
     let mutable openDocuments = Map.empty
+    let documentChanged = Event<_>()
+    let documentClosed = Event<_>()
 
     member __.RegisterView(view: IWpfTextView) = 
         ForegroundThreadGuard.CheckThread()
-        match textDocumentFactoryService.TryGetTextDocument(view.TextBuffer) with
+        match textDocumentFactoryService.TryGetTextDocument view.TextBuffer with
         | true, doc ->
             let path = doc.FilePath
-            let rec textBufferChanged (args: TextContentChangedEventArgs) =
+            let textBufferChanged (args: TextContentChangedEventArgs) =
                 ForegroundThreadGuard.CheckThread()
                 openDocuments <- Map.add path (OpenDocument.Create doc args.After doc.Encoding) openDocuments
+                documentChanged.Trigger path
 
-            and textBufferChangedSubscription: IDisposable = view.TextBuffer.ChangedHighPriority.Subscribe(textBufferChanged)
-            and viewClosed _ = 
+            let textBufferChangedSubscription: IDisposable = view.TextBuffer.ChangedHighPriority.Subscribe textBufferChanged
+            
+            let rec viewClosed _ = 
                 ForegroundThreadGuard.CheckThread()
                 textBufferChangedSubscription.Dispose()
                 viewClosedSubscription.Dispose()
                 openDocuments <- Map.remove path openDocuments
+                documentClosed.Trigger path
 
             and viewClosedSubscription: IDisposable = view.Closed.Subscribe viewClosed
             
@@ -47,3 +52,5 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
         Seq.map f openDocuments
 
     member __.TryFindOpenDocument path = Map.tryFind path openDocuments
+    member __.DocumentChanged = documentChanged.Publish
+    member __.DocumentClosed = documentClosed.Publish

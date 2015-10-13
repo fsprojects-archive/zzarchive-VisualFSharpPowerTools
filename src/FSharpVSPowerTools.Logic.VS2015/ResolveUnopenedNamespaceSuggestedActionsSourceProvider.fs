@@ -57,7 +57,10 @@ and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceR
         member __.Dispose() = (resolver :> IDisposable).Dispose()
         member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) = 
             match resolver.CurrentWord, resolver.Suggestions with
-            | Some _, Some suggestions ->
+            | None, _
+            | _, [] -> 
+                Seq.empty
+            | Some _, suggestions ->
                 suggestions
                 |> List.map (fun xs ->
                     xs
@@ -77,10 +80,9 @@ and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceR
                                member __.Invoke _ct = s.Invoke()
                                member __.TryGetTelemetryId _telemetryId = false })
                      |> fun xs -> SuggestedActionSet xs) :> _
-            | _ -> Seq.empty
 
         member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
-            Task.FromResult (Option.isSome resolver.CurrentWord && resolver.Suggestions |> Option.getOrElse [] |> (List.isEmpty >> not))
+            Task.FromResult (Option.isSome resolver.CurrentWord && resolver.Suggestions |> List.isEmpty |> not)
 
         [<CLIEvent>]
         member __.SuggestedActionsChanged: IEvent<EventHandler<EventArgs>, EventArgs> = actionsChanged.Publish

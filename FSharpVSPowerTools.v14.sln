@@ -32,6 +32,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\index.fsx = docs\content\index.fsx
 		docs\content\navbar.fsx = docs\content\navbar.fsx
 		docs\content\navigateto.fsx = docs\content\navigateto.fsx
+		docs\content\outlining.fsx = docs\content\outlining.fsx
 		docs\content\recordstubgeneration.fsx = docs\content\recordstubgeneration.fsx
 		docs\content\rename.fsx = docs\content\rename.fsx
 		docs\content\resolveunopenednamespaces.fsx = docs\content\resolveunopenednamespaces.fsx
@@ -58,7 +59,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test samples", "{CDFE262B-BF3B-4B13-B3E6-859CC2A82F0D}"
 	ProjectSection(SolutionItems) = preProject
 		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
+		tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
+		tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs
 		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
 	EndProjectSection
 EndProject

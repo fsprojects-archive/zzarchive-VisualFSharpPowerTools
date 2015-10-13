@@ -9,7 +9,7 @@ type internal ShortIdent = string
 type internal Idents = ShortIdent[]
 
 let internal longIdentToArray (longIdent: LongIdent): Idents =
-    longIdent |> List.map string |> List.toArray
+    longIdent |> Seq.map string |> Seq.toArray
 
     /// An recursive pattern that collect all sequential expressions to avoid StackOverflowException
 let rec (|Sequentials|_|) = function
@@ -443,7 +443,28 @@ let getQuatationRanges ast =
 
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
     and visitBindindgs = List.iter visitBinding
-    and visitMatch (SynMatchClause.Clause (_, _, expr, _, _)) = visitExpr expr
+
+    and visitPattern = function
+        | SynPat.QuoteExpr(expr, _) -> visitExpr expr
+        | SynPat.Named(pat, _, _, _, _) -> visitPattern pat
+        | SynPat.Typed(pat, _, _) -> visitPattern pat
+        | SynPat.Or(pat1, pat2, _) -> visitPattern pat1; visitPattern pat2
+        | SynPat.Ands(pats, _) -> List.iter visitPattern pats
+        | SynPat.LongIdent(_, _, _, ctorArgs, _, _) -> 
+            match ctorArgs with
+            | SynConstructorArgs.Pats pats -> List.iter visitPattern pats
+            | SynConstructorArgs.NamePatPairs(xs, _) -> 
+                xs |> List.map snd |> List.iter visitPattern
+        | SynPat.Tuple(pats, _) -> List.iter visitPattern pats
+        | SynPat.Paren(pat, _) -> visitPattern pat
+        | SynPat.ArrayOrList(_, pats, _) -> List.iter visitPattern pats
+        | SynPat.Record(xs, _) -> xs |> List.map snd |> List.iter visitPattern
+        | _ -> ()
+
+    and visitMatch (SynMatchClause.Clause (pat, _, expr, _, _)) = 
+        visitPattern pat
+        visitExpr expr
+
     and visitMatches = List.iter visitMatch
     
     let visitMember = function
@@ -453,11 +474,12 @@ let getQuatationRanges ast =
         | _ -> () 
 
     let visitType ty =
-        let (SynTypeDefn.TypeDefn (_, repr, _, _)) = ty
+        let (SynTypeDefn.TypeDefn (_, repr, defns, _)) = ty
         match repr with
         | SynTypeDefnRepr.ObjectModel (_, defns, _) ->
             for d in defns do visitMember d
         | _ -> ()
+        for d in defns do visitMember d
 
     let rec visitDeclarations decls = 
         for declaration in decls do
@@ -631,4 +653,291 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
     |> List.rev
     |> Seq.concat
     |> Seq.map (fun ident -> ident.idText)
-    |> String.concat "."  
+    |> String.concat "."
+
+
+module HashDirectiveInfo =
+    open System.IO
+    type IncludeDirective =
+        | ResolvedDirectory of string
+
+    type LoadDirective =
+        | ExistingFile of string
+        | UnresolvableFile of string * previousIncludes : string array
+
+    [<NoComparison>]
+    type Directive =
+        | Include of IncludeDirective * range
+        | Load of LoadDirective * range
+
+    /// returns an array of LoadScriptResolutionEntries
+    /// based on #I and #load directives
+    let getIncludeAndLoadDirectives ast =
+        // the Load items are resolved using fallback resolution relying on previously parsed #I directives
+        // (this behaviour is undocumented in F# but it seems to be how it works).
+        
+        // list of #I directives so far (populated while encountering those in order)
+        // TODO: replace by List.fold if possible
+        let includesSoFar = new System.Collections.Generic.List<_>()
+        let pushInclude = includesSoFar.Add
+
+        // those might need to be abstracted away from real filesystem operations
+        let fileExists = File.Exists
+        let directoryExists = Directory.Exists
+        let isPathRooted = Path.IsPathRooted
+        let getDirectoryOfFile = Path.GetFullPathSafe >> Path.GetDirectoryName
+        let getRootedDirectory = Path.GetFullPathSafe
+        let makeRootedDirectoryIfNecessary baseDirectory directory =
+            if not (isPathRooted directory) then
+                getRootedDirectory (baseDirectory </> directory)
+            else
+                directory
+
+        // separate function to reduce nesting one level
+        let parseDirectives modules file =
+            [|
+            let baseDirectory = getDirectoryOfFile file
+            for (SynModuleOrNamespace(_, _, declarations, _, _, _, _)) in modules do
+                for decl in declarations do
+                    match decl with
+                    | SynModuleDecl.HashDirective(ParsedHashDirective("I",[directory],range),_) ->
+                        let directory = makeRootedDirectoryIfNecessary (getDirectoryOfFile file) directory
+                        
+                        if directoryExists directory then
+                            let includeDirective = ResolvedDirectory(directory)
+                            pushInclude includeDirective
+                            yield Include (includeDirective, range)
+
+                    | SynModuleDecl.HashDirective(ParsedHashDirective("load",files,range),_) ->
+                        for f in files do
+                            if isPathRooted f && fileExists f then
+
+                                // this is absolute reference to an existing script, easiest case
+                                yield Load (ExistingFile f, range)
+
+                            else
+
+                                // I'm not sure if the order is correct, first checking relative to file containing the #load directive
+                                // then checking for undocumented resolution using previously parsed #I directives
+                                let fileRelativeToCurrentFile = baseDirectory </> f
+                                if fileExists fileRelativeToCurrentFile then
+
+                                    // this is existing file relative to current file
+                                    yield Load (ExistingFile fileRelativeToCurrentFile, range)
+
+                                else
+
+                                    // match file against first include which seemingly have it found
+                                    let maybeFile =
+                                        includesSoFar
+                                        |> Seq.tryPick (function
+                                            | (ResolvedDirectory d) ->
+                                                let filePath = d </> f
+                                                if fileExists filePath then Some filePath else None
+                                        )
+                                    match maybeFile with
+                                    | None -> () // can't load this file even using any of the #I directives...
+                                    | Some f ->
+                                        yield Load (ExistingFile f, range)
+
+                    | _ -> ()
+            |]
+
+        match ast with
+        | ParsedInput.ImplFile(ParsedImplFileInput(fn,_,_,_,_,modules,_)) -> parseDirectives modules fn
+        | _ -> [||]
+
+    /// returns the Some (complete file name of a resolved #load directive at position) or None
+    let getHashLoadDirectiveResolvedPathAtPosition (pos: pos) (ast: ParsedInput) : string option =
+        getIncludeAndLoadDirectives ast
+        |> Array.tryPick (
+            function
+            | Load(ExistingFile f, range) 
+                // check the line is within the range
+                // (doesn't work when there are multiple files given to a single #load directive)
+                when rangeContainsPos range pos
+                    -> Some f
+            | _     -> None
+        )
+
+
+/// Set of visitor utilies, designed for the express purpose of fetching ranges
+/// from an untyped AST for the purposes of outlining.
+module Outlining =
+    module private Range =
+        let endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End r2.End
+
+    let rec private visitExpr e = 
+        seq {
+            match e with
+            | SynExpr.LetOrUse (_, _, bindings, body, _) ->
+                yield! visitBindings bindings
+                yield! visitExpr body
+            | SynExpr.Match (seqPointAtBinding, e, clauses, _, r) ->
+                match seqPointAtBinding with
+                | SequencePointAtBinding pr ->
+                    yield Range.endToEnd pr r
+                | _ -> ()
+                yield! visitExpr e
+                yield! visitMatchClauses clauses
+            | SynExpr.App (_, _, _, e, _) ->
+                yield! visitExpr e
+            | SynExpr.CompExpr (_, _, e, r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.Sequential (_, _, e1, e2, _) ->
+                yield! visitExpr e1
+                yield! visitExpr e2
+            | SynExpr.YieldOrReturn (_, e, _) ->
+                yield! visitExpr e
+            | SynExpr.YieldOrReturnFrom (_, e, _) ->
+                yield! visitExpr e
+            | SynExpr.ArrayOrListOfSeqExpr (_, e, _) ->
+                yield! visitExpr e
+            | SynExpr.ObjExpr (_, _, bindings, _, newRange, wholeRange) ->
+                yield mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
+                yield! visitBindings bindings
+            | SynExpr.TryWith (e, _, matchClauses, tryRange, withRange, tryPoint, withPoint) ->
+                match tryPoint with
+                | SequencePointAtTry r -> yield Range.endToEnd r tryRange
+                | _ -> ()
+                match withPoint with
+                | SequencePointAtWith r -> yield Range.endToEnd r withRange
+                | _ -> ()
+                yield! visitExpr e
+                yield! visitMatchClauses matchClauses
+            | SynExpr.TryFinally (tryExpr, finallyExpr, r, tryPoint, finallyPoint) ->
+                match tryPoint with
+                | SequencePointAtTry tryRange ->
+                    yield Range.endToEnd tryRange r
+                | _ -> ()
+                match finallyPoint with
+                | SequencePointAtFinally finallyRange ->
+                    yield Range.endToEnd finallyRange r
+                | _ -> ()
+                yield! visitExpr tryExpr
+                yield! visitExpr finallyExpr
+            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) ->
+                yield! visitExpr e1
+                yield! visitExpr e2
+                match e3 with
+                | Some e -> yield! visitExpr e
+                | None -> ()
+            | _ -> ()
+        }
+
+    and private visitMatchClause (SynMatchClause.Clause (_, _, e, r, _) ) = 
+        seq {
+            yield r
+            yield! visitExpr e
+        }
+
+    and private visitMatchClauses = Seq.collect visitMatchClause
+
+    and private visitBinding (Binding(_, kind, _, _, _, _, _, _, _, e, range, _) as b) =
+        seq {
+            match kind with
+            | NormalBinding ->
+                let r1 = b.RangeOfBindingSansRhs
+                let r2 = b.RangeOfBindingAndRhs
+                yield Range.endToEnd r1 r2
+            | DoBinding ->
+                let doEnd = mkPos range.Start.Line (range.Start.Column + 2)
+                yield mkFileIndexRange range.FileIndex doEnd range.End
+            | _ -> ()
+            yield! visitExpr e
+        }
+
+    and private visitBindings = Seq.collect visitBinding 
+
+    and private visitSynMemberDefn d =
+        seq {
+            match d with
+            | SynMemberDefn.Member (binding, _) ->
+                yield! visitBinding binding
+            | SynMemberDefn.LetBindings (bindings, _, _, _) ->
+                yield! visitBindings bindings
+            | SynMemberDefn.Interface(tp, mmembers, _) ->
+                yield Range.endToEnd tp.Range d.Range
+                match mmembers with
+                | Some members -> yield! Seq.collect visitSynMemberDefn members
+                | None -> ()
+            | SynMemberDefn.NestedType(td, _, _) ->
+                yield! visitTypeDefn td
+            | _ -> ()
+        }
+
+    and private visitTypeDefn (TypeDefn(componentInfo, objectModel, members, range)) =
+        seq {
+            yield Range.endToEnd componentInfo.Range range
+            match objectModel with
+            | ObjectModel(_, members, _) -> yield! Seq.collect visitSynMemberDefn members
+            | Simple _ -> yield! Seq.collect visitSynMemberDefn members
+        }
+
+    let private getConsecutiveModuleDecls (predicate: SynModuleDecl -> range option) (decls: SynModuleDecls) =
+        let groupConsecutiveDecls input =
+            let rec loop (input: range list) (res: range list list) currentBulk =
+                match input, currentBulk with
+                | [], [] -> List.rev res
+                | [], _ -> List.rev (currentBulk :: res)
+                | r :: rest, [] -> loop rest res [r]
+                | r :: rest, last :: _ when r.StartLine = last.EndLine + 1 -> 
+                    loop rest res (r :: currentBulk)
+                | r :: rest, _ -> loop rest (currentBulk :: res) [r]
+            loop input [] []
+
+
+        decls 
+        |> List.choose predicate
+        |> groupConsecutiveDecls
+        |> List.choose (fun ranges ->
+            match ranges with
+            | [] -> None
+            | [r] when r.StartLine = r.EndLine -> None
+            | [r] -> Some (Range.mkRange "" r.Start r.End)
+            | lastRange :: rest ->
+                let firstRange = Seq.last rest
+                Some (Range.mkRange "" firstRange.Start lastRange.End))
+
+    let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
+    let collectHashDirectives = 
+        getConsecutiveModuleDecls(
+            function 
+            | SynModuleDecl.HashDirective (ParsedHashDirective(directive, _, _), r) ->
+                let prefixLength = "#".Length + directive.Length + " ".Length
+                Some (Range.mkRange "" (Range.mkPos r.StartLine prefixLength) r.End)
+            | _ -> None)
+
+    let rec private visitDeclaration (decl: SynModuleDecl) = 
+        seq {
+            match decl with
+            | SynModuleDecl.Let(_, bindings, _) ->
+                yield! visitBindings bindings
+            | SynModuleDecl.Types(types, _) ->
+                yield! Seq.collect visitTypeDefn types
+            | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
+                yield Range.endToEnd cmpInfo.Range decl.Range
+                yield! collectOpens decls
+                yield! Seq.collect visitDeclaration decls
+            | SynModuleDecl.DoExpr(_, e, _) ->
+                yield! visitExpr e
+            | _ -> ()
+        }
+
+    let private visitModuleOrNamespace moduleOrNs =
+        seq {
+            let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
+            yield! collectHashDirectives decls
+            yield! collectOpens decls
+            yield! Seq.collect visitDeclaration decls
+        }
+
+    let getOutliningRanges tree =
+        seq {
+            match tree with
+            | ParsedInput.ImplFile(implFile) ->
+                let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
+                yield! Seq.collect visitModuleOrNamespace modules
+            | _ -> ()
+        }

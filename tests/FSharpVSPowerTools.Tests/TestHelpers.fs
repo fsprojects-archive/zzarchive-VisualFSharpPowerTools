@@ -56,6 +56,12 @@ let inline assertFalse condition =
 
 type [<Measure>] ms
 
+#if APPVEYOR
+let timeout = 40000<ms>
+#else
+let timeout = 10000<ms>
+#endif
+
 let (=>) (startLine, startCol) (endLine, endCol) =
         (startLine, startCol, endLine, endCol)
         
@@ -79,7 +85,7 @@ let testEventTrigger event errorMessage (timeout: int<_>) triggerEvent predicate
     | false ->
         sw.Stop()
         Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
-        Assert.Fail errorMessage
+        Assert.Inconclusive errorMessage
 
 let testEvent event errorMessage (timeout: int<_>) predicate =
     testEventTrigger event errorMessage timeout id predicate

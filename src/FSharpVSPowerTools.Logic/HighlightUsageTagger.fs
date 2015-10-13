@@ -84,12 +84,17 @@ type HighlightUsageTagger(textDocument: ITextDocument,
         match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
         | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
         | Some point, _ ->
+            let res =
+                maybe {
+                    requestedPoint <- point
+                    let currentRequest = requestedPoint
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                    let! project = projectFactory.CreateForDocument buffer doc 
+                    return currentRequest, doc, project }
+            
             asyncMaybe {
-                requestedPoint <- point
-                let currentRequest = requestedPoint
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument buffer doc
+                let! currentRequest, doc, project = res
                 match vsLanguageService.GetSymbol(currentRequest, project) with
                 | Some (newWord, symbol) ->
                     // If this is the same word we currently have, we're done (e.g. caret moved within a word).
@@ -100,10 +105,10 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                         return! doUpdate (currentRequest, symbol, newWord, doc.FullName, project) |> liftAsync
                 | None ->
                     return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
-            } 
+            }
             |> Async.map (Option.iter id)
             |> Async.StartInThreadPoolSafe
-        | _ -> ()
+        | None, _ -> ()
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
                                                       updateAtCaretPosition)
@@ -134,7 +139,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                 // the duplication is not expected.
                 for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) do
                     if span <> word then yield tagSpan span
-            | _ -> ()
+            | Some _ | None -> ()
         ]
 
     interface ITagger<HighlightUsageTag> with

@@ -9,13 +9,14 @@ using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
 using System.Diagnostics;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
-    [TagType(typeof(RecordStubGeneratorSmartTag))]
-    public class RecordStubGeneratorSmartTaggerProvider : IViewTaggerProvider
+    [TagType(typeof(ImplementInterfaceSmartTag))]
+    public class ImplementInterfaceSmartTaggerProvider : IViewTaggerProvider
     {
         [Import]
         internal VSLanguageService fsharpVsLanguageService = null;
@@ -25,6 +26,9 @@ namespace FSharpVSPowerTools
 
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
+
+        [Import]
+        internal IEditorOptionsFactoryService editorOptionsFactory = null;
 
         [Import]
         internal ITextUndoHistoryRegistry undoHistoryRegistry = null;
@@ -38,19 +42,26 @@ namespace FSharpVSPowerTools
             if (textView.TextBuffer != buffer) return null;
 
             var generalOptions = Setting.getGeneralOptions(serviceProvider);
-            if (generalOptions == null || !generalOptions.GenerateRecordStubEnabled) return null;
+            if (generalOptions == null || !generalOptions.InterfaceImplementationEnabled) return null;
             var codeGenOptions = Setting.getCodeGenerationOptions(serviceProvider);
             if (codeGenOptions == null) return null;
+
+            var dte = serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
+            var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+            if (vsVersion == VisualStudioVersion.VS2015) return null;
 
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new RecordStubGeneratorSmartTagger(doc, textView,
-                            undoHistoryRegistry.RegisterHistory(buffer),
-                            fsharpVsLanguageService, serviceProvider,
-                            projectFactory, Setting.getDefaultMemberBody(codeGenOptions)) as ITagger<T>;
+                var implementInterface = 
+                    new ImplementInterface(doc, textView,
+                        editorOptionsFactory, undoHistoryRegistry.RegisterHistory(buffer),
+                        fsharpVsLanguageService, serviceProvider, projectFactory,
+                        Setting.getInterfaceMemberIdentifier(codeGenOptions),
+                        Setting.getDefaultMemberBody(codeGenOptions));
+                return new ImplementInterfaceSmartTagger(buffer, implementInterface) as ITagger<T>;
             }
-            
+
             return null;
         }
     }

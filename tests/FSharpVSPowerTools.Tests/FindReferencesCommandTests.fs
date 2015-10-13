@@ -59,26 +59,14 @@ type FindReferencesCommandHelper() =
     member __.ReferencesChanged = findReferencesBuffer.Changed
 
     member __.ReferencesResults = 
-        findReferencesBuffer.CurrentSnapshot.GetText().Split([|Environment.NewLine|], StringSplitOptions.RemoveEmptyEntries)
-        
+        findReferencesBuffer.CurrentSnapshot.GetText()
+        |> String.getNonEmptyLines
 
 module FindReferencesCommandTests =
     open System.IO
 
-#if APPVEYOR
-    let timeout = 40000<ms>
-#else
-    let timeout = 10000<ms>
-#endif
-
     let helper = FindReferencesCommandHelper()
     let fileName = getTempFileName ".fs"
-
-    [<TestFixtureSetUp>]
-    let setUp() =
-        TestUtilities.AssertListener.Initialize()
-        DocumentEventListener.SkipTimerDelay <- true
-        Logger.GlobalServiceProvider <- helper.ServiceProvider
 
     [<Test>]
     let ``should be able to find all references in a single document``() =
@@ -119,12 +107,10 @@ val func : int -> int
         let command = helper.GetCommand(textView)
 
         let prefix = Path.GetFullPath(fileName)
-        
-        testEventTrigger helper.ReferencesChanged "Timed out before being able to find all references" timeout
-            (fun () -> 
-                textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 6) |> ignore
-                command.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidFindReferences, 
-                    0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
+        textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 6) |> ignore
+        command.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidFindReferences, 
+            0u, IntPtr.Zero, IntPtr.Zero) |> ignore
+        testEvent helper.ReferencesChanged "Timed out before being able to find all references" timeout
             (fun () -> 
                 helper.ReferencesResults 
                 |> assertEqual 

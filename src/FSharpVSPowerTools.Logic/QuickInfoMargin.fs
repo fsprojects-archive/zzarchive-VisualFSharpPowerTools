@@ -59,7 +59,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
                 |> String.concat " ")
             |> Option.orElse (tooltip |> Option.bind (fun tooltip ->
                 tooltip 
-                |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|] 
+                |> String.getNonEmptyLines
                 |> Array.toList 
                 |> List.tryHead
                 |> Option.map (fun str ->
@@ -76,7 +76,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | null -> ""
         | x ->
             x 
-            |> String.split StringSplitOptions.RemoveEmptyEntries [|"\r\n"; "\r"; "\n"|]
+            |> String.getNonEmptyLines
             |> Array.mapi (fun i x -> 
                 if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then ". " + (String.trim x) 
                 else " " + (String.trim x))
@@ -87,18 +87,22 @@ type QuickInfoMargin (textDocument: ITextDocument,
         let caretPos = view.Caret.Position
         match buffer.GetSnapshotPoint caretPos with
         | Some point ->
+            let project =
+                maybe {
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                    let! project = projectFactory.CreateForDocument buffer doc
+                    return project }
             asyncMaybe {
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument buffer doc
+                let! project = project
                 let! tooltip =
                     asyncMaybe {
-                        let! newWord, symbol = vsLanguageService.GetSymbol (point, project)
+                        let! newWord, longIdent = vsLanguageService.GetLongIdentSymbol (point, project)
                         let lineStr = point.GetContainingLine().GetText()
-
+                        let idents = String.split StringSplitOptions.None [|"."|] longIdent.Text |> Array.toList
                         let! (FSharpToolTipText tooltip) =
                             vsLanguageService.GetOpenDeclarationTooltip(
-                                symbol.Line + 1, symbol.RightColumn, lineStr, [symbol.Text], project, 
+                                longIdent.Line + 1, longIdent.RightColumn, lineStr, idents, project, 
                                 textDocument.FilePath, newWord.Snapshot.GetText())
                         return!
                             tooltip
@@ -130,7 +134,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
             } 
             |> Async.map (Option.getOrElse (None, None) >> updateQuickInfo)
             |> Async.StartInThreadPoolSafe
-        | _ -> updateQuickInfo (None, None)
+        | None -> updateQuickInfo (None, None)
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, updateAtCaretPosition)
 
