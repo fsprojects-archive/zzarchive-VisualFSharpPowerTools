@@ -13,6 +13,7 @@ open Management
 open LintUtils
 open FSharpVSPowerTools.ProjectSystem
 
+[<ClassInterface(ClassInterfaceType.AutoDual)>]
 [<Guid("f0bb4785-e75a-485f-86e8-e382dd5934a4")>]
 type LintOptionsPage private (dte:EnvDTE.DTE option) =
     inherit UIElementDialogPage()
