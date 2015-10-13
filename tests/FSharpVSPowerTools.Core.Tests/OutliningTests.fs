@@ -30,7 +30,10 @@ let parseSource source =
     languageService.ParseFileInProject(opts fileName, fileName, source)
     |> Async.RunSynchronously
 
-let (=>) (source: string) (lineRanges: (int * int) list) =
+type Line = int
+type Col = int
+
+let (=>) (source: string) (ranges: (Line * Col * Line * Col) list) =
     let ast = (parseSource source).ParseTree
     try
         match ast with
@@ -38,128 +41,133 @@ let (=>) (source: string) (lineRanges: (int * int) list) =
             let multilineRanges =
                 getOutliningRanges tree
                 |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
-                |> Seq.map (fun r -> r.StartLine, r.EndLine)
+                |> Seq.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
                 |> List.ofSeq
-            CollectionAssert.AreEquivalent (List.sort lineRanges, List.sort multilineRanges)
+            CollectionAssert.AreEquivalent (List.sort ranges, List.sort multilineRanges)
         | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
     with _ ->
         debug "AST:\n%+A" ast
         reraise()
 
 [<Test>]
-let ``parsing an empty file doesn't emit any ranges``() =
-    "" => []
+let ``empty file``() = "" => []
 
 [<Test>]
-let ``parsing a module correctly``() =
+let ``nested module``() =
     """
-    module MyModule =
+module MyModule =
+    ()
+"""
+    => [ 2, 15, 3, 6 ]
+
+[<Test>]
+let ``module with multiline function``() =
+    """
+module MyModule =
+    let foo() =
+        foo()
+"""
+    => [ 2, 15, 4, 13
+         3, 13, 4, 13 ]
+
+[<Test>]
+let ``DU``() =
+    """
+type Color =
+    | Red
+    | Green
+    | Blue
+"""
+    => [ 2, 10, 5, 10 ]
+
+[<Test>]
+let ``DU with interface``() =
+    """
+type Color =
+    | Red
+    | Green
+    | Blue
+
+    interface IDisposable with
+        member __.Dispose() =
+            (docEventListener :> IDisposable).Dispose()
+"""
+    => [ 2, 10, 9, 55
+         7, 25, 9, 55
+         8, 27, 9, 55 ]
+
+[<Test>]
+let ``record with interface``() =
+    """
+type Color =
+    { Red: int
+        Green: int
+        Blue: int 
+    }
+
+    interface IDisposable with
+        member __.Dispose() =
+            (docEventListener :> IDisposable).Dispose()
+"""
+    => [ 2, 10, 10, 55
+         8, 25, 10, 55
+         9, 27, 10, 55 ]
+
+[<Test>]
+let ``type with a do block``() =
+    """
+type Color() =   // 2
+    let foo() =
         ()
-    """
-    => [ (2,3) ]
+
+    do
+        foo()
+        ()       // 8
+"""
+    => [ 2, 10, 8, 10
+         3, 13, 4, 10
+         6, 6, 8, 10 ]
 
 [<Test>]
-let ``parsing a module with multiline function correctly``() =
+let ``complex outlining test``() =
     """
-    module MyModule =
-        let foo() =
-            foo()
-    """
-    => [ (2,4); (3,4) ]
+module MyModule =       // 2
+    let foo() = ()
+    let bar() =
+        ()
 
-[<Test>]
-let ``parsing a DU correctly``() =
-    """
-    type Color =
-        | Red
-        | Green
-        | Blue
-    """
-    => [ (2,5) ]
-
-[<Test>]
-let ``parsing a DU with interface correctly``() =
-    """
-    type Color =
-        | Red
-        | Green
-        | Blue
-
-        interface IDisposable with
-            member __.Dispose() =
-                (docEventListener :> IDisposable).Dispose()
-    """
-    => [ (2,9); (7,9); (8,9) ]
-
-[<Test>]
-let ``parsing a record with interface correctly``() =
-    """
-    type Color =
+    type Color =        // 7
         { Red: int
           Green: int
           Blue: int 
         }
 
-        interface IDisposable with
+        interface IDisposable with      // 13
             member __.Dispose() =
                 (docEventListener :> IDisposable).Dispose()
-    """
-    => [ (2,10); (8,10); (9,10) ]
 
-[<Test>]
-let ``parsing a type with a do block correctly``() =
-    """
-    type Color() =        // 2
-        let foo() =
-            ()
+    module MyInnerModule =              // 17
 
-        do
-            foo()
-            ()          // 8
-    """
-    => [ (2,8); (3,4); (6,8) ]
-
-[<Test>]
-let ``complex outlining test``() =
-    """
-    module MyModule =       // 2
-        let foo() = ()
-        let bar() =
-            ()
-
-        type Color =        // 7
+        type RecordColor =              // 19
             { Red: int
               Green: int
               Blue: int 
             }
 
-            interface IDisposable with      // 13
+            interface IDisposable with  // 25
                 member __.Dispose() =
                     (docEventListener :> IDisposable).Dispose()
-
-        module MyInnerModule =              // 17
-
-            type RecordColor =              // 19
-                { Red: int
-                  Green: int
-                  Blue: int 
-                }
-
-                interface IDisposable with  // 25
-                    member __.Dispose() =
-                        (docEventListener :> IDisposable).Dispose()
-    """
-    => [ (2,27) // MyModule
-         (4,5)  // bar
-         (7,15) // Color
-         (13,15)
-         (14,15)
-         (17,27) // MyInnerModule
-         (19,27) // RecordColor
-         (25,27)
-         (26,27)
-       ]
-
+"""
+    => [ 2, 15, 27, 63     // MyModule
+         4, 13, 5, 10
+         7, 14, 15, 59     // Color
+         13, 29, 15, 59
+         14, 31, 15, 59
+         17, 24, 27, 63    // MyInnerModule
+         19, 24, 27, 63    // RecordColor
+         25, 33, 27, 63
+         26, 35, 27, 63 ]
+    
 [<Test>]
 let ``open statements``() =
     """
@@ -189,14 +197,14 @@ open H             // 23
 open G             // 25
 open H             // 26
 """
-    => [ 2, 3
-         5, 19
-         8, 9
-         11, 14
-         16, 19
-         17, 18
-         21, 23
-         25, 26 ]
+    => [ 2, 5, 3, 6
+         5, 8, 19, 17
+         8, 9, 9, 10
+         11, 12, 14, 17
+         16, 12, 19, 17
+         17, 13, 18, 14
+         21, 5, 23, 6
+         25, 5, 26, 6 ]
 
 [<Test>]
 let ``hash directives``() =
@@ -224,8 +232,53 @@ let x = 1 // 9
       "c" // 22
 #r "d"    // 23
 """
-    => [ 2, 3
-         7, 8
-         11, 14
-         16, 18
-         20, 23 ]
+    => [ 2, 3, 3, 6
+         7, 3, 8, 6
+         11, 3, 14, 6
+         16, 6, 18, 9
+         20, 6, 23, 6 ]
+
+[<Test>]
+let ``nested let bindings``() =
+    """
+let f x =       // 2
+    let g x =   // 3
+        let h = // 4
+            ()  // 5
+        ()      // 6
+    x           // 7
+"""
+    => [ 2, 7, 7, 5
+         3, 11, 6, 10
+         4, 13, 5, 14 ]
+
+[<Test>]
+let ``match``() =
+    """
+match None with     // 2
+| Some _ ->         // 3
+    ()              // 4
+| None ->           // 5
+    match None with // 6
+    | Some _ -> ()  // 7
+    | None ->       // 8
+        let x = ()  // 9
+        ()          // 10
+"""
+    => [ 2, 15, 10, 10
+         6, 19, 10, 10 ]
+         
+[<Test>]
+let ``computation expressions``() =
+    """
+seq {              // 2
+    yield ()       // 3
+    let f x =      // 4
+        ()         // 5
+    yield! seq {   // 6
+        yield () } // 7
+}                  // 8
+"""
+    => [ 2, 4, 8, 1
+         4, 11, 5, 10
+         6, 15, 7, 18 ]
