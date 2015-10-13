@@ -11,6 +11,7 @@ open System.Windows
 open FSharpLint.Framework.Configuration
 open Management
 open LintUtils
+open FSharpVSPowerTools.ProjectSystem
 
 [<Guid("f0bb4785-e75a-485f-86e8-e382dd5934a4")>]
 type LintOptionsPage private (dte:EnvDTE.DTE option) =
@@ -31,7 +32,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
             let rec trySave () =
                 match saveViewModel loadedConfigs optionsViewModel with
                 | Success -> ()
-                | Failure(reason) -> 
+                | Failure reason -> 
                     match promptRetryDialog reason with
                     | MessageBoxRetryButtonClicked -> trySave ()
                     | _ -> ()
@@ -44,25 +45,22 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
 
     interface ILintOptions with
         member this.UpdateDirectories() =
-            loadedConfigs <- updateLoadedConfigs (this.GetDte()) loadedConfigs
+            loadedConfigs <- updateLoadedConfigs this.Dte loadedConfigs
 
         member __.GetConfigurationForDirectory(dir) =
             getConfigForDirectory loadedConfigs dir
 
-    member private this.GetDte() =
+    member private this.Dte =
         match dte with
-        | Some(dte) -> dte
+        | Some dte -> dte
         | None -> this.GetService(typeof<EnvDTE.DTE>) :?> EnvDTE.DTE
 
-    member private this.GetVsUiShell() =
+    member private this.VsUiShell =
         this.GetService(typeof<SVsUIShell>) :?> IVsUIShell
 
     member private this.RetrySaveDialog(failedToSaveReason) =
-        let result = ref 0
-
-        let successfullyShown =
-            this.GetVsUiShell().ShowMessageBox(
-                0u,
+        match this.VsUiShell.ShowMessageBox
+               (0u,
                 ref Guid.Empty,
                 "Unable To Apply Changes",
                 sprintf "Unable to save config changes: %s." failedToSaveReason,
@@ -71,51 +69,56 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
                 OLEMSGBUTTON.OLEMSGBUTTON_RETRYCANCEL,
                 OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST,
                 OLEMSGICON.OLEMSGICON_INFO,
-                0,
-                result) = VSConstants.S_OK
-        
-        if successfullyShown then !result
-        else 0
+                0) with
+        | VSConstants.S_OK, result -> result
+        | _ -> 0
             
-    override this.OnApply(_) = 
-        match lintOptionsPageControl.Value.DataContext with
-        | :? LintViewModel as viewModel -> 
-            saveViewModel this.RetrySaveDialog viewModel
-        | _ -> ()
+    override this.OnApply e = 
+        protect (fun _ ->
+            match lintOptionsPageControl.Value.DataContext with
+            | :? LintViewModel as viewModel -> 
+                saveViewModel this.RetrySaveDialog viewModel
+            | _ -> ())
+        base.OnApply e
 
-    override this.OnActivate(_) = 
-        let dte = this.GetDte()
+    override this.OnActivate e = 
+        protect (fun _ ->
+            let dte = this.Dte
 
-        loadedConfigs <- updateLoadedConfigs dte loadedConfigs
-        loadedConfigs <- refresh tryLoadConfig loadedConfigs
+            loadedConfigs <- updateLoadedConfigs dte loadedConfigs
+            loadedConfigs <- refresh tryLoadConfig loadedConfigs
 
-        let lintOptions =
-            match getInitialPath dte loadedConfigs with
-            | Some(path) ->
-                let files = getFileHierarchy loadedConfigs
+            let lintOptions =
+                match getInitialPath dte loadedConfigs with
+                | Some(path) ->
+                    let files = getFileHierarchy loadedConfigs
 
-                let rec getFileViewModel files =
-                    let getFile (file:FileViewModel) =
-                        if file.Path = path then Some(file) 
-                        else getFileViewModel file.Files
+                    let rec getFileViewModel files =
+                        let getFile (file: FileViewModel) =
+                            if file.Path = path then Some file 
+                            else getFileViewModel file.Files
 
-                    Seq.tryPick getFile files
+                        Seq.tryPick getFile files
 
-                match getFileViewModel files with
-                | Some(file) ->
-                    OptionsViewModel(
-                        (fun dir -> getConfigForDirectory loadedConfigs dir),
-                        files,
-                        file) |> Some
+                    match getFileViewModel files with
+                    | Some file ->
+                        OptionsViewModel(
+                            (getConfigForDirectory loadedConfigs),
+                            files,
+                            file) |> Some
+                    | None -> 
+                        Debug.Assert(false, "No file view model for the initial file found.")
+                        None
                 | None -> 
-                    Debug.Assert(false, "No file view model for the initial file found.")
                     None
-            | None -> 
-                None
 
-        lintOptionsPageControl.Value.DataContext <- 
-            LintViewModel(lintOptions, saveViewModel this.RetrySaveDialog)
+            lintOptionsPageControl.Value.DataContext <- 
+                LintViewModel(lintOptions, saveViewModel this.RetrySaveDialog))
+
+        base.OnActivate e
             
     override __.Child = 
-        let control = lintOptionsPageControl.Value
-        control :> UIElement
+        protectOrDefault (fun _ ->
+            let control = lintOptionsPageControl.Value
+            control :> UIElement)
+            null
