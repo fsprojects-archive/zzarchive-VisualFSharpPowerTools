@@ -764,7 +764,6 @@ module HashDirectiveInfo =
 /// Set of visitor utilies, designed for the express purpose of fetching ranges
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
-
     module private Range =
         let endToEnd (r1: range) (r2: range) =
             mkFileIndexRange r1.FileIndex r1.End r2.End
@@ -808,6 +807,34 @@ module Outlining =
             | Simple _ -> yield! Seq.collect visitSynMemberDefn members
         }
 
+    let private getConsecutiveModuleDecls (predicate: SynModuleDecl -> range option) (decls: SynModuleDecls) =
+        let groupConsecutiveDecls input =
+            let rec loop (input: range list) (res: range list list) currentBulk =
+                match input, currentBulk with
+                | [], [] -> List.rev res
+                | [], _ -> List.rev (currentBulk :: res)
+                | r :: rest, [] -> loop rest res [r]
+                | r :: rest, last :: _ when r.StartLine = last.EndLine + 1 -> 
+                    loop rest res (r :: currentBulk)
+                | r :: rest, _ -> loop rest (currentBulk :: res) [r]
+            loop input [] []
+
+
+        decls 
+        |> List.choose predicate
+        |> groupConsecutiveDecls
+        |> List.choose (fun ranges ->
+            match ranges with
+            | [] -> None
+            | [r] when r.StartLine = r.EndLine -> None
+            | [r] -> Some (Range.mkRange "" r.Start r.End)
+            | lastRange :: rest ->
+                let firstRange = Seq.last rest
+                Some (Range.mkRange "" firstRange.Start lastRange.End))
+
+    let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
+    let collectHashDirectives = getConsecutiveModuleDecls (function SynModuleDecl.HashDirective (_, r) -> Some r | _ -> None)
+
     let rec private visitDeclaration (decl: SynModuleDecl) = 
         seq {
             match decl with
@@ -817,6 +844,7 @@ module Outlining =
                 yield! Seq.collect visitTypeDefn types
             | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
                 yield Range.endToEnd cmpInfo.Range decl.Range
+                yield! collectOpens decls
                 yield! Seq.collect visitDeclaration decls
             | _ -> ()
         }
@@ -824,6 +852,8 @@ module Outlining =
     let private visitModuleOrNamespace moduleOrNs =
         seq {
             let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
+            yield! collectHashDirectives decls
+            yield! collectOpens decls
             yield! Seq.collect visitDeclaration decls
         }
 
