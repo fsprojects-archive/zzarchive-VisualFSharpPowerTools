@@ -812,7 +812,7 @@ module Outlining =
             let rec loop (input: range list) (res: range list list) currentBulk =
                 match input, currentBulk with
                 | [], [] -> List.rev res
-                | [], _ -> currentBulk :: res |> List.rev
+                | [], _ -> List.rev (currentBulk :: res)
                 | r :: rest, [] -> loop rest res [r]
                 | r :: rest, last :: _ when r.StartLine = last.EndLine + 1 -> 
                     loop rest res (r :: currentBulk)
@@ -823,11 +823,14 @@ module Outlining =
         decls 
         |> List.choose predicate
         |> groupConsecutiveDecls
-        |> List.filter (fun x -> x.Length > 1)
-        |> List.map (fun ranges ->
-            let last = List.head ranges
-            let first = List.rev ranges |> List.head
-            Range.mkRange "" first.Start last.End)
+        |> List.choose (fun ranges ->
+            match ranges with
+            | [r] when r.StartLine = r.EndLine -> None
+            | [r] -> Some (Range.mkRange "" r.Start r.End)
+            | _ ->
+                let lastRange = List.head ranges
+                let firstRange = Seq.last ranges
+                Some (Range.mkRange "" firstRange.Start lastRange.End))
 
     let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
     let collectHashDirectives = getConsecutiveModuleDecls (function SynModuleDecl.HashDirective (_, r) -> Some r | _ -> None)
