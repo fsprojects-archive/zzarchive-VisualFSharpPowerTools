@@ -825,11 +825,11 @@ module Outlining =
         |> groupConsecutiveDecls
         |> List.choose (fun ranges ->
             match ranges with
+            | [] -> None
             | [r] when r.StartLine = r.EndLine -> None
             | [r] -> Some (Range.mkRange "" r.Start r.End)
-            | _ ->
-                let lastRange = List.head ranges
-                let firstRange = Seq.last ranges
+            | lastRange :: rest ->
+                let firstRange = Seq.last rest
                 Some (Range.mkRange "" firstRange.Start lastRange.End))
 
     let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
