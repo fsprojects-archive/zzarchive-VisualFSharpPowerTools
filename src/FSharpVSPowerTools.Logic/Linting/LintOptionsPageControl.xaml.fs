@@ -34,14 +34,25 @@ type LintOptionsPageControl() =
                     | _ -> ()
                 | _ -> ())
 
-    let selectedFileChanged =
+    let selectedTreeViewItemChanged handleChange =
         RoutedPropertyChangedEventHandler(fun control _ -> 
             match control with
             | :? TreeView as control ->
-                match control.DataContext, control.SelectedItem with
-                | (:? OptionsViewModel as viewModel), (:? FileViewModel as selected) ->
-                    viewModel.SelectedFile <- selected
-                | _ -> ()
+                handleChange (control.DataContext, control.SelectedItem)
+            | _ -> ())
+
+    let selectedFileChanged =
+        selectedTreeViewItemChanged 
+            (function
+            | (:? OptionsViewModel as viewModel), (:? FileViewModel as selected) ->
+                viewModel.SelectedFile <- selected
+            | _ -> ())
+
+    let selectedRuleChanged =
+        selectedTreeViewItemChanged 
+            (function
+            | (:? OptionsViewModel as viewModel), (:? RuleViewModel as selected) ->
+                viewModel.SelectedRule <- Some(selected)
             | _ -> ())
     
     override __.OnLoaded control = 
@@ -53,6 +64,8 @@ type LintOptionsPageControl() =
 
         control.FilesTreeView.SelectedItemChanged.AddHandler(selectedFileChanged)
 
+        control.RulesTreeView.SelectedItemChanged.AddHandler(selectedRuleChanged)
+
     override __.OnUnloaded control =
         control.HintsListView.SelectionChanged.RemoveHandler(selectionChanged)
         control.IgnoreFilesListView.KeyDown.RemoveHandler(onKeydown)
@@ -61,3 +74,5 @@ type LintOptionsPageControl() =
         control.HintsListView.KeyDown.RemoveHandler(onKeydown)
 
         control.FilesTreeView.SelectedItemChanged.RemoveHandler(selectedFileChanged)
+
+        control.RulesTreeView.SelectedItemChanged.RemoveHandler(selectedRuleChanged)

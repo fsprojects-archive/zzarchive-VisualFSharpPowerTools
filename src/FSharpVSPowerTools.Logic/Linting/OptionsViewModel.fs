@@ -208,11 +208,8 @@ type OptionsViewModel(getConfigForDirectory, files, selectedFile:FileViewModel) 
     let selectedFile = this.Factory.Backing(<@ this.SelectedFile @>, selectedFile)
 
     member __.SelectedRule 
-        with get() = selectedRule.Value
+        with get() : RuleViewModel option = selectedRule.Value
         and set (value) = selectedRule.Value <- value
-
-    member __.SelectedRuleChanged = 
-        this.Factory.CommandSyncParam(fun p -> this.SelectedRule <- Some(p))
 
     member __.CurrentFilePath = currentFilePath.Value
     
