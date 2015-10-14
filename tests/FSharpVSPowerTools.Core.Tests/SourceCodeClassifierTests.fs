@@ -1333,14 +1333,6 @@ module N =
     => [ 5, []]
 
 [<Test>]
-let ``open declaration is not marked as unused if an attribute defined in it is applied on an interface member argument``() =
-    """
-open System.Runtime.InteropServices
-type T = abstract M: [<DefaultParameterValue(null)>] ?x: int -> unit
-"""
-    => [ 2, []]
-
-[<Test>]
 let ``relative module open declaration``() =
     """
 module Top =
