@@ -275,9 +275,13 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         List.iter walkAttribute attrs 
         walkType t
 
-    and walkValSig (SynValSig.ValSpfn(attrs, _, _, t, _, _, _, _, _, _, _)) =
+    and walkValSig (SynValSig.ValSpfn(attrs, _, _, t, SynValInfo(argInfos, argInfo), _, _, _, _, _, _)) =
         List.iter walkAttribute attrs 
         walkType t
+        argInfo :: (argInfos |> List.concat) 
+        |> List.map (fun (SynArgInfo(attrs, _, _)) -> attrs) 
+        |> List.concat 
+        |> List.iter walkAttribute
 
     and walkMemberSig = function
         | SynMemberSig.Inherit (t, _) -> walkType t
