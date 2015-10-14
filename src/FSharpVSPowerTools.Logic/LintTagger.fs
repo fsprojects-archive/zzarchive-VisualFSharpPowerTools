@@ -24,35 +24,39 @@ type LintTagger(textDocument: ITextDocument,
     let mutable wordSpans = []
     let buffer = textDocument.TextBuffer
 
+    let lintData = lazy(
+        let lintOptions = Setting.getLintOptions serviceProvider
+        lintOptions.UpdateDirectories()
+        let config = Path.GetDirectoryName textDocument.FilePath |> lintOptions.GetConfigurationForDirectory
+        let shouldFileBeIgnored =
+            match config.IgnoreFiles with
+            | Some(ignoreFiles) ->
+                IgnoreFiles.shouldFileBeIgnored
+                    ignoreFiles.Files
+                    textDocument.FilePath
+            | None -> false
+        config, shouldFileBeIgnored)
+
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
+                            
     let updateAtCaretPosition () =
         let uiContext = SynchronizationContext.Current
-        let res = maybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+        let result = maybe {
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
             let! project = projectFactory.CreateForDocument buffer doc 
-            return doc, project, dte.Version }
+            return doc, project }
 
         asyncMaybe {
-            let! doc, project, dteVersion = res
+            let! doc, project = result
             let source = buffer.CurrentSnapshot.GetText()
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
             let! ast = parseFileResults.ParseTree
 
-            let lintOptions = Setting.getLintOptions serviceProvider
-            lintOptions.UpdateDirectories()
-            let config = Path.GetDirectoryName doc.FullName |> lintOptions.GetConfigurationForDirectory
-
-            let shouldFileBeIgnored =
-                match config.IgnoreFiles with
-                | Some(ignoreFiles) ->
-                    IgnoreFiles.shouldFileBeIgnored
-                        ignoreFiles.Files
-                        textDocument.FilePath
-                | None -> false
+            let config, shouldFileBeIgnored = lintData.Value
 
             if not shouldFileBeIgnored then
                 let res = 
-                    let version = dteVersion |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                     Lint.lintParsedFile
                         { Lint.OptionalLintParameters.Default with Configuration = Some config }
                         { Ast = ast
@@ -71,8 +75,7 @@ type LintTagger(textDocument: ITextDocument,
                                 if r.StartLine = r.EndLine then
                                     r.EndColumn
                                 else
-                                    let line = buffer.CurrentSnapshot.GetLineFromLineNumber(r.StartLine - 1).GetText()
-                                    line.Length
+                                    buffer.CurrentSnapshot.GetLineFromLineNumber(r.StartLine - 1).Length
                             let range =
                                 Range.mkRange "" 
                                     (Range.mkPos r.StartLine r.StartColumn)
@@ -95,7 +98,7 @@ type LintTagger(textDocument: ITextDocument,
             })
         |> Async.StartInThreadPoolSafe
 
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 200us, updateAtCaretPosition)
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, updateAtCaretPosition)
 
     let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<LintTag> list = 
         [
