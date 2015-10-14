@@ -190,3 +190,5 @@ tests/data/*/*.pdb
 
 _NCrunch_*
 build_PRIVATE.cmd
+gallerycredentials.txt
+.fake
