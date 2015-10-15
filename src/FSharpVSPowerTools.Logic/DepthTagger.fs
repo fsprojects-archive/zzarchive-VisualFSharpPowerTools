@@ -21,7 +21,7 @@ type private DepthTaggerState =
       Tags: ITagSpan<DepthRegionTag>[]
       Results: (ITrackingSpan * (int * int * int * int)) list }
 
-type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: VSLanguageService) as self =
+type DepthTagger(buffer: ITextBuffer, filename: string, languageService: VSLanguageService) as self =
     // computed periodically on a background thread
     let lastResults = Atom []
     // only updated on the UI thread in the GetTags method
@@ -32,9 +32,8 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
         let uiContext = SynchronizationContext.Current
         async { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            let sourceCodeOfTheFile = snapshot.GetText()                        
-            let! ranges = fsharpLanguageService.CheckerAsync (fun x ->
-                            DepthParser(x).GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename))
+            let source = snapshot.GetText() 
+            let! ranges = languageService.CheckerAsync (DepthParser.getNonoverlappingDepthRanges source filename)
             let newResults = 
                 ranges 
                 |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
@@ -80,13 +79,10 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
             tags
 
     interface ITagger<DepthRegionTag> with
-        member __.GetTags spans = 
-            protectOrDefault (fun _ -> getTags spans :> _) Seq.empty
-        
+        member __.GetTags spans = protectOrDefault (fun _ -> getTags spans :> _) Seq.empty
         [<CLIEvent>]
         member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
-        member __.Dispose() = 
-            (docEventListener :> IDisposable).Dispose()
+        member __.Dispose() = (docEventListener :> IDisposable).Dispose()
          

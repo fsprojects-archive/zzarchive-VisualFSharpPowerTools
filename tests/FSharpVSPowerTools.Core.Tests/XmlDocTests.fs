@@ -15,7 +15,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
 let input = File.ReadAllText(fileName)
 let checker = FSharpChecker.Create()
-let output = XmlDocParser.getXmlDocables(input, fileName, checker) |> Async.RunSynchronously |> Set.ofList
+let output = XmlDocParser.getXmlDocables input fileName checker |> Async.RunSynchronously |> Set.ofList
 
 [<Test>]
 let ``should create XML Doc for module-level let bounds``() =

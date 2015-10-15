@@ -327,12 +327,11 @@ module internal DepthParsing =
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open DepthParsing
 
-type DepthParser (checker: FSharpChecker) =
-    /////////////////////////////////////////////////////
+module DepthParser =
     // TODO, consider perf, way just to consider viewport and do as little work as necessary?
-    let getRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename) =
+    let private getRanges sourceLines source filename (checker: FSharpChecker) =
         async {
-            let mindents = computeMinIndentArray sourceCodeLinesOfTheFile
+            let mindents = computeMinIndentArray sourceLines
             let indent startLine endLine =
                 let mutable i, n = mindents.[startLine-1], startLine+1
                 while n <= endLine do
@@ -341,8 +340,8 @@ type DepthParser (checker: FSharpChecker) =
                 i
         
             // Get compiler options for the 'project' implied by a single script file
-            let! projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
-            let! input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
+            let! projOptions = checker.GetProjectOptionsFromScript(filename, source)
+            let! input = checker.ParseFileInProject (filename, source, projOptions)
     
             match input.ParseTree with
             | Some tree -> 
@@ -354,32 +353,20 @@ type DepthParser (checker: FSharpChecker) =
                 return [||]
         }
 
-    // One of the two main APIs.  This reports all the nested ranges in a file, along with the 'indent' of that range.
-    // This is not used by the colorizer, but may be useful to other "scope tools", and it used as an implementation detail
-    // of the other API, below.
-
-    /// Get the "nested ranges" of source code structures, along with the minimum-number-of-indent spaces inside that span (ignoring comments and #commands).
-    /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
-    ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    member x.GetRanges(sourceCodeOfTheFile: string, filename) =
-        let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
-        getRangesImpl (sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename)
-
     /////////////////////////////////////////////////////
-
-    // The other main API, the one consumed by the colorizer.
+    // The main API, the one consumed by the colorizer.
     // This reports a list of non-overlapping ranges, each contained on a single line, along with the 'semantic depth'
     // of that range (possibly negated, if in virtual whitespace).
 
     /// Get non-overlapping ranges, where each range spans at most a single line, and has info about its "semantic depth".
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    member x.GetNonoverlappingDepthRanges(sourceCodeOfTheFile: string, filename) =
+    let getNonoverlappingDepthRanges sourceLines filename (checker: FSharpChecker) =
         async {
-            let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
+            let sourceCodeLinesOfTheFile = String.getLines sourceLines
             let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
-            let len line = lineLens.[line-1]  // line #s are 1-based
-            let! nestedRanges = getRangesImpl (sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename)
+            let len line = lineLens.[line - 1]  // line #s are 1-based
+            let! nestedRanges = getRanges sourceCodeLinesOfTheFile sourceLines filename checker
             let q = System.Collections.Generic.SortedSet<_>(qevComp)  // priority queue
             for r in nestedRanges do
                 System.Diagnostics.Debug.WriteLine(sprintf "%A" r)

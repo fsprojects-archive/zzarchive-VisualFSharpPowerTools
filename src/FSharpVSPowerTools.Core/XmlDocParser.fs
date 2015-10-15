@@ -189,6 +189,6 @@ open XmlDocParsing
 
 module XmlDocParser =
     /// Get the list of Xml documentation from current source code
-    let getXmlDocables (sourceCodeOfTheFile: string, filename, checker: FSharpChecker) =
+    let getXmlDocables sourceCodeOfTheFile filename (checker: FSharpChecker) =
         let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
         getXmlDocablesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
