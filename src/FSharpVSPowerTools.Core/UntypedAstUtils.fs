@@ -877,7 +877,8 @@ module Outlining =
             match d with
             | SynMemberDefn.Member (binding, _) ->
                 yield! visitBinding binding
-            | SynMemberDefn.LetBindings (bindings, _, _, _) ->
+            | SynMemberDefn.LetBindings (bindings, _, _, r) ->
+                yield r
                 yield! visitBindings bindings
             | SynMemberDefn.Interface(tp, mmembers, _) ->
                 yield Range.endToEnd tp.Range d.Range
@@ -886,6 +887,8 @@ module Outlining =
                 | None -> ()
             | SynMemberDefn.NestedType(td, _, _) ->
                 yield! visitTypeDefn td
+            | SynMemberDefn.AbstractSlot(_,_,r) ->
+                yield r
             | _ -> ()
         }
 
