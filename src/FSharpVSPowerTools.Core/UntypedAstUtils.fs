@@ -817,12 +817,19 @@ module Outlining =
                 | _ -> ()
                 yield! visitExpr tryExpr
                 yield! visitExpr finallyExpr
-            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) ->
+            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, r) ->
+                yield r
                 yield! visitExpr e1
                 yield! visitExpr e2
                 match e3 with
                 | Some e -> yield! visitExpr e
                 | None -> ()
+            | SynExpr.For(_,_,_,_,_,e,r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.ForEach(_,_,_,_,_,e,r)->
+                yield r
+                yield! visitExpr e
             | _ -> ()
         }
 
