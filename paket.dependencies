@@ -26,5 +26,8 @@ source http://nuget.org/api/v2
 nuget FSharp.Formatting
 nuget FAKE
 nuget Nuget.CommandLine
+nuget FSharp.Core 3.1.2.5 redirects:on
+nuget canopy
+nuget Selenium.WebDriver.ChromeDriver
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx
