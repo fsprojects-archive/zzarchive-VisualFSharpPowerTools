@@ -249,7 +249,18 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
             List.iter walkTypar ts 
             walkMemberSig sign
             walkExpr e
+        | SynExpr.Const (SynConst.Measure(_, m), _) -> walkMeasure m
         | _ -> ()
+
+    and walkMeasure = function
+        | SynMeasure.Product(m1, m2, _)
+        | SynMeasure.Divide (m1, m2, _) -> walkMeasure m1; walkMeasure m2
+        | SynMeasure.Named(longIdent, _) -> addLongIdent longIdent
+        | SynMeasure.Seq(ms, _) -> List.iter walkMeasure ms
+        | SynMeasure.Power(m, _, _) -> walkMeasure m
+        | SynMeasure.Var(ty, _) -> walkTypar ty
+        | SynMeasure.One
+        | SynMeasure.Anon _ -> ()
 
     and walkSimplePat = function
         | SynSimplePat.Attrib (pat, attrs, _) ->
@@ -264,9 +275,13 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         List.iter walkAttribute attrs 
         walkType t
 
-    and walkValSig (SynValSig.ValSpfn(attrs, _, _, t, _, _, _, _, _, _, _)) =
+    and walkValSig (SynValSig.ValSpfn(attrs, _, _, t, SynValInfo(argInfos, argInfo), _, _, _, _, _, _)) =
         List.iter walkAttribute attrs 
         walkType t
+        argInfo :: (argInfos |> List.concat) 
+        |> List.map (fun (SynArgInfo(attrs, _, _)) -> attrs) 
+        |> List.concat 
+        |> List.iter walkAttribute
 
     and walkMemberSig = function
         | SynMemberSig.Inherit (t, _) -> walkType t
