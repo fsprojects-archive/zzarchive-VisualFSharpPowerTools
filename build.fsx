@@ -224,8 +224,8 @@ let readString prompt echo : string =
 #I @"packages/build/Selenium.Support/lib/net40"
 #I @"packages/build/Selenium.WebDriver/lib/net40"
 #r @"packages/build/Newtonsoft.Json/lib/net40/Newtonsoft.Json.dll"
-#r @"WebDriver.Support.dll"
-#r @"WebDriver.dll"
+#r @"packages/build/Selenium.Support/lib/net40/WebDriver.Support.dll"
+#r @"packages/build/Selenium.WebDriver/lib/net40/WebDriver.dll"
 #r @"packages/build/canopy/lib/canopy.dll"
 #r @"packages/build/SizSelCsZzz/lib/SizSelCsZzz.dll"
 open canopy
