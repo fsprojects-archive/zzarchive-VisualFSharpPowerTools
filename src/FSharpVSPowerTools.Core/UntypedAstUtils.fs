@@ -788,6 +788,9 @@ module Outlining =
             | SynExpr.LetOrUse (_, _, bindings, body, _) ->
                 yield! visitBindings bindings
                 yield! visitExpr body
+            | SynExpr.Do(e,r) ->
+                yield r 
+                yield! visitExpr e
             | SynExpr.Match (seqPointAtBinding,_,clauses,_,r) ->
                 match seqPointAtBinding with
                 | SequencePointAtBinding pr ->
@@ -804,15 +807,24 @@ module Outlining =
                 yield! visitMatchClauses clauses
             | SynExpr.App (_, _, _, e, _) ->
                 yield! visitExpr e
-            | SynExpr.CompExpr (_, _, e, r) ->
-                yield r
-                yield! visitExpr e
             | SynExpr.Sequential (_, _, e1, e2, _) ->
                 yield! visitExpr e1
                 yield! visitExpr e2
-            | SynExpr.YieldOrReturn (_, e, _) ->
+            | SynExpr.CompExpr (_,_,e,r) ->
+                let cexprEnd = Range.mkPos r.EndLine (r.EndColumn - 1) // exclude the closing } on the cexpr from collapsing
+                yield mkFileIndexRange r.FileIndex r.Start cexprEnd
                 yield! visitExpr e
-            | SynExpr.YieldOrReturnFrom (_, e, _) ->
+            | SynExpr.YieldOrReturn (_,e,r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.YieldOrReturnFrom (_,e,r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.LetOrUseBang(_,_,_,_,_,e,r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.DoBang(e,r) ->
+                yield r
                 yield! visitExpr e
             | SynExpr.ArrayOrListOfSeqExpr (_, e, _) ->
                 yield! visitExpr e
@@ -857,7 +869,7 @@ module Outlining =
                 yield! visitExpr e
             | SynExpr.Quote(_,isRaw,e,_,r) ->
                 // subtract columns so the @@> or @> is not collapsed
-                let rEnd = mkPos r.End.Line (r.EndColumn-(if isRaw then 3 else 2)) 
+                let rEnd = Range.mkPos r.End.Line (r.EndColumn-(if isRaw then 3 else 2)) 
                 yield mkFileIndexRange r.FileIndex r.Start rEnd
                 yield! visitExpr e
             | _ -> ()
@@ -874,14 +886,15 @@ module Outlining =
     and private visitBinding (Binding(_,kind,_,_,_,_,_,_,_,e,range,_) as b) =
         seq {
             match kind with
-            | NormalBinding ->
+            | SynBindingKind.NormalBinding ->
                 let r1 = b.RangeOfBindingSansRhs
                 let r2 = b.RangeOfBindingAndRhs
                 yield Range.endToEnd r1 r2
-            | DoBinding ->
+            | SynBindingKind.DoBinding ->
                 let doEnd = mkPos range.Start.Line (range.Start.Column + 2)
                 yield mkFileIndexRange range.FileIndex doEnd range.End
-            | _ -> ()
+            | SynBindingKind.StandaloneExpression -> 
+                yield range
             yield! visitExpr e
         }
 
