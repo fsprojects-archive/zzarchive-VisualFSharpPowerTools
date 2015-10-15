@@ -782,18 +782,25 @@ module Outlining =
     module private Range =
         let endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End r2.End
 
-    let rec private visitExpr e = 
+    let rec private visitExpr expression = 
         seq {
-            match e with
+            match expression with
             | SynExpr.LetOrUse (_, _, bindings, body, _) ->
                 yield! visitBindings bindings
                 yield! visitExpr body
-            | SynExpr.Match (seqPointAtBinding, e, clauses, _, r) ->
+            | SynExpr.Match (seqPointAtBinding,_,clauses,_,r) ->
                 match seqPointAtBinding with
                 | SequencePointAtBinding pr ->
                     yield Range.endToEnd pr r
                 | _ -> ()
-                yield! visitExpr e
+                yield r
+                yield! visitMatchClauses clauses
+            | SynExpr.MatchLambda(_,_,clauses,seqPointAtBinding,r) ->
+                match seqPointAtBinding with
+                | SequencePointAtBinding pr ->
+                    yield Range.endToEnd pr r
+                | _ -> ()
+                yield r
                 yield! visitMatchClauses clauses
             | SynExpr.App (_, _, _, e, _) ->
                 yield! visitExpr e
@@ -845,18 +852,26 @@ module Outlining =
             | SynExpr.ForEach(_,_,_,_,_,e,r)->
                 yield r
                 yield! visitExpr e
+            | SynExpr.Lambda(_,_,_,e,r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.Quote(_,isRaw,e,_,r) ->
+                // subtract columns so the @@> or @> is not collapsed
+                let rEnd = mkPos r.End.Line (r.EndColumn-(if isRaw then 3 else 2)) 
+                yield mkFileIndexRange r.FileIndex r.Start rEnd
+                yield! visitExpr e
             | _ -> ()
         }
 
-    and private visitMatchClause (SynMatchClause.Clause (_, _, e, r, _) ) = 
-        seq {
-            yield r
-            yield! visitExpr e
-        }
+    and private visitMatchClause (SynMatchClause.Clause (_,_,e,_,_) as clause) = 
+        seq { 
+                yield clause.Range  // Collapse the scope after `->`
+                yield! visitExpr e 
+            }
 
     and private visitMatchClauses = Seq.collect visitMatchClause
 
-    and private visitBinding (Binding(_, kind, _, _, _, _, _, _, _, e, range, _) as b) =
+    and private visitBinding (Binding(_,kind,_,_,_,_,_,_,_,e,range,_) as b) =
         seq {
             match kind with
             | NormalBinding ->
@@ -926,6 +941,7 @@ module Outlining =
                 Some (Range.mkRange "" firstRange.Start lastRange.End))
 
     let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
+
     let collectHashDirectives =
          getConsecutiveModuleDecls(
             function 
