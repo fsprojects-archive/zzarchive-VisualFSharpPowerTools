@@ -221,6 +221,55 @@ let readString prompt echo : string =
     printfn ""
   input
 
+#I @"packages/build/Selenium.Support/lib/net40"
+#I @"packages/build/Selenium.WebDriver/lib/net40"
+#r @"packages/build/Newtonsoft.Json/lib/net40/Newtonsoft.Json.dll"
+#r @"WebDriver.Support.dll"
+#r @"WebDriver.dll"
+#r @"packages/build/canopy/lib/canopy.dll"
+#r @"packages/build/SizSelCsZzz/lib/SizSelCsZzz.dll"
+open canopy
+open runner
+open System
+
+Target "UploadToGallery" (fun _ ->
+    canopy.configuration.chromeDir <- @"./packages/build/Selenium.WebDriver.ChromeDriver/driver"
+    start chrome
+
+    let vsixGuid = "136b942e-9f2c-4c0b-8bac-86d774189cff"
+    let galleryUrl = sprintf "https://visualstudiogallery.msdn.microsoft.com/%s/edit?newSession=True" vsixGuid
+
+    let username,password =
+        let lines = File.ReadAllLines("gallerycredentials.txt")
+        lines.[0],lines.[1]
+
+    // log in to msdn
+    url galleryUrl    
+    "#i0116" << username
+    "#i0118" << password
+
+    click "#idSIButton9"
+
+    sleep 5
+    // start a new upload session - via hacky form link
+    js (sprintf "$('form[action=\"/%s/edit/changeContributionUpload\"]').submit();" vsixGuid) |> ignore
+
+    // select "upload the vsix"    
+    let fi = System.IO.FileInfo("bin/FSharpVSPowerTools.vsix")
+    
+    ".uploadFileInput" << fi.FullName 
+    click "#setContributionTypeButton"
+    
+    sleep 15
+
+    click "#uploadButton"
+
+    sleep 15
+
+    quit()
+)
+
+
 Target "Release" (fun _ ->
     StageAll ""
     Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
@@ -261,6 +310,7 @@ Target "All" DoNothing
  ==> "RunStatistics"
 
 "Release"
+  ==> "UploadToGallery"
   ==> "PublishNuGet"
   ==> "ReleaseAll"
 
