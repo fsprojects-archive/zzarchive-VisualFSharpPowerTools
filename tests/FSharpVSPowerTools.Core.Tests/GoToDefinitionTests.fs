@@ -110,7 +110,9 @@ let generateDefinitionFromPos caretPos src =
     let signature = Option.get (tryGenerateDefinitionFromPos caretPos src)
     match validateSignature src signature with
     | None | Some [||] -> ()
-    | Some errors -> failwithf "Type checking results in errors: %A" errors
+    | Some errors -> 
+        printfn "Output signature: %s" signature
+        failwithf "Type checking results in errors: %A" errors
     signature
 
 let generateDefinitionFromPosNoValidation caretPos src = 
