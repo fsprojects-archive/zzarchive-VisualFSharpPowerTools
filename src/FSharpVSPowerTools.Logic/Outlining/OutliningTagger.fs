@@ -47,10 +47,11 @@ type Tagger
                 lastLine <- snapshot.GetLineFromLineNumber(firstLine.LineNumber + MaxTooltipLines - 1)
 
             let missingLinesCount = Math.Max(nHintLines - MaxTooltipLines, 0)
-            let hintSnapshotSpan = SnapshotSpan(firstLine.Start, lastLine.End)
 
+            let hintSnapshotSpan = SnapshotSpan(firstLine.Start, snapshotSpan.End)
+            let collapseSpan = SnapshotSpan(firstLine.End, snapshotSpan.End)
             TagSpan(
-                snapshotSpan,
+                collapseSpan,
                 { new IOutliningRegionTag with
                     member __.CollapsedForm      = "..." :> obj
                     member __.IsDefaultCollapsed = false

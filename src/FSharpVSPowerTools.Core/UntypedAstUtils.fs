@@ -832,12 +832,19 @@ module Outlining =
                 | _ -> ()
                 yield! visitExpr tryExpr
                 yield! visitExpr finallyExpr
-            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) ->
+            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, r) ->
+                yield r
                 yield! visitExpr e1
                 yield! visitExpr e2
                 match e3 with
                 | Some e -> yield! visitExpr e
                 | None -> ()
+            | SynExpr.For(_,_,_,_,_,e,r) ->
+                yield r
+                yield! visitExpr e
+            | SynExpr.ForEach(_,_,_,_,_,e,r)->
+                yield r
+                yield! visitExpr e
             | _ -> ()
         }
 
@@ -870,7 +877,8 @@ module Outlining =
             match d with
             | SynMemberDefn.Member (binding, _) ->
                 yield! visitBinding binding
-            | SynMemberDefn.LetBindings (bindings, _, _, _) ->
+            | SynMemberDefn.LetBindings (bindings, _, _, r) ->
+                yield r
                 yield! visitBindings bindings
             | SynMemberDefn.Interface(tp, mmembers, _) ->
                 yield Range.endToEnd tp.Range d.Range
@@ -879,6 +887,8 @@ module Outlining =
                 | None -> ()
             | SynMemberDefn.NestedType(td, _, _) ->
                 yield! visitTypeDefn td
+            | SynMemberDefn.AbstractSlot(_,_,r) ->
+                yield r
             | _ -> ()
         }
 
@@ -916,8 +926,8 @@ module Outlining =
                 Some (Range.mkRange "" firstRange.Start lastRange.End))
 
     let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
-    let collectHashDirectives = 
-        getConsecutiveModuleDecls(
+    let collectHashDirectives =
+         getConsecutiveModuleDecls(
             function 
             | SynModuleDecl.HashDirective (ParsedHashDirective(directive, _, _), r) ->
                 let prefixLength = "#".Length + directive.Length + " ".Length
@@ -956,3 +966,4 @@ module Outlining =
                 yield! Seq.collect visitModuleOrNamespace modules
             | _ -> ()
         }
+
