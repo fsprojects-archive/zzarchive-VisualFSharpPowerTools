@@ -43,7 +43,7 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
                             let! xmlDocables = languageService.CheckerAsync (fun x -> 
-                                XmlDocParser.GetXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, x))
+                                XmlDocParser.getXmlDocables(wpfTextView.TextSnapshot.GetText(), filename, x))
                             let xmlDocablesBelowThisLine = 
                                 // +1 because looking below current line for e.g. a 'member'
                                 xmlDocables |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) 

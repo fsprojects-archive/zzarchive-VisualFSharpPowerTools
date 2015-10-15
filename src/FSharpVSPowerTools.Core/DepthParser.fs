@@ -326,20 +326,11 @@ module internal DepthParsing =
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open DepthParsing
-open System
 
-type DepthParser private () =
-    let checker = lazy (FSharpChecker.Create())
-
-    member internal __.Checker = checker.Value
-
-    static member internal Instance = DepthParser()
-
+type DepthParser (checker: FSharpChecker) =
     /////////////////////////////////////////////////////
-
     // TODO, consider perf, way just to consider viewport and do as little work as necessary?
-
-    member internal x.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker: FSharpChecker option) =
+    let getRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename) =
         async {
             let mindents = computeMinIndentArray sourceCodeLinesOfTheFile
             let indent startLine endLine =
@@ -349,7 +340,6 @@ type DepthParser private () =
                     n <- n + 1
                 i
         
-            let checker = defaultArg checker x.Checker
             // Get compiler options for the 'project' implied by a single script file
             let! projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
             let! input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
@@ -371,9 +361,9 @@ type DepthParser private () =
     /// Get the "nested ranges" of source code structures, along with the minimum-number-of-indent spaces inside that span (ignoring comments and #commands).
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    static member GetRanges(sourceCodeOfTheFile: string, filename, ?checker: FSharpChecker) =
+    member x.GetRanges(sourceCodeOfTheFile: string, filename) =
         let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
-        DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
+        getRangesImpl (sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename)
 
     /////////////////////////////////////////////////////
 
@@ -384,12 +374,12 @@ type DepthParser private () =
     /// Get non-overlapping ranges, where each range spans at most a single line, and has info about its "semantic depth".
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    static member GetNonoverlappingDepthRanges(sourceCodeOfTheFile: string, filename, ?checker: FSharpChecker) =
+    member x.GetNonoverlappingDepthRanges(sourceCodeOfTheFile: string, filename) =
         async {
             let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
             let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
             let len line = lineLens.[line-1]  // line #s are 1-based
-            let! nestedRanges = DepthParser.Instance.GetRangesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
+            let! nestedRanges = getRangesImpl (sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename)
             let q = System.Collections.Generic.SortedSet<_>(qevComp)  // priority queue
             for r in nestedRanges do
                 System.Diagnostics.Debug.WriteLine(sprintf "%A" r)

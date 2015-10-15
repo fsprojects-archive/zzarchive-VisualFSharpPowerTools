@@ -10,11 +10,12 @@ module FSharpVSPowerTools.Core.Tests.XmlDocTests
 open System.IO
 open FSharpVSPowerTools
 open NUnit.Framework
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
 let input = File.ReadAllText(fileName)
-
-let output = XmlDocParser.GetXmlDocables(input, fileName) |> Async.RunSynchronously |> Set.ofList
+let checker = FSharpChecker.Create()
+let output = XmlDocParser.getXmlDocables(input, fileName, checker) |> Async.RunSynchronously |> Set.ofList
 
 [<Test>]
 let ``should create XML Doc for module-level let bounds``() =

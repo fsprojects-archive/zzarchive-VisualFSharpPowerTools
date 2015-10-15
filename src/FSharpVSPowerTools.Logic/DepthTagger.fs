@@ -34,8 +34,8 @@ type DepthTagger(buffer: ITextBuffer, filename: string, fsharpLanguageService: V
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
             let sourceCodeOfTheFile = snapshot.GetText()                        
             let! ranges = fsharpLanguageService.CheckerAsync (fun x ->
-                            DepthParser.GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename, x))
-            let newResults =
+                            DepthParser(x).GetNonoverlappingDepthRanges(sourceCodeOfTheFile, filename))
+            let newResults = 
                 ranges 
                 |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
                     try 
