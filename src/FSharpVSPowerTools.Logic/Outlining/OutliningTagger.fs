@@ -75,7 +75,7 @@ type Tagger
                 snapshotSpans <- snapshotSpans |> Array.map (fun x -> x.TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive))
             snapshotSpans
             |> Seq.filter nssc.IntersectsWith
-            |> Seq.map (createTagSpan)
+            |> Seq.map createTagSpan
             |> Seq.cast<ITagSpan<_>>
 
     let doUpdate () =
