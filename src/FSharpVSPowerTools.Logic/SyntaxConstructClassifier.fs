@@ -137,7 +137,7 @@ type SyntaxConstructClassifier
 
     let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
         let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
-            vsLanguageService.GetAllEntities(textDocument.FilePath, source, project)    
+            vsLanguageService.GetAllEntities(textDocument.FilePath, source, project)
 
         return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> async {
             let qualifyOpenDeclarations line endCol idents = async { 
@@ -328,7 +328,7 @@ type SyntaxConstructClassifier
                     triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"
 
                     if isSlowStageEnabled() then
-                        if currentProject.IsForStandaloneScript then
+                        if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
                             updateUnusedDeclarations()
                         else
                             let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject
@@ -359,7 +359,8 @@ type SyntaxConstructClassifier
         new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, fun _ -> updateSyntaxConstructClassifiers false)
 
     let projectCheckedSubscription = 
-        if isSlowStageEnabled() then
+        // project check results needed for Unused Declarations only.
+        if includeUnusedReferences() then
             Some (vsLanguageService.RawChecker.ProjectChecked.Subscribe (fun projectFileName ->
                 match isSlowStageEnabled(), fastState.Value with
                 | true, FastStage.Data ({ SingleSymbolsProjects = projects } as fastData) ->

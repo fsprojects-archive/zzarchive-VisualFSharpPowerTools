@@ -210,9 +210,7 @@ type LanguageService (?fileSystem: IFileSystem) =
                    while files.ContainsKey filePath &&
                          (not (files.TryUpdate (filePath, BeingChecked, Checked)
                                || files.TryUpdate (filePath, BeingChecked, NeedChecking))) do
-                       let state = files.[filePath]
-                       debug "[LanguageService] %s is in state = %A, waiting for Checked or NeedChecking..." filePath state
-                       do! Async.Sleep 200
+                       do! Async.Sleep 20
                    
                    debug "[LanguageService] Change state for %s to `BeingChecked`" filePath
                    debug "[LanguageService] Parse and typecheck source..."
@@ -354,10 +352,7 @@ type LanguageService (?fileSystem: IFileSystem) =
           | Some results -> return results
           | None -> 
               debug "Parsing: Trigger parse (fileName=%s)" fileName
-              let! results = parseAndCheckFileInProject(fileName, src, opts)
-              debug "Worker: Starting background compilations"
-              checkerInstance.StartBackgroundCompile opts
-              return results
+              return! parseAndCheckFileInProject(fileName, src, opts)
       }
 
   /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
