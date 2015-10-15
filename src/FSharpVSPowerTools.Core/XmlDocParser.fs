@@ -187,15 +187,8 @@ module XmlDocComment =
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open XmlDocParsing
 
-type XmlDocParser private () =
-    let checker = lazy (FSharpChecker.Create())
-
-    member internal __.Checker = checker.Value
-
-    static member internal Instance = XmlDocParser()
-
+module XmlDocParser =
     /// Get the list of Xml documentation from current source code
-    static member GetXmlDocables(sourceCodeOfTheFile: string, filename, ?checker) =
+    let getXmlDocables sourceCodeOfTheFile filename (checker: FSharpChecker) =
         let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
-        let checker = defaultArg checker XmlDocParser.Instance.Checker
         getXmlDocablesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
