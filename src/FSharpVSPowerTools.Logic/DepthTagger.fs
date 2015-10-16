@@ -43,11 +43,10 @@ type DepthTagger
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
             let source = snapshot.GetText()
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetCurrentDocument doc.FilePath
-            let! project = projectFactory.CreateForDocument buffer doc
-            let! opts = languageService.GetProjectCheckerOptions project |> liftAsync
-            let! ranges = languageService.CheckerAsync (fun checker ->
-                DepthParser.getNonoverlappingDepthRanges (source, doc.FullName, opts, checker)) |> liftAsync
+            let! document = dte.GetCurrentDocument doc.FilePath
+            let! project = projectFactory.CreateForDocument buffer document
+            let! parseResults = languageService.ParseFileInProject (doc.FilePath, source, project) |> liftAsync
+            let! ranges = DepthParser.getNonoverlappingDepthRanges (source, parseResults.ParseTree) |> liftAsync
             let newResults = 
                 ranges 
                 |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
