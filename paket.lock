@@ -4,7 +4,7 @@ NUGET
     Expression.Blend.Sdk (1.0.2)
     Fantomas (1.11.0)
       FSharp.Compiler.Service (>= 1.4.0.5)
-    FSharp.Compiler.Service (1.4.1)
+    FSharp.Compiler.Service (1.4.2)
     FSharp.Management (0.3.0)
     FSharp.ViewModule.Core (0.9.9.1)
     FSharpLint.Core (0.0.13-beta)
@@ -67,4 +67,3 @@ NUGET
     FSharp.Core (3.1.2.5) - redirects: on
     NUnit (2.6.4)
     NUnit.Runners (2.6.4)
-
