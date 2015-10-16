@@ -712,10 +712,10 @@ module HashDirectiveInfo =
         let parseDirectives modules file =
             [|
             let baseDirectory = getDirectoryOfFile file
-            for (SynModuleOrNamespace(_, _, declarations, _, _, _, _)) in modules do
+            for (SynModuleOrNamespace (_, _, declarations, _, _, _, _)) in modules do
                 for decl in declarations do
                     match decl with
-                    | SynModuleDecl.HashDirective(ParsedHashDirective("I",[directory],range),_) ->
+                    | SynModuleDecl.HashDirective (ParsedHashDirective("I",[directory],range),_) ->
                         let directory = makeRootedDirectoryIfNecessary (getDirectoryOfFile file) directory
                         
                         if directoryExists directory then
@@ -723,7 +723,7 @@ module HashDirectiveInfo =
                             pushInclude includeDirective
                             yield Include (includeDirective, range)
 
-                    | SynModuleDecl.HashDirective(ParsedHashDirective("load",files,range),_) ->
+                    | SynModuleDecl.HashDirective (ParsedHashDirective ("load",files,range),_) ->
                         for f in files do
                             if isPathRooted f && fileExists f then
 
@@ -731,17 +731,14 @@ module HashDirectiveInfo =
                                 yield Load (ExistingFile f, range)
 
                             else
-
                                 // I'm not sure if the order is correct, first checking relative to file containing the #load directive
                                 // then checking for undocumented resolution using previously parsed #I directives
                                 let fileRelativeToCurrentFile = baseDirectory </> f
                                 if fileExists fileRelativeToCurrentFile then
-
                                     // this is existing file relative to current file
                                     yield Load (ExistingFile fileRelativeToCurrentFile, range)
 
                                 else
-
                                     // match file against first include which seemingly have it found
                                     let maybeFile =
                                         includesSoFar
@@ -753,13 +750,12 @@ module HashDirectiveInfo =
                                     match maybeFile with
                                     | None -> () // can't load this file even using any of the #I directives...
                                     | Some f ->
-                                        yield Load (ExistingFile f, range)
-
+                                        yield Load (ExistingFile f,range)
                     | _ -> ()
             |]
 
         match ast with
-        | ParsedInput.ImplFile(ParsedImplFileInput(fn,_,_,_,_,modules,_)) -> parseDirectives modules fn
+        | ParsedInput.ImplFile (ParsedImplFileInput(fn,_,_,_,_,modules,_)) -> parseDirectives modules fn
         | _ -> [||]
 
     /// returns the Some (complete file name of a resolved #load directive at position) or None
@@ -767,7 +763,7 @@ module HashDirectiveInfo =
         getIncludeAndLoadDirectives ast
         |> Array.tryPick (
             function
-            | Load(ExistingFile f, range) 
+            | Load (ExistingFile f,range) 
                 // check the line is within the range
                 // (doesn't work when there are multiple files given to a single #load directive)
                 when rangeContainsPos range pos
@@ -780,121 +776,162 @@ module HashDirectiveInfo =
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
     module private Range =
+        /// Created a range starting at the end of r1 amd finishing at the end of r2
         let endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End r2.End
+    
+
+    ///  Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside 
+    ///  some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions 
+    ///  following a binding or the the right hand side of a pattern, e.g. `let x = ...` 
+    type Scope = | Below = 0 | Same = 1
+
+    type [<NoComparison;Struct>] srange (scope:Scope, r:range) = 
+            member __.Scope = scope
+            member __.Range = r
+
+    let inline mkSrange scope r = srange (scope,r)
+
+    // Only yield a range that spans 2 or more lines
+    let inline private rcheck scope (r:range) = 
+        seq { if r.StartLine <> r.EndLine then yield mkSrange scope r }
 
     let rec private visitExpr expression = 
         seq {
             match expression with
-            | SynExpr.LetOrUse (_, _, bindings, body, _) ->
+            | SynExpr.LetOrUse (_,_,bindings, body,_) ->
                 yield! visitBindings bindings
                 yield! visitExpr body
-            | SynExpr.Do(e,r) ->
-                yield r 
+            | SynExpr.Do (e,_) ->
                 yield! visitExpr e
+            | SynExpr.New (_,_,e,_) ->
+                yield! visitExpr e           
             | SynExpr.Match (seqPointAtBinding,_,clauses,_,r) ->
                 match seqPointAtBinding with
                 | SequencePointAtBinding pr ->
-                    yield Range.endToEnd pr r
+                    yield! rcheck Scope.Below <| Range.endToEnd pr r
                 | _ -> ()
-                yield r
                 yield! visitMatchClauses clauses
-            | SynExpr.MatchLambda(_,_,clauses,seqPointAtBinding,r) ->
+            | SynExpr.MatchLambda (_,_,clauses,seqPointAtBinding,r) ->
                 match seqPointAtBinding with
                 | SequencePointAtBinding pr ->
-                    yield Range.endToEnd pr r
+                    yield! rcheck Scope.Below <| Range.endToEnd pr r
                 | _ -> ()
-                yield r
+                yield! rcheck Scope.Below r 
                 yield! visitMatchClauses clauses
-            | SynExpr.App (_, _, _, e, _) ->
+            | SynExpr.App (_,_,_,e,_) ->
                 yield! visitExpr e
-            | SynExpr.Sequential (_, _, e1, e2, _) ->
+            | SynExpr.Sequential (_,isTrueSeq,e1,e2,_) ->
                 yield! visitExpr e1
-                yield! visitExpr e2
-            | SynExpr.CompExpr (_,_,e,r) ->
-                let cexprEnd = Range.mkPos r.EndLine (r.EndColumn - 1) // exclude the closing } on the cexpr from collapsing
-                yield mkFileIndexRange r.FileIndex r.Start cexprEnd
+                if isTrueSeq then
+                    yield! visitExpr e2
+            | SynExpr.ArrayOrListOfSeqExpr (isArray,e,r) ->
+                let rStart = Range.mkPos r.StartLine (r.StartColumn+(if isArray then 2 else 1)) 
+                let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - (if isArray then 2 else 1)) 
+                yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex rStart rEnd
+                yield! visitExpr e
+            | SynExpr.CompExpr (arrayOrList,_,e,r) ->
+                if arrayOrList then ()
+                else                    
+                    let cexprStart = Range.mkPos r.StartLine (r.StartColumn+1) // exclude the opening { on the cexpr from collapsing
+                    let cexprEnd   = Range.mkPos r.EndLine   (r.EndColumn - 1) // exclude the closing } on the cexpr from collapsing
+                    yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex cexprStart cexprEnd
                 yield! visitExpr e
             | SynExpr.YieldOrReturn (_,e,r) ->
-                yield r
+                yield! rcheck Scope.Below r 
                 yield! visitExpr e
             | SynExpr.YieldOrReturnFrom (_,e,r) ->
-                yield r
+                yield! rcheck Scope.Below  r 
                 yield! visitExpr e
-            | SynExpr.LetOrUseBang(_,_,_,_,_,e,r) ->
-                yield r
+            | SynExpr.LetOrUseBang (_,_,_,_,_,e,r) ->
+                yield! rcheck Scope.Below r 
                 yield! visitExpr e
-            | SynExpr.DoBang(e,r) ->
-                yield r
+            | SynExpr.DoBang (e,r) ->
+                yield! rcheck Scope.Below r
                 yield! visitExpr e
-            | SynExpr.ArrayOrListOfSeqExpr (_, e, _) ->
-                yield! visitExpr e
-            | SynExpr.ObjExpr (_, _, bindings, _, newRange, wholeRange) ->
-                yield mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
+            | SynExpr.ObjExpr (_,_,bindings,_,newRange,wholeRange) ->
+                let r = mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
+                yield! rcheck Scope.Below r
                 yield! visitBindings bindings
-            | SynExpr.TryWith (e, _, matchClauses, tryRange, withRange, tryPoint, withPoint) ->
+            | SynExpr.TryWith (e,_,matchClauses,tryRange,withRange,tryPoint,withPoint) ->
                 match tryPoint with
-                | SequencePointAtTry r -> yield Range.endToEnd r tryRange
+                | SequencePointAtTry r -> 
+                    yield! rcheck Scope.Below <| Range.endToEnd r tryRange
                 | _ -> ()
                 match withPoint with
-                | SequencePointAtWith r -> yield Range.endToEnd r withRange
+                | SequencePointAtWith r ->
+                    yield! rcheck Scope.Below <| Range.endToEnd r withRange
                 | _ -> ()
                 yield! visitExpr e
                 yield! visitMatchClauses matchClauses
-            | SynExpr.TryFinally (tryExpr, finallyExpr, r, tryPoint, finallyPoint) ->
+            | SynExpr.TryFinally (tryExpr,finallyExpr,r,tryPoint,finallyPoint) ->
                 match tryPoint with
                 | SequencePointAtTry tryRange ->
-                    yield Range.endToEnd tryRange r
+                    yield! rcheck Scope.Below<| Range.endToEnd tryRange r
                 | _ -> ()
                 match finallyPoint with
-                | SequencePointAtFinally finallyRange ->
-                    yield Range.endToEnd finallyRange r
+                | SequencePointAtFinally finallyRange ->                    
+                    yield! rcheck Scope.Below <| Range.endToEnd finallyRange r
                 | _ -> ()
                 yield! visitExpr tryExpr
                 yield! visitExpr finallyExpr
-            | SynExpr.IfThenElse (e1, e2, e3, _, _, _, r) ->
-                yield r
+            | SynExpr.IfThenElse (e1,e2,e3,_,_,_,r) ->
+                yield! rcheck Scope.Below r
                 yield! visitExpr e1
                 yield! visitExpr e2
                 match e3 with
-                | Some e -> yield! visitExpr e
+                | Some e -> 
+                    yield! rcheck Scope.Below e.Range
+                    yield! visitExpr e
                 | None -> ()
-            | SynExpr.For(_,_,_,_,_,e,r) ->
-                yield r
+            | SynExpr.For (_,_,_,_,_,e,r) ->
+                yield! rcheck Scope.Below  r
                 yield! visitExpr e
-            | SynExpr.ForEach(_,_,_,_,_,e,r)->
-                yield r
+            | SynExpr.ForEach (_,_,_,_,_,e,r) ->
+                yield! rcheck Scope.Below  r
                 yield! visitExpr e
-            | SynExpr.Lambda(_,_,_,e,r) ->
-                yield r
+            | SynExpr.While (_,_,e,r) ->
+                yield! rcheck Scope.Below  r
                 yield! visitExpr e
-            | SynExpr.Quote(_,isRaw,e,_,r) ->
+            | SynExpr.Lambda (_,_,_,e,r) ->
+                yield! rcheck Scope.Below  r
+                yield! visitExpr e
+            | SynExpr.Lazy (e,r) ->
+                yield! rcheck Scope.Below r
+                yield! visitExpr e
+            | SynExpr.Quote (_,isRaw,e,_,r) ->
                 // subtract columns so the @@> or @> is not collapsed
-                let rEnd = Range.mkPos r.End.Line (r.EndColumn-(if isRaw then 3 else 2)) 
-                yield mkFileIndexRange r.FileIndex r.Start rEnd
+                let rStart = Range.mkPos r.StartLine (r.StartColumn+(if isRaw then 3 else 2)) 
+                let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - (if isRaw then 3 else 2)) 
+                yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex rStart rEnd
                 yield! visitExpr e
+            | SynExpr.Tuple (es,_,r) ->
+                yield! rcheck Scope.Same r
+                yield! Seq.collect visitExpr es
+            | SynExpr.Paren(e,_,_,_) ->
+                yield! visitExpr e
+            | SynExpr.Record (_,_,_,r) ->
+                let rcdStart = Range.mkPos r.StartLine (r.StartColumn+1) // exclude the opening { of the record from collapsing
+                let rcdEnd   = Range.mkPos r.EndLine   (r.EndColumn - 1) // exclude the closing } of the record from collapsing
+                yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex rcdStart rcdEnd
             | _ -> ()
         }
 
-    and private visitMatchClause (SynMatchClause.Clause (_,_,e,_,_) as clause) = 
+    and private visitMatchClause (SynMatchClause.Clause (_,_,e,_,_)) = 
         seq { 
-                yield clause.Range  // Collapse the scope after `->`
+                yield! rcheck Scope.Same <| e.Range  // Collapse the scope after `->`
                 yield! visitExpr e 
             }
 
     and private visitMatchClauses = Seq.collect visitMatchClause
 
-    and private visitBinding (Binding(_,kind,_,_,_,_,_,_,_,e,range,_) as b) =
+    and private visitBinding (Binding (_,kind,_,_,_,_,_,_,_,e,_,_) as b) =        
         seq {
             match kind with
             | SynBindingKind.NormalBinding ->
                 let r1 = b.RangeOfBindingSansRhs
                 let r2 = b.RangeOfBindingAndRhs
-                yield Range.endToEnd r1 r2
-            | SynBindingKind.DoBinding ->
-                let doEnd = mkPos range.Start.Line (range.Start.Column + 2)
-                yield mkFileIndexRange range.FileIndex doEnd range.End
-            | SynBindingKind.StandaloneExpression -> 
-                yield range
+                yield! rcheck Scope.Below <| Range.endToEnd r1 r2
+            | _ -> ()
             yield! visitExpr e
         }
 
@@ -903,29 +940,31 @@ module Outlining =
     and private visitSynMemberDefn d =
         seq {
             match d with
-            | SynMemberDefn.Member (binding, _) ->
+            | SynMemberDefn.Member (binding,_) ->
                 yield! visitBinding binding
-            | SynMemberDefn.LetBindings (bindings, _, _, r) ->
-                yield r
+            | SynMemberDefn.LetBindings (bindings,_,_,r) ->
+                yield! rcheck Scope.Below r
                 yield! visitBindings bindings
-            | SynMemberDefn.Interface(tp, mmembers, _) ->
-                yield Range.endToEnd tp.Range d.Range
+            | SynMemberDefn.Interface (tp,mmembers,_) ->
+                yield! rcheck Scope.Below <| Range.endToEnd tp.Range d.Range
                 match mmembers with
                 | Some members -> yield! Seq.collect visitSynMemberDefn members
                 | None -> ()
-            | SynMemberDefn.NestedType(td, _, _) ->
+            | SynMemberDefn.NestedType (td,_,_) ->
                 yield! visitTypeDefn td
-            | SynMemberDefn.AbstractSlot(_,_,r) ->
-                yield r
+            | SynMemberDefn.AbstractSlot (_,_,r) ->
+                yield! rcheck Scope.Below r
             | _ -> ()
         }
 
-    and private visitTypeDefn (TypeDefn(componentInfo, objectModel, members, range)) =
-        seq {
-            yield Range.endToEnd componentInfo.Range range
+    and private visitTypeDefn (TypeDefn (componentInfo,objectModel,members,range)) =
+        seq {            
+            yield! rcheck Scope.Below <| Range.endToEnd componentInfo.Range range
             match objectModel with
-            | ObjectModel(_, members, _) -> yield! Seq.collect visitSynMemberDefn members
-            | Simple _ -> yield! Seq.collect visitSynMemberDefn members
+            | SynTypeDefnRepr.ObjectModel (_,objMembers,_) -> 
+                yield! Seq.collect visitSynMemberDefn objMembers
+            | SynTypeDefnRepr.Simple _ -> 
+                yield! Seq.collect visitSynMemberDefn members
         }
 
     let private getConsecutiveModuleDecls (predicate: SynModuleDecl -> range option) (decls: SynModuleDecls) =
@@ -933,13 +972,12 @@ module Outlining =
             let rec loop (input: range list) (res: range list list) currentBulk =
                 match input, currentBulk with
                 | [], [] -> List.rev res
-                | [], _ -> List.rev (currentBulk :: res)
+                | [], _ -> List.rev (currentBulk::res)
                 | r :: rest, [] -> loop rest res [r]
                 | r :: rest, last :: _ when r.StartLine = last.EndLine + 1 -> 
-                    loop rest res (r :: currentBulk)
-                | r :: rest, _ -> loop rest (currentBulk :: res) [r]
+                    loop rest res (r::currentBulk)
+                | r :: rest, _ -> loop rest (currentBulk::res) [r]
             loop input [] []
-
 
         decls 
         |> List.choose predicate
@@ -948,17 +986,17 @@ module Outlining =
             match ranges with
             | [] -> None
             | [r] when r.StartLine = r.EndLine -> None
-            | [r] -> Some (Range.mkRange "" r.Start r.End)
+            | [r] -> Some <| mkSrange Scope.Same (Range.mkRange "" r.Start r.End)
             | lastRange :: rest ->
                 let firstRange = Seq.last rest
-                Some (Range.mkRange "" firstRange.Start lastRange.End))
+                Some <| mkSrange Scope.Same (Range.mkRange "" firstRange.Start lastRange.End))
 
-    let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None)
+    let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_,r) -> Some r | _ -> None)
 
     let collectHashDirectives =
          getConsecutiveModuleDecls(
             function 
-            | SynModuleDecl.HashDirective (ParsedHashDirective(directive, _, _), r) ->
+            | SynModuleDecl.HashDirective (ParsedHashDirective (directive,_,_),r) ->
                 let prefixLength = "#".Length + directive.Length + " ".Length
                 Some (Range.mkRange "" (Range.mkPos r.StartLine prefixLength) r.End)
             | _ -> None)
@@ -966,22 +1004,24 @@ module Outlining =
     let rec private visitDeclaration (decl: SynModuleDecl) = 
         seq {
             match decl with
-            | SynModuleDecl.Let(_, bindings, _) ->
+            | SynModuleDecl.Let (_,bindings,_) ->
                 yield! visitBindings bindings
-            | SynModuleDecl.Types(types, _) ->
+            | SynModuleDecl.Types (types,_) ->
                 yield! Seq.collect visitTypeDefn types
-            | SynModuleDecl.NestedModule(cmpInfo, decls, _, _) ->
-                yield Range.endToEnd cmpInfo.Range decl.Range
+            | SynModuleDecl.NestedModule (cmpInfo,decls,_,_) ->
+                yield! rcheck Scope.Below <| Range.endToEnd cmpInfo.Range decl.Range
                 yield! collectOpens decls
                 yield! Seq.collect visitDeclaration decls
-            | SynModuleDecl.DoExpr(_, e, _) ->
+            | SynModuleDecl.DoExpr (_,e,_) ->
+//                yield! rcheck Scope.Below decl.Range
+                //yield! rcheck Scope.Below r 
                 yield! visitExpr e
             | _ -> ()
         }
 
     let private visitModuleOrNamespace moduleOrNs =
         seq {
-            let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
+            let (SynModuleOrNamespace (_,_,decls,_,_,_,_)) = moduleOrNs
             yield! collectHashDirectives decls
             yield! collectOpens decls
             yield! Seq.collect visitDeclaration decls
@@ -991,7 +1031,7 @@ module Outlining =
         seq {
             match tree with
             | ParsedInput.ImplFile(implFile) ->
-                let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
+                let (ParsedImplFileInput (_,_,_,_,_,modules,_)) = implFile
                 yield! Seq.collect visitModuleOrNamespace modules
             | _ -> ()
         }
