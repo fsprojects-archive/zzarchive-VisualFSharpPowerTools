@@ -71,8 +71,9 @@ type XmlDocFilter
                                 toInsert.Append(' ', indent).AppendLine("/// <summary>")
                                         .Append(' ', indent).AppendLine("/// ")
                                         .Append(' ', indent).Append("/// </summary>") |> ignore
-                                for p in paramNames do
-                                    toInsert.AppendLine().Append(' ', indent).Append(sprintf "/// <param name=\"%s\"></param>" p) |> ignore
+                                paramNames
+                                |> List.iter (fun p ->
+                                    toInsert.AppendLine().Append(' ', indent).Append(sprintf "/// <param name=\"%s\"></param>" p) |> ignore)
                                 let _newSS = wpfTextView.TextBuffer.Insert(wpfTextView.Caret.Position.BufferPosition.Position, toInsert.ToString())
                                 // move the caret to between the summary tags
                                 let lastLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine()
