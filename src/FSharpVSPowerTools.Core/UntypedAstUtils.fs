@@ -777,7 +777,7 @@ module HashDirectiveInfo =
 module Outlining =
     module private Range =
         /// Created a range starting at the end of r1 amd finishing at the end of r2
-        let endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End r2.End
+        let inline endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End r2.End
     
 
     ///  Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside 
@@ -790,6 +790,13 @@ module Outlining =
             member __.Range = r
 
     let inline mkSrange scope r = srange (scope,r)
+    
+    /// Produce a new range by adding modStart to the StartColumn of `r` 
+    /// and subtracting modEnd from the EndColumn of `r`
+    let inline rangeMod (r:range) modStart modEnd =
+        let rStart = Range.mkPos r.StartLine (r.StartColumn+modStart) 
+        let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - modEnd) 
+        mkFileIndexRange r.FileIndex rStart rEnd
 
     // Only yield a range that spans 2 or more lines
     let inline private rcheck scope (r:range) = 
@@ -825,16 +832,12 @@ module Outlining =
                 if isTrueSeq then
                     yield! visitExpr e2
             | SynExpr.ArrayOrListOfSeqExpr (isArray,e,r) ->
-                let rStart = Range.mkPos r.StartLine (r.StartColumn+(if isArray then 2 else 1)) 
-                let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - (if isArray then 2 else 1)) 
-                yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex rStart rEnd
+                yield! rcheck Scope.Same <| rangeMod r (if isArray then 2 else 1) (if isArray then 2 else 1)
                 yield! visitExpr e
             | SynExpr.CompExpr (arrayOrList,_,e,r) ->
                 if arrayOrList then ()
-                else                    
-                    let cexprStart = Range.mkPos r.StartLine (r.StartColumn+1) // exclude the opening { on the cexpr from collapsing
-                    let cexprEnd   = Range.mkPos r.EndLine   (r.EndColumn - 1) // exclude the closing } on the cexpr from collapsing
-                    yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex cexprStart cexprEnd
+                else  // exclude the opening { and closing } on the cexpr from collapsing
+                    yield! rcheck Scope.Same <| rangeMod r 1 1
                 yield! visitExpr e
             | SynExpr.YieldOrReturn (_,e,r) ->
                 yield! rcheck Scope.Below r 
@@ -900,9 +903,7 @@ module Outlining =
                 yield! visitExpr e
             | SynExpr.Quote (_,isRaw,e,_,r) ->
                 // subtract columns so the @@> or @> is not collapsed
-                let rStart = Range.mkPos r.StartLine (r.StartColumn+(if isRaw then 3 else 2)) 
-                let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - (if isRaw then 3 else 2)) 
-                yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex rStart rEnd
+                yield! rcheck Scope.Same <| rangeMod r (if isRaw then 3 else 2) (if isRaw then 3 else 2)
                 yield! visitExpr e
             | SynExpr.Tuple (es,_,r) ->
                 yield! rcheck Scope.Same r
@@ -910,9 +911,8 @@ module Outlining =
             | SynExpr.Paren(e,_,_,_) ->
                 yield! visitExpr e
             | SynExpr.Record (_,_,_,r) ->
-                let rcdStart = Range.mkPos r.StartLine (r.StartColumn+1) // exclude the opening { of the record from collapsing
-                let rcdEnd   = Range.mkPos r.EndLine   (r.EndColumn - 1) // exclude the closing } of the record from collapsing
-                yield! rcheck Scope.Same <| mkFileIndexRange r.FileIndex rcdStart rcdEnd
+                // exclude the opening `{` and closing `}` of the record from collapsing
+                yield! rcheck Scope.Same <| rangeMod r 1 1
             | _ -> ()
         }
 
@@ -957,6 +957,7 @@ module Outlining =
             | _ -> ()
         }
 
+
     and private visitTypeDefn (TypeDefn (componentInfo,objectModel,members,range)) =
         seq {            
             yield! rcheck Scope.Below <| Range.endToEnd componentInfo.Range range
@@ -966,6 +967,7 @@ module Outlining =
             | SynTypeDefnRepr.Simple _ -> 
                 yield! Seq.collect visitSynMemberDefn members
         }
+
 
     let private getConsecutiveModuleDecls (predicate: SynModuleDecl -> range option) (decls: SynModuleDecls) =
         let groupConsecutiveDecls input =
@@ -978,20 +980,21 @@ module Outlining =
                     loop rest res (r::currentBulk)
                 | r :: rest, _ -> loop rest (currentBulk::res) [r]
             loop input [] []
-
-        decls 
-        |> List.choose predicate
-        |> groupConsecutiveDecls
-        |> List.choose (fun ranges ->
+        
+        let selectRanges (ranges: range list) =
             match ranges with
             | [] -> None
             | [r] when r.StartLine = r.EndLine -> None
             | [r] -> Some <| mkSrange Scope.Same (Range.mkRange "" r.Start r.End)
             | lastRange :: rest ->
                 let firstRange = Seq.last rest
-                Some <| mkSrange Scope.Same (Range.mkRange "" firstRange.Start lastRange.End))
+                Some <| mkSrange Scope.Same (Range.mkRange "" firstRange.Start lastRange.End)
+
+        decls |> (List.choose predicate>>groupConsecutiveDecls>>List.choose selectRanges)
+
 
     let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_,r) -> Some r | _ -> None)
+
 
     let collectHashDirectives =
          getConsecutiveModuleDecls(
@@ -1000,6 +1003,7 @@ module Outlining =
                 let prefixLength = "#".Length + directive.Length + " ".Length
                 Some (Range.mkRange "" (Range.mkPos r.StartLine prefixLength) r.End)
             | _ -> None)
+
 
     let rec private visitDeclaration (decl: SynModuleDecl) = 
         seq {
@@ -1013,11 +1017,10 @@ module Outlining =
                 yield! collectOpens decls
                 yield! Seq.collect visitDeclaration decls
             | SynModuleDecl.DoExpr (_,e,_) ->
-//                yield! rcheck Scope.Below decl.Range
-                //yield! rcheck Scope.Below r 
                 yield! visitExpr e
             | _ -> ()
         }
+
 
     let private visitModuleOrNamespace moduleOrNs =
         seq {
@@ -1026,6 +1029,7 @@ module Outlining =
             yield! collectOpens decls
             yield! Seq.collect visitDeclaration decls
         }
+
 
     let getOutliningRanges tree =
         seq {
