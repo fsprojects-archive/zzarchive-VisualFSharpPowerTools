@@ -931,7 +931,7 @@ module Outlining =
                 let r1 = b.RangeOfBindingSansRhs
                 let r2 = b.RangeOfBindingAndRhs
                 yield! rcheck Scope.Below <| Range.endToEnd r1 r2
-            | _ -> ()
+            | _ -> () 
             yield! visitExpr e
         }
 
@@ -945,15 +945,18 @@ module Outlining =
             | SynMemberDefn.LetBindings (bindings,_,_,r) ->
                 yield! rcheck Scope.Below r
                 yield! visitBindings bindings
-            | SynMemberDefn.Interface (tp,mmembers,_) ->
+            | SynMemberDefn.Interface (tp,iMembers,_) ->
                 yield! rcheck Scope.Below <| Range.endToEnd tp.Range d.Range
-                match mmembers with
+                match iMembers with
                 | Some members -> yield! Seq.collect visitSynMemberDefn members
                 | None -> ()
             | SynMemberDefn.NestedType (td,_,_) ->
                 yield! visitTypeDefn td
             | SynMemberDefn.AbstractSlot (_,_,r) ->
                 yield! rcheck Scope.Below r
+            | SynMemberDefn.AutoProperty (_,_,_,_,(*memkind*)_,_,_,_,e,_,r) ->
+                yield! rcheck Scope.Below r
+                yield! visitExpr e   
             | _ -> ()
         }
 
