@@ -1,18 +1,17 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
-open Microsoft.VisualStudio.Language.Intellisense
 open FSharpVSPowerTools.DepthColorizer
 
-type DepthTaggerHelper() =    
+type DepthTaggerHelper() =
     inherit VsTestBase()
 
     let taggerProvider = DepthColorizerTaggerProvider(
-                            fsharpVsLanguageService = base.VsLanguageService,
+                            vsLanguageService = base.VsLanguageService,
+                            projectFactory = base.ProjectFactory,
                             serviceProvider = base.ServiceProvider,
                             textDocumentFactoryService = base.DocumentFactoryService)
 
@@ -48,7 +47,7 @@ type T() =
         let tagger = helper.GetTagger(buffer)
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
+                helper.TagsOf(buffer, tagger)
                 |> Seq.toList 
                 |> assertEqual 
                     [ (1, 0, 0, 0); 
@@ -70,7 +69,7 @@ type Hoge () =
         let tagger = helper.GetTagger(buffer)
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
+                helper.TagsOf(buffer, tagger)
                 |> Seq.toList 
                 |> assertEqual 
                     [ (1, 0, 0, 0); 

@@ -7,6 +7,8 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open System.Threading
 open System.Diagnostics
+open Microsoft.VisualStudio.Shell.Interop
+open FSharpVSPowerTools.AsyncMaybe
 
 // The tag that carries metadata about F# color-regions.
 type DepthRegionTag(info: int * int * int * int) = 
@@ -21,7 +23,14 @@ type private DepthTaggerState =
       Tags: ITagSpan<DepthRegionTag>[]
       Results: (ITrackingSpan * (int * int * int * int)) list }
 
-type DepthTagger(buffer: ITextBuffer, filename: string, languageService: VSLanguageService) as self =
+type DepthTagger
+     (
+         doc: ITextDocument, 
+         buffer: ITextBuffer, 
+         serviceProvider: System.IServiceProvider, 
+         projectFactory: ProjectFactory, 
+         languageService: VSLanguageService
+     ) as self =
     // computed periodically on a background thread
     let lastResults = Atom []
     // only updated on the UI thread in the GetTags method
@@ -30,10 +39,15 @@ type DepthTagger(buffer: ITextBuffer, filename: string, languageService: VSLangu
     
     let refreshTags() = 
         let uiContext = SynchronizationContext.Current
-        async { 
+        asyncMaybe { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            let source = snapshot.GetText() 
-            let! ranges = languageService.CheckerAsync (DepthParser.getNonoverlappingDepthRanges source filename)
+            let source = snapshot.GetText()
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = dte.GetCurrentDocument doc.FilePath
+            let! project = projectFactory.CreateForDocument buffer doc
+            let! opts = languageService.GetProjectCheckerOptions project |> liftAsync
+            let! ranges = languageService.CheckerAsync (fun checker ->
+                DepthParser.getNonoverlappingDepthRanges (source, doc.FullName, opts, checker)) |> liftAsync
             let newResults = 
                 ranges 
                 |> Seq.fold (fun res ((line, startCol, endCol, _) as info) ->
@@ -56,10 +70,10 @@ type DepthTagger(buffer: ITextBuffer, filename: string, languageService: VSLangu
             lastResults.Swap (fun _ -> newResults) |> ignore
             debug "[DepthTagger] Firing tags changed"
             // Switch back to UI thread before firing events
-            do! Async.SwitchToContext(uiContext)
+            do! Async.SwitchToContext(uiContext) |> liftAsync
             tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))
         } 
-        |> Async.StartInThreadPoolSafe
+        |> Async.Ignore |> Async.StartInThreadPoolSafe
     
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, refreshTags) 
     

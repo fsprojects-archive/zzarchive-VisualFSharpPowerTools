@@ -11,11 +11,13 @@ open System.IO
 open FSharpVSPowerTools
 open NUnit.Framework
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open TestHelpers.LanguageServiceTestHelper
  
 let fileName = Path.Combine(__SOURCE_DIRECTORY__, "DepthColorizerSampleFile.fs")
 let input = File.ReadAllText(fileName)
 let checker = FSharpChecker.Create() 
-let output = DepthParser.getNonoverlappingDepthRanges input fileName checker |> Async.RunSynchronously
+let opts = projectOptions fileName
+let output = DepthParser.getNonoverlappingDepthRanges (input, fileName, opts, checker) |> Async.RunSynchronously
 
 [<Test>]
 let ``should create single level at depth 0 for module definition``() =

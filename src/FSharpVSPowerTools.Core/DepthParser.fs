@@ -361,7 +361,7 @@ module DepthParser =
     /// Get non-overlapping ranges, where each range spans at most a single line, and has info about its "semantic depth".
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    let getNonoverlappingDepthRanges sourceLines filename (checker: FSharpChecker) =
+    let getNonoverlappingDepthRanges (sourceLines, filename, project, checker: FSharpChecker) =
         async {
             let sourceCodeLinesOfTheFile = String.getLines sourceLines
             let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
