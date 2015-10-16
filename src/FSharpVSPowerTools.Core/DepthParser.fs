@@ -324,7 +324,6 @@ module internal DepthParsing =
                         member __.Compare(v1, v2) =
                             compare v1.UniqueInfo v2.UniqueInfo }
 
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open DepthParsing
 
 module DepthParser =
