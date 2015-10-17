@@ -166,11 +166,12 @@ type LanguageService (?fileSystem: IFileSystem) =
   let handleCriticalErrors e file source opts = 
       errorHandler |> Option.iter (fun handle -> handle e file source opts)
 
-  // Create an instance of interactive checker. The callback is called by the F# compiler service
-  // when its view of the prior-typechecking-state of the start of a file has changed, for example
-  // when the background typechecker has "caught up" after some other file has been changed, 
-  // and its time to re-typecheck the current file.
-  let checkerInstance = FSharpChecker.Create (projectCacheSize = 50, keepAllBackgroundResolutions = false)
+  // Create an instance of interactive checker.
+  let checkerInstance = 
+    FSharpChecker.Create(
+        projectCacheSize = 10, 
+        keepAllBackgroundResolutions = false,
+        keepAssemblyContents = false)
 
   let checkerAsync (f: FSharpChecker -> Async<'a>) = 
     let ctx = System.Threading.SynchronizationContext.Current
