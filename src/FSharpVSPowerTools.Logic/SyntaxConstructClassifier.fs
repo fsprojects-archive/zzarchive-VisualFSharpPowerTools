@@ -332,7 +332,7 @@ type SyntaxConstructClassifier
                             updateUnusedDeclarations()
                         else
                             let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject
-                            vsLanguageService.StartBackgroundCompile currentProjectOpts
+                            vsLanguageService.CheckProjectInBackground currentProjectOpts
 
                     pf.Stop()
                     Logging.logInfo "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result
@@ -374,7 +374,7 @@ type SyntaxConstructClassifier
                     match projects |> List.tryFind (fun p -> not p.Checked) with
                     | Some { Options = opts } -> 
                         // there is at least one yet unchecked project, start compilation on it
-                        vsLanguageService.StartBackgroundCompile opts
+                        vsLanguageService.CheckProjectInBackground opts
                     | None -> 
                         // all the needed projects have been checked in background, let's calculate 
                         // Slow Stage (unused symbols and opens)
