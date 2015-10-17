@@ -28,7 +28,7 @@ type internal DraftToken =
     { Kind: SymbolKind
       Token: FSharpTokenInfo 
       RightColumn: int }
-    static member Create kind token = 
+    static member inline Create kind token = 
         { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
 
 module Lexer =
@@ -88,7 +88,7 @@ module Lexer =
         let isIdentifier t = t.CharClass = FSharpTokenCharKind.Identifier
         let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
     
-        let (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) (token: FSharpTokenInfo) =
+        let inline (|GenericTypeParameterPrefix|StaticallyResolvedTypeParameterPrefix|Other|) (token: FSharpTokenInfo) =
             if token.Tag = FSharpTokenTag.QUOTE then GenericTypeParameterPrefix
             elif token.Tag = FSharpTokenTag.INFIX_AT_HAT_OP then
                  // The lexer return INFIX_AT_HAT_OP token for both "^" and "@" symbols.
