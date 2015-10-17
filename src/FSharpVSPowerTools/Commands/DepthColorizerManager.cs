@@ -42,7 +42,7 @@ namespace FSharpVSPowerTools
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new DepthTagger(doc, buffer, serviceProvider, projectFactory, vsLanguageService) as ITagger<T>;
+                return new DepthTagger( doc, buffer, serviceProvider,projectFactory, vsLanguageService) as ITagger<T>;
             }
 
             return null;

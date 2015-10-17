@@ -163,29 +163,3 @@ type OutliningTagger
             scopedSnapSpans <- [||]
             docEventListener.Dispose ()
 
-
-//[<Export (typeof<ITaggerProvider>)>]
-//[<ContentType "F#">]
-//[<TagType (typeof<IOutliningRegionTag>)>]
-//type OutliningTaggerProvider [<ImportingConstructor>]
-//    (   serviceProvider: IServiceProvider, 
-//        textDocumentFactoryService : ITextDocumentFactoryService, 
-//        projectFactory: ProjectFactory, 
-//        vsLanguageService : VSLanguageService) as self =
-//    
-//    member __.CreateTagger buffer : ITagger<IOutliningRegionTag> = 
-//        let doc = ref (Unchecked.defaultof<ITextDocument>)
-//        let generalOptions = Setting.getGeneralOptions (serviceProvider)
-//        if  generalOptions.OutliningEnabled = true
-//         && textDocumentFactoryService.TryGetTextDocument (buffer, doc) then
-//            new OutliningTagger ( !doc
-//                                , serviceProvider
-//                                , projectFactory
-//                                , vsLanguageService ) :> ITagger<_>          
-//        else null
-//
-//    interface ITaggerProvider with
-//        member __.CreateTagger buffer : ITagger<_> = 
-//            self.CreateTagger buffer :> obj :?> _
-//            
-//   

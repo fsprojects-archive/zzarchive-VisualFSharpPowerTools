@@ -1,8 +1,13 @@
 ﻿#if INTERACTIVE
+
+#r "../../packages/test/NUnit/lib/nunit.framework.dll"
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "TestHelpers.fs"
 #else
@@ -10,9 +15,9 @@ module FSharpVSPowerTools.Core.Tests.UntypedAstUtils.Outlining
 #endif
 
 open System.IO
-open NUnit.Framework
 open FSharpVSPowerTools
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
+open NUnit.Framework
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
@@ -41,10 +46,7 @@ let (=>) (source: string) (expectedRanges: (Line * Col * Line * Col) list) =
             let actualRanges =
                 getOutliningRanges tree
                 |> Seq.filter (fun sr-> sr.Range.StartLine <> sr.Range.EndLine)
-                |> Seq.map (fun r ->  r.Range.StartLine
-                                    , r.Range.StartColumn
-                                    , r.Range.EndLine
-                                    , r.Range.EndColumn)
+                |> Seq.map (fun r ->  r.Range.StartLine, r.Range.StartColumn, r.Range.EndLine, r.Range.EndColumn)
                 |> List.ofSeq
             CollectionAssert.AreEquivalent (List.sort expectedRanges, List.sort actualRanges)
         | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
@@ -359,3 +361,102 @@ else
          3, 11, 4, 10
          7, 4,  9, 6
          7, 11, 8, 10 ]
+
+[<Test>]
+let ``code quotation`` () =
+    """
+<@
+  "code"
+        @>
+"""   
+    => [ 2, 2, 4, 8 ]
+
+[<Test>]
+let ``raw code quotation`` () =
+    """
+<@@
+  "code"
+        @@>
+"""  
+    => [ 2, 3, 4, 8 ]
+
+[<Test>]
+let ``match lambda aka function`` () =
+    """
+function
+| 0 ->  ()
+        ()
+"""
+    => [ 2, 0, 4, 10
+         3, 8, 4, 10 ]
+
+[<Test>]
+let `` match guarded clause`` () =
+    """
+let matchwith num =
+    match num with
+    | 0 -> ()
+           ()
+"""    
+    =>  [ 2, 17, 5, 13
+          3, 18, 5, 13
+          4, 11, 5, 13 ]
+
+
+[<Test>]
+let `` for loop `` () =
+    """
+for x = 100 downto 10 do
+    ()
+    ()
+"""
+    => [ 2, 0, 4, 6 ]
+
+
+[<Test>]
+let `` for each `` () =
+    """
+for x in 0 .. 100 -> 
+            ()
+            ()
+"""  
+    =>  [ 2, 0, 4, 14
+          2, 18, 4, 14 ]
+   
+[<Test>]   
+let `` tuple `` () =
+    """
+( 20340       
+, 322
+, 123123 )
+"""
+       =>  [(2, 2, 4, 8)]
+
+
+[<Test>]   
+let `` do! `` () =
+    """
+do! 
+    printfn "allo"
+    printfn "allo"
+"""
+    =>  [(2, 0, 4, 14)]
+
+
+[<Test>]   
+let `` cexpr yield yield! `` () =
+    """
+cexpr{
+    yield! 
+        cexpr{
+                    yield 
+                                
+                        10
+                }
+    }
+"""
+    =>  [(2, 6, 9, 4)
+         (3, 4, 8, 17)
+         (4, 14, 8, 16) 
+         (5, 20, 7, 26)]
+
