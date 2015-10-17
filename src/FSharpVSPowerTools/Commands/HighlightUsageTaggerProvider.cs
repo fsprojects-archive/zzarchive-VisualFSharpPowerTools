@@ -18,47 +18,23 @@ namespace FSharpVSPowerTools
     [TagType(typeof(HighlightUsageTag))]
     public class HighlightUsageTaggerProvider : IViewTaggerProvider
     {
-        //[Import]
-        //internal VSLanguageService fsharpVsLanguageService = null;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly VSLanguageService _fsharpVsLanguageService;
 
-        //[Import]
-        //internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        //[Import(typeof(SVsServiceProvider))]
-        //internal IServiceProvider serviceProvider = null;
-
-        //[Import]
-        //internal ProjectFactory projectFactory = null;
-
-        //private readonly IServiceProvider _serviceProvider;
-        //private readonly ITextDocumentFactoryService _textDocumentFactoryService;
-        //private readonly ProjectFactory _projectFactory;
-        //private readonly VSLanguageService _fsharpVsLanguageService;
-
-        //[ImportingConstructor]
-        //public HighlightUsageTaggerProvider(
-        //    IServiceProvider serviceProvider,
-        //    ITextDocumentFactoryService textDocumentFactoryService,
-        //    ProjectFactory projectFactory,
-        //    VSLanguageService fsharpVsLanguageService)
-        //{
-        //    _serviceProvider = serviceProvider;
-        //    _textDocumentFactoryService = textDocumentFactoryService;
-        //    _projectFactory = projectFactory;
-        //    _fsharpVsLanguageService = fsharpVsLanguageService;
-        //}
-
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
+        [ImportingConstructor]
+        public HighlightUsageTaggerProvider(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            ProjectFactory projectFactory,
+            VSLanguageService fsharpVsLanguageService)
+        {
+            _serviceProvider = serviceProvider;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _projectFactory = projectFactory;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+        }
 
         private static readonly Type serviceType = typeof(HighlightUsageTagger);
 
@@ -67,14 +43,14 @@ namespace FSharpVSPowerTools
             // Only provide highlighting on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return null;
 
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
-                    () => new HighlightUsageTagger(doc, textView, fsharpVsLanguageService, serviceProvider, projectFactory) as ITagger<T>);
+                    () => new HighlightUsageTagger(doc, textView, _fsharpVsLanguageService, _serviceProvider, _projectFactory) as ITagger<T>);
             }
 
             return null;
