@@ -25,10 +25,13 @@ namespace FSharpVSPowerTools
         internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
         [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
+        internal VSLanguageService vsLanguageService = null;
 
         [Import(typeof(SVsServiceProvider))]
         internal IServiceProvider serviceProvider = null;
+
+        [Import]
+        internal ProjectFactory projectFactory = null;
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
@@ -39,7 +42,7 @@ namespace FSharpVSPowerTools
 
             if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new DepthTagger(buffer, doc.FilePath, fsharpVsLanguageService) as ITagger<T>;
+                return new DepthTagger(doc, buffer, serviceProvider, projectFactory, vsLanguageService) as ITagger<T>;
             }
 
             return null;

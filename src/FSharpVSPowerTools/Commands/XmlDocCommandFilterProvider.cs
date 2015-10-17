@@ -30,6 +30,9 @@ namespace FSharpVSPowerTools
         [Import]
         internal VSLanguageService fsharpVsLanguageService = null;
 
+        [Import]
+        internal ProjectFactory projectFactory = null;
+
         [Import(typeof(SVsServiceProvider))]
         internal System.IServiceProvider serviceProvider = null;
 
@@ -44,7 +47,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, fsharpVsLanguageService);
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, projectFactory, fsharpVsLanguageService, serviceProvider);
             }
         }
     }

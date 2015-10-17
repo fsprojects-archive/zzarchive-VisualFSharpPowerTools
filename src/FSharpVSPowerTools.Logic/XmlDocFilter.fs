@@ -15,15 +15,26 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open FSharpVSPowerTools
+open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.VisualStudio.Shell.Interop
 
-type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: string, languageService: VSLanguageService) as self =
+type XmlDocFilter 
+     (
+        textView: IVsTextView, 
+        wpfTextView: IWpfTextView, 
+        filename: string, 
+        projectFactory: ProjectFactory,
+        languageService: VSLanguageService,
+        serviceProvider: System.IServiceProvider
+     ) as self =
+    
     let mutable passThruToEditor: IOleCommandTarget = null
     do if not (ErrorHandler.Succeeded(textView.AddCommandFilter(self, &passThruToEditor))) && Debugger.IsAttached then 
            Debugger.Break()
 
     /// Get the char for a <see cref="VSConstants.VSStd2KCmdID.TYPECHAR"/> command.
-    let getTypedChar(pvaIn: IntPtr) =
+    let getTypedChar(pvaIn: IntPtr) = 
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
     interface IOleCommandTarget with
@@ -39,11 +50,14 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
 
                     match XmlDocComment.isBlank lineWithLastCharInserted with
                     | Some i when i = indexOfCaret ->
-                        async {
+                        asyncMaybe {
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
-                            let! xmlDocables = 
-                                languageService.CheckerAsync (XmlDocParser.getXmlDocables (wpfTextView.TextSnapshot.GetText()) filename)
+                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                            let! document = dte.GetCurrentDocument filename
+                            let! project = projectFactory.CreateForDocument wpfTextView.TextBuffer document
+                            let! parseResults = languageService.ParseFileInProject (filename, wpfTextView.TextSnapshot.GetText(), project) |> liftAsync
+                            let! xmlDocables = XmlDocParser.getXmlDocables (wpfTextView.TextSnapshot.GetText(), parseResults.ParseTree) |> liftAsync
                             let xmlDocablesBelowThisLine = 
                                 // +1 because looking below current line for e.g. a 'member'
                                 xmlDocables |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) 
@@ -57,8 +71,9 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                                 toInsert.Append(' ', indent).AppendLine("/// <summary>")
                                         .Append(' ', indent).AppendLine("/// ")
                                         .Append(' ', indent).Append("/// </summary>") |> ignore
-                                for p in paramNames do
-                                    toInsert.AppendLine().Append(' ', indent).Append(sprintf "/// <param name=\"%s\"></param>" p) |> ignore
+                                paramNames
+                                |> List.iter (fun p ->
+                                    toInsert.AppendLine().Append(' ', indent).Append(sprintf "/// <param name=\"%s\"></param>" p) |> ignore)
                                 let _newSS = wpfTextView.TextBuffer.Insert(wpfTextView.Caret.Position.BufferPosition.Position, toInsert.ToString())
                                 // move the caret to between the summary tags
                                 let lastLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine()
@@ -66,7 +81,7 @@ type XmlDocFilter(textView: IVsTextView, wpfTextView: IWpfTextView, filename: st
                                 let _newCaret = wpfTextView.Caret.MoveTo(wpfTextView.GetTextViewLineContainingBufferPosition(middleSummaryLine.Start))
                                 ()
                         } 
-                        |> Async.StartImmediateSafe
+                        |> Async.Ignore |> Async.StartImmediateSafe
                     | Some _ | None -> ()
                 | _ -> ()
             passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
