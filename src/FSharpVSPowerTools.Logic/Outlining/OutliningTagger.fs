@@ -32,11 +32,11 @@ type OutliningTagger
 
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
-    let mutable snapshotSpans : ScopedSpan [] = [||]
+    let mutable scopedSnapSpans : ScopedSpan [] = [||]
 
     /// triggerUpdate -=> tagsChanged
     let triggerUpdate newSnapshotSpans =
-        snapshotSpans <- newSnapshotSpans
+        scopedSnapSpans <- newSnapshotSpans
         tagsChanged.Trigger(
             self, SnapshotSpanEventArgs (SnapshotSpan   ( buffer.CurrentSnapshot
                                                         , 0
@@ -134,25 +134,40 @@ type OutliningTagger
 
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
-    let getTags (nssc: NormalizedSnapshotSpanCollection) =
-        if Seq.isEmpty nssc || Array.isEmpty snapshotSpans then Seq.empty else
-        let newSnapshot = (Seq.head nssc).Snapshot
-        if newSnapshot.Version <> (snd snapshotSpans.[0]).Snapshot.Version then
-            snapshotSpans <- snapshotSpans 
-                            |> Array.map (fun (scp,spn) -> scp,spn.TranslateTo  ( newSnapshot
-                                                                                , SpanTrackingMode.EdgeExclusive))            
-        snapshotSpans |> (Seq.filter (snd>>nssc.IntersectsWith)>>(Seq.map createTagSpan))
+    let getTags (nssc: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
+        let enabled = Setting.getGeneralOptions(serviceProvider).OutliningEnabled
+        
+        let inline genSpans() =
+            let newSnapshot = (Seq.head nssc).Snapshot
+            if newSnapshot.Version <> (snd scopedSnapSpans.[0]).Snapshot.Version then
+                scopedSnapSpans <- scopedSnapSpans |> Array.map (fun (scp,spn) -> 
+                                    scp,spn.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive))            
+            scopedSnapSpans |> (Seq.filter (snd>>nssc.IntersectsWith)>>(Seq.map createTagSpan))
 
-    // Try to construct tags on creation
-    do doUpdate ()
+        match Seq.isEmpty nssc, Array.isEmpty scopedSnapSpans, enabled with
+        | false, false, true  -> genSpans () 
+        | true , _    , _     -> Seq.empty
+        | _    , true , _     -> Seq.empty  
+        | _    , _    , false -> scopedSnapSpans<-[||]; Seq.empty  
 
+
+    // Construct tags on creation
+    do 
+        self.Trigger()
+
+    member internal __.Trigger() =
+        tagsChanged.Trigger (self, 
+            SnapshotSpanEventArgs (SnapshotSpan   
+                (buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length - 1)))
 
     interface ITagger<IOutliningRegionTag> with
         member __.GetTags spans = getTags spans
         [<CLIEvent>] member __.TagsChanged : IEvent<_,_> = tagsChanged.Publish
 
     interface IDisposable with
-        member __.Dispose() = docEventListener.Dispose ()
+        member __.Dispose() = 
+            scopedSnapSpans <- [||]
+            docEventListener.Dispose ()
 
 
 [<  Export (typeof<ITaggerProvider>)
@@ -164,10 +179,12 @@ type OutliningTaggerProvider [<ImportingConstructor>]
     , projectFactory: ProjectFactory
     , vsLanguageService : VSLanguageService
     ) as self =
-
+    
     member __.CreateTagger buffer : ITagger<IOutliningRegionTag> = 
         let doc = ref (Unchecked.defaultof<ITextDocument>)
-        if textDocumentFactoryService.TryGetTextDocument (buffer, doc) then
+        let generalOptions = Setting.getGeneralOptions (serviceProvider)
+        if  generalOptions.OutliningEnabled = true
+         && textDocumentFactoryService.TryGetTextDocument (buffer, doc) then
             new OutliningTagger ( !doc
                                 , serviceProvider
                                 , projectFactory
