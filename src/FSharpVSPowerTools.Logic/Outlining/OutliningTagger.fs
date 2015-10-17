@@ -164,15 +164,14 @@ type OutliningTagger
             docEventListener.Dispose ()
 
 
-[<  Export (typeof<ITaggerProvider>)
-;   ContentType "F#"
-;   TagType (typeof<IOutliningRegionTag>) >]
-type OutliningTaggerProvider [<ImportingConstructor>] 
-    ( serviceProvider: IServiceProvider
-    , textDocumentFactoryService : ITextDocumentFactoryService
-    , projectFactory: ProjectFactory
-    , vsLanguageService : VSLanguageService
-    ) as self =
+[<Export (typeof<ITaggerProvider>)>]
+[<ContentType "F#">]
+[<TagType (typeof<IOutliningRegionTag>)>]
+type OutliningTaggerProvider [<ImportingConstructor>]
+    (   serviceProvider: IServiceProvider, 
+        textDocumentFactoryService : ITextDocumentFactoryService, 
+        projectFactory: ProjectFactory, 
+        vsLanguageService : VSLanguageService) as self =
     
     member __.CreateTagger buffer : ITagger<IOutliningRegionTag> = 
         let doc = ref (Unchecked.defaultof<ITextDocument>)
