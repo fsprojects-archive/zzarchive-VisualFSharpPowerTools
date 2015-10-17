@@ -1,8 +1,13 @@
 ﻿#if INTERACTIVE
+
+#r "../../packages/test/NUnit/lib/nunit.framework.dll"
 #r "../../bin/FSharp.Compiler.Service.dll"
-#r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "../../src/FSharpVSPowerTools.Core/Utils.fs"
+      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
       "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
+      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
+      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "TestHelpers.fs"
 #else
@@ -10,16 +15,16 @@ module FSharpVSPowerTools.Core.Tests.UntypedAstUtils.Outlining
 #endif
 
 open System.IO
-open NUnit.Framework
 open FSharpVSPowerTools
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
+open NUnit.Framework
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
 let framework = FSharpCompilerVersion.FSharp_3_1
 let languageService = LanguageService()
-
+                                                    
 let opts source = 
     let opts = 
         languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, LanguageServiceTestHelper.args, [||], framework) 
@@ -40,8 +45,8 @@ let (=>) (source: string) (expectedRanges: (Line * Col * Line * Col) list) =
         | Some tree ->
             let actualRanges =
                 getOutliningRanges tree
-                |> Seq.filter (fun r -> r.StartLine <> r.EndLine)
-                |> Seq.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
+                |> Seq.filter (fun sr-> sr.Range.StartLine <> sr.Range.EndLine)
+                |> Seq.map (fun r ->  r.Range.StartLine, r.Range.StartColumn, r.Range.EndLine, r.Range.EndColumn)
                 |> List.ofSeq
             CollectionAssert.AreEquivalent (List.sort expectedRanges, List.sort actualRanges)
         | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
@@ -124,9 +129,10 @@ type Color() =   // 2
         foo()
         ()       // 8
 """
-    => [ 2, 10, 8, 10
-         3, 13, 4, 10
-         6, 6, 8, 10 ]
+    => [ 2, 10,  8, 10
+         3,  4,  4, 10
+         3, 13,  4, 10
+         6,  4,  8, 10 ]
 
 [<Test>]
 let ``complex outlining test``() =
@@ -266,7 +272,9 @@ match None with     // 2
         ()          // 10
 """
     => [ 2, 15, 10, 10
-         6, 19, 10, 10 ]
+         6,  4, 10, 10
+         6, 19, 10, 10 
+         9,  8, 10, 10 ]
          
 [<Test>]
 let ``computation expressions``() =
@@ -279,9 +287,10 @@ seq {              // 2
         yield () } // 7
 }                  // 8
 """
-    => [ 2, 4, 8, 1
+    => [ 2, 5, 8, 0
          4, 11, 5, 10
-         6, 15, 7, 18 ]
+         6, 4, 7, 18 
+         6, 16, 7, 17 ]
 
 [<Test>]
 let ``list``() =
@@ -291,7 +300,7 @@ let _ =
       3 ]
 """
   => [ 2, 5, 4, 9
-       3, 6, 4, 7 ]
+       3, 5, 4, 8 ]
 
 [<Test>]
 let ``object expressions``() =
@@ -314,10 +323,11 @@ with _ ->     // 5
         ()    // 7
     ()        // 8
 """
-    => [ 2, 3, 8, 6
-         3, 11, 4, 10
-         5, 4, 8, 6
-         6, 11, 7, 10 ]
+    => [ 2,  3,  8,  6
+         3, 11,  4, 10
+         5,  4,  8,  6
+         6,  4,  8,  6
+         6, 11,  7, 10 ]
 
 [<Test>]
 let ``try - finally``() =
@@ -347,5 +357,106 @@ else
         ()
     ()
 """
-    => [ 3, 11, 4, 10
+    => [ 2, 0, 9, 6
+         3, 11, 4, 10
+         7, 4,  9, 6
          7, 11, 8, 10 ]
+
+[<Test>]
+let ``code quotation`` () =
+    """
+<@
+  "code"
+        @>
+"""   
+    => [ 2, 2, 4, 8 ]
+
+[<Test>]
+let ``raw code quotation`` () =
+    """
+<@@
+  "code"
+        @@>
+"""  
+    => [ 2, 3, 4, 8 ]
+
+[<Test>]
+let ``match lambda aka function`` () =
+    """
+function
+| 0 ->  ()
+        ()
+"""
+    => [ 2, 0, 4, 10
+         3, 8, 4, 10 ]
+
+[<Test>]
+let `` match guarded clause`` () =
+    """
+let matchwith num =
+    match num with
+    | 0 -> ()
+           ()
+"""    
+    =>  [ 2, 17, 5, 13
+          3, 18, 5, 13
+          4, 11, 5, 13 ]
+
+
+[<Test>]
+let `` for loop `` () =
+    """
+for x = 100 downto 10 do
+    ()
+    ()
+"""
+    => [ 2, 0, 4, 6 ]
+
+
+[<Test>]
+let `` for each `` () =
+    """
+for x in 0 .. 100 -> 
+            ()
+            ()
+"""  
+    =>  [ 2, 0, 4, 14
+          2, 18, 4, 14 ]
+   
+[<Test>]   
+let `` tuple `` () =
+    """
+( 20340       
+, 322
+, 123123 )
+"""
+       =>  [(2, 2, 4, 8)]
+
+
+[<Test>]   
+let `` do! `` () =
+    """
+do! 
+    printfn "allo"
+    printfn "allo"
+"""
+    =>  [(2, 0, 4, 18)]
+
+
+[<Test>]   
+let `` cexpr yield yield! `` () =
+    """
+cexpr{
+    yield! 
+        cexpr{
+                    yield 
+                                
+                        10
+                }
+    }
+"""
+    =>  [(2, 6, 9, 4)
+         (3, 4, 8, 17)
+         (4, 14, 8, 16) 
+         (5, 20, 7, 26)]
+

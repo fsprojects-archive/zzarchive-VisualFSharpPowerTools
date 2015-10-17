@@ -1,11 +1,12 @@
-using System.ComponentModel.Composition;
+﻿using System.ComponentModel.Composition;
 using FSharpVSPowerTools.ProjectSystem;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
-namespace FSharpVSPowerTools {
+namespace FSharpVSPowerTools
+{
     [Export(typeof(ITaggerProvider))]
     [TagType(typeof(IOutliningRegionTag))]
     [ContentType("F#")]
@@ -38,13 +39,12 @@ namespace FSharpVSPowerTools {
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return (ITagger<T>) buffer.Properties.GetOrCreateSingletonProperty(() =>
-                    new Outlining.Tagger(
-                        buffer,
-                        doc,
-                        _serviceProvider,
-                        _projectFactory,
-                        _vsLanguageService));
+                return (ITagger<T>)buffer.Properties.GetOrCreateSingletonProperty(() =>
+                   new Outlining.OutliningTagger(                       
+                       doc,
+                       _serviceProvider,
+                       _projectFactory,
+                       _vsLanguageService));
             }
 
             return null;

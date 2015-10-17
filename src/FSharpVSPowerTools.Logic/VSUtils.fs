@@ -70,7 +70,8 @@ type SnapshotPoint with
 
 type SnapshotSpan with
     /// Return corresponding zero-based FCS range
-    member x.ToRange() =
+    /// (lineStart, colStart, lineEnd, colEnd)
+    member inline x.ToRange() =
         let lineStart = x.Snapshot.GetLineNumberFromPosition(x.Start.Position)
         let lineEnd = x.Snapshot.GetLineNumberFromPosition(x.End.Position)
         let startLine = x.Snapshot.GetLineFromPosition(x.Start.Position)
