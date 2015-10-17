@@ -34,14 +34,13 @@ type OutliningTagger
     let tagsChanged = Event<_,_> ()
     let mutable scopedSnapSpans : ScopedSpan [] = [||]
 
-    /// triggerUpdate -=> tagsChanged
-    let triggerUpdate newSnapshotSpans =
-        scopedSnapSpans <- newSnapshotSpans
-        tagsChanged.Trigger(
-            self, SnapshotSpanEventArgs (SnapshotSpan   ( buffer.CurrentSnapshot
-                                                        , 0
-                                                        , buffer.CurrentSnapshot.Length - 1)))
+    let tagTrigger () =
+        tagsChanged.Trigger (self, 
+            SnapshotSpanEventArgs (SnapshotSpan   
+                (buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length - 1)))
 
+    /// triggerUpdate -=> tagsChanged
+    let triggerUpdate newSnapshotSpans = scopedSnapSpans <- newSnapshotSpans; tagTrigger ()
 
     /// convert the FSharp compiler range in SRanges into a snapshotspan and tuple it with its Scope tag
     let fromSRange (snapshot: ITextSnapshot) (sr: srange) : ScopedSpan option = 
@@ -152,13 +151,8 @@ type OutliningTagger
 
 
     // Construct tags on creation
-    do 
-        self.Trigger()
-
-    member internal __.Trigger() =
-        tagsChanged.Trigger (self, 
-            SnapshotSpanEventArgs (SnapshotSpan   
-                (buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length - 1)))
+    do  tagTrigger()
+        
 
     interface ITagger<IOutliningRegionTag> with
         member __.GetTags spans = getTags spans
