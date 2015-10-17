@@ -97,7 +97,7 @@ type OutliningTagger
         let minlead = 
             let seed = if lines = [||] then 0 else lines.[0] |> leadingWhitespace
             (seed, lines) ||> Array.fold (fun acc elm -> leadingWhitespace elm |> min acc)
-        (StringBuilder (), lines) ||> Array.fold (fun acc elm -> elm.Substring minlead |> acc.Append ) |> string 
+        (StringBuilder (), lines) ||> Array.fold (fun acc elm -> elm.Substring minlead |> acc.AppendLine ) |> string 
 
 
     let createTagSpan ((scope,snapshotSpan): ScopedSpan) =
