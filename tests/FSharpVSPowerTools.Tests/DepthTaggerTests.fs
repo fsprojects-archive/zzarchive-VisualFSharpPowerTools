@@ -9,7 +9,7 @@ open FSharpVSPowerTools.DepthColorizer
 type DepthTaggerHelper() =
     inherit VsTestBase()
 
-    let taggerProvider = DepthColorizerTaggerProvider()
+    let taggerProvider = DepthColorizerTaggerProvider(base.ServiceProvider,base.DocumentFactoryService,base.ProjectFactory ,base.VsLanguageService  )
 
     member __.GetTagger(buffer) = 
         taggerProvider.CreateTagger<_>(buffer)

@@ -24,7 +24,7 @@ let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 let sourceFiles = [| fileName |]
 let framework = FSharpCompilerVersion.FSharp_3_1
 let languageService = LanguageService()
-
+                                                    
 let opts source = 
     let opts = 
         languageService.GetCheckerOptions (fileName, projectFileName, source, sourceFiles, LanguageServiceTestHelper.args, [||], framework) 
@@ -440,7 +440,7 @@ do!
     printfn "allo"
     printfn "allo"
 """
-    =>  [(2, 0, 4, 14)]
+    =>  [(2, 0, 4, 18)]
 
 
 [<Test>]   

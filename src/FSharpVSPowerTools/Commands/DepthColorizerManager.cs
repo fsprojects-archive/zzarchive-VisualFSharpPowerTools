@@ -21,28 +21,37 @@ namespace FSharpVSPowerTools
     [TagType(typeof(DepthRegionTag))]
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
 
-        [Import]
-        internal VSLanguageService vsLanguageService = null;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly VSLanguageService _vsLanguageService;
 
-        [Import(typeof(SVsServiceProvider))]
-        internal IServiceProvider serviceProvider = null;
+        [ImportingConstructor]
+        public DepthColorizerTaggerProvider(
+            IServiceProvider serviceProvider,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            ProjectFactory projectFactory,
+            VSLanguageService vsLanguageService)
+        {
+            _serviceProvider = serviceProvider;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _projectFactory = projectFactory;
+            _vsLanguageService = vsLanguageService;
+        }
 
-        [Import]
-        internal ProjectFactory projectFactory = null;
+
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             ITextDocument doc;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return null;
 
-            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new DepthTagger( doc, buffer, serviceProvider,projectFactory, vsLanguageService) as ITagger<T>;
+                return new DepthTagger( doc, buffer, _serviceProvider,_projectFactory, _vsLanguageService) as ITagger<T>;
             }
 
             return null;
