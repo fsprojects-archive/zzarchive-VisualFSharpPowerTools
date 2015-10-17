@@ -351,9 +351,9 @@ type VSLanguageService
         instance.RawChecker.InvalidateAll()
         entityCache.Clear()
     
-    member __.StartBackgroundCompile (opts: FSharpProjectOptions) =
+    member __.CheckProjectInBackground (opts: FSharpProjectOptions) =
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
-        instance.RawChecker.StartBackgroundCompile opts
+        instance.RawChecker.CheckProjectInBackground opts
 
     member __.CheckerAsync x = instance.CheckerAsync x
     member __.RawChecker = instance.RawChecker
