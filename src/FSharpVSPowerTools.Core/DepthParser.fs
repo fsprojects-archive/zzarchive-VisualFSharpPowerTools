@@ -324,34 +324,10 @@ module internal DepthParsing =
                         member __.Compare(v1, v2) =
                             compare v1.UniqueInfo v2.UniqueInfo }
 
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open DepthParsing
 
 module DepthParser =
-    // TODO, consider perf, way just to consider viewport and do as little work as necessary?
-    let private getRanges sourceLines source filename (checker: FSharpChecker) =
-        async {
-            let mindents = computeMinIndentArray sourceLines
-            let indent startLine endLine =
-                let mutable i, n = mindents.[startLine-1], startLine+1
-                while n <= endLine do
-                    i <- min i mindents.[n-1] // line nums are 1-based
-                    n <- n + 1
-                i
-        
-            // Get compiler options for the 'project' implied by a single script file
-            let! projOptions = checker.GetProjectOptionsFromScript(filename, source)
-            let! input = checker.ParseFileInProject (filename, source, projOptions)
-    
-            match input.ParseTree with
-            | Some tree -> 
-                return tree
-                       |> getRangesInput 
-                       |> List.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn, indent r.StartLine r.EndLine)
-                       |> List.toArray 
-            | None -> 
-                return [||]
-        }
+    open Microsoft.FSharp.Compiler.Ast
 
     /////////////////////////////////////////////////////
     // The main API, the one consumed by the colorizer.
@@ -361,12 +337,33 @@ module DepthParser =
     /// Get non-overlapping ranges, where each range spans at most a single line, and has info about its "semantic depth".
     /// Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.  
     ///       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.
-    let getNonoverlappingDepthRanges sourceLines filename (checker: FSharpChecker) =
+    let getNonoverlappingDepthRanges (sourceLines, input: ParsedInput option) =
+        // TODO, consider perf, way just to consider viewport and do as little work as necessary?
+        let getRanges source =
+            async {
+                let mindents = computeMinIndentArray source 
+                let indent startLine endLine =
+                    let mutable i, n = mindents.[startLine-1], startLine+1
+                    while n <= endLine do
+                        i <- min i mindents.[n-1] // line nums are 1-based
+                        n <- n + 1 
+                    i
+        
+                match input with
+                | Some tree -> 
+                    return tree
+                           |> getRangesInput 
+                           |> List.map (fun r -> r.StartLine, r.StartColumn, r.EndLine, r.EndColumn, indent r.StartLine r.EndLine)
+                           |> List.toArray 
+                | None -> 
+                    return [||]
+            }
+
         async {
             let sourceCodeLinesOfTheFile = String.getLines sourceLines
             let lineLens = sourceCodeLinesOfTheFile |> Seq.map (fun s -> s.TrimEnd(null).Length) |> (fun s -> Seq.append s [0]) |> Seq.toArray 
             let len line = lineLens.[line - 1]  // line #s are 1-based
-            let! nestedRanges = getRanges sourceCodeLinesOfTheFile sourceLines filename checker
+            let! nestedRanges = getRanges sourceCodeLinesOfTheFile
             let q = System.Collections.Generic.SortedSet<_>(qevComp)  // priority queue
             for r in nestedRanges do
                 System.Diagnostics.Debug.WriteLine(sprintf "%A" r)

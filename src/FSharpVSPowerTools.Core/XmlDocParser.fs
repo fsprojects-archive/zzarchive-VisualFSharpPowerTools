@@ -7,7 +7,6 @@ type XmlDocable =
 module internal XmlDocParsing =
     open Microsoft.FSharp.Compiler.Range
     open Microsoft.FSharp.Compiler.Ast
-    open Microsoft.FSharp.Compiler.SourceCodeServices
         
     let (|ConstructorPats|) = function
         | Pats ps -> ps
@@ -35,7 +34,7 @@ module internal XmlDocParsing =
         | SynPat.InstanceMember _
         | SynPat.FromParseError _ -> []
 
-    let getXmlDocablesImpl(sourceCodeLinesOfTheFile: string [], sourceCodeOfTheFile, filename, checker: FSharpChecker) =
+    let getXmlDocablesImpl(sourceCodeLinesOfTheFile: string [], input: ParsedInput option) =
         let indentOf (lineNum: int) =
             let mutable i = 0
             let line = sourceCodeLinesOfTheFile.[lineNum-1] // -1 because lineNum reported by xmldocs are 1-based, but array is 0-based
@@ -43,7 +42,7 @@ module internal XmlDocParsing =
                 i <- i + 1
             i
 
-        let isEmptyXmlDoc (preXmlDoc: PreXmlDoc) = 
+        let isEmptyXmlDoc (preXmlDoc: PreXmlDoc) =
             match preXmlDoc.ToXmlDoc() with 
             | XmlDoc [||] -> true
             | XmlDoc [|x|] when x.Trim() = "" -> true
@@ -148,10 +147,7 @@ module internal XmlDocParsing =
 
         async {
             // Get compiler options for the 'project' implied by a single script file
-            let! projOptions = checker.GetProjectOptionsFromScript(filename, sourceCodeOfTheFile)
-            let! input = checker.ParseFileInProject (filename, sourceCodeOfTheFile, projOptions)
-    
-            match input.ParseTree with
+            match input with
             | Some input -> 
                 return getXmlDocablesInput input
             | None ->
@@ -176,19 +172,16 @@ module XmlDocComment =
         | "" -> Some ("", pos)
         | _ -> None
 
-    let inline private (>=>) f g = fun x -> f x |> Option.bind g
-
+    let inline private (>=>) f g = f >> Option.bind g
+    
     // if it's a blank XML comment with trailing "<", returns Some (index of the "<"), otherwise returns None
     let isBlank (s: string) =
         let parser = ws >=> str "///" >=> ws >=> str "<" >=> eol
         let res = parser (s.TrimEnd(), 0) |> Option.map snd |> Option.map (fun x -> x - 1)
         res
 
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open XmlDocParsing
-
 module XmlDocParser =
     /// Get the list of Xml documentation from current source code
-    let getXmlDocables sourceCodeOfTheFile filename (checker: FSharpChecker) =
+    let getXmlDocables (sourceCodeOfTheFile, input) =
         let sourceCodeLinesOfTheFile = String.getLines sourceCodeOfTheFile
-        getXmlDocablesImpl(sourceCodeLinesOfTheFile, sourceCodeOfTheFile, filename, checker)
+        XmlDocParsing.getXmlDocablesImpl (sourceCodeLinesOfTheFile, input)

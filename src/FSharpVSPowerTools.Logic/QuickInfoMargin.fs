@@ -136,7 +136,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
             |> Async.StartInThreadPoolSafe
         | None -> updateQuickInfo (None, None)
 
-    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 1000us, updateAtCaretPosition)
+    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, updateAtCaretPosition)
 
     interface IWpfTextViewMargin with
         member __.VisualElement = upcast visual
