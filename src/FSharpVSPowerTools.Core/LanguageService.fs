@@ -173,6 +173,8 @@ type LanguageService (?fileSystem: IFileSystem) =
         keepAllBackgroundResolutions = false,
         keepAssemblyContents = false)
 
+  do checkerInstance.ImplicitlyStartBackgroundWork <- false
+
   let checkerAsync (f: FSharpChecker -> Async<'a>) = 
     let ctx = System.Threading.SynchronizationContext.Current
     async {
