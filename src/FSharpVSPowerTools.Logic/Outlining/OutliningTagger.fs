@@ -68,7 +68,7 @@ type OutliningTagger
     // drills down into the snapshot text to find the first non whitespace line 
     // to display as the text inside the collapse box preceding the `...`
     let getHintText (snapshotSpan:SnapshotSpan) =
-        let snapshot= snapshotSpan.Snapshot        
+        let snapshot= snapshotSpan.Snapshot
         let firstLineNum = snapshot.GetLineNumberFromPosition(snapshotSpan.Start.Position)
         let rec loop acc =
             if acc >= snapshot.LineCount + firstLineNum then "" else
