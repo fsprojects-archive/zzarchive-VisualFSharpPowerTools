@@ -439,7 +439,6 @@ let listFSharpProjectsInSolution (dte: DTE) =
         yield! handleProject p ]
 
 
-
 /// Linux linebreak `\n`
 let [<Literal>] linuxLineBreak = "\n"
 
@@ -449,25 +448,23 @@ let [<Literal>] windowsLineBreak = "\r\n"
 /// Mac linebreak `\r`
 let [<Literal>] macLineBreak = "\r"
 
-/// Replaces pattern in the string with the replacement
-let inline replace (pattern:string) replacement (text:string) = text.Replace(pattern, replacement)
-
-/// Converts all linebreaks in a string to windows linebreaks
-let convertToWindowsLineBreaks text = 
-    replace windowsLineBreak linuxLineBreak 
-        >> replace macLineBreak linuxLineBreak 
-            >> replace linuxLineBreak windowsLineBreak <| text
 
 /// Splits a string into lines for all platform's linebreaks.
 /// If the string mixes windows, mac, and linux linebreaks, all will be respected
-let lineSplit str = (convertToWindowsLineBreaks str).Split([|windowsLineBreak|],StringSplitOptions.None)
+let inline lineSplit (str:string) = str.Split([|windowsLineBreak;linuxLineBreak;macLineBreak|],StringSplitOptions.None)
 
 type String with
-    /// Replaces pattern in the string with the replacement
-    static member inline replace pattern replacement text = replace pattern replacement text
+
     /// Splits a string into lines for all platform's linebreaks.
     /// If the string mixes windows, mac, and linux linebreaks, all will be respected
     static member toLineArray str = lineSplit str
+
     /// Splits a string into lines for all platform's linebreaks.
     /// If the string mixes windows, mac, and linux linebreaks, all will be respected
     member self.ToLineArray () = lineSplit self
+
+    /// Return substring starting at index, returns the same string if given a negative index
+    /// if given an index > string.Length returns empty string
+    member self.SubstringSafe index =
+        if   index < 0 then self elif index > self.Length then "" else self.Substring index
+

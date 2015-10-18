@@ -85,19 +85,31 @@ type OutliningTagger
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text
         loop firstLineNum
 
+
     /// Find the length of the shortest whitespace indentation in the textblock used for the outlining
     /// hint tooltip, then trim that length from the front of every line in the textblock
-    let cleanHintText (text:string) =
+    let tidyHintText (text:string) =
         let leadingWhitespace (str:string) =
             let charr = str.ToCharArray ()
             let rec loop acc  =
                 if acc >= charr.Length then acc 
                 elif not (Char.IsWhiteSpace charr.[acc]) then acc else loop (acc+1) in loop 0
+        // To to find the smallest indentation, an empty line can't serve as the seed
         let lines = lineSplit text
-        let minlead = 
-            let seed = if lines = [||] then 0 else lines.[0] |> leadingWhitespace
-            (seed, lines) ||> Array.fold (fun acc elm -> leadingWhitespace elm |> min acc)
-        (StringBuilder (), lines) ||> Array.fold (fun acc elm -> elm.Substring minlead |> acc.AppendLine ) |> string 
+
+        let rec findStartingLine idx  = 
+            if idx >= lines.Length then -1  // return -1 if all the lines are blank
+            elif String.IsNullOrWhiteSpace lines.[idx] then findStartingLine (idx+1) 
+            else idx // found suitable starting line
+
+        let startIndex = findStartingLine 0            
+        if lines = [||] ||  startIndex = -1 then "" else // no hint text to tidy, return an empty string
+        let minIndent = 
+            let seed = lines.[startIndex] |> leadingWhitespace
+            (seed, lines.[startIndex..]) ||> Array.fold (fun acc elm -> 
+                if String.IsNullOrWhiteSpace elm then acc // skip over empty lines, we don't want them skewing our min
+                else leadingWhitespace elm |> min acc)
+        (StringBuilder (), lines) ||> Array.fold (fun acc elm -> elm.SubstringSafe minIndent |> acc.AppendLine ) |> string 
 
 
     let createTagSpan ((scope,snapshotSpan): ScopedSpan) =
@@ -122,7 +134,7 @@ type OutliningTagger
                         member __.IsDefaultCollapsed = false
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
-                            let text = hintSnapshotSpan.GetText () |> cleanHintText
+                            let text = hintSnapshotSpan.GetText () |> tidyHintText
                             match missingLinesCount with
                             | 0 -> text :> obj
                             | n -> sprintf "%s\n\n +%d lines..." text n :> obj
