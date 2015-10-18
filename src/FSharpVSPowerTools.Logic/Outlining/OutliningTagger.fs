@@ -3,20 +3,12 @@
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio.Text.Operations
-open Microsoft.VisualStudio.Utilities
-open Microsoft.VisualStudio.Shell
-open System.ComponentModel.Composition
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.FSharp.Compiler.Ast
-open Microsoft.FSharp.Compiler.Range
 open System.Threading
-open System.Diagnostics
 open System.Text
 
 let [<Literal>] private UpdateDelay = 200us
@@ -63,7 +55,9 @@ type OutliningTagger
             let ranges = (getOutliningRanges>>Seq.choose (fromSRange snapshot)>>Array.ofSeq) ast
             do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
             triggerUpdate ranges
-        } |> Async.Ignore |> Async.StartInThreadPoolSafe
+        } 
+        |> Async.Ignore 
+        |> Async.StartInThreadPoolSafe
 
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged
@@ -121,7 +115,7 @@ type OutliningTagger
             if nHintLines > MaxTooltipLines then
                 lastLine <- snapshot.GetLineFromLineNumber (firstLine.LineNumber + MaxTooltipLines - 1)
 
-            let missingLinesCount = Math.Max (nHintLines - MaxTooltipLines, 0)
+            let missingLinesCount = max (nHintLines - MaxTooltipLines) 0
 
             let hintSnapshotSpan = SnapshotSpan (firstLine.Start, lastLine.End)
             let collapseText, collapseSpan = 
@@ -139,39 +133,40 @@ type OutliningTagger
                             | 0 -> text :> obj
                             | n -> sprintf "%s\n\n +%d lines..." text n :> obj
                     }) :> ITagSpan<_>
-        with | :? ArgumentOutOfRangeException ->
-                Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan"
-                null
+        with 
+        | :? ArgumentOutOfRangeException ->
+            Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan"
+            null
 
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
-    let getTags (nssc: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
-        let enabled = Setting.getGeneralOptions(serviceProvider).OutliningEnabled
-        
-        let inline genSpans() =
-            let newSnapshot = (Seq.head nssc).Snapshot
+    let getTags (normalizedSnapshotSpans: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
+        match Seq.isEmpty normalizedSnapshotSpans, Array.isEmpty scopedSnapSpans with
+        | false, false -> 
+            let newSnapshot = (Seq.head normalizedSnapshotSpans).Snapshot
             if newSnapshot.Version <> (snd scopedSnapSpans.[0]).Snapshot.Version then
-                scopedSnapSpans <- scopedSnapSpans |> Array.map (fun (scp,spn) -> 
-                                    scp,spn.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive))            
-            scopedSnapSpans |> (Seq.filter (snd>>nssc.IntersectsWith)>>(Seq.map createTagSpan))
-
-        match Seq.isEmpty nssc, Array.isEmpty scopedSnapSpans, enabled with
-        | false, false, true  -> genSpans () 
-        | true , _    , _     -> Seq.empty
-        | _    , true , _     -> Seq.empty  
-        | _    , _    , false -> scopedSnapSpans<-[||]; Seq.empty  
-
+                scopedSnapSpans <- scopedSnapSpans 
+                                   |> Array.map (fun (scp,spn) -> 
+                                        scp, spn.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive))            
+            scopedSnapSpans 
+            |> Seq.filter (snd >> normalizedSnapshotSpans.IntersectsWith) 
+            |> Seq.map createTagSpan
+        | true , _ 
+        | _    , true -> Seq.empty  
+        
 
     // Construct tags on creation
     do  tagTrigger()
         
 
     interface ITagger<IOutliningRegionTag> with
-        member __.GetTags spans = getTags spans
-        [<CLIEvent>] member __.TagsChanged : IEvent<_,_> = tagsChanged.Publish
+        member __.GetTags spans = 
+            protectOrDefault (fun _ -> getTags spans) Seq.empty
+
+        [<CLIEvent>]
+        member __.TagsChanged = tagsChanged.Publish
 
     interface IDisposable with
         member __.Dispose() = 
             scopedSnapSpans <- [||]
             docEventListener.Dispose ()
-

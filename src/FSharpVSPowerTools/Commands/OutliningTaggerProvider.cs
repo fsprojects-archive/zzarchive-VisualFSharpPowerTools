@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
+using System;
 
 namespace FSharpVSPowerTools
 {
@@ -12,14 +13,14 @@ namespace FSharpVSPowerTools
     [ContentType("F#")]
     public class OutliningTaggerProvider : ITaggerProvider
     {
-        private readonly SVsServiceProvider _serviceProvider;
+        private readonly IServiceProvider _serviceProvider;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _vsLanguageService;
 
         [ImportingConstructor]
         public OutliningTaggerProvider(
-            SVsServiceProvider serviceProvider,
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService)
@@ -33,7 +34,7 @@ namespace FSharpVSPowerTools
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
             var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || generalOptions.OutliningEnabled == false)
+            if (generalOptions == null || !generalOptions.OutliningEnabled)
                 return null;
 
             ITextDocument doc;
