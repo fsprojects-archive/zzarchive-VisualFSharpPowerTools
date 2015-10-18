@@ -28,7 +28,7 @@ type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
      projectFactory: ProjectFactory,
-     languageService: VSLanguageService) as self = 
+     languageService: VSLanguageService) as self =
 
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
@@ -93,7 +93,7 @@ type OutliningTagger
             let rec loop acc  =
                 if acc >= charr.Length then acc 
                 elif not (Char.IsWhiteSpace charr.[acc]) then acc else loop (acc+1) in loop 0
-        let lines = text.Split [|'\n'|]
+        let lines = lineSplit text
         let minlead = 
             let seed = if lines = [||] then 0 else lines.[0] |> leadingWhitespace
             (seed, lines) ||> Array.fold (fun acc elm -> leadingWhitespace elm |> min acc)
