@@ -103,6 +103,7 @@ module Array =
         match x, y with
         | null, null -> true
         | [||], [||] -> true
+        | null, _ | _, null -> false
         | _ when x.Length <> y.Length -> false
         | _ ->
             let mutable break' = false
