@@ -29,7 +29,7 @@ namespace FSharpVSPowerTools
 
         [ImportingConstructor]
         public DepthColorizerTaggerProvider(
-            IServiceProvider serviceProvider,
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService)
