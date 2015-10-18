@@ -35,7 +35,6 @@ module Array =
         | null -> nullArg argName 
         | _ -> ()
 
-
     /// Returns true if one array has another as its subset from index 0.
     let startsWith (prefix: _ []) (whole: _ []) =
         let rec loop index =
@@ -98,6 +97,21 @@ module Array =
                 i <- i + 1
 
         Array.sub temp 0 i 
+
+    /// Optimized arrays equality. ~100x faster than `array1 = array2`.
+    let inline areEqual (x: 'a[]) (y: 'a[]) =
+        if x.Length <> y.Length then false
+        elif x.Length = 0 then true
+        else
+            let mutable break' = false
+            let mutable i = 0
+            let mutable result = true
+            while i < x.Length && not break' do
+                if x.[i] <> y.[i] then 
+                    break' <- true
+                    result <- false
+                i <- i + 1
+            result
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

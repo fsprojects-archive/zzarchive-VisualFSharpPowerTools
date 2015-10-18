@@ -24,7 +24,7 @@ type OpenDeclaration =
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module OpenDeclWithAutoOpens =
     let updateBySymbolPrefix (symbolPrefix: Idents) (decl: OpenDeclWithAutoOpens) =
-        let matched = decl.Declarations |> List.exists ((=) symbolPrefix)
+        let matched = decl.Declarations |> List.exists (Array.areEqual symbolPrefix)
         //if not decl.IsUsed && matched then debug "OpenDeclarationWithAutoOpens %A is used by %A" decl symbolPrefix
         matched, { decl with IsUsed = decl.IsUsed || matched }
 
@@ -124,7 +124,7 @@ module OpenDeclarationGetter =
                 decl.Declarations 
                 |> List.map (fun d -> 
                     if d.IsUsed then d
-                    else { d with IsUsed = d.Declarations |> List.exists ((=) idents) })
+                    else { d with IsUsed = d.Declarations |> List.exists (Array.areEqual idents) })
             let isUsed = declarations |> List.exists (fun d -> d.IsUsed)
             { decl with Declarations = declarations; IsUsed = isUsed })
 
@@ -332,7 +332,7 @@ module OpenDeclarationGetter =
                             //debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
                             cleanIdents
                         | Some (firstCleanIdents :: _ as cleanIdentsList) ->
-                            if cleanIdentsList |> List.exists ((=) fullName) then
+                            if cleanIdentsList |> List.exists (Array.areEqual fullName) then
                                 //debug "[SourceCodeClassifier] An exact match found among several clean idents: %A" fullName
                                 fullName
                             else
