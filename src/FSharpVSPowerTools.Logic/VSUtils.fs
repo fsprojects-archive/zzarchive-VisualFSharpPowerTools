@@ -437,3 +437,37 @@ let listFSharpProjectsInSolution (dte: DTE) =
 
     [ for p in dte.Solution.Projects do
         yield! handleProject p ]
+
+
+
+/// Linux linebreak `\n`
+let [<Literal>] linuxLineBreak = "\n"
+
+/// Windows linebreak `\r\n`
+let [<Literal>] windowsLineBreak = "\r\n"
+
+/// Mac linebreak `\r`
+let [<Literal>] macLineBreak = "\r"
+
+/// Replaces pattern in the string with the replacement
+let inline replace (pattern:string) replacement (text:string) = text.Replace(pattern, replacement)
+
+/// Converts all linebreaks in a string to windows linebreaks
+let convertToWindowsLineBreaks text = 
+    replace windowsLineBreak linuxLineBreak 
+        >> replace macLineBreak linuxLineBreak 
+            >> replace linuxLineBreak windowsLineBreak <| text
+
+/// Splits a string into lines for all platform's linebreaks.
+/// If the string mixes windows, mac, and linux linebreaks, all will be respected
+let lineSplit str = (convertToWindowsLineBreaks str).Split([|windowsLineBreak|],StringSplitOptions.None)
+
+type String with
+    /// Replaces pattern in the string with the replacement
+    static member inline replace pattern replacement text = replace pattern replacement text
+    /// Splits a string into lines for all platform's linebreaks.
+    /// If the string mixes windows, mac, and linux linebreaks, all will be respected
+    static member toLineArray str = lineSplit str
+    /// Splits a string into lines for all platform's linebreaks.
+    /// If the string mixes windows, mac, and linux linebreaks, all will be respected
+    member self.ToLineArray () = lineSplit self
