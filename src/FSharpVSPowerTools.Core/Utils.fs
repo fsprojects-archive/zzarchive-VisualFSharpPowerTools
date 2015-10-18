@@ -100,9 +100,11 @@ module Array =
 
     /// Optimized arrays equality. ~100x faster than `array1 = array2`.
     let inline areEqual (x: 'a[]) (y: 'a[]) =
-        if x.Length <> y.Length then false
-        elif x.Length = 0 then true
-        else
+        match x, y with
+        | null, null -> true
+        | [||], [||] -> true
+        | _ when x.Length <> y.Length -> false
+        | _ ->
             let mutable break' = false
             let mutable i = 0
             let mutable result = true

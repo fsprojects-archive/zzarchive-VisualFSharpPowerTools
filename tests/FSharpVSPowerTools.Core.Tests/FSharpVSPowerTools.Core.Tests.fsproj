@@ -55,6 +55,7 @@
     <Content Include="app.config" />
     <None Include="paket.references" />
     <Compile Include="TestHelpers.fs" />
+    <Compile Include="UtilsTests.fs" />
     <Compile Include="LexerTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
