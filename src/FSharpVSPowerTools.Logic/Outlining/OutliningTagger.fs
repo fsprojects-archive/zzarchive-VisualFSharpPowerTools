@@ -21,6 +21,44 @@ let [<Literal>] private MaxTooltipLines = 25
 
 type ScopedSpan = Scope * SnapshotSpan
 
+type OutliningControl(createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
+    inherit ContentControl()
+   
+    do self.IsVisibleChanged.Add (fun (e: DependencyPropertyChangedEventArgs) ->
+        let nowVisible = e.NewValue :?> bool
+        if nowVisible then
+            match self.Content with
+            | null ->
+                let view = createView (createBuffer())
+                self.Content <- view.VisualElement
+            | _ -> ()
+        else
+            (self.Content :?> ITextView).Close()
+            self.Content <- null)
+        
+    override __.ToString() =
+        match self.Content with
+        | null ->
+            createBuffer().CurrentSnapshot.GetText()
+        | content ->
+            (content :?> ITextView).TextBuffer.CurrentSnapshot.GetText()
+
+let sizeToFit (view: IWpfTextView) =
+    let isNormal d = (not (Double.IsNaN d)) && (not (Double.IsInfinity d))
+    view.VisualElement.Height <- view.LineHeight * float view.TextBuffer.CurrentSnapshot.LineCount
+
+    // In order to compute the width, we need "MaxTextRightCoordinate", but we won't have
+    // that until a layout event occurs.  Fortunately, a layout event is going to occur because we set
+    // 'Height' above.
+    view.LayoutChanged.Add  (fun _ ->
+        view.VisualElement.Dispatcher.BeginInvoke(Action(fun () ->
+            let newWidth = view.MaxTextRightCoordinate
+            let currentWidth = view.VisualElement.Width
+            if isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth then ()
+            else
+                view.VisualElement.Width <- view.MaxTextRightCoordinate)) 
+        |> ignore) 
+
 type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
@@ -104,6 +142,7 @@ type OutliningTagger
         let roles = textEditorFactoryService.CreateTextViewRoleSet("")
         let view = textEditorFactoryService.CreateTextView(finalBuffer, roles, Background = Brushes.Transparent)
         view.ZoomLevel <- 0.75 * view.ZoomLevel
+        sizeToFit view
         view
 
     let createElisionBufferNoIndent (factoryService: IProjectionBufferFactoryService) (hintSnapshotSpan: SnapshotSpan) =
@@ -111,7 +150,6 @@ type OutliningTagger
         let elisionBuffer = factoryService.CreateElisionBuffer(null, exposedSpans, ElisionBufferOptions.None)
         
         let snapshot = hintSnapshotSpan.Snapshot
-        let buffer = snapshot.TextBuffer
         let indentationColumn = inferIndent (hintSnapshotSpan.GetText())
         let spansToElide = ResizeArray<Span>()
         
@@ -125,19 +163,6 @@ type OutliningTagger
                 
         elisionBuffer.ElideSpans(NormalizedSpanCollection(spansToElide)) |> ignore
         elisionBuffer
-
-    let createOutliningControl textEditorFactoryService factoryService hintSnapshotSpan =
-        let control = ContentControl()
-        let isVisibleChanged (e: DependencyPropertyChangedEventArgs) =
-            let nowVisible = e.NewValue :?> bool
-            if nowVisible then
-                if control.Content = null then
-                    control.Content <- (createElisionBufferView textEditorFactoryService (createElisionBufferNoIndent factoryService hintSnapshotSpan)).VisualElement
-            else
-                (control.Content :?> ITextView).Close()
-                control.Content <- null
-            
-        control.IsVisibleChanged.Subscribe isVisibleChanged |> ignore
 
     // drills down into the snapshot text to find the first non whitespace line 
     // to display as the text inside the collapse box preceding the `...`
@@ -175,7 +200,8 @@ type OutliningTagger
                         member __.IsDefaultCollapsed = false
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
-                            createOutliningControl textEditorFactoryService projectionBufferFactoryService hintSnapshotSpan :> _
+                            OutliningControl((createElisionBufferView textEditorFactoryService), 
+                                             (fun _ -> createElisionBufferNoIndent projectionBufferFactoryService hintSnapshotSpan)) :> _
                     }) :> ITagSpan<_>
         with 
         | :? ArgumentOutOfRangeException ->
