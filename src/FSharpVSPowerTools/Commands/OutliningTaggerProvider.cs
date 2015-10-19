@@ -5,6 +5,8 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using System;
+using Microsoft.VisualStudio.Text.Projection;
+using Microsoft.VisualStudio.Text.Editor;
 
 namespace FSharpVSPowerTools
 {
@@ -15,18 +17,24 @@ namespace FSharpVSPowerTools
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ITextEditorFactoryService _textEditorFactoryService;
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _vsLanguageService;
+        private readonly IProjectionBufferFactoryService _projectionBufferFactoryService;
 
         [ImportingConstructor]
         public OutliningTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
+            ITextEditorFactoryService textEditorFactoryService,
+            IProjectionBufferFactoryService projectionBufferFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
+            _textEditorFactoryService = textEditorFactoryService;
+            _projectionBufferFactoryService = projectionBufferFactoryService;
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
         }
@@ -44,6 +52,8 @@ namespace FSharpVSPowerTools
                    new Outlining.OutliningTagger(                       
                        doc,
                        _serviceProvider,
+                       _textEditorFactoryService,
+                       _projectionBufferFactoryService,
                        _projectFactory,
                        _vsLanguageService));
             }
