@@ -233,10 +233,10 @@ module TypedAstPatterns =
     let (|MutableVar|_|) (symbol: FSharpSymbol) = 
         let isMutable = 
             match symbol with
-            | :? FSharpField as field -> field.IsMutable
+            | :? FSharpField as field -> field.IsMutable && not field.IsLiteral
             | :? FSharpMemberOrFunctionOrValue as func -> func.IsMutable
             | _ -> false
-        if isMutable then Some() else None   
+        if isMutable then Some() else None
 
     /// Entity (originalEntity, abbreviatedEntity, abbreviatedType)
     let (|Entity|_|) (symbol: FSharpSymbol) =

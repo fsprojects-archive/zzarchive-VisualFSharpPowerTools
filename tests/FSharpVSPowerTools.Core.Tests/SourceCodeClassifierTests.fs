@@ -1832,4 +1832,14 @@ let _ = System.DateTime.Now :> obj
 let _ = System.DateTime.Now :?> obj
 """
     => [ 2, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 30; Cat.ReferenceType, 31, 34 ] 
-         3, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 31; Cat.ReferenceType, 32, 35 ] ]
+         3, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 31; Cat.ReferenceType, 32, 35 ]]
+
+[<Test>]
+let ``enum cases should not be colorized``() =
+    """
+let _ = System.StringComparison.InvariantCultureIgnoreCase
+type InternalEnum = Case1 = 1
+let _ = InternalEnum.Case1
+"""
+    => [ 2, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 31 ]
+         4, [ Cat.Operator, 6, 7; Cat.ValueType, 8, 20 ]]
