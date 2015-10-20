@@ -388,7 +388,7 @@ let getLongIdentAt ast pos =
     | _ -> None
 
 /// Returns ranges of all quotations found in an untyped AST
-let getQuatationRanges ast =
+let getQuotationRanges ast =
     let quotationRanges = ResizeArray()
 
     let rec visitExpr = function

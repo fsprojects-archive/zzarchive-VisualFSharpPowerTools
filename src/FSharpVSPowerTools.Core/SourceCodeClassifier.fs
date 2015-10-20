@@ -71,7 +71,7 @@ module private QuotationCategorizer =
                                             EndCol = maxCol }
                                Snapshot = None }))
 
-    let getCategories ast lexer = UntypedAstUtils.getQuatationRanges ast |> categorize lexer
+    let getCategories ast lexer = UntypedAstUtils.getQuotationRanges ast |> categorize lexer
 
 module private StringCategorizers =
     open System.Text.RegularExpressions
