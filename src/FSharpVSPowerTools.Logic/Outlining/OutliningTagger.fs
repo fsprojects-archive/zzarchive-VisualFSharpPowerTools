@@ -10,6 +10,7 @@ open FSharpVSPowerTools.UntypedAstUtils.Outlining
 open Microsoft.VisualStudio.Shell.Interop
 open System.Threading
 open System.Text
+open Microsoft.FSharp.Compiler.Ast
 
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
@@ -25,6 +26,8 @@ type OutliningTagger
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
     let mutable scopedSnapSpans : ScopedSpan [] = [||]
+    let mutable oldAST = None : ParsedInput option
+
 
     let tagTrigger () =
         tagsChanged.Trigger (self, 
@@ -42,6 +45,17 @@ type OutliningTagger
         | None       -> None
 
 
+    // There are times when the compiler will return an empty parse tree due to an error in the source file
+    // when this happens if we use that empty tree outlining tags will not be created and any scopes that had
+    // been collapsed will explode back open causing an annoying buffer shift. To prevent this behavior we check
+    // for an empty ast via it's range and ignore it if the length is zero
+    let checkAST (oldtree:ParsedInput option) (newTree:ParsedInput) : bool =
+        if oldtree.IsNone then true 
+        // Check the parsed AST to see if it's empty via it's range
+        elif newTree.Range.StartColumn = newTree.Range.EndColumn  
+         &&  newTree.Range.StartLine = newTree.Range.EndLine then false else true
+
+
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate () =
         let uiContext = SynchronizationContext.Current
@@ -52,9 +66,13 @@ type OutliningTagger
             let! project = projectFactory.CreateForDocument buffer doc
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
             let! ast = parseFileResults.ParseTree
-            let ranges = (getOutliningRanges>>Seq.choose (fromSRange snapshot)>>Array.ofSeq) ast
-            do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
-            triggerUpdate ranges
+            //Logging.logInfo "|Outlining|\nAST Range\n%A" ast.Range
+            //Logging.logInfo "|Outlining|\nAST\n%A" ast
+            if checkAST oldAST ast then
+                oldAST <- Some ast
+                let ranges = (getOutliningRanges>>Seq.choose (fromSRange snapshot)>>Array.ofSeq) ast                
+                do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
+                triggerUpdate ranges
         } 
         |> Async.Ignore 
         |> Async.StartInThreadPoolSafe
