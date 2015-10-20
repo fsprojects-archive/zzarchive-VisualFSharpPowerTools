@@ -825,8 +825,10 @@ module Outlining =
                 | _ -> ()
                 yield! rcheck Scope.Below r 
                 yield! visitMatchClauses clauses
-            | SynExpr.App (_,_,_,e,_) ->
-                yield! visitExpr e
+            | SynExpr.App (_,isInfix,funcExpr,argExpr,_) ->
+                yield! visitExpr argExpr
+                //if isInfix then
+                yield! visitExpr funcExpr
             | SynExpr.Sequential (_,isTrueSeq,e1,e2,_) ->
                 yield! visitExpr e1
                 if isTrueSeq then
@@ -910,7 +912,14 @@ module Outlining =
                 yield! Seq.collect visitExpr es
             | SynExpr.Paren(e,_,_,_) ->
                 yield! visitExpr e
-            | SynExpr.Record (_,_,_,r) ->
+            | SynExpr.Record (recCtor,recCopy,recordFields,r) ->
+                if recCtor.IsSome then 
+                    let (_,ctorArgs,_,_,_) = recCtor.Value
+                    yield! visitExpr ctorArgs
+                if recCopy.IsSome then
+                    let (e,_) = recCopy.Value
+                    yield! visitExpr e
+                yield! recordFields |> (Seq.choose(fun(_,e,_)->e)>>Seq.collect visitExpr)
                 // exclude the opening `{` and closing `}` of the record from collapsing
                 yield! rcheck Scope.Same <| rangeMod r 1 1
             | _ -> ()
