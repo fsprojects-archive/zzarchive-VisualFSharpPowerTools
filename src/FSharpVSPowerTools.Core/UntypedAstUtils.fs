@@ -950,6 +950,7 @@ module Outlining =
         seq {
             match d with
             | SynMemberDefn.Member (binding,_) ->
+                yield! rcheck Scope.Below r
                 yield! visitBinding binding
             | SynMemberDefn.LetBindings (bindings,_,_,r) ->
                 yield! rcheck Scope.Below r
@@ -976,6 +977,7 @@ module Outlining =
             match objectModel with
             | SynTypeDefnRepr.ObjectModel (_,objMembers,_) -> 
                 yield! Seq.collect visitSynMemberDefn objMembers
+                yield! Seq.collect visitSynMemberDefn members
             | SynTypeDefnRepr.Simple _ -> 
                 yield! Seq.collect visitSynMemberDefn members
         }
