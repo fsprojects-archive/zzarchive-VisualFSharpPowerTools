@@ -159,7 +159,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
         else []
 
     let mergeRefs existing actual =
-        // remove refs which are not actual anymore (they have been removed from the project)
+        // remove refs which don't actual anymore (they have been removed from the project)
         let existing =
             existing |> List.filter (fun existingRef -> List.exists ((=) existingRef) actual)
         // get refs which don't exist in the existing file
@@ -174,32 +174,25 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
         new ProjectProvider(project, getProjectProvider, (fun _ -> ()), id)
 
     let generateReferenceFiles (project: Project) =
-        maybe {
-            let! project = Option.ofNull project
-            let! currentConfiguration = 
-                try Some (project.ConfigurationManager.ActiveConfiguration.ConfigurationName.ToLower())
-                with e -> 
-                    Logging.logError "[FsiReference] Cannot get current configuration name: %O" e
-                    None
-            let loadRefsFileName = sprintf "load-references-%s.fsx" currentConfiguration
+        Option.ofNull project
+        |> Option.iter (fun project ->
+            let loadRefsFileName = "load-references.fsx"
             use projectProvider = createProjectProvider project
             let actualRefs = generateRefs(project, projectProvider)
-
             let refs = 
                 let existingRefs = getExistingFileRefs project loadRefsFileName
                 mergeRefs existingRefs actualRefs
 
             addFileToActiveProject(project, loadRefsFileName, generateFileContent refs)
             let content = generateLoadScriptContent(project, projectProvider, loadRefsFileName)
-            addFileToActiveProject(project, sprintf "load-project-%s.fsx" currentConfiguration, content) }
-        |> ignore
+            addFileToActiveProject(project, "load-project.fsx", content))
 
     let generateFsiReferences() =
         getActiveProject()
         |> Option.iter (fun project ->
             // Generate script files
             if isFSharpProject project then
-                generateReferenceFiles project)
+                generateReferenceFiles project)        
 
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildDoneEventHandler (fun _ _ ->
             Logging.logInfo "Checking projects after build done..."

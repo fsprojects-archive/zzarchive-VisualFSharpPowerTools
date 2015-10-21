@@ -327,48 +327,39 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             if String.IsNullOrEmpty s then None else Some s)
 
     let navigateToSource (fsSymbol: FSharpSymbol) (url: string) = 
-        async {
-            use handler = new HttpClientHandler(UseDefaultCredentials = true)
-            use http = new HttpClient(handler)
-            let! response = http.GetAsync(url) |> Async.AwaitTask
-            if response.IsSuccessStatusCode then
-                fsSymbol.ImplementationLocation
-                |> Option.iter (fun r ->
-                    // NOTE: other source code hostings might have different url templates
-                    let m = Regex.Matches(url, "[0-9a-fA-F]{32}") |> Seq.cast<Match> |> Seq.tryHead
-                    let replaceBlob (m: Match option) url =
-                        match m with
-                        | Some m when m.Success ->
-                            replace m.Value (sprintf "blob/%s" m.Value) url
-                        | _ -> url
-                    let browserUrl =
-                        let formattedGithubUrl =  
-                            sprintf "%s#L%d" 
-                             (url 
-                             |> replace "raw.githubusercontent" "github" 
-                             |> replace "raw.github" "github"
-                             |> replaceBlob m)
-                             r.StartLine
+        fsSymbol.ImplementationLocation
+        |> Option.iter (fun r ->
+            // NOTE: other source code hostings might have different url templates
+            let m = Regex.Matches(url, "[0-9a-fA-F]{32}") |> Seq.cast<Match> |> Seq.tryHead
+            let replaceBlob (m: Match option) url =
+                match m with
+                | Some m when m.Success ->
+                    replace m.Value (sprintf "blob/%s" m.Value) url
+                | _ -> url
+            let browserUrl =
+                let formattedGithubUrl =  
+                    sprintf "%s#L%d" 
+                        (url 
+                        |> replace "raw.githubusercontent" "github" 
+                        |> replace "raw.github" "github"
+                        |> replaceBlob m)
+                        r.StartLine
 
-                        match url with
-                        | String.StartsWith "https://raw.githubusercontent.com" _-> formattedGithubUrl
-                        | String.StartsWith "https://raw.github.com" _-> formattedGithubUrl
-                        | String.StartsWith "https://github.com" _-> formattedGithubUrl
-                        | String.StartsWith "https://bitbucket.org" _-> 
-                            let fileName = Path.GetFileName r.FileName
-                            sprintf "%s?fileviewer=file-view-default#%s-%d" (url |> replace "/raw/" "/src/") fileName r.StartLine
-                        | String.Contains ".codebasehq.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
-                        | String.StartsWith "https://gitlab.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
-                        | other -> other
+                match url with
+                | String.StartsWith "https://raw.githubusercontent.com" _-> formattedGithubUrl
+                | String.StartsWith "https://raw.github.com" _-> formattedGithubUrl
+                | String.StartsWith "https://github.com" _-> formattedGithubUrl
+                | String.StartsWith "https://bitbucket.org" _-> 
+                    let fileName = Path.GetFileName r.FileName
+                    sprintf "%s?fileviewer=file-view-default#%s-%d" (url |> replace "/raw/" "/src/") fileName r.StartLine
+                | String.Contains ".codebasehq.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
+                | String.StartsWith "https://gitlab.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
+                | other -> other
 
-                    if fireNavigationEvent then
-                        currentUrl <- Some url
-                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                        
-                    Process.Start(browserUrl) |> ignore)
-            else
-                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                statusBar.SetText(sprintf "The url '%s' is invalid with error code %A." url response.StatusCode) |> ignore
-        }
+            if fireNavigationEvent then
+                currentUrl <- Some url
+                urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))
+            Process.Start(browserUrl) |> ignore)
 
     let tryFindSourceUrl (fsSymbol: FSharpSymbol) = 
         let changeExt ext path = Path.ChangeExtension(path, ext)
@@ -468,7 +459,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                         else
                             match tryFindSourceUrl symbol with
                             | Some url ->
-                                return! navigateToSource symbol url
+                                return navigateToSource symbol url
                             | None ->
                                 match pref with
                                 | NavigationPreference.SymbolSourceOrMetadata ->
