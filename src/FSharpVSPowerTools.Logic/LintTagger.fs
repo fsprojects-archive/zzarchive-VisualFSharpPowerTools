@@ -92,7 +92,7 @@ type LintTagger(textDocument: ITextDocument,
             async {
                 let spans = spans |> Option.getOrElse []
                 wordSpans <- spans
-                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                let span = buffer.CurrentSnapshot.FullSpan
                 do! Async.SwitchToContext uiContext
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs span)
             })

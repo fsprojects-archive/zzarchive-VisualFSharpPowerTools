@@ -25,16 +25,16 @@ type OutliningControl(createView: ITextBuffer -> IWpfTextView, createBuffer) as 
     inherit ContentControl()
    
     do self.IsVisibleChanged.Add (fun (e: DependencyPropertyChangedEventArgs) ->
-        let nowVisible = e.NewValue :?> bool
-        if nowVisible then
-            match self.Content with
-            | null ->
+        match e.NewValue, self.Content with
+        | (:? bool as nowVisible), null ->
+            if nowVisible then
                 let view = createView (createBuffer())
                 self.Content <- view.VisualElement
-            | _ -> ()
-        else
-            (self.Content :?> ITextView).Close()
-            self.Content <- null)
+        | (:? bool as nowVisible), (:? ITextView as content) ->
+            if not nowVisible then
+                content.Close()
+                self.Content <- null
+        | _ -> ())
         
     override __.ToString() =
         match self.Content with
