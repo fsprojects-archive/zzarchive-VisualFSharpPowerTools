@@ -442,30 +442,15 @@ let listFSharpProjectsInSolution (dte: DTE) =
     [ for p in dte.Solution.Projects do
         yield! handleProject p ]
 
-
-/// Linux linebreak `\n`
-let [<Literal>] linuxLineBreak = "\n"
-
-/// Windows linebreak `\r\n`
-let [<Literal>] windowsLineBreak = "\r\n"
-
-/// Mac linebreak `\r`
-let [<Literal>] macLineBreak = "\r"
-
-
-/// Splits a string into lines for all platform's linebreaks.
-/// If the string mixes windows, mac, and linux linebreaks, all will be respected
-let inline lineSplit (str:string) = str.Split([|windowsLineBreak;linuxLineBreak;macLineBreak|],StringSplitOptions.None)
-
 type String with
 
     /// Splits a string into lines for all platform's linebreaks.
     /// If the string mixes windows, mac, and linux linebreaks, all will be respected
-    static member toLineArray str = lineSplit str
+    static member toLineArray str = String.getLines str
 
     /// Splits a string into lines for all platform's linebreaks.
     /// If the string mixes windows, mac, and linux linebreaks, all will be respected
-    member self.ToLineArray () = lineSplit self
+    member self.ToLineArray () = String.getLines self
 
     /// Return substring starting at index, returns the same string if given a negative index
     /// if given an index > string.Length returns empty string

@@ -21,6 +21,8 @@ let [<Literal>] private MaxTooltipLines = 25
 
 type ScopedSpan = Scope * SnapshotSpan
 
+/// A colored outlining hint control similar to 
+/// https://github.com/dotnet/roslyn/blob/57aaa6c9d8bc1995edfc261b968777666172f1b8/src/EditorFeatures/Core/Implementation/Outlining/OutliningTaggerProvider.Tag.cs
 type OutliningControl(createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
     inherit ContentControl()
    
@@ -118,7 +120,7 @@ type OutliningTagger
             loop 0
 
         // To find the smallest indentation, an empty line can't serve as the seed
-        let lines = lineSplit text
+        let lines = String.getLines text
 
         let rec tryFindStartingLine idx  = 
             if idx >= lines.Length then None  // return None if all the lines are blank
@@ -146,7 +148,10 @@ type OutliningTagger
 
     let createElisionBufferNoIndent (suffixOpt: string option) (projectionBufferFactoryService: IProjectionBufferFactoryService) (hintSnapshotSpan: SnapshotSpan) =
         let exposedSpans = NormalizedSnapshotSpanCollection(hintSnapshotSpan)
-        let elisionBuffer = projectionBufferFactoryService.CreateElisionBuffer(null, exposedSpans, ElisionBufferOptions.None)
+        let elisionBuffer = projectionBufferFactoryService.CreateElisionBuffer(
+                                projectionEditResolver = null,
+                                exposedSpans = exposedSpans,
+                                options = ElisionBufferOptions.None)
         
         let snapshot = hintSnapshotSpan.Snapshot
         let indentationColumn = inferIndent (hintSnapshotSpan.GetText())
@@ -161,6 +166,7 @@ type OutliningTagger
             spansToElide.Add(Span.FromBounds(lineStart, lineStart + indentationColumn))
                 
         elisionBuffer.ElideSpans(NormalizedSpanCollection(spansToElide)) |> ignore
+
         match suffixOpt with
         | Some suffix ->
             let elisionSpan = elisionBuffer.CurrentSnapshot.FullSpan
@@ -173,7 +179,6 @@ type OutliningTagger
                 projectionEditResolver = null,
                 sourceSpans = sourceSpans,
                 options = ProjectionBufferOptions.None) :> ITextBuffer
-
         | None ->
             elisionBuffer :> ITextBuffer
 
