@@ -80,12 +80,16 @@ type SnapshotSpan with
         let colEnd = x.End.Position - endLine.Start.Position
         (lineStart, colStart, lineEnd, colEnd - 1)
 
+type ITextSnapshot with
+    member x.FullSpan =
+        SnapshotSpan(x, 0, x.Length)
+
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
         Option.ofNullable <| position.Point.GetPoint(x, position.Affinity)
     
     member x.TriggerTagsChanged (sender: obj) (event: Event<_,_>) =
-        let span = SnapshotSpan(x.CurrentSnapshot, 0, x.CurrentSnapshot.Length)
+        let span = x.CurrentSnapshot.FullSpan
         event.Trigger(sender, SnapshotSpanEventArgs(span))
 
 type ITextView with

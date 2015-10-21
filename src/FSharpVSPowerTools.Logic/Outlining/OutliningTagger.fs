@@ -45,7 +45,8 @@ type OutliningControl(createView: ITextBuffer -> IWpfTextView, createBuffer) as 
 
 let sizeToFit (view: IWpfTextView) =
     let isNormal d = (not (Double.IsNaN d)) && (not (Double.IsInfinity d))
-    view.VisualElement.Height <- view.LineHeight * float view.TextBuffer.CurrentSnapshot.LineCount
+    let suffixLineCount = 2
+    view.VisualElement.Height <- view.LineHeight * float (view.TextBuffer.CurrentSnapshot.LineCount + suffixLineCount)
 
     // In order to compute the width, we need "MaxTextRightCoordinate", but we won't have
     // that until a layout event occurs.  Fortunately, a layout event is going to occur because we set
@@ -72,9 +73,7 @@ type OutliningTagger
     let mutable scopedSnapSpans : ScopedSpan [] = [||]
 
     let tagTrigger () =
-        tagsChanged.Trigger (self, 
-            SnapshotSpanEventArgs (SnapshotSpan   
-                (buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length - 1)))
+        tagsChanged.Trigger (self, SnapshotSpanEventArgs buffer.CurrentSnapshot.FullSpan)
 
     /// triggerUpdate -=> tagsChanged
     let triggerUpdate newSnapshotSpans = scopedSnapSpans <- newSnapshotSpans; tagTrigger ()
@@ -145,9 +144,9 @@ type OutliningTagger
         sizeToFit view
         view
 
-    let createElisionBufferNoIndent (factoryService: IProjectionBufferFactoryService) (hintSnapshotSpan: SnapshotSpan) =
+    let createElisionBufferNoIndent (suffixOpt: string option) (projectionBufferFactoryService: IProjectionBufferFactoryService) (hintSnapshotSpan: SnapshotSpan) =
         let exposedSpans = NormalizedSnapshotSpanCollection(hintSnapshotSpan)
-        let elisionBuffer = factoryService.CreateElisionBuffer(null, exposedSpans, ElisionBufferOptions.None)
+        let elisionBuffer = projectionBufferFactoryService.CreateElisionBuffer(null, exposedSpans, ElisionBufferOptions.None)
         
         let snapshot = hintSnapshotSpan.Snapshot
         let indentationColumn = inferIndent (hintSnapshotSpan.GetText())
@@ -162,7 +161,21 @@ type OutliningTagger
             spansToElide.Add(Span.FromBounds(lineStart, lineStart + indentationColumn))
                 
         elisionBuffer.ElideSpans(NormalizedSpanCollection(spansToElide)) |> ignore
-        elisionBuffer
+        match suffixOpt with
+        | Some suffix ->
+            let elisionSpan = elisionBuffer.CurrentSnapshot.FullSpan
+            let sourceSpans: obj [] =
+                [|
+                    elisionSpan.Snapshot.CreateTrackingSpan(elisionSpan.Span, SpanTrackingMode.EdgeExclusive);
+                    suffix
+                |]
+            projectionBufferFactoryService.CreateProjectionBuffer(
+                projectionEditResolver = null,
+                sourceSpans = sourceSpans,
+                options = ProjectionBufferOptions.None) :> ITextBuffer
+
+        | None ->
+            elisionBuffer :> ITextBuffer
 
     // drills down into the snapshot text to find the first non whitespace line 
     // to display as the text inside the collapse box preceding the `...`
@@ -201,7 +214,12 @@ type OutliningTagger
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
                             OutliningControl((createElisionBufferView textEditorFactoryService), 
-                                             (fun _ -> createElisionBufferNoIndent projectionBufferFactoryService hintSnapshotSpan)) :> _
+                                             (fun _ -> 
+                                                let suffixOpt =
+                                                    match missingLinesCount with
+                                                    | 0 -> None
+                                                    | n -> Some (sprintf "\n\n +%d lines..." n)
+                                                createElisionBufferNoIndent suffixOpt projectionBufferFactoryService hintSnapshotSpan)) :> _
                     }) :> ITagSpan<_>
         with 
         | :? ArgumentOutOfRangeException ->
