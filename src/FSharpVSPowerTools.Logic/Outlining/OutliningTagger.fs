@@ -223,7 +223,7 @@ type OutliningTagger
     // outlined regions that should be collapsed by default will make use of 
     // the scope argument currently hidden by the wildcard `(scope,collapse,snapshotSpan)`
     // probably easiest to use a helper function and put it in `member __.IsDefaultCollapsed = isCollapsed scope`
-    let createTagSpan ((_,collapse,snapshotSpan): ScopedSpan) =
+    let createTagSpan ((scope,collapse,snapshotSpan): ScopedSpan) =
         try
             let snapshot = snapshotSpan.Snapshot in let firstLine = snapshot.GetLineFromPosition (snapshotSpan.Start.Position)
             let mutable lastLine = snapshot.GetLineFromPosition (snapshotSpan.End.Position)
@@ -240,14 +240,22 @@ type OutliningTagger
                 let textHint = (getHintText snapshotSpan) + "..."
                 let arrowText, arrowSpan =
                     let idx = firstLine.GetText().IndexOf "->"
-                    if idx = -1 then
-                        (textHint, belowSpan)
-                    else
+                    match idx, scope with
+                    // if we're examining a clause without an arrow on the same line (e.g. a series `Or`s)
+                    // the spans need to be adjusted to the position of the guard `|`
+                    | -1, Scope.MatchClause ->
+                        let bar = firstLine.GetText().IndexOf "|"
+                        let barSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + bar ), snapshotSpan.End)
+                        ((getHintText barSpan) + "...", barSpan)
+                    // This covers lambdas (eventually foreach loops in lists and seqs)
+                    | -1, _ -> (textHint, belowSpan)
+                    | _ -> 
                         let arrowSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + 2), snapshotSpan.End)
-                        ( getHintText arrowSpan, arrowSpan)
+                        ((getHintText arrowSpan) + "...", arrowSpan)
                 match collapse with
                 | Collapse.Same -> (textHint, snapshotSpan)
-                | Collapse.Arrow -> (arrowText, arrowSpan)
+                | Collapse.ArrowSame -> (arrowText, arrowSpan)
+                | Collapse.ArrowBelow -> (arrowText, snapshotSpan)
                 | _ (* Scope.Below *) -> ("...", belowSpan)
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
