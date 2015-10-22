@@ -169,7 +169,7 @@ type LanguageService (?fileSystem: IFileSystem) =
   // Create an instance of interactive checker.
   let checkerInstance = 
     FSharpChecker.Create(
-        projectCacheSize = 10, 
+        projectCacheSize = 50, 
         keepAllBackgroundResolutions = false,
         keepAssemblyContents = false)
 
