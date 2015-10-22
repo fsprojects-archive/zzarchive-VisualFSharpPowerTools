@@ -894,7 +894,9 @@ module Outlining =
                 yield! rcheck  Scope.ArrayOrList Collapse.Same <| rangeMod r (if isArray then 2 else 1) (if isArray then 2 else 1)
                 yield! visitExpr e
             | SynExpr.CompExpr (arrayOrList,_,e,r) ->
-                if arrayOrList then ()
+//                if arrayOrList then ()
+                if arrayOrList then 
+                    yield! visitExpr e
                 else  // exclude the opening { and closing } on the cexpr from collapsing
                     yield! rcheck Scope.CompExpr Collapse.Same <| rangeMod r 1 1
                 yield! visitExpr e
@@ -985,6 +987,24 @@ module Outlining =
                 yield! recordFields |> (Seq.choose(fun(_,e,_)->e)>>Seq.collect visitExpr)
                 // exclude the opening `{` and closing `}` of the record from collapsing
                 yield! rcheck Scope.Record Collapse.Same <| rangeMod r 1 1
+            | SynExpr.Upcast (e,_,_)  ->
+                yield! visitExpr e
+            | SynExpr.Downcast (e,_,_)  ->
+                yield! visitExpr e
+            | SynExpr.AddressOf(_,e,_,_) ->
+                yield! visitExpr e
+            | SynExpr.InferredDowncast(e,_) ->
+                yield! visitExpr e
+            | SynExpr.InferredUpcast(e,_) ->
+                yield! visitExpr e
+            | SynExpr.DotGet(e,_,_,_) ->
+                yield! visitExpr e
+            | SynExpr.DotSet(e,_,_,_) ->
+                yield! visitExpr e
+            | SynExpr.DotIndexedGet(e,_,_,_) ->
+                yield! visitExpr e
+            | SynExpr.DotIndexedSet(e,_,_,_,_,_) ->
+                yield! visitExpr e
             | _ -> ()
         }
 

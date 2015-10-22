@@ -204,7 +204,7 @@ type OutliningTagger
     // to display as the text inside the collapse box preceding the `...`
     let getHintText (snapshotSpan:SnapshotSpan) =
         let snapshot= snapshotSpan.Snapshot
-        let firstLineNum = snapshot.GetLineNumberFromPosition(snapshotSpan.Start.Position)
+        let firstLineNum = snapshot.GetLineNumberFromPosition(snapshotSpan.Start.Position) 
         let rec loop acc =
             if acc >= snapshot.LineCount + firstLineNum then "" else
             let text =  if acc = firstLineNum then
@@ -274,10 +274,6 @@ type OutliningTagger
             |> Seq.map createTagSpan
         | true , _
         | _    , true -> Seq.empty
-
-
-    // Construct tags on creation
-    do  tagTrigger()
 
 
     interface ITagger<IOutliningRegionTag> with
