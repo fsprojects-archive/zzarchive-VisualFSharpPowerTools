@@ -28,7 +28,7 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
         protect <| fun _ ->
             if not textView.IsClosed then
                 let buffer = textView.TextBuffer
-                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                let span = buffer.CurrentSnapshot.FullSpan
                 
                 let data =
                     tagAggregator.GetTags(span)
