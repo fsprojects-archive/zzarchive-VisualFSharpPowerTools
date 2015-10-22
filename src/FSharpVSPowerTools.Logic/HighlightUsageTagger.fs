@@ -39,7 +39,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
                 currentWord <- newWord
-                let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                let span = buffer.CurrentSnapshot.FullSpan
                 tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
 
     let symbolUsesToSpans (word: SnapshotSpan) fileName (lastIdent: string) (symbolUses: FSharpSymbolUse []) =

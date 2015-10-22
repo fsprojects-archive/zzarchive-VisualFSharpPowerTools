@@ -39,7 +39,7 @@ type LintQuickInfoSource(buffer: ITextBuffer, viewTagAggregatorFactoryService: I
                 match session.GetTriggerPoint buffer.CurrentSnapshot |> Option.ofNullable with
                 | None -> ()
                 | Some point ->
-                    let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+                    let span = buffer.CurrentSnapshot.FullSpan
                     let res =
                         let tags = getTagAggregator(session.TextView).GetTags(span)
                         tags

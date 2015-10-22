@@ -37,7 +37,7 @@ type HighlightUsageFilter(textView: IWpfTextView,
         textView.TextBuffer.GetSnapshotPoint textView.Caret.Position
         |> Option.iter (fun caretPos ->
             let buffer = textView.TextBuffer
-            let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
+            let span = buffer.CurrentSnapshot.FullSpan
             let comparePosition (span: SnapshotSpan) =
                 if span.Start.Position > caretPos.Position then
                     1
