@@ -15,7 +15,7 @@ open Microsoft.FSharp.Compiler.Ast
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
 
-type ScopedSpan = Scope * SnapshotSpan
+type ScopedSpan = Collapse * SnapshotSpan
 
 type OutliningTagger
     (textDocument: ITextDocument,
@@ -38,10 +38,10 @@ type OutliningTagger
     let triggerUpdate newSnapshotSpans = scopedSnapSpans <- newSnapshotSpans; tagTrigger ()
 
     /// convert the FSharp compiler range in SRanges into a snapshotspan and tuple it with its Scope tag
-    let fromSRange (snapshot: ITextSnapshot) (sr: srange) : ScopedSpan option = 
+    let fromSRange (snapshot: ITextSnapshot) (sr: scopeRange) : ScopedSpan option = 
         let r = sr.Range
         match VSUtils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
-        | Some sshot -> Some (sr.Scope,sshot)
+        | Some sshot -> Some (sr.Collapse,sshot)
         | None       -> None
 
 
@@ -67,7 +67,7 @@ type OutliningTagger
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
             let! ast = parseFileResults.ParseTree
             //Logging.logInfo "|Outlining|\nAST Range\n%A" ast.Range
-            //Logging.logInfo "|Outlining|\nAST\n%A" ast
+            Logging.logInfo "|Outlining|\nAST\n%A" ast
             if checkAST oldAST ast then
                 oldAST <- Some ast
                 let ranges = (getOutliningRanges>>Seq.choose (fromSRange snapshot)>>Array.ofSeq) ast                
@@ -136,10 +136,20 @@ type OutliningTagger
             let missingLinesCount = max (nHintLines - MaxTooltipLines) 0
 
             let hintSnapshotSpan = SnapshotSpan (firstLine.Start, lastLine.End)
+            let belowSpan = SnapshotSpan (firstLine.End, snapshotSpan.End)
             let collapseText, collapseSpan = 
+                let textHint = (getHintText snapshotSpan) + "..."
+                let arrowText, arrowSpan = 
+                    let idx = firstLine.GetText().IndexOf "->"
+                    if idx = -1 then 
+                        (textHint, belowSpan)
+                    else 
+                        let arrowSpan = SnapshotSpan (SnapshotPoint(snapshot, firstLine.Start.Position + idx + 2), snapshotSpan.End )
+                        ( getHintText arrowSpan, arrowSpan)
                 match scope with
-                | Scope.Same -> ((getHintText snapshotSpan) + "...", snapshotSpan)
-                | _ (* Scope.Below *) -> ("...", SnapshotSpan (firstLine.End, snapshotSpan.End))
+                | Collapse.Same -> (textHint, snapshotSpan)
+                | Collapse.``->`` -> (arrowText, arrowSpan )
+                | _ (* Scope.Below *) -> ("...", belowSpan )
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
@@ -180,6 +190,7 @@ type OutliningTagger
     interface ITagger<IOutliningRegionTag> with
         member __.GetTags spans = 
             protectOrDefault (fun _ -> getTags spans) Seq.empty
+
 
         [<CLIEvent>]
         member __.TagsChanged = tagsChanged.Publish
