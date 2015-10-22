@@ -24,27 +24,27 @@ type ScopedSpan = Scope * Collapse * SnapshotSpan
 
 /// A colored outlining hint control similar to
 /// https://github.com/dotnet/roslyn/blob/57aaa6c9d8bc1995edfc261b968777666172f1b8/src/EditorFeatures/Core/Implementation/Outlining/OutliningTaggerProvider.Tag.cs
-type OutliningControl(createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
-    inherit ContentControl()
+type OutliningControl (createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
+    inherit ContentControl ()
 
     do self.IsVisibleChanged.Add (fun (e: DependencyPropertyChangedEventArgs) ->
         match e.NewValue, self.Content with
         | (:? bool as nowVisible), null ->
             if nowVisible then
-                let view = createView (createBuffer())
+                let view = createView (createBuffer ())
                 self.Content <- view.VisualElement
         | (:? bool as nowVisible), (:? ITextView as content) ->
             if not nowVisible then
-                content.Close()
+                content.Close ()
                 self.Content <- null
         | _ -> ())
 
-    override __.ToString() =
+    override __.ToString () =
         match self.Content with
         | null ->
-            createBuffer().CurrentSnapshot.GetText()
+            createBuffer().CurrentSnapshot.GetText ()
         | content ->
-            (content :?> ITextView).TextBuffer.CurrentSnapshot.GetText()
+            (content :?> ITextView).TextBuffer.CurrentSnapshot.GetText ()
 
 let sizeToFit (view: IWpfTextView) =
     let isNormal d = (not (Double.IsNaN d)) && (not (Double.IsInfinity d))
@@ -55,7 +55,7 @@ let sizeToFit (view: IWpfTextView) =
     // that until a layout event occurs.  Fortunately, a layout event is going to occur because we set
     // 'Height' above.
     view.LayoutChanged.Add  (fun _ ->
-        view.VisualElement.Dispatcher.BeginInvoke(Action(fun () ->
+        view.VisualElement.Dispatcher.BeginInvoke (Action (fun () ->
             let newWidth = view.MaxTextRightCoordinate
             let currentWidth = view.VisualElement.Width
             if isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth then ()
@@ -108,7 +108,7 @@ type OutliningTagger
     let doUpdate () =
         let uiContext = SynchronizationContext.Current
         asyncMaybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
             let snapshot = buffer.CurrentSnapshot in let source = snapshot.GetText ()
             let! doc = dte.GetCurrentDocument (textDocument.FilePath)
             let! project = projectFactory.CreateForDocument buffer doc
@@ -161,8 +161,8 @@ type OutliningTagger
 
 
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
-        let roles = textEditorFactoryService.CreateTextViewRoleSet("")
-        let view = textEditorFactoryService.CreateTextView(finalBuffer, roles, Background = Brushes.Transparent)
+        let roles = textEditorFactoryService.CreateTextViewRoleSet ("")
+        let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
         view.ZoomLevel <- 0.75 * view.ZoomLevel
         sizeToFit view
         view
@@ -176,8 +176,8 @@ type OutliningTagger
                                 options = ElisionBufferOptions.None)
 
         let snapshot = hintSnapshotSpan.Snapshot
-        let indentationColumn = inferIndent (hintSnapshotSpan.GetText())
-        let spansToElide = ResizeArray<Span>()
+        let indentationColumn = inferIndent (hintSnapshotSpan.GetText ())
+        let spansToElide = ResizeArray<Span> ()
 
         let startLineNumber = snapshot.GetLineNumberFromPosition (hintSnapshotSpan.Span.Start)
         let endLineNumber = snapshot.GetLineNumberFromPosition (hintSnapshotSpan.Span.End)
@@ -271,8 +271,10 @@ type OutliningTagger
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
     let getTags (normalizedSnapshotSpans: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
-        match Seq.isEmpty normalizedSnapshotSpans, Array.isEmpty scopedSnapSpans with
-        | false, false ->
+        let (|EmptySeq|) xs = if Seq.isEmpty xs then EmptySeq else ()
+        match normalizedSnapshotSpans, scopedSnapSpans with
+        | EmptySeq, [||] -> Seq.empty
+        | _ ->
             let newSnapshot = (Seq.head normalizedSnapshotSpans).Snapshot
             let _,_,span = scopedSnapSpans.[0]
             if newSnapshot.Version <> span.Snapshot.Version then
@@ -283,19 +285,17 @@ type OutliningTagger
             |> Seq.filter (fun (_, _, snapSpan) -> normalizedSnapshotSpans.IntersectsWith snapSpan)
             // insert a filter here using scope to remove the regions that should not be outlined at all
             |> Seq.map createTagSpan
-        | true , _
-        | _    , true -> Seq.empty
 
 
     interface ITagger<IOutliningRegionTag> with
         member __.GetTags spans =
             protectOrDefault (fun _ -> getTags spans) Seq.empty
 
-
         [<CLIEvent>]
         member __.TagsChanged = tagsChanged.Publish
 
+
     interface IDisposable with
-        member __.Dispose() =
-            scopedSnapSpans <- [||]
+        member __.Dispose () =
             docEventListener.Dispose ()
+            scopedSnapSpans <- [||]

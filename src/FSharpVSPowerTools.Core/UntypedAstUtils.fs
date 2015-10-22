@@ -365,7 +365,7 @@ let getQuotationRanges ast =
         | SynExpr.LongIdentSet (_, expr, _)
         | SynExpr.Typed (expr, _, _)
         | SynExpr.Paren (expr, _, _, _)
-        | SynExpr.New(_, _, expr, _)
+        | SynExpr.New (_, _, expr, _)
         | SynExpr.ArrayOrListOfSeqExpr (_, expr, _)
         | SynExpr.CompExpr (_, _, expr, _)
         | SynExpr.ForEach (_, _, _, _, _, expr(*body*), _)
@@ -483,8 +483,8 @@ let internal getStringLiterals ast : Range.range list =
         | SynExpr.Lambda (_, _, _, expr, _) 
         | SynExpr.YieldOrReturn (_, expr, _) 
         | SynExpr.YieldOrReturnFrom (_, expr, _) 
-        | SynExpr.New(_, _, expr, _) 
-        | SynExpr.Assert(expr, _) 
+        | SynExpr.New (_, _, expr, _) 
+        | SynExpr.Assert (expr, _) 
         | SynExpr.Do (expr, _) 
         | SynExpr.Typed (expr, _, _) 
         | SynExpr.Paren (expr, _, _, _) 
@@ -497,14 +497,14 @@ let internal getStringLiterals ast : Range.range list =
         | SynExpr.InferredUpcast(expr, _)
         | SynExpr.InferredDowncast(expr, _)
         | SynExpr.LongIdentSet (_, expr, _) 
-        | SynExpr.DotGet(expr, _, _, _) 
+        | SynExpr.DotGet (expr, _, _, _) 
         | SynExpr.ForEach (_, _, _, _, _,expr(*body*), _) -> visitExpr expr
         | SynExpr.App (_,_, expr1(*funcExpr*), expr2(*argExpr*), _) 
-        | SynExpr.TryFinally(expr1, expr2, _, _, _) 
-        | SynExpr.NamedIndexedPropertySet(_, expr1, expr2, _) 
-        | SynExpr.DotNamedIndexedPropertySet(_, _, expr1, expr2, _) 
+        | SynExpr.TryFinally (expr1, expr2, _, _, _) 
+        | SynExpr.NamedIndexedPropertySet (_, expr1, expr2, _) 
+        | SynExpr.DotNamedIndexedPropertySet (_, _, expr1, expr2, _) 
         | SynExpr.LetOrUseBang (_, _, _, _,expr1(*rhsExpr*), expr2(*body*), _)
-        | SynExpr.While(_, expr1, expr2, _) -> 
+        | SynExpr.While (_, expr1, expr2, _) -> 
             visitExpr expr1; visitExpr expr2
         | Sequentials exprs
         | SynExpr.Tuple (exprs, _, _) 
@@ -815,11 +815,11 @@ module Outlining =
             | SynExpr.DoBang (e,r)
             | SynExpr.LetOrUseBang (_,_,_,_,_,e,r)
             | SynExpr.YieldOrReturnFrom (_,e,r) ->
-                yield! rcheck Scope.CompExprInternal Collapse.Below  r 
+                yield! rcheck Scope.CompExprInternal Collapse.Below r 
                 yield! visitExpr e
             | SynExpr.For (_,_,_,_,_,e,r)
             | SynExpr.ForEach (_,_,_,_,_,e,r) ->
-                yield! rcheck Scope.For Collapse.Below  r
+                yield! rcheck Scope.For Collapse.Below r
                 yield! visitExpr e
             | SynExpr.LetOrUse (_,_,bindings, body,_) ->
                 yield! visitBindings bindings
