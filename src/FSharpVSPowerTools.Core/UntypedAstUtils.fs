@@ -60,29 +60,21 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         walkTypar typar
             
     and walkTypeConstraint = function
-        | SynTypeConstraint.WhereTyparDefaultsToType (t1, t2, _) -> 
-            walkTypar t1
-            walkType t2
-        | SynTypeConstraint.WhereTyparIsValueType(t, _) -> walkTypar t
-        | SynTypeConstraint.WhereTyparIsReferenceType(t, _) -> walkTypar t
-        | SynTypeConstraint.WhereTyparIsUnmanaged(t, _) -> walkTypar t
-        | SynTypeConstraint.WhereTyparSupportsNull (t, _) -> walkTypar t
-        | SynTypeConstraint.WhereTyparIsComparable(t, _) -> walkTypar t
+        | SynTypeConstraint.WhereTyparIsValueType(t, _)
+        | SynTypeConstraint.WhereTyparIsReferenceType(t, _)
+        | SynTypeConstraint.WhereTyparIsUnmanaged(t, _)
+        | SynTypeConstraint.WhereTyparSupportsNull (t, _)
+        | SynTypeConstraint.WhereTyparIsComparable(t, _)
         | SynTypeConstraint.WhereTyparIsEquatable(t, _) -> walkTypar t
-        | SynTypeConstraint.WhereTyparSubtypeOfType(t, ty, _) -> 
-            walkTypar t
-            walkType ty
-        | SynTypeConstraint.WhereTyparSupportsMember(ts, sign, _) -> 
-            List.iter walkTypar ts 
-            walkMemberSig sign
-        | SynTypeConstraint.WhereTyparIsEnum(t, ts, _) -> 
-            walkTypar t
-            List.iter walkType ts
-        | SynTypeConstraint.WhereTyparIsDelegate(t, ts, _) -> 
-            walkTypar t
-            List.iter walkType ts
+        | SynTypeConstraint.WhereTyparDefaultsToType (t, ty, _)
+        | SynTypeConstraint.WhereTyparSubtypeOfType(t, ty, _) -> walkTypar t; walkType ty
+        | SynTypeConstraint.WhereTyparIsEnum(t, ts, _)
+        | SynTypeConstraint.WhereTyparIsDelegate(t, ts, _) -> walkTypar t; List.iter walkType ts
+        | SynTypeConstraint.WhereTyparSupportsMember(ts, sign, _) -> List.iter walkTypar ts; walkMemberSig sign
 
     and walkPat = function
+        | SynPat.Tuple(pats, _)
+        | SynPat.ArrayOrList(_, pats, _)
         | SynPat.Ands (pats, _) -> List.iter walkPat pats
         | SynPat.Named (pat, ident, _, _, _) -> 
             walkPat pat
@@ -101,9 +93,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
                  List.iter walkTyparDecl typars
                  List.iter walkTypeConstraint constraints)
             List.iter walkPat pats
-        | SynPat.Tuple(pats, _) -> List.iter walkPat pats
         | SynPat.Paren(pat, _) -> walkPat pat
-        | SynPat.ArrayOrList(_, pats, _) -> List.iter walkPat pats
         | SynPat.IsInst(t, _) -> walkType t
         | SynPat.QuoteExpr(e, _) -> walkExpr e
         | _ -> ()
@@ -123,24 +113,17 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynIndexerArg.Two (e1, e2) -> List.iter walkExpr [e1; e2]
 
     and walkType = function
+        | SynType.Array(_, t, _)
+        | SynType.HashConstraint(t, _)
+        | SynType.MeasurePower(t, _, _) -> walkType t
+        | SynType.Fun(t1, t2, _)
+        | SynType.MeasureDivide(t1, t2, _) -> walkType t1; walkType t2
         | SynType.LongIdent ident -> addLongIdentWithDots ident
-        | SynType.App(ty, _, types, _, _, _, _) -> 
-            walkType ty
-            List.iter walkType types
+        | SynType.App(ty, _, types, _, _, _, _) -> walkType ty; List.iter walkType types
         | SynType.LongIdentApp(_, _, _, types, _, _, _) -> List.iter walkType types
         | SynType.Tuple(ts, _) -> ts |> List.iter (fun (_, t) -> walkType t)
-        | SynType.Array(_, t, _) -> walkType t
-        | SynType.Fun(t1, t2, _) -> 
-            walkType t1
-            walkType t2
         | SynType.WithGlobalConstraints(t, typeConstraints, _) -> 
-            walkType t
-            List.iter walkTypeConstraint typeConstraints
-        | SynType.HashConstraint(t, _) -> walkType t
-        | SynType.MeasureDivide(t1, t2, _) -> 
-            walkType t1
-            walkType t2
-        | SynType.MeasurePower(t, _, _) -> walkType t
+            walkType t; List.iter walkTypeConstraint typeConstraints
         | _ -> ()
 
     and walkClause (Clause(pat, e1, e2, _, _)) =
@@ -149,20 +132,37 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         e1 |> Option.iter walkExpr
 
     and walkExpr = function
+        | SynExpr.Paren (e, _, _, _)
+        | SynExpr.Quote(_, _, e, _, _)
+        | SynExpr.Typed(e, _, _)
+        | SynExpr.InferredUpcast(e, _)
+        | SynExpr.InferredDowncast(e, _) 
+        | SynExpr.AddressOf(_, e, _, _)
+        | SynExpr.DoBang(e, _)
+        | SynExpr.YieldOrReturn(_, e, _)
+        | SynExpr.ArrayOrListOfSeqExpr(_, e, _)
+        | SynExpr.CompExpr(_, _, e, _)
+        | SynExpr.Lambda(_, _, _, e, _)
+        | SynExpr.Do(e, _)
+        | SynExpr.Assert(e, _)
+        | SynExpr.Lazy(e, _)
+        | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
         | SynExpr.LongIdent (_, ident, _, _) -> addLongIdentWithDots ident
-        | SynExpr.Ident ident -> addIdent ident
-        | SynExpr.Paren (e, _, _, _) -> walkExpr e
-        | SynExpr.Quote(_, _, e, _, _) -> walkExpr e
-        | SynExpr.Typed(e, _, _) -> walkExpr e
-        | SynExpr.Tuple(es, _, _) -> List.iter walkExpr es
+        | SynExpr.New(_, t, e, _)
+        | SynExpr.TypeTest(e, t, _)
+        | SynExpr.Upcast(e, t, _) 
+        | SynExpr.Downcast(e, t, _) -> walkExpr e; walkType t
+        | SynExpr.Tuple(es, _, _)
+        | Sequentials es
         | SynExpr.ArrayOrList(_, es, _) -> List.iter walkExpr es
+        | SynExpr.App(_, _, e1, e2, _)
+        | SynExpr.TryFinally(e1, e2, _, _, _)
+        | SynExpr.While(_, e1, e2, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.Record(_, _, fields, _) -> 
             fields |> List.iter (fun ((ident, _), e, _) -> 
                         addLongIdentWithDots ident
                         e |> Option.iter walkExpr)
-        | SynExpr.New(_, t, e, _) -> 
-            walkExpr e
-            walkType t
+        | SynExpr.Ident ident -> addIdent ident
         | SynExpr.ObjExpr(ty, argOpt, bindings, ifaces, _, _) -> 
             argOpt |> Option.iter (fun (e, ident) -> 
                 walkExpr e
@@ -170,44 +170,29 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
             walkType ty
             List.iter walkBinding bindings
             List.iter walkInterfaceImpl ifaces
-        | SynExpr.While(_, e1, e2, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.For(_, ident, e1, _, e2, e3, _) -> 
             addIdent ident
             List.iter walkExpr [e1; e2; e3]
         | SynExpr.ForEach(_, _, _, pat, e1, e2, _) -> 
             walkPat pat
             List.iter walkExpr [e1; e2]
-        | SynExpr.ArrayOrListOfSeqExpr(_, e, _) -> walkExpr e
-        | SynExpr.CompExpr(_, _, e, _) -> walkExpr e
-        | SynExpr.Lambda(_, _, _, e, _) -> walkExpr e
         | SynExpr.MatchLambda(_, _, synMatchClauseList, _, _) -> 
             List.iter walkClause synMatchClauseList
         | SynExpr.Match(_, e, synMatchClauseList, _, _) -> 
             walkExpr e 
             List.iter walkClause synMatchClauseList
-        | SynExpr.Do(e, _) -> walkExpr e
-        | SynExpr.Assert(e, _) -> walkExpr e
-        | SynExpr.App(_, _, e1, e2, _) -> List.iter walkExpr [e1; e2]
         | SynExpr.TypeApp(e, _, tys, _, _, _, _) -> 
-            walkExpr e 
-            List.iter walkType tys
+            List.iter walkType tys; walkExpr e
         | SynExpr.LetOrUse(_, _, bindings, e, _) -> 
-            List.iter walkBinding bindings 
-            walkExpr e
+            List.iter walkBinding bindings; walkExpr e
         | SynExpr.TryWith(e, _, clauses, _, _, _, _) -> 
-            List.iter walkClause clauses
-            walkExpr e
-        | SynExpr.TryFinally(e1, e2, _, _, _) -> List.iter walkExpr [e1; e2]
-        | SynExpr.Lazy(e, _) -> walkExpr e
-        | Sequentials es -> List.iter walkExpr es
+            List.iter walkClause clauses;  walkExpr e
         | SynExpr.IfThenElse(e1, e2, e3, _, _, _, _) -> 
             List.iter walkExpr [e1; e2]
             e3 |> Option.iter walkExpr
-        | SynExpr.LongIdentSet(ident, e, _) -> 
+        | SynExpr.LongIdentSet(ident, e, _)
+        | SynExpr.DotGet(e, _, ident, _) -> 
             addLongIdentWithDots ident
-            walkExpr e
-        | SynExpr.DotGet(e, _, idents, _) -> 
-            addLongIdentWithDots idents
             walkExpr e
         | SynExpr.DotSet(e1, idents, e2, _) -> 
             walkExpr e1
@@ -226,25 +211,10 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.DotNamedIndexedPropertySet(e1, ident, e2, e3, _) -> 
             addLongIdentWithDots ident
             List.iter walkExpr [e1; e2; e3]
-        | SynExpr.TypeTest(e, t, _) -> 
-            walkExpr e
-            walkType t
-        | SynExpr.Upcast(e, t, _) -> 
-            walkExpr e
-            walkType t
-        | SynExpr.Downcast(e, t, _) -> 
-            walkExpr e
-            walkType t
-        | SynExpr.InferredUpcast(e, _) -> walkExpr e
-        | SynExpr.InferredDowncast(e, _) -> walkExpr e
-        | SynExpr.AddressOf(_, e, _, _) -> walkExpr e
         | SynExpr.JoinIn(e1, _, e2, _) -> List.iter walkExpr [e1; e2]
-        | SynExpr.YieldOrReturn(_, e, _) -> walkExpr e
-        | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr e
         | SynExpr.LetOrUseBang(_, _, _, pat, e1, e2, _) -> 
             walkPat pat
             List.iter walkExpr [e1; e2]
-        | SynExpr.DoBang(e, _) -> walkExpr e
         | SynExpr.TraitCall (ts, sign, e, _) ->
             List.iter walkTypar ts 
             walkMemberSig sign
@@ -392,68 +362,54 @@ let getQuotationRanges ast =
     let quotationRanges = ResizeArray()
 
     let rec visitExpr = function
-        | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
-            visitExpr cond
-            visitExpr trueBranch
-            falseBranchOpt |> Option.iter visitExpr 
-        | SynExpr.LetOrUse (_, _, bindings, body, _) -> 
-            visitBindindgs bindings
-            visitExpr body
-        | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
-            visitExpr rhsExpr
-            visitExpr body
-        | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) -> quotationRanges.Add range
-        | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
-            visitExpr argExpr
-            visitExpr funcExpr
-        | SynExpr.Lambda (_, _, _, expr, _) -> visitExpr expr
-        | SynExpr.Record (_, _, fields, _) ->
-            fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpr
-        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) -> visitExpr expr
-        | SynExpr.CompExpr (_, _, expr, _) -> visitExpr expr
-        | SynExpr.ForEach (_, _, _, _, _, body, _) -> visitExpr body
-        | SynExpr.YieldOrReturn (_, expr, _) -> visitExpr expr
-        | SynExpr.YieldOrReturnFrom (_, expr, _) -> visitExpr expr
-        | SynExpr.Do (expr, _) -> visitExpr expr
-        | SynExpr.DoBang (expr, _) -> visitExpr expr
-        | SynExpr.Downcast (expr, _, _) -> visitExpr expr
-        | SynExpr.For (_, _, _, _, _, expr, _) -> visitExpr expr
-        | SynExpr.Lazy (expr, _) -> visitExpr expr
-        | SynExpr.Match (_, expr, clauses, _, _) -> 
+        | SynExpr.LongIdentSet (_, expr, _)
+        | SynExpr.Typed (expr, _, _)
+        | SynExpr.Paren (expr, _, _, _)
+        | SynExpr.New(_, _, expr, _)
+        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _)
+        | SynExpr.CompExpr (_, _, expr, _)
+        | SynExpr.ForEach (_, _, _, _, _, expr(*body*), _)
+        | SynExpr.YieldOrReturn (_, expr, _)
+        | SynExpr.YieldOrReturnFrom (_, expr, _)
+        | SynExpr.Do (expr, _)
+        | SynExpr.DoBang (expr, _)
+        | SynExpr.Downcast (expr, _, _)
+        | SynExpr.For (_, _, _, _, _, expr, _)
+        | SynExpr.Lazy (expr, _)
+        | SynExpr.Assert(expr, _) 
+        | SynExpr.TypeApp(expr, _, _, _, _, _, _) 
+        | SynExpr.DotSet(_, _, expr, _) 
+        | SynExpr.DotIndexedSet(_, _, expr, _, _, _) 
+        | SynExpr.NamedIndexedPropertySet(_, _, expr, _) 
+        | SynExpr.DotNamedIndexedPropertySet(_, _, _, expr, _) 
+        | SynExpr.TypeTest(expr, _, _) 
+        | SynExpr.Upcast(expr, _, _) 
+        | SynExpr.InferredUpcast(expr, _) 
+        | SynExpr.InferredDowncast(expr, _) 
+        | SynExpr.Lambda (_, _, _, expr, _)
+        | SynExpr.AddressOf(_, expr, _, _) -> 
             visitExpr expr
-            visitMatches clauses 
+        | SynExpr.App (_,_, expr1(*funcExpr*),expr2(*argExpr*), _)
+        | SynExpr.LetOrUseBang (_, _, _, _,expr1(*rhsExpr*),expr2(*body*), _)
+        | SynExpr.TryFinally (expr1, expr2, _, _, _)
+        | SynExpr.While(_, expr1, expr2, _) -> 
+            visitExpr expr1; visitExpr expr2
+        | SynExpr.Tuple (exprs, _, _)
+        | SynExpr.ArrayOrList(_, exprs, _)
+        | Sequentials  exprs ->
+            List.iter visitExpr exprs
+        | SynExpr.TryWith (expr, _, clauses, _, _, _, _)
+        | SynExpr.Match (_, expr, clauses, _, _) ->
+            visitExpr expr; visitMatches clauses 
+        | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
+            visitExpr cond; visitExpr trueBranch
+            falseBranchOpt |> Option.iter visitExpr 
+        | SynExpr.LetOrUse (_, _, bindings, body, _) -> visitBindindgs bindings; visitExpr body
+        | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) -> quotationRanges.Add range
         | SynExpr.MatchLambda (_, _, clauses, _, _) -> visitMatches clauses
         | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> visitBindindgs bindings
-        | SynExpr.Typed (expr, _, _) -> visitExpr expr
-        | SynExpr.Paren (expr, _, _, _) -> visitExpr expr
-        | Sequentials  es ->
-            List.iter visitExpr es
-        | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
-        | SynExpr.Tuple (exprs, _, _) -> 
-            for expr in exprs do 
-                visitExpr expr
-        | SynExpr.TryFinally (expr1, expr2, _, _, _) ->
-            visitExpr expr1
-            visitExpr expr2
-        | SynExpr.TryWith (expr, _, clauses, _, _, _, _) ->
-            visitExpr expr
-            visitMatches clauses
-        | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
-        | SynExpr.New(_, _, expr, _) -> visitExpr expr
-        | SynExpr.While(_, expr1, expr2, _) -> 
-            visitExpr expr1
-            visitExpr expr2
-        | SynExpr.Assert(expr, _) -> visitExpr expr
-        | SynExpr.TypeApp(expr, _, _, _, _, _, _) -> visitExpr expr
-        | SynExpr.DotSet(_, _, expr, _) -> visitExpr expr
-        | SynExpr.DotIndexedSet(_, _, expr, _, _, _) -> visitExpr expr
-        | SynExpr.NamedIndexedPropertySet(_, _, expr, _) -> visitExpr expr
-        | SynExpr.DotNamedIndexedPropertySet(_, _, _, expr, _) -> visitExpr expr
-        | SynExpr.TypeTest(expr, _, _) -> visitExpr expr
-        | SynExpr.Upcast(expr, _, _) -> visitExpr expr
-        | SynExpr.InferredUpcast(expr, _) -> visitExpr expr
-        | SynExpr.InferredDowncast(expr, _) -> visitExpr expr
-        | SynExpr.AddressOf(_, expr, _, _) -> visitExpr expr
+        | SynExpr.Record (_, _, fields, _) ->
+            fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpr
         | _ -> ()
 
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
@@ -461,24 +417,22 @@ let getQuotationRanges ast =
 
     and visitPattern = function
         | SynPat.QuoteExpr(expr, _) -> visitExpr expr
-        | SynPat.Named(pat, _, _, _, _) -> visitPattern pat
+        | SynPat.Named(pat, _, _, _, _) 
+        | SynPat.Paren(pat, _)
         | SynPat.Typed(pat, _, _) -> visitPattern pat
+        | SynPat.Ands(pats, _)
+        | SynPat.Tuple(pats, _)
+        | SynPat.ArrayOrList(_, pats, _) -> List.iter visitPattern pats
         | SynPat.Or(pat1, pat2, _) -> visitPattern pat1; visitPattern pat2
-        | SynPat.Ands(pats, _) -> List.iter visitPattern pats
         | SynPat.LongIdent(_, _, _, ctorArgs, _, _) -> 
             match ctorArgs with
             | SynConstructorArgs.Pats pats -> List.iter visitPattern pats
             | SynConstructorArgs.NamePatPairs(xs, _) -> 
                 xs |> List.map snd |> List.iter visitPattern
-        | SynPat.Tuple(pats, _) -> List.iter visitPattern pats
-        | SynPat.Paren(pat, _) -> visitPattern pat
-        | SynPat.ArrayOrList(_, pats, _) -> List.iter visitPattern pats
         | SynPat.Record(xs, _) -> xs |> List.map snd |> List.iter visitPattern
         | _ -> ()
 
-    and visitMatch (SynMatchClause.Clause (pat, _, expr, _, _)) = 
-        visitPattern pat
-        visitExpr expr
+    and visitMatch (SynMatchClause.Clause (pat, _, expr, _, _)) = visitPattern pat; visitExpr expr
 
     and visitMatches = List.iter visitMatch
     
@@ -491,30 +445,26 @@ let getQuotationRanges ast =
     let visitType ty =
         let (SynTypeDefn.TypeDefn (_, repr, defns, _)) = ty
         match repr with
-        | SynTypeDefnRepr.ObjectModel (_, defns, _) ->
-            for d in defns do visitMember d
+        | SynTypeDefnRepr.ObjectModel (_, objDefns, _) ->
+            for d in objDefns do visitMember d
         | _ -> ()
         for d in defns do visitMember d
 
     let rec visitDeclarations decls = 
-        for declaration in decls do
-            match declaration with
+        decls |> List.iter
+           (function
             | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
             | SynModuleDecl.DoExpr (_, expr, _) -> visitExpr expr
-            | SynModuleDecl.Types (types, _) -> for ty in types do visitType ty
+            | SynModuleDecl.Types (types, _) -> List.iter visitType types
             | SynModuleDecl.NestedModule (_, decls, _, _) -> visitDeclarations decls
-            | _ -> ()
+            | _ -> () )
 
     let visitModulesAndNamespaces modulesOrNss =
-        for moduleOrNs in modulesOrNss do
-            let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
-            visitDeclarations decls
-
+        modulesOrNss
+        |> Seq.iter (fun (SynModuleOrNamespace(_, _, decls, _, _, _, _)) -> visitDeclarations decls) 
     ast 
     |> Option.iter (function
-        | ParsedInput.ImplFile implFile ->
-            let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
-            visitModulesAndNamespaces modules
+        | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) -> visitModulesAndNamespaces modules
         | _ -> ())
     quotationRanges
    
@@ -528,6 +478,41 @@ let internal getStringLiterals ast : Range.range list =
         | _ -> ()
 
     let rec visitExpr = function 
+        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) 
+        | SynExpr.CompExpr (_, _, expr, _) 
+        | SynExpr.Lambda (_, _, _, expr, _) 
+        | SynExpr.ForEach (_, _, _, _, _,expr(*body*), _) 
+        | SynExpr.YieldOrReturn (_, expr, _) 
+        | SynExpr.YieldOrReturnFrom (_, expr, _) 
+        | SynExpr.New(_, _, expr, _) 
+        | SynExpr.Assert(expr, _) 
+        | SynExpr.Do (expr, _) 
+        | SynExpr.Typed (expr, _, _) 
+        | SynExpr.Paren (expr, _, _, _) 
+        | SynExpr.DoBang (expr, _) 
+        | SynExpr.Downcast (expr, _, _) 
+        | SynExpr.For (_, _, _, _, _, expr, _) 
+        | SynExpr.Lazy (expr, _) 
+        | SynExpr.TypeTest(expr, _, _) 
+        | SynExpr.Upcast(expr, _, _) 
+        | SynExpr.InferredUpcast(expr, _)
+        | SynExpr.InferredDowncast(expr, _)
+        | SynExpr.LongIdentSet (_, expr, _) 
+        | SynExpr.DotGet(expr, _, _, _) -> 
+            visitExpr expr
+        | SynExpr.App (_,_, expr1(*funcExpr*), expr2(*argExpr*), _) 
+        | SynExpr.TryFinally(expr1, expr2, _, _, _) 
+        | SynExpr.NamedIndexedPropertySet(_, expr1, expr2, _) 
+        | SynExpr.DotNamedIndexedPropertySet(_, _, expr1, expr2, _) 
+        | SynExpr.LetOrUseBang (_, _, _, _,expr1(*rhsExpr*), expr2(*body*), _)
+        | SynExpr.While(_, expr1, expr2, _) -> 
+            visitExpr expr1; visitExpr expr2
+        | Sequentials exprs
+        | SynExpr.Tuple (exprs, _, _) 
+        | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
+        | SynExpr.Match (_, expr, clauses, _, _)
+        | SynExpr.TryWith(expr, _, clauses, _, _, _, _) ->
+            visitExpr expr; visitMatches clauses 
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
             visitExpr cond
             visitExpr trueBranch
@@ -535,50 +520,11 @@ let internal getStringLiterals ast : Range.range list =
         | SynExpr.LetOrUse (_, _, bindings, body, _) -> 
             visitBindindgs bindings
             visitExpr body
-        | SynExpr.LetOrUseBang (_, _, _, _, rhsExpr, body, _) -> 
-            visitExpr rhsExpr
-            visitExpr body
-        | SynExpr.App (_,_, funcExpr, argExpr, _) -> 
-            visitExpr argExpr
-            visitExpr funcExpr
-        | SynExpr.Lambda (_, _, _, expr, _) -> visitExpr expr
         | SynExpr.Record (_, _, fields, _) ->
             fields |> List.choose (fun (_, expr, _) -> expr) |> List.iter visitExpr
-        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) -> visitExpr expr
-        | SynExpr.CompExpr (_, _, expr, _) -> visitExpr expr
-        | SynExpr.ForEach (_, _, _, _, _, body, _) -> visitExpr body
-        | SynExpr.YieldOrReturn (_, expr, _) -> visitExpr expr
-        | SynExpr.YieldOrReturnFrom (_, expr, _) -> visitExpr expr
-        | SynExpr.Do (expr, _) -> visitExpr expr
-        | SynExpr.DoBang (expr, _) -> visitExpr expr
-        | SynExpr.Downcast (expr, _, _) -> visitExpr expr
-        | SynExpr.For (_, _, _, _, _, expr, _) -> visitExpr expr
-        | SynExpr.Lazy (expr, _) -> visitExpr expr
-        | SynExpr.Match (_, expr, clauses, _, _) -> 
-            visitExpr expr
-            visitMatches clauses 
         | SynExpr.MatchLambda (_, _, clauses, _, _) -> visitMatches clauses
         | SynExpr.ObjExpr (_, _, bindings, _, _ , _) -> visitBindindgs bindings
-        | SynExpr.Typed (expr, _, _) -> visitExpr expr
-        | SynExpr.Paren (expr, _, _, _) -> visitExpr expr
-        | Sequentials es ->
-            List.iter visitExpr es
-        | SynExpr.LongIdentSet (_, expr, _) -> visitExpr expr
-        | SynExpr.Tuple (exprs, _, _) -> List.iter visitExpr exprs
         | SynExpr.Const (SynConst.String (_, r), _) -> result.Add r
-        | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
-        | SynExpr.New(_, _, expr, _) -> visitExpr expr
-        | SynExpr.While(_, e1, e2, _) -> visitExpr e1; visitExpr e2
-        | SynExpr.Assert(e, _) -> visitExpr e
-        | SynExpr.TryWith(e, _, clauses, _, _, _, _) -> visitExpr e; visitMatches clauses
-        | SynExpr.TryFinally(e1, e2, _, _, _) -> visitExpr e1; visitExpr e2
-        | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> visitExpr e1; visitExpr e2
-        | SynExpr.DotNamedIndexedPropertySet(_, _, e1, e2, _) -> visitExpr e1; visitExpr e2
-        | SynExpr.TypeTest(e, _, _) -> visitExpr e
-        | SynExpr.Upcast(e, _, _) -> visitExpr e
-        | SynExpr.InferredUpcast(e, _) -> visitExpr e
-        | SynExpr.InferredDowncast(e, _) -> visitExpr e
-        | SynExpr.DotGet(e, _, _, _) -> visitExpr e
         | SynExpr.TypeApp(_, _, tys, _, _, _, _) -> List.iter visitType tys
         | _ -> ()
          
@@ -613,15 +559,11 @@ let internal getStringLiterals ast : Range.range list =
             | _ -> ()
 
     let visitModulesAndNamespaces modulesOrNss =
-        for moduleOrNs in modulesOrNss do
-            let (SynModuleOrNamespace(_, _, decls, _, _, _, _)) = moduleOrNs
-            visitDeclarations decls
+        Seq.iter (fun (SynModuleOrNamespace(_, _, decls, _, _, _, _)) -> visitDeclarations decls) modulesOrNss
 
     ast 
     |> Option.iter (function
-        | ParsedInput.ImplFile implFile ->
-            let (ParsedImplFileInput(_, _, _, _, _, modules, _)) = implFile
-            visitModulesAndNamespaces modules
+        | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) -> visitModulesAndNamespaces modules
         | _ -> ())
 
     List.ofSeq result
@@ -858,13 +800,31 @@ module Outlining =
     let rec private visitExpr expression = 
         seq {
             match expression with
+            | SynExpr.Upcast (e,_,_) 
+            | SynExpr.Downcast (e,_,_)  
+            | SynExpr.AddressOf(_,e,_,_) 
+            | SynExpr.InferredDowncast(e,_) 
+            | SynExpr.InferredUpcast(e,_)
+            | SynExpr.DotGet(e,_,_,_)
+            | SynExpr.DotSet(e,_,_,_)
+            | SynExpr.DotIndexedGet(e,_,_,_)
+            | SynExpr.DotIndexedSet(e,_,_,_,_,_) 
+            | SynExpr.Do (e,_)
+            | SynExpr.New (_,_,e,_)
+            | SynExpr.Typed(e,_,_) -> yield! visitExpr e       
+            | SynExpr.YieldOrReturn (_,e,r)
+            | SynExpr.DoBang (e,r)
+            | SynExpr.LetOrUseBang (_,_,_,_,_,e,r)
+            | SynExpr.YieldOrReturnFrom (_,e,r) ->
+                yield! rcheck Scope.CompExprInternal Collapse.Below  r 
+                yield! visitExpr e
+            | SynExpr.For (_,_,_,_,_,e,r)
+            | SynExpr.ForEach (_,_,_,_,_,e,r) ->
+                yield! rcheck Scope.For Collapse.Below  r
+                yield! visitExpr e
             | SynExpr.LetOrUse (_,_,bindings, body,_) ->
                 yield! visitBindings bindings
                 yield! visitExpr body
-            | SynExpr.Do (e,_) ->
-                yield! visitExpr e
-            | SynExpr.New (_,_,e,_) ->
-                yield! visitExpr e           
             | SynExpr.Match (seqPointAtBinding,_,clauses,_,r) ->
                 match seqPointAtBinding with
                 | SequencePointAtBinding pr ->
@@ -900,18 +860,6 @@ module Outlining =
                     yield! visitExpr e
                 else  // exclude the opening { and closing } on the cexpr from collapsing
                     yield! rcheck Scope.CompExpr Collapse.Same <| rangeMod r 1 1
-                yield! visitExpr e
-            | SynExpr.YieldOrReturn (_,e,r) ->
-                yield! rcheck Scope.CompExprInternal Collapse.Below r 
-                yield! visitExpr e
-            | SynExpr.YieldOrReturnFrom (_,e,r) ->
-                yield! rcheck Scope.CompExprInternal Collapse.Below  r 
-                yield! visitExpr e
-            | SynExpr.LetOrUseBang (_,_,_,_,_,e,r) ->
-                yield! rcheck Scope.CompExprInternal Collapse.Below r 
-                yield! visitExpr e
-            | SynExpr.DoBang (e,r) ->
-                yield! rcheck Scope.CompExprInternal Collapse.Below r
                 yield! visitExpr e
             | SynExpr.ObjExpr (_,_,bindings,_,newRange,wholeRange) ->
                 let r = mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
@@ -954,12 +902,6 @@ module Outlining =
                     yield! rcheck Scope.ElseInIfThenElse Collapse.Same e.Range
                     yield! visitExpr e
                 | None -> ()
-            | SynExpr.For (_,_,_,_,_,e,r) ->
-                yield! rcheck Scope.For Collapse.Below  r
-                yield! visitExpr e
-            | SynExpr.ForEach (_,_,_,_,_,e,r) ->
-                yield! rcheck Scope.For Collapse.Below  r
-                yield! visitExpr e
             | SynExpr.While (_,_,e,r) ->
                 yield! rcheck Scope.While Collapse.Below  r
                 yield! visitExpr e
@@ -987,18 +929,7 @@ module Outlining =
                     yield! visitExpr e
                 yield! recordFields |> (Seq.choose(fun(_,e,_)->e)>>Seq.collect visitExpr)
                 // exclude the opening `{` and closing `}` of the record from collapsing
-                yield! rcheck Scope.Record Collapse.Same <| rangeMod r 1 1
-            | SynExpr.Upcast (e,_,_) 
-            | SynExpr.Downcast (e,_,_)  
-            | SynExpr.AddressOf(_,e,_,_) 
-            | SynExpr.InferredDowncast(e,_) 
-            | SynExpr.InferredUpcast(e,_)
-            | SynExpr.DotGet(e,_,_,_)
-            | SynExpr.DotSet(e,_,_,_) 
-            | SynExpr.DotIndexedGet(e,_,_,_) 
-            | SynExpr.DotIndexedSet(e,_,_,_,_,_) 
-            | SynExpr.Typed(e,_,_) ->
-                yield! visitExpr e                
+                yield! rcheck Scope.Record Collapse.Same <| rangeMod r 1 1         
             | _ -> ()
         }
 
