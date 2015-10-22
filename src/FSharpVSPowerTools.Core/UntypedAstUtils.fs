@@ -894,7 +894,6 @@ module Outlining =
                 yield! rcheck  Scope.ArrayOrList Collapse.Same <| rangeMod r (if isArray then 2 else 1) (if isArray then 2 else 1)
                 yield! visitExpr e
             | SynExpr.CompExpr (arrayOrList,_,e,r) ->
-//                if arrayOrList then ()
                 if arrayOrList then 
                     yield! visitExpr e
                 else  // exclude the opening { and closing } on the cexpr from collapsing
@@ -1005,6 +1004,8 @@ module Outlining =
                 yield! visitExpr e
             | SynExpr.DotIndexedSet(e,_,_,_,_,_) ->
                 yield! visitExpr e
+            | SynExpr.Typed(e,_,_) ->
+                yield! visitExpr e                
             | _ -> ()
         }
 
