@@ -60,47 +60,47 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         walkTypar typar
             
     and walkTypeConstraint = function
-        | SynTypeConstraint.WhereTyparIsValueType(t, _)
-        | SynTypeConstraint.WhereTyparIsReferenceType(t, _)
-        | SynTypeConstraint.WhereTyparIsUnmanaged(t, _)
+        | SynTypeConstraint.WhereTyparIsValueType (t, _)
+        | SynTypeConstraint.WhereTyparIsReferenceType (t, _)
+        | SynTypeConstraint.WhereTyparIsUnmanaged (t, _)
         | SynTypeConstraint.WhereTyparSupportsNull (t, _)
-        | SynTypeConstraint.WhereTyparIsComparable(t, _)
-        | SynTypeConstraint.WhereTyparIsEquatable(t, _) -> walkTypar t
+        | SynTypeConstraint.WhereTyparIsComparable (t, _)
+        | SynTypeConstraint.WhereTyparIsEquatable (t, _) -> walkTypar t
         | SynTypeConstraint.WhereTyparDefaultsToType (t, ty, _)
-        | SynTypeConstraint.WhereTyparSubtypeOfType(t, ty, _) -> walkTypar t; walkType ty
-        | SynTypeConstraint.WhereTyparIsEnum(t, ts, _)
-        | SynTypeConstraint.WhereTyparIsDelegate(t, ts, _) -> walkTypar t; List.iter walkType ts
-        | SynTypeConstraint.WhereTyparSupportsMember(ts, sign, _) -> List.iter walkTypar ts; walkMemberSig sign
+        | SynTypeConstraint.WhereTyparSubtypeOfType (t, ty, _) -> walkTypar t; walkType ty
+        | SynTypeConstraint.WhereTyparIsEnum (t, ts, _)
+        | SynTypeConstraint.WhereTyparIsDelegate (t, ts, _) -> walkTypar t; List.iter walkType ts
+        | SynTypeConstraint.WhereTyparSupportsMember (ts, sign, _) -> List.iter walkTypar ts; walkMemberSig sign
 
     and walkPat = function
-        | SynPat.Tuple(pats, _)
-        | SynPat.ArrayOrList(_, pats, _)
+        | SynPat.Tuple (pats, _)
+        | SynPat.ArrayOrList (_, pats, _)
         | SynPat.Ands (pats, _) -> List.iter walkPat pats
         | SynPat.Named (pat, ident, _, _, _) -> 
             walkPat pat
             addIdent ident
-        | SynPat.Typed(pat, t, _) -> 
+        | SynPat.Typed (pat, t, _) -> 
             walkPat pat
             walkType t
-        | SynPat.Attrib(pat, attrs, _) -> 
+        | SynPat.Attrib (pat, attrs, _) -> 
             walkPat pat
             List.iter walkAttribute attrs
-        | SynPat.Or(pat1, pat2, _) -> List.iter walkPat [pat1; pat2]
-        | SynPat.LongIdent(ident, _, typars, ConstructorPats pats, _, _) -> 
+        | SynPat.Or (pat1, pat2, _) -> List.iter walkPat [pat1; pat2]
+        | SynPat.LongIdent (ident, _, typars, ConstructorPats pats, _, _) -> 
             addLongIdentWithDots ident
             typars
             |> Option.iter (fun (SynValTyparDecls (typars, _, constraints)) ->
                  List.iter walkTyparDecl typars
                  List.iter walkTypeConstraint constraints)
             List.iter walkPat pats
-        | SynPat.Paren(pat, _) -> walkPat pat
-        | SynPat.IsInst(t, _) -> walkType t
+        | SynPat.Paren (pat, _) -> walkPat pat
+        | SynPat.IsInst (t, _) -> walkType t
         | SynPat.QuoteExpr(e, _) -> walkExpr e
         | _ -> ()
 
     and walkTypar (Typar (_, _, _)) = ()
 
-    and walkBinding (SynBinding.Binding(_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _)) =
+    and walkBinding (SynBinding.Binding (_, _, _, _, attrs, _, _, pat, returnInfo, e, _, _)) =
         List.iter walkAttribute attrs
         walkPat pat
         walkExpr e
@@ -113,20 +113,20 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynIndexerArg.Two (e1, e2) -> List.iter walkExpr [e1; e2]
 
     and walkType = function
-        | SynType.Array(_, t, _)
-        | SynType.HashConstraint(t, _)
-        | SynType.MeasurePower(t, _, _) -> walkType t
-        | SynType.Fun(t1, t2, _)
-        | SynType.MeasureDivide(t1, t2, _) -> walkType t1; walkType t2
+        | SynType.Array (_, t, _)
+        | SynType.HashConstraint (t, _)
+        | SynType.MeasurePower (t, _, _) -> walkType t
+        | SynType.Fun (t1, t2, _)
+        | SynType.MeasureDivide (t1, t2, _) -> walkType t1; walkType t2
         | SynType.LongIdent ident -> addLongIdentWithDots ident
-        | SynType.App(ty, _, types, _, _, _, _) -> walkType ty; List.iter walkType types
-        | SynType.LongIdentApp(_, _, _, types, _, _, _) -> List.iter walkType types
-        | SynType.Tuple(ts, _) -> ts |> List.iter (fun (_, t) -> walkType t)
-        | SynType.WithGlobalConstraints(t, typeConstraints, _) -> 
+        | SynType.App (ty, _, types, _, _, _, _) -> walkType ty; List.iter walkType types
+        | SynType.LongIdentApp (_, _, _, types, _, _, _) -> List.iter walkType types
+        | SynType.Tuple (ts, _) -> ts |> List.iter (fun (_, t) -> walkType t)
+        | SynType.WithGlobalConstraints (t, typeConstraints, _) -> 
             walkType t; List.iter walkTypeConstraint typeConstraints
         | _ -> ()
 
-    and walkClause (Clause(pat, e1, e2, _, _)) =
+    and walkClause (Clause (pat, e1, e2, _, _)) =
         walkPat pat 
         walkExpr e2
         e1 |> Option.iter walkExpr
@@ -154,10 +154,10 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.Tuple (es, _, _)
         | Sequentials es
         | SynExpr.ArrayOrList (_, es, _) -> List.iter walkExpr es
-        | SynExpr.App(_, _, e1, e2, _)
-        | SynExpr.TryFinally(e1, e2, _, _, _)
-        | SynExpr.While(_, e1, e2, _) -> List.iter walkExpr [e1; e2]
-        | SynExpr.Record(_, _, fields, _) -> 
+        | SynExpr.App (_, _, e1, e2, _)
+        | SynExpr.TryFinally (e1, e2, _, _, _)
+        | SynExpr.While (_, e1, e2, _) -> List.iter walkExpr [e1; e2]
+        | SynExpr.Record (_, _, fields, _) -> 
             fields |> List.iter (fun ((ident, _), e, _) -> 
                         addLongIdentWithDots ident
                         e |> Option.iter walkExpr)
@@ -254,16 +254,16 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         |> List.iter walkAttribute
 
     and walkMemberSig = function
-        | SynMemberSig.Inherit (t, _) -> walkType t
-        | SynMemberSig.Member(vs, _, _) -> walkValSig vs
+        | SynMemberSig.Inherit (t, _)
         | SynMemberSig.Interface(t, _) -> walkType t
+        | SynMemberSig.Member(vs, _, _) -> walkValSig vs
         | SynMemberSig.ValField(f, _) -> walkField f
         | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) -> 
             let isTypeExtensionOrAlias = 
                 match repr with
-                | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAugmentation, _, _)
+                | SynTypeDefnSigRepr.Simple(SynTypeDefnSimpleRepr.TypeAbbrev _, _)
                 | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAbbrev, _, _)
-                | SynTypeDefnSigRepr.Simple(SynTypeDefnSimpleRepr.TypeAbbrev _, _) -> true
+                | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAugmentation, _, _) -> true
                 | _ -> false
             walkComponentInfo isTypeExtensionOrAlias info
             walkTypeDefnSigRepr repr
@@ -740,7 +740,9 @@ module Outlining =
     type Collapse = 
         | Below = 0 
         | Same = 1
-        | Arrow = 2
+        | ArrowSame = 2
+        | ArrowBelow = 3
+        | ClauseBlock = 4
 
     type Scope =
         | Open = 0
@@ -813,8 +815,10 @@ module Outlining =
             | SynExpr.DotIndexedSet(e,_,_,_,_,_) -> yield! visitExpr e       
             | SynExpr.YieldOrReturn (_,e,r)
             | SynExpr.DoBang (e,r)
-            | SynExpr.LetOrUseBang (_,_,_,_,_,e,r)
             | SynExpr.YieldOrReturnFrom (_,e,r) ->
+                yield! rcheck Scope.CompExprInternal Collapse.Below r 
+                yield! visitExpr e
+            | SynExpr.LetOrUseBang (_,_,_,_,_,e,r) ->
                 yield! rcheck Scope.CompExprInternal Collapse.Below r 
                 yield! visitExpr e
             | SynExpr.For (_,_,_,_,_,e,r)
@@ -905,7 +909,8 @@ module Outlining =
                 yield! rcheck Scope.While Collapse.Below  r
                 yield! visitExpr e
             | SynExpr.Lambda (_,_,_,e,r) ->
-                yield! rcheck Scope.Lambda Collapse.Arrow r
+//                yield! rcheck Scope.Lambda Collapse.ArrowBelow <| Range.startToEnd e.Range r
+                yield! rcheck Scope.Lambda Collapse.ArrowSame <| Range.startToEnd e.Range r
                 yield! visitExpr e
             | SynExpr.Lazy (e,r) ->
                 yield! rcheck Scope.SpecialFunc Collapse.Below r
@@ -932,9 +937,11 @@ module Outlining =
             | _ -> ()
         }
 
-    and private visitMatchClause (SynMatchClause.Clause (synpat,_,e,_,_)) = 
-        seq {        
-                yield! rcheck Scope.MatchClause Collapse.Arrow <| Range.startToEnd synpat.Range e.Range  // Collapse the scope after `->`
+    // visit clauses needs to be rewritten so it can dive/fold over any sequence of ORs or ANDs so 
+    // they're properly treated as a cohesive range
+    and private visitMatchClause (SynMatchClause.Clause (synPat,_,e,_,_)) =
+        seq {   
+                yield! rcheck Scope.MatchClause Collapse.ArrowSame <| Range.startToEnd synPat.Range e.Range  // Collapse the scope after `->`
                 yield! visitExpr e 
             }
 
@@ -1024,10 +1031,10 @@ module Outlining =
             match ranges with
             | [] -> None
             | [r] when r.StartLine = r.EndLine -> None
-            | [r] -> Some <| ScopeRange(scope, Collapse.Same, (Range.mkRange "" r.Start r.End))
+            | [r] -> Some <| ScopeRange (scope, Collapse.Same, (Range.mkRange "" r.Start r.End))
             | lastRange :: rest ->
                 let firstRange = Seq.last rest
-                Some <| ScopeRange(scope, Collapse.Same, (Range.mkRange "" firstRange.Start lastRange.End))
+                Some <| ScopeRange (scope, Collapse.Same, (Range.mkRange "" firstRange.Start lastRange.End))
 
         decls |> (List.choose predicate>>groupConsecutiveDecls>>List.choose selectRanges)
 
