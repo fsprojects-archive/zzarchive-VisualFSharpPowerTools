@@ -779,17 +779,19 @@ module Outlining =
     module private Range =
         /// Create a range starting at the end of r1 and finishing at the end of r2
         let inline endToEnd   (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End   r2.End
+
+        /// Create a range beginning at the start of r1 and finishing at the end of r2
         let inline startToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.Start r2.End
         
-        /// Create a range starting at the end of r1 modified my m1 and finishing at the end of r2 modified by m2
+        /// Create a range starting at the end of r1 modified by m1 and finishing at the end of r2 modified by m2
         let inline endToEndmod (r1: range) (m1:int) (r2: range) (m2:int) = 
             let modstart,modend = mkPos r1.EndLine (r1.EndColumn+m1),mkPos r2.EndLine (r2.EndColumn+m2)
             mkFileIndexRange r1.FileIndex modstart modend
 
 
         let inline ofAttributes (attrs:SynAttributes) =            
-            if List.length attrs = 0 then range () else
-                startToEnd attrs.[0].Range attrs.[List.length attrs - 1].ArgExpr.Range
+            match attrs with | [] -> range () | _  -> startToEnd attrs.[0].Range attrs.[List.length attrs - 1].ArgExpr.Range
+
 
     ///  Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside 
     ///  some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions 
@@ -797,7 +799,7 @@ module Outlining =
     type Collapse = 
         | Below = 0 
         | Same = 1
-        | ``->`` = 2
+        | Arrow = 2
 
     type Scope =
         | Open = 0
@@ -835,12 +837,12 @@ module Outlining =
         | Interface = 31
         | HashDirective = 32
 
-    type [< NoComparison; Struct >] scopeRange (scope:Scope,collapse:Collapse, r:range) = 
+    type [< NoComparison; Struct >] ScopeRange (scope:Scope,collapse:Collapse, r:range) = 
             member __.Scope = scope
             member __.Collapse = collapse
             member __.Range = r
 
-    let inline mkSrange scope collapse r = scopeRange (scope,collapse,r)
+   // let inline mkSrange scope collapse r = ScopeRange (scope,collapse,r)
     
     /// Produce a new range by adding modStart to the StartColumn of `r` 
     /// and subtracting modEnd from the EndColumn of `r`
@@ -851,7 +853,7 @@ module Outlining =
 
     // Only yield a range that spans 2 or more lines
     let inline private rcheck scope collapse (r:range) = 
-        seq { if r.StartLine <> r.EndLine then yield mkSrange scope collapse r }
+        seq { if r.StartLine <> r.EndLine then yield ScopeRange(scope,collapse,r )}
 
     let rec private visitExpr expression = 
         seq {
@@ -962,7 +964,7 @@ module Outlining =
                 yield! rcheck Scope.While Collapse.Below  r
                 yield! visitExpr e
             | SynExpr.Lambda (_,_,_,e,r) ->
-                yield! rcheck Scope.Lambda Collapse.``->`` r
+                yield! rcheck Scope.Lambda Collapse.Arrow r
                 yield! visitExpr e
             | SynExpr.Lazy (e,r) ->
                 yield! rcheck Scope.SpecialFunc Collapse.Below r
@@ -986,24 +988,15 @@ module Outlining =
                 yield! recordFields |> (Seq.choose(fun(_,e,_)->e)>>Seq.collect visitExpr)
                 // exclude the opening `{` and closing `}` of the record from collapsing
                 yield! rcheck Scope.Record Collapse.Same <| rangeMod r 1 1
-            | SynExpr.Upcast (e,_,_)  ->
-                yield! visitExpr e
-            | SynExpr.Downcast (e,_,_)  ->
-                yield! visitExpr e
-            | SynExpr.AddressOf(_,e,_,_) ->
-                yield! visitExpr e
-            | SynExpr.InferredDowncast(e,_) ->
-                yield! visitExpr e
-            | SynExpr.InferredUpcast(e,_) ->
-                yield! visitExpr e
-            | SynExpr.DotGet(e,_,_,_) ->
-                yield! visitExpr e
-            | SynExpr.DotSet(e,_,_,_) ->
-                yield! visitExpr e
-            | SynExpr.DotIndexedGet(e,_,_,_) ->
-                yield! visitExpr e
-            | SynExpr.DotIndexedSet(e,_,_,_,_,_) ->
-                yield! visitExpr e
+            | SynExpr.Upcast (e,_,_) 
+            | SynExpr.Downcast (e,_,_)  
+            | SynExpr.AddressOf(_,e,_,_) 
+            | SynExpr.InferredDowncast(e,_) 
+            | SynExpr.InferredUpcast(e,_)
+            | SynExpr.DotGet(e,_,_,_)
+            | SynExpr.DotSet(e,_,_,_) 
+            | SynExpr.DotIndexedGet(e,_,_,_) 
+            | SynExpr.DotIndexedSet(e,_,_,_,_,_) 
             | SynExpr.Typed(e,_,_) ->
                 yield! visitExpr e                
             | _ -> ()
@@ -1011,7 +1004,7 @@ module Outlining =
 
     and private visitMatchClause (SynMatchClause.Clause (synpat,_,e,_,_)) = 
         seq {        
-                yield! rcheck Scope.MatchClause Collapse.``->`` <| Range.startToEnd synpat.Range e.Range  // Collapse the scope after `->`
+                yield! rcheck Scope.MatchClause Collapse.Arrow <| Range.startToEnd synpat.Range e.Range  // Collapse the scope after `->`
                 yield! visitExpr e 
             }
 
@@ -1101,10 +1094,10 @@ module Outlining =
             match ranges with
             | [] -> None
             | [r] when r.StartLine = r.EndLine -> None
-            | [r] -> Some <| mkSrange scope Collapse.Same (Range.mkRange "" r.Start r.End)
+            | [r] -> Some <| ScopeRange(scope, Collapse.Same, (Range.mkRange "" r.Start r.End))
             | lastRange :: rest ->
                 let firstRange = Seq.last rest
-                Some <| mkSrange scope Collapse.Same (Range.mkRange "" firstRange.Start lastRange.End)
+                Some <| ScopeRange(scope, Collapse.Same, (Range.mkRange "" firstRange.Start lastRange.End))
 
         decls |> (List.choose predicate>>groupConsecutiveDecls>>List.choose selectRanges)
 

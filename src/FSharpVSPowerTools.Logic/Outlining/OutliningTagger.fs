@@ -20,7 +20,7 @@ open Microsoft.FSharp.Compiler.Ast
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
 
-type ScopedSpan = Collapse * SnapshotSpan
+type ScopedSpan = Scope * Collapse * SnapshotSpan
 
 /// A colored outlining hint control similar to
 /// https://github.com/dotnet/roslyn/blob/57aaa6c9d8bc1995edfc261b968777666172f1b8/src/EditorFeatures/Core/Implementation/Outlining/OutliningTaggerProvider.Tag.cs
@@ -84,10 +84,10 @@ type OutliningTagger
     let triggerUpdate newSnapshotSpans = scopedSnapSpans <- newSnapshotSpans; tagTrigger ()
 
     /// convert the FSharp compiler range in SRanges into a snapshotspan and tuple it with its Scope tag
-    let fromSRange (snapshot: ITextSnapshot) (sr: scopeRange) : ScopedSpan option =
+    let fromScopeRange (snapshot: ITextSnapshot) (sr: ScopeRange) : ScopedSpan option =
         let r = sr.Range
         match VSUtils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
-        | Some sshot -> Some (sr.Collapse,sshot)
+        | Some sshot -> Some (sr.Scope, sr.Collapse, sshot)
         | None       -> None
 
 
@@ -96,10 +96,12 @@ type OutliningTagger
     // been collapsed will explode back open causing an annoying buffer shift. To prevent this behavior we check
     // for an empty ast via it's range and ignore it if the length is zero
     let checkAST (oldtree:ParsedInput option) (newTree:ParsedInput) : bool =
-        if oldtree.IsNone then true
-        // Check the parsed AST to see if it's empty via it's range
-        elif newTree.Range.StartColumn = newTree.Range.EndColumn
-         &&  newTree.Range.StartLine = newTree.Range.EndLine then false else true
+        let inline lengthZero (emptyTree:ParsedInput) =
+             emptyTree.Range.StartColumn = emptyTree.Range.EndColumn &&  emptyTree.Range.StartLine = emptyTree.Range.EndLine 
+        match oldtree, newTree with
+        | None, _ -> true
+        | _, emptyTree when lengthZero emptyTree -> false 
+        | _ -> true
 
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
@@ -112,13 +114,13 @@ type OutliningTagger
             let! project = projectFactory.CreateForDocument buffer doc
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
             let! ast = parseFileResults.ParseTree
-            //Logging.logInfo "|Outlining|\nAST Range\n%A" ast.Range
-            Logging.logInfo "|Outlining|\nAST\n%A" ast
+            //Logging.logInfo "[Outlining]\nAST Range\n%A" ast.Range
+            Logging.logInfo "[Outlining]\nAST\n%A" ast
             if checkAST oldAST ast then
                 oldAST <- Some ast
-                let ranges = (getOutliningRanges>>Seq.choose (fromSRange snapshot)>>Array.ofSeq) ast
+                let scopedSpans = (getOutliningRanges >> Seq.choose (fromScopeRange snapshot) >> Array.ofSeq) ast
                 do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
-                triggerUpdate ranges
+                triggerUpdate scopedSpans
         }
         |> Async.Ignore
         |> Async.StartInThreadPoolSafe
@@ -130,7 +132,7 @@ type OutliningTagger
 
     /// Find the length of the shortest whitespace indentation in the textblock used for the outlining
     let inferIndent (text: string) =
-        let countleadingWhitespace (str: string) =
+        let countLeadingWhitespace (str: string) =
             let rec loop acc =
                 if acc >= str.Length then acc
                 elif not (Char.IsWhiteSpace str.[acc]) then acc
@@ -150,12 +152,13 @@ type OutliningTagger
         | Some startIndex ->
             if lines = [||] then 0 else
             let minIndent =
-                let seed = countleadingWhitespace lines.[startIndex]
+                let seed = countLeadingWhitespace lines.[startIndex]
                 (seed, lines.[startIndex..])
                 ||> Array.fold (fun indent line ->
                     if String.IsNullOrWhiteSpace line then indent // skip over empty lines, we don't want them skewing our min
-                    else countleadingWhitespace line |> min indent)
+                    else countLeadingWhitespace line |> min indent)
             minIndent
+
 
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
         let roles = textEditorFactoryService.CreateTextViewRoleSet("")
@@ -164,10 +167,11 @@ type OutliningTagger
         sizeToFit view
         view
 
+
     let createElisionBufferNoIndent (suffixOpt: string option) (projectionBufferFactoryService: IProjectionBufferFactoryService) (hintSnapshotSpan: SnapshotSpan) =
-        let exposedSpans = NormalizedSnapshotSpanCollection(hintSnapshotSpan)
-        let elisionBuffer = projectionBufferFactoryService.CreateElisionBuffer(
-                                projectionEditResolver = null,
+        let exposedSpans = NormalizedSnapshotSpanCollection (hintSnapshotSpan)
+        let elisionBuffer = projectionBufferFactoryService.CreateElisionBuffer
+                               (projectionEditResolver = null,
                                 exposedSpans = exposedSpans,
                                 options = ElisionBufferOptions.None)
 
@@ -175,30 +179,31 @@ type OutliningTagger
         let indentationColumn = inferIndent (hintSnapshotSpan.GetText())
         let spansToElide = ResizeArray<Span>()
 
-        let startLineNumber = snapshot.GetLineNumberFromPosition(hintSnapshotSpan.Span.Start)
-        let endLineNumber = snapshot.GetLineNumberFromPosition(hintSnapshotSpan.Span.End)
+        let startLineNumber = snapshot.GetLineNumberFromPosition (hintSnapshotSpan.Span.Start)
+        let endLineNumber = snapshot.GetLineNumberFromPosition (hintSnapshotSpan.Span.End)
 
         for lineNumber in startLineNumber..endLineNumber do
-            let line = snapshot.GetLineFromLineNumber(lineNumber)
+            let line = snapshot.GetLineFromLineNumber (lineNumber)
             let lineStart = line.Start.Position
-            spansToElide.Add(Span.FromBounds(lineStart, lineStart + indentationColumn))
+            spansToElide.Add(Span.FromBounds (lineStart, lineStart + indentationColumn))
 
-        elisionBuffer.ElideSpans(NormalizedSpanCollection(spansToElide)) |> ignore
+        elisionBuffer.ElideSpans (NormalizedSpanCollection (spansToElide)) |> ignore
 
         match suffixOpt with
         | Some suffix ->
             let elisionSpan = elisionBuffer.CurrentSnapshot.FullSpan
             let sourceSpans: obj [] =
                 [|
-                    elisionSpan.Snapshot.CreateTrackingSpan(elisionSpan.Span, SpanTrackingMode.EdgeExclusive);
+                    elisionSpan.Snapshot.CreateTrackingSpan (elisionSpan.Span, SpanTrackingMode.EdgeExclusive);
                     suffix
                 |]
-            projectionBufferFactoryService.CreateProjectionBuffer(
-                projectionEditResolver = null,
+            projectionBufferFactoryService.CreateProjectionBuffer
+               (projectionEditResolver = null,
                 sourceSpans = sourceSpans,
                 options = ProjectionBufferOptions.None) :> ITextBuffer
         | None ->
             elisionBuffer :> ITextBuffer
+
 
     // drills down into the snapshot text to find the first non whitespace line
     // to display as the text inside the collapse box preceding the `...`
@@ -209,12 +214,16 @@ type OutliningTagger
             if acc >= snapshot.LineCount + firstLineNum then "" else
             let text =  if acc = firstLineNum then
                             let _,colstart,_,_ = snapshotSpan.ToRange ()
-                            snapshot.GetLineFromLineNumber(acc).GetText().Substring(colstart).Trim()
-                        else snapshot.GetLineFromLineNumber(acc).GetText().Trim()
+                            snapshot.GetLineFromLineNumber(acc).GetText().Substring(colstart).Trim ()
+                        else snapshot.GetLineFromLineNumber(acc).GetText().Trim ()
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text
         loop firstLineNum
 
-    let createTagSpan ((scope,snapshotSpan): ScopedSpan) =
+
+    // outlined regions that should be collapsed by default will make use of 
+    // the scope argument currently hidden by the wildcard `(scope,collapse,snapshotSpan)`
+    // probably easiest to use a helper function and put it in `member __.IsDefaultCollapsed = isCollapsed scope`
+    let createTagSpan ((_,collapse,snapshotSpan): ScopedSpan) =
         try
             let snapshot = snapshotSpan.Snapshot in let firstLine = snapshot.GetLineFromPosition (snapshotSpan.Start.Position)
             let mutable lastLine = snapshot.GetLineFromPosition (snapshotSpan.End.Position)
@@ -234,19 +243,19 @@ type OutliningTagger
                     if idx = -1 then
                         (textHint, belowSpan)
                     else
-                        let arrowSpan = SnapshotSpan (SnapshotPoint(snapshot, firstLine.Start.Position + idx + 2), snapshotSpan.End )
+                        let arrowSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + 2), snapshotSpan.End)
                         ( getHintText arrowSpan, arrowSpan)
-                match scope with
+                match collapse with
                 | Collapse.Same -> (textHint, snapshotSpan)
-                | Collapse.``->`` -> (arrowText, arrowSpan )
-                | _ (* Scope.Below *) -> ("...", belowSpan )
+                | Collapse.Arrow -> (arrowText, arrowSpan)
+                | _ (* Scope.Below *) -> ("...", belowSpan)
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
                         member __.IsDefaultCollapsed = false
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
-                            OutliningControl((createElisionBufferView textEditorFactoryService),
+                            OutliningControl ((createElisionBufferView textEditorFactoryService),
                                              (fun _ ->
                                                 let suffixOpt =
                                                     match missingLinesCount with
@@ -265,12 +274,14 @@ type OutliningTagger
         match Seq.isEmpty normalizedSnapshotSpans, Array.isEmpty scopedSnapSpans with
         | false, false ->
             let newSnapshot = (Seq.head normalizedSnapshotSpans).Snapshot
-            if newSnapshot.Version <> (snd scopedSnapSpans.[0]).Snapshot.Version then
+            let _,_,span = scopedSnapSpans.[0]
+            if newSnapshot.Version <> span.Snapshot.Version then
                 scopedSnapSpans <- scopedSnapSpans
-                                   |> Array.map (fun (scp,spn) ->
-                                        scp, spn.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive))
+                                   |> Array.map (fun (scope,collapse,snapSpan) ->
+                                        (scope, collapse, snapSpan.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive)))
             scopedSnapSpans
-            |> Seq.filter (snd >> normalizedSnapshotSpans.IntersectsWith)
+            |> Seq.filter (fun (_, _, snapSpan) -> normalizedSnapshotSpans.IntersectsWith snapSpan)
+            // insert a filter here using scope to remove the regions that should not be outlined at all
             |> Seq.map createTagSpan
         | true , _
         | _    , true -> Seq.empty
