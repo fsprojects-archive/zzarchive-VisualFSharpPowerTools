@@ -779,6 +779,7 @@ module Outlining =
         | Attribute = 30
         | Interface = 31
         | HashDirective = 32
+        | LetOrUseBang = 33
 
     type [< NoComparison; Struct >] ScopeRange (scope:Scope,collapse:Collapse, r:range) = 
             member __.Scope = scope
@@ -804,23 +805,26 @@ module Outlining =
             | SynExpr.Upcast (e,_,_) 
             | SynExpr.Downcast (e,_,_)  
             | SynExpr.AddressOf(_,e,_,_) 
-            | SynExpr.InferredDowncast(e,_) 
-            | SynExpr.InferredUpcast(e,_)
-            | SynExpr.DotGet(e,_,_,_)
-            | SynExpr.DotSet(e,_,_,_)
+            | SynExpr.InferredDowncast (e,_) 
+            | SynExpr.InferredUpcast (e,_)
+            | SynExpr.DotGet (e,_,_,_)
+            | SynExpr.DotSet (e,_,_,_)
             | SynExpr.Do (e,_)
             | SynExpr.New (_,_,e,_)
-            | SynExpr.Typed(e,_,_)
-            | SynExpr.DotIndexedGet(e,_,_,_)
-            | SynExpr.DotIndexedSet(e,_,_,_,_,_) -> yield! visitExpr e       
+            | SynExpr.Typed (e,_,_)
+            | SynExpr.DotIndexedGet (e,_,_,_)
+            | SynExpr.DotIndexedSet (e,_,_,_,_,_) -> yield! visitExpr e       
             | SynExpr.YieldOrReturn (_,e,r)
             | SynExpr.DoBang (e,r)
             | SynExpr.YieldOrReturnFrom (_,e,r) ->
                 yield! rcheck Scope.CompExprInternal Collapse.Below r 
                 yield! visitExpr e
-            | SynExpr.LetOrUseBang (_,_,_,_,_,e,r) ->
-                yield! rcheck Scope.CompExprInternal Collapse.Below r 
-                yield! visitExpr e
+            | SynExpr.LetOrUseBang (_,_,_,pat,e1,e2,_) ->
+                // for `let!` or `use!` the pattern begins at the end of the keyword so that
+                // this scope can be used without adjustment if there is no `=` on the same line
+                // if there is an `=` the range will be adjusted during the tooltip creation
+                yield! rcheck Scope.LetOrUseBang Collapse.Below <| Range.endToEnd pat.Range e1.Range 
+                yield! visitExpr e2
             | SynExpr.For (_,_,_,_,_,e,r)
             | SynExpr.ForEach (_,_,_,_,_,e,r) ->
                 yield! rcheck Scope.For Collapse.Below r
@@ -937,8 +941,6 @@ module Outlining =
             | _ -> ()
         }
 
-    // visit clauses needs to be rewritten so it can dive/fold over any sequence of ORs or ANDs so 
-    // they're properly treated as a cohesive range
     and private visitMatchClause (SynMatchClause.Clause (synPat,_,e,_,_)) =
         seq {   
                 yield! rcheck Scope.MatchClause Collapse.ArrowSame <| Range.startToEnd synPat.Range e.Range  // Collapse the scope after `->`

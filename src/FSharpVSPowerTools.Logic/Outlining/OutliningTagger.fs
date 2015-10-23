@@ -110,7 +110,8 @@ type OutliningTagger
         asyncMaybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
             let snapshot = buffer.CurrentSnapshot in let source = snapshot.GetText ()
-            let! doc = dte.GetCurrentDocument (textDocument.FilePath)
+            let! doc =
+                dte.GetCurrentDocument (textDocument.FilePath)
             let! project = projectFactory.CreateForDocument buffer doc
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
             let! ast = parseFileResults.ParseTree
@@ -233,30 +234,46 @@ type OutliningTagger
                 lastLine <- snapshot.GetLineFromLineNumber (firstLine.LineNumber + MaxTooltipLines - 1)
 
             let missingLinesCount = max (nHintLines - MaxTooltipLines) 0
-
             let hintSnapshotSpan = SnapshotSpan (firstLine.Start, lastLine.End)
             let belowSpan = SnapshotSpan (firstLine.End, snapshotSpan.End)
+
             let collapseText, collapseSpan =
                 let textHint = (getHintText snapshotSpan) + "..."
-                let arrowText, arrowSpan =
-                    let idx = firstLine.GetText().IndexOf "->"
-                    match idx, scope with
-                    // if we're examining a clause without an arrow on the same line (e.g. a series `Or`s)
-                    // the spans need to be adjusted to the position of the guard `|`
-                    | -1, Scope.MatchClause ->
-                        let bar = firstLine.GetText().IndexOf "|"
-                        let barSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + bar ), snapshotSpan.End)
-                        ((getHintText barSpan) + "...", barSpan)
-                    // This covers lambdas (eventually foreach loops in lists and seqs)
-                    | -1, _ -> (textHint, belowSpan)
-                    | _ -> 
-                        let arrowSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + 2), snapshotSpan.End)
-                        ((getHintText arrowSpan) + "...", arrowSpan)
+                // several of the different kinds of outlining scopes require having their range tweaked
+                // based on symbols that aren't found in the ast to get the best visual presentation for collapsing
+                let customText, customSpan =                
+                    match scope with
+                    | Scope.MatchClause -> 
+                        let idx = firstLine.GetText().IndexOf "->"
+                        if idx = -1 then 
+                            // if we're examining a clause without an arrow on the same line (e.g. a series `Or`s)
+                            // the spans need to be adjusted to the position of the guard `|`
+                            let bar = firstLine.GetText().IndexOf "|"
+                            let barSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + bar), snapshotSpan.End)
+                            ((getHintText barSpan) + "...", barSpan)
+                        // This covers lambdas (eventually foreach loops in lists and seqs)
+                        else
+                            let arrowSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + 2), snapshotSpan.End)
+                            ((getHintText arrowSpan) + "...", arrowSpan)
+                    | Scope.Module
+                    | Scope.Member
+                    | Scope.Type
+                    | Scope.LetOrUse
+                    | Scope.LetOrUseBang -> 
+                        let idx = firstLine.GetText().IndexOf "="
+                        // if there's no `=` place the ellipsis directly after the expr
+                        if idx = -1 then ("...", snapshotSpan)
+                        else
+                            let bindingSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + 1), snapshotSpan.End)
+                            ("...", bindingSpan)
+                    | _ -> (textHint, belowSpan)
+
                 match collapse with
                 | Collapse.Same -> (textHint, snapshotSpan)
-                | Collapse.ArrowSame -> (arrowText, arrowSpan)
-                | Collapse.ArrowBelow -> (arrowText, snapshotSpan)
-                | _ (* Scope.Below *) -> ("...", belowSpan)
+                | Collapse.ArrowSame -> (customText, customSpan)
+                | Collapse.ArrowBelow -> (customText, snapshotSpan)
+                | _ (* Scope.Below *) -> ("...", customSpan)
+
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
