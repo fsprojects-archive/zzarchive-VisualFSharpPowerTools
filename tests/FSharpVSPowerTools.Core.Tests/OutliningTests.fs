@@ -38,6 +38,21 @@ let parseSource source =
 type Line = int
 type Col = int
 
+let parseTree (source: string) =
+    let ast = (parseSource source).ParseTree
+    try
+        match ast with
+        | Some tree ->
+                getOutliningRanges tree
+                |> Seq.filter (fun sr-> sr.Range.StartLine <> sr.Range.EndLine)
+                |> Seq.map (fun r ->  r.Range.StartLine, r.Range.StartColumn, r.Range.EndLine, r.Range.EndColumn)
+                |> Seq.iter (printfn "%A")
+        | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
+    with _ ->
+        printfn "Parse of string into AST failed\nAST:\n%+A" ast
+
+
+
 let (=>) (source: string) (expectedRanges: (Line * Col * Line * Col) list) =
     let ast = (parseSource source).ParseTree
     try
@@ -99,7 +114,8 @@ type Color =
 """
     => [ 2, 10, 9, 55
          7, 25, 9, 55
-         8, 27, 9, 55 ]
+         (8, 15, 9, 55)
+         (8, 27, 9, 55) ]
 
 [<Test>]
 let ``record with interface``() =
@@ -116,7 +132,8 @@ type Color =
 """
     => [ 2, 10, 10, 55
          8, 25, 10, 55
-         9, 27, 10, 55 ]
+         (9, 15, 10, 55)
+         (9, 27, 10, 55)]
 
 [<Test>]
 let ``type with a do block``() =
@@ -163,16 +180,19 @@ module MyModule =       // 2
             interface IDisposable with  // 25
                 member __.Dispose() =
                     (docEventListener :> IDisposable).Dispose()
-"""
+""" 
+    //|> parseTree
     => [ 2, 15, 27, 63     // MyModule
          4, 13, 5, 10
          7, 14, 15, 59     // Color
          13, 29, 15, 59
-         14, 31, 15, 59
+         (14, 19, 15, 59)
+         (14, 31, 15, 59)
          17, 24, 27, 63    // MyInnerModule
          19, 24, 27, 63    // RecordColor
          25, 33, 27, 63
-         26, 35, 27, 63 ]
+         (26, 23, 27, 63)
+         (26, 35, 27, 63)]
     
 [<Test>]
 let ``open statements``() =
@@ -203,14 +223,15 @@ open H             // 23
 open G             // 25
 open H             // 26
 """
-    => [ 2, 5, 3, 6
-         5, 8, 19, 17
-         8, 9, 9, 10
-         11, 12, 14, 17
-         16, 12, 19, 17
-         17, 13, 18, 14
-         21, 5, 23, 6
-         25, 5, 26, 6 ]
+//    |> parseTree
+    => [(2, 5, 3, 6)
+        (21, 5, 23, 6)
+        (25, 5, 26, 6)
+        (5, 8, 19, 17)
+        (8, 9, 9, 10)
+        (11, 12, 14, 17)
+        (16, 12, 19, 17)
+        (17, 13, 18, 14)]
 
 [<Test>]
 let ``hash directives``() =
@@ -237,7 +258,7 @@ let x = 1 // 9
       "b" // 21
       "c" // 22
 #r "d"    // 23
-"""
+"""    
     => [ 2, 3, 3, 6
          7, 3, 8, 6
          11, 3, 14, 6
@@ -271,10 +292,12 @@ match None with     // 2
         let x = ()  // 9
         ()          // 10
 """
-    => [ 2, 15, 10, 10
-         6,  4, 10, 10
-         6, 19, 10, 10 
-         9,  8, 10, 10 ]
+//    |> parseTree
+    => [(2, 15, 10, 10)
+        (3, 2, 4, 6)
+        (5, 2, 10, 10)
+        (6, 19, 10, 10)
+        (8, 6, 10, 10) ]
          
 [<Test>]
 let ``computation expressions``() =
@@ -323,11 +346,12 @@ with _ ->     // 5
         ()    // 7
     ()        // 8
 """
-    => [ 2,  3,  8,  6
-         3, 11,  4, 10
-         5,  4,  8,  6
-         6,  4,  8,  6
-         6, 11,  7, 10 ]
+//    |> parseTree
+    => [(2, 3, 8, 6)
+        (5, 4, 8, 6)
+        (3, 11, 4, 10)
+        (5, 5, 8, 6)
+        (6, 11, 7, 10) ]
 
 [<Test>]
 let ``try - finally``() =
@@ -357,10 +381,12 @@ else
         ()
     ()
 """
-    => [ 2, 0, 9, 6
-         3, 11, 4, 10
-         7, 4,  9, 6
-         7, 11, 8, 10 ]
+//    |> parseTree
+    => [(2, 0, 9, 6)
+        (2, 12, 5, 6)
+        (3, 11, 4, 10)
+        (7, 4, 9, 6)
+        (7, 11, 8, 10)]
 
 [<Test>]
 let ``code quotation`` () =
@@ -388,7 +414,7 @@ function
         ()
 """
     => [ 2, 0, 4, 10
-         3, 8, 4, 10 ]
+         (3, 2, 4, 10)]
 
 [<Test>]
 let `` match guarded clause`` () =
@@ -400,7 +426,7 @@ let matchwith num =
 """    
     =>  [ 2, 17, 5, 13
           3, 18, 5, 13
-          4, 11, 5, 13 ]
+          (4, 6, 5, 13) ]
 
 
 [<Test>]
