@@ -235,44 +235,52 @@ type OutliningTagger
 
             let missingLinesCount = max (nHintLines - MaxTooltipLines) 0
             let hintSnapshotSpan = SnapshotSpan (firstLine.Start, lastLine.End)
-            let belowSpan = SnapshotSpan (firstLine.End, snapshotSpan.End)
+           // let belowSpan = SnapshotSpan (firstLine.End, snapshotSpan.End)
 
-            let collapseText, collapseSpan =
-                let textHint = (getHintText snapshotSpan) + "..."
-                // several of the different kinds of outlining scopes require having their range tweaked
-                // based on symbols that aren't found in the ast to get the best visual presentation for collapsing
-                let customText, customSpan =                
-                    match scope with
-                    | Scope.MatchClause -> 
-                        let idx = firstLine.GetText().IndexOf "->"
-                        if idx = -1 then 
-                            // if we're examining a clause without an arrow on the same line (e.g. a series `Or`s)
-                            // the spans need to be adjusted to the position of the guard `|`
-                            let bar = firstLine.GetText().IndexOf "|"
-                            let barSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + bar), snapshotSpan.End)
-                            ((getHintText barSpan) + "...", barSpan)
-                        // This covers lambdas (eventually foreach loops in lists and seqs)
-                        else
-                            let arrowSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + 2), snapshotSpan.End)
-                            ((getHintText arrowSpan) + "...", arrowSpan)
-                    | Scope.Module
-                    | Scope.Member
-                    | Scope.Type
-                    | Scope.LetOrUse
-                    | Scope.LetOrUseBang -> 
-                        let idx = firstLine.GetText().IndexOf "="
-                        // if there's no `=` place the ellipsis directly after the expr
-                        if idx = -1 then ("...", snapshotSpan)
-                        else
-                            let bindingSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + 1), snapshotSpan.End)
-                            ("...", bindingSpan)
-                    | _ -> (textHint, belowSpan)
+            let collapseText, collapseSpan =         
+                /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip    
+                let mkOutliningPair (token:string) (md:int) (collapse:Collapse)=
+                    match collapse, firstLine.GetText().IndexOf token with // Type extension where `with` is on a lower line
+                    | Collapse.Same, -1 -> ((getHintText snapshotSpan) + "...", snapshotSpan)
+                    | _ (* Collapse.Below *) , -1 ->  ("...", snapshotSpan)
+                    | Collapse.Same, idx  ->
+                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
+                        ((getHintText modSpan) + "...", modSpan)   
+                    | _ (*Collapse.Below*), idx ->
+                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
+                        ( "...", modSpan) 
+                
+                let (|OutliningPair|_|) (collapse:Collapse) (_:Scope) =
+                    match collapse with
+                    | Collapse.Same -> Some ((getHintText snapshotSpan) + "...", snapshotSpan)
+                    | _ (*Collapse.Below*) -> Some ("...", snapshotSpan)
+                let lineText = firstLine.GetText()
 
-                match collapse with
-                | Collapse.Same -> (textHint, snapshotSpan)
-                | Collapse.ArrowSame -> (customText, customSpan)
-                | Collapse.ArrowBelow -> (customText, snapshotSpan)
-                | _ (* Scope.Below *) -> ("...", customSpan)
+                let inline pairAlts str1 str2 =
+                    if lineText.Contains str1 then mkOutliningPair str1 0 collapse else mkOutliningPair str2 0 collapse
+
+                match scope with
+                | Scope.Type
+                | Scope.Module
+                | Scope.Member
+                | Scope.LetOrUse 
+                | Scope.LetOrUseBang -> mkOutliningPair "=" 0 collapse
+                | Scope.ObjExpr
+                | Scope.TypeExtension -> mkOutliningPair "with" 0 collapse
+                | Scope.MatchClause -> 
+                    let idx = lineText.IndexOf "->" 
+                    if idx = -1 then  mkOutliningPair "|" -1 collapse else
+                    let substr = lineText.SubstringSafe (idx+2)
+                    if substr = String.Empty || String.IsNullOrWhiteSpace substr then
+                        mkOutliningPair "->" 0 Collapse.Below
+                    else
+                        mkOutliningPair "->" 0 Collapse.Same
+                | Scope.YieldOrReturn -> pairAlts "yield" "return"
+                | Scope.YieldOrReturnBang -> pairAlts "yield!" "return!"
+                | Scope.Lambda ->  mkOutliningPair "->" 0 collapse
+                | Scope.IfThenElse -> mkOutliningPair "if" 0 collapse
+                | OutliningPair collapse pair -> pair
+                | _ -> ("...", snapshotSpan) // should never be reached due to AP
 
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
@@ -292,7 +300,6 @@ type OutliningTagger
         | :? ArgumentOutOfRangeException ->
             Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan"
             null
-
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
     let getTags (normalizedSnapshotSpans: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
