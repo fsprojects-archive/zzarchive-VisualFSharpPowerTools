@@ -43,41 +43,39 @@ namespace FSharpVSPowerTools {
             LoopsCollapsedByDefault = false;
             AttributesEnabled = true;
             AttributesCollapsedByDefault = false;
-
         }
 
         protected override void OnApply(PageApplyEventArgs e) {
-            OpensEnabled = _control.Opens.Enabled;
+            OpensEnabled = _control.Opens.OutliningEnabled;
             OpensCollapsedByDefault = _control.Opens.CollapsedByDefault;
-            ModulesEnabled = _control.Modules.Enabled;
+            ModulesEnabled = _control.Modules.OutliningEnabled;
             ModulesCollapsedByDefault = _control.Modules.CollapsedByDefault;
-            HashDirectivesEnabled = _control.HashDirectives.Enabled;
+            HashDirectivesEnabled = _control.HashDirectives.OutliningEnabled;
             HashDirectivesCollapsedByDefault = _control.HashDirectives.CollapsedByDefault;
-            TypesEnabled = _control.Types.Enabled;
+            TypesEnabled = _control.Types.OutliningEnabled;
             TypesCollapsedByDefault = _control.Types.CollapsedByDefault;
-            SimpleTypesEnabled = _control.SimpleTypes.Enabled;
+            SimpleTypesEnabled = _control.SimpleTypes.OutliningEnabled;
             SimpleTypesCollapsedByDefault = _control.SimpleTypes.CollapsedByDefault;
-            TypeExpressionsEnabled = _control.TypeExpressions.Enabled;
+            TypeExpressionsEnabled = _control.TypeExpressions.OutliningEnabled;
             TypeExpressionsCollapsedByDefault = _control.TypeExpressions.CollapsedByDefault;
-            MembersEnabled = _control.Members.Enabled;
+            MembersEnabled = _control.Members.OutliningEnabled;
             MembersCollapsedByDefault = _control.Members.CollapsedByDefault;
-            LetOrUseEnabled = _control.LetOrUse.Enabled;
+            LetOrUseEnabled = _control.LetOrUse.OutliningEnabled;
             LetOrUseCollapsedByDefault = _control.LetOrUse.CollapsedByDefault;
-            CollectionsEnabled = _control.Collections.Enabled;
+            CollectionsEnabled = _control.Collections.OutliningEnabled;
             CollectionsCollapsedByDefault = _control.Collections.CollapsedByDefault;
-            PatternMatchesEnabled = _control.PatternMatches.Enabled;
+            PatternMatchesEnabled = _control.PatternMatches.OutliningEnabled;
             PatternMatchesCollapsedByDefault = _control.PatternMatches.CollapsedByDefault;
-            TryWithFinallyEnabled = _control.TryWithFinally.Enabled;
+            TryWithFinallyEnabled = _control.TryWithFinally.OutliningEnabled;
             TryWithFinallyCollapsedByDefault = _control.TryWithFinally.CollapsedByDefault;
-            IfThenElseEnabled = _control.IfThenElse.Enabled;
+            IfThenElseEnabled = _control.IfThenElse.OutliningEnabled;
             IfThenElseCollapsedByDefault = _control.IfThenElse.CollapsedByDefault;
-            CExpressionMembersEnabled = _control.CExpressionMembers.Enabled;
+            CExpressionMembersEnabled = _control.CExpressionMembers.OutliningEnabled;
             CExpressionMembersCollapsedByDefault = _control.CExpressionMembers.CollapsedByDefault;
-            LoopsEnabled = _control.Loops.Enabled;
+            LoopsEnabled = _control.Loops.OutliningEnabled;
             LoopsCollapsedByDefault = _control.Loops.CollapsedByDefault;
-            AttributesEnabled = _control.Attributes.Enabled;
+            AttributesEnabled = _control.Attributes.OutliningEnabled;
             AttributesCollapsedByDefault = _control.Attributes.CollapsedByDefault;
-
 
             base.OnApply(e);
         }
