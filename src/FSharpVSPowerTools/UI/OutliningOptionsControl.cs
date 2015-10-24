@@ -20,17 +20,19 @@ namespace FSharpVSPowerTools.UI {
         public OutliningOptionControl Types { get; private set; }
         public OutliningOptionControl SimpleTypes { get; private set; }
         public OutliningOptionControl TypeExpressions { get; private set; }
-        public OutliningOptionControl Members { get; set; }
-        public OutliningOptionControl LetOrUse{ get; set; }
-        public OutliningOptionControl Collections{ get; set; }
+        public OutliningOptionControl Members { get; private set; }
+        public OutliningOptionControl LetOrUse{ get; private set; }
+        public OutliningOptionControl Collections{ get; private set; }
         public OutliningOptionControl PatternMatches { get; private set; }
-        public OutliningOptionControl TryWithFinally { get; set; }
-        public OutliningOptionControl IfThenElse { get; set; }
-        public OutliningOptionControl CExpressionMembers { get; set; }
-        public OutliningOptionControl Loops { get; set; }
-        public OutliningOptionControl Attributes { get; set; }
+        public OutliningOptionControl TryWithFinally { get; private set; }
+        public OutliningOptionControl IfThenElse { get; private set; }
+        public OutliningOptionControl CExpressionMembers { get; private set; }
+        public OutliningOptionControl Loops { get; private set; }
+        public OutliningOptionControl Attributes { get; private set; }
 
-        protected override void OnLoad(EventArgs _) {
+        protected override void OnLoad(EventArgs e) {
+            base.OnLoad(e);
+
             Opens = new OutliningOptionControl("Open :") {
                 OutliningEnabled = _outliningOptions.OpensEnabled,
                 CollapsedByDefault = _outliningOptions.OpensCollapsedByDefault
@@ -87,12 +89,12 @@ namespace FSharpVSPowerTools.UI {
                 OutliningEnabled =   _outliningOptions.LoopsEnabled,
                 CollapsedByDefault = _outliningOptions.LoopsCollapsedByDefault
             };
-            Attributes = new OutliningOptionControl("For / ForEach / While :")
-            {
+            Attributes = new OutliningOptionControl("For / ForEach / While :") {
                 OutliningEnabled = _outliningOptions.AttributesEnabled,
                 CollapsedByDefault = _outliningOptions.AttributesCollapsedByDefault
             };
 
+            flowLayoutPanel1.Controls.Clear();
             flowLayoutPanel1.Controls.Add(Opens);
             flowLayoutPanel1.Controls.Add(Modules);
             flowLayoutPanel1.Controls.Add(HashDirectives);            
@@ -110,9 +112,3 @@ namespace FSharpVSPowerTools.UI {
         }
     }
 }
-
-            // = new OutliningOptionControl(" :") {
-            //    OutliningEnabled =   _outliningOptions.Enabled,
-            //    CollapsedByDefault = _outliningOptions.CollapsedByDefault
-            //};
-
