@@ -9,16 +9,10 @@ namespace FSharpVSPowerTools
     {
         public GlobalOptionsPage()
         {
-            StrictMode = false;
             DiagnosticMode = false;
             BackgroundCompilation = true;
             ProjectCacheSize = 50;
         }
-
-        [Category("Caching")]
-        [DisplayName("Strict Mode")]
-        [Description("Invalidate caches aggressively in order to provide more up-to-date results.")]
-        public bool StrictMode { get; set; }
 
         [Category("Debugging")]
         [DisplayName("Diagnostic Mode")]
@@ -27,13 +21,13 @@ namespace FSharpVSPowerTools
 
         [Category("Performance")]
         [DisplayName("Background Compilation")]
-        [Description("Compiling current project in background. May cause high CPU load on large projects.")]
+        [Description("Compile current project in background. Enabling the option may cause high CPU load on large projects.")]
         public bool BackgroundCompilation { get; set; }
 
         [Category("Performance")]
         [DisplayName("Project Cache Size")]
-        [Description("How many project's parse and check results are cached. Too large value may cause high memory load, " +
-                     "which will make Visual Studio unusable.")]
+        [Description("The number of projects where their parse and check results are cached. A large value may cause high memory load, " +
+                     "which will make Visual Studio sluggish.")]
         public int ProjectCacheSize { get; set; }
     }
 }

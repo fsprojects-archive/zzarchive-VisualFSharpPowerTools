@@ -171,7 +171,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
     let rec createProjectProvider project =
         let getProjectProvider project =
             Some (createProjectProvider project :> IProjectProvider)
-        new ProjectProvider(project, getProjectProvider, (fun _ -> ()), id)
+        new ProjectProvider(project, getProjectProvider, ignore)
 
     let generateReferenceFiles (project: Project) =
         maybe {

@@ -48,7 +48,6 @@ type ICodeGenerationOptions =
     abstract InterfaceMemberIdentifier: string with get, set
      
 type IGlobalOptions =
-    abstract StrictMode: bool with get, set
     abstract DiagnosticMode: bool with get, set
     abstract BackgroundCompilation: bool with get, set
     abstract ProjectCacheSize: int with get, set

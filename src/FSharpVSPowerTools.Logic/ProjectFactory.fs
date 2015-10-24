@@ -142,7 +142,7 @@ type ProjectFactory
     default x.CreateForProject (project: Project): IProjectProvider = 
         let createProjectProvider project = Some (x.CreateForProject project)
         cache.Get project.FullName (fun _ ->
-            new ProjectProvider (project, createProjectProvider, onProjectChanged, vsLanguageService.FixProjectLoadTime)) :> _
+            new ProjectProvider (project, createProjectProvider, onProjectChanged)) :> _
 
     member x.CreateForDocument buffer (doc: Document) =
         let filePath = doc.FullName
