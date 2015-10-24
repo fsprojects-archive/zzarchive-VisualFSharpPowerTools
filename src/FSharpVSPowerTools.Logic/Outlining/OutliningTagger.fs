@@ -125,7 +125,7 @@ type OutliningTagger
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
             let! ast = parseFileResults.ParseTree
             //Logging.logInfo "[Outlining]\nAST Range\n%A" ast.Range
-            Logging.logInfo "[Outlining]\nAST\n%A" ast
+            Logging.logInfo (fun _ -> sprintf "[Outlining]\nAST\n%A" ast)
             if checkAST oldAST ast then
                 oldAST <- Some ast
                 let scopedSpans = (getOutliningRanges >> Seq.choose (fromScopeRange snapshot) >> Array.ofSeq) ast
@@ -308,7 +308,7 @@ type OutliningTagger
                     }) :> ITagSpan<_> |> Some
         with
         | :? ArgumentOutOfRangeException ->
-            Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan"
+            Logging.logInfo (fun _ -> "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan")
             None
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags

@@ -81,7 +81,7 @@ type ReferenceSourceProvider(baseUrl: string) =
             |> Option.map Path.GetFileNameWithoutExtension
             |> Option.map (fun assemblyName ->
                 let url = baseUrl + "/" + assemblyName + "/a.html#" + getMD5Hash xmlDocSig
-                Logging.logInfo "Go to definition at '%s'." url
+                Logging.logInfo (fun _ -> sprintf "Go to definition at '%s'." url)
                 url))
         
     interface IDisposable with
