@@ -28,6 +28,7 @@ namespace FSharpVSPowerTools.UI {
         public OutliningOptionControl IfThenElse { get; set; }
         public OutliningOptionControl CExpressionMembers { get; set; }
         public OutliningOptionControl Loops { get; set; }
+        public OutliningOptionControl Attributes { get; set; }
 
         protected override void OnLoad(EventArgs _) {
             Opens = new OutliningOptionControl("Open :") {
@@ -85,6 +86,11 @@ namespace FSharpVSPowerTools.UI {
             Loops = new OutliningOptionControl("For / ForEach / While :") {
                 OutliningEnabled =   _outliningOptions.LoopsEnabled,
                 CollapsedByDefault = _outliningOptions.LoopsCollapsedByDefault
+            };
+            Attributes = new OutliningOptionControl("For / ForEach / While :")
+            {
+                OutliningEnabled = _outliningOptions.AttributesEnabled,
+                CollapsedByDefault = _outliningOptions.AttributesCollapsedByDefault
             };
 
             flowLayoutPanel1.Controls.Add(Opens);

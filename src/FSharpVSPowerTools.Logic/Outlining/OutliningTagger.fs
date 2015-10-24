@@ -73,6 +73,8 @@ let inline scaleToFit (view: IWpfTextView) =
     view
 
 
+
+
 type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
@@ -176,8 +178,8 @@ type OutliningTagger
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
         serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
-        |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.75 * cv.ZoomLevel)
-                            (fun _ -> view.ZoomLevel <- 0.75 * view.ZoomLevel)
+        |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.80 * cv.ZoomLevel)
+                            (fun _ -> view.ZoomLevel <- 0.80 * view.ZoomLevel)
         scaleToFit view
 
 
@@ -230,6 +232,153 @@ type OutliningTagger
                         else textshot.LineText(acc).Trim ()
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text
         loop firstLineNum
+
+
+    let collapseByDefualt scope =
+        let options = Setting.getOutliningOptions serviceProvider
+        match scope with
+        | Scope.Open   ->  options.OpensCollapsedByDefault             
+        | Scope.Module                -> options.ModulesCollapsedByDefault   
+        | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault   
+        | Scope.Attribute             -> options.AttributesCollapsedByDefault
+        | Scope.Interface             
+        | Scope.TypeExtension         
+        | Scope.Type                  -> options.TypesCollapsedByDefault   
+        | Scope.Member                -> options.MembersCollapsedByDefault   
+        | Scope.LetOrUse              -> options.LetOrUseCollapsedByDefault 
+        | Scope.Match                 
+        | Scope.MatchClause           
+        | Scope.MatchLambda           -> options.PatternMatchesCollapsedByDefault 
+        | Scope.IfThenElse            
+        | Scope.ThenInIfThenElse      
+        | Scope.ElseInIfThenElse      -> options.IfThenElseCollapsedByDefault 
+        | Scope.TryWith               
+        | Scope.TryInTryWith          
+        | Scope.WithInTryWith         
+        | Scope.TryFinally            
+        | Scope.TryInTryFinally       
+        | Scope.FinallyInTryFinally   -> options.TryWithFinallyCollapsedByDefault     
+        | Scope.ArrayOrList           -> options.CollectionsCollapsedByDefault
+        | Scope.CompExpr               
+        | Scope.ObjExpr                
+        | Scope.Quote                  
+        | Scope.Record                 
+        | Scope.Tuple                  
+        | Scope.SpecialFunc           -> options.TypeExpressionsCollapsedByDefault 
+        | Scope.CompExprInternal       
+        | Scope.LetOrUseBang           
+        | Scope.YieldOrReturn          
+        | Scope.YieldOrReturnBang     -> options.CExpressionMembersCollapsedByDefault
+        | Scope.UnionCase              
+        | Scope.EnumCase               
+        | Scope.RecordField            
+        | Scope.SimpleType             
+        | Scope.RecordDefn             
+        | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault   
+        | Scope.For                   
+        | Scope.While                 -> options.LoopsCollapsedByDefault    
+//        | Scope.Namespace             ->
+//        | Scope.Do                    -> 
+//        | Scope.Lambda                 
+        | _ -> false    
+
+    let outliningEnabled scope =
+        let options = Setting.getOutliningOptions serviceProvider
+        match scope with
+        | Scope.Open   ->  options.OpensEnabled             
+        | Scope.Module                -> options.ModulesEnabled   
+        | Scope.HashDirective         -> options.HashDirectivesEnabled   
+        | Scope.Attribute             -> options.AttributesEnabled
+        | Scope.Interface             
+        | Scope.TypeExtension         
+        | Scope.Type                  -> options.TypesEnabled   
+        | Scope.Member                -> options.MembersEnabled   
+        | Scope.LetOrUse              -> options.LetOrUseEnabled 
+        | Scope.Match                 
+        | Scope.MatchClause           
+        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
+        | Scope.IfThenElse            
+        | Scope.ThenInIfThenElse      
+        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
+        | Scope.TryWith               
+        | Scope.TryInTryWith          
+        | Scope.WithInTryWith         
+        | Scope.TryFinally            
+        | Scope.TryInTryFinally       
+        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled     
+        | Scope.ArrayOrList           -> options.CollectionsEnabled
+        | Scope.CompExpr               
+        | Scope.ObjExpr                
+        | Scope.Quote                  
+        | Scope.Record                 
+        | Scope.Tuple                  
+        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
+        | Scope.CompExprInternal       
+        | Scope.LetOrUseBang           
+        | Scope.YieldOrReturn          
+        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
+        | Scope.UnionCase              
+        | Scope.EnumCase               
+        | Scope.RecordField            
+        | Scope.SimpleType             
+        | Scope.RecordDefn             
+        | Scope.UnionDefn             -> options.SimpleTypesEnabled   
+        | Scope.For                   
+        | Scope.While                 -> options.LoopsEnabled    
+//        | Scope.Namespace             ->
+//        | Scope.Do                    -> 
+//        | Scope.Lambda                 
+        | _ -> false    
+
+    (*
+                    
+         options.        
+          
+                   
+             
+         options.TypeExpressionsCollapsedByDefault   
+                 
+                  
+         options.CollectionsCollapsedByDefault       
+            
+         options.TryWithFinallyCollapsedByDefault    
+                
+         options.CExpressionMembersCollapsedByDefault
+                   
+    *)
+
+    (*
+         OpensEnabled                        
+         OpensCollapsedByDefault             
+         ModulesEnabled                      
+         ModulesCollapsedByDefault           
+         HashDirectivesEnabled               
+         HashDirectivesCollapsedByDefault    
+         TypesEnabled                        
+         TypesCollapsedByDefault             
+         SimpleTypesEnabled                  
+         SimpleTypesCollapsedByDefault       
+         TypeExpressionsEnabled              
+         TypeExpressionsCollapsedByDefault   
+         MembersEnabled                      
+         MembersCollapsedByDefault           
+         LetOrUseEnabled                     
+         LetOrUseCollapsedByDefault          
+         CollectionsEnabled                  
+         CollectionsCollapsedByDefault       
+         PatternMatchesEnabled               
+         PatternMatchesCollapsedByDefault    
+         TryWithFinallyEnabled               
+         TryWithFinallyCollapsedByDefault    
+         IfThenElseEnabled                   
+         IfThenElseCollapsedByDefault        
+         CExpressionMembersEnabled           
+         CExpressionMembersCollapsedByDefault
+         LoopsEnabled                        
+         LoopsCollapsedByDefault              
+    *)
+
+
 
 
     // outlined regions that should be collapsed by default will make use of
@@ -326,7 +475,7 @@ type OutliningTagger
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
-                        member __.IsDefaultCollapsed = false
+                        member __.IsDefaultCollapsed = collapseByDefualt scope
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
                             OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _
@@ -350,7 +499,7 @@ type OutliningTagger
                                         ScopeSpan (s.Scope, s.Collapse, s.SnapSpan.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive)))
             scopedSnapSpans
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
-            // insert a filter here using scope to remove the regions that should not be outlined at all
+            |> Seq.filter (fun s -> outliningEnabled s.Scope)
             |> Seq.choose createTagSpan
 
 

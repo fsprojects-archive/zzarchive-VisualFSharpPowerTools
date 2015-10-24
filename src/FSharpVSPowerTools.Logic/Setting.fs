@@ -85,7 +85,8 @@ type IOutliningOptions =
     abstract CExpressionMembersCollapsedByDefault: bool with get, set
     abstract LoopsEnabled: bool with get, set
     abstract LoopsCollapsedByDefault: bool with get, set
-
+    abstract AttributesEnabled: bool with get, set
+    abstract AttributesCollapsedByDefault: bool with get, set
 
 
 
@@ -123,3 +124,6 @@ module Setting =
         
     let getLintOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<ILintOptions>()
+
+    let getOutliningOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.GetService<IOutliningOptions>()

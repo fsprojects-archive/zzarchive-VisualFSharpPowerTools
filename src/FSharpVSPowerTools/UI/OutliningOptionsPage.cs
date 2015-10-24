@@ -41,7 +41,9 @@ namespace FSharpVSPowerTools {
             CExpressionMembersCollapsedByDefault = false;
             LoopsEnabled = true;
             LoopsCollapsedByDefault = false;
-        
+            AttributesEnabled = true;
+            AttributesCollapsedByDefault = false;
+
         }
 
         protected override void OnApply(PageApplyEventArgs e) {
@@ -73,7 +75,9 @@ namespace FSharpVSPowerTools {
             CExpressionMembersCollapsedByDefault = _control.CExpressionMembers.CollapsedByDefault;
             LoopsEnabled = _control.Loops.Enabled;
             LoopsCollapsedByDefault = _control.Loops.CollapsedByDefault;
-        
+            AttributesEnabled = _control.Attributes.Enabled;
+            AttributesCollapsedByDefault = _control.Attributes.CollapsedByDefault;
+
 
             base.OnApply(e);
         }
@@ -161,6 +165,12 @@ namespace FSharpVSPowerTools {
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool LoopsCollapsedByDefault { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool AttributesEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool AttributesCollapsedByDefault { get; set; }
 
         protected override IWin32Window Window {
             get { return _control = new OutliningOptionsControl(this); }
