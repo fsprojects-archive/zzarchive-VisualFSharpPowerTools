@@ -46,6 +46,7 @@ Alternatively, one can build [vs2012 branch](https://github.com/fsprojects/Visua
  - Navigate to source
  - Quick info panel
  - FSharpLint integration
+ - Outlining
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 
