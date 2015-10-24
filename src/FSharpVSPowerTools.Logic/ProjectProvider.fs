@@ -11,8 +11,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type internal ProjectProvider(project: Project, 
                               getProjectProvider: Project -> IProjectProvider option, 
-                              onChanged: Project -> unit, 
-                              fixProjectLoadTime: FSharpProjectOptions -> FSharpProjectOptions) =
+                              onChanged: Project -> unit) =
     static let mutable getField = None
     do Debug.Assert(project <> null, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
@@ -128,12 +127,10 @@ type internal ProjectProvider(project: Project,
                     |> Array.choose (fun (fullPath, opts) -> 
                         fullPath |> Option.map (fun x -> x, opts))
                 
-                // Fix project load time to ensure each project provider instance has its correct project load time.    
                 let opts = 
                     languageService.GetProjectCheckerOptions (
                         projectFileName.Value, sourceFiles.Value, compilerOptions.Value, referencedProjects)
-                    |> fixProjectLoadTime 
-
+  
                 (*
                 // Disable due to a bug in Visual F# Tools' project system (https://visualfsharp.codeplex.com/workitem/164)
                 let orphanedProjects = lazy (
