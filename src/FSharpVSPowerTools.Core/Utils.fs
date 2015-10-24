@@ -166,6 +166,12 @@ module Option =
         match x with
         | Some x -> [x]
         | None -> []
+
+
+    let inline iterElse someAction noneAction opt =
+        match opt with
+        | Some x -> someAction x
+        | None   -> noneAction ()
     
 // Async helper functions copied from https://github.com/jack-pappas/ExtCore/blob/master/ExtCore/ControlCollections.Async.fs
 [<RequireQualifiedAccess>]
