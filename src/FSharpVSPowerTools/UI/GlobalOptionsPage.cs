@@ -11,6 +11,8 @@ namespace FSharpVSPowerTools
         {
             StrictMode = false;
             DiagnosticMode = false;
+            BackgroundCompilation = true;
+            ProjectCacheSize = 50;
         }
 
         [Category("Caching")]
@@ -22,5 +24,16 @@ namespace FSharpVSPowerTools
         [DisplayName("Diagnostic Mode")]
         [Description("Print out stacktraces and log information to Visual Studio Output panel.")]
         public bool DiagnosticMode { get; set; }
+
+        [Category("Performance")]
+        [DisplayName("Background Compilation")]
+        [Description("Compiling current project in background. May cause high CPU load on large projects.")]
+        public bool BackgroundCompilation { get; set; }
+
+        [Category("Performance")]
+        [DisplayName("Project Cache Size")]
+        [Description("How many project's parse and check results are cached. Too large value may cause high memory load, " +
+                     "which will make Visual Studio unusable.")]
+        public int ProjectCacheSize { get; set; }
     }
 }
