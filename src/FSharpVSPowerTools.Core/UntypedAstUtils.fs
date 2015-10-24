@@ -792,6 +792,12 @@ module Outlining =
         | TypeExtension = 34
         | YieldOrReturn = 35
         | YieldOrReturnBang = 36
+        | UnionCase = 37
+        | EnumCase = 38
+        | RecordField = 39
+        | SimpleType = 40
+        | RecordDefn = 41
+        | UnionDefn = 42
 
     type [< NoComparison; Struct >] ScopeRange (scope:Scope, collapse:Collapse, r:range) = 
             member __.Scope = scope
@@ -803,7 +809,7 @@ module Outlining =
     let inline private rcheck scope collapse (r:range) = 
         seq { if r.StartLine <> r.EndLine then yield ScopeRange (scope, collapse, r)}
 
-    let rec private visitExpr expression = 
+    let rec private parseExpr expression = 
         seq {
             match expression with
             | SynExpr.Upcast (e,_,_) 
@@ -817,39 +823,39 @@ module Outlining =
             | SynExpr.New (_,_,e,_)
             | SynExpr.Typed (e,_,_)
             | SynExpr.DotIndexedGet (e,_,_,_)
-            | SynExpr.DotIndexedSet (e,_,_,_,_,_) -> yield! visitExpr e       
+            | SynExpr.DotIndexedSet (e,_,_,_,_,_) -> yield! parseExpr e       
             | SynExpr.YieldOrReturn (_,e,r) ->
                 yield! rcheck Scope.YieldOrReturn Collapse.Below r 
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.YieldOrReturnFrom (_,e,r) ->
                 yield! rcheck Scope.YieldOrReturnBang Collapse.Below r 
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.DoBang (e,r) ->
                 yield! rcheck Scope.Do Collapse.Below <| Range.modStart r 3
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.LetOrUseBang (_,_,_,pat,e1,e2,_) ->
                 // for `let!` or `use!` the pattern begins at the end of the keyword so that
                 // this scope can be used without adjustment if there is no `=` on the same line
                 // if there is an `=` the range will be adjusted during the tooltip creation
                 yield! rcheck Scope.LetOrUseBang Collapse.Below <| Range.endToEnd pat.Range e1.Range 
-                yield! visitExpr e1
-                yield! visitExpr e2
+                yield! parseExpr e1
+                yield! parseExpr e2
             | SynExpr.For (_,_,_,_,_,e,r)
             | SynExpr.ForEach (_,_,_,_,_,e,r) ->
                 yield! rcheck Scope.For Collapse.Below r
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.LetOrUse (_,_,bindings, body,_) ->
-                yield! visitBindings bindings
-                yield! visitExpr body
+                yield! parseBindings bindings
+                yield! parseExpr body
             | SynExpr.Match (seqPointAtBinding,_,clauses,_,r) ->
                 match seqPointAtBinding with
                 | SequencePointAtBinding pr ->
                     yield! rcheck Scope.Match Collapse.Below <| Range.endToEnd pr r
                 | _ -> ()
-                yield! visitMatchClauses clauses
+                yield! parseMatchClauses clauses
             | SynExpr.MatchLambda (_,_,clauses,_,r) ->
                 yield! rcheck Scope.MatchLambda Collapse.Below <| Range.modStart r 8
-                yield! visitMatchClauses clauses
+                yield! parseMatchClauses clauses
             | SynExpr.App (atomicFlag,isInfix,funcExpr,argExpr,r) ->
                 // seq exprs, custom operators, etc
                 if ExprAtomicFlag.NonAtomic=atomicFlag && isInfix=false 
@@ -858,24 +864,24 @@ module Outlining =
                    // these cases must be removed to prevent creating unnecessary tags for the same scope
                    && (function | SynExpr.CompExpr _ -> false | _ -> true) argExpr then
                         yield! rcheck Scope.SpecialFunc Collapse.Below <| Range.endToEnd funcExpr.Range r
-                yield! visitExpr argExpr
-                yield! visitExpr funcExpr
+                yield! parseExpr argExpr
+                yield! parseExpr funcExpr
             | SynExpr.Sequential (_,_,e1,e2,_) ->
-                yield! visitExpr e1
-                yield! visitExpr e2
+                yield! parseExpr e1
+                yield! parseExpr e2
             | SynExpr.ArrayOrListOfSeqExpr (isArray,e,r) ->
                 yield! rcheck  Scope.ArrayOrList Collapse.Same <| Range.modBoth r (if isArray then 2 else 1) (if isArray then 2 else 1)
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.CompExpr (arrayOrList,_,e,r) ->
                 if arrayOrList then 
-                    yield! visitExpr e
+                    yield! parseExpr e
                 else  // exclude the opening { and closing } on the cexpr from collapsing
                     yield! rcheck Scope.CompExpr Collapse.Same <| Range.modBoth r 1 1
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.ObjExpr (_,_,bindings,_,newRange,wholeRange) ->
                 let r = mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
                 yield! rcheck Scope.ObjExpr Collapse.Below r
-                yield! visitBindings bindings
+                yield! parseBindings bindings
             | SynExpr.TryWith (e,_,matchClauses,tryRange,withRange,tryPoint,withPoint) ->
                 match tryPoint with
                 | SequencePointAtTry r -> 
@@ -885,8 +891,8 @@ module Outlining =
                 | SequencePointAtWith r ->
                     yield! rcheck Scope.WithInTryWith Collapse.Below <| Range.endToEnd r withRange
                 | _ -> ()
-                yield! visitExpr e
-                yield! visitMatchClauses matchClauses
+                yield! parseExpr e
+                yield! parseMatchClauses matchClauses
             | SynExpr.TryFinally (tryExpr,finallyExpr,r,tryPoint,finallyPoint) ->
                 match tryPoint with
                 | SequencePointAtTry tryRange ->
@@ -896,8 +902,8 @@ module Outlining =
                 | SequencePointAtFinally finallyRange ->                    
                     yield! rcheck  Scope.FinallyInTryFinally Collapse.Below <| Range.endToEnd finallyRange r
                 | _ -> ()
-                yield! visitExpr tryExpr
-                yield! visitExpr finallyExpr
+                yield! parseExpr tryExpr
+                yield! parseExpr finallyExpr
             | SynExpr.IfThenElse (e1,e2,e3,seqPointInfo,_,_,r) ->                
                 // Outline the entire IfThenElse
                 yield! rcheck Scope.IfThenElse Collapse.Below r
@@ -906,60 +912,60 @@ module Outlining =
                 | SequencePointInfoForBinding.SequencePointAtBinding rt -> 
                     yield! rcheck  Scope.ThenInIfThenElse Collapse.Below <| Range.endToEnd rt e2.Range
                 | _ -> ()
-                yield! visitExpr e1
-                yield! visitExpr e2
+                yield! parseExpr e1
+                yield! parseExpr e2
                 match e3 with
                 | Some e -> 
                     match e with // prevent double collapsing on elifs
                     | SynExpr.IfThenElse (_,_,_,_,_,_,_) ->
-                        yield! visitExpr e    
+                        yield! parseExpr e    
                     | _ ->
                         yield! rcheck Scope.ElseInIfThenElse Collapse.Same e.Range
-                        yield! visitExpr e                            
+                        yield! parseExpr e                            
                 | None -> ()
             | SynExpr.While (_,_,e,r) ->
                 yield! rcheck Scope.While Collapse.Below  r
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.Lambda (_,_,pats,e,r) ->
                 match pats with
                 | SynSimplePats.SimplePats (_,pr)
                 | SynSimplePats.Typed (_,_,pr) ->
                     yield! rcheck Scope.Lambda Collapse.Below <| Range.endToEnd pr r
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.Lazy (e,r) ->
                 yield! rcheck Scope.SpecialFunc Collapse.Below r
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.Quote (_,isRaw,e,_,r) ->
                 // subtract columns so the @@> or @> is not collapsed
                 yield! rcheck Scope.Quote Collapse.Same <| Range.modBoth r (if isRaw then 3 else 2) (if isRaw then 3 else 2)
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.Tuple (es,_,r) ->
                 yield! rcheck Scope.Tuple Collapse.Same r
-                yield! Seq.collect visitExpr es
+                yield! Seq.collect parseExpr es
             | SynExpr.Paren (e,_,_,_) ->
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.Record (recCtor,recCopy,recordFields,r) ->
                 if recCtor.IsSome then 
                     let (_,ctorArgs,_,_,_) = recCtor.Value
-                    yield! visitExpr ctorArgs
+                    yield! parseExpr ctorArgs
                 if recCopy.IsSome then
                     let (e,_) = recCopy.Value
-                    yield! visitExpr e
-                yield! recordFields |> (Seq.choose (fun (_,e,_) -> e) >> Seq.collect visitExpr)
+                    yield! parseExpr e
+                yield! recordFields |> (Seq.choose (fun (_,e,_) -> e) >> Seq.collect parseExpr)
                 // exclude the opening `{` and closing `}` of the record from collapsing
                 yield! rcheck Scope.Record Collapse.Same <| Range.modBoth r 1 1         
             | _ -> ()
         }
 
-    and private visitMatchClause (SynMatchClause.Clause (synPat,_,e,_,_)) =
+    and private parseMatchClause (SynMatchClause.Clause (synPat,_,e,_,_)) =
         seq {   
                 yield! rcheck Scope.MatchClause Collapse.Same <| Range.startToEnd synPat.Range e.Range  // Collapse the scope after `->`
-                yield! visitExpr e 
+                yield! parseExpr e 
             }
 
-    and private visitMatchClauses = Seq.collect visitMatchClause
+    and private parseMatchClauses = Seq.collect parseMatchClause
 
-    and private visitAttributes (attrs:SynAttributes) =
+    and private parseAttributes (attrs:SynAttributes) =
         seq{
             let attrListRange  = 
                 if attrs.Length = 0 then Seq.empty else 
@@ -969,14 +975,14 @@ module Outlining =
             | [_] -> yield! attrListRange
             | hd::tl -> 
                 yield! attrListRange
-                yield! visitExpr hd.ArgExpr
+                yield! parseExpr hd.ArgExpr
                 // If there are more than 2 attributes only add tags to the 2nd and beyond, to avoid double collapsing on the first attribute
                 yield! tl |> Seq.collect (fun attr -> rcheck Scope.Attribute Collapse.Same <| Range.startToEnd attr.Range attr.ArgExpr.Range)
                 // visit the expressions inside each attribute
-                yield! attrs |> Seq.collect (fun attr -> visitExpr attr.ArgExpr)
+                yield! attrs |> Seq.collect (fun attr -> parseExpr attr.ArgExpr)
         }
 
-    and private visitBinding (Binding (_,kind,_,_,attrs,_,_,_,_,e,br,_) as b) =        
+    and private parseBinding (Binding (_,kind,_,_,attrs,_,_,_,_,e,br,_) as b) =        
         seq {
 //            let r = Range.endToEnd b.RangeOfBindingSansRhs b.RangeOfBindingAndRhs
             match kind with
@@ -985,38 +991,84 @@ module Outlining =
             | SynBindingKind.DoBinding -> 
                 yield! rcheck Scope.Do Collapse.Below <| Range.modStart br 2
             | _ -> () 
-            yield! visitAttributes attrs
-            yield! visitExpr e
+            yield! parseAttributes attrs
+            yield! parseExpr e
         }
 
-    and private visitBindings = Seq.collect visitBinding 
+    and private parseBindings = Seq.collect parseBinding 
 
-    and private visitSynMemberDefn d =
+    and private parseSynMemberDefn d =
         seq {
             match d with
             | SynMemberDefn.Member (binding,r) ->
                 yield! rcheck Scope.Member Collapse.Below r
-                yield! visitBinding binding
+                yield! parseBinding binding
             | SynMemberDefn.LetBindings (bindings,_,_,r) ->
                 //yield! rcheck Scope.LetOrUse Collapse.Below r
-                yield! visitBindings bindings
+                yield! parseBindings bindings
             | SynMemberDefn.Interface (tp,iMembers,_) ->
                 yield! rcheck Scope.Interface Collapse.Below <| Range.endToEnd tp.Range d.Range
                 match iMembers with
-                | Some members -> yield! Seq.collect visitSynMemberDefn members
+                | Some members -> yield! Seq.collect parseSynMemberDefn members
                 | None -> ()
             | SynMemberDefn.NestedType (td,_,_) ->
-                yield! visitTypeDefn td
+                yield! parseTypeDefn td
             | SynMemberDefn.AbstractSlot (ValSpfn(_,_,_,synt,_,_,_,_,_,_,_),_,r) -> 
                 yield! rcheck Scope.Member Collapse.Below <| Range.startToEnd synt.Range r
             | SynMemberDefn.AutoProperty (_,_,_,_,(*memkind*)_,_,_,_,e,_,r) ->
                 yield! rcheck Scope.Member Collapse.Below r
-                yield! visitExpr e   
+                yield! parseExpr e   
             | _ -> ()
         }
 
+    (*  For Cases like
+        --------------
+            type JsonDocument = 
+                private {   Json : string
+                            Path : string   }  
+        Or 
+             type JsonDocument = 
+                internal |  Json of string
+                         |  Path of string   
+    *)
+    and private parseSimpleRepr simple =
+        let accessRange (opt:SynAccess option) =
+            match opt with
+            | None -> 0
+            | Some synacc ->
+                match synacc with
+                | SynAccess.Public -> 6
+                | SynAccess.Private -> 7
+                | SynAccess.Internal -> 8
+        seq{
+            match simple with
+            | SynTypeDefnSimpleRepr.Enum (cases,er) -> 
+                yield! rcheck Scope.SimpleType Collapse.Below er
+                yield! cases 
+                    |> Seq.collect (fun (SynEnumCase.EnumCase (attrs,_,_,_,cr)) ->
+                    seq{yield! rcheck Scope.EnumCase Collapse.Below cr
+                        yield! parseAttributes attrs
+                    })
+            | SynTypeDefnSimpleRepr.Record (opt,fields,rr) -> 
+                //yield! rcheck Scope.SimpleType Collapse.Same <| Range.modBoth rr (accessRange opt+1) 1
+                yield! rcheck Scope.RecordDefn Collapse.Same rr //<| Range.modBoth rr 1 1
+                yield! fields 
+                    |> Seq.collect (fun (SynField.Field (attrs,_,_,_,_,_,_,fr)) ->
+                    seq{yield! rcheck Scope.RecordField Collapse.Below fr
+                        yield! parseAttributes attrs
+                    })
+            | SynTypeDefnSimpleRepr.Union (opt,cases,ur) -> 
+//                yield! rcheck Scope.SimpleType Collapse.Same <| Range.modStart ur (accessRange opt)
+                yield! rcheck Scope.UnionDefn Collapse.Same ur 
+                yield! cases 
+                    |> Seq.collect (fun (SynUnionCase.UnionCase (attrs,_,_,_,_,cr)) ->
+                    seq{yield! rcheck Scope.UnionCase Collapse.Below cr
+                        yield! parseAttributes attrs
+                    })
+            | _ -> ()
+        }
 
-    and private visitTypeDefn (TypeDefn (componentInfo, objectModel, members, range)) =
+    and private parseTypeDefn (TypeDefn (componentInfo, objectModel, members, range)) =
         seq {            
             match objectModel with
             | SynTypeDefnRepr.ObjectModel (defnKind, objMembers, _) -> 
@@ -1025,12 +1077,13 @@ module Outlining =
                     yield! rcheck Scope.TypeExtension Collapse.Below <| Range.endToEnd componentInfo.Range range
                 | _ -> 
                     yield! rcheck Scope.Type Collapse.Below <| Range.endToEnd componentInfo.Range range
-                yield! Seq.collect visitSynMemberDefn objMembers
+                yield! Seq.collect parseSynMemberDefn objMembers
                 // visit the members of a type extension
-                yield! Seq.collect visitSynMemberDefn members
-            | SynTypeDefnRepr.Simple _ -> 
+                yield! Seq.collect parseSynMemberDefn members
+            | SynTypeDefnRepr.Simple (simpleRepr,r) -> 
                 yield! rcheck Scope.Type Collapse.Below <| Range.endToEnd componentInfo.Range range
-                yield! Seq.collect visitSynMemberDefn members
+                yield! parseSimpleRepr simpleRepr
+                yield! Seq.collect parseSynMemberDefn members
         }
 
 
@@ -1070,35 +1123,35 @@ module Outlining =
             | _ -> None) Scope.HashDirective
 
 
-    let rec private visitDeclaration (decl: SynModuleDecl) = 
+    let rec private parseDeclaration (decl: SynModuleDecl) = 
         seq {
             match decl with
             | SynModuleDecl.Let (_,bindings,_) ->
-                yield! visitBindings bindings
+                yield! parseBindings bindings
             | SynModuleDecl.Types (types,_) ->
-                yield! Seq.collect visitTypeDefn types
+                yield! Seq.collect parseTypeDefn types
             // Fold the attributes above a module
             | SynModuleDecl.NestedModule (SynComponentInfo.ComponentInfo (attrs,_,_,_,_,_,_,cmpRange), decls,_,_) ->
                 // Outline the full scope of the module
                 yield! rcheck Scope.Module Collapse.Below <| Range.endToEnd cmpRange decl.Range
                 // A module's component info stores the ranges of its attributes
-                yield! visitAttributes attrs
+                yield! parseAttributes attrs
                 yield! collectOpens decls
-                yield! Seq.collect visitDeclaration decls
+                yield! Seq.collect parseDeclaration decls
             | SynModuleDecl.DoExpr (_,e,_) ->
-                yield! visitExpr e
+                yield! parseExpr e
             | SynModuleDecl.Attributes (attrs,_) ->
-                yield! visitAttributes attrs
+                yield! parseAttributes attrs
             | _ -> ()
         }
 
 
-    let private visitModuleOrNamespace moduleOrNs =
+    let private parseModuleOrNamespace moduleOrNs =
         seq {
             let (SynModuleOrNamespace.SynModuleOrNamespace (_,_,decls,_,_,_,_)) = moduleOrNs
             yield! collectHashDirectives decls
             yield! collectOpens decls
-            yield! Seq.collect visitDeclaration decls
+            yield! Seq.collect parseDeclaration decls
         }
 
 
@@ -1107,7 +1160,7 @@ module Outlining =
             match tree with
             | ParsedInput.ImplFile(implFile) ->
                 let (ParsedImplFileInput (_,_,_,_,_,modules,_)) = implFile
-                yield! Seq.collect visitModuleOrNamespace modules
+                yield! Seq.collect parseModuleOrNamespace modules
             | _ -> ()
         }
 
