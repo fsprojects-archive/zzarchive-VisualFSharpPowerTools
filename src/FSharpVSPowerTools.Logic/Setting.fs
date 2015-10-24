@@ -57,10 +57,37 @@ type ILintOptions =
     abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
 
 type IOutliningOptions =
-    abstract ToplevelEnabled: bool with get, set
-    abstract MatchStatementEnabled: bool with get, set
-    abstract ToplevelCollapsedByDefault: bool with get, set
-    abstract MatchStatementCollapsedByDefault: bool with get, set
+    abstract OpensEnabled: bool with get, set
+    abstract OpensCollapsedByDefault: bool with get, set
+    abstract ModulesEnabled: bool with get, set
+    abstract ModulesCollapsedByDefault: bool with get, set
+    abstract HashDirectivesEnabled: bool with get, set
+    abstract HashDirectivesCollapsedByDefault: bool with get, set
+    abstract TypesEnabled: bool with get, set
+    abstract TypesCollapsedByDefault: bool with get, set
+    abstract SimpleTypesEnabled: bool with get, set
+    abstract SimpleTypesCollapsedByDefault: bool with get, set
+    abstract TypeExpressionsEnabled: bool with get, set
+    abstract TypeExpressionsCollapsedByDefault: bool with get, set
+    abstract MembersEnabled: bool with get, set
+    abstract MembersCollapsedByDefault: bool with get, set
+    abstract LetOrUseEnabled: bool with get, set
+    abstract LetOrUseCollapsedByDefault: bool with get, set
+    abstract CollectionsEnabled: bool with get, set
+    abstract CollectionsCollapsedByDefault: bool with get, set
+    abstract PatternMatchesEnabled: bool with get, set
+    abstract PatternMatchesCollapsedByDefault: bool with get, set
+    abstract TryWithFinallyEnabled: bool with get, set
+    abstract TryWithFinallyCollapsedByDefault: bool with get, set
+    abstract IfThenElseEnabled: bool with get, set
+    abstract IfThenElseCollapsedByDefault: bool with get, set
+    abstract CExpressionMembersEnabled: bool with get, set
+    abstract CExpressionMembersCollapsedByDefault: bool with get, set
+    abstract LoopsEnabled: bool with get, set
+    abstract LoopsCollapsedByDefault: bool with get, set
+
+
+
 
 [<AutoOpen>]
 module Utils =
