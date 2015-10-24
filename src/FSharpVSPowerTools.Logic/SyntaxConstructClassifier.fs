@@ -12,6 +12,7 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.VisualStudio.Text.Tagging
+open FSharpVSPowerTools.UntypedAstUtils
 
 [<NoComparison>]
 type private CheckingProject =
@@ -167,7 +168,7 @@ type SyntaxConstructClassifier
 
     let updateUnusedDeclarations() = 
         let worker (project, snapshot) =
-            asyncMaybe {    
+            asyncMaybe {
                 let pf = Profiler()
                 debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
                 
@@ -183,11 +184,14 @@ type SyntaxConstructClassifier
                     else async { return symbolsUses }
                     |> liftAsync 
 
-                let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)     
+                let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
                 
                 let! checkResults = pf.Time "parseFileInProject" <| fun _ ->
                     vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
+
+                let! ast = checkResults.GetUntypedAst()
+                do! if ast.Range.IsEmpty then None else Some() 
 
                 let! entities, openDecls = 
                     if includeUnusedOpens() then
@@ -267,39 +271,44 @@ type SyntaxConstructClassifier
                 Updating (oldData, snapshot)) |> ignore)
                 
         if needUpdate then
-            let worker = async {
-                match getCurrentProject(), snapshot with
-                | Some currentProject, Some snapshot ->
-                    debug "[SyntaxConstructClassifier] - Effective update"
-                    let pf = Profiler()
-                                        
-                    let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
-                        vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
+            let worker = asyncMaybe {
+                let! currentProject = getCurrentProject()
+                let! snapshot = snapshot
+                debug "[SyntaxConstructClassifier] - Effective update"
+                let pf = Profiler()
+                                    
+                let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
+                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
+                    |> liftAsync
 
-                    let lexer = vsLanguageService.CreateLexer(snapshot, currentProject.CompilerOptions)
-
-                    let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                        vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                            snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, false, pf)
-
-                    let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
-
-                    let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
-                        getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
-                        |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-
-                    let spans = 
-                        match slowState.Value with
-                        | SlowStage.Data { UnusedSpans = oldUnusedSpans } ->
-                            spans
-                            |> Array.filter (fun s ->
-                                not (oldUnusedSpans |> Map.containsKey s.WordSpan))
-                            |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd)
-                        | _ -> spans
-
-                    let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
-
-                    let! singleSymbolsProjects = async {
+                let! ast = checkResults.GetUntypedAst()
+                do! if ast.Range.IsEmpty then None else Some()
+                let lexer = vsLanguageService.CreateLexer(snapshot, currentProject.CompilerOptions)
+                
+                let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(
+                        snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, false, pf)
+                    |> liftAsync
+                
+                let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
+                
+                let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
+                    getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
+                    |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                
+                let spans = 
+                    match slowState.Value with
+                    | SlowStage.Data { UnusedSpans = oldUnusedSpans } ->
+                        spans
+                        |> Array.filter (fun s ->
+                            not (oldUnusedSpans |> Map.containsKey s.WordSpan))
+                        |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd)
+                    | _ -> spans
+                
+                let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                
+                let! singleSymbolsProjects = 
+                    async {
                         if includeUnusedReferences() then
                             let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath currentProject
                             let singleDefs = UnusedDeclarations.getSingleDeclarations allSymbolsUses
@@ -317,28 +326,27 @@ type SyntaxConstructClassifier
                                           // because otherwise the slow stage never completes
                                           Checked = currentProject.IsForStandaloneScript })
                                     >> Seq.toList)
-                        else return [] }
-                    
-                    fastState.Swap (fun _ -> 
-                        FastStage.Data 
-                            { Snapshot = snapshot
-                              Spans = spans
-                              SingleSymbolsProjects = singleSymbolsProjects }) |> ignore  
-
-                    triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"
-
-                    if isSlowStageEnabled() then
-                        if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
-                            updateUnusedDeclarations()
-                        else
-                            let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject
-                            vsLanguageService.CheckProjectInBackground currentProjectOpts
-
-                    pf.Stop()
-                    Logging.logInfo "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result
-                    
-                | _ -> () } 
-            Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
+                        else return [] } |> liftAsync
+                
+                fastState.Swap (fun _ -> 
+                    FastStage.Data 
+                        { Snapshot = snapshot
+                          Spans = spans
+                          SingleSymbolsProjects = singleSymbolsProjects }) |> ignore  
+                
+                triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"
+                
+                if isSlowStageEnabled() then
+                    if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
+                        updateUnusedDeclarations()
+                    else
+                        let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject |> liftAsync
+                        vsLanguageService.CheckProjectInBackground currentProjectOpts
+                
+                pf.Stop()
+                Logging.logInfo "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result
+            } 
+            Async.StartInThreadPoolSafe (Async.Ignore worker, cancelToken.Token) 
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
