@@ -46,7 +46,7 @@ let parseTree (source: string) =
                 getOutliningRanges tree
                 |> Seq.filter (fun sr-> sr.Range.StartLine <> sr.Range.EndLine)
                 |> Seq.map (fun r ->  r.Range.StartLine, r.Range.StartColumn, r.Range.EndLine, r.Range.EndColumn)
-                |> Seq.iter (printfn "%A")
+                |> Seq.iter (fun x -> printfn "%s" <| string x)
         | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
     with _ ->
         printfn "Parse of string into AST failed\nAST:\n%+A" ast
@@ -98,7 +98,10 @@ type Color =
     | Green
     | Blue
 """
-    => [ 2, 10, 5, 10 ]
+    => [
+        (2, 10, 5, 10)
+        (3, 4, 5, 10)
+       ]
 
 [<Test>]
 let ``DU with interface``() =
@@ -113,6 +116,7 @@ type Color =
             (docEventListener :> IDisposable).Dispose()
 """
     => [ 2, 10, 9, 55
+         3, 4, 5, 10
          7, 25, 9, 55
          (8, 15, 9, 55)
          (8, 27, 9, 55) ]
@@ -129,11 +133,16 @@ type Color =
     interface IDisposable with
         member __.Dispose() =
             (docEventListener :> IDisposable).Dispose()
-"""
-    => [ 2, 10, 10, 55
-         8, 25, 10, 55
-         (9, 15, 10, 55)
-         (9, 27, 10, 55)]
+""" //|> parseTree
+    =>
+    [ 
+        (2, 10, 10, 55)
+        (3, 4, 4, 14)
+        (3, 6, 4, 13)
+        (8, 25, 10, 55)
+        (9, 15, 10, 55)
+        (9, 27, 10, 55)
+    ]
 
 [<Test>]
 let ``type with a do block``() =
@@ -181,15 +190,17 @@ module MyModule =       // 2
                     (docEventListener :> IDisposable).Dispose()
 """ 
     //|> parseTree
-    => [ 2, 15, 27, 63     // MyModule
-         4, 13, 5, 10
-         7, 14, 15, 59     // Color
-         13, 29, 15, 59
+    => [ (2, 15, 27, 63)  // MyModule
+         (4, 13, 5, 10)
+         (7, 14, 15, 59)  // Color
+         (8, 8, 11, 9)
+         (13, 29, 15, 59)
          (14, 19, 15, 59)
-         (14, 31, 15, 59)
-         17, 24, 27, 63    // MyInnerModule
-         19, 24, 27, 63    // RecordColor
-         25, 33, 27, 63
+         (14, 31, 15, 59)  // MyInnerModule
+         (17, 24, 27, 63)  // RecordColor
+         (19, 24, 27, 63)
+         (20, 12, 23, 13)
+         (25, 33, 27, 63)
          (26, 23, 27, 63)
          (26, 35, 27, 63)]
     
