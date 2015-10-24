@@ -184,6 +184,15 @@
     <Compile Include="Commands\SyntaxConstructClassifierProvider.cs" />
     <Compile Include="Commands\UnionPatternMatchCaseGeneratorSmartTaggerProvider.cs" />
     <Compile Include="Commands\XmlDocCommandFilterProvider.cs" />
+    <Compile Include="UI\OutliningOptionsControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\OutliningOptionsControl.Designer.cs">
+      <DependentUpon>OutliningOptionsControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\OutliningOptionsPage.cs">
+      <SubType>Component</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="paket.references">

@@ -26,6 +26,7 @@ namespace FSharpVSPowerTools
     [ProvideOptionPage(typeof(CodeGenerationOptionsPage), Resource.vsPackageTitle, "Code Generation", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(GlobalOptionsPage), Resource.vsPackageTitle, "Configuration", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(Linting.LintOptionsPage), Resource.vsPackageTitle, "Lint", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
+    [ProvideOptionPage(typeof(OutliningOptionsPage), Resource.vsPackageTitle, "Outlining", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideService(typeof(IGeneralOptions))]   
     [ProvideService(typeof(IFormattingOptions))]
     [ProvideService(typeof(ICodeGenerationOptions))]
