@@ -126,7 +126,7 @@ type OutliningTagger
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
             let! ast = parseFileResults.ParseTree
             //Logging.logInfo "[Outlining]\nAST Range\n%A" ast.Range
-            Logging.logInfo "[Outlining]\nAST\n%A" ast
+            //Logging.logInfo "[Outlining]\nAST\n%A" ast
             if checkAST oldAST ast then
                 oldAST <- Some ast
                 let scopedSpans = (getOutliningRanges >> Seq.choose (fromScopeRange snapshot) >> Array.ofSeq) ast
@@ -251,19 +251,17 @@ type OutliningTagger
 
             let collapseText, collapseSpan =         
                 /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip    
-                let inline mkOutliningPairBase snapspan (token:string) (md:int) (collapse:Collapse) =
+                let inline mkOutliningPair (token:string) (md:int) (collapse:Collapse) =
                     match collapse, firstLine.GetText().IndexOf token with // Type extension where `with` is on a lower line
-                    | Collapse.Same, -1 -> ((getHintText snapspan) + "...", snapspan)
-                    | _ (* Collapse.Below *) , -1 ->  ("...", snapspan)
+                    | Collapse.Same, -1 -> ((getHintText snapshotSpan) + "...", snapshotSpan)
+                    | _ (* Collapse.Below *) , -1 ->  ("...", snapshotSpan)
                     | Collapse.Same, idx  ->
-                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapspan.End)
+                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
                         ((getHintText modSpan) + "...", modSpan)   
                     | _ (*Collapse.Below*), idx ->
-                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapspan.End)
+                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
                         ( "...", modSpan) 
         
-                let mkOutliningPair = mkOutliningPairBase snapshotSpan
-                
                 let (|OutliningPair|_|) (collapse:Collapse) (_:Scope) =
                     match collapse with
                     | Collapse.Same -> Some ((getHintText snapshotSpan) + "...", snapshotSpan)
@@ -295,6 +293,7 @@ type OutliningTagger
                 | Scope.LetOrUse 
                 | Scope.LetOrUseBang -> mkOutliningPair "=" 0 collapse
                 | Scope.ObjExpr
+                | Scope.Interface
                 | Scope.TypeExtension -> mkOutliningPair "with" 0 collapse
                 | Scope.MatchClause -> 
                     let idx = lineText.IndexOf "->" 
