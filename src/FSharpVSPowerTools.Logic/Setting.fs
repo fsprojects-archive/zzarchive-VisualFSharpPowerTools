@@ -46,10 +46,11 @@ type ICodeGenerationOptions =
     abstract DefaultBody: string with get, set
     abstract CodeGenerationOptions: CodeGenerationKinds with get, set
     abstract InterfaceMemberIdentifier: string with get, set
-
+     
 type IGlobalOptions =
     abstract StrictMode: bool with get, set
     abstract DiagnosticMode: bool with get, set
+    abstract BackgroundCompilation: bool with get, set
 
 type ILintOptions =
     abstract UpdateDirectories: unit -> unit
@@ -64,7 +65,7 @@ module Utils =
 [<RequireQualifiedAccess>]
 module Setting =
     open System
-
+     
     let getGeneralOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGeneralOptions>()
 

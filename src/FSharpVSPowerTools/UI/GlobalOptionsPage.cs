@@ -11,6 +11,7 @@ namespace FSharpVSPowerTools
         {
             StrictMode = false;
             DiagnosticMode = false;
+            BackgroundCompilation = true;
         }
 
         [Category("Caching")]
@@ -22,5 +23,10 @@ namespace FSharpVSPowerTools
         [DisplayName("Diagnostic Mode")]
         [Description("Print out stacktraces and log information to Visual Studio Output panel.")]
         public bool DiagnosticMode { get; set; }
+
+        [Category("Performance")]
+        [DisplayName("Background compilation")]
+        [Description("Compiling current project in background. May cause high CPU load on large projects.")]
+        public bool BackgroundCompilation { get; set; }
     }
 }
