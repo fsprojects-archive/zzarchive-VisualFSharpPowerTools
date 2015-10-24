@@ -184,6 +184,12 @@
     <Compile Include="Commands\SyntaxConstructClassifierProvider.cs" />
     <Compile Include="Commands\UnionPatternMatchCaseGeneratorSmartTaggerProvider.cs" />
     <Compile Include="Commands\XmlDocCommandFilterProvider.cs" />
+    <Compile Include="UI\OutliningOptionControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\OutliningOptionControl.Designer.cs">
+      <DependentUpon>OutliningOptionControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\OutliningOptionsControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -262,6 +268,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\GeneralOptionsControl.resx">
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\OutliningOptionControl.resx">
+      <DependentUpon>OutliningOptionControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\OutliningOptionsControl.resx">
       <DependentUpon>OutliningOptionsControl.cs</DependentUpon>

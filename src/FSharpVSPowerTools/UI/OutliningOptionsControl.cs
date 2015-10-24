@@ -14,31 +14,33 @@ namespace FSharpVSPowerTools.UI {
             _outliningOptions = outliningOptions;
         }
 
+        public OutliningOptionControl TopLevel { get; private set; }
+        public OutliningOptionControl Types { get; private set; }
+        public OutliningOptionControl MatchStatements { get; private set; }
+        public OutliningOptionControl ExceptionHandling { get; set; }
+        public OutliningOptionControl ComputationConstructs { get; set; }
+        public OutliningOptionControl CollectionsTuplesCexprs { get; set; }
+
         protected override void OnLoad(EventArgs _) {
-            TopLevelEnabled                  = _outliningOptions.ToplevelEnabled;
-            TopLevelCollapsedByDefault       = _outliningOptions.ToplevelCollapsedByDefault;
-            MatchStatementEnabled            = _outliningOptions.MatchStatementEnabled;
-            MatchStatementCollapsedByDefault = _outliningOptions.MatchStatementCollapsedByDefault;
-        }
+            TopLevel = new OutliningOptionControl("Top Level:") {
+                OutliningEnabled = _outliningOptions.ToplevelEnabled,
+                CollapsedByDefault = _outliningOptions.ToplevelCollapsedByDefault
+            };
+            Types = new OutliningOptionControl("Types:");
+            MatchStatements = new OutliningOptionControl("Match Statements:") {
+                OutliningEnabled = _outliningOptions.MatchStatementEnabled,
+                CollapsedByDefault = _outliningOptions.MatchStatementCollapsedByDefault
+            };
+            ExceptionHandling = new OutliningOptionControl("Exception Handling:");
+            ComputationConstructs = new OutliningOptionControl("Computation Constructs:");
+            CollectionsTuplesCexprs = new OutliningOptionControl("Collections/Tuples/Cexprs:");
 
-        public bool TopLevelEnabled {
-            get { return cbTopLevelEnabled.Checked; }
-            private set { cbTopLevelEnabled.Checked = value; }
-        }
-
-        public bool TopLevelCollapsedByDefault {
-            get { return cbTopLevelCollapsedByDefault.Checked; }
-            private set { cbTopLevelCollapsedByDefault.Checked = value; }
-        }
-
-        public bool MatchStatementEnabled {
-            get { return cbMatchStatementEnabled.Checked; }
-            private set { cbMatchStatementEnabled.Checked = value; }
-        }
-
-        public bool MatchStatementCollapsedByDefault {
-            get { return cbMatchStatementCollapsedByDefault.Checked; }
-            private set { cbMatchStatementCollapsedByDefault.Checked = value; }
+            flowLayoutPanel1.Controls.Add(TopLevel);
+            flowLayoutPanel1.Controls.Add(Types);
+            flowLayoutPanel1.Controls.Add(MatchStatements);
+            flowLayoutPanel1.Controls.Add(ExceptionHandling);
+            flowLayoutPanel1.Controls.Add(ComputationConstructs);
+            flowLayoutPanel1.Controls.Add(CollectionsTuplesCexprs);
         }
     }
 }

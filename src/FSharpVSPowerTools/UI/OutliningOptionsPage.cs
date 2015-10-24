@@ -16,10 +16,10 @@ namespace FSharpVSPowerTools {
         }
 
         protected override void OnApply(PageApplyEventArgs e) {
-            ToplevelEnabled                  = _control.TopLevelEnabled;
-            ToplevelCollapsedByDefault       = _control.TopLevelCollapsedByDefault;
-            MatchStatementEnabled            = _control.MatchStatementEnabled;
-            MatchStatementCollapsedByDefault = _control.MatchStatementCollapsedByDefault;
+            ToplevelEnabled                  = _control.TopLevel.OutliningEnabled;
+            ToplevelCollapsedByDefault       = _control.TopLevel.CollapsedByDefault;
+            MatchStatementEnabled            = _control.MatchStatements.OutliningEnabled;
+            MatchStatementCollapsedByDefault = _control.MatchStatements.CollapsedByDefault;
 
             base.OnApply(e);
         }
