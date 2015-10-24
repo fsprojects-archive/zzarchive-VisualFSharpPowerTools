@@ -45,10 +45,10 @@ type ThemeManager [<ImportingConstructor>]
             |> Option.bind (function 
                             | [|_; _; themeId|] -> Some themeId 
                             | arr -> 
-                                Logging.logWarning "Parsed Visual Studio theme settings are not well-formed %A." arr
+                                Logging.logWarning (fun _ -> sprintf "Parsed Visual Studio theme settings are not well-formed %A." arr)
                                 None)
         | _ ->
-            Logging.logWarning "Can't recognize Visual Studio version %A." version
+            Logging.logWarning (fun _ -> sprintf "Can't recognize Visual Studio version %A." version)
             None
 
     member __.GetCurrentTheme() =
@@ -71,5 +71,5 @@ type ThemeManager [<ImportingConstructor>]
                 | 30uy, 30uy, 30uy -> VisualStudioTheme.Dark
                 | _ -> VisualStudioTheme.Light
             with _ -> 
-                Logging.logError "Can't read Visual Studio themes from Fonts and Colors Items."
+                Logging.logError (fun _ -> "Can't read Visual Studio themes from Fonts and Colors Items.")
                 VisualStudioTheme.Unknown)

@@ -170,7 +170,7 @@ namespace FSharpVSPowerTools
                     color = new FontColor(Color.FromRgb(220, 220, 220), Color.FromRgb(30, 30, 30));
                     success = themeColors[currentTheme].TryGetValue(category, out color);
                     if (!success)
-                        LoggingModule.logWarningMessage(String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
+                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
 
                 case VisualStudioTheme.Light:
@@ -179,7 +179,7 @@ namespace FSharpVSPowerTools
                     color = new FontColor(Colors.Black, Colors.White);
                     success = themeColors[currentTheme].TryGetValue(category, out color);
                     if (!success)
-                        LoggingModule.logWarningMessage(String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
+                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
             }
         }

@@ -168,8 +168,8 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             project?SetProjectFileDirty true
             project?ComputeSourcesAndFlags()
             ()
-        | [] -> Logging.logError "performVerticalMoveAction called with empty info.Items"
-        | _ -> Logging.logError "performVerticalMoveAction called with more than one item in info.Items"
+        | [] -> Logging.logError (fun _ -> "performVerticalMoveAction called with empty info.Items")
+        | _ -> Logging.logError (fun _ -> "performVerticalMoveAction called with more than one item in info.Items")
     
     let askForDestinationFolder resources = 
         let model = MoveToFolderDialogModel resources
@@ -298,7 +298,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                 project?SetProjectFileDirty true
                 project?ComputeSourcesAndFlags()
             | _ -> 
-                Logging.logWarning "Can't find folder '%s'for renaming." name
+                Logging.logWarning (fun _ -> sprintf "Can't find folder '%s' for renaming." name)
 
     let performNameAction (info: ActionInfo) action name =
         match action with
@@ -320,7 +320,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
                     | VisualStudioVersion.VS2015 -> 
                         false
                     | v ->
-                        Logging.logWarning "Unknown Visual Studio version detected while adding/renaming folder: %O" v
+                        Logging.logWarning (fun _ -> sprintf "Unknown Visual Studio version detected while adding/renaming folder: %O" v)
                         true
 
                 let resources = 

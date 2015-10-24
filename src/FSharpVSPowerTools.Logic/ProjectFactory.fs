@@ -203,7 +203,7 @@ type ProjectFactory
             let isSymbolLocalForProject = TypedAstUtils.isSymbolLocalForProject symbol 
             match Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation with
             | Some loc ->
-                Logging.logInfo "Trying to find symbol '%O' declared at '%O' from current file '%O'..." symbol loc.FileName currentFile
+                Logging.logInfo (fun _ -> sprintf "Trying to find symbol '%O' declared at '%O' from current file '%O'..." symbol loc.FileName currentFile)
                 let filePath = Path.GetFullPathSafe loc.FileName
                 if currentProject.IsForStandaloneScript && filePath = currentFile then 
                     Some SymbolDeclarationLocation.File

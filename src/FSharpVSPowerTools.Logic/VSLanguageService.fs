@@ -65,7 +65,7 @@ type VSLanguageService
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
     /// Clean up instructions are displayed on status bar.
     let suggestRecoveryAfterFailure ex fileName _source opts =
-        Logging.logError "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts
+        Logging.logError (fun _ -> sprintf "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
                 

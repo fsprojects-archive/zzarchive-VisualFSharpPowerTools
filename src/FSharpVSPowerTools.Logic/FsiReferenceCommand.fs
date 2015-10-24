@@ -179,7 +179,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
             let! currentConfiguration = 
                 try Some (project.ConfigurationManager.ActiveConfiguration.ConfigurationName.ToLower())
                 with e -> 
-                    Logging.logError "[FsiReference] Cannot get current configuration name: %O" e
+                    Logging.logError (fun _ -> sprintf "[FsiReference] Cannot get current configuration name: %O" e)
                     None
             let loadRefsFileName = sprintf "load-references-%s.fsx" currentConfiguration
             use projectProvider = createProjectProvider project
@@ -202,12 +202,12 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
                 generateReferenceFiles project)
 
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildDoneEventHandler (fun _ _ ->
-            Logging.logInfo "Checking projects after build done..."
+            Logging.logInfo (fun _ -> "Checking projects after build done...")
             let dte = dte2 :?> DTE
             listFSharpProjectsInSolution dte
             |> Seq.iter (fun project ->
                 if containsReferenceScript project then
-                    Logging.logInfo "Re-generating reference scripts for '%s'..." project.Name
+                    Logging.logInfo (fun _ -> sprintf "Re-generating reference scripts for '%s'..." project.Name)
                     generateReferenceFiles project))
 
     let events = dte2.Events.BuildEvents

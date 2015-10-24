@@ -218,7 +218,7 @@ type SyntaxConstructClassifier
                 slowState.Swap (fun _ -> SlowStage.Data { Snapshot = snapshot; UnusedSpans = notUsedSpans; IsUpdating = false }) |> ignore
                 debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
                 pf.Stop()
-                Logging.logInfo "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result
+                Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result)
                 triggerClassificationChanged snapshot "UpdateUnusedDeclarations"
 
                 // Switch back to UI thread before firing events
@@ -335,7 +335,7 @@ type SyntaxConstructClassifier
                             vsLanguageService.CheckProjectInBackground currentProjectOpts
 
                     pf.Stop()
-                    Logging.logInfo "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result
+                    Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result)
                     
                 | _ -> () } 
             Async.StartInThreadPoolSafe (worker, cancelToken.Token) 
