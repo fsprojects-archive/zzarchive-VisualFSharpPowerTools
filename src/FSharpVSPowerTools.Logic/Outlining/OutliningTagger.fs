@@ -72,6 +72,7 @@ let inline scaleToFit (view: IWpfTextView) =
         |> ignore)
     view
 
+
 type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
@@ -85,7 +86,7 @@ type OutliningTagger
     let mutable scopedSnapSpans : ScopeSpan [] = [||]
     let mutable oldAST = None : ParsedInput option
 
- 
+    
     /// triggerUpdate -=> tagsChanged
     let triggerUpdate newSnapshotSpans = 
         scopedSnapSpans <- newSnapshotSpans
@@ -220,7 +221,7 @@ type OutliningTagger
     // to display as the text inside the collapse box preceding the `...`
     let getHintText (snapshotSpan:SnapshotSpan) =
         let textshot = snapshotSpan.Snapshot
-        let firstLineNum = snapshotSpan.FirstLineNum textshot
+        let firstLineNum = snapshotSpan.StartLineNum 
         let rec loop acc =
             if acc >= textshot.LineCount + firstLineNum then "" else
             let text =  if acc = firstLineNum then
@@ -237,7 +238,8 @@ type OutliningTagger
     let createTagSpan (scopedSpan: ScopeSpan) =
         let scope, collapse, snapshotSpan = scopedSpan.Scope, scopedSpan.Collapse, scopedSpan.SnapSpan
         try
-            let snapshot = snapshotSpan.Snapshot in let firstLine = snapshot.GetLineFromPosition (snapshotSpan.Start.Position)
+            let snapshot = snapshotSpan.Snapshot 
+            let firstLine = snapshot.GetLineFromPosition (snapshotSpan.Start.Position)
             let mutable lastLine = snapshot.GetLineFromPosition (snapshotSpan.End.Position)
 
             let nHintLines = lastLine.LineNumber - firstLine.LineNumber + 1
@@ -249,26 +251,43 @@ type OutliningTagger
 
             let collapseText, collapseSpan =         
                 /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip    
-                let mkOutliningPair (token:string) (md:int) (collapse:Collapse)=
+                let inline mkOutliningPairBase snapspan (token:string) (md:int) (collapse:Collapse) =
                     match collapse, firstLine.GetText().IndexOf token with // Type extension where `with` is on a lower line
-                    | Collapse.Same, -1 -> ((getHintText snapshotSpan) + "...", snapshotSpan)
-                    | _ (* Collapse.Below *) , -1 ->  ("...", snapshotSpan)
+                    | Collapse.Same, -1 -> ((getHintText snapspan) + "...", snapspan)
+                    | _ (* Collapse.Below *) , -1 ->  ("...", snapspan)
                     | Collapse.Same, idx  ->
-                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
+                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapspan.End)
                         ((getHintText modSpan) + "...", modSpan)   
                     | _ (*Collapse.Below*), idx ->
-                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
+                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapspan.End)
                         ( "...", modSpan) 
+        
+                let mkOutliningPair = mkOutliningPairBase snapshotSpan
                 
                 let (|OutliningPair|_|) (collapse:Collapse) (_:Scope) =
                     match collapse with
                     | Collapse.Same -> Some ((getHintText snapshotSpan) + "...", snapshotSpan)
                     | _ (*Collapse.Below*) -> Some ("...", snapshotSpan)
+
                 let lineText = firstLine.GetText()
 
                 let inline pairAlts str1 str2 =
                     if lineText.Contains str1 then mkOutliningPair str1 0 collapse else mkOutliningPair str2 0 collapse
 
+                let (|StartsWith|_|) (token:string) (sspan:SnapshotSpan) =
+                    if token = "{" then // quick terminate for `{` start, this case must follow all access qualified matches in pattern match below
+                        let modspan = (sspan.ModBoth 1 -1)
+                        Some ((getHintText modspan) + "...", modspan) else
+                    let startText = lineText.SubstringSafe sspan.StartColumn
+                    if startText.StartsWith token then
+                        match sspan.PositionOf "{" with
+                        | bl,_ when bl>sspan.StartLineNum -> Some ("{...}",(sspan.ModStart (token.Length)))
+                        | bl,bc when bl=sspan.StartLineNum -> 
+                            let modSpan = (sspan.ModStart (bc-sspan.StartColumn)).ModBoth 1 -1
+                            Some (getHintText modSpan+"...",modSpan)
+                        | _ -> None
+                    else None 
+                        
                 match scope with
                 | Scope.Type
                 | Scope.Module
@@ -279,7 +298,7 @@ type OutliningTagger
                 | Scope.TypeExtension -> mkOutliningPair "with" 0 collapse
                 | Scope.MatchClause -> 
                     let idx = lineText.IndexOf "->" 
-                    if idx = -1 then  mkOutliningPair "|" -1 collapse else
+                    if idx = -1 then  mkOutliningPair "|" -1 collapse else  // special case to collapse compound guards
                     let substr = lineText.SubstringSafe (idx+2)
                     if substr = String.Empty || String.IsNullOrWhiteSpace substr then
                         mkOutliningPair "->" 0 Collapse.Below
@@ -289,6 +308,13 @@ type OutliningTagger
                 | Scope.YieldOrReturnBang -> pairAlts "yield!" "return!"
                 | Scope.Lambda ->  mkOutliningPair "->" 0 collapse
                 | Scope.IfThenElse -> mkOutliningPair "if" 0 collapse
+                | Scope.RecordDefn ->
+                    match snapshotSpan with
+                    | StartsWith "private"  pair -> pair
+                    | StartsWith "public"   pair -> pair
+                    | StartsWith "internal" pair -> pair
+                    | StartsWith "{"  pair -> pair
+                    | _ -> ("...", snapshotSpan) // should never be reached due to AP
                 | OutliningPair collapse pair -> pair
                 | _ -> ("...", snapshotSpan) // should never be reached due to AP
     
