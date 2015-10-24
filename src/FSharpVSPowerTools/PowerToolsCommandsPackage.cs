@@ -71,6 +71,9 @@ namespace FSharpVSPowerTools
             serviceContainer.AddService(typeof(ILintOptions),
                 delegate { return GetDialogPage(typeof(Linting.LintOptionsPage)); }, promote: true);
 
+            serviceContainer.AddService(typeof(IOutliningOptions),
+                delegate { return GetDialogPage(typeof(OutliningOptionsPage)); }, promote: true);
+
             var generalOptions = GetService(typeof(IGeneralOptions)) as IGeneralOptions;
             PerformRegistrations(generalOptions);
 

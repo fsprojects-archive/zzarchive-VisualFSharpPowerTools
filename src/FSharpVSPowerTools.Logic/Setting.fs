@@ -55,6 +55,12 @@ type ILintOptions =
     abstract UpdateDirectories: unit -> unit
     abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
 
+type IOutliningOptions =
+    abstract ToplevelEnabled: bool with get, set
+    abstract MatchStatementEnabled: bool with get, set
+    abstract ToplevelCollapsedByDefault: bool with get, set
+    abstract MatchStatementCollapsedByDefault: bool with get, set
+
 [<AutoOpen>]
 module Utils =
     type System.IServiceProvider with

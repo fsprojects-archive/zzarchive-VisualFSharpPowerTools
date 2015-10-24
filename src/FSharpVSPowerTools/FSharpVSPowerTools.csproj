@@ -263,6 +263,9 @@
     <EmbeddedResource Include="UI\GeneralOptionsControl.resx">
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="UI\OutliningOptionsControl.resx">
+      <DependentUpon>OutliningOptionsControl.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>
     <UseCodebase>true</UseCodebase>
