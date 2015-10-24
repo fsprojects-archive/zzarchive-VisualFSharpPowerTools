@@ -997,7 +997,7 @@ module Outlining =
             | SynMemberDefn.Member (binding,r) ->
                 yield! rcheck Scope.Member Collapse.Below r
                 yield! visitBinding binding
-            | SynMemberDefn.LetBindings (bindings,_,_,r) ->
+            | SynMemberDefn.LetBindings (bindings,_,_,_r) ->
                 //yield! rcheck Scope.LetOrUse Collapse.Below r
                 yield! visitBindings bindings
             | SynMemberDefn.Interface (tp,iMembers,_) ->
