@@ -142,7 +142,7 @@ type ProjectFactory
     default x.CreateForProject (project: Project): IProjectProvider = 
         let createProjectProvider project = Some (x.CreateForProject project)
         cache.Get project.FullName (fun _ ->
-            new ProjectProvider (project, createProjectProvider, onProjectChanged, vsLanguageService.FixProjectLoadTime)) :> _
+            new ProjectProvider (project, createProjectProvider, onProjectChanged)) :> _
 
     member x.CreateForDocument buffer (doc: Document) =
         let filePath = doc.FullName
@@ -203,7 +203,7 @@ type ProjectFactory
             let isSymbolLocalForProject = TypedAstUtils.isSymbolLocalForProject symbol 
             match Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation with
             | Some loc ->
-                Logging.logInfo "Trying to find symbol '%O' declared at '%O' from current file '%O'..." symbol loc.FileName currentFile
+                Logging.logInfo (fun _ -> sprintf "Trying to find symbol '%O' declared at '%O' from current file '%O'..." symbol loc.FileName currentFile)
                 let filePath = Path.GetFullPathSafe loc.FileName
                 if currentProject.IsForStandaloneScript && filePath = currentFile then 
                     Some SymbolDeclarationLocation.File

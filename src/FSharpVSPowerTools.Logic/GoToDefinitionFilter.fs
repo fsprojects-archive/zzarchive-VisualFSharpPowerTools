@@ -218,7 +218,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, startRow, startCol) 
                     |> ensureSucceeded)
             | None ->
-                Logging.logInfo "Can't find a matching symbol for '%A'" currentSymbol
+                Logging.logInfo (fun _ -> sprintf "Can't find a matching symbol for '%A'" currentSymbol)
         }
 
     // Now the input is an entity or a member/value.
@@ -247,7 +247,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 | Some (_, signature), Some signatureProject ->
                     do! gotoExactLocation signature filePath signatureProject fsSymbol vsTextBuffer
                 | _ -> 
-                    Logging.logInfo "Can't find a signature or signature project for '%s'" filePath
+                    Logging.logInfo (fun _ -> sprintf "Can't find a signature or signature project for '%s'" filePath)
                 // If the buffer has been opened, we will not re-generate signatures
                 windowFrame.Show() |> ensureSucceeded
             | _ ->
@@ -444,7 +444,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     | NavigationPreference.SymbolSourceOrMetadata
                     | NavigationPreference.SymbolSource as pref ->   
                         let symbol = fsSymbolUse.Symbol
-                        Logging.logInfo "Checking symbol source of %s..." symbol.FullName
+                        Logging.logInfo (fun _ -> sprintf "Checking symbol source of %s..." symbol.FullName)
                         if symbol.Assembly.FileName
                            |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
                            |> Option.getOrElse false then
@@ -455,7 +455,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                                     urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
                                 Process.Start url |> ignore
                             | None ->
-                                Logging.logWarning "Can't find navigation information for %s." symbol.FullName
+                                Logging.logWarning (fun _ -> sprintf "Can't find navigation information for %s." symbol.FullName)
                         else
                             match tryFindSourceUrl symbol with
                             | Some url ->

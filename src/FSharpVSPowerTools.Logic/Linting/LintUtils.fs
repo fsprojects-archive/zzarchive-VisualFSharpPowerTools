@@ -36,10 +36,10 @@ module LintUtils =
                 File.ReadAllText filename |> configuration |> Some
             with
                 | ConfigurationException(message) ->
-                    Logging.logWarning "Failed to load config file %s: %s" filename message
+                    Logging.logWarning (fun _ -> sprintf "Failed to load config file %s: %s" filename message)
                     None
                 | e ->
-                    Logging.logWarning "Failed to load config file %s: %s" filename e.Message
+                    Logging.logWarning (fun _ -> sprintf "Failed to load config file %s: %s" filename e.Message)
                     None
         else
             None

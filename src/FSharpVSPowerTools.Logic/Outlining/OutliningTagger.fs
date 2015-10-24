@@ -27,7 +27,7 @@ type ScopeSpan =
     val Scope : Scope
     val Collapse : Collapse
     val SnapSpan : SnapshotSpan
-    new (scope, collapse, snapSpan) = 
+    new (scope, collapse, snapSpan) =
         {Scope = scope; Collapse = collapse; SnapSpan = snapSpan}
 
 /// A colored outlining hint control similar to
@@ -86,9 +86,9 @@ type OutliningTagger
     let mutable scopedSnapSpans : ScopeSpan [] = [||]
     let mutable oldAST = None : ParsedInput option
 
-    
+
     /// triggerUpdate -=> tagsChanged
-    let triggerUpdate newSnapshotSpans = 
+    let triggerUpdate newSnapshotSpans =
         scopedSnapSpans <- newSnapshotSpans
         tagsChanged.Trigger (self, SnapshotSpanEventArgs buffer.CurrentSnapshot.FullSpan)
 
@@ -107,10 +107,10 @@ type OutliningTagger
     // for an empty ast via it's range and ignore it if the length is zero
     let checkAST (oldtree:ParsedInput option) (newTree:ParsedInput) : bool =
         let inline lengthZero (emptyTree:ParsedInput) =
-             emptyTree.Range.StartColumn = emptyTree.Range.EndColumn &&  emptyTree.Range.StartLine = emptyTree.Range.EndLine 
+             emptyTree.Range.StartColumn = emptyTree.Range.EndColumn &&  emptyTree.Range.StartLine = emptyTree.Range.EndLine
         match oldtree, newTree with
         | None, _ -> true
-        | _, emptyTree when lengthZero emptyTree -> false 
+        | _, emptyTree when lengthZero emptyTree -> false
         | _ -> true
 
 
@@ -176,7 +176,7 @@ type OutliningTagger
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
         serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
-        |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.75 * cv.ZoomLevel) 
+        |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.75 * cv.ZoomLevel)
                             (fun _ -> view.ZoomLevel <- 0.75 * view.ZoomLevel)
         scaleToFit view
 
@@ -221,7 +221,7 @@ type OutliningTagger
     // to display as the text inside the collapse box preceding the `...`
     let getHintText (snapshotSpan:SnapshotSpan) =
         let textshot = snapshotSpan.Snapshot
-        let firstLineNum = snapshotSpan.StartLineNum 
+        let firstLineNum = snapshotSpan.StartLineNum
         let rec loop acc =
             if acc >= textshot.LineCount + firstLineNum then "" else
             let text =  if acc = firstLineNum then
@@ -232,13 +232,13 @@ type OutliningTagger
         loop firstLineNum
 
 
-    // outlined regions that should be collapsed by default will make use of 
+    // outlined regions that should be collapsed by default will make use of
     // the scope argument currently hidden by the wildcard `(scope,collapse,snapshotSpan)`
     // probably easiest to use a helper function and put it in `member __.IsDefaultCollapsed = isCollapsed scope`
     let createTagSpan (scopedSpan: ScopeSpan) =
         let scope, collapse, snapshotSpan = scopedSpan.Scope, scopedSpan.Collapse, scopedSpan.SnapSpan
         try
-            let snapshot = snapshotSpan.Snapshot 
+            let snapshot = snapshotSpan.Snapshot
             let firstLine = snapshot.GetLineFromPosition (snapshotSpan.Start.Position)
             let mutable lastLine = snapshot.GetLineFromPosition (snapshotSpan.End.Position)
 
@@ -249,19 +249,19 @@ type OutliningTagger
             let missingLinesCount = max (nHintLines - MaxTooltipLines) 0
             let hintSnapshotSpan = SnapshotSpan (firstLine.Start, lastLine.End)
 
-            let collapseText, collapseSpan =         
-                /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip    
+            let collapseText, collapseSpan =
+                /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip
                 let inline mkOutliningPair (token:string) (md:int) (collapse:Collapse) =
                     match collapse, firstLine.GetText().IndexOf token with // Type extension where `with` is on a lower line
                     | Collapse.Same, -1 -> ((getHintText snapshotSpan) + "...", snapshotSpan)
                     | _ (* Collapse.Below *) , -1 ->  ("...", snapshotSpan)
                     | Collapse.Same, idx  ->
                         let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
-                        ((getHintText modSpan) + "...", modSpan)   
+                        ((getHintText modSpan) + "...", modSpan)
                     | _ (*Collapse.Below*), idx ->
                         let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
-                        ( "...", modSpan) 
-        
+                        ( "...", modSpan)
+
                 let (|OutliningPair|_|) (collapse:Collapse) (_:Scope) =
                     match collapse with
                     | Collapse.Same -> Some ((getHintText snapshotSpan) + "...", snapshotSpan)
@@ -280,23 +280,23 @@ type OutliningTagger
                     if startText.StartsWith token then
                         match sspan.PositionOf "{" with
                         | bl,_ when bl>sspan.StartLineNum -> Some ("{...}",(sspan.ModStart (token.Length)))
-                        | bl,bc when bl=sspan.StartLineNum -> 
+                        | bl,bc when bl=sspan.StartLineNum ->
                             let modSpan = (sspan.ModStart (bc-sspan.StartColumn)).ModBoth 1 -1
                             Some (getHintText modSpan+"...",modSpan)
                         | _ -> None
-                    else None 
-                        
+                    else None
+
                 match scope with
                 | Scope.Type
                 | Scope.Module
                 | Scope.Member
-                | Scope.LetOrUse 
+                | Scope.LetOrUse
                 | Scope.LetOrUseBang -> mkOutliningPair "=" 0 collapse
                 | Scope.ObjExpr
                 | Scope.Interface
                 | Scope.TypeExtension -> mkOutliningPair "with" 0 collapse
-                | Scope.MatchClause -> 
-                    let idx = lineText.IndexOf "->" 
+                | Scope.MatchClause ->
+                    let idx = lineText.IndexOf "->"
                     if idx = -1 then  mkOutliningPair "|" -1 collapse else  // special case to collapse compound guards
                     let substr = lineText.SubstringSafe (idx+2)
                     if substr = String.Empty || String.IsNullOrWhiteSpace substr then
@@ -316,8 +316,8 @@ type OutliningTagger
                     | _ -> ("...", snapshotSpan) // should never be reached due to AP
                 | OutliningPair collapse pair -> pair
                 | _ -> ("...", snapshotSpan) // should never be reached due to AP
-    
-            let createBuffer _ = 
+
+            let createBuffer _ =
                 (match missingLinesCount with
                 | 0 -> None
                 | n -> Some (sprintf "\n\n +%d lines..." n)
@@ -329,11 +329,11 @@ type OutliningTagger
                         member __.IsDefaultCollapsed = false
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
-                            OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _ 
+                            OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _
                     }) :> ITagSpan<_> |> Some
         with
         | :? ArgumentOutOfRangeException ->
-            Logging.logInfo "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan"
+            Logging.logInfo (fun _ -> "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan")
             None
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
@@ -351,7 +351,7 @@ type OutliningTagger
             scopedSnapSpans
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
             // insert a filter here using scope to remove the regions that should not be outlined at all
-            |> Seq.choose createTagSpan 
+            |> Seq.choose createTagSpan
 
 
     interface ITagger<IOutliningRegionTag> with

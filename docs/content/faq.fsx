@@ -23,6 +23,8 @@ Our suggestion is to disable automatic features including
  - Resolve unopened namespaces
  - Task List comments
  - Quick info panel
+ - FSharpLint integration
+ - Outlining
 
 and enable them one by one to identify the features causing slowness. 
 If you found a scenario that is slow, please let us know on [the issue tracker](https://github.com/fsprojects/VisualFSharpPowerTools/issues).
@@ -33,15 +35,6 @@ Why is unused declaration option divided into two separate options in v1.6.0?
 There are some performance penalties on checking unused declarations. 
 Until the performance issue is sorted out, we divide the option into two settings to provide more granularity to users.
 The new options are disabled by default.
-
-What is Strict mode? When should I use it?
------------------------
-
-`FSharp.Compiler.Service` (one of our main components) makes extensive use of caching.
-In Strict mode, cache invalidation is done more aggressively. 
-Consequently, type checking results are more up-to-date but there might be performance degradation.
-This setting is disabled by default.
-We recommend to use it if there are frequent intermittent errors on syntax coloring.
 
 What is Diagnostic mode? When should I use it?
 -----------------------
