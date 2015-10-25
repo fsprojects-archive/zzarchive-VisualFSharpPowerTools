@@ -2,27 +2,23 @@
 
 open System
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Outlining
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open System.Threading
-open System.Text
 open Microsoft.VisualStudio.Text.Projection
 open Microsoft.VisualStudio.Text.Editor
-open System.Windows.Media
 open System.Windows
+open System.Windows.Media
 open System.Windows.Controls
 open Microsoft.FSharp.Compiler.Ast
 
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
 
-//type ScopedSpan = Scope * Collapse * SnapshotSpan
 [<Struct; NoComparison>]
 type ScopeSpan =
     val Scope : Scope
@@ -33,7 +29,7 @@ type ScopeSpan =
 
 /// A colored outlining hint control similar to
 /// https://github.com/dotnet/roslyn/blob/57aaa6c9d8bc1995edfc261b968777666172f1b8/src/EditorFeatures/Core/Implementation/Outlining/OutliningTaggerProvider.Tag.cs
-type OutliningControl (createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
+type OutliningHint (createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
     inherit ContentControl ()
 
     do self.IsVisibleChanged.Add (fun (e: DependencyPropertyChangedEventArgs) ->
@@ -72,8 +68,6 @@ let inline scaleToFit (view: IWpfTextView) =
                 view.VisualElement.Width <- view.MaxTextRightCoordinate))
         |> ignore)
     view
-
-
 
 
 type OutliningTagger
@@ -174,11 +168,14 @@ type OutliningTagger
             minIndent
 
 
+    let wpfTextView = lazy(serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath)
+
+
     /// Create the WPFTextView for the Outlining tooltip scaled to 75% of the document's ZoomLevel
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
-        serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
+        wpfTextView.Value
         |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.80 * cv.ZoomLevel)
                             (fun _ -> view.ZoomLevel <- 0.80 * view.ZoomLevel)
         scaleToFit view
@@ -234,11 +231,12 @@ type OutliningTagger
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text
         loop firstLineNum
 
+    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
 
-    let collapseByDefualt scope =
-        let options = Setting.getOutliningOptions serviceProvider
+    let collapseByDefault scope =
+        let options = outliningOptions.Value
         match scope with
-        | Scope.Open   ->  options.OpensCollapsedByDefault             
+        | Scope.Open                  -> options.OpensCollapsedByDefault             
         | Scope.Module                -> options.ModulesCollapsedByDefault   
         | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault   
         | Scope.Attribute             -> options.AttributesCollapsedByDefault
@@ -284,9 +282,9 @@ type OutliningTagger
         | _ -> false    
 
     let outliningEnabled scope =
-        let options = Setting.getOutliningOptions serviceProvider
+        let options = outliningOptions.Value
         match scope with
-        | Scope.Open   ->  options.OpensEnabled             
+        | Scope.Open                  -> options.OpensEnabled             
         | Scope.Module                -> options.ModulesEnabled   
         | Scope.HashDirective         -> options.HashDirectivesEnabled   
         | Scope.Attribute             -> options.AttributesEnabled
@@ -426,11 +424,12 @@ type OutliningTagger
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
-                        member __.IsDefaultCollapsed = false //collapseByDefualt scope
+                        member __.IsDefaultCollapsed = collapseByDefault scope
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
-                            OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _
-                    }) :> ITagSpan<_> |> Some
+                            OutliningHint (createElisionBufferView textEditorFactoryService, createBuffer) :> _
+                    }) :> ITagSpan<_> 
+            |> Some
         with
         | :? ArgumentOutOfRangeException ->
             Logging.logInfo (fun _ -> "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan")
@@ -467,24 +466,3 @@ type OutliningTagger
         member __.Dispose () =
             docEventListener.Dispose ()
             scopedSnapSpans <- [||]
-
-
-(*  For more advanced/nuanced region collapsing commands and for outlining regions
-    to start out collapsed an IOutliningManager of some sort will be necessary
-
-    Viasfora's `BaseOutliningManager`
-        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/BaseOutliningManager.cs
-
-    and SelectionOutliningManager`
-        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/SelectionOutliningManager.cs
-
-    should serve as a good reference to implement  similar functionality for VFPT
-
-    https://github.com/tomasr/viasfora/tree/master/Viasfora/Outlining
-
-        let textView = serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
-        let outliningManager = 
-            if  textView.IsNone then None else
-            Some <| serviceProvider.GetService<IOutliningManagerService>().GetOutliningManager(textView.Value :> ITextView)
-        outliningManager.Value
-*)
