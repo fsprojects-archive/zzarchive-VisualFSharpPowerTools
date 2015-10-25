@@ -73,15 +73,20 @@ namespace FSharpVSPowerTools
             if (generalOptions == null || !generalOptions.OutliningEnabled) return;
             var textBuffer = textView.TextBuffer;
             var outliningTagger = CreateTagger<IOutliningRegionTag>(textBuffer);
+            bool isFirstOutlining = true;
             outliningTagger.TagsChanged += (sender, e) =>
             {
-                var fullSpan = new SnapshotSpan(textView.TextSnapshot, 0, textView.TextSnapshot.Length);
-                // Ensure that first tags have been computed.
-                var tags = outliningTagger.GetTags(new NormalizedSnapshotSpanCollection(fullSpan));
-                var outliningManager = _outliningManagerService.GetOutliningManager(textView);
-                if (outliningManager != null)
+                if (isFirstOutlining)
                 {
-                    outliningManager.CollapseAll(fullSpan, match: c => c.Tag.IsDefaultCollapsed);
+                    var fullSpan = new SnapshotSpan(textView.TextSnapshot, 0, textView.TextSnapshot.Length);
+                    // Ensure that first tags have been computed.
+                    var tags = outliningTagger.GetTags(new NormalizedSnapshotSpanCollection(fullSpan));
+                    var outliningManager = _outliningManagerService.GetOutliningManager(textView);
+                    if (outliningManager != null)
+                    {
+                        outliningManager.CollapseAll(fullSpan, match: c => c.Tag.IsDefaultCollapsed);
+                    }
+                    isFirstOutlining = false;
                 }
             };
         }

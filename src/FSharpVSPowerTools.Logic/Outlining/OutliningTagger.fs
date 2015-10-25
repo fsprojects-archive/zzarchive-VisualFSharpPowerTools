@@ -2,27 +2,23 @@
 
 open System
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Outlining
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open System.Threading
-open System.Text
 open Microsoft.VisualStudio.Text.Projection
 open Microsoft.VisualStudio.Text.Editor
-open System.Windows.Media
 open System.Windows
+open System.Windows.Media
 open System.Windows.Controls
 open Microsoft.FSharp.Compiler.Ast
 
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
 
-//type ScopedSpan = Scope * Collapse * SnapshotSpan
 [<Struct; NoComparison>]
 type ScopeSpan =
     val Scope : Scope
@@ -235,11 +231,12 @@ type OutliningTagger
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text
         loop firstLineNum
 
+    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
 
     let collapseByDefault scope =
-        let options = Setting.getOutliningOptions serviceProvider
+        let options = outliningOptions.Value
         match scope with
-        | Scope.Open                  ->  options.OpensCollapsedByDefault             
+        | Scope.Open                  -> options.OpensCollapsedByDefault             
         | Scope.Module                -> options.ModulesCollapsedByDefault   
         | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault   
         | Scope.Attribute             -> options.AttributesCollapsedByDefault
@@ -285,9 +282,9 @@ type OutliningTagger
         | _ -> false    
 
     let outliningEnabled scope =
-        let options = Setting.getOutliningOptions serviceProvider
+        let options = outliningOptions.Value
         match scope with
-        | Scope.Open                  ->  options.OpensEnabled             
+        | Scope.Open                  -> options.OpensEnabled             
         | Scope.Module                -> options.ModulesEnabled   
         | Scope.HashDirective         -> options.HashDirectivesEnabled   
         | Scope.Attribute             -> options.AttributesEnabled
@@ -469,24 +466,3 @@ type OutliningTagger
         member __.Dispose () =
             docEventListener.Dispose ()
             scopedSnapSpans <- [||]
-
-
-(*  For more advanced/nuanced region collapsing commands and for outlining regions
-    to start out collapsed an IOutliningManager of some sort will be necessary
-
-    Viasfora's `BaseOutliningManager`
-        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/BaseOutliningManager.cs
-
-    and SelectionOutliningManager`
-        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/SelectionOutliningManager.cs
-
-    should serve as a good reference to implement  similar functionality for VFPT
-
-    https://github.com/tomasr/viasfora/tree/master/Viasfora/Outlining
-
-        let textView = serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
-        let outliningManager = 
-            if  textView.IsNone then None else
-            Some <| serviceProvider.GetService<IOutliningManagerService>().GetOutliningManager(textView.Value :> ITextView)
-        outliningManager.Value
-*)
