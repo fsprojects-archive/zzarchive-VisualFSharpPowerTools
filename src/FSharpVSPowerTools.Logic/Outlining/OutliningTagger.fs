@@ -235,10 +235,10 @@ type OutliningTagger
         loop firstLineNum
 
 
-    let collapseByDefualt scope =
+    let _collapseByDefault scope =
         let options = Setting.getOutliningOptions serviceProvider
         match scope with
-        | Scope.Open   ->  options.OpensCollapsedByDefault             
+        | Scope.Open                  ->  options.OpensCollapsedByDefault             
         | Scope.Module                -> options.ModulesCollapsedByDefault   
         | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault   
         | Scope.Attribute             -> options.AttributesCollapsedByDefault
@@ -286,7 +286,7 @@ type OutliningTagger
     let outliningEnabled scope =
         let options = Setting.getOutliningOptions serviceProvider
         match scope with
-        | Scope.Open   ->  options.OpensEnabled             
+        | Scope.Open                  ->  options.OpensEnabled             
         | Scope.Module                -> options.ModulesEnabled   
         | Scope.HashDirective         -> options.HashDirectivesEnabled   
         | Scope.Attribute             -> options.AttributesEnabled
@@ -426,11 +426,12 @@ type OutliningTagger
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
-                        member __.IsDefaultCollapsed = false //collapseByDefualt scope
+                        member __.IsDefaultCollapsed = false //_collapseByDefault scope
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
                             OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _
-                    }) :> ITagSpan<_> |> Some
+                    }) :> ITagSpan<_> 
+            |> Some
         with
         | :? ArgumentOutOfRangeException ->
             Logging.logInfo (fun _ -> "ArgumentOutOfRangeException in Outlining.Tagger.createTagSpan")

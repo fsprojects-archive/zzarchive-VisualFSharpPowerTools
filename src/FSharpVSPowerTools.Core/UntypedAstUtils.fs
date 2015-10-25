@@ -1003,7 +1003,7 @@ module Outlining =
             | SynMemberDefn.Member (binding,r) ->
                 yield! rcheck Scope.Member Collapse.Below r
                 yield! parseBinding binding
-            | SynMemberDefn.LetBindings (bindings,_,_,r) ->
+            | SynMemberDefn.LetBindings (bindings,_,_,_r) ->
                 //yield! rcheck Scope.LetOrUse Collapse.Below r
                 yield! parseBindings bindings
             | SynMemberDefn.Interface (tp,iMembers,_) ->
@@ -1032,7 +1032,7 @@ module Outlining =
                          |  Path of string
     *)
     and private parseSimpleRepr simple =
-        let accessRange (opt:SynAccess option) =
+        let _accessRange (opt:SynAccess option) =
             match opt with
             | None -> 0
             | Some synacc ->
@@ -1040,7 +1040,7 @@ module Outlining =
                 | SynAccess.Public -> 6
                 | SynAccess.Private -> 7
                 | SynAccess.Internal -> 8
-        seq{
+        seq {
             match simple with
             | SynTypeDefnSimpleRepr.Enum (cases,er) ->
                 yield! rcheck Scope.SimpleType Collapse.Below er
@@ -1049,7 +1049,7 @@ module Outlining =
                     seq{yield! rcheck Scope.EnumCase Collapse.Below cr
                         yield! parseAttributes attrs
                     })
-            | SynTypeDefnSimpleRepr.Record (opt,fields,rr) ->
+            | SynTypeDefnSimpleRepr.Record (_opt,fields,rr) ->
                 //yield! rcheck Scope.SimpleType Collapse.Same <| Range.modBoth rr (accessRange opt+1) 1
                 yield! rcheck Scope.RecordDefn Collapse.Same rr //<| Range.modBoth rr 1 1
                 yield! fields
@@ -1057,7 +1057,7 @@ module Outlining =
                     seq{yield! rcheck Scope.RecordField Collapse.Below fr
                         yield! parseAttributes attrs
                     })
-            | SynTypeDefnSimpleRepr.Union (opt,cases,ur) ->
+            | SynTypeDefnSimpleRepr.Union (_opt,cases,ur) ->
 //                yield! rcheck Scope.SimpleType Collapse.Same <| Range.modStart ur (accessRange opt)
                 yield! rcheck Scope.UnionDefn Collapse.Same ur
                 yield! cases
@@ -1080,7 +1080,7 @@ module Outlining =
                 yield! Seq.collect parseSynMemberDefn objMembers
                 // visit the members of a type extension
                 yield! Seq.collect parseSynMemberDefn members
-            | SynTypeDefnRepr.Simple (simpleRepr,r) ->
+            | SynTypeDefnRepr.Simple (simpleRepr,_r) ->
                 yield! rcheck Scope.Type Collapse.Below <| Range.endToEnd componentInfo.Range range
                 yield! parseSimpleRepr simpleRepr
                 yield! Seq.collect parseSynMemberDefn members
