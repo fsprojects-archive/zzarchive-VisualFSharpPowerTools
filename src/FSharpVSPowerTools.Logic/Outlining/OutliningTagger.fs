@@ -2,6 +2,7 @@
 
 open System
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Text.Outlining
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Utils
@@ -27,7 +28,7 @@ type ScopeSpan =
     val Scope : Scope
     val Collapse : Collapse
     val SnapSpan : SnapshotSpan
-    new (scope, collapse, snapSpan) = 
+    new (scope, collapse, snapSpan) =
         {Scope = scope; Collapse = collapse; SnapSpan = snapSpan}
 
 /// A colored outlining hint control similar to
@@ -72,6 +73,9 @@ let inline scaleToFit (view: IWpfTextView) =
         |> ignore)
     view
 
+
+
+
 type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
@@ -85,9 +89,9 @@ type OutliningTagger
     let mutable scopedSnapSpans : ScopeSpan [] = [||]
     let mutable oldAST = None : ParsedInput option
 
- 
+
     /// triggerUpdate -=> tagsChanged
-    let triggerUpdate newSnapshotSpans = 
+    let triggerUpdate newSnapshotSpans =
         scopedSnapSpans <- newSnapshotSpans
         tagsChanged.Trigger (self, SnapshotSpanEventArgs buffer.CurrentSnapshot.FullSpan)
 
@@ -106,10 +110,10 @@ type OutliningTagger
     // for an empty ast via it's range and ignore it if the length is zero
     let checkAST (oldtree:ParsedInput option) (newTree:ParsedInput) : bool =
         let inline lengthZero (emptyTree:ParsedInput) =
-             emptyTree.Range.StartColumn = emptyTree.Range.EndColumn &&  emptyTree.Range.StartLine = emptyTree.Range.EndLine 
+             emptyTree.Range.StartColumn = emptyTree.Range.EndColumn &&  emptyTree.Range.StartLine = emptyTree.Range.EndLine
         match oldtree, newTree with
         | None, _ -> true
-        | _, emptyTree when lengthZero emptyTree -> false 
+        | _, emptyTree when lengthZero emptyTree -> false
         | _ -> true
 
 
@@ -125,7 +129,7 @@ type OutliningTagger
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
             let! ast = parseFileResults.ParseTree
             //Logging.logInfo "[Outlining]\nAST Range\n%A" ast.Range
-            Logging.logInfo (fun _ -> sprintf "[Outlining]\nAST\n%A" ast)
+            //Logging.logInfo "[Outlining]\nAST\n%A" ast
             if checkAST oldAST ast then
                 oldAST <- Some ast
                 let scopedSpans = (getOutliningRanges >> Seq.choose (fromScopeRange snapshot) >> Array.ofSeq) ast
@@ -175,8 +179,8 @@ type OutliningTagger
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
         serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
-        |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.75 * cv.ZoomLevel) 
-                            (fun _ -> view.ZoomLevel <- 0.75 * view.ZoomLevel)
+        |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.80 * cv.ZoomLevel)
+                            (fun _ -> view.ZoomLevel <- 0.80 * view.ZoomLevel)
         scaleToFit view
 
 
@@ -220,7 +224,7 @@ type OutliningTagger
     // to display as the text inside the collapse box preceding the `...`
     let getHintText (snapshotSpan:SnapshotSpan) =
         let textshot = snapshotSpan.Snapshot
-        let firstLineNum = snapshotSpan.FirstLineNum textshot
+        let firstLineNum = snapshotSpan.StartLineNum
         let rec loop acc =
             if acc >= textshot.LineCount + firstLineNum then "" else
             let text =  if acc = firstLineNum then
@@ -231,13 +235,111 @@ type OutliningTagger
         loop firstLineNum
 
 
-    // outlined regions that should be collapsed by default will make use of 
+    let collapseByDefualt scope =
+        let options = Setting.getOutliningOptions serviceProvider
+        match scope with
+        | Scope.Open   ->  options.OpensCollapsedByDefault             
+        | Scope.Module                -> options.ModulesCollapsedByDefault   
+        | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault   
+        | Scope.Attribute             -> options.AttributesCollapsedByDefault
+        | Scope.Interface             
+        | Scope.TypeExtension         
+        | Scope.Type                  -> options.TypesCollapsedByDefault   
+        | Scope.Member                -> options.MembersCollapsedByDefault   
+        | Scope.LetOrUse              -> options.LetOrUseCollapsedByDefault 
+        | Scope.Match                 
+        | Scope.MatchClause           
+        | Scope.MatchLambda           -> options.PatternMatchesCollapsedByDefault 
+        | Scope.IfThenElse            
+        | Scope.ThenInIfThenElse      
+        | Scope.ElseInIfThenElse      -> options.IfThenElseCollapsedByDefault 
+        | Scope.TryWith               
+        | Scope.TryInTryWith          
+        | Scope.WithInTryWith         
+        | Scope.TryFinally            
+        | Scope.TryInTryFinally       
+        | Scope.FinallyInTryFinally   -> options.TryWithFinallyCollapsedByDefault     
+        | Scope.ArrayOrList           -> options.CollectionsCollapsedByDefault
+        | Scope.CompExpr               
+        | Scope.ObjExpr                
+        | Scope.Quote                  
+        | Scope.Record                 
+        | Scope.Tuple                  
+        | Scope.SpecialFunc           -> options.TypeExpressionsCollapsedByDefault 
+        | Scope.CompExprInternal       
+        | Scope.LetOrUseBang           
+        | Scope.YieldOrReturn          
+        | Scope.YieldOrReturnBang     -> options.CExpressionMembersCollapsedByDefault
+        | Scope.UnionCase              
+        | Scope.EnumCase               
+        | Scope.RecordField            
+        | Scope.SimpleType             
+        | Scope.RecordDefn             
+        | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault   
+        | Scope.For                   
+        | Scope.While                 -> options.LoopsCollapsedByDefault    
+//        | Scope.Namespace             ->
+//        | Scope.Do                    -> 
+//        | Scope.Lambda                 
+        | _ -> false    
+
+    let outliningEnabled scope =
+        let options = Setting.getOutliningOptions serviceProvider
+        match scope with
+        | Scope.Open   ->  options.OpensEnabled             
+        | Scope.Module                -> options.ModulesEnabled   
+        | Scope.HashDirective         -> options.HashDirectivesEnabled   
+        | Scope.Attribute             -> options.AttributesEnabled
+        | Scope.Interface             
+        | Scope.TypeExtension         
+        | Scope.Type                  -> options.TypesEnabled   
+        | Scope.Member                -> options.MembersEnabled   
+        | Scope.LetOrUse              -> options.LetOrUseEnabled 
+        | Scope.Match                 
+        | Scope.MatchClause           
+        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
+        | Scope.IfThenElse            
+        | Scope.ThenInIfThenElse      
+        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
+        | Scope.TryWith               
+        | Scope.TryInTryWith          
+        | Scope.WithInTryWith         
+        | Scope.TryFinally            
+        | Scope.TryInTryFinally       
+        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled     
+        | Scope.ArrayOrList           -> options.CollectionsEnabled
+        | Scope.CompExpr               
+        | Scope.ObjExpr                
+        | Scope.Quote                  
+        | Scope.Record                 
+        | Scope.Tuple                  
+        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
+        | Scope.CompExprInternal       
+        | Scope.LetOrUseBang           
+        | Scope.YieldOrReturn          
+        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
+        | Scope.UnionCase              
+        | Scope.EnumCase               
+        | Scope.RecordField            
+        | Scope.SimpleType             
+        | Scope.RecordDefn             
+        | Scope.UnionDefn             -> options.SimpleTypesEnabled   
+        | Scope.For                   
+        | Scope.While                 -> options.LoopsEnabled    
+//        | Scope.Namespace             ->
+//        | Scope.Do                    -> 
+//        | Scope.Lambda                 
+        | _ -> true   
+
+
+    // outlined regions that should be collapsed by default will make use of
     // the scope argument currently hidden by the wildcard `(scope,collapse,snapshotSpan)`
     // probably easiest to use a helper function and put it in `member __.IsDefaultCollapsed = isCollapsed scope`
     let createTagSpan (scopedSpan: ScopeSpan) =
         let scope, collapse, snapshotSpan = scopedSpan.Scope, scopedSpan.Collapse, scopedSpan.SnapSpan
         try
-            let snapshot = snapshotSpan.Snapshot in let firstLine = snapshot.GetLineFromPosition (snapshotSpan.Start.Position)
+            let snapshot = snapshotSpan.Snapshot
+            let firstLine = snapshot.GetLineFromPosition (snapshotSpan.Start.Position)
             let mutable lastLine = snapshot.GetLineFromPosition (snapshotSpan.End.Position)
 
             let nHintLines = lastLine.LineNumber - firstLine.LineNumber + 1
@@ -247,39 +349,55 @@ type OutliningTagger
             let missingLinesCount = max (nHintLines - MaxTooltipLines) 0
             let hintSnapshotSpan = SnapshotSpan (firstLine.Start, lastLine.End)
 
-            let collapseText, collapseSpan =         
-                /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip    
-                let mkOutliningPair (token:string) (md:int) (collapse:Collapse)=
+            let collapseText, collapseSpan =
+                /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip
+                let inline mkOutliningPair (token:string) (md:int) (collapse:Collapse) =
                     match collapse, firstLine.GetText().IndexOf token with // Type extension where `with` is on a lower line
                     | Collapse.Same, -1 -> ((getHintText snapshotSpan) + "...", snapshotSpan)
                     | _ (* Collapse.Below *) , -1 ->  ("...", snapshotSpan)
                     | Collapse.Same, idx  ->
                         let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
-                        ((getHintText modSpan) + "...", modSpan)   
+                        ((getHintText modSpan) + "...", modSpan)
                     | _ (*Collapse.Below*), idx ->
                         let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
-                        ( "...", modSpan) 
-                
+                        ( "...", modSpan)
+
                 let (|OutliningPair|_|) (collapse:Collapse) (_:Scope) =
                     match collapse with
                     | Collapse.Same -> Some ((getHintText snapshotSpan) + "...", snapshotSpan)
                     | _ (*Collapse.Below*) -> Some ("...", snapshotSpan)
+
                 let lineText = firstLine.GetText()
 
                 let inline pairAlts str1 str2 =
                     if lineText.Contains str1 then mkOutliningPair str1 0 collapse else mkOutliningPair str2 0 collapse
 
+                let (|StartsWith|_|) (token:string) (sspan:SnapshotSpan) =
+                    if token = "{" then // quick terminate for `{` start, this case must follow all access qualified matches in pattern match below
+                        let modspan = (sspan.ModBoth 1 -1)
+                        Some ((getHintText modspan) + "...", modspan) else
+                    let startText = lineText.SubstringSafe sspan.StartColumn
+                    if startText.StartsWith token then
+                        match sspan.PositionOf "{" with
+                        | bl,_ when bl>sspan.StartLineNum -> Some ("{...}",(sspan.ModStart (token.Length)))
+                        | bl,bc when bl=sspan.StartLineNum ->
+                            let modSpan = (sspan.ModStart (bc-sspan.StartColumn)).ModBoth 1 -1
+                            Some (getHintText modSpan+"...",modSpan)
+                        | _ -> None
+                    else None
+
                 match scope with
                 | Scope.Type
                 | Scope.Module
                 | Scope.Member
-                | Scope.LetOrUse 
+                | Scope.LetOrUse
                 | Scope.LetOrUseBang -> mkOutliningPair "=" 0 collapse
                 | Scope.ObjExpr
+                | Scope.Interface
                 | Scope.TypeExtension -> mkOutliningPair "with" 0 collapse
-                | Scope.MatchClause -> 
-                    let idx = lineText.IndexOf "->" 
-                    if idx = -1 then  mkOutliningPair "|" -1 collapse else
+                | Scope.MatchClause ->
+                    let idx = lineText.IndexOf "->"
+                    if idx = -1 then  mkOutliningPair "|" -1 collapse else  // special case to collapse compound guards
                     let substr = lineText.SubstringSafe (idx+2)
                     if substr = String.Empty || String.IsNullOrWhiteSpace substr then
                         mkOutliningPair "->" 0 Collapse.Below
@@ -289,10 +407,17 @@ type OutliningTagger
                 | Scope.YieldOrReturnBang -> pairAlts "yield!" "return!"
                 | Scope.Lambda ->  mkOutliningPair "->" 0 collapse
                 | Scope.IfThenElse -> mkOutliningPair "if" 0 collapse
+                | Scope.RecordDefn ->
+                    match snapshotSpan with
+                    | StartsWith "private"  pair -> pair
+                    | StartsWith "public"   pair -> pair
+                    | StartsWith "internal" pair -> pair
+                    | StartsWith "{"  pair -> pair
+                    | _ -> ("...", snapshotSpan) // should never be reached due to AP
                 | OutliningPair collapse pair -> pair
                 | _ -> ("...", snapshotSpan) // should never be reached due to AP
-    
-            let createBuffer _ = 
+
+            let createBuffer _ =
                 (match missingLinesCount with
                 | 0 -> None
                 | n -> Some (sprintf "\n\n +%d lines..." n)
@@ -301,10 +426,10 @@ type OutliningTagger
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
-                        member __.IsDefaultCollapsed = false
+                        member __.IsDefaultCollapsed = false //collapseByDefualt scope
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
-                            OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _ 
+                            OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _
                     }) :> ITagSpan<_> |> Some
         with
         | :? ArgumentOutOfRangeException ->
@@ -313,6 +438,7 @@ type OutliningTagger
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
     let getTags (normalizedSnapshotSpans: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
+
         let (|EmptySeq|) xs = if Seq.isEmpty xs then EmptySeq else ()
         match normalizedSnapshotSpans, scopedSnapSpans with
         | EmptySeq, [||] -> Seq.empty
@@ -325,8 +451,8 @@ type OutliningTagger
                                         ScopeSpan (s.Scope, s.Collapse, s.SnapSpan.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive)))
             scopedSnapSpans
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
-            // insert a filter here using scope to remove the regions that should not be outlined at all
-            |> Seq.choose createTagSpan 
+            |> Seq.filter (fun s -> outliningEnabled s.Scope)
+            |> Seq.choose createTagSpan
 
 
     interface ITagger<IOutliningRegionTag> with
@@ -341,3 +467,24 @@ type OutliningTagger
         member __.Dispose () =
             docEventListener.Dispose ()
             scopedSnapSpans <- [||]
+
+
+(*  For more advanced/nuanced region collapsing commands and for outlining regions
+    to start out collapsed an IOutliningManager of some sort will be necessary
+
+    Viasfora's `BaseOutliningManager`
+        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/BaseOutliningManager.cs
+
+    and SelectionOutliningManager`
+        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/SelectionOutliningManager.cs
+
+    should serve as a good reference to implement  similar functionality for VFPT
+
+    https://github.com/tomasr/viasfora/tree/master/Viasfora/Outlining
+
+        let textView = serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
+        let outliningManager = 
+            if  textView.IsNone then None else
+            Some <| serviceProvider.GetService<IOutliningManagerService>().GetOutliningManager(textView.Value :> ITextView)
+        outliningManager.Value
+*)

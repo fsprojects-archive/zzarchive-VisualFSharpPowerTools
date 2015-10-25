@@ -87,22 +87,6 @@ type SnapshotPoint with
         let point = x.TranslateTo(span.Snapshot, PointTrackingMode.Positive)
         point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
 
-type SnapshotSpan with
-    /// Return corresponding zero-based FCS range
-    /// (lineStart, colStart, lineEnd, colEnd)
-    member inline x.ToRange() =
-        let lineStart = x.Snapshot.GetLineNumberFromPosition (x.Start.Position)
-        let lineEnd = x.Snapshot.GetLineNumberFromPosition (x.End.Position)
-        let startLine = x.Snapshot.GetLineFromPosition (x.Start.Position)
-        let endLine = x.Snapshot.GetLineFromPosition (x.End.Position)
-        let colStart = x.Start.Position - startLine.Start.Position
-        let colEnd = x.End.Position - endLine.Start.Position
-        (lineStart, colStart, lineEnd, colEnd - 1)
-
-    member inline x.FirstLineNum (textSnapshot:ITextSnapshot) = 
-        textSnapshot.GetLineNumberFromPosition x.Start.Position
-
-
 type ITextSnapshot with
     /// SnapshotSpan of the entirety of this TextSnapshot
     member x.FullSpan =
@@ -117,6 +101,59 @@ type ITextSnapshot with
 
     /// Get the text at line `num`
     member inline x.LineText num =  x.GetLineFromLineNumber(num).GetText()
+
+
+type SnapshotSpan with
+
+    member inline x.StartLine  = x.Snapshot.GetLineFromPosition (x.Start.Position)
+    member inline x.StartLineNum  = x.Snapshot.GetLineNumberFromPosition x.Start.Position
+    member inline x.StartColumn  = 
+        x.Start.Position - x.StartLine.Start.Position 
+    
+    member inline x.EndLine = x.Snapshot.GetLineFromPosition (x.End.Position)
+    member inline x.EndLineNum  = x.Snapshot.GetLineNumberFromPosition x.End.Position
+    member inline x.EndColumn = 
+        x.End.Position - x.EndLine.Start.Position          
+
+    member x.ModStart (num) =
+        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
+
+    member x.ModEnd (num) =
+        SnapshotSpan(x.Start, (SnapshotPoint (x.Snapshot,x.End.Position + num)))
+
+    member x.ModBoth m1 m2 =
+        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1)
+                    ,SnapshotPoint (x.Snapshot, x.End.Position + m2))
+
+    /// get the position of the token found at (line,.col) if token was not found then -1,-1
+    member x.PositionOf (token:string) =
+        let firstLine = x.StartLineNum
+        let lastLine = x.EndLineNum
+        let lines =  [| for idx in firstLine .. lastLine -> x.Snapshot.LineText idx |]
+
+        let withinBounds (line, col) =
+            match line, col with
+            | -1,-1 -> -1,-1 // fast terminate if token wasn't found
+            |  l, c when c < x.StartColumn
+                     &&  l = firstLine -> -1,-1
+            |  l, c when c > x.EndColumn
+                     &&  l = lastLine -> -1,-1
+            | _ -> line,col
+
+        let rec loop idx =
+            if idx > lines.Length then -1,-1 else
+            match lines.[idx].IndexOf(token) with
+            | -1 -> loop (idx+1)
+            | toki -> (firstLine+idx,toki)
+        
+        loop 0 |> withinBounds
+
+
+    /// Return corresponding zero-based FCS range
+    /// (lineStart, colStart, lineEnd, colEnd)
+    member inline x.ToRange () =
+        (x.StartLineNum, x.StartColumn, x.EndLineNum, x.EndColumn-1)
+
 
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
