@@ -378,9 +378,9 @@ let ``ProcessParseTree should prefer open documents``() =
 
     assertTrue (seen.Count = 1)
     match seen.[0] with
-    | Ast.ParsedInput.ImplFile(Ast.ParsedImplFileInput(name, _isScript, _fileName, _scopedPragmas, _hashDirectives, [m], _)) -> 
+    | Ast.ParsedInput.ImplFile(Ast.ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, [m], _)) -> 
         match m with
-        | Ast.SynModuleOrNamespace([name], isModule, decls, _xmldoc, _attributes, _access, _range) ->
+        | Ast.SynModuleOrNamespace([name], _isModule, _decls, _xmldoc, _attributes, _access, _range) ->
             assertEqual name.idText "Bar"
         | x -> 
             Assert.Fail (sprintf "Expected empty module named Bar got %+A" x)

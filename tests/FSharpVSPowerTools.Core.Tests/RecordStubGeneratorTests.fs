@@ -48,6 +48,7 @@ let tryFindRecordDefinitionFromPos codeGenInfra (pos: pos) (document: IDocument)
     tryFindRecordDefinitionFromPos codeGenInfra (projectOptions document.FullName) pos document
     |> Async.RunSynchronously
 
+[<NoComparison; NoEquality>]
 type CodeGenDiagnostic = {
     mutable Range: range option
     mutable RecordExpr: RecordExpr option
