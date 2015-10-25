@@ -18,42 +18,48 @@ namespace FSharpVSPowerTools
     [TagType(typeof(UnionPatternMatchCaseGeneratorSmartTag))]
     public class UnionPatternMatchCaseGeneratorSmartTaggerProvider : IViewTaggerProvider
     {
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal ITextUndoHistoryRegistry undoHistoryRegistry = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly ITextUndoHistoryRegistry _undoHistoryRegistry;
+        
+        [ImportingConstructor]
+        public UnionPatternMatchCaseGeneratorSmartTaggerProvider(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            ITextUndoHistoryRegistry undoHistoryRegistry,
+            ProjectFactory projectFactory,
+            VSLanguageService fsharpVsLanguageService)
+        {
+            _serviceProvider = serviceProvider;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _undoHistoryRegistry = undoHistoryRegistry;
+            _projectFactory = projectFactory;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+        }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.UnionPatternMatchCaseGenerationEnabled) return null;
-            var codeGenOptions = Setting.getCodeGenerationOptions(serviceProvider);
+            var codeGenOptions = Setting.getCodeGenerationOptions(_serviceProvider);
             if (codeGenOptions == null) return null;
 
-            var dte = serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
+            var dte = _serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
             var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
             if (vsVersion == VisualStudioVersion.VS2015) return null;
 
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 var generator = new UnionPatternMatchCaseGenerator(doc, textView,
-                            undoHistoryRegistry.RegisterHistory(buffer),
-                            fsharpVsLanguageService, serviceProvider,
-                            projectFactory, Setting.getDefaultMemberBody(codeGenOptions));
+                                    _undoHistoryRegistry.RegisterHistory(buffer),
+                                    _fsharpVsLanguageService, _serviceProvider,
+                                    _projectFactory, Setting.getDefaultMemberBody(codeGenOptions));
                 return new UnionPatternMatchCaseGeneratorSmartTagger(buffer, generator) as ITagger<T>;
             }
             
