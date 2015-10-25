@@ -12,7 +12,11 @@ open FSharpVSPowerTools
 open NUnit.Framework
 open TestHelpers.LanguageServiceTestHelper
 
-let fileName = Path.Combine(__SOURCE_DIRECTORY__, "SampleFile.fs")
+[<Literal>]
+let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
+type dataFolder = FSharp.Management.FileSystem<dataFolderName>
+ 
+let fileName = dataFolder.``XmlDocSampleFile.fs``
 let input = File.ReadAllText(fileName)
 let languageService = LanguageService()
 let output = 

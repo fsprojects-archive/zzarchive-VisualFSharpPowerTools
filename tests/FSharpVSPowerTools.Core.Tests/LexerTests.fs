@@ -11,7 +11,12 @@ open NUnit.Framework
 open System.IO
 open FSharpVSPowerTools
 
-let source = File.ReadAllText (Path.Combine (__SOURCE_DIRECTORY__, "Tutorial.fs"))
+[<Literal>]
+let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
+type dataFolder = FSharp.Management.FileSystem<dataFolderName>
+ 
+let fileName = dataFolder.``LanguageServiceSampleFile.fs``
+let source = File.ReadAllText (fileName)
 
 let args = LanguageServiceTestHelper.args
 

@@ -14,7 +14,12 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 
-let fileName = Path.Combine(__SOURCE_DIRECTORY__, "Tutorial.fs")
+[<Literal>]
+let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
+type dataFolder = FSharp.Management.FileSystem<dataFolderName>
+ 
+let fileName = dataFolder.``LanguageServiceSampleFile.fs``
+
 let source = File.ReadAllText(fileName)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
 

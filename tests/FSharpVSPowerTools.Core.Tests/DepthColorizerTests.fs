@@ -11,8 +11,12 @@ open System.IO
 open FSharpVSPowerTools
 open NUnit.Framework
 open TestHelpers.LanguageServiceTestHelper
+
+[<Literal>]
+let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
+type dataFolder = FSharp.Management.FileSystem<dataFolderName>
  
-let fileName = Path.Combine(__SOURCE_DIRECTORY__, "DepthColorizerSampleFile.fs")
+let fileName = dataFolder.``DepthColorizerSampleFile.fs``
 let input = File.ReadAllText(fileName)
 let languageService = LanguageService()
 let output = 
