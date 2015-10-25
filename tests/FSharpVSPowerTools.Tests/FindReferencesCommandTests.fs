@@ -115,6 +115,6 @@ val func : int -> int
             (fun () -> 
                 helper.ReferencesResults 
                 |> assertEqual 
-                    [| sprintf "%s - (%i, %i) : val func" prefix 4 4;
-                       sprintf "%s - (%i, %i) : val func" (prefix.Replace("Sample.fsi", "Sample.fs")) 3 4;
-                       sprintf "%s - (%i, %i) : val func" (prefix.Replace("Sample.fsi", "Program.fs")) 5 4; |])
+                    [| sprintf "%s - (%i, %i) : val func : int -> int" prefix 4 4;
+                       sprintf "%s - (%i, %i) : let func (x: int) = x + 1" (prefix.Replace("Sample.fsi", "Sample.fs")) 3 4;
+                       sprintf "%s - (%i, %i) : Sample.func 10" (prefix.Replace("Sample.fsi", "Program.fs")) 5 4; |])

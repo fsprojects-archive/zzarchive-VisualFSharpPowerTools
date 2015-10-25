@@ -449,7 +449,14 @@ namespace FSharpVSPowerTools
             VSLanguageService fsharpVsLanguageService,
             ProjectFactory projectFactory)
         {
+            _serviceProvider = serviceProvider;
+            _classificationColorManager = classificationColorManager;
+            _classificationRegistry = classificationRegistry;
+            _textDocumentFactoryService = textDocumentFactoryService;
             _shellEventListener = shellEventListener;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+            _projectFactory = projectFactory;
+
             // Receive notification for Visual Studio theme change
             _shellEventListener.ThemeChanged += UpdateTheme;
         }
