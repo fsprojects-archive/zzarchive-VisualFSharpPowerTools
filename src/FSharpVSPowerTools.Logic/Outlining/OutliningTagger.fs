@@ -33,7 +33,7 @@ type ScopeSpan =
 
 /// A colored outlining hint control similar to
 /// https://github.com/dotnet/roslyn/blob/57aaa6c9d8bc1995edfc261b968777666172f1b8/src/EditorFeatures/Core/Implementation/Outlining/OutliningTaggerProvider.Tag.cs
-type OutliningControl (createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
+type OutliningHint (createView: ITextBuffer -> IWpfTextView, createBuffer) as self =
     inherit ContentControl ()
 
     do self.IsVisibleChanged.Add (fun (e: DependencyPropertyChangedEventArgs) ->
@@ -72,8 +72,6 @@ let inline scaleToFit (view: IWpfTextView) =
                 view.VisualElement.Width <- view.MaxTextRightCoordinate))
         |> ignore)
     view
-
-
 
 
 type OutliningTagger
@@ -174,11 +172,14 @@ type OutliningTagger
             minIndent
 
 
+    let wpfTextView = lazy(serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath)
+
+
     /// Create the WPFTextView for the Outlining tooltip scaled to 75% of the document's ZoomLevel
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
-        serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
+        wpfTextView.Value
         |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.80 * cv.ZoomLevel)
                             (fun _ -> view.ZoomLevel <- 0.80 * view.ZoomLevel)
         scaleToFit view
@@ -235,7 +236,7 @@ type OutliningTagger
         loop firstLineNum
 
 
-    let _collapseByDefault scope =
+    let collapseByDefault scope =
         let options = Setting.getOutliningOptions serviceProvider
         match scope with
         | Scope.Open                  ->  options.OpensCollapsedByDefault             
@@ -426,10 +427,10 @@ type OutliningTagger
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
-                        member __.IsDefaultCollapsed = false //_collapseByDefault scope
+                        member __.IsDefaultCollapsed = collapseByDefault scope
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
-                            OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _
+                            OutliningHint (createElisionBufferView textEditorFactoryService, createBuffer) :> _
                     }) :> ITagSpan<_> 
             |> Some
         with
