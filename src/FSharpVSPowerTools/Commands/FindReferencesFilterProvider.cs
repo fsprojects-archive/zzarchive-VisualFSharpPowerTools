@@ -19,37 +19,43 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal class FindReferencesFilterProvider : IWpfTextViewCreationListener
     {
-        [Import]
-        internal IVsEditorAdaptersFactoryService editorFactory = null;
+        private readonly System.IServiceProvider _serviceProvider;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly IVsEditorAdaptersFactoryService _editorFactory;
+        private readonly FileSystem _fileSystem;
 
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal System.IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
-
-        [Import]
-        internal FileSystem fileSystem = null; 
+        [ImportingConstructor]
+        public FindReferencesFilterProvider(
+            [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            IVsEditorAdaptersFactoryService editorFactory,
+            FileSystem fileSystem,
+            ProjectFactory projectFactory,
+            VSLanguageService fsharpVsLanguageService)
+        {
+            _serviceProvider = serviceProvider;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _editorFactory = editorFactory;
+            _fileSystem = fileSystem;
+            _projectFactory = projectFactory;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+        }
 
         internal FindReferencesFilter RegisterCommandFilter(IWpfTextView textView, bool showProgress)
         {
-            var textViewAdapter = editorFactory.GetViewAdapter(textView);
+            var textViewAdapter = _editorFactory.GetViewAdapter(textView);
             if (textViewAdapter == null) return null;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.FindAllReferencesEnabled) return null;
 
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                var filter = new FindReferencesFilter(doc, textView, fsharpVsLanguageService,
-                                                serviceProvider, projectFactory, showProgress, fileSystem);
+                var filter = new FindReferencesFilter(doc, textView, _fsharpVsLanguageService,
+                                                _serviceProvider, _projectFactory, showProgress, _fileSystem);
                 AddCommandFilter(textViewAdapter, filter);
                 return filter;
             }
@@ -77,8 +83,5 @@ namespace FSharpVSPowerTools
                 }
             }
         }
-
-
- 
     }
 }

@@ -47,7 +47,8 @@ type FindReferencesCommandHelper() =
                         textDocumentFactoryService = base.DocumentFactoryService,                            
                         fsharpVsLanguageService = base.VsLanguageService,
                         serviceProvider = base.ServiceProvider,
-                        projectFactory = base.ProjectFactory)
+                        projectFactory = base.ProjectFactory,
+                        fileSystem = base.FileSystem)
 
     member __.GetCommand(wpfTextView) =
         // ShowProgress requires to run on UI thread
