@@ -2,6 +2,7 @@
 
 open System
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Text.Outlining
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Utils
@@ -328,57 +329,7 @@ type OutliningTagger
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda                 
-        | _ -> false    
-
-    (*
-                    
-         options.        
-          
-                   
-             
-         options.TypeExpressionsCollapsedByDefault   
-                 
-                  
-         options.CollectionsCollapsedByDefault       
-            
-         options.TryWithFinallyCollapsedByDefault    
-                
-         options.CExpressionMembersCollapsedByDefault
-                   
-    *)
-
-    (*
-         OpensEnabled                        
-         OpensCollapsedByDefault             
-         ModulesEnabled                      
-         ModulesCollapsedByDefault           
-         HashDirectivesEnabled               
-         HashDirectivesCollapsedByDefault    
-         TypesEnabled                        
-         TypesCollapsedByDefault             
-         SimpleTypesEnabled                  
-         SimpleTypesCollapsedByDefault       
-         TypeExpressionsEnabled              
-         TypeExpressionsCollapsedByDefault   
-         MembersEnabled                      
-         MembersCollapsedByDefault           
-         LetOrUseEnabled                     
-         LetOrUseCollapsedByDefault          
-         CollectionsEnabled                  
-         CollectionsCollapsedByDefault       
-         PatternMatchesEnabled               
-         PatternMatchesCollapsedByDefault    
-         TryWithFinallyEnabled               
-         TryWithFinallyCollapsedByDefault    
-         IfThenElseEnabled                   
-         IfThenElseCollapsedByDefault        
-         CExpressionMembersEnabled           
-         CExpressionMembersCollapsedByDefault
-         LoopsEnabled                        
-         LoopsCollapsedByDefault              
-    *)
-
-
+        | _ -> true   
 
 
     // outlined regions that should be collapsed by default will make use of
@@ -475,7 +426,7 @@ type OutliningTagger
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
-                        member __.IsDefaultCollapsed = collapseByDefualt scope
+                        member __.IsDefaultCollapsed = false //collapseByDefualt scope
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
                             OutliningControl (createElisionBufferView textEditorFactoryService, createBuffer) :> _
@@ -487,6 +438,7 @@ type OutliningTagger
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
     let getTags (normalizedSnapshotSpans: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
+
         let (|EmptySeq|) xs = if Seq.isEmpty xs then EmptySeq else ()
         match normalizedSnapshotSpans, scopedSnapSpans with
         | EmptySeq, [||] -> Seq.empty
@@ -515,3 +467,24 @@ type OutliningTagger
         member __.Dispose () =
             docEventListener.Dispose ()
             scopedSnapSpans <- [||]
+
+
+(*  For more advanced/nuanced region collapsing commands and for outlining regions
+    to start out collapsed an IOutliningManager of some sort will be necessary
+
+    Viasfora's `BaseOutliningManager`
+        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/BaseOutliningManager.cs
+
+    and SelectionOutliningManager`
+        https://github.com/tomasr/viasfora/blob/master/Viasfora/Outlining/SelectionOutliningManager.cs
+
+    should serve as a good reference to implement  similar functionality for VFPT
+
+    https://github.com/tomasr/viasfora/tree/master/Viasfora/Outlining
+
+        let textView = serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath
+        let outliningManager = 
+            if  textView.IsNone then None else
+            Some <| serviceProvider.GetService<IOutliningManagerService>().GetOutliningManager(textView.Value :> ITextView)
+        outliningManager.Value
+*)

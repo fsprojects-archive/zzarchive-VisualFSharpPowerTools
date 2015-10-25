@@ -2,7 +2,7 @@
 using System.Windows.Forms;
 
 namespace FSharpVSPowerTools.UI {
-    public partial class OutliningOptionsControl : UserControl {
+    public partial class OutliningOptionsControl :UserControl {
         readonly IOutliningOptions _outliningOptions;
 
         public OutliningOptionsControl() {
@@ -33,63 +33,63 @@ namespace FSharpVSPowerTools.UI {
         protected override void OnLoad(EventArgs e) {
             base.OnLoad(e);
 
-            Opens = new OutliningOptionControl("Open :") {
+            Opens = new OutliningOptionControl("Open") {
                 OutliningEnabled = _outliningOptions.OpensEnabled,
                 CollapsedByDefault = _outliningOptions.OpensCollapsedByDefault
             };
-            Modules = new OutliningOptionControl("Module :") {
+            Modules = new OutliningOptionControl("Module") {
                 OutliningEnabled = _outliningOptions.ModulesEnabled,
                 CollapsedByDefault = _outliningOptions.ModulesCollapsedByDefault
             };
-            HashDirectives = new OutliningOptionControl("#I / #r / #load :") {
+            HashDirectives = new OutliningOptionControl("#I / #r / #load") {
                 OutliningEnabled = _outliningOptions.HashDirectivesEnabled,
                 CollapsedByDefault = _outliningOptions.HashDirectivesCollapsedByDefault
             };
-            Types = new OutliningOptionControl("Type / Interface / Type Extension :") {
+            Types = new OutliningOptionControl("Type / Interface / Type Extension") {
                 OutliningEnabled = _outliningOptions.TypesEnabled,
                 CollapsedByDefault = _outliningOptions.TypesCollapsedByDefault
             };
-            SimpleTypes = new OutliningOptionControl("Record and DU Definition :"){              
+            SimpleTypes = new OutliningOptionControl("Record and DU Definition"){              
                 OutliningEnabled =   _outliningOptions.SimpleTypesEnabled,
                 CollapsedByDefault = _outliningOptions.SimpleTypesCollapsedByDefault
             };
-            TypeExpressions = new OutliningOptionControl("CExpr / ObjExpr / Record / Tuple / Code Quotation :") {
+            TypeExpressions = new OutliningOptionControl("CExpr / ObjExpr / Record / Tuple / Code Quotation") {
                 OutliningEnabled =   _outliningOptions.TypeExpressionsEnabled,
                 CollapsedByDefault = _outliningOptions.TypeExpressionsCollapsedByDefault
             };
-            Members = new OutliningOptionControl("Member :") {
+            Members = new OutliningOptionControl("Member") {
                 OutliningEnabled =   _outliningOptions.MembersEnabled,
                 CollapsedByDefault = _outliningOptions.MembersCollapsedByDefault
             };
-            LetOrUse = new OutliningOptionControl("Let / Use :") {
+            LetOrUse = new OutliningOptionControl("Let / Use") {
                 OutliningEnabled =   _outliningOptions.LetOrUseEnabled,
                 CollapsedByDefault = _outliningOptions.LetOrUseCollapsedByDefault
             };
-            Collections = new OutliningOptionControl("Array / List :") {
+            Collections = new OutliningOptionControl("Array / List") {
                 OutliningEnabled =   _outliningOptions.CollectionsEnabled,
                 CollapsedByDefault = _outliningOptions.CollectionsCollapsedByDefault
             };
-            PatternMatches = new OutliningOptionControl("Pattern Match :") {
+            PatternMatches = new OutliningOptionControl("Pattern Match") {
                 OutliningEnabled =   _outliningOptions.PatternMatchesEnabled ,
                 CollapsedByDefault = _outliningOptions.PatternMatchesCollapsedByDefault
             };
-            TryWithFinally = new OutliningOptionControl("Try-With-Finally :") {
+            TryWithFinally = new OutliningOptionControl("Try-With-Finally") {
                 OutliningEnabled =   _outliningOptions.TryWithFinallyEnabled,
                 CollapsedByDefault = _outliningOptions.TryWithFinallyCollapsedByDefault
             };
-            IfThenElse = new OutliningOptionControl("If-Then-Else :") {
+            IfThenElse = new OutliningOptionControl("If-Then-Else") {
                 OutliningEnabled =   _outliningOptions.IfThenElseEnabled,
                 CollapsedByDefault = _outliningOptions.IfThenElseCollapsedByDefault
             };
-            CExpressionMembers = new OutliningOptionControl("CExpr Members :") {
+            CExpressionMembers = new OutliningOptionControl("CExpr Members") {
                 OutliningEnabled =   _outliningOptions.CExpressionMembersEnabled,
                 CollapsedByDefault = _outliningOptions.CExpressionMembersCollapsedByDefault
             };
-            Loops = new OutliningOptionControl("For / ForEach / While :") {
+            Loops = new OutliningOptionControl("For / ForEach / While") {
                 OutliningEnabled =   _outliningOptions.LoopsEnabled,
                 CollapsedByDefault = _outliningOptions.LoopsCollapsedByDefault
             };
-            Attributes = new OutliningOptionControl("For / ForEach / While :") {
+            Attributes = new OutliningOptionControl("For / ForEach / While") {
                 OutliningEnabled = _outliningOptions.AttributesEnabled,
                 CollapsedByDefault = _outliningOptions.AttributesCollapsedByDefault
             };
