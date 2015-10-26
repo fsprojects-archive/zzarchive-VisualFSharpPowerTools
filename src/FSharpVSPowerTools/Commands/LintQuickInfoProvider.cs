@@ -15,18 +15,24 @@ namespace FSharpVSPowerTools
     [ContentType("F#")]
     internal class LintQuickInfoProvider : IQuickInfoSourceProvider
     {
-        [Import(typeof(SVsServiceProvider))]
-        internal IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IViewTagAggregatorFactoryService _viewTagAggregatorFactoryService;
+     
+        [ImportingConstructor]
+        public LintQuickInfoProvider(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            IViewTagAggregatorFactoryService viewTagAggregatorFactoryService)
+        {
+            _serviceProvider = serviceProvider;
+            _viewTagAggregatorFactoryService = viewTagAggregatorFactoryService;
+        }
 
         public IQuickInfoSource TryCreateQuickInfoSource(ITextBuffer textBuffer)
         {
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.LinterEnabled) return null;
 
-            return new LintQuickInfoSource(textBuffer, viewTagAggregatorFactoryService);
+            return new LintQuickInfoSource(textBuffer, _viewTagAggregatorFactoryService);
         }
     }
 }

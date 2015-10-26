@@ -17,29 +17,35 @@ namespace FSharpVSPowerTools.QuickInfo
     [TextViewRole(PredefinedTextViewRoles.Document)]
     public class QuickInfoMarginProvider : IWpfTextViewMarginProvider
     {
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly VSLanguageService _vsLanguageService;
 
-        [Import]
-        VSLanguageService languageService = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal IServiceProvider serviceProvider = null;
+        [ImportingConstructor]
+        public QuickInfoMarginProvider(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            ProjectFactory projectFactory,
+            VSLanguageService vsLanguageService)
+        {
+            _serviceProvider = serviceProvider;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _projectFactory = projectFactory;
+            _vsLanguageService = vsLanguageService;
+        }
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost textViewHost, IWpfTextViewMargin marginContainer)
         {
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.QuickInfoPanelEnabled) return null;
 
             var textView = textViewHost.TextView;
             var buffer = textView.TextBuffer;
 
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return new QuickInfoMargin(doc, textView, languageService, serviceProvider, projectFactory);
+            if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+                return new QuickInfoMargin(doc, textView, _vsLanguageService, _serviceProvider, _projectFactory);
             else
                 return null;
         }
