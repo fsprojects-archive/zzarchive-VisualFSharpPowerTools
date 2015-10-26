@@ -31,39 +31,41 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     public class GoToDefinitionFilterProvider : IVsTextViewCreationListener, IWpfTextViewConnectionListener, IDisposable
     {
-        [Import]
-        internal IVsEditorAdaptersFactoryService editorFactory = null;
+        private readonly IVsEditorAdaptersFactoryService _editorFactory;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly IEditorOptionsFactoryService _editorOptionsFactory;
+        private readonly ProjectFactory _projectFactory;
+        private readonly ReferenceSourceProvider _referenceSourceProvider;
+        private readonly System.IServiceProvider _serviceProvider;
+        private readonly SolutionEvents _solutionEvents;
 
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
-        [Import]
-        internal IEditorOptionsFactoryService editorOptionsFactory = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
-
-        [Import(typeof(DotNetReferenceSourceProvider))]
-        internal ReferenceSourceProvider referenceSourceProvider = null;
-
-        private readonly System.IServiceProvider serviceProvider = null;
-        private readonly SolutionEvents solutionEvents = null;
         private static readonly Type serviceType = typeof(GoToDefinitionFilterProvider);
         
         [ImportingConstructor]
-        public GoToDefinitionFilterProvider([Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider)
+        public GoToDefinitionFilterProvider(
+            [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
+            IVsEditorAdaptersFactoryService editorFactory,
+            IEditorOptionsFactoryService editorOptionsFactory,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            [Import(typeof(DotNetReferenceSourceProvider))] ReferenceSourceProvider referenceSourceProvider,
+            VSLanguageService fsharpVsLanguageService,
+            ProjectFactory projectFactory)
         {
-            this.serviceProvider = serviceProvider;
+            _serviceProvider = serviceProvider;
+            _editorFactory = editorFactory;
+            _editorOptionsFactory = editorOptionsFactory;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _referenceSourceProvider = referenceSourceProvider;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+            _projectFactory = projectFactory;
 
             var dte = serviceProvider.GetService(typeof(SDTE)) as DTE;
             var events = dte.Events as Events2;
             if (events != null)
             {
-                this.solutionEvents = events.SolutionEvents;
-                this.solutionEvents.AfterClosing += Cleanup;
+                _solutionEvents = events.SolutionEvents;
+                _solutionEvents.AfterClosing += Cleanup;
             }
         }
 
@@ -74,34 +76,34 @@ namespace FSharpVSPowerTools
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            var textView = editorFactory.GetWpfTextView(textViewAdapter);
+            var textView = _editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
             Register(textViewAdapter, textView, fireNavigationEvent: false);
         }
 
         internal GoToDefinitionFilter RegisterCommandFilter(IWpfTextView textView, bool fireNavigationEvent)
         {
-            var textViewAdapter = editorFactory.GetViewAdapter(textView);
+            var textViewAdapter = _editorFactory.GetViewAdapter(textView);
             if (textViewAdapter == null) return null;
             return Register(textViewAdapter, textView, fireNavigationEvent);
         }
 
         private GoToDefinitionFilter Register(IVsTextView textViewAdapter, IWpfTextView textView, bool fireNavigationEvent)
         {
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToSymbolSourceEnabled)) return null;
             // Favor Navigate to Source feature over Go to Metadata
             var preference = generalOptions.GoToSymbolSourceEnabled
                                 ? (generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource) 
                                 : NavigationPreference.Metadata;
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                var commandFilter = new GoToDefinitionFilter(doc, textView, editorOptionsFactory,
-                                                             fsharpVsLanguageService, serviceProvider, projectFactory,
-                                                             referenceSourceProvider, preference, fireNavigationEvent);
-                if (!referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
-                    referenceSourceProvider.Activate();
+                var commandFilter = new GoToDefinitionFilter(doc, textView, _editorOptionsFactory,
+                                                             _fsharpVsLanguageService, _serviceProvider, _projectFactory,
+                                                             _referenceSourceProvider, preference, fireNavigationEvent);
+                if (!_referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
+                    _referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);
                 AddCommandFilter(textViewAdapter, commandFilter);
                 return commandFilter;
@@ -137,7 +139,7 @@ namespace FSharpVSPowerTools
             GoToDefinitionFilter commandFilter;
             if (textView.Properties.TryGetProperty(serviceType, out commandFilter))
             {
-                var textViewAdapter = editorFactory.GetViewAdapter(textView);
+                var textViewAdapter = _editorFactory.GetViewAdapter(textView);
                 int hr = textViewAdapter.RemoveCommandFilter(commandFilter);
                 Debug.Assert(hr == VSConstants.S_OK, "Should be able to unwire the command.");
                 (commandFilter as IDisposable).Dispose();
@@ -146,9 +148,9 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            if (solutionEvents != null)
-                solutionEvents.AfterClosing -= Cleanup;
-            (referenceSourceProvider as IDisposable).Dispose();
+            if (_solutionEvents != null)
+                _solutionEvents.AfterClosing -= Cleanup;
+            (_referenceSourceProvider as IDisposable).Dispose();
         }
     }
 }

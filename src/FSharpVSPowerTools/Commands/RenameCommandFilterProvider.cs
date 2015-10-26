@@ -19,35 +19,41 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal class RenameCommandFilterProvider : IVsTextViewCreationListener
     {
-        [Import]
-        internal IVsEditorAdaptersFactoryService editorFactory = null;
-
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal System.IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
+        private readonly System.IServiceProvider _serviceProvider;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly IVsEditorAdaptersFactoryService _editorFactory;
+       
+        [ImportingConstructor]
+        public RenameCommandFilterProvider(
+            [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            IVsEditorAdaptersFactoryService editorFactory,
+            ProjectFactory projectFactory,
+            VSLanguageService fsharpVsLanguageService)
+        {
+            _serviceProvider = serviceProvider;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _editorFactory = editorFactory;
+            _projectFactory = projectFactory;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+        }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            var textView = editorFactory.GetWpfTextView(textViewAdapter);
+            var textView = _editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.RenameRefactoringEnabled) return;
 
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
                 AddCommandFilter(textViewAdapter,
-                    new RenameCommandFilter(doc, textView, fsharpVsLanguageService,
-                                            serviceProvider, projectFactory));
+                    new RenameCommandFilter(doc, textView, _fsharpVsLanguageService,
+                                            _serviceProvider, _projectFactory));
             }
         }
 

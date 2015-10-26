@@ -21,33 +21,40 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Interactive)]
     public class XmlDocCommandFilterProvider : IVsTextViewCreationListener
     {
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import]
-        internal IVsEditorAdaptersFactoryService editorFactory = null;
-
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal System.IServiceProvider serviceProvider = null;
+        private readonly System.IServiceProvider _serviceProvider;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly IVsEditorAdaptersFactoryService _editorFactory;
+       
+        [ImportingConstructor]
+        public XmlDocCommandFilterProvider(
+            [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            IVsEditorAdaptersFactoryService editorFactory,
+            ProjectFactory projectFactory,
+            VSLanguageService fsharpVsLanguageService)
+        {
+            _serviceProvider = serviceProvider;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _editorFactory = editorFactory;
+            _projectFactory = projectFactory;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+        }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            var wpfTextView = editorFactory.GetWpfTextView(textViewAdapter);
+            var wpfTextView = _editorFactory.GetWpfTextView(textViewAdapter);
             if (wpfTextView == null) return;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.XmlDocEnabled) return;
 
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
             {
-                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, projectFactory, fsharpVsLanguageService, serviceProvider);
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, 
+                                 _projectFactory, _fsharpVsLanguageService, _serviceProvider);
             }
         }
     }

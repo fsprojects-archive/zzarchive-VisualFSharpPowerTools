@@ -21,7 +21,6 @@ namespace FSharpVSPowerTools
     [TagType(typeof(DepthRegionTag))]
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
-
         private readonly IServiceProvider _serviceProvider;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
         private readonly ProjectFactory _projectFactory;
@@ -39,8 +38,6 @@ namespace FSharpVSPowerTools
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
         }
-
-
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
@@ -69,29 +66,35 @@ namespace FSharpVSPowerTools
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
         internal AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
-        [Import]
-        internal IViewTagAggregatorFactoryService viewTagAggregatorFactoryService = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal ThemeManager themeManager = null;
-
-        [Import]
-        internal ShellEventListener shellEventListener = null;
-
+        private readonly ShellEventListener _shellEventListener;
+        private readonly ThemeManager _themeManager;
+        private readonly IViewTagAggregatorFactoryService _viewTagAggregatorFactoryService;
+        private readonly IServiceProvider _serviceProvider;
+        
         private static readonly Type serviceType = typeof(DepthColorizerAdornmentManager);
+
+        [ImportingConstructor]
+        public DepthColorizerAdornmentManager(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            ShellEventListener shellEventListener,
+            ThemeManager themeManager,
+            IViewTagAggregatorFactoryService viewTagAggregatorFactoryService)
+        {
+            _serviceProvider = serviceProvider;
+            _themeManager = themeManager;
+            _viewTagAggregatorFactoryService = viewTagAggregatorFactoryService;
+            _shellEventListener = shellEventListener;
+        }
 
         public void TextViewCreated(IWpfTextView textView)
         {
             if (textView == null) return;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return;
             
-            var tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
-            var adornment = new DepthColorizerAdornment(textView, tagAggregator, themeManager, shellEventListener);
+            var tagAggregator = _viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
+            var adornment = new DepthColorizerAdornment(textView, tagAggregator, _themeManager, _shellEventListener);
             textView.Properties.AddProperty(serviceType, adornment);
         }
 
