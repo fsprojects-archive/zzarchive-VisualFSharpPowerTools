@@ -445,12 +445,12 @@ type SyntaxConstructClassifier
         match fastState.Value with
         | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans }
         | FastStage.Updating (Some { FastStageData.Snapshot = snapshot; Spans = spans }, _) ->
-            let spanStartLine = targetSnapshotSpan.Start.GetContainingLine().LineNumber + 1
-            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 1
+            let spanStartLine = max 0 (targetSnapshotSpan.Start.GetContainingLine().LineNumber - 10)
+            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 10
             let spans =
                 spans
                 // Locations are sorted, so we can safely filter them efficiently
-                |> Seq.skipWhile (fun { WordSpan = { Line = line }} -> line < spanStartLine)
+                |> Seq.skipWhile (fun span -> span.WordSpan.Line < spanStartLine)
                 |> Seq.choose (fun columnSpan -> 
                     maybe {
                         let! clType = getClassificationType columnSpan.Category
