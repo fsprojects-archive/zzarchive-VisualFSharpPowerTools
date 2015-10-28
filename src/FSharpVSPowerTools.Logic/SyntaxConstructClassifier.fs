@@ -13,6 +13,8 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools.UntypedAstUtils
+open Microsoft.FSharp.Compiler.Ast
+open Microsoft.FSharp.Compiler
 
 [<NoComparison>]
 type private CheckingProject =
@@ -166,6 +168,45 @@ type SyntaxConstructClassifier
 
     let uiContext = SynchronizationContext.Current
 
+    let checkAst message (ast: ParsedInput) =
+        if ast.Range.IsEmpty then 
+            debug "[SyntaxConstructClassifier] %s Empty AST" message
+            None
+        else Some()
+
+    let mergeSpans (oldSpans: CategorizedColumnSpan<_>[]) (newSpans: CategorizedColumnSpan<_>[]) =
+        let getLineRange spans =
+            let lines = 
+                spans 
+                |> Array.filter (fun x -> 
+                    match x.Category with
+                    | Category.Escaped 
+                    | Category.Operator
+                    | Category.Other
+                    | Category.Printf
+                    | Category.Quotation -> false
+                    | _ -> true) 
+                |> Array.map (fun x -> x.WordSpan.Line)
+            Array.min lines, Array.max lines
+            
+        let newStartLine, newEndLine = getLineRange newSpans
+        let oldStartLine, oldEndLine = getLineRange oldSpans
+        if newStartLine <= oldStartLine && newEndLine >= oldEndLine then
+            debug "[SyntaxConstructClassifier] Replace spans entirely."
+            newSpans
+        else
+            debug "[SyntaxConstructClassifier] Mergin spans (new range %A < old range %A)."
+                  (newStartLine, newEndLine) (oldStartLine, oldEndLine)
+            let oldSpans = oldSpans |> Array.sortBy (fun x -> x.WordSpan.Line)
+            let oldSpans1 = oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine)
+            let oldSpans2 = oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine)
+
+            seq { yield! oldSpans1
+                  yield! oldSpans2
+                  yield! newSpans }
+            |> Seq.sortBy (fun x -> x.WordSpan.Line)
+            |> Seq.toArray
+
     let updateUnusedDeclarations() = 
         let worker (project, snapshot) =
             asyncMaybe {
@@ -191,7 +232,7 @@ type SyntaxConstructClassifier
                     vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
 
                 let! ast = checkResults.GetUntypedAst()
-                do! if ast.Range.IsEmpty then None else Some() 
+                do! checkAst "Slow stage" ast
 
                 let! entities, openDecls = 
                     if includeUnusedOpens() then
@@ -214,7 +255,9 @@ type SyntaxConstructClassifier
                                
                 fastState.Swap (function
                     | FastStage.Data data -> 
-                        FastStage.Data { data with Snapshot = snapshot; Spans = spans; SingleSymbolsProjects = [] }
+                        FastStage.Data { data with Snapshot = snapshot
+                                                   Spans = mergeSpans data.Spans spans
+                                                   SingleSymbolsProjects = [] }
                     | state -> state)
                     |> ignore
                 
@@ -282,7 +325,7 @@ type SyntaxConstructClassifier
                     |> liftAsync
 
                 let! ast = checkResults.GetUntypedAst()
-                do! if ast.Range.IsEmpty then None else Some()
+                do! checkAst "Fast stage" ast
                 let lexer = vsLanguageService.CreateLexer(snapshot, currentProject.CompilerOptions)
                 
                 let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
@@ -328,11 +371,17 @@ type SyntaxConstructClassifier
                                     >> Seq.toList)
                         else return [] } |> liftAsync
                 
-                fastState.Swap (fun _ -> 
+                fastState.Swap (fun oldState ->
+                    let spans = 
+                        match oldState with
+                        | FastStage.Data oldData
+                        | FastStage.Updating (Some oldData, _) -> mergeSpans oldData.Spans spans
+                        | _ -> spans
+
                     FastStage.Data 
                         { Snapshot = snapshot
                           Spans = spans
-                          SingleSymbolsProjects = singleSymbolsProjects }) |> ignore  
+                          SingleSymbolsProjects = singleSymbolsProjects }) |> ignore
                 
                 triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"
                 
@@ -344,7 +393,7 @@ type SyntaxConstructClassifier
                         vsLanguageService.CheckProjectInBackground currentProjectOpts
                 
                 pf.Stop()
-                    Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result)
+                Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result)
             } 
             Async.StartInThreadPoolSafe (Async.Ignore worker, cancelToken.Token) 
 
