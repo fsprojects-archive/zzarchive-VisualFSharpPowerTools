@@ -95,7 +95,8 @@ Target "VsixManifest" (fun _ ->
     doc.GetElementsByTagName("Identity") 
       |> Seq.cast<XmlNode> 
       |> Seq.head 
-      |>(fun node -> node.Attributes.GetNamedItem("Version").Value <- version)
+      |>(fun node -> let currentVersion = node.Attributes.GetNamedItem("Version").Value
+                     node.Attributes.GetNamedItem("Version").Value <- sprintf "%s.%s" currentVersion AppVeyor.AppVeyorEnvironment.BuildNumber)
     doc.Save manifest
 )
 
