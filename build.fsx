@@ -95,7 +95,7 @@ Target "VsixManifest" (fun _ ->
     doc.GetElementsByTagName("Identity") 
       |> Seq.cast<XmlNode> 
       |> Seq.head 
-      |>(fun node -> printfn "%A" node; node.Attributes.GetNamedItem("Version").Value <- version)
+      |>(fun node -> node.Attributes.GetNamedItem("Version").Value <- version)
     doc.Save manifest
 )
 
