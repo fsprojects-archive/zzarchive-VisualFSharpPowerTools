@@ -197,13 +197,13 @@ type SyntaxConstructClassifier
         else
             debug "[SyntaxConstructClassifier] Mergin spans (new range %A < old range %A)."
                   (newStartLine, newEndLine) (oldStartLine, oldEndLine)
-            let oldSpans = oldSpans |> Array.sortBy (fun x -> x.WordSpan.Line)
-            let oldSpans1 = oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine)
-            let oldSpans2 = oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine)
 
-            seq { yield! oldSpans1
-                  yield! oldSpans2
-                  yield! newSpans }
+            let oldSpans = 
+                seq { yield! oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine)
+                      yield! oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine) }
+
+            oldSpans
+            |> Seq.append newSpans
             |> Seq.sortBy (fun x -> x.WordSpan.Line)
             |> Seq.toArray
 
@@ -242,7 +242,8 @@ type SyntaxConstructClassifier
 
                 let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                     getCategoriesAndLocations (symbolsUses, checkResults, lexer, getTextLineOneBased, openDecls, entities)
-                    |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                    |> Array.sortBy (fun x -> x.WordSpan.Line)
+                    |> Array.map (fun x -> { x with Snapshot = Some snapshot })
                
                 let notUsedSpans =
                     spans
@@ -337,7 +338,8 @@ type SyntaxConstructClassifier
                 
                 let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                     getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
-                    |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
+                    |> Array.sortBy (fun x -> x.WordSpan.Line)
+                    |> Array.map (fun x -> { x with Snapshot = Some snapshot })
                 
                 let spans = 
                     match slowState.Value with
