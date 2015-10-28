@@ -9,6 +9,7 @@ open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open System
 open System.IO
+open System.Xml
 
 // Information about the project are used
 //  - for version and project name in generated AssemblyInfo file
@@ -84,6 +85,19 @@ Target "AssemblyInfo" (fun _ ->
       
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2015/AssemblyInfo.fs"
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2015" :: shared) 
+)
+
+Target "VsixManifest" (fun _ ->
+    let version = sprintf "%s.%s" release.AssemblyVersion AppVeyor.AppVeyorEnvironment.BuildNumber
+    let manifest = "./src/FSharpVSPowerTools/source.extension.vsixmanifest"
+    let doc = new XmlDocument(PreserveWhitespace=true) in
+    doc.Load manifest
+    doc.GetElementsByTagName("Identity") 
+      |> Seq.cast<XmlNode> 
+      |> Seq.head 
+      |>(fun node -> let currentVersion = node.Attributes.GetNamedItem("Version").Value
+                     node.Attributes.GetNamedItem("Version").Value <- sprintf "%s.%s" currentVersion AppVeyor.AppVeyorEnvironment.BuildNumber)
+    doc.Save manifest
 )
 
 // --------------------------------------------------------------------------------------
@@ -301,6 +315,7 @@ Target "All" DoNothing
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
   ==> "AssemblyInfo"
+  =?> ("VsixManifest", isAppVeyorBuild)
   ==> "Build"
   ==> "BuildTests"
   ==> "UnitTests"
