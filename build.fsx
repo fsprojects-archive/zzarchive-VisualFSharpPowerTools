@@ -58,7 +58,6 @@ let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
 
 let isAppVeyorBuild = environVar "APPVEYOR" <> null
 let buildVersion = sprintf "%s-a%s" release.NugetVersion (DateTime.UtcNow.ToString "yyMMddHHmm")
-let version = sprintf "%s.%s" release.AssemblyVersion (if isAppVeyorBuild then AppVeyor.AppVeyorEnvironment.BuildNumber else "0")
 
 Target "BuildVersion" (fun _ ->
     Shell.Exec("appveyor", sprintf "UpdateBuild -Version \"%s\"" buildVersion) |> ignore
@@ -89,6 +88,7 @@ Target "AssemblyInfo" (fun _ ->
 )
 
 Target "VsixManifest" (fun _ ->
+    let version = sprintf "%s.%s" release.AssemblyVersion AppVeyor.AppVeyorEnvironment.BuildNumber
     let manifest = "./src/FSharpVSPowerTools/source.extension.vsixmanifest"
     let doc = new XmlDocument(PreserveWhitespace=true) in
     doc.Load manifest
@@ -314,7 +314,7 @@ Target "All" DoNothing
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
   ==> "AssemblyInfo"
-  ==> "VsixManifest"
+  =?> ("VsixManifest", isAppVeyorBuild)
   ==> "Build"
   ==> "BuildTests"
   ==> "UnitTests"
