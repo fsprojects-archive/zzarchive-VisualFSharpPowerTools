@@ -59,12 +59,13 @@ type VSLanguageService
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    let instance = LanguageService fileSystem
+    let globalOptions = Setting.getGlobalOptions serviceProvider
+    let instance = LanguageService (globalOptions.BackgroundCompilation, globalOptions.ProjectCacheSize, fileSystem)
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
     /// Clean up instructions are displayed on status bar.
     let suggestRecoveryAfterFailure ex fileName _source opts =
-        Logging.logError "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts
+        Logging.logError (fun _ -> sprintf "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
                 
@@ -117,37 +118,8 @@ type VSLanguageService
         Lexer.getSymbol source line col lineStr kind args (buildQueryLexState point.Snapshot.TextBuffer)
         |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
 
-
-    static let initializationTime = DateTime.Now
     let entityCache = EntityCache()
 
-    /// If we are on the strict mode, set project load time to that of the last recently-changed open document.
-    /// When there is no open document, use initialization time as project load time.
-    let fixProjectLoadTime =
-        // Make sure that the options are retrieved after options dialogs have been initialized.
-        // Otherwise, the calls will throw exceptions.
-        let globalOptions = lazy (Setting.getGlobalOptions(serviceProvider))
-        fun opts ->
-            if globalOptions.Value.StrictMode then
-                let projectFiles = Set.ofArray opts.ProjectFileNames
-                let openDocumentsChangeTimes = 
-                    openDocumentsTracker.MapOpenDocuments (fun (KeyValue (file, doc)) -> file, doc)
-                    |> Seq.choose (fun (file, doc) -> 
-                        if doc.Document.IsDirty && Set.contains file projectFiles then 
-                            Some doc.LastChangeTime 
-                        else None)
-                    |> Seq.toList
-        
-                match openDocumentsChangeTimes with
-                | [] -> 
-                    { opts with LoadTime = initializationTime }
-                | changeTimes -> 
-                    { opts with LoadTime = List.max changeTimes }  
-            else
-                opts
-
-    member __.FixProjectLoadTime opts = fixProjectLoadTime opts
-        
     member __.GetSymbol(point, projectProvider) =
         getSymbolUsing SymbolLookupKind.Fuzzy point projectProvider
 

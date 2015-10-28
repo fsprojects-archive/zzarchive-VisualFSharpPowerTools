@@ -1,5 +1,12 @@
 #### 2.2.0 - Unreleased
 * Implement outlining support ([#1147](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1147))
+* Fix conflicts between FSharpLint options dialog and ReSharper ([1166](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1166))
+* Use FCS operation queues more effectively ([1177](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1177), [1178](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1178))
+* Add more advanced outlining ([1175](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1175), [1202](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1202)) 
+* Add colored outlining hints ([1200](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1200))
+* Generate seperate reference scripts for each project configuration ([1197](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1197))
+* No longer check for existence of urls before navigating to source ([1199](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1199))
+* Add 'Background Compilation' and 'Project Cache Size' options ([1207](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1207))
 
 #### 2.1.0 - October 11 2015
 * Fix fonts and colors' appearance on VS 2015 ([#1064](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1064))

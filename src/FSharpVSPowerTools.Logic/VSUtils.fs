@@ -2,11 +2,30 @@
 module FSharpVSPowerTools.ProjectSystem.VSUtils
 
 open System
+open FSharpVSPowerTools
+
+
+type String with
+
+    /// Splits a string into lines for all platform's linebreaks.
+    /// If the string mixes windows, mac, and linux linebreaks, all will be respected
+    static member toLineArray str = String.getLines str
+
+    /// Splits a string into lines for all platform's linebreaks.
+    /// If the string mixes windows, mac, and linux linebreaks, all will be respected
+    member self.ToLineArray () = String.getLines self
+
+    /// Return substring starting at index, returns the same string if given a negative index
+    /// if given an index > string.Length returns empty string
+    member self.SubstringSafe index =
+        if   index < 0 then self elif index > self.Length then "" else self.Substring index
+
+
 open System.Diagnostics
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.FSharp.Compiler.Range
-open FSharpVSPowerTools
+
 
 let fromRange (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
     Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
@@ -68,21 +87,73 @@ type SnapshotPoint with
         let point = x.TranslateTo(span.Snapshot, PointTrackingMode.Positive)
         point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
 
-type SnapshotSpan with
-    /// Return corresponding zero-based FCS range
-    /// (lineStart, colStart, lineEnd, colEnd)
-    member inline x.ToRange() =
-        let lineStart = x.Snapshot.GetLineNumberFromPosition(x.Start.Position)
-        let lineEnd = x.Snapshot.GetLineNumberFromPosition(x.End.Position)
-        let startLine = x.Snapshot.GetLineFromPosition(x.Start.Position)
-        let endLine = x.Snapshot.GetLineFromPosition(x.End.Position)
-        let colStart = x.Start.Position - startLine.Start.Position
-        let colEnd = x.End.Position - endLine.Start.Position
-        (lineStart, colStart, lineEnd, colEnd - 1)
-
 type ITextSnapshot with
+    /// SnapshotSpan of the entirety of this TextSnapshot
     member x.FullSpan =
         SnapshotSpan(x, 0, x.Length)
+
+    /// Get the start and end line numbers of a snapshotSpan based on this textSnapshot
+    /// returns a tuple of (startLineNumber, endLineNumber)
+    member inline x.LineBounds (snapshotSpan:SnapshotSpan) =
+        let startLineNumber = x.GetLineNumberFromPosition (snapshotSpan.Span.Start)
+        let endLineNumber = x.GetLineNumberFromPosition (snapshotSpan.Span.End)
+        (startLineNumber, endLineNumber)
+
+    /// Get the text at line `num`
+    member inline x.LineText num =  x.GetLineFromLineNumber(num).GetText()
+
+
+type SnapshotSpan with
+
+    member inline x.StartLine  = x.Snapshot.GetLineFromPosition (x.Start.Position)
+    member inline x.StartLineNum  = x.Snapshot.GetLineNumberFromPosition x.Start.Position
+    member inline x.StartColumn  = 
+        x.Start.Position - x.StartLine.Start.Position 
+    
+    member inline x.EndLine = x.Snapshot.GetLineFromPosition (x.End.Position)
+    member inline x.EndLineNum  = x.Snapshot.GetLineNumberFromPosition x.End.Position
+    member inline x.EndColumn = 
+        x.End.Position - x.EndLine.Start.Position          
+
+    member x.ModStart (num) =
+        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
+
+    member x.ModEnd (num) =
+        SnapshotSpan(x.Start, (SnapshotPoint (x.Snapshot,x.End.Position + num)))
+
+    member x.ModBoth m1 m2 =
+        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1)
+                    ,SnapshotPoint (x.Snapshot, x.End.Position + m2))
+
+    /// get the position of the token found at (line,.col) if token was not found then -1,-1
+    member x.PositionOf (token:string) =
+        let firstLine = x.StartLineNum
+        let lastLine = x.EndLineNum
+        let lines =  [| for idx in firstLine .. lastLine -> x.Snapshot.LineText idx |]
+
+        let withinBounds (line, col) =
+            match line, col with
+            | -1,-1 -> -1,-1 // fast terminate if token wasn't found
+            |  l, c when c < x.StartColumn
+                     &&  l = firstLine -> -1,-1
+            |  l, c when c > x.EndColumn
+                     &&  l = lastLine -> -1,-1
+            | _ -> line,col
+
+        let rec loop idx =
+            if idx > lines.Length then -1,-1 else
+            match lines.[idx].IndexOf(token) with
+            | -1 -> loop (idx+1)
+            | toki -> (firstLine+idx,toki)
+        
+        loop 0 |> withinBounds
+
+
+    /// Return corresponding zero-based FCS range
+    /// (lineStart, colStart, lineEnd, colEnd)
+    member inline x.ToRange () =
+        (x.StartLineNum, x.StartColumn, x.EndLineNum, x.EndColumn-1)
+
 
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
@@ -204,7 +275,7 @@ type DTE with
                 |> Option.bind (fun item -> Option.ofNull item.Document)
             match docOpt, result with
             | Some doc, None ->
-                Logging.logWarning "Can't match between active document '%O' and current path '%O' in current solution." doc.FullName filePath
+                Logging.logWarning (fun _ -> sprintf "Can't match between active document '%O' and current path '%O' in current solution." doc.FullName filePath)
             | _ -> ()
             result
 
@@ -411,19 +482,35 @@ type IServiceProvider with
             windowFrame.Show()
             |> ensureSucceeded
 
-            let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+            let vsTextView = VsShellUtilities.GetTextView windowFrame
             let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
             let mutable vsTextBuffer = Unchecked.defaultof<_>
-            vsTextView.GetBuffer(&vsTextBuffer)
+            vsTextView.GetBuffer (&vsTextBuffer)
             |> ensureSucceeded
 
-            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, endRow, endCol)
+            vsTextManager.NavigateToLineAndColumn (vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, endRow, endCol)
             |> ensureSucceeded
+
+    /// Get the IWPFTextView of a document if it is open
+    member serviceProvider.GetWPFTextViewOfDocument fileName =
+        let mutable hierarchy = Unchecked.defaultof<_>
+        let mutable itemId = Unchecked.defaultof<_>
+        let mutable windowFrame = Unchecked.defaultof<_>
+        if VsShellUtilities.IsDocumentOpen
+               (serviceProvider, fileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
+            let vsTextView = VsShellUtilities.GetTextView windowFrame 
+            let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
+            let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
+            Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
+        else None      
+        
+           
+
 
 let isSourceExtension ext =
-    String.Equals(ext, ".fsx", StringComparison.OrdinalIgnoreCase) || 
-        String.Equals(ext, ".fsscript", StringComparison.OrdinalIgnoreCase) ||
-        String.Equals(ext, ".fs", StringComparison.OrdinalIgnoreCase)
+    String.Equals (ext, ".fsx", StringComparison.OrdinalIgnoreCase) 
+    || String.Equals (ext, ".fsscript", StringComparison.OrdinalIgnoreCase) 
+    || String.Equals (ext, ".fs", StringComparison.OrdinalIgnoreCase)
 
 let isSignatureExtension ext =
     String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase)
@@ -441,19 +528,3 @@ let listFSharpProjectsInSolution (dte: DTE) =
 
     [ for p in dte.Solution.Projects do
         yield! handleProject p ]
-
-type String with
-
-    /// Splits a string into lines for all platform's linebreaks.
-    /// If the string mixes windows, mac, and linux linebreaks, all will be respected
-    static member toLineArray str = String.getLines str
-
-    /// Splits a string into lines for all platform's linebreaks.
-    /// If the string mixes windows, mac, and linux linebreaks, all will be respected
-    member self.ToLineArray () = String.getLines self
-
-    /// Return substring starting at index, returns the same string if given a negative index
-    /// if given an index > string.Length returns empty string
-    member self.SubstringSafe index =
-        if   index < 0 then self elif index > self.Length then "" else self.Substring index
-

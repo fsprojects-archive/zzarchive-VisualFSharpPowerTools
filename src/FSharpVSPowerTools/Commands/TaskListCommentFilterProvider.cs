@@ -14,27 +14,32 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Editable)]
     internal class TaskListCommentFilterProvider : IVsTextViewCreationListener
     {
-        [Import]
-        internal IVsEditorAdaptersFactoryService editorFactory = null;
+        internal IWpfTextView _textView;
+        internal TaskListCommentFilter _taskCommentFilter;
 
-        [Import(typeof(SVsServiceProvider))]
-        internal System.IServiceProvider serviceProvider = null;
+        private readonly System.IServiceProvider _serviceProvider;
+        private readonly IVsEditorAdaptersFactoryService _editorFactory;
+        private readonly TaskListManager _taskListManager;
 
-        [Import]
-        internal TaskListManager taskListManager = null;
-
-        internal IWpfTextView textView;
-        internal TaskListCommentFilter taskCommentFilter;
-
+        [ImportingConstructor]
+        public TaskListCommentFilterProvider(
+            [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
+            IVsEditorAdaptersFactoryService editorFactory,
+            TaskListManager taskListManager)
+        {
+            _serviceProvider = serviceProvider;
+            _editorFactory = editorFactory;
+            _taskListManager = taskListManager;
+        }
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            textView = editorFactory.GetWpfTextView(textViewAdapter);
-            if (textView == null) return;
+            _textView = _editorFactory.GetWpfTextView(textViewAdapter);
+            if (_textView == null) return;
 
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.TaskListCommentsEnabled) return;
 
-            taskCommentFilter = new TaskListCommentFilter(textView, serviceProvider, taskListManager);
+            _taskCommentFilter = new TaskListCommentFilter(_textView, _serviceProvider, _taskListManager);
         }
     }
 }

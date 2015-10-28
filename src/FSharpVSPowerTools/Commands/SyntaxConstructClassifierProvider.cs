@@ -170,7 +170,7 @@ namespace FSharpVSPowerTools
                     color = new FontColor(Color.FromRgb(220, 220, 220), Color.FromRgb(30, 30, 30));
                     success = themeColors[currentTheme].TryGetValue(category, out color);
                     if (!success)
-                        LoggingModule.logWarningMessage(String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
+                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
 
                 case VisualStudioTheme.Light:
@@ -179,7 +179,7 @@ namespace FSharpVSPowerTools
                     color = new FontColor(Colors.Black, Colors.White);
                     success = themeColors[currentTheme].TryGetValue(category, out color);
                     if (!success)
-                        LoggingModule.logWarningMessage(String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
+                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
             }
         }
@@ -429,54 +429,57 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Document)]
     public class SyntaxConstructClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
     { 
-        [Import]
-        internal IClassificationTypeRegistryService classificationRegistry = null;
+        private readonly ShellEventListener _shellEventListener;
+        private readonly ClassificationColorManager _classificationColorManager;
+        private readonly IClassificationTypeRegistryService _classificationRegistry;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly IServiceProvider _serviceProvider;
 
-        [Import]
-        internal VSLanguageService fsharpVsLanguageService = null;
-
-        [Import]
-        internal ITextDocumentFactoryService textDocumentFactoryService = null;
-
-        [Import]
-        internal ProjectFactory projectFactory = null;
-
-        [Import(typeof(SVsServiceProvider))]
-        internal IServiceProvider serviceProvider = null;
-
-        [Import]
-        internal ClassificationColorManager classificationColorManager = null;
-
-        private readonly ShellEventListener shellEventListener = null;
         private static readonly Type serviceType = typeof(SyntaxConstructClassifier);
 
         [ImportingConstructor]
-        public SyntaxConstructClassifierProvider(ShellEventListener shellEventListener)
+        public SyntaxConstructClassifierProvider(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            ShellEventListener shellEventListener,
+            ClassificationColorManager classificationColorManager,
+            IClassificationTypeRegistryService classificationRegistry,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            VSLanguageService fsharpVsLanguageService,
+            ProjectFactory projectFactory)
         {
-            this.shellEventListener = shellEventListener;
+            _serviceProvider = serviceProvider;
+            _classificationColorManager = classificationColorManager;
+            _classificationRegistry = classificationRegistry;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _shellEventListener = shellEventListener;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+            _projectFactory = projectFactory;
+
             // Receive notification for Visual Studio theme change
-            shellEventListener.ThemeChanged += UpdateTheme;
+            _shellEventListener.ThemeChanged += UpdateTheme;
         }
 
         private void UpdateTheme(object sender, EventArgs e)
         {
-            classificationColorManager.UpdateColors();
+            _classificationColorManager.UpdateColors();
         }
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
-            var generalOptions = Setting.getGeneralOptions(serviceProvider);
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
 
             bool includeUnusedReferences = generalOptions.UnusedReferencesEnabled;
             bool includeUnusedOpens = generalOptions.UnusedOpensEnabled;
 
             ITextDocument doc;
-            if (textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
-                    () => new SyntaxConstructClassifier(doc, buffer, classificationRegistry, fsharpVsLanguageService,
-                                    serviceProvider, projectFactory, includeUnusedReferences, includeUnusedOpens));
+                    () => new SyntaxConstructClassifier(doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
+                                    _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
             }
 
             return null;
@@ -489,7 +492,7 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            shellEventListener.ThemeChanged -= UpdateTheme;
+            _shellEventListener.ThemeChanged -= UpdateTheme;
         }
     }
 }

@@ -46,14 +46,49 @@ type ICodeGenerationOptions =
     abstract DefaultBody: string with get, set
     abstract CodeGenerationOptions: CodeGenerationKinds with get, set
     abstract InterfaceMemberIdentifier: string with get, set
-
+     
 type IGlobalOptions =
-    abstract StrictMode: bool with get, set
     abstract DiagnosticMode: bool with get, set
+    abstract BackgroundCompilation: bool with get, set
+    abstract ProjectCacheSize: int with get, set
 
 type ILintOptions =
     abstract UpdateDirectories: unit -> unit
     abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
+
+type IOutliningOptions =
+    abstract OpensEnabled: bool with get, set
+    abstract OpensCollapsedByDefault: bool with get, set
+    abstract ModulesEnabled: bool with get, set
+    abstract ModulesCollapsedByDefault: bool with get, set
+    abstract HashDirectivesEnabled: bool with get, set
+    abstract HashDirectivesCollapsedByDefault: bool with get, set
+    abstract TypesEnabled: bool with get, set
+    abstract TypesCollapsedByDefault: bool with get, set
+    abstract SimpleTypesEnabled: bool with get, set
+    abstract SimpleTypesCollapsedByDefault: bool with get, set
+    abstract TypeExpressionsEnabled: bool with get, set
+    abstract TypeExpressionsCollapsedByDefault: bool with get, set
+    abstract MembersEnabled: bool with get, set
+    abstract MembersCollapsedByDefault: bool with get, set
+    abstract LetOrUseEnabled: bool with get, set
+    abstract LetOrUseCollapsedByDefault: bool with get, set
+    abstract CollectionsEnabled: bool with get, set
+    abstract CollectionsCollapsedByDefault: bool with get, set
+    abstract PatternMatchesEnabled: bool with get, set
+    abstract PatternMatchesCollapsedByDefault: bool with get, set
+    abstract TryWithFinallyEnabled: bool with get, set
+    abstract TryWithFinallyCollapsedByDefault: bool with get, set
+    abstract IfThenElseEnabled: bool with get, set
+    abstract IfThenElseCollapsedByDefault: bool with get, set
+    abstract CExpressionMembersEnabled: bool with get, set
+    abstract CExpressionMembersCollapsedByDefault: bool with get, set
+    abstract LoopsEnabled: bool with get, set
+    abstract LoopsCollapsedByDefault: bool with get, set
+    abstract AttributesEnabled: bool with get, set
+    abstract AttributesCollapsedByDefault: bool with get, set
+
+
 
 [<AutoOpen>]
 module Utils =
@@ -64,7 +99,7 @@ module Utils =
 [<RequireQualifiedAccess>]
 module Setting =
     open System
-
+     
     let getGeneralOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGeneralOptions>()
 
@@ -89,3 +124,6 @@ module Setting =
         
     let getLintOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<ILintOptions>()
+
+    let getOutliningOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.GetService<IOutliningOptions>()

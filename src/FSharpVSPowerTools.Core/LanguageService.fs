@@ -159,7 +159,7 @@ type FileState =
 // Language service 
 
 /// Provides functionality for working with the F# interactive checker running in background
-type LanguageService (?fileSystem: IFileSystem) =
+type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fileSystem: IFileSystem) =
 
   do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
   let mutable errorHandler = None
@@ -169,10 +169,11 @@ type LanguageService (?fileSystem: IFileSystem) =
   // Create an instance of interactive checker.
   let checkerInstance = 
     FSharpChecker.Create(
-        projectCacheSize = 50, 
+        projectCacheSize = defaultArg projectCacheSize 50, 
         keepAllBackgroundResolutions = false,
-        keepAssemblyContents = false)
-
+        keepAssemblyContents = false,
+        ImplicitlyStartBackgroundWork = defaultArg backgroundCompilation true)
+  
   let checkerAsync (f: FSharpChecker -> Async<'a>) = 
     let ctx = System.Threading.SynchronizationContext.Current
     async {

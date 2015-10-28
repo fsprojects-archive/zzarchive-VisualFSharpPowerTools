@@ -14,6 +14,7 @@ type GoToDefinitionCommandHelper() =
     inherit VsTestBase()
     let command = new GoToDefinitionFilterProvider(
                         editorFactory = base.VsEditorAdaptersFactoryService,
+                        editorOptionsFactory = base.EditorOptionsFactoryService,
                         textDocumentFactoryService = base.DocumentFactoryService,                            
                         fsharpVsLanguageService = base.VsLanguageService,
                         serviceProvider = base.ServiceProvider,

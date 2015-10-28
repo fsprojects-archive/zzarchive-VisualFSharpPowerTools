@@ -35,33 +35,33 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         for ident in longIdent do
             identsByEndPos.[ident.idRange.End] <- idents
 
-    let addLongIdentWithDots (LongIdentWithDots (longIdent, lids) as value) = 
+    let addLongIdentWithDots (LongIdentWithDots (longIdent, lids) as value) =
         match longIdentToArray longIdent with
         | [||] -> ()
         | [|_|] as idents -> identsByEndPos.[value.Range.End] <- idents
         | idents ->
-            for dotRange in lids do 
+            for dotRange in lids do
                 identsByEndPos.[Range.mkPos dotRange.EndLine (dotRange.EndColumn - 1)] <- idents
             identsByEndPos.[value.Range.End] <- idents
-    
-    let addIdent (ident: Ident) = 
+
+    let addIdent (ident: Ident) =
         identsByEndPos.[ident.idRange.End] <- [|ident.idText|]
 
-    let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
+    let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) =
         List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
     and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, attrs, _, _)) =
         List.iter walkAttribute attrs
         List.iter walkSynModuleDecl decls
 
-    and walkAttribute (attr: SynAttribute) = 
-        addLongIdentWithDots attr.TypeName 
+    and walkAttribute (attr: SynAttribute) =
+        addLongIdentWithDots attr.TypeName
         walkExpr attr.ArgExpr
 
-    and walkTyparDecl (SynTyparDecl.TyparDecl (attrs, typar)) = 
+    and walkTyparDecl (SynTyparDecl.TyparDecl (attrs, typar)) =
         List.iter walkAttribute attrs
         walkTypar typar
-            
+
     and walkTypeConstraint = function
         | SynTypeConstraint.WhereTyparIsValueType (t, _)
         | SynTypeConstraint.WhereTyparIsReferenceType (t, _)
@@ -79,17 +79,17 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynPat.Tuple (pats, _)
         | SynPat.ArrayOrList (_, pats, _)
         | SynPat.Ands (pats, _) -> List.iter walkPat pats
-        | SynPat.Named (pat, ident, _, _, _) -> 
+        | SynPat.Named (pat, ident, _, _, _) ->
             walkPat pat
             addIdent ident
-        | SynPat.Typed (pat, t, _) -> 
+        | SynPat.Typed (pat, t, _) ->
             walkPat pat
             walkType t
-        | SynPat.Attrib (pat, attrs, _) -> 
+        | SynPat.Attrib (pat, attrs, _) ->
             walkPat pat
             List.iter walkAttribute attrs
         | SynPat.Or (pat1, pat2, _) -> List.iter walkPat [pat1; pat2]
-        | SynPat.LongIdent (ident, _, typars, ConstructorPats pats, _, _) -> 
+        | SynPat.LongIdent (ident, _, typars, ConstructorPats pats, _, _) ->
             addLongIdentWithDots ident
             typars
             |> Option.iter (fun (SynValTyparDecls (typars, _, constraints)) ->
@@ -125,12 +125,12 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynType.App (ty, _, types, _, _, _, _) -> walkType ty; List.iter walkType types
         | SynType.LongIdentApp (_, _, _, types, _, _, _) -> List.iter walkType types
         | SynType.Tuple (ts, _) -> ts |> List.iter (fun (_, t) -> walkType t)
-        | SynType.WithGlobalConstraints (t, typeConstraints, _) -> 
+        | SynType.WithGlobalConstraints (t, typeConstraints, _) ->
             walkType t; List.iter walkTypeConstraint typeConstraints
         | _ -> ()
 
     and walkClause (Clause (pat, e1, e2, _, _)) =
-        walkPat pat 
+        walkPat pat
         walkExpr e2
         e1 |> Option.iter walkExpr
 
@@ -139,7 +139,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.Quote (_, _, e, _, _)
         | SynExpr.Typed (e, _, _)
         | SynExpr.InferredUpcast (e, _)
-        | SynExpr.InferredDowncast (e, _) 
+        | SynExpr.InferredDowncast (e, _)
         | SynExpr.AddressOf (_, e, _, _)
         | SynExpr.DoBang (e, _)
         | SynExpr.YieldOrReturn (_, e, _)
@@ -152,7 +152,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.YieldOrReturnFrom (_, e, _) -> walkExpr e
         | SynExpr.New (_, t, e, _)
         | SynExpr.TypeTest (e, t, _)
-        | SynExpr.Upcast (e, t, _) 
+        | SynExpr.Upcast (e, t, _)
         | SynExpr.Downcast (e, t, _) -> walkExpr e; walkType t
         | SynExpr.Tuple (es, _, _)
         | Sequentials es
@@ -160,66 +160,66 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.App (_, _, e1, e2, _)
         | SynExpr.TryFinally (e1, e2, _, _, _)
         | SynExpr.While (_, e1, e2, _) -> List.iter walkExpr [e1; e2]
-        | SynExpr.Record (_, _, fields, _) -> 
-            fields |> List.iter (fun ((ident, _), e, _) -> 
+        | SynExpr.Record (_, _, fields, _) ->
+            fields |> List.iter (fun ((ident, _), e, _) ->
                         addLongIdentWithDots ident
                         e |> Option.iter walkExpr)
         | SynExpr.Ident ident -> addIdent ident
-        | SynExpr.ObjExpr(ty, argOpt, bindings, ifaces, _, _) -> 
-            argOpt |> Option.iter (fun (e, ident) -> 
+        | SynExpr.ObjExpr(ty, argOpt, bindings, ifaces, _, _) ->
+            argOpt |> Option.iter (fun (e, ident) ->
                 walkExpr e
                 ident |> Option.iter addIdent)
             walkType ty
             List.iter walkBinding bindings
             List.iter walkInterfaceImpl ifaces
         | SynExpr.LongIdent (_, ident, _, _) -> addLongIdentWithDots ident
-        | SynExpr.For (_, ident, e1, _, e2, e3, _) -> 
+        | SynExpr.For (_, ident, e1, _, e2, e3, _) ->
             addIdent ident
             List.iter walkExpr [e1; e2; e3]
-        | SynExpr.ForEach (_, _, _, pat, e1, e2, _) -> 
+        | SynExpr.ForEach (_, _, _, pat, e1, e2, _) ->
             walkPat pat
             List.iter walkExpr [e1; e2]
-        | SynExpr.MatchLambda (_, _, synMatchClauseList, _, _) -> 
+        | SynExpr.MatchLambda (_, _, synMatchClauseList, _, _) ->
             List.iter walkClause synMatchClauseList
-        | SynExpr.Match (_, e, synMatchClauseList, _, _) -> 
-            walkExpr e 
+        | SynExpr.Match (_, e, synMatchClauseList, _, _) ->
+            walkExpr e
             List.iter walkClause synMatchClauseList
-        | SynExpr.TypeApp (e, _, tys, _, _, _, _) -> 
+        | SynExpr.TypeApp (e, _, tys, _, _, _, _) ->
             List.iter walkType tys; walkExpr e
-        | SynExpr.LetOrUse (_, _, bindings, e, _) -> 
+        | SynExpr.LetOrUse (_, _, bindings, e, _) ->
             List.iter walkBinding bindings; walkExpr e
-        | SynExpr.TryWith (e, _, clauses, _, _, _, _) -> 
+        | SynExpr.TryWith (e, _, clauses, _, _, _, _) ->
             List.iter walkClause clauses;  walkExpr e
-        | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) -> 
+        | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) ->
             List.iter walkExpr [e1; e2]
             e3 |> Option.iter walkExpr
         | SynExpr.LongIdentSet (ident, e, _)
-        | SynExpr.DotGet (e, _, ident, _) -> 
+        | SynExpr.DotGet (e, _, ident, _) ->
             addLongIdentWithDots ident
             walkExpr e
-        | SynExpr.DotSet (e1, idents, e2, _) -> 
+        | SynExpr.DotSet (e1, idents, e2, _) ->
             walkExpr e1
             addLongIdentWithDots idents
             walkExpr e2
-        | SynExpr.DotIndexedGet (e, args, _, _) -> 
+        | SynExpr.DotIndexedGet (e, args, _, _) ->
             walkExpr e
             List.iter walkIndexerArg args
-        | SynExpr.DotIndexedSet (e1, args, e2, _, _, _) -> 
+        | SynExpr.DotIndexedSet (e1, args, e2, _, _, _) ->
             walkExpr e1
             List.iter walkIndexerArg args
             walkExpr e2
-        | SynExpr.NamedIndexedPropertySet (ident, e1, e2, _) -> 
+        | SynExpr.NamedIndexedPropertySet (ident, e1, e2, _) ->
             addLongIdentWithDots ident
             List.iter walkExpr [e1; e2]
-        | SynExpr.DotNamedIndexedPropertySet (e1, ident, e2, e3, _) -> 
+        | SynExpr.DotNamedIndexedPropertySet (e1, ident, e2, e3, _) ->
             addLongIdentWithDots ident
             List.iter walkExpr [e1; e2; e3]
         | SynExpr.JoinIn (e1, _, e2, _) -> List.iter walkExpr [e1; e2]
-        | SynExpr.LetOrUseBang (_, _, _, pat, e1, e2, _) -> 
+        | SynExpr.LetOrUseBang (_, _, _, pat, e1, e2, _) ->
             walkPat pat
             List.iter walkExpr [e1; e2]
         | SynExpr.TraitCall (ts, sign, e, _) ->
-            List.iter walkTypar ts 
+            List.iter walkTypar ts
             walkMemberSig sign
             walkExpr e
         | SynExpr.Const (SynConst.Measure(_, m), _) -> walkMeasure m
@@ -237,7 +237,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
 
     and walkSimplePat = function
         | SynSimplePat.Attrib (pat, attrs, _) ->
-            walkSimplePat pat 
+            walkSimplePat pat
             List.iter walkAttribute attrs
         | SynSimplePat.Typed(pat, t, _) ->
             walkSimplePat pat
@@ -245,15 +245,15 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | _ -> ()
 
     and walkField (SynField.Field(attrs, _, _, t, _, _, _, _)) =
-        List.iter walkAttribute attrs 
+        List.iter walkAttribute attrs
         walkType t
 
     and walkValSig (SynValSig.ValSpfn(attrs, _, _, t, SynValInfo(argInfos, argInfo), _, _, _, _, _, _)) =
-        List.iter walkAttribute attrs 
+        List.iter walkAttribute attrs
         walkType t
-        argInfo :: (argInfos |> List.concat) 
-        |> List.map (fun (SynArgInfo(attrs, _, _)) -> attrs) 
-        |> List.concat 
+        argInfo :: (argInfos |> List.concat)
+        |> List.map (fun (SynArgInfo(attrs, _, _)) -> attrs)
+        |> List.concat
         |> List.iter walkAttribute
 
     and walkMemberSig = function
@@ -261,8 +261,8 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynMemberSig.Interface(t, _) -> walkType t
         | SynMemberSig.Member(vs, _, _) -> walkValSig vs
         | SynMemberSig.ValField(f, _) -> walkField f
-        | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) -> 
-            let isTypeExtensionOrAlias = 
+        | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (info, repr, memberSigs, _), _) ->
+            let isTypeExtensionOrAlias =
                 match repr with
                 | SynTypeDefnSigRepr.Simple(SynTypeDefnSimpleRepr.TypeAbbrev _, _)
                 | SynTypeDefnSigRepr.ObjectModel(SynTypeDefnKind.TyconAbbrev, _, _)
@@ -275,18 +275,18 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
     and walkMember = function
         | SynMemberDefn.AbstractSlot (valSig, _, _) -> walkValSig valSig
         | SynMemberDefn.Member (binding, _) -> walkBinding binding
-        | SynMemberDefn.ImplicitCtor (_, attrs, pats, _, _) -> 
-            List.iter walkAttribute attrs 
+        | SynMemberDefn.ImplicitCtor (_, attrs, pats, _, _) ->
+            List.iter walkAttribute attrs
             List.iter walkSimplePat pats
         | SynMemberDefn.ImplicitInherit (t, e, _, _) -> walkType t; walkExpr e
         | SynMemberDefn.LetBindings (bindings, _, _, _) -> List.iter walkBinding bindings
-        | SynMemberDefn.Interface (t, members, _) -> 
-            walkType t 
+        | SynMemberDefn.Interface (t, members, _) ->
+            walkType t
             members |> Option.iter (List.iter walkMember)
         | SynMemberDefn.Inherit (t, _, _) -> walkType t
         | SynMemberDefn.ValField (field, _) -> walkField field
         | SynMemberDefn.NestedType (tdef, _, _) -> walkTypeDefn tdef
-        | SynMemberDefn.AutoProperty (attrs, _, _, t, _, _, _, _, e, _, _) -> 
+        | SynMemberDefn.AutoProperty (attrs, _, _, t, _, _, _, _, e, _, _) ->
             List.iter walkAttribute attrs
             Option.iter walkType t
             walkExpr e
@@ -298,8 +298,8 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynUnionCaseType.UnionCaseFields fields -> List.iter walkField fields
         | SynUnionCaseType.UnionCaseFullType (t, _) -> walkType t
 
-    and walkUnionCase (SynUnionCase.UnionCase (attrs, _, t, _, _, _)) = 
-        List.iter walkAttribute attrs 
+    and walkUnionCase (SynUnionCase.UnionCase (attrs, _, t, _, _, _)) =
+        List.iter walkAttribute attrs
         walkUnionCaseType t
 
     and walkTypeDefnSimple = function
@@ -325,7 +325,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
 
     and walkTypeDefn (TypeDefn (info, repr, members, _)) =
-        let isTypeExtensionOrAlias = 
+        let isTypeExtensionOrAlias =
             match repr with
             | SynTypeDefnRepr.ObjectModel (SynTypeDefnKind.TyconAugmentation, _, _)
             | SynTypeDefnRepr.ObjectModel (SynTypeDefnKind.TyconAbbrev, _, _)
@@ -347,8 +347,8 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynModuleDecl.Attributes (attrs, _) -> List.iter walkAttribute attrs
         | _ -> ()
 
-    match input with 
-    | Some (ParsedInput.ImplFile input) -> 
+    match input with
+    | Some (ParsedInput.ImplFile input) ->
          walkImplFileInput input
     | _ -> ()
     //debug "%A" idents
@@ -379,23 +379,23 @@ let getQuotationRanges ast =
         | SynExpr.Downcast (expr, _, _)
         | SynExpr.For (_, _, _, _, _, expr, _)
         | SynExpr.Lazy (expr, _)
-        | SynExpr.Assert (expr, _) 
-        | SynExpr.TypeApp (expr, _, _, _, _, _, _) 
-        | SynExpr.DotSet (_, _, expr, _) 
-        | SynExpr.DotIndexedSet (_, _, expr, _, _, _) 
-        | SynExpr.NamedIndexedPropertySet (_, _, expr, _) 
-        | SynExpr.DotNamedIndexedPropertySet (_, _, _, expr, _) 
-        | SynExpr.TypeTest (expr, _, _) 
-        | SynExpr.Upcast (expr, _, _) 
-        | SynExpr.InferredUpcast (expr, _) 
-        | SynExpr.InferredDowncast (expr, _) 
+        | SynExpr.Assert (expr, _)
+        | SynExpr.TypeApp (expr, _, _, _, _, _, _)
+        | SynExpr.DotSet (_, _, expr, _)
+        | SynExpr.DotIndexedSet (_, _, expr, _, _, _)
+        | SynExpr.NamedIndexedPropertySet (_, _, expr, _)
+        | SynExpr.DotNamedIndexedPropertySet (_, _, _, expr, _)
+        | SynExpr.TypeTest (expr, _, _)
+        | SynExpr.Upcast (expr, _, _)
+        | SynExpr.InferredUpcast (expr, _)
+        | SynExpr.InferredDowncast (expr, _)
         | SynExpr.Lambda (_, _, _, expr, _)
-        | SynExpr.AddressOf (_, expr, _, _) -> 
+        | SynExpr.AddressOf (_, expr, _, _) ->
             visitExpr expr
         | SynExpr.App (_,_, expr1(*funcExpr*),expr2(*argExpr*), _)
         | SynExpr.LetOrUseBang (_, _, _, _,expr1(*rhsExpr*),expr2(*body*), _)
         | SynExpr.TryFinally (expr1, expr2, _, _, _)
-        | SynExpr.While (_, expr1, expr2, _) -> 
+        | SynExpr.While (_, expr1, expr2, _) ->
             visitExpr expr1; visitExpr expr2
         | SynExpr.Tuple (exprs, _, _)
         | SynExpr.ArrayOrList (_, exprs, _)
@@ -403,10 +403,10 @@ let getQuotationRanges ast =
             List.iter visitExpr exprs
         | SynExpr.TryWith (expr, _, clauses, _, _, _, _)
         | SynExpr.Match (_, expr, clauses, _, _) ->
-            visitExpr expr; visitMatches clauses 
+            visitExpr expr; visitMatches clauses
         | SynExpr.IfThenElse (cond, trueBranch, falseBranchOpt, _, _, _, _) ->
             visitExpr cond; visitExpr trueBranch
-            falseBranchOpt |> Option.iter visitExpr 
+            falseBranchOpt |> Option.iter visitExpr
         | SynExpr.LetOrUse (_, _, bindings, body, _) -> visitBindindgs bindings; visitExpr body
         | SynExpr.Quote (_, _isRaw, _quotedExpr, _, range) -> quotationRanges.Add range
         | SynExpr.MatchLambda (_, _, clauses, _, _) -> visitMatches clauses
@@ -420,17 +420,17 @@ let getQuotationRanges ast =
 
     and visitPattern = function
         | SynPat.QuoteExpr (expr, _) -> visitExpr expr
-        | SynPat.Named (pat, _, _, _, _) 
+        | SynPat.Named (pat, _, _, _, _)
         | SynPat.Paren (pat, _)
         | SynPat.Typed (pat, _, _) -> visitPattern pat
         | SynPat.Ands (pats, _)
         | SynPat.Tuple (pats, _)
         | SynPat.ArrayOrList (_, pats, _) -> List.iter visitPattern pats
         | SynPat.Or (pat1, pat2, _) -> visitPattern pat1; visitPattern pat2
-        | SynPat.LongIdent (_, _, _, ctorArgs, _, _) -> 
+        | SynPat.LongIdent (_, _, _, ctorArgs, _, _) ->
             match ctorArgs with
             | SynConstructorArgs.Pats pats -> List.iter visitPattern pats
-            | SynConstructorArgs.NamePatPairs(xs, _) -> 
+            | SynConstructorArgs.NamePatPairs(xs, _) ->
                 xs |> List.map snd |> List.iter visitPattern
         | SynPat.Record(xs, _) -> xs |> List.map snd |> List.iter visitPattern
         | _ -> ()
@@ -438,12 +438,12 @@ let getQuotationRanges ast =
     and visitMatch (SynMatchClause.Clause (pat, _, expr, _, _)) = visitPattern pat; visitExpr expr
 
     and visitMatches = List.iter visitMatch
-    
+
     let visitMember = function
         | SynMemberDefn.LetBindings (bindings, _, _, _) -> visitBindindgs bindings
         | SynMemberDefn.Member (binding, _) -> visitBinding binding
         | SynMemberDefn.AutoProperty (_, _, _, _, _, _, _, _, expr, _, _) -> visitExpr expr
-        | _ -> () 
+        | _ -> ()
 
     let visitType ty =
         let (SynTypeDefn.TypeDefn (_, repr, defns, _)) = ty
@@ -453,7 +453,7 @@ let getQuotationRanges ast =
         | _ -> ()
         for d in defns do visitMember d
 
-    let rec visitDeclarations decls = 
+    let rec visitDeclarations decls =
         decls |> List.iter
            (function
             | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
@@ -464,62 +464,62 @@ let getQuotationRanges ast =
 
     let visitModulesAndNamespaces modulesOrNss =
         modulesOrNss
-        |> Seq.iter (fun (SynModuleOrNamespace(_, _, decls, _, _, _, _)) -> visitDeclarations decls) 
-    ast 
+        |> Seq.iter (fun (SynModuleOrNamespace(_, _, decls, _, _, _, _)) -> visitDeclarations decls)
+    ast
     |> Option.iter (function
         | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) -> visitModulesAndNamespaces modules
         | _ -> ())
     quotationRanges
-   
+
 /// Returns all string literal ranges
 let internal getStringLiterals ast : Range.range list =
-    let result = ResizeArray() 
-     
+    let result = ResizeArray()
+
     let visitType ty =
         match ty with
         | SynType.StaticConstant (SynConst.String(_, r), _) -> result.Add r
         | _ -> ()
 
-    let rec visitExpr = function 
-        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _) 
-        | SynExpr.CompExpr (_, _, expr, _) 
-        | SynExpr.Lambda (_, _, _, expr, _) 
-        | SynExpr.YieldOrReturn (_, expr, _) 
-        | SynExpr.YieldOrReturnFrom (_, expr, _) 
-        | SynExpr.New (_, _, expr, _) 
-        | SynExpr.Assert (expr, _) 
-        | SynExpr.Do (expr, _) 
-        | SynExpr.Typed (expr, _, _) 
-        | SynExpr.Paren (expr, _, _, _) 
-        | SynExpr.DoBang (expr, _) 
-        | SynExpr.Downcast (expr, _, _) 
-        | SynExpr.For (_, _, _, _, _, expr, _) 
-        | SynExpr.Lazy (expr, _) 
-        | SynExpr.TypeTest(expr, _, _) 
-        | SynExpr.Upcast(expr, _, _) 
+    let rec visitExpr = function
+        | SynExpr.ArrayOrListOfSeqExpr (_, expr, _)
+        | SynExpr.CompExpr (_, _, expr, _)
+        | SynExpr.Lambda (_, _, _, expr, _)
+        | SynExpr.YieldOrReturn (_, expr, _)
+        | SynExpr.YieldOrReturnFrom (_, expr, _)
+        | SynExpr.New (_, _, expr, _)
+        | SynExpr.Assert (expr, _)
+        | SynExpr.Do (expr, _)
+        | SynExpr.Typed (expr, _, _)
+        | SynExpr.Paren (expr, _, _, _)
+        | SynExpr.DoBang (expr, _)
+        | SynExpr.Downcast (expr, _, _)
+        | SynExpr.For (_, _, _, _, _, expr, _)
+        | SynExpr.Lazy (expr, _)
+        | SynExpr.TypeTest(expr, _, _)
+        | SynExpr.Upcast(expr, _, _)
         | SynExpr.InferredUpcast(expr, _)
         | SynExpr.InferredDowncast(expr, _)
-        | SynExpr.LongIdentSet (_, expr, _) 
-        | SynExpr.DotGet (expr, _, _, _) 
+        | SynExpr.LongIdentSet (_, expr, _)
+        | SynExpr.DotGet (expr, _, _, _)
         | SynExpr.ForEach (_, _, _, _, _,expr(*body*), _) -> visitExpr expr
-        | SynExpr.App (_,_, expr1(*funcExpr*), expr2(*argExpr*), _) 
-        | SynExpr.TryFinally (expr1, expr2, _, _, _) 
-        | SynExpr.NamedIndexedPropertySet (_, expr1, expr2, _) 
-        | SynExpr.DotNamedIndexedPropertySet (_, _, expr1, expr2, _) 
+        | SynExpr.App (_,_, expr1(*funcExpr*), expr2(*argExpr*), _)
+        | SynExpr.TryFinally (expr1, expr2, _, _, _)
+        | SynExpr.NamedIndexedPropertySet (_, expr1, expr2, _)
+        | SynExpr.DotNamedIndexedPropertySet (_, _, expr1, expr2, _)
         | SynExpr.LetOrUseBang (_, _, _, _,expr1(*rhsExpr*), expr2(*body*), _)
-        | SynExpr.While (_, expr1, expr2, _) -> 
+        | SynExpr.While (_, expr1, expr2, _) ->
             visitExpr expr1; visitExpr expr2
         | Sequentials exprs
-        | SynExpr.Tuple (exprs, _, _) 
+        | SynExpr.Tuple (exprs, _, _)
         | SynExpr.ArrayOrList(_, exprs, _) -> List.iter visitExpr exprs
         | SynExpr.Match (_, expr, clauses, _, _)
         | SynExpr.TryWith(expr, _, clauses, _, _, _, _) ->
-            visitExpr expr; visitMatches clauses 
+            visitExpr expr; visitMatches clauses
         | SynExpr.IfThenElse(cond, trueBranch, falseBranchOpt, _, _, _, _) ->
             visitExpr cond
             visitExpr trueBranch
-            falseBranchOpt |> Option.iter visitExpr 
-        | SynExpr.LetOrUse (_, _, bindings, body, _) -> 
+            falseBranchOpt |> Option.iter visitExpr
+        | SynExpr.LetOrUse (_, _, bindings, body, _) ->
             visitBindindgs bindings
             visitExpr body
         | SynExpr.Record (_, _, fields, _) ->
@@ -529,17 +529,17 @@ let internal getStringLiterals ast : Range.range list =
         | SynExpr.Const (SynConst.String (_, r), _) -> result.Add r
         | SynExpr.TypeApp(_, _, tys, _, _, _, _) -> List.iter visitType tys
         | _ -> ()
-         
+
     and visitBinding (Binding(_, _, _, _, _, _, _, _, _, body, _, _)) = visitExpr body
     and visitBindindgs = List.iter visitBinding
     and visitMatch (SynMatchClause.Clause (_, _, expr, _, _)) = visitExpr expr
     and visitMatches = List.iter visitMatch
-    
+
     let visitMember = function
         | SynMemberDefn.LetBindings (bindings, _, _, _) -> visitBindindgs bindings
         | SynMemberDefn.Member (binding, _) -> visitBinding binding
         | SynMemberDefn.AutoProperty (_, _, _, _, _, _, _, _, expr, _, _) -> visitExpr expr
-        | _ -> () 
+        | _ -> ()
 
     let visitTypeDefn ty =
         let (SynTypeDefn.TypeDefn (_, repr, memberDefns, _)) = ty
@@ -551,7 +551,7 @@ let internal getStringLiterals ast : Range.range list =
         | _ -> ()
         List.iter visitMember memberDefns
 
-    let rec visitDeclarations decls = 
+    let rec visitDeclarations decls =
         for declaration in decls do
             match declaration with
             | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
@@ -563,7 +563,7 @@ let internal getStringLiterals ast : Range.range list =
     let visitModulesAndNamespaces modulesOrNss =
         Seq.iter (fun (SynModuleOrNamespace(_, _, decls, _, _, _, _)) -> visitDeclarations decls) modulesOrNss
 
-    ast 
+    ast
     |> Option.iter (function
         | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) -> visitModulesAndNamespaces modules
         | _ -> ())
@@ -577,9 +577,9 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
         | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) ->
             let rec walkModuleOrNamespace idents (decls, moduleRange) =
                 decls
-                |> List.fold (fun acc -> 
+                |> List.fold (fun acc ->
                     function
-                    | SynModuleDecl.NestedModule (componentInfo, nestedModuleDecls, _, nestedModuleRange) -> 
+                    | SynModuleDecl.NestedModule (componentInfo, nestedModuleDecls, _, nestedModuleRange) ->
                         if rangeContainsPos moduleRange pos then
                             let (ComponentInfo(_,_,_,longIdent,_,_,_,_)) = componentInfo
                             walkModuleOrNamespace (longIdent::acc) (nestedModuleDecls, nestedModuleRange)
@@ -591,12 +591,12 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                     if rangeContainsPos moduleRange pos then
                         walkModuleOrNamespace (longIdent::acc) (decls, moduleRange) @ acc
                     else acc) []
-        | ParsedInput.SigFile(ParsedSigFileInput(_, _, _, _, modules)) -> 
+        | ParsedInput.SigFile(ParsedSigFileInput(_, _, _, _, modules)) ->
             let rec walkModuleOrNamespaceSig idents (decls, moduleRange) =
                 decls
-                |> List.fold (fun acc -> 
+                |> List.fold (fun acc ->
                     function
-                    | SynModuleSigDecl.NestedModule (componentInfo, nestedModuleDecls, nestedModuleRange) -> 
+                    | SynModuleSigDecl.NestedModule (componentInfo, nestedModuleDecls, nestedModuleRange) ->
                         if rangeContainsPos moduleRange pos then
                             let (ComponentInfo(_,_,_,longIdent,_,_,_,_)) = componentInfo
                             walkModuleOrNamespaceSig (longIdent::acc) (nestedModuleDecls, nestedModuleRange)
@@ -634,7 +634,7 @@ module HashDirectiveInfo =
     let getIncludeAndLoadDirectives ast =
         // the Load items are resolved using fallback resolution relying on previously parsed #I directives
         // (this behaviour is undocumented in F# but it seems to be how it works).
-        
+
         // list of #I directives so far (populated while encountering those in order)
         // TODO: replace by List.fold if possible
         let includesSoFar = new System.Collections.Generic.List<_>()
@@ -661,7 +661,7 @@ module HashDirectiveInfo =
                     match decl with
                     | SynModuleDecl.HashDirective (ParsedHashDirective("I",[directory],range),_) ->
                         let directory = makeRootedDirectoryIfNecessary (getDirectoryOfFile file) directory
-                        
+
                         if directoryExists directory then
                             let includeDirective = ResolvedDirectory(directory)
                             pushInclude includeDirective
@@ -707,7 +707,7 @@ module HashDirectiveInfo =
         getIncludeAndLoadDirectives ast
         |> Array.tryPick (
             function
-            | Load (ExistingFile f,range) 
+            | Load (ExistingFile f,range)
                 // check the line is within the range
                 // (doesn't work when there are multiple files given to a single #load directive)
                 when rangeContainsPos range pos
@@ -726,26 +726,35 @@ module Outlining =
 
         /// Create a range beginning at the start of r1 and finishing at the end of r2
         let inline startToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.Start r2.End
-        
+
         /// Create a range starting at the end of r1 modified by m1 and finishing at the end of r2 modified by m2
-        let inline endToEndmod (r1: range) (m1:int) (r2: range) (m2:int) = 
-            let modstart,modend = mkPos r1.EndLine (r1.EndColumn+m1),mkPos r2.EndLine (r2.EndColumn+m2)
+        let inline endToEndmod (r1: range) (m1:int) (r2: range) (m2:int) =
+            let modstart, modend = mkPos r1.EndLine (r1.EndColumn + m1), mkPos r2.EndLine (r2.EndColumn + m2)
             mkFileIndexRange r1.FileIndex modstart modend
 
+        /// Create a new range from r by shifting the starting column by m
+        let inline modStart (r: range) (m:int) =
+            let modstart = mkPos r.StartLine (r.StartColumn+m)
+            mkFileIndexRange r.FileIndex modstart r.End
 
-        let inline ofAttributes (attrs:SynAttributes) =            
+        /// Produce a new range by adding modStart to the StartColumn of `r`
+        /// and subtracting modEnd from the EndColumn of `r`
+        let inline modBoth (r:range) modStart modEnd =
+            let rStart = Range.mkPos r.StartLine (r.StartColumn+modStart)
+            let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - modEnd)
+            mkFileIndexRange r.FileIndex rStart rEnd
+
+        let inline ofAttributes (attrs:SynAttributes) =
             match attrs with | [] -> range () | _  -> startToEnd attrs.[0].Range attrs.[List.length attrs - 1].ArgExpr.Range
 
 
-    ///  Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside 
-    ///  some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions 
-    ///  following a binding or the the right hand side of a pattern, e.g. `let x = ...` 
-    type Collapse = 
-        | Below = 0 
+    ///  Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside
+    ///  some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions
+    ///  following a binding or the the right hand side of a pattern, e.g. `let x = ...`
+    type Collapse =
+        | Below = 0
         | Same = 1
-        | ArrowSame = 2
-        | ArrowBelow = 3
-        | ClauseBlock = 4
+
 
     type Scope =
         | Open = 0
@@ -755,7 +764,7 @@ module Outlining =
         | Member = 4
         | LetOrUse = 5
         | Match = 6
-        /// MatchLambda = function | expr -> .... | expr ->...  
+        /// MatchLambda = function | expr -> .... | expr ->...
         | MatchLambda = 7
         | CompExpr = 8
         | IfThenElse = 9
@@ -764,9 +773,9 @@ module Outlining =
         | TryWith = 12
         | TryInTryWith = 13
         | WithInTryWith = 14
-        | TryFinally = 15 
+        | TryFinally = 15
         | TryInTryFinally = 16
-        | FinallyInTryFinally = 17       
+        | FinallyInTryFinally = 17
         | ArrayOrList = 18
         | ObjExpr = 19
         | For = 20
@@ -783,240 +792,301 @@ module Outlining =
         | Interface = 31
         | HashDirective = 32
         | LetOrUseBang = 33
+        | TypeExtension = 34
+        | YieldOrReturn = 35
+        | YieldOrReturnBang = 36
+        | UnionCase = 37
+        | EnumCase = 38
+        | RecordField = 39
+        | SimpleType = 40
+        | RecordDefn = 41
+        | UnionDefn = 42
 
-    type [< NoComparison; Struct >] ScopeRange (scope:Scope,collapse:Collapse, r:range) = 
+    type [< NoComparison; Struct >] ScopeRange (scope:Scope, collapse:Collapse, r:range) =
             member __.Scope = scope
             member __.Collapse = collapse
             member __.Range = r
 
-   // let inline mkSrange scope collapse r = ScopeRange (scope,collapse,r)
-    
-    /// Produce a new range by adding modStart to the StartColumn of `r` 
-    /// and subtracting modEnd from the EndColumn of `r`
-    let inline rangeMod (r:range) modStart modEnd =
-        let rStart = Range.mkPos r.StartLine (r.StartColumn+modStart) 
-        let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - modEnd) 
-        mkFileIndexRange r.FileIndex rStart rEnd
 
     // Only yield a range that spans 2 or more lines
-    let inline private rcheck scope collapse (r:range) = 
-        seq { if r.StartLine <> r.EndLine then yield ScopeRange(scope,collapse,r )}
+    let inline private rcheck scope collapse (r:range) =
+        seq { if r.StartLine <> r.EndLine then yield ScopeRange (scope, collapse, r)}
 
-    let rec private visitExpr expression = 
+    let rec private parseExpr expression =
         seq {
             match expression with
-            | SynExpr.Upcast (e,_,_) 
-            | SynExpr.Downcast (e,_,_)  
-            | SynExpr.AddressOf(_,e,_,_) 
-            | SynExpr.InferredDowncast (e,_) 
+            | SynExpr.Upcast (e,_,_)
+            | SynExpr.Downcast (e,_,_)
+            | SynExpr.AddressOf(_,e,_,_)
+            | SynExpr.InferredDowncast (e,_)
             | SynExpr.InferredUpcast (e,_)
             | SynExpr.DotGet (e,_,_,_)
-            | SynExpr.DotSet (e,_,_,_)
             | SynExpr.Do (e,_)
+            | SynExpr.DotSet (e,_,_,_)
             | SynExpr.New (_,_,e,_)
             | SynExpr.Typed (e,_,_)
             | SynExpr.DotIndexedGet (e,_,_,_)
-            | SynExpr.DotIndexedSet (e,_,_,_,_,_) -> yield! visitExpr e       
-            | SynExpr.YieldOrReturn (_,e,r)
-            | SynExpr.DoBang (e,r)
+            | SynExpr.DotIndexedSet (e,_,_,_,_,_) -> yield! parseExpr e
+            | SynExpr.YieldOrReturn (_,e,r) ->
+                yield! rcheck Scope.YieldOrReturn Collapse.Below r
+                yield! parseExpr e
             | SynExpr.YieldOrReturnFrom (_,e,r) ->
-                yield! rcheck Scope.CompExprInternal Collapse.Below r 
-                yield! visitExpr e
+                yield! rcheck Scope.YieldOrReturnBang Collapse.Below r
+                yield! parseExpr e
+            | SynExpr.DoBang (e,r) ->
+                yield! rcheck Scope.Do Collapse.Below <| Range.modStart r 3
+                yield! parseExpr e
             | SynExpr.LetOrUseBang (_,_,_,pat,e1,e2,_) ->
                 // for `let!` or `use!` the pattern begins at the end of the keyword so that
                 // this scope can be used without adjustment if there is no `=` on the same line
                 // if there is an `=` the range will be adjusted during the tooltip creation
-                yield! rcheck Scope.LetOrUseBang Collapse.Below <| Range.endToEnd pat.Range e1.Range 
-                yield! visitExpr e2
+                yield! rcheck Scope.LetOrUseBang Collapse.Below <| Range.endToEnd pat.Range e1.Range
+                yield! parseExpr e1
+                yield! parseExpr e2
             | SynExpr.For (_,_,_,_,_,e,r)
             | SynExpr.ForEach (_,_,_,_,_,e,r) ->
                 yield! rcheck Scope.For Collapse.Below r
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.LetOrUse (_,_,bindings, body,_) ->
-                yield! visitBindings bindings
-                yield! visitExpr body
+                yield! parseBindings bindings
+                yield! parseExpr body
             | SynExpr.Match (seqPointAtBinding,_,clauses,_,r) ->
                 match seqPointAtBinding with
                 | SequencePointAtBinding pr ->
                     yield! rcheck Scope.Match Collapse.Below <| Range.endToEnd pr r
                 | _ -> ()
-                yield! visitMatchClauses clauses
-            | SynExpr.MatchLambda (_,_,clauses,seqPointAtBinding,r) ->
-                match seqPointAtBinding with
-                | SequencePointAtBinding pr ->
-                    yield! rcheck Scope.MatchLambda Collapse.Below <| Range.endToEnd pr r
-                | _ -> ()
-                yield! rcheck Scope.MatchLambda Collapse.Below r 
-                //yield! rcheck Scope.Same <| e.Range  // Collapse the scope after `->`  start scope for after -> here?
-                yield! visitMatchClauses clauses
+                yield! parseMatchClauses clauses
+            | SynExpr.MatchLambda (_,_,clauses,_,r) ->
+                yield! rcheck Scope.MatchLambda Collapse.Below <| Range.modStart r 8
+                yield! parseMatchClauses clauses
             | SynExpr.App (atomicFlag,isInfix,funcExpr,argExpr,r) ->
                 // seq exprs, custom operators, etc
-                if ExprAtomicFlag.NonAtomic=atomicFlag && isInfix=false 
-                   && (function|SynExpr.Ident _->true|_->false) funcExpr 
+                if ExprAtomicFlag.NonAtomic=atomicFlag && isInfix=false
+                   && (function | SynExpr.Ident _ -> true | _ -> false) funcExpr
                    // if the argExrp is a computation expression another match will handle the outlining
                    // these cases must be removed to prevent creating unnecessary tags for the same scope
-                   && (function|SynExpr.CompExpr _->false|_->true) argExpr then
-                        yield! rcheck Scope.SpecialFunc Collapse.Below r
-                yield! visitExpr argExpr
-                yield! visitExpr funcExpr
+                   && (function | SynExpr.CompExpr _ -> false | _ -> true) argExpr then
+                        yield! rcheck Scope.SpecialFunc Collapse.Below <| Range.endToEnd funcExpr.Range r
+                yield! parseExpr argExpr
+                yield! parseExpr funcExpr
             | SynExpr.Sequential (_,_,e1,e2,_) ->
-                yield! visitExpr e1
-                yield! visitExpr e2
+                yield! parseExpr e1
+                yield! parseExpr e2
             | SynExpr.ArrayOrListOfSeqExpr (isArray,e,r) ->
-                yield! rcheck  Scope.ArrayOrList Collapse.Same <| rangeMod r (if isArray then 2 else 1) (if isArray then 2 else 1)
-                yield! visitExpr e
+                yield! rcheck  Scope.ArrayOrList Collapse.Same <| Range.modBoth r (if isArray then 2 else 1) (if isArray then 2 else 1)
+                yield! parseExpr e
             | SynExpr.CompExpr (arrayOrList,_,e,r) ->
-                if arrayOrList then 
-                    yield! visitExpr e
+                if arrayOrList then
+                    yield! parseExpr e
                 else  // exclude the opening { and closing } on the cexpr from collapsing
-                    yield! rcheck Scope.CompExpr Collapse.Same <| rangeMod r 1 1
-                yield! visitExpr e
+                    yield! rcheck Scope.CompExpr Collapse.Same <| Range.modBoth r 1 1
+                yield! parseExpr e
             | SynExpr.ObjExpr (_,_,bindings,_,newRange,wholeRange) ->
                 let r = mkFileIndexRange newRange.FileIndex newRange.End (Range.mkPos wholeRange.EndLine (wholeRange.EndColumn - 1))
                 yield! rcheck Scope.ObjExpr Collapse.Below r
-                yield! visitBindings bindings
+                yield! parseBindings bindings
             | SynExpr.TryWith (e,_,matchClauses,tryRange,withRange,tryPoint,withPoint) ->
                 match tryPoint with
-                | SequencePointAtTry r -> 
+                | SequencePointAtTry r ->
                     yield! rcheck Scope.TryWith Collapse.Below <| Range.endToEnd r tryRange
                 | _ -> ()
                 match withPoint with
                 | SequencePointAtWith r ->
                     yield! rcheck Scope.WithInTryWith Collapse.Below <| Range.endToEnd r withRange
                 | _ -> ()
-                yield! visitExpr e
-                yield! visitMatchClauses matchClauses
+                yield! parseExpr e
+                yield! parseMatchClauses matchClauses
             | SynExpr.TryFinally (tryExpr,finallyExpr,r,tryPoint,finallyPoint) ->
                 match tryPoint with
                 | SequencePointAtTry tryRange ->
-                    yield! rcheck Scope.TryFinally Collapse.Below<| Range.endToEnd tryRange r
+                    yield! rcheck Scope.TryFinally Collapse.Below <| Range.endToEnd tryRange r
                 | _ -> ()
                 match finallyPoint with
-                | SequencePointAtFinally finallyRange ->                    
+                | SequencePointAtFinally finallyRange ->
                     yield! rcheck  Scope.FinallyInTryFinally Collapse.Below <| Range.endToEnd finallyRange r
                 | _ -> ()
-                yield! visitExpr tryExpr
-                yield! visitExpr finallyExpr
-            | SynExpr.IfThenElse (e1,e2,e3,seqPointInfo,_,_,r) ->                
+                yield! parseExpr tryExpr
+                yield! parseExpr finallyExpr
+            | SynExpr.IfThenElse (e1,e2,e3,seqPointInfo,_,_,r) ->
                 // Outline the entire IfThenElse
                 yield! rcheck Scope.IfThenElse Collapse.Below r
                 // Outline the `then` scope
                 match seqPointInfo with
-                | SequencePointInfoForBinding.SequencePointAtBinding rt -> 
+                | SequencePointInfoForBinding.SequencePointAtBinding rt ->
                     yield! rcheck  Scope.ThenInIfThenElse Collapse.Below <| Range.endToEnd rt e2.Range
                 | _ -> ()
-                yield! visitExpr e1
-                yield! visitExpr e2
+                yield! parseExpr e1
+                yield! parseExpr e2
                 match e3 with
-                | Some e -> 
-                    yield! rcheck Scope.ElseInIfThenElse Collapse.Same e.Range
-                    yield! visitExpr e
+                | Some e ->
+                    match e with // prevent double collapsing on elifs
+                    | SynExpr.IfThenElse (_,_,_,_,_,_,_) ->
+                        yield! parseExpr e
+                    | _ ->
+                        yield! rcheck Scope.ElseInIfThenElse Collapse.Same e.Range
+                        yield! parseExpr e
                 | None -> ()
             | SynExpr.While (_,_,e,r) ->
                 yield! rcheck Scope.While Collapse.Below  r
-                yield! visitExpr e
-            | SynExpr.Lambda (_,_,_,e,r) ->
-//                yield! rcheck Scope.Lambda Collapse.ArrowBelow <| Range.startToEnd e.Range r
-                yield! rcheck Scope.Lambda Collapse.ArrowSame <| Range.startToEnd e.Range r
-                yield! visitExpr e
+                yield! parseExpr e
+            | SynExpr.Lambda (_,_,pats,e,r) ->
+                match pats with
+                | SynSimplePats.SimplePats (_,pr)
+                | SynSimplePats.Typed (_,_,pr) ->
+                    yield! rcheck Scope.Lambda Collapse.Below <| Range.endToEnd pr r
+                yield! parseExpr e
             | SynExpr.Lazy (e,r) ->
                 yield! rcheck Scope.SpecialFunc Collapse.Below r
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.Quote (_,isRaw,e,_,r) ->
                 // subtract columns so the @@> or @> is not collapsed
-                yield! rcheck Scope.Quote Collapse.Same <| rangeMod r (if isRaw then 3 else 2) (if isRaw then 3 else 2)
-                yield! visitExpr e
+                yield! rcheck Scope.Quote Collapse.Same <| Range.modBoth r (if isRaw then 3 else 2) (if isRaw then 3 else 2)
+                yield! parseExpr e
             | SynExpr.Tuple (es,_,r) ->
                 yield! rcheck Scope.Tuple Collapse.Same r
-                yield! Seq.collect visitExpr es
+                yield! Seq.collect parseExpr es
             | SynExpr.Paren (e,_,_,_) ->
-                yield! visitExpr e
+                yield! parseExpr e
             | SynExpr.Record (recCtor,recCopy,recordFields,r) ->
-                if recCtor.IsSome then 
+                if recCtor.IsSome then
                     let (_,ctorArgs,_,_,_) = recCtor.Value
-                    yield! visitExpr ctorArgs
+                    yield! parseExpr ctorArgs
                 if recCopy.IsSome then
                     let (e,_) = recCopy.Value
-                    yield! visitExpr e
-                yield! recordFields |> (Seq.choose(fun(_,e,_)->e) >> Seq.collect visitExpr)
+                    yield! parseExpr e
+                yield! recordFields |> (Seq.choose (fun (_,e,_) -> e) >> Seq.collect parseExpr)
                 // exclude the opening `{` and closing `}` of the record from collapsing
-                yield! rcheck Scope.Record Collapse.Same <| rangeMod r 1 1         
+                yield! rcheck Scope.Record Collapse.Same <| Range.modBoth r 1 1
             | _ -> ()
         }
 
-    and private visitMatchClause (SynMatchClause.Clause (synPat,_,e,_,_)) =
-        seq {   
-                yield! rcheck Scope.MatchClause Collapse.ArrowSame <| Range.startToEnd synPat.Range e.Range  // Collapse the scope after `->`
-                yield! visitExpr e 
+    and private parseMatchClause (SynMatchClause.Clause (synPat,_,e,_,_)) =
+        seq {
+                yield! rcheck Scope.MatchClause Collapse.Same <| Range.startToEnd synPat.Range e.Range  // Collapse the scope after `->`
+                yield! parseExpr e
             }
 
-    and private visitMatchClauses = Seq.collect visitMatchClause
+    and private parseMatchClauses = Seq.collect parseMatchClause
 
-    and private visitAttributes (attrs:SynAttributes) =
+    and private parseAttributes (attrs:SynAttributes) =
         seq{
-            let attrListRange  = 
-                if attrs.Length = 0 then Seq.empty else 
+            let attrListRange  =
+                if attrs.Length = 0 then Seq.empty else
                 rcheck Scope.Attribute Collapse.Same  <| Range.startToEnd (attrs.[0].Range) (attrs.[attrs.Length-1].ArgExpr.Range)
             match  attrs with
             | [] -> ()
             | [_] -> yield! attrListRange
-            | hd::tl -> 
+            | hd::tl ->
                 yield! attrListRange
-                yield! visitExpr hd.ArgExpr
+                yield! parseExpr hd.ArgExpr
                 // If there are more than 2 attributes only add tags to the 2nd and beyond, to avoid double collapsing on the first attribute
                 yield! tl |> Seq.collect (fun attr -> rcheck Scope.Attribute Collapse.Same <| Range.startToEnd attr.Range attr.ArgExpr.Range)
                 // visit the expressions inside each attribute
-                yield! attrs |> Seq.collect (fun attr -> visitExpr attr.ArgExpr)
+                yield! attrs |> Seq.collect (fun attr -> parseExpr attr.ArgExpr)
         }
 
-    and private visitBinding (Binding (_,kind,_,_,attrs,_,_,_,_,e,_,_) as b) =        
+    and private parseBinding (Binding (_,kind,_,_,attrs,_,_,_,_,e,br,_) as b) =
         seq {
+//            let r = Range.endToEnd b.RangeOfBindingSansRhs b.RangeOfBindingAndRhs
             match kind with
             | SynBindingKind.NormalBinding ->
-                let r1 = b.RangeOfBindingSansRhs
-                let r2 = b.RangeOfBindingAndRhs
-                yield! rcheck Scope.LetOrUse Collapse.Below <| Range.endToEnd r1 r2
-            | _ -> () 
-            yield! visitAttributes attrs
-            yield! visitExpr e
+                yield! rcheck Scope.LetOrUse Collapse.Below <| Range.endToEnd b.RangeOfBindingSansRhs b.RangeOfBindingAndRhs
+            | SynBindingKind.DoBinding ->
+                yield! rcheck Scope.Do Collapse.Below <| Range.modStart br 2
+            | _ -> ()
+            yield! parseAttributes attrs
+            yield! parseExpr e
         }
 
-    and private visitBindings = Seq.collect visitBinding 
+    and private parseBindings = Seq.collect parseBinding
 
-    and private visitSynMemberDefn d =
+    and private parseSynMemberDefn d =
         seq {
             match d with
             | SynMemberDefn.Member (binding,r) ->
                 yield! rcheck Scope.Member Collapse.Below r
-                yield! visitBinding binding
-            | SynMemberDefn.LetBindings (bindings,_,_,r) ->
-                yield! rcheck Scope.LetOrUse Collapse.Below r
-                yield! visitBindings bindings
+                yield! parseBinding binding
+            | SynMemberDefn.LetBindings (bindings,_,_,_r) ->
+                //yield! rcheck Scope.LetOrUse Collapse.Below r
+                yield! parseBindings bindings
             | SynMemberDefn.Interface (tp,iMembers,_) ->
                 yield! rcheck Scope.Interface Collapse.Below <| Range.endToEnd tp.Range d.Range
                 match iMembers with
-                | Some members -> yield! Seq.collect visitSynMemberDefn members
+                | Some members -> yield! Seq.collect parseSynMemberDefn members
                 | None -> ()
             | SynMemberDefn.NestedType (td,_,_) ->
-                yield! visitTypeDefn td
-            | SynMemberDefn.AbstractSlot (_,_,r) ->
-                yield! rcheck Scope.Member Collapse.Below r
+                yield! parseTypeDefn td
+            | SynMemberDefn.AbstractSlot (ValSpfn(_,_,_,synt,_,_,_,_,_,_,_),_,r) ->
+                yield! rcheck Scope.Member Collapse.Below <| Range.startToEnd synt.Range r
             | SynMemberDefn.AutoProperty (_,_,_,_,(*memkind*)_,_,_,_,e,_,r) ->
                 yield! rcheck Scope.Member Collapse.Below r
-                yield! visitExpr e   
+                yield! parseExpr e
             | _ -> ()
         }
 
+    (*  For Cases like
+        --------------
+            type JsonDocument =
+                private {   Json : string
+                            Path : string   }
+        Or
+             type JsonDocument =
+                internal |  Json of string
+                         |  Path of string
+    *)
+    and private parseSimpleRepr simple =
+        let _accessRange (opt:SynAccess option) =
+            match opt with
+            | None -> 0
+            | Some synacc ->
+                match synacc with
+                | SynAccess.Public -> 6
+                | SynAccess.Private -> 7
+                | SynAccess.Internal -> 8
+        seq {
+            match simple with
+            | SynTypeDefnSimpleRepr.Enum (cases,er) ->
+                yield! rcheck Scope.SimpleType Collapse.Below er
+                yield! cases
+                    |> Seq.collect (fun (SynEnumCase.EnumCase (attrs,_,_,_,cr)) ->
+                    seq{yield! rcheck Scope.EnumCase Collapse.Below cr
+                        yield! parseAttributes attrs
+                    })
+            | SynTypeDefnSimpleRepr.Record (_opt,fields,rr) ->
+                //yield! rcheck Scope.SimpleType Collapse.Same <| Range.modBoth rr (accessRange opt+1) 1
+                yield! rcheck Scope.RecordDefn Collapse.Same rr //<| Range.modBoth rr 1 1
+                yield! fields
+                    |> Seq.collect (fun (SynField.Field (attrs,_,_,_,_,_,_,fr)) ->
+                    seq{yield! rcheck Scope.RecordField Collapse.Below fr
+                        yield! parseAttributes attrs
+                    })
+            | SynTypeDefnSimpleRepr.Union (_opt,cases,ur) ->
+//                yield! rcheck Scope.SimpleType Collapse.Same <| Range.modStart ur (accessRange opt)
+                yield! rcheck Scope.UnionDefn Collapse.Same ur
+                yield! cases
+                    |> Seq.collect (fun (SynUnionCase.UnionCase (attrs,_,_,_,_,cr)) ->
+                    seq{yield! rcheck Scope.UnionCase Collapse.Below cr
+                        yield! parseAttributes attrs
+                    })
+            | _ -> ()
+        }
 
-    and private visitTypeDefn (TypeDefn (componentInfo,objectModel,members,range)) =
-        seq {            
-            yield! rcheck Scope.Type Collapse.Below <| Range.endToEnd componentInfo.Range range
+    and private parseTypeDefn (TypeDefn (componentInfo, objectModel, members, range)) =
+        seq {
             match objectModel with
-            | SynTypeDefnRepr.ObjectModel (_,objMembers,_) -> 
-                yield! Seq.collect visitSynMemberDefn objMembers
-                yield! Seq.collect visitSynMemberDefn members
-            | SynTypeDefnRepr.Simple _ -> 
-                yield! Seq.collect visitSynMemberDefn members
+            | SynTypeDefnRepr.ObjectModel (defnKind, objMembers, _) ->
+                match defnKind with
+                | SynTypeDefnKind.TyconAugmentation ->
+                    yield! rcheck Scope.TypeExtension Collapse.Below <| Range.endToEnd componentInfo.Range range
+                | _ ->
+                    yield! rcheck Scope.Type Collapse.Below <| Range.endToEnd componentInfo.Range range
+                yield! Seq.collect parseSynMemberDefn objMembers
+                // visit the members of a type extension
+                yield! Seq.collect parseSynMemberDefn members
+            | SynTypeDefnRepr.Simple (simpleRepr,_r) ->
+                yield! rcheck Scope.Type Collapse.Below <| Range.endToEnd componentInfo.Range range
+                yield! parseSimpleRepr simpleRepr
+                yield! Seq.collect parseSynMemberDefn members
         }
 
 
@@ -1027,11 +1097,11 @@ module Outlining =
                 | [], [] -> List.rev res
                 | [], _ -> List.rev (currentBulk::res)
                 | r :: rest, [] -> loop rest res [r]
-                | r :: rest, last :: _ when r.StartLine = last.EndLine + 1 -> 
+                | r :: rest, last :: _ when r.StartLine = last.EndLine + 1 ->
                     loop rest res (r::currentBulk)
                 | r :: rest, _ -> loop rest (currentBulk::res) [r]
             loop input [] []
-        
+
         let selectRanges (ranges: range list) =
             match ranges with
             | [] -> None
@@ -1041,7 +1111,7 @@ module Outlining =
                 let firstRange = Seq.last rest
                 Some <| ScopeRange (scope, Collapse.Same, (Range.mkRange "" firstRange.Start lastRange.End))
 
-        decls |> (List.choose predicate>>groupConsecutiveDecls>>List.choose selectRanges)
+        decls |> (List.choose predicate >> groupConsecutiveDecls >> List.choose selectRanges)
 
 
     let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_,r) -> Some r | _ -> None) Scope.Open
@@ -1049,42 +1119,42 @@ module Outlining =
 
     let collectHashDirectives =
          getConsecutiveModuleDecls(
-            function 
+            function
             | SynModuleDecl.HashDirective (ParsedHashDirective (directive,_,_),r) ->
                 let prefixLength = "#".Length + directive.Length + " ".Length
                 Some (Range.mkRange "" (Range.mkPos r.StartLine prefixLength) r.End)
             | _ -> None) Scope.HashDirective
 
 
-    let rec private visitDeclaration (decl: SynModuleDecl) = 
+    let rec private parseDeclaration (decl: SynModuleDecl) =
         seq {
             match decl with
             | SynModuleDecl.Let (_,bindings,_) ->
-                yield! visitBindings bindings
+                yield! parseBindings bindings
             | SynModuleDecl.Types (types,_) ->
-                yield! Seq.collect visitTypeDefn types
+                yield! Seq.collect parseTypeDefn types
             // Fold the attributes above a module
             | SynModuleDecl.NestedModule (SynComponentInfo.ComponentInfo (attrs,_,_,_,_,_,_,cmpRange), decls,_,_) ->
                 // Outline the full scope of the module
                 yield! rcheck Scope.Module Collapse.Below <| Range.endToEnd cmpRange decl.Range
                 // A module's component info stores the ranges of its attributes
-                yield! visitAttributes attrs
+                yield! parseAttributes attrs
                 yield! collectOpens decls
-                yield! Seq.collect visitDeclaration decls
+                yield! Seq.collect parseDeclaration decls
             | SynModuleDecl.DoExpr (_,e,_) ->
-                yield! visitExpr e
+                yield! parseExpr e
             | SynModuleDecl.Attributes (attrs,_) ->
-                yield! visitAttributes attrs
+                yield! parseAttributes attrs
             | _ -> ()
         }
 
 
-    let private visitModuleOrNamespace moduleOrNs =
+    let private parseModuleOrNamespace moduleOrNs =
         seq {
             let (SynModuleOrNamespace.SynModuleOrNamespace (_,_,decls,_,_,_,_)) = moduleOrNs
             yield! collectHashDirectives decls
             yield! collectOpens decls
-            yield! Seq.collect visitDeclaration decls
+            yield! Seq.collect parseDeclaration decls
         }
 
 
@@ -1093,7 +1163,6 @@ module Outlining =
             match tree with
             | ParsedInput.ImplFile(implFile) ->
                 let (ParsedImplFileInput (_,_,_,_,_,modules,_)) = implFile
-                yield! Seq.collect visitModuleOrNamespace modules
+                yield! Seq.collect parseModuleOrNamespace modules
             | _ -> ()
         }
-

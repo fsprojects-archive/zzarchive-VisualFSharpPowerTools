@@ -81,10 +81,8 @@ module OutputWindowHelper =
     let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
 
     let diagnose logType msg =
-        // Guard against exceptions since it's not entirely clear that GlobalProvider will be populated correctly.
-        if (try globalOptions.Value.DiagnosticMode with _ -> false) then
-            outputWindowPane.Value 
-            |> Option.iter (writeToOutputWindow logType msg)       
+        outputWindowPane.Value 
+        |> Option.iter (writeToOutputWindow logType msg)
 
 [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Logging =
@@ -93,12 +91,13 @@ module Logging =
     /// This is a global logger, please make sure that it is executed after the package is loaded.
     let internal logger = lazy (Logger(Logger.GlobalServiceProvider))
 
-    let internal log logType (msg: Printf.StringFormat<'T, unit>) = 
-        let format msg = 
+    let internal log logType (produceMessage: _ -> string) = 
+        // Guard against exceptions since it's not entirely clear that GlobalProvider will be populated correctly.
+        if (try globalOptions.Value.DiagnosticMode with _ -> false) then
+            let msg = produceMessage()
             diagnose logType msg
             logger.Value.Log(logType, msg)
-        Printf.kprintf format msg
-        
+            
     let logInfo msg = log LogType.Information msg
     let logWarning msg = log LogType.Warning msg
     let logError msg = log LogType.Error msg
@@ -111,12 +110,12 @@ module Logging =
 
     // Specialized logging functions to be C#-friendly
 
-    let logInfoMessage (msg: string) = logInfo "%s" msg
-    let logWarningMessage (msg: string) = logWarning "%s" msg
-    let logErrorMessage (msg: string) = logError "%s" msg
+    let logInfoMessage (msg: Func<string>) = logInfo msg.Invoke
+    let logWarningMessage (msg: Func<string>) = logWarning msg.Invoke
+    let logErrorMessage (msg: Func<string>) = logError msg.Invoke
 
     let logExceptionWithContext(ex: Exception, context) = 
-        logError "Context: %s\nException Message: %s\nStack Trace: %s" context ex.Message ex.StackTrace
+        logError (fun _ -> sprintf "Context: %s\nException Message: %s\nStack Trace: %s" context ex.Message ex.StackTrace)
 
     let logException (ex: Exception) = 
-        logError "Exception Message: %s\nStack Trace: %s" ex.Message ex.StackTrace
+        logError (fun _ -> sprintf "Exception Message: %s\nStack Trace: %s" ex.Message ex.StackTrace)

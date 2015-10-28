@@ -56,15 +56,6 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic.VS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools.IntegrationTests", "tests\FSharpVSPowerTools.IntegrationTests\FSharpVSPowerTools.IntegrationTests.csproj", "{697E3311-F98F-4063-B20C-D59D44CB4FA8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test samples", "test samples", "{CDFE262B-BF3B-4B13-B3E6-859CC2A82F0D}"
-	ProjectSection(SolutionItems) = preProject
-		tests\FSharpVSPowerTools.Core.Tests\Coloring.fs = tests\FSharpVSPowerTools.Core.Tests\Coloring.fs
-		tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\DepthColorizerSampleFile.fs
-		tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\InterfaceSampleFile.fs
-		tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs = tests\FSharpVSPowerTools.Core.Tests\SampleFile.fs
-		tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs = tests\FSharpVSPowerTools.Core.Tests\Tutorial.fs
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUtilities", "tests\TestUtilities\TestUtilities.csproj", "{C6800510-FCD0-4301-9890-36E41DFB29BB}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Tests", "tests\FSharpVSPowerTools.Tests\FSharpVSPowerTools.Tests.fsproj", "{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}"
