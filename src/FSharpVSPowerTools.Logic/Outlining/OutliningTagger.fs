@@ -15,6 +15,7 @@ open System.Windows
 open System.Windows.Media
 open System.Windows.Controls
 open Microsoft.FSharp.Compiler.Ast
+open FSharpVSPowerTools.UntypedAstUtils
 
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
@@ -103,11 +104,9 @@ type OutliningTagger
     // been collapsed will explode back open causing an annoying buffer shift. To prevent this behavior we check
     // for an empty ast via it's range and ignore it if the length is zero
     let checkAST (oldtree:ParsedInput option) (newTree:ParsedInput) : bool =
-        let inline lengthZero (emptyTree:ParsedInput) =
-             emptyTree.Range.StartColumn = emptyTree.Range.EndColumn &&  emptyTree.Range.StartLine = emptyTree.Range.EndLine
         match oldtree, newTree with
         | None, _ -> true
-        | _, emptyTree when lengthZero emptyTree -> false
+        | _, emptyTree when emptyTree.Range.IsEmpty -> false 
         | _ -> true
 
 

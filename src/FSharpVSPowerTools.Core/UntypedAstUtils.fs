@@ -5,6 +5,9 @@ open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 
+type Range.range with
+    member inline x.IsEmpty = x.StartColumn = x.EndColumn && x.StartLine = x.EndLine 
+
 type internal ShortIdent = string
 type internal Idents = ShortIdent[]
 
