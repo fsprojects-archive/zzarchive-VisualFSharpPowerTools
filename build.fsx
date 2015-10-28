@@ -9,6 +9,7 @@ open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open System
 open System.IO
+open System.Xml
 
 // Information about the project are used
 //  - for version and project name in generated AssemblyInfo file
@@ -57,6 +58,7 @@ let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
 
 let isAppVeyorBuild = environVar "APPVEYOR" <> null
 let buildVersion = sprintf "%s-a%s" release.NugetVersion (DateTime.UtcNow.ToString "yyMMddHHmm")
+let version = sprintf "%s.%s" release.AssemblyVersion (if isAppVeyorBuild then AppVeyor.AppVeyorEnvironment.BuildNumber else "0")
 
 Target "BuildVersion" (fun _ ->
     Shell.Exec("appveyor", sprintf "UpdateBuild -Version \"%s\"" buildVersion) |> ignore
@@ -67,8 +69,8 @@ Target "AssemblyInfo" (fun _ ->
   let shared =
       [ Attribute.Product project
         Attribute.Description summary
-        Attribute.Version release.AssemblyVersion
-        Attribute.FileVersion release.AssemblyVersion ] 
+        Attribute.Version version
+        Attribute.FileVersion version ] 
 
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
@@ -84,6 +86,17 @@ Target "AssemblyInfo" (fun _ ->
       
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2015/AssemblyInfo.fs"
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2015" :: shared) 
+)
+
+Target "VsixManifest" (fun _ ->
+    let manifest = "./src/FSharpVSPowerTools/source.extension.vsixmanifest"
+    let doc = new XmlDocument() in
+    doc.Load manifest
+    doc.GetElementsByTagName("Identity") 
+      |> Seq.cast<XmlNode> 
+      |> Seq.head 
+      |>(fun node -> printfn "%A" node; node.Attributes.GetNamedItem("Version").Value <- version)
+    doc.Save manifest
 )
 
 // --------------------------------------------------------------------------------------
@@ -301,6 +314,7 @@ Target "All" DoNothing
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
   ==> "AssemblyInfo"
+  ==> "VsixManifest"
   ==> "Build"
   ==> "BuildTests"
   ==> "UnitTests"
