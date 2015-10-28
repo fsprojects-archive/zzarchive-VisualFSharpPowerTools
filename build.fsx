@@ -69,8 +69,8 @@ Target "AssemblyInfo" (fun _ ->
   let shared =
       [ Attribute.Product project
         Attribute.Description summary
-        Attribute.Version version
-        Attribute.FileVersion version ] 
+        Attribute.Version release.AssemblyVersion
+        Attribute.FileVersion release.AssemblyVersion ] 
 
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
@@ -90,7 +90,7 @@ Target "AssemblyInfo" (fun _ ->
 
 Target "VsixManifest" (fun _ ->
     let manifest = "./src/FSharpVSPowerTools/source.extension.vsixmanifest"
-    let doc = new XmlDocument() in
+    let doc = new XmlDocument(PreserveWhitespace=true) in
     doc.Load manifest
     doc.GetElementsByTagName("Identity") 
       |> Seq.cast<XmlNode> 
