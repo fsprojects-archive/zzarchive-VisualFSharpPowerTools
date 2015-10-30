@@ -37,26 +37,17 @@ module Array =
 
     /// Returns true if one array has another as its subset from index 0.
     let startsWith (prefix: _ []) (whole: _ []) =
-        let rec loop index =
-            if index > prefix.Length - 1 then true
-            elif index > whole.Length - 1 then false
-            elif prefix.[index] = whole.[index] then loop (index + 1)
-            else false
-        prefix.Length = 0 || loop 0
+        if prefix.Length = 0 then true
+        elif prefix.Length > whole.Length then false
+        elif prefix.Length = whole.Length then prefix = whole
+        else Array.sub whole 0 prefix.Length = prefix
 
     /// Returns true if one array has trailing elements equal to another's.
     let endsWith (suffix: _ []) (whole: _ []) =
-        let suffixLength = suffix.Length
-        let wholeLength = whole.Length
-        let rec loop step =
-            if step > suffixLength then true
-            elif step > wholeLength then false
-            elif suffix.[suffixLength - step] = whole.[wholeLength - step] then loop (step + 1)
-            else false
-
         if suffix.Length = 0 then true
-        elif whole.Length < suffix.Length then false
-        else loop 1
+        elif suffix.Length > whole.Length then false
+        elif suffix.Length = whole.Length then suffix = whole
+        else Array.sub whole (whole.Length-suffix.Length) suffix.Length = suffix
 
     /// Returns a new array with an element replaced with a given value.
     let replace index value (arr: _ []) =
