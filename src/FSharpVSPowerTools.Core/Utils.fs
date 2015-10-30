@@ -39,6 +39,18 @@ module List =
             | _ -> List.rev acc
         loop [] xs
 
+    /// Fold over the list passing the index and element at that index to a folding function
+    let foldi (folder:'State -> int -> 'T -> 'State) (state:'State) (xs:'T list) =        
+        match xs with 
+        | [] -> state
+        | _ -> 
+            let f = OptimizedClosures.FSharpFunc<_,_,_,_>.Adapt folder
+            let rec loop idx s xs = 
+                match xs with 
+                | [] -> s
+                | h::t -> loop (idx+1) (f.Invoke(s,idx,h)) t
+            loop 0 state xs
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Array =
@@ -110,6 +122,13 @@ module Array =
             state <- folder.Invoke (state, i, array.[i])
         state
 
+    /// Get the first element of the array or None if the Array is empty
+    let tryHead array =        
+        match array with
+        | null | [||] -> None
+        | arr  -> Some arr.[0]    
+    
+
     open System.Collections.Generic
 
     /// Returns an array that contains no duplicate entries according to generic hash and
@@ -124,8 +143,28 @@ module Array =
             if hashSet.Add(v) then
                 temp.[i] <- v
                 i <- i + 1
-        temp.[0..i ]
+        temp.[0..i]
 
+    /// pass an array byref to reverse it in place
+    let revInPlace (arr: 'a[] byref ) =
+        checkNonNull "array" arr
+        let arrlen, revlen = arr.Length-1, arr.Length/2 - 1
+        for idx in 0 .. revlen do
+            let t1 = arr.[idx] 
+            let t2 = arr.[arrlen-idx]
+            arr.[idx] <- t2
+            arr.[arrlen-idx] <- t1
+
+
+    /// Return an array of elements that preceded the first element that failed
+    /// to satisfy the predicate
+    let takeWhile predicate (array: 'T[]) = 
+        checkNonNull "array" array
+        if array.Length = 0 then Array.empty else
+        let mutable count = 0
+        while count < array.Length && predicate array.[count] do
+            count <- count + 1
+        array.[0..count]
 
 
 [<RequireQualifiedAccess>]
@@ -521,9 +560,11 @@ module String =
         match str with
         | null -> null
         | str ->
-            match str.ToCharArray() |> Array.toList with
-            | [] -> str
-            | h :: t when Char.IsUpper h -> String (Char.ToLower h :: t |> List.toArray)
+            match str.ToCharArray () with
+            | [||] -> str
+            | arr when Char.IsUpper arr.[0] -> 
+                arr.[0] <- Char.ToLower arr.[0]
+                String (arr)
             | _ -> str
 
     let extractTrailingIndex (str: string) =
@@ -541,6 +582,8 @@ module String =
                | "" -> str, None
                | index -> str.Substring (0, str.Length - index.Length), Some (int index)
 
+    /// Remove all trailing and leading whitespace from the string
+    /// return null if the string is null
     let trim (value: string) = match value with null -> null | x -> x.Trim()
     
     let split options (separator: string[]) (value: string) = 
@@ -584,6 +627,30 @@ module String =
                 yield !line
             line := reader.ReadLine()
         |]
+
+    open System.Text
+    /// Use an accumulation function to create a new string applying a transformation
+    /// to every non-empty line in the string
+    let mapNonEmptyLines (folder: StringBuilder -> string -> StringBuilder) (str: string) =
+        let f = OptimizedClosures.FSharpFunc<_,_,_>.Adapt folder
+        use reader = new StringReader (str)
+        let sb = StringBuilder ()
+        let mutable line = reader.ReadLine ()
+        while isNotNull line do
+            if line.Length > 0 then
+                f.Invoke (sb,line) |> ignore
+            line <- reader.ReadLine()
+        string sb
+
+    /// Parse a string to find the first nonempty line
+    /// Return null if the string was null or only contained empty lines
+    let firstNonEmptyLine (str: string) =
+        use reader = new StringReader (str)
+        let rec loop (line:string) =
+            if isNull line then None 
+            elif  line.Length > 0 then Some line
+            else loop (reader.ReadLine())
+        loop (reader.ReadLine())
 
 module Reflection =
     open System.Reflection
