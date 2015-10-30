@@ -14,6 +14,7 @@ module Prelude =
     let inline fail msg = Printf.kprintf Debug.Fail msg
     let inline isNull v = match v with | null -> true | _ -> false
     let inline isNotNull v = v |> (not << isNull)
+    let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -571,13 +572,13 @@ module String =
         match str with
         | null -> null, None
         | _ ->
-            str 
-            |> Seq.toList 
-            |> List.rev 
-            |> Seq.takeWhile Char.IsDigit 
-            |> Seq.toArray 
-            |> Array.rev
-            |> fun chars -> String(chars)
+            let chars = 
+                let mutable charr = (str.ToCharArray ())
+                Array.revInPlace &charr; charr
+            let digits = 
+                let mutable darr = chars |> Array.takeWhile Char.IsDigit
+                Array.revInPlace &darr; darr
+            String digits
             |> function
                | "" -> str, None
                | index -> str.Substring (0, str.Length - index.Length), Some (int index)
@@ -586,6 +587,7 @@ module String =
     /// return null if the string is null
     let trim (value: string) = match value with null -> null | x -> x.Trim()
     
+    /// Splits a string into substrings based on the strings in the array seperators
     let split options (separator: string[]) (value: string) = 
         match value with null -> null | x -> x.Split(separator, options)
 
