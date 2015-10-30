@@ -119,14 +119,12 @@ module Array =
         checkNonNull "array" array
         let temp = Array.zeroCreate array.Length
         let mutable i = 0
-
         let hashSet = HashSet<'T>(HashIdentity.Structural<'T>)
         for v in array do 
             if hashSet.Add(v) then
                 temp.[i] <- v
                 i <- i + 1
-
-        Array.sub temp 0 i 
+        temp.[0..i ]
 
 
 
