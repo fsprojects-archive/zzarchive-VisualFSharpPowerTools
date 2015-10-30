@@ -1,12 +1,14 @@
 ﻿namespace FSharpVSPowerTools.QuickInfo
 
 open System
+open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
+open FSharpVSPowerTools.StringBuilder
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -37,51 +39,50 @@ type QuickInfoMargin (textDocument: ITextDocument,
     
     let buffer = view.TextBuffer
 
-    let updateQuickInfo (tooltip: string option, errors: ((FSharpErrorSeverity * string list) []) option) = lock updateLock <| fun () -> 
-        model.QuickInfo <-
-            errors
-            |> Option.map (fun errors ->
-                errors 
-                |> Array.map (fun (severity, errors) -> 
-                    let errors = List.map String.trim errors
-                    let title = 
-                        match errors with
-                        | [_] -> sprintf "%+A" severity
-                        | _ -> sprintf "%+As (%d)" severity errors.Length
-                    title + ": " + 
-                    (match errors with 
-                     | [e] -> e
-                     | _ -> 
-                        errors 
-                        |> List.mapi (fun i e -> sprintf "%d. %s" (i + 1) e) 
-                        |> List.toArray 
-                        |> String.concat " "))
-                |> String.concat " ")
-            |> Option.orElse (tooltip |> Option.bind (fun tooltip ->
-                tooltip 
-                |> String.getNonEmptyLines
-                |> Array.toList 
-                |> List.tryHead
-                |> Option.map (fun str ->
-                    if str.StartsWith("type ", StringComparison.Ordinal) then
-                        let index = str.LastIndexOf("=", StringComparison.Ordinal)
-                        if index > 0 then
-                            str.[0..index-1]
-                        else str
+    let updateQuickInfo (tooltip: string option, errors: ((FSharpErrorSeverity * string list) []) option) =
+        let updateFunc () =    
+            // helper function to lead a string builder across the collection of 
+            // errors accumulating lines annotated with their index number   
+            let errorString (errors:string list) (sb:StringBuilder) =
+                match errors with 
+                | [e] -> append e sb
+                | _ -> (sb, errors ) ||> List.foldi (fun sb i e -> 
+                    sb |> append (sprintf "%d. %s" (i + 1) e) |> append " ")
+                       
+            let currentInfo =
+                // if the tooltip contains errors show them
+                errors |> Option.map (fun errors ->
+                    (StringBuilder (), errors) ||> Array.fold (fun sb (severity, err) -> 
+                        let errorls = List.map String.trim err
+                        let title = 
+                            match errorls with
+                            | [_] -> sprintf "%s" <| string severity
+                            | _ -> sprintf "%s (%d)" (string severity) errorls.Length
+                        (sb |> append title |> append ": " |> errorString errorls |> append " ")) |> string)  
+                // show type info if there aren't any errors
+                |>  Option.orElse (tooltip |> Option.bind (fun tooltip ->
+                    tooltip  |> String.firstNonEmptyLine |> Option.map (fun str ->
+                    if str.StartsWith ("type ", StringComparison.Ordinal) then
+                        let index = str.LastIndexOf ("=", StringComparison.Ordinal)
+                        if index > 0 then str.[0..index-1] else str
                     else str)))
-            |> Option.getOrElse ""
+                // if there are no results the panel will be empty
+                |> Option.getOrElse ""
+            model.QuickInfo <- currentInfo
+        lock updateLock updateFunc      
+        
+    // helper function in the form required by mapNonEmptyLines
+    let flattener (sb:StringBuilder) (str:string) : StringBuilder =
+            if str.Length > 0 && Char.IsUpper str.[0] then (sb.Append ". ").Append (String.trim str) 
+            else (sb.Append " ").Append (String.trim str)
+                
 
-    let flattenLines (x: string) =
+    let flattenLines (x: string) : string =
+        let appendDot (x:string) = 
+            if x.Length > 0 && x.[x.Length - 1] <> '.' then x + "." else x
         match x with
         | null -> ""
-        | x ->
-            x 
-            |> String.getNonEmptyLines
-            |> Array.mapi (fun i x -> 
-                if i > 0 && x.Length > 0 && Char.IsUpper x.[0] then ". " + (String.trim x) 
-                else " " + (String.trim x))
-            |> String.concat ""
-            |> fun x -> if x.Length > 0 && x.[x.Length - 1] <> '.' then x + "." else x
+        | x -> x |> String.mapNonEmptyLines flattener |> appendDot
 
     let updateAtCaretPosition () =
         let caretPos = view.Caret.Position

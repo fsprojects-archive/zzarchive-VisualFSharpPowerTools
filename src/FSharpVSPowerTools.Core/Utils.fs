@@ -652,6 +652,21 @@ module String =
             else loop (reader.ReadLine())
         loop (reader.ReadLine())
 
+open System.Text
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module StringBuilder =
+    /// Pipelining function for appending a string to a stringbuilder
+    let inline append   (str:string) (sb:StringBuilder) = sb.Append str
+
+    /// Pipelining function for appending a string with a '\n' to a stringbuilder
+    let inline appendln (str:string) (sb:StringBuilder) = sb.AppendLine str
+    
+    /// SideEffecting function for appending a string to a stringbuilder
+    let appendi (str:string) (sb:StringBuilder) = sb.Append str |> ignore
+
+    /// SideEffecting function for appending a string with a '\n' to a stringbuilder
+    let appendlni (str:string) (sb:StringBuilder) = sb.AppendLine str |> ignore
+
 module Reflection =
     open System.Reflection
 
