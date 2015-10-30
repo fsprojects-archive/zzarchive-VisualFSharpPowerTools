@@ -143,7 +143,7 @@ module Array =
             if hashSet.Add(v) then
                 temp.[i] <- v
                 i <- i + 1
-        temp.[0..i]
+        temp.[0..i-1]
 
     /// pass an array byref to reverse it in place
     let revInPlace (arr: 'a[] byref ) =
