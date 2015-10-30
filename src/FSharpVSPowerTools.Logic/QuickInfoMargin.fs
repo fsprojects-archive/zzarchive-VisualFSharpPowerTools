@@ -50,24 +50,26 @@ type QuickInfoMargin (textDocument: ITextDocument,
                     sb |> append (sprintf "%d. %s" (i + 1) e) |> append " ")
                        
             let currentInfo =
-                // if the tooltip contains errors show them
-                errors |> Option.map (fun errors ->
-                    (StringBuilder (), errors) ||> Array.fold (fun sb (severity, err) -> 
+                match errors, tooltip with
+                | Some es, _ -> // if the tooltip contains errors show them
+                    let sb = StringBuilder ()
+                    for (severity, err) in es do
                         let errorls = List.map String.trim err
                         let title = 
                             match errorls with
                             | [_] -> sprintf "%s" <| string severity
                             | _ -> sprintf "%s (%d)" (string severity) errorls.Length
-                        (sb |> append title |> append ": " |> errorString errorls |> append " ")) |> string)  
-                // show type info if there aren't any errors
-                |>  Option.orElse (tooltip |> Option.bind (fun tooltip ->
-                    tooltip  |> String.firstNonEmptyLine |> Option.map (fun str ->
-                    if str.StartsWith ("type ", StringComparison.Ordinal) then
-                        let index = str.LastIndexOf ("=", StringComparison.Ordinal)
-                        if index > 0 then str.[0..index-1] else str
-                    else str)))
-                // if there are no results the panel will be empty
-                |> Option.getOrElse ""
+                        sb |> append title |> append ": " |> errorString errorls |> appendi " "
+                    string sb
+                | None, Some tt ->   // show type info if there aren't any errors
+                    match  String.firstNonEmptyLine tt with
+                    | Some str ->
+                        if str.StartsWith ("type ", StringComparison.Ordinal) then
+                            let index = str.LastIndexOf ("=", StringComparison.Ordinal)
+                            if index > 0 then str.[0..index-1] else str
+                        else str
+                    | None -> ""
+                | None, None -> ""  // if there are no results the panel will be empty
             model.QuickInfo <- currentInfo
         lock updateLock updateFunc      
         

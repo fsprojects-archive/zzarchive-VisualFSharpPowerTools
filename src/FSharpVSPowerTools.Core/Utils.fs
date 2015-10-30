@@ -62,7 +62,7 @@ module Array =
 
     /// Optimized arrays equality. ~100x faster than `array1 = array2` on strings.
     /// ~2x faster for floats
-    /// ~0.80% for ints
+    /// ~0.8x slower for ints
     let inline areEqual (x: 'a[]) (y: 'a[]) =
         match x, y with
         | null, null -> true
@@ -572,24 +572,24 @@ module String =
         match str with
         | null -> null, None
         | _ ->
-            let chars = 
-                let mutable charr = (str.ToCharArray ())
-                Array.revInPlace &charr; charr
-            let digits = 
-                let mutable darr = chars |> Array.takeWhile Char.IsDigit
-                Array.revInPlace &darr; darr
-            String digits
+            str 
+            |> Seq.toList 
+            |> List.rev 
+            |> Seq.takeWhile Char.IsDigit 
+            |> Seq.toArray 
+            |> Array.rev
+            |> fun chars -> String(chars)
             |> function
                | "" -> str, None
                | index -> str.Substring (0, str.Length - index.Length), Some (int index)
 
     /// Remove all trailing and leading whitespace from the string
     /// return null if the string is null
-    let trim (value: string) = match value with null -> null | x -> x.Trim()
+    let trim (value: string) = if value == null then null else value.Trim()
     
     /// Splits a string into substrings based on the strings in the array seperators
     let split options (separator: string[]) (value: string) = 
-        match value with null -> null | x -> x.Split(separator, options)
+        if value == null then null else value.Split(separator, options)
 
     let (|StartsWith|_|) pattern value =
         if String.IsNullOrWhiteSpace(value) then
@@ -664,10 +664,10 @@ module StringBuilder =
     let inline appendln (str:string) (sb:StringBuilder) = sb.AppendLine str
     
     /// SideEffecting function for appending a string to a stringbuilder
-    let appendi (str:string) (sb:StringBuilder) = sb.Append str |> ignore
+    let inline appendi (str:string) (sb:StringBuilder) = sb.Append str |> ignore
 
     /// SideEffecting function for appending a string with a '\n' to a stringbuilder
-    let appendlni (str:string) (sb:StringBuilder) = sb.AppendLine str |> ignore
+    let inline appendlni (str:string) (sb:StringBuilder) = sb.AppendLine str |> ignore
 
 module Reflection =
     open System.Reflection
