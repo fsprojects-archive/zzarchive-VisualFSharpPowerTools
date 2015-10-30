@@ -192,3 +192,6 @@ _NCrunch_*
 build_PRIVATE.cmd
 gallerycredentials.txt
 .fake
+
+.vs/config/applicationhost.config
+*.FSharpLint
