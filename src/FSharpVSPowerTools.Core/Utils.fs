@@ -123,12 +123,17 @@ module Array =
             state <- folder.Invoke (state, i, array.[i])
         state
 
-    /// Get the first element of the array or None if the Array is empty
+    /// Get the first element of the array or None if the Array is null or empty
     let tryHead array =        
         match array with
         | null | [||] -> None
         | arr  -> Some arr.[0]    
-    
+
+    /// Get the last element of the array or None if the Array is null or empty
+    let tryLast array =
+        match array with
+        | null | [||] -> None
+        | arr  -> Some arr.[arr.Length-1]        
 
     open System.Collections.Generic
 
@@ -557,16 +562,18 @@ module Pervasive =
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module String =
+
+    let inline toCharArray (str:string) = str.ToCharArray()
+
     let lowerCaseFirstChar (str: string) =
-        match str with
-        | null -> null
-        | str ->
-            match str.ToCharArray () with
-            | [||] -> str
-            | arr when Char.IsUpper arr.[0] -> 
-                arr.[0] <- Char.ToLower arr.[0]
-                String (arr)
-            | _ -> str
+        if isNull str then null else 
+        let strArr = toCharArray str
+        match Array.tryHead strArr with
+        | None -> str
+        | Some c when Char.IsUpper c -> 
+            strArr.[0] <- Char.ToLower c
+            String (strArr)
+        | Some _ -> str
 
     let extractTrailingIndex (str: string) =
         match str with
@@ -585,11 +592,11 @@ module String =
 
     /// Remove all trailing and leading whitespace from the string
     /// return null if the string is null
-    let trim (value: string) = if value == null then null else value.Trim()
+    let trim (value: string) = if isNull value then null else value.Trim()
     
     /// Splits a string into substrings based on the strings in the array seperators
     let split options (separator: string[]) (value: string) = 
-        if value == null then null else value.Split(separator, options)
+        if isNull value  then null else value.Split(separator, options)
 
     let (|StartsWith|_|) pattern value =
         if String.IsNullOrWhiteSpace(value) then

@@ -79,12 +79,14 @@ type QuickInfoMargin (textDocument: ITextDocument,
             else (sb.Append " ").Append (String.trim str)
                 
 
-    let flattenLines (x: string) : string =
-        let appendDot (x:string) = 
-            if x.Length > 0 && x.[x.Length - 1] <> '.' then x + "." else x
-        match x with
-        | null -> ""
-        | x -> x |> String.mapNonEmptyLines flattener |> appendDot
+    let flattenLines (str:string) : string =
+        if isNull str then "" else 
+        let flatstr = String.mapNonEmptyLines flattener str
+        match flatstr |> String.toCharArray |> Array.tryLast with
+        | None  -> ""
+        | Some '.' -> flatstr
+        | Some _ -> flatstr + "."
+
 
     let updateAtCaretPosition () =
         let caretPos = view.Caret.Position
