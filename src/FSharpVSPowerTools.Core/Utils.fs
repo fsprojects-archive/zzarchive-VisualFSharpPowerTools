@@ -3,6 +3,18 @@
 open System
 open System.Diagnostics
 
+
+[<AutoOpen>]
+module Prelude =
+    /// obj.ReferenceEquals
+    let inline (==) a b = obj.ReferenceEquals(a, b)
+    /// LanguagePrimitives.PhysicalEquality
+    let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
+    let inline debug msg = Printf.kprintf Debug.WriteLine msg
+    let inline fail msg = Printf.kprintf Debug.Fail msg
+    let inline isNull v = match v with | null -> true | _ -> false
+    let inline isNotNull v = v |> (not << isNull)
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Seq =
@@ -35,19 +47,44 @@ module Array =
         | null -> nullArg argName 
         | _ -> ()
 
+    /// Optimized arrays equality. ~100x faster than `array1 = array2` on strings.
+    /// ~2x faster for floats
+    /// ~0.80% for ints
+    let inline areEqual (x: 'a[]) (y: 'a[]) =
+        match x, y with
+        | null, null -> true
+        | [||], [||] -> true
+        | null, _ | _, null -> false
+        | _ when x.Length <> y.Length -> false
+        | _ ->
+            let mutable break' = false
+            let mutable i = 0
+            let mutable result = true
+            while i < x.Length && not break' do
+                if x.[i] <> y.[i] then 
+                    break' <- true
+                    result <- false
+                i <- i + 1
+            result
+
+
     /// Returns true if one array has another as its subset from index 0.
-    let startsWith (prefix: _ []) (whole: _ []) =
-        if prefix.Length = 0 then true
+    let startsWith (prefix: _ []) (whole: _ []) =        
+        if isNull prefix || isNull whole then false
+        elif prefix.Length = 0 then true
         elif prefix.Length > whole.Length then false
-        elif prefix.Length = whole.Length then prefix = whole
-        else Array.sub whole 0 prefix.Length = prefix
+        elif prefix.Length = whole.Length then areEqual prefix whole
+        else areEqual whole.[0..prefix.Length-1] prefix
+
 
     /// Returns true if one array has trailing elements equal to another's.
     let endsWith (suffix: _ []) (whole: _ []) =
-        if suffix.Length = 0 then true
+        if isNull suffix || isNull whole then false
+        elif suffix.Length = 0 then true
         elif suffix.Length > whole.Length then false
-        elif suffix.Length = whole.Length then suffix = whole
-        else Array.sub whole (whole.Length-suffix.Length) suffix.Length = suffix
+        elif suffix.Length = whole.Length then areEqual suffix whole
+        else areEqual whole.[whole.Length-suffix.Length..whole.Length-1] suffix
+
 
     /// Returns a new array with an element replaced with a given value.
     let replace index value (arr: _ []) =
@@ -64,11 +101,13 @@ module Array =
             res.[i] <- array.[0..i]
         res
 
+    /// Fold over the array passing the index and element at that index to a folding function
     let foldi (folder : 'State -> int -> 'T -> 'State) (state : 'State) (array : 'T[]) =
+        let folder = OptimizedClosures.FSharpFunc<_,_,_,_>.Adapt folder
         let mutable state = state
         let len = array.Length
         for i = 0 to len - 1 do
-            state <- folder state i array.[i]
+            state <- folder.Invoke (state, i, array.[i])
         state
 
     open System.Collections.Generic
@@ -89,23 +128,7 @@ module Array =
 
         Array.sub temp 0 i 
 
-    /// Optimized arrays equality. ~100x faster than `array1 = array2`.
-    let inline areEqual (x: 'a[]) (y: 'a[]) =
-        match x, y with
-        | null, null -> true
-        | [||], [||] -> true
-        | null, _ | _, null -> false
-        | _ when x.Length <> y.Length -> false
-        | _ ->
-            let mutable break' = false
-            let mutable i = 0
-            let mutable result = true
-            while i < x.Length && not break' do
-                if x.[i] <> y.[i] then 
-                    break' <- true
-                    result <- false
-                i <- i + 1
-            result
+
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -415,14 +438,6 @@ module Pervasive =
     Debug.Listeners.Add(new TextWriterTraceListener(System.Console.Out)) |> ignore
     Debug.AutoFlush <- true
 #endif
-    /// obj.ReferenceEquals
-    let inline (==) a b = obj.ReferenceEquals(a, b)
-    /// LanguagePrimitives.PhysicalEquality
-    let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
-    let inline debug msg = Printf.kprintf Debug.WriteLine msg
-    let inline fail msg = Printf.kprintf Debug.Fail msg
-    let inline isNull v = match v with | null -> true | _ -> false
-    let inline isNotNull v = v |> (not << isNull)
 
     let maybe = MaybeBuilder()
     let asyncMaybe = AsyncMaybeBuilder()
