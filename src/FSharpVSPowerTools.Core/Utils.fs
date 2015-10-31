@@ -613,6 +613,16 @@ module Pervasive =
             | _, _ when Object.Equals(ctx, nctx) && thread.Equals(Thread.CurrentThread) -> g arg
             | _ -> ctx.Post((fun _ -> g (arg)), null))
 
+    let memoize f =
+        let cache = System.Collections.Generic.Dictionary()
+        fun x ->
+            match cache.TryGetValue x with
+            | true, x -> x
+            | _ ->
+                let res = f x
+                cache.[x] <- res
+                res
+
     type Microsoft.FSharp.Control.Async with
         static member EitherEvent(ev1: IObservable<'T>, ev2: IObservable<'U>) = 
             synchronize (fun f -> 
@@ -660,6 +670,28 @@ module Pervasive =
 
     /// Path.Combine
     let (</>) path1 path2 = Path.Combine (path1, path2)
+
+[<RequireQualifiedAccess>]
+module Dict = 
+    open System.Collections.Generic
+
+    let add key value (dict: Dictionary<_,_>) =
+        dict.[key] <- value
+        dict
+
+    let remove (key: 'k) (dict: Dictionary<'k,_>) =
+        dict.Remove key |> ignore
+        dict
+
+    let tryFind key (dict: Dictionary<'k, 'v>) = 
+        let mutable value = Unchecked.defaultof<_>
+        if dict.TryGetValue (key, &value) then Some value
+        else None
+
+    let ofSeq (xs: ('k * 'v) seq) = 
+        let dict = Dictionary()
+        for k, v in xs do dict.[k] <- v
+        dict
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
