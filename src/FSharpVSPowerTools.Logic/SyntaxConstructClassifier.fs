@@ -59,7 +59,7 @@ type SyntaxConstructClassifier
         includeUnusedOpens: bool
     ) as self =
     
-    let getClassificationType cat =
+    let getClassificationType = memoize <| fun cat ->
         match cat with
         | Category.ReferenceType -> Some Constants.fsharpReferenceType
         | Category.ValueType -> Some Constants.fsharpValueType

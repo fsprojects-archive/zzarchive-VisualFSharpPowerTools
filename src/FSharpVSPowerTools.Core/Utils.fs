@@ -462,6 +462,16 @@ module Pervasive =
             | _, _ when Object.Equals(ctx, nctx) && thread.Equals(Thread.CurrentThread) -> g arg
             | _ -> ctx.Post((fun _ -> g (arg)), null))
 
+    let memoize f =
+        let cache = System.Collections.Generic.Dictionary()
+        fun x ->
+            match cache.TryGetValue x with
+            | true, x -> x
+            | _ ->
+                let res = f x
+                cache.[x] <- res
+                res
+
     type Microsoft.FSharp.Control.Async with
         static member EitherEvent(ev1: IObservable<'T>, ev2: IObservable<'U>) = 
             synchronize (fun f -> 
