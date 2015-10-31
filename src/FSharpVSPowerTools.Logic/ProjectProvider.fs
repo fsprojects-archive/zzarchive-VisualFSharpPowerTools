@@ -13,7 +13,7 @@ type internal ProjectProvider(project: Project,
                               getProjectProvider: Project -> IProjectProvider option, 
                               onChanged: Project -> unit) =
     static let mutable getField = None
-    do Debug.Assert(project <> null, "Input project should be well-formed.")
+    do Debug.Assert(project == null, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
     let refChanged = _dispReferencesEvents_ReferenceChangedEventHandler (fun _ -> onChanged project)
     let refRemoved = _dispReferencesEvents_ReferenceRemovedEventHandler (fun _ -> onChanged project)
