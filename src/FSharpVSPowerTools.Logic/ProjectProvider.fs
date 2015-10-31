@@ -13,7 +13,7 @@ type internal ProjectProvider(project: Project,
                               getProjectProvider: Project -> IProjectProvider option, 
                               onChanged: Project -> unit) =
     static let mutable getField = None
-    do Debug.Assert(project == null, "Input project should be well-formed.")
+    do Debug.Assert(isNotNull project, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)
     let refChanged = _dispReferencesEvents_ReferenceChangedEventHandler (fun _ -> onChanged project)
     let refRemoved = _dispReferencesEvents_ReferenceRemovedEventHandler (fun _ -> onChanged project)
@@ -37,7 +37,7 @@ type internal ProjectProvider(project: Project,
     
     let projectFileName = lazy (
         let fileName = getProperty "FileName"
-        Debug.Assert(fileName <> null && currentDir <> null, "Should have a file name for the project.")
+        Debug.Assert(isNotNull fileName && isNotNull currentDir, "Should have a file name for the project.")
         Path.Combine(currentDir, fileName))
     
     let getSourcesAndFlags = 
@@ -174,9 +174,9 @@ type internal ProjectProvider(project: Project,
                  p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
                  p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
      
-/// A standalone project provider in order to represent script files                            
+/// A standalone project provider in order to represent script files
 type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string, vsVersion) = 
-    do Debug.Assert (filePath <> null && buffer <> null, "FilePath and Buffer should not be null.")
+    do Debug.Assert (isNotNull filePath && isNotNull buffer, "FilePath and Buffer should not be null.")
     let source = buffer.CurrentSnapshot.GetText()
     let compilerVersion = 
         match vsVersion with
