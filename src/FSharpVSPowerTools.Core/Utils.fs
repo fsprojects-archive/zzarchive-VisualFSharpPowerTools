@@ -15,11 +15,7 @@ module Prelude =
     let inline isNull v = match v with | null -> true | _ -> false
     let inline isNotNull v = v |> (not << isNull)
     let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
-    let inline (+=) (a1:'a byref) (a2:'a) = a1 <- a1 + a2
-    let inline (-=) (a1:'a byref) (a2:'a) = a1 <- a1 - a2
-
-    type 'a List with
-        member x.Last = x.[x.Length-1]
+    
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -34,7 +30,11 @@ open System.Collections.Generic
 module List =
     let tryHead = function [] -> None | h :: _ -> Some h
 
-    let inline last (xs:'a list) = xs.Last
+    let rec last (xs:'a list) =
+        match xs with
+        | [] -> failwith "an empty list has no last element"
+        | x::[] -> x
+        | _::tl -> last tl
 
     let rec skipWhile p xs =
         match xs with
@@ -79,7 +79,7 @@ module List =
             | _ -> ()
         loop list
         dict  // Return the list-of-lists.
-        |> Seq.map (fun group -> (group.Key, group.Value.ToArray() |> List.ofArray))
+        |> Seq.map (fun group -> (group.Key, Seq.toList group.Value))
         |> Seq.toList
 
 
@@ -108,7 +108,7 @@ module Array =
                 if x.[i] <> y.[i] then 
                     break' <- true
                     result <- false
-                &i += 1
+                i <- i + 1
             result
 
 
@@ -190,7 +190,7 @@ module Array =
         for v in array do 
             if hashSet.Add(v) then
                 temp.[i] <- v
-                &i += 1
+                i <- i + 1
         temp.[0..i-1]
 
 
@@ -202,7 +202,7 @@ module Array =
         for v in array do
             if hashSet.Add(keyf v) then
                 temp.[i] <- v
-                &i += 1
+                i <- i + 1
         temp.[0..i]
 
     /// pass an array byref to reverse it in place
@@ -223,7 +223,7 @@ module Array =
         if array.Length = 0 then Array.empty else
         let mutable count = 0
         while count < array.Length-1 && predicate array.[count] do
-            &count += 1
+            count <- count + 1
         array.[0..count]
 
 
@@ -234,7 +234,7 @@ module Array =
         if array.Length = 0 then Array.empty else
         let mutable count = 0
         while count < array.Length-1 && predicate array.[count] do
-            &count += 1
+            count <- count + 1
         array.[count..array.Length-1]
 
 
@@ -247,7 +247,7 @@ module Array =
         for elm in array do
             if predicate elm then 
                result.[count] <- mapfn elm
-               &count += 1
+               count <- count + 1
         if count = 0 then [||] else
 
         result.[0..count]
@@ -271,7 +271,7 @@ module Array =
         let mutable i = 0
         for group in dict do
             result.[i] <- group.Key, group.Value.ToArray ()
-            &i += 1
+            i <- i + 1
         result
 
 

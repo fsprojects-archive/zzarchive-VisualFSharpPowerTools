@@ -39,7 +39,7 @@ type InterfaceData =
                     | HeadTypeStaticReq -> 
                         Some ("^" + s.idText)
                 | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
-                    xs |> List.map (fun x -> x.idText) |> String.concat "." |> Some
+                    xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
                 | SynType.App(t, _, ts, _, _, isPostfix, _) ->
                     match t, ts with
                     | TypeIdent typeName, [] -> Some typeName
@@ -49,7 +49,7 @@ type InterfaceData =
                         else
                             Some (sprintf "%s<%s>" typeName typeArg)
                     | TypeIdent typeName, _ -> 
-                        let typeArgs = ts |> List.choose (|TypeIdent|_|) |> String.concat ", "
+                        let typeArgs = ts |> Seq.choose (|TypeIdent|_|) |> String.concat ", "
                         if isPostfix then 
                             Some (sprintf "(%s) %s" typeArgs typeName)
                         else
@@ -60,7 +60,7 @@ type InterfaceData =
                 | SynType.Anon _ -> 
                     Some "_"
                 | SynType.Tuple(ts, _) ->
-                    Some (ts |> List.choose (snd >> (|TypeIdent|_|)) |> String.concat " * ")
+                    Some (ts |> Seq.choose (snd >> (|TypeIdent|_|)) |> String.concat " * ")
                 | SynType.Array(dimension, TypeIdent typeName, _) ->
                     Some (sprintf "%s [%s]" typeName (new String(',', dimension-1)))
                 | SynType.MeasurePower(TypeIdent typeName, RationalConst power, _) ->
@@ -72,7 +72,7 @@ type InterfaceData =
             match typ with
             | SynType.App(_, _, ts, _, _, _, _)
             | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
-                ts |> List.choose (|TypeIdent|_|) |> List.toArray
+                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
             | _ ->
                 [||]
 
@@ -122,7 +122,7 @@ module InterfaceStubGenerator =
             match arg.Name with 
             | None ->
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
-                else sprintf "arg%d" (namesWithIndices |> Map.toArray |> Array.map snd |> Array.sumBy Set.count |> max 1)
+                else sprintf "arg%d" (namesWithIndices |> Map.toSeq |> Seq.map snd |> Seq.sumBy Set.count |> max 1)
             | Some x -> x
         
         let nm, namesWithIndices = normalizeArgName namesWithIndices nm
@@ -430,8 +430,9 @@ module InterfaceStubGenerator =
             []
         | InterfaceData.Interface(_, Some memberDefns) -> 
             memberDefns
-            |> List.choose (function (SynMemberDefn.Member(binding, _)) -> Some binding | _ -> None)
-            |> List.choose (|MemberNameAndRange|_|)
+            |> Seq.choose (function (SynMemberDefn.Member(binding, _)) -> Some binding | _ -> None)
+            |> Seq.choose (|MemberNameAndRange|_|)
+            |> Seq.toList
         | InterfaceData.ObjExpr(_, bindings) -> 
             List.choose (|MemberNameAndRange|_|) bindings
 
@@ -484,13 +485,13 @@ module InterfaceStubGenerator =
         Debug.Assert(isInterface e, "The entity should be an interface.")
         let lines = String.getLines methodBody
         use writer = new ColumnIndentedTextWriter()
-        let typeParams = Seq.map getTypeParameterName e.GenericParameters |> Seq.toArray
+        let typeParams = Seq.map getTypeParameterName e.GenericParameters
         let instantiations = 
             let insts =
-                Array.zip typeParams typeInstances
+                Seq.zip typeParams typeInstances
                 // Filter out useless instances (when it is replaced by the same name or by wildcard)
-                |> Array.filter(fun (t1, t2) -> t1 <> t2 && t2 <> "_") 
-                |> Map.ofArray
+                |> Seq.filter(fun (t1, t2) -> t1 <> t2 && t2 <> "_") 
+                |> Map.ofSeq
             // A simple hack to handle instantiation of type alias 
             if e.IsFSharpAbbreviation then
                 let typ = getNonAbbreviatedType e.AbbreviatedType

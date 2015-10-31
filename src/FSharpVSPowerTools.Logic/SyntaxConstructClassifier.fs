@@ -158,8 +158,9 @@ type SyntaxConstructClassifier
             return 
                 entities
                 |> Option.map ( 
-                    List.groupBy (fun e -> e.FullName)
-                    >> List.map (fun (key, es) -> key, es |> List.map (fun e -> e.CleanedIdents))
+                    Seq.groupBy (fun e -> e.FullName)
+                    >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents)|> Seq.toList)
+                    >> Seq.toList
                     >> Map.ofList),
                 openDecls
         }
@@ -174,7 +175,7 @@ type SyntaxConstructClassifier
         else Some()
 
 
-    let mergeSpans (oldSpans: CategorizedColumnSpan<_>[]) (newSpans: CategorizedColumnSpan<_>[]) =
+    let mergeSpans (oldSpans: CategorizedColumnSpan<'a>[]) (newSpans: CategorizedColumnSpan<'a>[]) =
 
         let getLineRange spans =
             let lines = 
@@ -190,25 +191,30 @@ type SyntaxConstructClassifier
             if lines.Length = 0 then (-1, -1) else
             Array.min lines, Array.max lines
 
-        let compareSpans oldSpans newSpans =
-            let newStartLine, newEndLine = getLineRange newSpans
-            let oldStartLine, oldEndLine = getLineRange oldSpans
+        let compareSpans (oldSpans:CategorizedColumnSpan<'a>[]) (newSpans:CategorizedColumnSpan<'a>[]) =
+            match  getLineRange oldSpans, getLineRange newSpans with
+            |  (-1,-1),(-1,-1) -> [||]
+            |    _    ,(-1,-1) -> oldSpans
+            |  (-1,-1), _      -> newSpans    
+            | (oldStartLine, oldEndLine),(newStartLine, newEndLine) ->
+            // if the new spans encompass the old spans replace them all
             if newStartLine <= oldStartLine && newEndLine >= oldEndLine then
                 debug "[SyntaxConstructClassifier] Replace spans entirely."
                 newSpans
             else
                 debug "[SyntaxConstructClassifier] Mergin spans (new range %A < old range %A)."
-                      (newStartLine, newEndLine) (oldStartLine, oldEndLine)
+               
+                      (newStartLine, newEndLine) (oldStartLine, oldEndLine) 
                 seq {
-                    yield (oldSpans |> Array.takeWhile (fun x -> x.WordSpan.Line < newStartLine))
-                    yield (oldSpans |> Array.skipWhile (fun x -> x.WordSpan.Line < newEndLine)) 
-                    yield newSpans
-                }   
-                |> Array.concat 
-                |> Array.sortBy (fun x -> x.WordSpan.Line)
+                    yield! (oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine))
+                    yield! (oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine))   
+                    yield! newSpans                  
+                }     
+                |> Seq.sortBy (fun x -> x.WordSpan.Line)
+                |> Seq.toArray
 
         match oldSpans , newSpans with
-        | null, null | [||], [||] -> [||]
+        | null, null | null, [||] | [||], null | [||], [||] -> [||]
         | [||], nspans   -> nspans 
         | ospans , [||]  -> ospans
         | ospans, nspans -> compareSpans ospans nspans    
@@ -453,8 +459,8 @@ type SyntaxConstructClassifier
             let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 10
             spans
             // Locations are sorted, so we can safely filter them efficiently
-            |> Array.skipWhile (fun span -> span.WordSpan.Line < spanStartLine)
-            |> Array.choose (fun columnSpan -> 
+            |> Seq.skipWhile (fun span -> span.WordSpan.Line < spanStartLine)
+            |> Seq.choose (fun columnSpan -> 
                 maybe {
                     let! clType = getClassificationType columnSpan.Category
                     // Create a span on the original snapshot
@@ -467,8 +473,9 @@ type SyntaxConstructClassifier
                     // Translate the span to the new snapshot
                     return clType, span 
                 })
-            |> Array.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
-            |> Array.map (fun (clType, span) -> ClassificationSpan (span, clType))
+            |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
+            |> Seq.map (fun (clType, span) -> ClassificationSpan (span, clType))
+            |> Seq.toArray
         | FastStage.NoData -> 
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(textDocument.FilePath)) then

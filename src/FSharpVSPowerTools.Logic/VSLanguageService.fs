@@ -90,13 +90,13 @@ type VSLanguageService
 
     let filterSymbolUsesDuplicates (uses: FSharpSymbolUse[]) =
         uses
-        |> Array.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
-        |> Array.groupBy (fst >> Path.GetFullPathSafe)
-        |> Array.collect (fun (_, symbolUses) -> 
+        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
+        |> Seq.groupBy (fst >> Path.GetFullPathSafe)
+        |> Seq.collect (fun (_, symbolUses) -> 
             symbolUses 
-            |> Array.map snd 
-            |> Array.distinctBy (fun s -> s.RangeAlternate))
-
+            |> Seq.map snd 
+            |> Seq.distinctBy (fun s -> s.RangeAlternate))
+        |> Seq.toArray
 
     let mayReferToSameBuffer (snapshot: ITextSnapshot) filePath =
         match openDocumentsTracker.TryFindOpenDocument(filePath) with
