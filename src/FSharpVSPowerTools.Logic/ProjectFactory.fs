@@ -26,13 +26,13 @@ type private Cache<'K, 'V when 'K: comparison>() =
         | _ -> ()
 
     let agent = MailboxProcessor.Start(fun inbox ->
-        let rec loop (cache: Map<'K, 'V>) = 
+        let rec loop (cache: Dictionary<'K, 'V>) = 
             async {
                 let! msg = inbox.Receive()
                 return! loop (
                     match msg with
                     | Get (key, creator, r) ->
-                        match cache |> Map.tryFind key with
+                        match cache |> Dict.tryFind key with
                         | Some value ->
                             //debug "[Project cache] Return from cache for %A" key
                             r.Reply value
@@ -41,21 +41,21 @@ type private Cache<'K, 'V when 'K: comparison>() =
                             let value = creator()
                             //debug "[Project cache] Creating new value for %A" key
                             r.Reply value
-                            cache |> Map.add key value
+                            cache |> Dict.add key value
                     | TryGet (key, r) ->
-                        r.Reply (cache |> Map.tryFind key)
+                        r.Reply (cache |> Dict.tryFind key)
                         cache
                     | Remove key -> 
-                        match cache |> Map.tryFind key with
+                        match cache |> Dict.tryFind key with
                         | Some value -> 
                             disposeValue value
-                            cache |> Map.remove key
+                            cache |> Dict.remove key
                         | _ -> cache
                     | Clear -> 
-                        cache |> Map.toSeq |> Seq.iter (fun (_, value) -> disposeValue value)
-                        Map.empty) 
+                        cache |> Seq.iter (fun x -> disposeValue x.Value)
+                        Dictionary())
             }
-        loop Map.empty)
+        loop (Dictionary()))
     do agent.Error.Add (fail "%O")
     member __.Get key creator = agent.PostAndReply (fun r -> Get (key, creator, r))
     member __.TryGet key = agent.PostAndReply (fun r -> TryGet (key, r))

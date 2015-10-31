@@ -521,6 +521,28 @@ module Pervasive =
     let (</>) path1 path2 = Path.Combine (path1, path2)
 
 [<RequireQualifiedAccess>]
+module Dict = 
+    open System.Collections.Generic
+
+    let add key value (dict: Dictionary<_,_>) =
+        dict.[key] <- value
+        dict
+
+    let remove (key: 'k) (dict: Dictionary<'k,_>) =
+        dict.Remove key |> ignore
+        dict
+
+    let tryFind key (dict: Dictionary<'k, 'v>) = 
+        let mutable value = Unchecked.defaultof<_>
+        if dict.TryGetValue (key, &value) then Some value
+        else None
+
+    let ofSeq (xs: ('k * 'v) seq) = 
+        let dict = Dictionary()
+        for k, v in xs do dict.[k] <- v
+        dict
+
+[<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module String =
     let lowerCaseFirstChar (str: string) =
