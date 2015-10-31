@@ -39,7 +39,7 @@ type InterfaceData =
                     | HeadTypeStaticReq -> 
                         Some ("^" + s.idText)
                 | SynType.LongIdent(LongIdentWithDots(xs, _)) ->
-                    xs |> Seq.map (fun x -> x.idText) |> String.concat "." |> Some
+                    xs |> List.map (fun x -> x.idText) |> String.concat "." |> Some
                 | SynType.App(t, _, ts, _, _, isPostfix, _) ->
                     match t, ts with
                     | TypeIdent typeName, [] -> Some typeName
@@ -49,7 +49,7 @@ type InterfaceData =
                         else
                             Some (sprintf "%s<%s>" typeName typeArg)
                     | TypeIdent typeName, _ -> 
-                        let typeArgs = ts |> Seq.choose (|TypeIdent|_|) |> String.concat ", "
+                        let typeArgs = ts |> List.choose (|TypeIdent|_|) |> String.concat ", "
                         if isPostfix then 
                             Some (sprintf "(%s) %s" typeArgs typeName)
                         else
@@ -60,7 +60,7 @@ type InterfaceData =
                 | SynType.Anon _ -> 
                     Some "_"
                 | SynType.Tuple(ts, _) ->
-                    Some (ts |> Seq.choose (snd >> (|TypeIdent|_|)) |> String.concat " * ")
+                    Some (ts |> List.choose (snd >> (|TypeIdent|_|)) |> String.concat " * ")
                 | SynType.Array(dimension, TypeIdent typeName, _) ->
                     Some (sprintf "%s [%s]" typeName (new String(',', dimension-1)))
                 | SynType.MeasurePower(TypeIdent typeName, RationalConst power, _) ->
@@ -72,7 +72,7 @@ type InterfaceData =
             match typ with
             | SynType.App(_, _, ts, _, _, _, _)
             | SynType.LongIdentApp(_, _, _, ts, _, _, _) ->
-                ts |> Seq.choose (|TypeIdent|_|) |> Seq.toArray
+                ts |> List.choose (|TypeIdent|_|) |> List.toArray
             | _ ->
                 [||]
 
@@ -103,7 +103,7 @@ module InterfaceStubGenerator =
             None
         | _ -> 
             let revd = List.rev xs
-            Some(List.rev revd.Tail, revd.Head)
+            Some (List.rev revd.Tail, revd.Head)
 
     let internal getTypeParameterName (typar: FSharpGenericParameter) =
         (if typar.IsSolveAtCompileTime then "^" else "'") + typar.Name
@@ -122,7 +122,7 @@ module InterfaceStubGenerator =
             match arg.Name with 
             | None ->
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
-                else sprintf "arg%d" (namesWithIndices |> Map.toList |> List.map snd |> List.sumBy Set.count |> max 1)
+                else sprintf "arg%d" (namesWithIndices |> Map.toArray |> Array.map snd |> Array.sumBy Set.count |> max 1)
             | Some x -> x
         
         let nm, namesWithIndices = normalizeArgName namesWithIndices nm
@@ -401,7 +401,7 @@ module InterfaceStubGenerator =
 
     let internal (|LongIdentPattern|_|) = function
         | SynPat.LongIdent(LongIdentWithDots(xs, _), _, _, _, _, _) ->
-            let (name, range) = xs |> Seq.map (fun x -> x.idText, x.idRange) |> Seq.last
+            let (name, range) = xs |> List.map (fun x -> x.idText, x.idRange) |> List.last
             Some(name, range)
         | _ -> 
             None
@@ -430,9 +430,8 @@ module InterfaceStubGenerator =
             []
         | InterfaceData.Interface(_, Some memberDefns) -> 
             memberDefns
-            |> Seq.choose (function (SynMemberDefn.Member(binding, _)) -> Some binding | _ -> None)
-            |> Seq.choose (|MemberNameAndRange|_|)
-            |> Seq.toList
+            |> List.choose (function (SynMemberDefn.Member(binding, _)) -> Some binding | _ -> None)
+            |> List.choose (|MemberNameAndRange|_|)
         | InterfaceData.ObjExpr(_, bindings) -> 
             List.choose (|MemberNameAndRange|_|) bindings
 
@@ -467,11 +466,11 @@ module InterfaceStubGenerator =
         async {
             let! symbolUses = 
                 getMemberNameAndRanges interfaceData
-                |> Seq.toArray
+                |> List.toArray
                 |> Async.Array.map getMemberByLocation
-            return symbolUses |> Seq.choose (Option.bind formatMemberSignature)
-                              |> Seq.concat
-                              |> Set.ofSeq
+            return symbolUses |> Array.choose (Option.bind formatMemberSignature >> Option.map String.Concat)
+                             // |> Array.concat
+                              |> Set.ofArray
         }
 
     /// Check whether an entity is an interface or type abbreviation of an interface
@@ -485,13 +484,13 @@ module InterfaceStubGenerator =
         Debug.Assert(isInterface e, "The entity should be an interface.")
         let lines = String.getLines methodBody
         use writer = new ColumnIndentedTextWriter()
-        let typeParams = Seq.map getTypeParameterName e.GenericParameters
+        let typeParams = Seq.map getTypeParameterName e.GenericParameters |> Seq.toArray
         let instantiations = 
             let insts =
-                Seq.zip typeParams typeInstances
+                Array.zip typeParams typeInstances
                 // Filter out useless instances (when it is replaced by the same name or by wildcard)
-                |> Seq.filter(fun (t1, t2) -> t1 <> t2 && t2 <> "_") 
-                |> Map.ofSeq
+                |> Array.filter(fun (t1, t2) -> t1 <> t2 && t2 <> "_") 
+                |> Map.ofArray
             // A simple hack to handle instantiation of type alias 
             if e.IsFSharpAbbreviation then
                 let typ = getNonAbbreviatedType e.AbbreviatedType

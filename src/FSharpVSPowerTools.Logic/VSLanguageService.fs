@@ -67,7 +67,7 @@ type VSLanguageService
     let suggestRecoveryAfterFailure ex fileName _source opts =
         Logging.logError (fun _ -> sprintf "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-        statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
+        statusBar.SetText Resource.languageServiceErrorMessage |> ignore 
                 
     do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure
        openDocumentsTracker.DocumentChanged.Add instance.OnFileChanged
@@ -90,13 +90,13 @@ type VSLanguageService
 
     let filterSymbolUsesDuplicates (uses: FSharpSymbolUse[]) =
         uses
-        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
-        |> Seq.groupBy (fst >> Path.GetFullPathSafe)
-        |> Seq.collect (fun (_, symbolUses) -> 
+        |> Array.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
+        |> Array.groupBy (fst >> Path.GetFullPathSafe)
+        |> Array.collect (fun (_, symbolUses) -> 
             symbolUses 
-            |> Seq.map snd 
-            |> Seq.distinctBy (fun s -> s.RangeAlternate))
-        |> Seq.toArray
+            |> Array.map snd 
+            |> Array.distinctBy (fun s -> s.RangeAlternate))
+
 
     let mayReferToSameBuffer (snapshot: ITextSnapshot) filePath =
         match openDocumentsTracker.TryFindOpenDocument(filePath) with

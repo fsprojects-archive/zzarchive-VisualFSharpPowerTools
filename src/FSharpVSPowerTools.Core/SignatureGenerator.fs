@@ -473,8 +473,8 @@ and internal writeTypeHeader ctx (typ: FSharpEntity) =
     let parent = getParentPath typ
     writer.WriteLine(parent)
     ctx.ResolvingOpenDeclarations
-    |> Seq.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
-    |> Seq.iteri (fun i decl ->
+    |> Array.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
+    |> Array.iteri (fun i decl ->
         if i = 0 then 
             writer.WriteBlankLines ctx.BlankLines.BeforeTypeHeaderOpenDeclaration
         writer.WriteLine("open {0}", decl))
