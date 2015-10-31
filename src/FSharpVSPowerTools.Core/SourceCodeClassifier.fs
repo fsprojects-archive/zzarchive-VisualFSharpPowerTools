@@ -173,6 +173,8 @@ module private OperatorCategorizer =
         Array.append spansBasedOnSymbolUse (spansBasedOnLexer.ToArray()) |> Array.distinct 
 
 module SourceCodeClassifier =
+    open System.Collections.Generic
+
     let getIdentifierCategory = function
         | Entity e ->
             match e with
@@ -220,7 +222,8 @@ module SourceCodeClassifier =
         else from
 
     let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], checkResults: ParseAndCheckResults, lexer: LexerBase, 
-                                   getTextLine: int -> string, openDeclarations: OpenDeclaration list, allEntities: Map<string, Idents list> option) =
+                                   getTextLine: int -> string, openDeclarations: OpenDeclaration list, 
+                                   allEntities: Dictionary<string, Idents list> option) =
 
         let tokensByLine = lexer.TokenizeAll()
 

@@ -59,7 +59,7 @@ type SyntaxConstructClassifier
         includeUnusedOpens: bool
     ) as self =
     
-    let getClassificationType cat =
+    let getClassificationType = memoize <| fun cat ->
         match cat with
         | Category.ReferenceType -> Some Constants.fsharpReferenceType
         | Category.ValueType -> Some Constants.fsharpValueType
@@ -161,7 +161,7 @@ type SyntaxConstructClassifier
                      entities 
                      |> Seq.groupBy (fun e -> e.FullName)
                      |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                     |> Map.ofSeq),
+                     |> Dict.ofSeq),
                 openDecls
         }
     }
