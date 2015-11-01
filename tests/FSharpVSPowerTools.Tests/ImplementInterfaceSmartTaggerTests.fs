@@ -197,3 +197,40 @@ type Class() =
             failwith "Not implemented yet"
         
 """))
+
+    [<Test>]
+    let ``should generate members correctly for indexer-like properties``() = 
+        let content = """
+type Interface =
+    abstract member Method1 : int -> int with get
+    abstract member Method2 : int -> unit with set
+type Class() =
+    interface Interface
+"""
+        let fileName = getTempFileName ".fsx"
+        let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        let view = helper.GetView(buffer)
+        let tagger = helper.GetTagger(buffer, view)
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 6 16) |> ignore)
+            (fun () -> 
+                let tagToInsert =
+                    helper.TagsOf(buffer, tagger)
+                    |> Seq.concat
+                    |> Seq.last
+                testEventTrigger buffer.Changed "Timed out before buffer updated" timeout
+                    (fun () -> tagToInsert.Invoke())
+                    (fun () -> 
+                        buffer.CurrentSnapshot.GetText() |> assertEquivString """
+type Interface =
+    abstract member Method1 : int -> int with get
+    abstract member Method2 : int -> unit with set
+type Class() =
+    interface Interface with
+        member x.Method1
+            with get (arg1) = failwith "Not implemented yet"
+        member x.Method2
+            with set (arg1) (v) = failwith "Not implemented yet"
+        
+"""))
