@@ -13,7 +13,6 @@ nuget FSharp.Management
 group Test
 source http://nuget.org/api/v2
 
-nuget FsCheck.NUnit
 nuget NUnit.Runners
 nuget NUnit
 nuget Foq
