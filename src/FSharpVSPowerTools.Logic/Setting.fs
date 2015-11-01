@@ -87,7 +87,7 @@ type IOutliningOptions =
     abstract LoopsCollapsedByDefault: bool with get, set
     abstract AttributesEnabled: bool with get, set
     abstract AttributesCollapsedByDefault: bool with get, set
-    abstract TooltipZoomLevel: double with get, set
+    abstract TooltipZoomLevel: int with get, set
 
 
 

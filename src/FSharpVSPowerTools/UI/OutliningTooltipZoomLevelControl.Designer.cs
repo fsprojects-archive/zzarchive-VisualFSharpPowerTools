@@ -25,7 +25,7 @@
         private void InitializeComponent() {
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.lblOutliningGroup = new System.Windows.Forms.Label();
-            this.tb = new System.Windows.Forms.TextBox();
+            this.cb = new System.Windows.Forms.ComboBox();
             this.flowLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -34,12 +34,12 @@
             this.flowLayoutPanel1.AutoSize = true;
             this.flowLayoutPanel1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.flowLayoutPanel1.Controls.Add(this.lblOutliningGroup);
-            this.flowLayoutPanel1.Controls.Add(this.tb);
+            this.flowLayoutPanel1.Controls.Add(this.cb);
             this.flowLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.flowLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.flowLayoutPanel1.Margin = new System.Windows.Forms.Padding(0);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(295, 22);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(316, 24);
             this.flowLayoutPanel1.TabIndex = 0;
             this.flowLayoutPanel1.WrapContents = false;
             // 
@@ -53,13 +53,15 @@
             this.lblOutliningGroup.Text = "Tooltip zoom level";
             this.lblOutliningGroup.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // tb
+            // cb
             // 
-            this.tb.Location = new System.Drawing.Point(191, 0);
-            this.tb.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.tb.Name = "tb";
-            this.tb.Size = new System.Drawing.Size(100, 22);
-            this.tb.TabIndex = 1;
+            this.cb.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.cb.FormattingEnabled = true;
+            this.cb.Location = new System.Drawing.Point(191, 0);
+            this.cb.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.cb.Name = "cb";
+            this.cb.Size = new System.Drawing.Size(121, 24);
+            this.cb.TabIndex = 1;
             // 
             // OutliningTooltipZoomLevelControl
             // 
@@ -70,9 +72,8 @@
             this.Controls.Add(this.flowLayoutPanel1);
             this.Margin = new System.Windows.Forms.Padding(0);
             this.Name = "OutliningTooltipZoomLevelControl";
-            this.Size = new System.Drawing.Size(295, 22);
+            this.Size = new System.Drawing.Size(316, 24);
             this.flowLayoutPanel1.ResumeLayout(false);
-            this.flowLayoutPanel1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -82,6 +83,6 @@
 
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
         private System.Windows.Forms.Label lblOutliningGroup;
-        private System.Windows.Forms.TextBox tb;
+        private System.Windows.Forms.ComboBox cb;
     }
 }

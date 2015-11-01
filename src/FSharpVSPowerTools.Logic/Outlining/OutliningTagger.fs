@@ -176,7 +176,7 @@ type OutliningTagger
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
-        let zoomLevel = outliningOptions.Value.TooltipZoomLevel
+        let zoomLevel = float (outliningOptions.Value.TooltipZoomLevel) / 100.0
         wpfTextView.Value
         |>  Option.iterElse (fun cv -> view.ZoomLevel <- zoomLevel * cv.ZoomLevel)
                             (fun _ -> view.ZoomLevel <- zoomLevel * view.ZoomLevel)
