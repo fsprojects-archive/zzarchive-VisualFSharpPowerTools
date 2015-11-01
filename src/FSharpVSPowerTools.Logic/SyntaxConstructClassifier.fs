@@ -155,9 +155,9 @@ type SyntaxConstructClassifier
             }
 
             let! openDecls = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
-            return 
+            return
                 (entities
-                    |> Option.map 
+                    |> Option.map
                      (Seq.groupBy (fun e -> e.FullName)
                      >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
                      >> Dict.ofSeq)

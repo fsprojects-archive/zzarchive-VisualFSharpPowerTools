@@ -62,11 +62,10 @@ let [<Test>] ``|List| Groups map back onto their keys`` () =
             | true  -> List.forall (fun x -> keyfn x = key) elms)
 
 
-
-
 //==============//
 //  Array Tests //
 //==============//
+
 
 let [<Test>] ``|Array| areEqual``() =
     Check.QuickThrowOnFailure <| fun (x: int[]) (y: int[]) ->
@@ -143,11 +142,7 @@ let [<Test>] ``|Array| filterMap = filter |> map`` () =
 
 
 
-//[<Property>]
-//let ``filterMap = filter |> map`` (array:string []) =
-//    
 
 
 
-//    Assert.AreEqual((null = [||]), (Array.areEqual null [||]))
-//    Assert.AreEqual(([||] = null), (Array.areEqual [||] null))
+

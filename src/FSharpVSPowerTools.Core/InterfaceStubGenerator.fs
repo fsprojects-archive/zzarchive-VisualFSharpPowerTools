@@ -401,8 +401,9 @@ module InterfaceStubGenerator =
 
     let internal (|LongIdentPattern|_|) = function
         | SynPat.LongIdent(LongIdentWithDots(xs, _), _, _, _, _, _) ->
-            let (name, range) = xs |> List.map (fun x -> x.idText, x.idRange) |> List.last
-            Some(name, range)
+//            let (name, range) = xs |> List.map (fun x -> x.idText, x.idRange) |> List.last
+            let last = List.last xs
+            Some(last.idText, last.idRange)
         | _ -> 
             None
 

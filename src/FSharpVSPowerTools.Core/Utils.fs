@@ -704,26 +704,25 @@ module String =
     let inline toCharArray (str:string) = str.ToCharArray()
 
     let lowerCaseFirstChar (str: string) =
-        if isNull str then null else 
+        if String.IsNullOrEmpty str 
+         || Char.IsLower(str, 0) then str else 
         let strArr = toCharArray str
         match Array.tryHead strArr with
         | None -> str
-        | Some c when Char.IsUpper c -> 
+        | Some c  -> 
             strArr.[0] <- Char.ToLower c
             String (strArr)
-        | Some _ -> str
+
 
     let extractTrailingIndex (str: string) =
         match str with
         | null -> null, None
         | _ ->
-            str 
-            |> Seq.toList 
-            |> List.rev 
-            |> Seq.takeWhile Char.IsDigit 
-            |> Seq.toArray 
-            |> Array.rev
-            |> fun chars -> String(chars)
+            let mutable charr = str.ToCharArray() 
+            Array.revInPlace &charr
+            let mutable  digits = Array.takeWhile Char.IsDigit charr
+            Array.revInPlace &digits            
+            String digits
             |> function
                | "" -> str, None
                | index -> str.Substring (0, str.Length - index.Length), Some (int index)
@@ -737,16 +736,16 @@ module String =
         if isNull value  then null else value.Split(separator, options)
 
     let (|StartsWith|_|) pattern value =
-        if String.IsNullOrWhiteSpace(value) then
+        if String.IsNullOrWhiteSpace value then
             None
-        elif value.StartsWith(pattern) then
+        elif value.StartsWith pattern then
             Some value
         else None
 
     let (|Contains|_|) pattern value =
-        if String.IsNullOrWhiteSpace(value) then
+        if String.IsNullOrWhiteSpace value then
             None
-        elif value.Contains(pattern) then
+        elif value.Contains pattern then
             Some value
         else None
     
@@ -806,13 +805,13 @@ module StringBuilder =
     let inline append   (str:string) (sb:StringBuilder) = sb.Append str
 
     /// Pipelining function for appending a string with a '\n' to a stringbuilder
-    let inline appendln (str:string) (sb:StringBuilder) = sb.AppendLine str
+    let inline appendLine (str:string) (sb:StringBuilder) = sb.AppendLine str
     
     /// SideEffecting function for appending a string to a stringbuilder
     let inline appendi (str:string) (sb:StringBuilder) = sb.Append str |> ignore
 
     /// SideEffecting function for appending a string with a '\n' to a stringbuilder
-    let inline appendlni (str:string) (sb:StringBuilder) = sb.AppendLine str |> ignore
+    let inline appendLinei (str:string) (sb:StringBuilder) = sb.AppendLine str |> ignore
 
 module Reflection =
     open System.Reflection
