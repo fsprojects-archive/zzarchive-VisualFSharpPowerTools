@@ -160,6 +160,23 @@ Target "UnitTests" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
+// Run the unit tests using test runner
+
+Target "PUnitTests" (fun _ ->
+    !! testAssemblies 
+    |> NUnitParallel (fun p ->
+        let param =
+            { p with
+                DisableShadowCopy = true
+                TimeOut = TimeSpan.FromMinutes 20.
+                Framework = "4.5"
+                Domain = NUnitDomainModel.MultipleDomainModel
+                OutputFile = "TestResults.xml" }
+        if isAppVeyorBuild then { param with ExcludeCategory = "AppVeyorLongRunning" } else param)
+)
+
+
+// --------------------------------------------------------------------------------------
 // Run the integration tests using test runner
 
 Target "IntegrationTests" (fun _ ->
@@ -320,6 +337,11 @@ Target "All" DoNothing
   ==> "BuildTests"
   ==> "UnitTests"
   ==> "Main"
+
+"Clean"
+  ==> "Build"
+  ==> "BuildTests"
+  ==> "PUnitTests"
 
 "Clean"
  ==> "RunStatistics"

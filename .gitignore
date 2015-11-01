@@ -195,3 +195,4 @@ gallerycredentials.txt
 
 .vs/config/applicationhost.config
 *.FSharpLint
+tests/FSharpVSPowerTools.Tests/test22.fsx
