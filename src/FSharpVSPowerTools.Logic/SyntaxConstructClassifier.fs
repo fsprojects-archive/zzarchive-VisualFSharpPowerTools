@@ -198,11 +198,13 @@ type SyntaxConstructClassifier
         let oldTcSpans, (oldStartLine, oldEndLine) = getLineRange oldSpans
         let isNewRangeLarger = newStartLine <= oldStartLine && newEndLine >= oldEndLine
         
-        let isFirstOrLastSpanChanged() = 
+        // returns `true` if both first and last spans are still here, which means
+        // that new spans are not produced from partially valid source file. 
+        let areFirstAndLastSpansNotChanged() = 
             let sameWordSpan x y =
                 x.SymbolKind = y.SymbolKind
                 && x.StartCol = y.StartCol
-                && x.EndCol = y.EndCol 
+                && x.EndCol = y.EndCol
             match newTcSpans, oldTcSpans with
             | [||], [||] -> false
             | _, [||] | [||], _ -> true
@@ -210,7 +212,7 @@ type SyntaxConstructClassifier
                 sameWordSpan x.[0].WordSpan y.[0].WordSpan
                 && sameWordSpan x.[x.Length - 1].WordSpan y.[y.Length - 1].WordSpan
 
-        if isNewRangeLarger || isFirstOrLastSpanChanged() then
+        if isNewRangeLarger || areFirstAndLastSpansNotChanged() then
             debug "[SyntaxConstructClassifier] Replace spans entirely."
             Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely.")
             newSpans
