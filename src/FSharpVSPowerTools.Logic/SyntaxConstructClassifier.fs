@@ -184,7 +184,8 @@ type SyntaxConstructClassifier
                     | Category.Operator
                     | Category.Other
                     | Category.Printf
-                    | Category.Quotation -> false
+                    | Category.Quotation 
+                    | Category.Unused -> false
                     | _ -> true) 
                 |> Array.map (fun x -> x.WordSpan.Line)
             Array.min lines, Array.max lines
