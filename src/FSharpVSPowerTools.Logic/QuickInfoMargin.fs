@@ -40,73 +40,42 @@ type QuickInfoMargin (textDocument: ITextDocument,
     let buffer = view.TextBuffer
     let mutable currentWord: SnapshotSpan option = None
 
-<<<<<<< HEAD
-    let updateQuickInfo (tooltip: string option, errors: ((FSharpErrorSeverity * string list) []) option) =
-        let updateFunc () =
-            // helper function to lead a string builder across the collection of
-            // errors accumulating lines annotated with their index number
-            let errorString (errors:string list) (sb:StringBuilder) =
-                match errors with
-                | [e] -> append e sb
-                | _ -> (sb, errors ) ||> List.foldi (fun sb i e ->
-                    sb |> append (sprintf "%d. %s" (i + 1) e) |> append " ")
 
-            let currentInfo =
-                match errors, tooltip with
-                | Some es, _ -> // if the tooltip contains errors show them
-                    let sb = StringBuilder ()
-                    for (severity, err) in es do
-                        let errorls = List.map String.trim err
-                        let title =
-                            match errorls with
-                            | [_] -> sprintf "%s" <| string severity
-                            | _ -> sprintf "%s (%d)" (string severity) errorls.Length
-                        sb |> append title |> append ": " |> errorString errorls |> appendi " "
-                    string sb
-                | None, Some tt ->   // show type info if there aren't any errors
-                    match  String.firstNonEmptyLine tt with
-                    | Some str ->
-                        if str.StartsWith ("type ", StringComparison.Ordinal) then
-                            let index = str.LastIndexOf ("=", StringComparison.Ordinal)
-                            if index > 0 then str.[0..index-1] else str
     let updateQuickInfo (tooltip: string option, errors: ((FSharpErrorSeverity * string list) []) option,
-                         newWord: SnapshotSpan option) = lock updateLock <| fun () ->
+                         newWord: SnapshotSpan option) = lock updateLock <| fun () -> 
         currentWord <- newWord
-        model.QuickInfo <-
-            errors
-            |> Option.map (fun errors ->
-                errors
-                |> Array.map (fun (severity, errors) ->
-                    let errors = List.map String.trim errors
+        
+        // helper function to lead a string builder across the collection of
+        // errors accumulating lines annotated with their index number
+        let errorString (errors:string list) (sb:StringBuilder) =
+            match errors with
+            | [e] -> append e sb
+            | _ -> (sb, errors ) ||> List.foldi (fun sb i e ->
+                sb |> append (sprintf "%d. %s" (i + 1) e) |> append " ")        
+        
+        let currentInfo =
+            match errors, tooltip with
+            | Some es, _ -> // if the tooltip contains errors show them
+                let sb = StringBuilder ()
+                for (severity, err) in es do
+                    let errorls = List.map String.trim err
                     let title =
-                        match errors with
-                        | [_] -> sprintf "%+A" severity
-                        | _ -> sprintf "%+As (%d)" severity errors.Length
-                    title + ": " +
-                    (match errors with
-                     | [e] -> e
-                     | _ ->
-                        errors
-                        |> List.mapi (fun i e -> sprintf "%d. %s" (i + 1) e)
-                        |> List.toArray
-                        |> String.concat " "))
-                |> String.concat " ")
-            |> Option.orElse (tooltip |> Option.bind (fun tooltip ->
-                tooltip
-                |> String.getNonEmptyLines
-                |> Array.toList
-                |> List.tryHead
-                |> Option.map (fun str ->
-                    if str.StartsWith("type ", StringComparison.Ordinal) then
-                        let index = str.LastIndexOf("=", StringComparison.Ordinal)
-                        if index > 0 then
-                            str.[0..index-1]
->>>>>>> refs/remotes/fsprojects/master
-                        else str
-                    | None -> ""
-                | None, None -> ""  // if there are no results the panel will be empty
-            model.QuickInfo <- currentInfo
-        lock updateLock updateFunc
+                        match errorls with
+                        | [_] -> sprintf "%s" <| string severity
+                        | _ -> sprintf "%s (%d)" (string severity) errorls.Length
+                    sb |> append title |> append ": " |> errorString errorls |> appendi " "
+                string sb
+            | None, Some tt ->   // show type info if there aren't any errors
+                match  String.firstNonEmptyLine tt with
+                | Some str ->
+                    if str.StartsWith ("type ", StringComparison.Ordinal) then
+                        let index = str.LastIndexOf ("=", StringComparison.Ordinal)
+                        if index > 0 then str.[0..index-1] else str
+                    else str
+                | None -> ""
+            | None, None -> ""  // if there are no results the panel will be empty        
+        
+        model.QuickInfo <- currentInfo
 
     // helper function in the form required by mapNonEmptyLines
     let flattener (sb:StringBuilder) (str:string) : StringBuilder =

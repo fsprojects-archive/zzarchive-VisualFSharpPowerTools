@@ -155,21 +155,13 @@ type SyntaxConstructClassifier
             }
 
             let! openDecls = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
-            return
-                entities
-<<<<<<< HEAD
-                |> Option.map ( 
-                    Seq.groupBy (fun e -> e.FullName)
-                    >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents)|> Seq.toList)
-                    >> Seq.toList
-                    >> Map.ofList),
-                |> Option.map (fun entities ->
-                     entities
-                     |> Seq.groupBy (fun e -> e.FullName)
-                     |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                     |> Dict.ofSeq),
->>>>>>> refs/remotes/fsprojects/master
-                openDecls
+            return 
+                (entities
+                    |> Option.map 
+                     (Seq.groupBy (fun e -> e.FullName)
+                     >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                     >> Dict.ofSeq)
+                                    , openDecls)
         }
     }
 
