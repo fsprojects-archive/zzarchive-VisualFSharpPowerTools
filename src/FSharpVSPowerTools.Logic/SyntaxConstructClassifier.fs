@@ -198,7 +198,7 @@ type SyntaxConstructClassifier
         let oldTcSpans, (oldStartLine, oldEndLine) = getLineRange oldSpans
         let isNewRangeLarger = newStartLine <= oldStartLine && newEndLine >= oldEndLine
         
-        let isFirstOrLastSpanDisappear() = 
+        let isFirstOrLastSpanChanged() = 
             let sameWordSpan x y =
                 x.SymbolKind = y.SymbolKind
                 && x.StartCol = y.StartCol
@@ -210,7 +210,7 @@ type SyntaxConstructClassifier
                 sameWordSpan x.[0].WordSpan y.[0].WordSpan
                 && sameWordSpan x.[x.Length - 1].WordSpan y.[y.Length - 1].WordSpan
 
-        if isNewRangeLarger || isFirstOrLastSpanDisappear() then
+        if isNewRangeLarger || isFirstOrLastSpanChanged() then
             debug "[SyntaxConstructClassifier] Replace spans entirely."
             Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely.")
             newSpans
