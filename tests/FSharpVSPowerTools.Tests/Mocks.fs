@@ -36,6 +36,7 @@ let createGeneralOptionsPage() =
             page.XmlDocEnabled --> true
             page.GoToSymbolSourceEnabled --> true
             page.LinterEnabled --> true
+            page.OutliningEnabled --> true
         @>)
 
 let createClassificationTypeRegistryService() =
@@ -79,11 +80,8 @@ let createTextBufferUndoManagerProvider() =
 let createDummyCommandTarget() =
     {
         new IOleCommandTarget with
-            member __.Exec(_pguidCmdGroup: byref<Guid>, _nCmdID: uint32, _nCmdexecopt: uint32, _pvaIn: nativeint, _pvaOut: nativeint): int = 
-                VSConstants.S_OK
-            
-            member __.QueryStatus(_pguidCmdGroup: byref<Guid>, _cCmds: uint32, _prgCmds: OLECMD [], _pCmdText: nativeint): int = 
-                VSConstants.S_OK
+            member __.Exec(_pguidCmdGroup, _nCmdID, _nCmdexecopt, _pvaIn, _pvaOut) = VSConstants.S_OK
+            member __.QueryStatus(_pguidCmdGroup, _cCmds, _prgCmds, _pCmdText) = VSConstants.S_OK
     }
     
 let createDocumentFactoryService() =
