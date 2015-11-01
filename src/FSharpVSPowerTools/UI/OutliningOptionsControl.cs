@@ -29,6 +29,7 @@ namespace FSharpVSPowerTools.UI {
         public OutliningOptionControl CExpressionMembers { get; private set; }
         public OutliningOptionControl Loops { get; private set; }
         public OutliningOptionControl Attributes { get; private set; }
+        public OutliningTooltipZoomLevelControl Tooltip { get; private set; }
 
         protected override void OnLoad(EventArgs e) {
             base.OnLoad(e);
@@ -93,6 +94,9 @@ namespace FSharpVSPowerTools.UI {
                 OutliningEnabled = _outliningOptions.AttributesEnabled,
                 CollapsedByDefault = _outliningOptions.AttributesCollapsedByDefault
             };
+            Tooltip = new OutliningTooltipZoomLevelControl() {
+                InputValue = _outliningOptions.TooltipZoomLevel
+            };
 
             flowLayoutPanelMain.Controls.Clear();
             flowLayoutPanelMain.Controls.Add(Opens);
@@ -110,6 +114,7 @@ namespace FSharpVSPowerTools.UI {
             flowLayoutPanelMain.Controls.Add(CExpressionMembers);
             flowLayoutPanelMain.Controls.Add(Loops);
             flowLayoutPanelMain.Controls.Add(Attributes);
+            flowLayoutPanelMain.Controls.Add(Tooltip);
         }
     }
 }

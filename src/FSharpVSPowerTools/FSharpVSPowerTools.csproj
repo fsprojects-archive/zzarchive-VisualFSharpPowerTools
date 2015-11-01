@@ -185,6 +185,12 @@
     <Compile Include="Commands\SyntaxConstructClassifierProvider.cs" />
     <Compile Include="Commands\UnionPatternMatchCaseGeneratorSmartTaggerProvider.cs" />
     <Compile Include="Commands\XmlDocCommandFilterProvider.cs" />
+    <Compile Include="UI\OutliningTooltipZoomLevelControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UI\OutliningTooltipZoomLevelControl.Designer.cs">
+      <DependentUpon>OutliningTooltipZoomLevelControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\OutliningOptionControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -269,6 +275,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\GeneralOptionsControl.resx">
       <DependentUpon>GeneralOptionsControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\OutliningTooltipZoomLevelControl.resx">
+      <DependentUpon>OutliningTooltipZoomLevelControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\OutliningOptionControl.resx">
       <DependentUpon>OutliningOptionControl.cs</DependentUpon>

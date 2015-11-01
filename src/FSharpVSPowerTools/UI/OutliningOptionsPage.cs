@@ -43,6 +43,7 @@ namespace FSharpVSPowerTools {
             LoopsCollapsedByDefault = false;
             AttributesEnabled = true;
             AttributesCollapsedByDefault = false;
+            TooltipZoomLevel = 0.8;
         }
 
         protected override void OnApply(PageApplyEventArgs e) {
@@ -76,6 +77,7 @@ namespace FSharpVSPowerTools {
             LoopsCollapsedByDefault = _control.Loops.CollapsedByDefault;
             AttributesEnabled = _control.Attributes.OutliningEnabled;
             AttributesCollapsedByDefault = _control.Attributes.CollapsedByDefault;
+            TooltipZoomLevel = _control.Tooltip.InputValue;
 
             base.OnApply(e);
         }
@@ -169,6 +171,9 @@ namespace FSharpVSPowerTools {
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool AttributesCollapsedByDefault { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public double TooltipZoomLevel { get; set; }
 
         protected override IWin32Window Window {
             get { return _control = new OutliningOptionsControl(this); }
