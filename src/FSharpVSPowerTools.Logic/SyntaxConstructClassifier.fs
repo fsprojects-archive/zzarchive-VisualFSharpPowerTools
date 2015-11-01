@@ -174,49 +174,62 @@ type SyntaxConstructClassifier
         else Some()
 
 
-    let mergeSpans (oldSpans: CategorizedColumnSpan<'a>[]) (newSpans: CategorizedColumnSpan<'a>[]) =
+    let mergeSpans (oldSpans: CategorizedColumnSpan<_>[]) (newSpans: CategorizedColumnSpan<_>[]) =
+        let getTypeCheckerSpans spans =
+            spans
+            |> Array.filter (fun x ->
+                match x.Category with
+                | Category.Escaped
+                | Category.Operator
+                | Category.Other
+                | Category.Printf
+                | Category.Quotation
+                | Category.Unused -> false
+                | _ -> true)
 
         let getLineRange spans =
-            let lines =
-                spans
-                |> Array.filterMap (fun x ->
-                    match x.Category with
-                    | Category.Escaped
-                    | Category.Operator
-                    | Category.Other
-                    | Category.Printf
-                    | Category.Quotation -> false
-                    | _ -> true)  (fun x -> x.WordSpan.Line)
-            if lines.Length = 0 then (-1, -1) else
-            Array.min lines, Array.max lines
+            let typeCheckerSpans = getTypeCheckerSpans spans
+            typeCheckerSpans,
+            typeCheckerSpans
+            |> Array.map (fun x -> x.WordSpan.Line)
+            |> function [||] -> -1, -1 | lines -> Array.min lines, Array.max lines
 
-        let compareSpans (oldSpans:CategorizedColumnSpan<'a>[]) (newSpans:CategorizedColumnSpan<'a>[]) =
-            match  getLineRange oldSpans, getLineRange newSpans with
-            |  (-1,-1),(-1,-1) -> [||]
-            |    _    ,(-1,-1) -> oldSpans
-            |  (-1,-1), _      -> newSpans
-            | (oldStartLine, oldEndLine),(newStartLine, newEndLine) ->
-            // if the new spans encompass the old spans replace them all
-            if newStartLine <= oldStartLine && newEndLine >= oldEndLine then
-                debug "[SyntaxConstructClassifier] Replace spans entirely."
-                newSpans
-            else
-                debug "[SyntaxConstructClassifier] Mergin spans (new range %A < old range %A)."
+        let newTcSpans, (newStartLine, newEndLine) = getLineRange newSpans
+        let oldTcSpans, (oldStartLine, oldEndLine) = getLineRange oldSpans
+        let isNewRangeLarger = newStartLine <= oldStartLine && newEndLine >= oldEndLine
 
-                      (newStartLine, newEndLine) (oldStartLine, oldEndLine)
-                seq {
-                    yield! (oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine))
-                    yield! (oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine))
-                    yield! newSpans
-                }
-                |> Seq.sortBy (fun x -> x.WordSpan.Line)
-                |> Seq.toArray
+        // returns `true` if both first and last spans are still here, which means
+        // that new spans are not produced from partially valid source file.
+        let areFirstAndLastSpansNotChanged() =
+            let sameWordSpan x y =
+                x.SymbolKind = y.SymbolKind
+                && x.StartCol = y.StartCol
+                && x.EndCol = y.EndCol
+            match newTcSpans, oldTcSpans with
+            | [||], [||] -> false
+            | _, [||] | [||], _ -> true
+            | x, y ->
+                sameWordSpan x.[0].WordSpan y.[0].WordSpan
+                && sameWordSpan x.[x.Length - 1].WordSpan y.[y.Length - 1].WordSpan
 
-        match oldSpans , newSpans with
-        | null, null | null, [||] | [||], null | [||], [||] -> [||]
-        | [||], nspans   -> nspans
-        | ospans , [||]  -> ospans
-        | ospans, nspans -> compareSpans ospans nspans
+        if isNewRangeLarger || areFirstAndLastSpansNotChanged() then
+            debug "[SyntaxConstructClassifier] Replace spans entirely."
+            Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely.")
+            newSpans
+        else
+            debug "[SyntaxConstructClassifier] Merging spans (new range %A < old range %A)."
+                  (newStartLine, newEndLine) (oldStartLine, oldEndLine)
+            Logging.logInfo (fun _ ->
+                sprintf "[SyntaxConstructClassifier] Merging spans (new range %A < old range %A)."
+                        (newStartLine, newEndLine) (oldStartLine, oldEndLine))
+            seq { 
+                yield! oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine)
+                yield! oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine) 
+                yield! newSpans  
+            }
+            |> Seq.sortBy (fun x -> x.WordSpan.Line)
+            |> Seq.toArray
+
 
     let updateUnusedDeclarations() =
         let worker (project, snapshot) =

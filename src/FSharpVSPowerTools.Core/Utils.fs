@@ -18,7 +18,17 @@ module Prelude =
     
 
 [<RequireQualifiedAccess>]
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Null =
+
+    let inline fill defaultValue x = 
+        if isNull x then null else defaultValue
+
+    let inline fillWith (genDefaultValue: unit -> 'a) x = 
+        if isNull x then null else genDefaultValue ()
+
+
+[<RequireQualifiedAccess>]
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Seq =
     let tryHead s =
         if Seq.isEmpty s then None else Some (Seq.head s)
@@ -367,8 +377,7 @@ module Async =
             let len = Array.length array
             let result = Array.zeroCreate len
 
-            async {
-                // Apply the mapping function to each array element.
+            async { // Apply the mapping function to each array element.
                 for i in 0 .. len - 1 do
                     let! mappedValue = mapping array.[i]
                     result.[i] <- mappedValue
