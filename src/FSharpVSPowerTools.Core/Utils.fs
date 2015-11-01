@@ -33,7 +33,7 @@ module List =
     let rec last (xs:'a list) =
         match xs with
         | [] -> failwith "an empty list has no last element"
-        | x::[] -> x
+        | [x] -> x
         | _::tl -> last tl
 
     let rec skipWhile p xs =
@@ -157,8 +157,9 @@ module Array =
     /// Fold over the array passing the index and element at that index to a folding function
     let foldi (folder : 'State -> int -> 'T -> 'State) (state : 'State) (array : 'T[]) =
         checkNonNull "array" array
+        if array.Length = 0 then state else
         let folder = OptimizedClosures.FSharpFunc<_,_,_,_>.Adapt folder
-        let mutable state = state
+        let mutable state:'State = state
         let len = array.Length
         for i = 0 to len - 1 do
             state <- folder.Invoke (state, i, array.[i])
@@ -184,6 +185,7 @@ module Array =
     /// If an element occurs multiple times in the array then the later occurrences are discarded.
     let distinct (array:'T[]) =
         checkNonNull "array" array
+        if array.Length = 0 then [||] else
         let temp = Array.zeroCreate array.Length
         let mutable i = 0
         let hashSet = HashSet<'T> HashIdentity.Structural<'T>
@@ -196,6 +198,7 @@ module Array =
 
     let distinctBy keyf (array:'T[]) =
         checkNonNull "array" array
+        if array.Length = 0 then [||] else
         let temp = Array.zeroCreate array.Length
         let mutable i = 0 
         let hashSet = HashSet<_> HashIdentity.Structural<_>
@@ -203,35 +206,36 @@ module Array =
             if hashSet.Add(keyf v) then
                 temp.[i] <- v
                 i <- i + 1
-        temp.[0..i]
+        temp.[0..i-1]
 
     /// pass an array byref to reverse it in place
-    let revInPlace (arr: 'a[] byref ) =
-        checkNonNull "array" arr
-        let arrlen, revlen = arr.Length-1, arr.Length/2 - 1
+    let revInPlace (array: 'a[] byref ) =
+        checkNonNull "array" array
+        if areEqual array [||] then () else        
+        let arrlen, revlen = array.Length-1, array.Length/2 - 1
         for idx in 0 .. revlen do
-            let t1 = arr.[idx] 
-            let t2 = arr.[arrlen-idx]
-            arr.[idx] <- t2
-            arr.[arrlen-idx] <- t1
+            let t1 = array.[idx] 
+            let t2 = array.[arrlen-idx]
+            array.[idx] <- t2
+            array.[arrlen-idx] <- t1
 
 
     /// Return an array of elements that preceded the first element that failed
     /// to satisfy the predicate
     let takeWhile predicate (array: 'T[]) =
         checkNonNull "array" array
-        if array.Length = 0 then Array.empty else
+        if array.Length = 0 then [||] else
         let mutable count = 0
         while count < array.Length-1 && predicate array.[count] do
             count <- count + 1
-        array.[0..count]
+        array.[0..count-1]
 
 
     /// Return an array of elements that begin at the first element that failed
     /// to satisfy the predicate
     let skipWhile predicate (array: 'T[]) =
         checkNonNull "array" array
-        if array.Length = 0 then Array.empty else
+        if array.Length = 0 then [||] else
         let mutable count = 0
         while count < array.Length-1 && predicate array.[count] do
             count <- count + 1
@@ -241,7 +245,7 @@ module Array =
     /// Map all elements of the array that satisfy the predicate
     let filterMap predicate mapfn (array: 'T[])  =
         checkNonNull "array" array
-        if array.Length = 0 then Array.empty else
+        if array.Length = 0 then [||] else
         let result = Array.zeroCreate array.Length
         let mutable count = 0
         for elm in array do
@@ -249,8 +253,8 @@ module Array =
                result.[count] <- mapfn elm
                count <- count + 1
         if count = 0 then [||] else
+        result.[0..count-1]
 
-        result.[0..count]
 
     let groupBy (keyfn:'T->'Key) (array: 'T[]) =
         checkNonNull "array" array
