@@ -28,137 +28,149 @@ type MockDTE() =
         filePath <- fileName
 
     interface DTE with
-        member x.ActiveDocument: Document = 
+        member __.ActiveSolutionProjects = notimpl
+        member __.ActiveWindow = notimpl
+        member __.AddIns = notimpl
+        member __.Application = notimpl
+        member __.CommandBars = notimpl
+        member __.CommandLineArguments = notimpl
+        member __.Commands = notimpl
+        member __.ContextAttributes = notimpl
+        member __.DTE = notimpl
+        member __.Debugger = notimpl
+        member __.DisplayMode
+            with get () = notimpl
+            and set _v = notimpl
+        member __.Documents = notimpl
+        member __.Edition = notimpl
+        member __.ExecuteCommand(_commandName, _commandArgs) = notimpl
+        member __.FileName = notimpl
+        member __.Find = notimpl
+        member __.FullName = notimpl
+        member __.GetObject(_name) = notimpl
+        member __.Globals = notimpl
+        member __.IsOpenFile with get (_viewKind, _fileName) = notimpl
+        member __.ItemOperations = notimpl
+        member __.LaunchWizard(_vSZFile, _contextParams) = notimpl
+        member __.LocaleID = notimpl
+        member __.Macros = notimpl
+        member __.MacrosIDE = notimpl
+        member __.MainWindow = notimpl
+        member __.Mode = notimpl
+        member __.Name = notimpl
+        member __.ObjectExtenders = notimpl
+        member __.OpenFile(_viewKind, _fileName) = notimpl
+        member __.Properties with get (_category, _page) = notimpl
+        member __.Quit() = notimpl
+        member __.RegistryRoot = notimpl
+        member __.SatelliteDllPath(_path, _name) = notimpl
+        member __.SelectedItems = notimpl
+        member __.SourceControl = notimpl
+        member __.StatusBar = notimpl
+        member __.SuppressUI
+            with get () = notimpl
+            and set _v = notimpl
+        member __.UndoContext = notimpl
+        member __.UserControl
+            with get () = notimpl
+            and set _v = notimpl
+        member __.WindowConfigurations = notimpl
+        member __.Windows = notimpl
+        
+        member x.ActiveDocument = 
             if String.IsNullOrEmpty(filePath) then
                 invalidArg "filePath" "Invalid path for active document"
             else
                 MockDocument(filePath, x) :> _
 
-        member __.ActiveSolutionProjects: obj = notimpl
-        member __.ActiveWindow: Window = notimpl
-        member __.AddIns: AddIns = notimpl
-        member __.Application: DTE = notimpl
-        member __.CommandBars: obj = notimpl
-        member __.CommandLineArguments: string = notimpl
-        member __.Commands: Commands = notimpl
-        member __.ContextAttributes: ContextAttributes = notimpl
-        member __.DTE: DTE = notimpl
-        member __.Debugger: Debugger = notimpl
-        member __.DisplayMode with get (): vsDisplay = notimpl and set (_v: vsDisplay): unit = notimpl
-        member __.Documents: Documents = notimpl
-        member __.Edition: string = notimpl
-        member __.Events: Events = 
+        member __.Events = 
             MockEvents() :> _
         
-        member __.ExecuteCommand(_commandName: string, _commandArgs: string): unit = notimpl
-        member __.FileName: string = notimpl
-        member __.Find: Find = notimpl
-        member __.FullName: string = notimpl
-        member __.GetObject(_name: string): obj = notimpl
-        member __.Globals: Globals = notimpl
-        member __.IsOpenFile with get (_viewKind: string, _fileName: string): bool = notimpl
-        member __.ItemOperations: ItemOperations = notimpl
-        member __.LaunchWizard(_vSZFile: string, _contextParams: byref<obj []>): wizardResult = notimpl
-        member __.LocaleID: int = notimpl
-        member __.Macros: Macros = notimpl
-        member __.MacrosIDE: DTE = notimpl
-        member __.MainWindow: Window = notimpl
-        member __.Mode: vsIDEMode = notimpl
-        member __.Name: string = notimpl
-        member __.ObjectExtenders: ObjectExtenders = notimpl
-        member __.OpenFile(_viewKind: string, _fileName: string): Window = notimpl
-        member __.Properties with get (_category: string, _page: string): Properties = notimpl
-        member __.Quit(): unit = notimpl
-        member __.RegistryRoot: string = notimpl
-        member __.SatelliteDllPath(_path: string, _name: string): string = notimpl
-        member __.SelectedItems: SelectedItems = notimpl
-        member x.Solution: Solution = 
+        member x.Solution = 
             MockSolution(projects, x) :> _
-        
-        member __.SourceControl: SourceControl = notimpl
-        member __.StatusBar: StatusBar = notimpl
-        member __.SuppressUI with get (): bool = notimpl and set (_v: bool): unit = notimpl
-        member __.UndoContext: UndoContext = notimpl
-        member __.UserControl with get (): bool = notimpl and set (_v: bool): unit = notimpl        
-        member __.Version: string = 
+        member __.Version = 
             "12.0"
-                    
-        member __.WindowConfigurations: WindowConfigurations = notimpl        
-        member __.Windows: Windows = notimpl
-
-and MockDocument(filePath: string, dte: DTE) =
+ 
+and MockDocument(filePath, dte: DTE) =
     interface Document with
-        member __.Activate(): unit = notimpl
-        member __.ActiveWindow: Window = notimpl
-        member __.ClearBookmarks(): unit = notimpl
-        member __.Close(_save: vsSaveChanges): unit = notimpl
-        member __.Collection: Documents = notimpl
-        member __.DTE: DTE = dte
-        member __.Extender with get (_extenderName: string): obj = notimpl
-        member __.ExtenderCATID: string = notimpl
-        member __.ExtenderNames: obj = notimpl
-        member __.FullName: string = 
+        member __.Activate() = notimpl
+        member __.ActiveWindow = notimpl
+        member __.ClearBookmarks() = notimpl
+        member __.Close(_save) = notimpl
+        member __.Collection = notimpl
+        member __.Extender with get (_extenderName) = notimpl
+        member __.ExtenderCATID = notimpl
+        member __.ExtenderNames = notimpl
+        member __.IndentSize = notimpl
+        member __.Kind = notimpl
+        member __.Language
+            with get () = notimpl
+            and set _v = notimpl
+        member __.MarkText(_pattern, _flags) = notimpl
+        member __.Name = notimpl
+        member __.NewWindow() = notimpl
+        member __.Object(_modelKind) = notimpl
+        member __.Path = notimpl
+        member __.PrintOut() = notimpl
+        member __.ReadOnly
+            with get () = notimpl
+            and set _v = notimpl
+        member __.Redo() = notimpl
+        member __.ReplaceText(_findText, _replaceText, _flags) = notimpl
+        member __.Save(_fileName) = notimpl
+        member __.Saved
+            with get () = notimpl
+            and set _v = notimpl
+        member __.Selection = notimpl
+        member __.TabSize = notimpl
+        member __.Type = notimpl
+        member __.Undo() = notimpl
+        member __.Windows = notimpl
+        
+        member __.DTE = dte
+        
+        member __.FullName = 
             filePath
 
-        member __.IndentSize: int = notimpl
-        member __.Kind: string = notimpl
-        member __.Language with get (): string = notimpl and set (_v: string): unit = notimpl
-        member __.MarkText(_pattern: string, _flags: int): bool = notimpl
-        member __.Name: string = notimpl
-        member __.NewWindow(): Window = notimpl
-        member __.Object(_modelKind: string): obj = notimpl
-        member __.Path: string = notimpl
-        member __.PrintOut(): unit = notimpl
-        member __.ProjectItem: ProjectItem = 
+        member __.ProjectItem = 
             dte.Solution.FindProjectItem filePath
-
-        member __.ReadOnly with get (): bool = notimpl and set (_v: bool): unit = notimpl
-        member __.Redo(): bool = notimpl
-        member __.ReplaceText(_findText: string, _replaceText: string, _flags: int): bool = notimpl
-        member __.Save(_fileName: string): vsSaveStatus = notimpl
-        member __.Saved with get (): bool = notimpl and set (_v: bool): unit = notimpl
-        member __.Selection: obj = notimpl
-        member __.TabSize: int = notimpl
-        member __.Type: string = notimpl
-        member __.Undo(): bool = notimpl
-        member __.Windows: Windows = notimpl        
 
 and MockEvents() =
     interface Events with
-        member __.BuildEvents: BuildEvents = notimpl
-        member __.CommandBarEvents with get (_commandBarControl: obj): obj = notimpl        
-        member __.CommandEvents with get (_guid: string, _iD: int): CommandEvents = notimpl        
-        member __.DTEEvents: DTEEvents = notimpl        
-        member __.DebuggerEvents: DebuggerEvents = notimpl        
-        member __.DocumentEvents with get (_document: Document): DocumentEvents = notimpl        
-        member __.FindEvents: FindEvents = notimpl        
-        member __.GetObject(_name: string): obj = notimpl        
-        member __.MiscFilesEvents: ProjectItemsEvents = notimpl        
-        member __.OutputWindowEvents with get (_pane: string): OutputWindowEvents = notimpl        
-        member __.SelectionEvents: SelectionEvents = notimpl        
-        member __.SolutionEvents: SolutionEvents = notimpl        
-        member __.SolutionItemsEvents: ProjectItemsEvents = notimpl        
-        member __.TaskListEvents with get (_filter: string): TaskListEvents = notimpl        
-        member __.TextEditorEvents with get (_textDocumentFilter: TextDocument): TextEditorEvents = notimpl        
-        member __.WindowEvents with get (_windowFilter: Window): WindowEvents = notimpl
+        member __.BuildEvents = notimpl
+        member __.CommandBarEvents with get (_commandBarControl) = notimpl
+        member __.CommandEvents with get (_guid, _iD) = notimpl
+        member __.DTEEvents = notimpl
+        member __.DebuggerEvents = notimpl
+        member __.DocumentEvents with get (_document) = notimpl
+        member __.FindEvents = notimpl
+        member __.GetObject(_name) = notimpl
+        member __.MiscFilesEvents = notimpl
+        member __.OutputWindowEvents with get (_pane) = notimpl
+        member __.SelectionEvents = notimpl
+        member __.SolutionEvents = notimpl
+        member __.SolutionItemsEvents = notimpl
+        member __.TaskListEvents with get (_filter) = notimpl
+        member __.TextEditorEvents with get (_textDocumentFilter) = notimpl
+        member __.WindowEvents with get (_windowFilter) = notimpl
         
 and MockSolution(projects, dte: DTE) =
     interface IEnumerable with
-        member __.GetEnumerator(): IEnumerator = notimpl
+        member __.GetEnumerator() = notimpl
         
     interface Solution with
-        member __.AddFromFile(_fileName: string, _exclusive: bool): Project = notimpl
-        member __.AddFromTemplate(_fileName: string, _destination: string, _projectName: string, _exclusive: bool): Project = notimpl        
-        member __.AddIns: AddIns = notimpl        
-        member __.Close(_saveFirst: bool): unit = notimpl        
-        member __.Count: int = notimpl        
-        member __.Create(_destination: string, _name: string): unit = notimpl        
-        member __.DTE: DTE = notimpl        
-        member __.Extender with get (_extenderName: string): obj = notimpl        
-        member __.ExtenderCATID: string = notimpl        
-        member __.ExtenderNames: obj = notimpl        
-        member __.FileName: string = notimpl        
-        member __.FindProjectItem(fileName: string): ProjectItem = 
+        member __.AddFromFile(_fileName, _exclusive) = notimpl
+        member __.AddFromTemplate(_fileName, _destination, _projectName, _exclusive) = notimpl        
+        member __.AddIns = notimpl        
+        member __.Close(_saveFirst) = notimpl        
+        member __.Count = notimpl        
+        member __.Create(_destination, _name) = notimpl        
+        member __.DTE = notimpl        
+        member __.Extender with get (_extenderName) = notimpl        
+        member __.ExtenderCATID = notimpl        
+        member __.ExtenderNames = notimpl        
+        member __.FileName = notimpl        
+        member __.FindProjectItem(fileName) = 
             let allProjects = projects |> Seq.map (|KeyValue|) |> Seq.map snd
             // Accept relative file path as an input
             let fileName = Path.GetFullPathSafe(fileName)
@@ -169,113 +181,114 @@ and MockSolution(projects, dte: DTE) =
                 MockProjectItem(fileName, project, dte) :> _
             | None -> null
 
-        member __.FullName: string = notimpl        
-        member __.GetEnumerator(): Collections.IEnumerator = notimpl        
-        member __.Globals: Globals = notimpl        
-        member __.IsDirty with get (): bool = notimpl and set (_v: bool): unit = notimpl        
-        member __.IsOpen: bool = notimpl        
-        member __.Item(_index: obj): Project = notimpl        
-        member __.Open(_fileName: string): unit = notimpl        
-        member __.Parent: DTE = notimpl        
-        member __.ProjectItemsTemplatePath(_projectKind: string): string = notimpl        
-        member __.Projects: Projects = 
+        member __.FullName = notimpl        
+        member __.GetEnumerator() = notimpl        
+        member __.Globals = notimpl        
+        member __.IsDirty with get () = notimpl and set (_v) = notimpl        
+        member __.IsOpen = notimpl        
+        member __.Item(_index) = notimpl        
+        member __.Open(_fileName) = notimpl        
+        member __.Parent = notimpl        
+        member __.ProjectItemsTemplatePath(_projectKind) = notimpl        
+        member __.Projects = 
             let projs =
                 projects 
                 |> Seq.map (|KeyValue|) 
                 |> Seq.map snd
                 |> Seq.map (fun p -> MockProject(p, dte) :> Project)
             { new Projects with
-                  member x.Count: int = 
-                      notimpl
-                  
-                  member x.DTE: DTE = 
-                      notimpl
-                  
-                  member x.GetEnumerator(): IEnumerator = 
-                      projs.GetEnumerator() :> IEnumerator
-                  
-                  member x.Item(index: obj): Project = 
-                      notimpl
-                  
-                  member x.Kind: string = 
-                      notimpl
-                  
-                  member x.Parent: DTE = 
-                      notimpl
-                  
-                  member x.Properties: Properties = 
-                      notimpl
+                  member __.Count = notimpl
+                  member __.DTE = notimpl
+                  member __.Item(_index) = notimpl
+                  member __.Kind = notimpl
+                  member __.Parent = notimpl
+                  member __.Properties = notimpl
+
+                  member __.GetEnumerator() = 
+                      projs.GetEnumerator() :> _
+                 
               interface IEnumerable with
-                    member x.GetEnumerator(): IEnumerator = 
-                        projs.GetEnumerator() :> IEnumerator }
+                    member __.GetEnumerator() = 
+                        projs.GetEnumerator() :> _ }
                 
-        member __.Properties: Properties = notimpl        
-        member __.Remove(_proj: Project): unit = notimpl        
-        member __.SaveAs(_fileName: string): unit = notimpl        
-        member __.Saved with get (): bool = notimpl and set (_v: bool): unit = notimpl        
-        member __.SolutionBuild: SolutionBuild = notimpl        
-        member __.TemplatePath with get (_projectType: string): string = notimpl
+        member __.Properties = notimpl        
+        member __.Remove(_proj) = notimpl        
+        member __.SaveAs(_fileName) = notimpl        
+        member __.Saved with get () = notimpl and set (_v) = notimpl        
+        member __.SolutionBuild = notimpl        
+        member __.TemplatePath with get (_projectType) = notimpl
 
 and MockProject(project: IProjectProvider, _dte: DTE) = 
     interface Project with
-        member __.CodeModel: CodeModel = notimpl
-        member __.Collection: Projects = notimpl
-        member __.ConfigurationManager: ConfigurationManager = notimpl
-        member __.DTE: DTE = notimpl
-        member __.Delete(): unit = notimpl
-        member __.Extender with get (_extenderName: string): obj = notimpl
-        member __.ExtenderCATID: string = notimpl
-        member __.ExtenderNames: obj = notimpl
-        member __.FileName: string = notimpl
-        member __.FullName: string = 
+        member __.CodeModel = notimpl
+        member __.Collection = notimpl
+        member __.ConfigurationManager = notimpl
+        member __.DTE = notimpl
+        member __.Delete() = notimpl
+        member __.Extender with get (_extenderName) = notimpl
+        member __.ExtenderCATID = notimpl
+        member __.ExtenderNames = notimpl
+        member __.FileName = notimpl
+        member __.Globals = notimpl
+        member __.IsDirty
+            with get () = notimpl
+            and set _v = notimpl
+        member __.Name
+            with get () = notimpl
+            and set _v = notimpl
+        member __.Object = notimpl
+        member __.ParentProjectItem = notimpl
+        member __.ProjectItems = notimpl
+        member __.Properties = notimpl
+        member __.Save(_fileName) = notimpl
+        member __.SaveAs(_newFileName) = notimpl
+        member __.Saved
+            with get () = notimpl
+            and set _v = notimpl
+        member __.UniqueName = notimpl
+        
+        member __.FullName = 
             project.ProjectFileName 
 
-        member __.Globals: Globals = notimpl
-        member __.IsDirty with get (): bool = notimpl and set (_v: bool): unit = notimpl
-        member __.Kind: string = 
+        member __.Kind = 
             FSharpProjectKind
 
-        member __.Name with get (): string = notimpl and set (_v: string): unit = notimpl
-        member __.Object: obj = notimpl
-        member __.ParentProjectItem: ProjectItem =  notimpl
-        member __.ProjectItems: ProjectItems = notimpl
-        member __.Properties: Properties = notimpl
-        member __.Save(_fileName: string): unit = notimpl
-        member __.SaveAs(_newFileName: string): unit = notimpl
-        member __.Saved with get (): bool = notimpl and set (_v: bool): unit = notimpl
-        member __.UniqueName: string = notimpl
-                  
-
-and MockProjectItem(filePath: string, project: IProjectProvider, dte: DTE) =
+and MockProjectItem(filePath, project: IProjectProvider, dte: DTE) =
     interface ProjectItem with
-        member __.Collection: ProjectItems = notimpl
-        member __.ConfigurationManager: ConfigurationManager = notimpl
-        member __.ContainingProject: Project = 
+        member __.Collection = notimpl
+        member __.ConfigurationManager = notimpl
+        member __.DTE = notimpl
+        member __.Delete() = notimpl
+        member __.ExpandView() = notimpl
+        member __.Extender with get (_extenderName) = notimpl
+        member __.ExtenderCATID = notimpl
+        member __.ExtenderNames = notimpl
+        member __.FileCodeModel = notimpl
+        member __.FileCount = notimpl
+        member __.FileNames with get (_index) = notimpl
+        member __.IsDirty
+            with get () = notimpl
+            and set _v = notimpl
+        member __.IsOpen with get (_viewKind) = notimpl
+        member __.Kind = notimpl
+        member __.Name
+            with get () = notimpl
+            and set _v = notimpl
+        member __.Object = notimpl
+        member __.Open(_viewKind) = notimpl
+        member __.ProjectItems = notimpl
+        member __.Properties = notimpl
+        member __.Remove() = notimpl
+        member __.Save(_fileName) = notimpl
+        member __.SaveAs(_newFileName) = notimpl
+        member __.Saved
+            with get () = notimpl
+            and set _v = notimpl
+        member __.SubProject = notimpl
+        
+        member __.ContainingProject = 
             if project.IsForStandaloneScript then null
             else MockProject(project, dte) :> _
 
-        member __.DTE: DTE = notimpl
-        member __.Delete(): unit = notimpl
-        member __.Document: Document = 
+        member __.Document = 
             MockDocument(filePath, dte) :> _
-
-        member __.ExpandView(): unit = notimpl
-        member __.Extender with get (_extenderName: string): obj = notimpl
-        member __.ExtenderCATID: string = notimpl
-        member __.ExtenderNames: obj = notimpl
-        member __.FileCodeModel: FileCodeModel = notimpl
-        member __.FileCount: int16 = notimpl
-        member __.FileNames with get (_index: int16): string = notimpl
-        member __.IsDirty with get (): bool = notimpl and set (_v: bool): unit = notimpl
-        member __.IsOpen with get (_viewKind: string): bool = notimpl
-        member __.Kind: string = notimpl
-        member __.Name with get (): string = notimpl and set (_v: string): unit = notimpl
-        member __.Object: obj = notimpl
-        member __.Open(_viewKind: string): Window = notimpl
-        member __.ProjectItems: ProjectItems = notimpl
-        member __.Properties: Properties = notimpl        
-        member __.Remove(): unit = notimpl        
-        member __.Save(_fileName: string): unit = notimpl        
-        member __.SaveAs(_newFileName: string): bool = notimpl        
-        member __.Saved with get (): bool = notimpl and set (_v: bool): unit = notimpl        
-        member __.SubProject: Project = notimpl
