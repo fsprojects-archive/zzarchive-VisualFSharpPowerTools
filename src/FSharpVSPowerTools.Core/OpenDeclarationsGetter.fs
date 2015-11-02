@@ -327,7 +327,7 @@ module OpenDeclarationGetter =
                 let fullNames =
                     symbolUse.FullNames
                     |> Array.map (fun fullName ->
-                        match entities |> Map.tryFind (String.Join (".", fullName)) with
+                        match entities |> Dict.tryFind (String.Join (".", fullName)) with
                         | Some [cleanIdents] ->
                             //debug "[SourceCodeClassifier] One clean FullName %A -> %A" fullName cleanIdents
                             cleanIdents
