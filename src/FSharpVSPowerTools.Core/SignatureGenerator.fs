@@ -455,11 +455,11 @@ and internal writeModuleHeader ctx (modul: FSharpEntity) =
     let qualifiedModuleName = tryRemoveModuleSuffix modul modul.FullName
     writer.WriteLine("module {0}", qualifiedModuleName)
     ctx.ResolvingOpenDeclarations
-    |> Seq.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
-    |> Seq.iteri (fun i decl ->
+    |> Array.iteri (fun i (openDecl, isUsed) -> 
+        if not isUsed then () else
         if i = 0 then 
             writer.WriteBlankLines ctx.BlankLines.BeforeModuleHeaderOpenDeclaration
-        writer.WriteLine("open {0}", decl)) 
+        writer.WriteLine("open {0}", openDecl)) 
 
 and internal getParentPath (entity: FSharpEntity) =
     match entity.Namespace with
@@ -471,13 +471,13 @@ and internal getParentPath (entity: FSharpEntity) =
 and internal writeTypeHeader ctx (typ: FSharpEntity) =
     let writer = ctx.OpenDeclWriter
     let parent = getParentPath typ
-    writer.WriteLine(parent)
+    writer.WriteLine parent
     ctx.ResolvingOpenDeclarations
-    |> Array.choose (fun (openDecl, isUsed) -> if isUsed then Some openDecl else None)
-    |> Array.iteri (fun i decl ->
+    |> Array.iteri (fun i (openDecl, isUsed) -> 
+        if not isUsed then () else
         if i = 0 then 
             writer.WriteBlankLines ctx.BlankLines.BeforeTypeHeaderOpenDeclaration
-        writer.WriteLine("open {0}", decl))
+        writer.WriteLine("open {0}", openDecl))
     writer.WriteBlankLines ctx.BlankLines.AfterTypeHeader
 
 and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
