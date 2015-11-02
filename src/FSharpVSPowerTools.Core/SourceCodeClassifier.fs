@@ -229,11 +229,11 @@ module SourceCodeClassifier =
 
         let allSymbolsUses2 =
             allSymbolsUses
-            |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
-            |> Seq.collect (fun (line, sus) ->
+            |> Array.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
+            |> Array.collect (fun (line, sus) ->
                 let tokens = tokensByLine.[line - 1]
                 sus 
-                |> Seq.choose (fun su ->
+                |> Array.choose (fun su ->
                     let fsSymbolUse = su.SymbolUse
                     let r = fsSymbolUse.RangeAlternate
                     match fsSymbolUse.Symbol with
@@ -268,7 +268,6 @@ module SourceCodeClassifier =
                                             StartCol = r.Start.Column
                                             EndCol = r.End.Column })
                             | _ -> None)))
-            |> Seq.toArray
        
         // index all symbol usages by LineNumber 
         let wordSpansByLine = 

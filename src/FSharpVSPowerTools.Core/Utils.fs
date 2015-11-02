@@ -3,17 +3,48 @@
 open System
 open System.Diagnostics
 
+
+[<AutoOpen>]
+module Prelude =
+    /// obj.ReferenceEquals
+    let inline (==) a b = obj.ReferenceEquals(a, b)
+    /// LanguagePrimitives.PhysicalEquality
+    let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
+    let inline debug msg = Printf.kprintf Debug.WriteLine msg
+    let inline fail msg = Printf.kprintf Debug.Fail msg
+    let inline isNull v = match v with | null -> true | _ -> false
+    let inline isNotNull v = v |> (not << isNull)
+    let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
+    
+
 [<RequireQualifiedAccess>]
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Null =
+
+    let inline fill defaultValue x = 
+        if isNull x then null else defaultValue
+
+    let inline fillWith (genDefaultValue: unit -> 'a) x = 
+        if isNull x then null else genDefaultValue ()
+
+
+[<RequireQualifiedAccess>]
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Seq =
     let tryHead s =
         if Seq.isEmpty s then None else Some (Seq.head s)
 
     let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
 
+open System.Collections.Generic
 [<RequireQualifiedAccess>]
 module List =
     let tryHead = function [] -> None | h :: _ -> Some h
+
+    let rec last (xs:'a list) =
+        match xs with
+        | [] -> failwith "an empty list has no last element"
+        | [x] -> x
+        | _::tl -> last tl
 
     let rec skipWhile p xs =
         match xs with
@@ -27,78 +58,52 @@ module List =
             | _ -> List.rev acc
         loop [] xs
 
+    /// Fold over the list passing the index and element at that index to a folding function
+    let foldi (folder:'State -> int -> 'T -> 'State) (state:'State) (xs:'T list) =        
+        match xs with 
+        | [] -> state
+        | _ -> 
+            let f = OptimizedClosures.FSharpFunc<_,_,_,_>.Adapt folder
+            let rec loop idx s xs = 
+                match xs with 
+                | [] -> s
+                | h::t -> loop (idx+1) (f.Invoke(s,idx,h)) t
+            loop 0 state xs
+
+
+    let inline groupBy (keyfn:'T->'Key) (list: 'T list) =
+        let dict = Dictionary<'Key,ResizeArray<'T>> (HashIdentity.Structural)
+        // Build the groupings
+        let rec loop list =
+            match list with
+            | v :: t -> 
+                let key = keyfn v
+                let ok,prev = dict.TryGetValue key
+                if ok then
+                    prev.Add v
+                else 
+                    let prev = new ResizeArray<'T> 1
+                    dict.[key] <- prev
+                    prev.Add v
+                loop t
+            | _ -> ()
+        loop list
+        dict  // Return the list-of-lists.
+        |> Seq.map (fun group -> (group.Key, Seq.toList group.Value))
+        |> Seq.toList
+
+
 [<RequireQualifiedAccess>]
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Array =
     let inline private checkNonNull argName arg = 
         match box arg with 
         | null -> nullArg argName 
         | _ -> ()
 
-    /// Returns true if one array has another as its subset from index 0.
-    let startsWith (prefix: _ []) (whole: _ []) =
-        let rec loop index =
-            if index > prefix.Length - 1 then true
-            elif index > whole.Length - 1 then false
-            elif prefix.[index] = whole.[index] then loop (index + 1)
-            else false
-        prefix.Length = 0 || loop 0
-
-    /// Returns true if one array has trailing elements equal to another's.
-    let endsWith (suffix: _ []) (whole: _ []) =
-        let suffixLength = suffix.Length
-        let wholeLength = whole.Length
-        let rec loop step =
-            if step > suffixLength then true
-            elif step > wholeLength then false
-            elif suffix.[suffixLength - step] = whole.[wholeLength - step] then loop (step + 1)
-            else false
-
-        if suffix.Length = 0 then true
-        elif whole.Length < suffix.Length then false
-        else loop 1
-
-    /// Returns a new array with an element replaced with a given value.
-    let replace index value (arr: _ []) =
-        if index >= arr.Length then raise (IndexOutOfRangeException "index")
-        let res = Array.copy arr
-        res.[index] <- value
-        res
-
-    /// Returns all heads of a given array.
-    /// For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]
-    let heads (array: 'T []) =
-        let res = Array.zeroCreate<'T[]> array.Length
-        for i = array.Length - 1 downto 0 do
-            res.[i] <- array.[0..i]
-        res
-
-    let foldi (folder : 'State -> int -> 'T -> 'State) (state : 'State) (array : 'T[]) =
-        let mutable state = state
-        let len = array.Length
-        for i = 0 to len - 1 do
-            state <- folder state i array.[i]
-        state
-
-    open System.Collections.Generic
-
-    /// Returns an array that contains no duplicate entries according to generic hash and
-    /// equality comparisons on the entries.
-    /// If an element occurs multiple times in the array then the later occurrences are discarded.
-    let distinct (array:'T[]) =
-        checkNonNull "array" array
-        let temp = Array.zeroCreate array.Length
-        let mutable i = 0
-
-        let hashSet = HashSet<'T>(HashIdentity.Structural<'T>)
-        for v in array do 
-            if hashSet.Add(v) then
-                temp.[i] <- v
-                i <- i + 1
-
-        Array.sub temp 0 i 
-
-    /// Optimized arrays equality. ~100x faster than `array1 = array2`.
+    /// Optimized arrays equality. ~100x faster than `array1 = array2` on strings.
+    /// ~2x faster for floats
+    /// ~0.8x slower for ints
     let inline areEqual (x: 'a[]) (y: 'a[]) =
         match x, y with
         | null, null -> true
@@ -115,6 +120,179 @@ module Array =
                     result <- false
                 i <- i + 1
             result
+
+    /// check if subArray is found in the wholeArray starting 
+    /// at the provided index
+    let inline isSubArray (subArray:'a []) (wholeArray:'a []) index = 
+        if isNull subArray || isNull wholeArray then false
+        elif subArray.Length = 0 then true
+        elif subArray.Length > wholeArray.Length then false
+        elif subArray.Length = wholeArray.Length then areEqual subArray wholeArray else        
+        let rec loop subidx idx =
+            if subidx = subArray.Length then true 
+            elif subArray.[subidx] = wholeArray.[idx] then loop (subidx+1) (idx+1) 
+            else false
+        loop 0 index
+
+
+    /// Returns true if one array has another as its subset from index 0.
+    let startsWith (prefix: _ []) (whole: _ []) =        
+        isSubArray prefix whole 0
+            
+
+    /// Returns true if one array has trailing elements equal to another's.
+    let endsWith (suffix: _ []) (whole: _ []) =
+        isSubArray suffix whole (whole.Length-suffix.Length)
+            
+
+    /// Returns a new array with an element replaced with a given value.
+    let replace index value (array: _ []) =
+        checkNonNull "array" array
+        if index >= array.Length then raise (IndexOutOfRangeException "index")
+        let res = Array.copy array
+        res.[index] <- value
+        res
+
+    
+    let head (array:'T []) =
+         checkNonNull "array" array
+         if array.Length = 0 then invalidArg "array" "cannot get the head of an empty array"
+
+
+    /// Returns all heads of a given array.
+    /// For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]
+    let heads (array: 'T []) =
+        checkNonNull "array" array
+        let res = Array.zeroCreate<'T[]> array.Length
+        for i = array.Length - 1 downto 0 do
+            res.[i] <- array.[0..i]
+        res
+
+
+    /// Fold over the array passing the index and element at that index to a folding function
+    let foldi (folder : 'State -> int -> 'T -> 'State) (state : 'State) (array : 'T[]) =
+        checkNonNull "array" array
+        if array.Length = 0 then state else
+        let folder = OptimizedClosures.FSharpFunc<_,_,_,_>.Adapt folder
+        let mutable state:'State = state
+        let len = array.Length
+        for i = 0 to len - 1 do
+            state <- folder.Invoke (state, i, array.[i])
+        state
+
+
+    /// Get the first element of the array or None if the Array is null or empty
+    let tryHead array =        
+        match array with
+        | null | [||] -> None
+        | arr  -> Some arr.[0]    
+
+
+    /// Get the last element of the array or None if the Array is null or empty
+    let tryLast array =
+        match array with
+        | null | [||] -> None
+        | arr  -> Some arr.[arr.Length-1]        
+
+
+    /// Returns an array that contains no duplicate entries according to generic hash and
+    /// equality comparisons on the entries.
+    /// If an element occurs multiple times in the array then the later occurrences are discarded.
+    let distinct (array:'T[]) =
+        checkNonNull "array" array
+        if array.Length = 0 then [||] else
+        let temp = Array.zeroCreate array.Length
+        let mutable i = 0
+        let hashSet = HashSet<'T> HashIdentity.Structural<'T>
+        for v in array do 
+            if hashSet.Add(v) then
+                temp.[i] <- v
+                i <- i + 1
+        temp.[0..i-1]
+
+
+    let distinctBy keyf (array:'T[]) =
+        checkNonNull "array" array
+        if array.Length = 0 then [||] else
+        let temp = Array.zeroCreate array.Length
+        let mutable i = 0 
+        let hashSet = HashSet<_> HashIdentity.Structural<_>
+        for v in array do
+            if hashSet.Add(keyf v) then
+                temp.[i] <- v
+                i <- i + 1
+        temp.[0..i-1]
+
+    /// pass an array byref to reverse it in place
+    let revInPlace (array: 'a[] byref ) =
+        checkNonNull "array" array
+        if areEqual array [||] then () else        
+        let arrlen, revlen = array.Length-1, array.Length/2 - 1
+        for idx in 0 .. revlen do
+            let t1 = array.[idx] 
+            let t2 = array.[arrlen-idx]
+            array.[idx] <- t2
+            array.[arrlen-idx] <- t1
+
+
+    /// Return an array of elements that preceded the first element that failed
+    /// to satisfy the predicate
+    let takeWhile predicate (array: 'T[]) =
+        checkNonNull "array" array
+        if array.Length = 0 then [||] else
+        let mutable count = 0
+        while count < array.Length-1 && predicate array.[count] do
+            count <- count + 1
+        array.[0..count-1]
+
+
+    /// Return an array of elements that begin at the first element that failed
+    /// to satisfy the predicate
+    let skipWhile predicate (array: 'T[]) =
+        checkNonNull "array" array
+        if array.Length = 0 then [||] else
+        let mutable count = 0
+        while count < array.Length-1 && predicate array.[count] do
+            count <- count + 1
+        array.[count..array.Length-1]
+
+
+    /// Map all elements of the array that satisfy the predicate
+    let filterMap predicate mapfn (array: 'T[])  =
+        checkNonNull "array" array
+        if array.Length = 0 then [||] else
+        let result = Array.zeroCreate array.Length
+        let mutable count = 0
+        for elm in array do
+            if predicate elm then 
+               result.[count] <- mapfn elm
+               count <- count + 1
+        if count = 0 then [||] else
+        result.[0..count-1]
+
+
+    let groupBy (keyfn:'T->'Key) (array: 'T[]) =
+        checkNonNull "array" array
+        let dict = Dictionary<'Key,ResizeArray<'T>> HashIdentity.Structural
+        // Build the groupings
+        for i = 0 to (array.Length - 1) do
+            let v = array.[i]
+            let key = keyfn v
+            let ok, prev = dict.TryGetValue key
+            if ok then 
+                prev.Add v
+            else 
+                let prev = ResizeArray<'T> 1
+                dict.[key] <- prev
+                prev.Add v 
+        // Return the array-of-arrays.
+        let result = Array.zeroCreate dict.Count
+        let mutable i = 0
+        for group in dict do
+            result.[i] <- group.Key, group.Value.ToArray ()
+            i <- i + 1
+        result
+
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -204,8 +382,7 @@ module Async =
             let len = Array.length array
             let result = Array.zeroCreate len
 
-            async {
-                // Apply the mapping function to each array element.
+            async { // Apply the mapping function to each array element.
                 for i in 0 .. len - 1 do
                     let! mappedValue = mapping array.[i]
                     result.[i] <- mappedValue
@@ -424,14 +601,6 @@ module Pervasive =
     Debug.Listeners.Add(new TextWriterTraceListener(System.Console.Out)) |> ignore
     Debug.AutoFlush <- true
 #endif
-    /// obj.ReferenceEquals
-    let inline (==) a b = obj.ReferenceEquals(a, b)
-    /// LanguagePrimitives.PhysicalEquality
-    let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
-    let inline debug msg = Printf.kprintf Debug.WriteLine msg
-    let inline fail msg = Printf.kprintf Debug.Fail msg
-    let inline isNull v = match v with | null -> true | _ -> false
-    let inline isNotNull v = v |> (not << isNull)
 
     let maybe = MaybeBuilder()
     let asyncMaybe = AsyncMaybeBuilder()
@@ -545,46 +714,52 @@ module Dict =
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module String =
+
+    let inline toCharArray (str:string) = str.ToCharArray()
+
     let lowerCaseFirstChar (str: string) =
-        match str with
-        | null -> null
-        | str ->
-            match str.ToCharArray() |> Array.toList with
-            | [] -> str
-            | h :: t when Char.IsUpper h -> String (Char.ToLower h :: t |> List.toArray)
-            | _ -> str
+        if String.IsNullOrEmpty str 
+         || Char.IsLower(str, 0) then str else 
+        let strArr = toCharArray str
+        match Array.tryHead strArr with
+        | None -> str
+        | Some c  -> 
+            strArr.[0] <- Char.ToLower c
+            String (strArr)
+
 
     let extractTrailingIndex (str: string) =
         match str with
         | null -> null, None
         | _ ->
-            str 
-            |> Seq.toList 
-            |> List.rev 
-            |> Seq.takeWhile Char.IsDigit 
-            |> Seq.toArray 
-            |> Array.rev
-            |> fun chars -> String(chars)
+            let mutable charr = str.ToCharArray() 
+            Array.revInPlace &charr
+            let mutable  digits = Array.takeWhile Char.IsDigit charr
+            Array.revInPlace &digits            
+            String digits
             |> function
                | "" -> str, None
                | index -> str.Substring (0, str.Length - index.Length), Some (int index)
 
-    let trim (value: string) = match value with null -> null | x -> x.Trim()
+    /// Remove all trailing and leading whitespace from the string
+    /// return null if the string is null
+    let trim (value: string) = if isNull value then null else value.Trim()
     
+    /// Splits a string into substrings based on the strings in the array seperators
     let split options (separator: string[]) (value: string) = 
-        match value with null -> null | x -> x.Split(separator, options)
+        if isNull value  then null else value.Split(separator, options)
 
     let (|StartsWith|_|) pattern value =
-        if String.IsNullOrWhiteSpace(value) then
+        if String.IsNullOrWhiteSpace value then
             None
-        elif value.StartsWith(pattern) then
+        elif value.StartsWith pattern then
             Some value
         else None
 
     let (|Contains|_|) pattern value =
-        if String.IsNullOrWhiteSpace(value) then
+        if String.IsNullOrWhiteSpace value then
             None
-        elif value.Contains(pattern) then
+        elif value.Contains pattern then
             Some value
         else None
     
@@ -612,6 +787,45 @@ module String =
                 yield !line
             line := reader.ReadLine()
         |]
+
+    open System.Text
+    /// Use an accumulation function to create a new string applying a transformation
+    /// to every non-empty line in the string
+    let mapNonEmptyLines (folder: StringBuilder -> string -> StringBuilder) (str: string) =
+        let f = OptimizedClosures.FSharpFunc<_,_,_>.Adapt folder
+        use reader = new StringReader (str)
+        let sb = StringBuilder ()
+        let mutable line = reader.ReadLine ()
+        while isNotNull line do
+            if line.Length > 0 then
+                f.Invoke (sb,line) |> ignore
+            line <- reader.ReadLine()
+        string sb
+
+    /// Parse a string to find the first nonempty line
+    /// Return null if the string was null or only contained empty lines
+    let firstNonEmptyLine (str: string) =
+        use reader = new StringReader (str)
+        let rec loop (line:string) =
+            if isNull line then None 
+            elif  line.Length > 0 then Some line
+            else loop (reader.ReadLine())
+        loop (reader.ReadLine())
+
+open System.Text
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module StringBuilder =
+    /// Pipelining function for appending a string to a stringbuilder
+    let inline append   (str:string) (sb:StringBuilder) = sb.Append str
+
+    /// Pipelining function for appending a string with a '\n' to a stringbuilder
+    let inline appendLine (str:string) (sb:StringBuilder) = sb.AppendLine str
+    
+    /// SideEffecting function for appending a string to a stringbuilder
+    let inline appendi (str:string) (sb:StringBuilder) = sb.Append str |> ignore
+
+    /// SideEffecting function for appending a string with a '\n' to a stringbuilder
+    let inline appendLinei (str:string) (sb:StringBuilder) = sb.AppendLine str |> ignore
 
 module Reflection =
     open System.Reflection

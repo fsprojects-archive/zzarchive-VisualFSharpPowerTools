@@ -610,8 +610,8 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                     else acc) []
     idents
     |> List.rev
-    |> Seq.concat
-    |> Seq.map (fun ident -> ident.idText)
+    |> List.concat
+    |> List.map (fun ident -> ident.idText)
     |> String.concat "."
 
 
