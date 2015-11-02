@@ -75,6 +75,30 @@ let [<Test>] ``|Array| areEqual``() =
     Assert.AreEqual(([||] = null), (Array.areEqual [||] null))
 
 
+let [<Test>] ``|Array| random slice is a sub array``() =
+    let rng = System.Random ()
+    Check.QuickThrowOnFailure <| 
+    fun (array:int[]) ->
+        (array <> [||]) ==>
+           lazy(let start   = rng.Next(0,array.Length-1)
+                let finish  = rng.Next(start,array.Length-1)
+                Array.isSubArray (array.[start..finish]) array start = true)
+
+
+let [<Test>] ``|Array| startsWith respects bounds``() =
+    Check.QuickThrowOnFailure <| 
+    fun (subEnd: int) (array:int[]) ->
+        (subEnd >= 0 && subEnd < array.Length) ==> 
+           lazy (Array.startsWith (array.[0..subEnd]) array = true)
+
+
+let [<Test>] ``|Array| endsWith respects bounds``() =
+    Check.QuickThrowOnFailure <| 
+    fun (subStart: int) (array:int[]) ->
+        (subStart >= 0 && subStart < array.Length) ==> 
+           lazy (Array.endsWith (array.[subStart..array.Length-1]) array = true)
+
+
 let [<Test>] ``|Array| Distinct has no duplicates``() =
     Check.QuickThrowOnFailure <|
         fun (array:string []) ->

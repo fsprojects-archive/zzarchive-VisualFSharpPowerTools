@@ -121,24 +121,29 @@ module Array =
                 i <- i + 1
             result
 
+    /// check if subArray is found in the wholeArray starting 
+    /// at the provided index
+    let inline isSubArray (subArray:'a []) (wholeArray:'a []) index = 
+        if isNull subArray || isNull wholeArray then false
+        elif subArray.Length = 0 then true
+        elif subArray.Length > wholeArray.Length then false
+        elif subArray.Length = wholeArray.Length then areEqual subArray wholeArray else        
+        let rec loop subidx idx =
+            if subidx = subArray.Length then true 
+            elif subArray.[subidx] = wholeArray.[idx] then loop (subidx+1) (idx+1) 
+            else false
+        loop 0 index
+
 
     /// Returns true if one array has another as its subset from index 0.
     let startsWith (prefix: _ []) (whole: _ []) =        
-        if isNull prefix || isNull whole then false
-        elif prefix.Length = 0 then true
-        elif prefix.Length > whole.Length then false
-        elif prefix.Length = whole.Length then areEqual prefix whole
-        else areEqual whole.[0..prefix.Length-1] prefix
-
+        isSubArray prefix whole 0
+            
 
     /// Returns true if one array has trailing elements equal to another's.
     let endsWith (suffix: _ []) (whole: _ []) =
-        if isNull suffix || isNull whole then false
-        elif suffix.Length = 0 then true
-        elif suffix.Length > whole.Length then false
-        elif suffix.Length = whole.Length then areEqual suffix whole
-        else areEqual whole.[whole.Length-suffix.Length..whole.Length-1] suffix
-
+        isSubArray suffix whole (whole.Length-suffix.Length)
+            
 
     /// Returns a new array with an element replaced with a given value.
     let replace index value (array: _ []) =
