@@ -330,11 +330,12 @@ module InterfaceStubGenerator =
                     writer |> closeDeclaration
                     writer |> writeImplementation
                 | args, _ ->
-                    if verboseMode then writer.WriteLine("")
+                    writer.WriteLine("")
                     writer.Indent ctx.Indentation
                     writer.Write("with get {0}", args)
                     writer |> closeDeclaration
                     writer |> writeImplementation
+                    writer.Unindent ctx.Indentation
             else
                 writer.Write(usage)
                 writer |> closeDeclaration
