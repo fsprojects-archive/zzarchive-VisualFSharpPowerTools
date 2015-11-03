@@ -21,10 +21,25 @@ type private CheckingProject =
     { Options: FSharpProjectOptions
       Checked: bool }
 
+[<Sealed>]
+type private CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSnapshot>, originalSnapshot: ITextSnapshot) =
+    let mutable snapshotSpan: SnapshotSpan option = None 
+    member __.ColumnSpan = columnSpan
+    member __.GetSnapshotSpan targetSnapshot =
+        let newSpan =
+            snapshotSpan 
+            |> Option.orTry (fun _ -> fromRange originalSnapshot (columnSpan.WordSpan.ToRange()))
+            |> Option.map (fun span ->
+                if span.Snapshot <> targetSnapshot then
+                    span.TranslateTo(targetSnapshot, SpanTrackingMode.EdgeExclusive)
+                else span)
+        snapshotSpan <- newSpan
+        snapshotSpan
+
 [<NoComparison>]
 type private FastStageData =
     { Snapshot: ITextSnapshot
-      Spans: CategorizedColumnSpan<ITextSnapshot>[]
+      Spans: CategorizedSnapshotSpan[]
       SingleSymbolsProjects: CheckingProject list }
 
 [<NoComparison>]
@@ -36,7 +51,7 @@ type private FastStage =
 [<NoComparison>]
 type private SlowStageData =
     { Snapshot: ITextSnapshot
-      UnusedSpans: Map<WordSpan, CategorizedColumnSpan<ITextSnapshot>>
+      UnusedSpans: Map<WordSpan, CategorizedSnapshotSpan>
       IsUpdating: bool }
 
 [<NoComparison>]
@@ -174,11 +189,11 @@ type SyntaxConstructClassifier
         else Some()
 
 
-    let mergeSpans (oldSpans: CategorizedColumnSpan<_>[]) (newSpans: CategorizedColumnSpan<_>[]) =
-        let getTypeCheckerSpans spans =
+    let mergeSpans (oldSpans: CategorizedSnapshotSpan[]) (newSpans: CategorizedSnapshotSpan[]) =
+        let getTypeCheckerSpans (spans: CategorizedSnapshotSpan[]) =
             spans
             |> Array.filter (fun x ->
-                match x.Category with
+                match x.ColumnSpan.Category with
                 | Category.Escaped
                 | Category.Operator
                 | Category.Other
@@ -191,7 +206,7 @@ type SyntaxConstructClassifier
             let typeCheckerSpans = getTypeCheckerSpans spans
             typeCheckerSpans,
             typeCheckerSpans
-            |> Array.map (fun x -> x.WordSpan.Line)
+            |> Array.map (fun x -> x.ColumnSpan.WordSpan.Line)
             |> function [||] -> -1, -1 | lines -> Array.min lines, Array.max lines
 
         let newTcSpans, (newStartLine, newEndLine) = getLineRange newSpans
@@ -209,8 +224,8 @@ type SyntaxConstructClassifier
             | [||], [||] -> false
             | _, [||] | [||], _ -> true
             | x, y ->
-                sameWordSpan x.[0].WordSpan y.[0].WordSpan
-                && sameWordSpan x.[x.Length - 1].WordSpan y.[y.Length - 1].WordSpan
+                sameWordSpan x.[0].ColumnSpan.WordSpan y.[0].ColumnSpan.WordSpan
+                && sameWordSpan x.[x.Length - 1].ColumnSpan.WordSpan y.[y.Length - 1].ColumnSpan.WordSpan
 
         if isNewRangeLarger || areFirstAndLastSpansNotChanged() then
             debug "[SyntaxConstructClassifier] Replace spans entirely."
@@ -223,11 +238,11 @@ type SyntaxConstructClassifier
                 sprintf "[SyntaxConstructClassifier] Merging spans (new range %A < old range %A)."
                         (newStartLine, newEndLine) (oldStartLine, oldEndLine))
             seq { 
-                yield! oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine)
-                yield! oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine) 
-                yield! newSpans  
+                yield! oldSpans |> Seq.takeWhile (fun x -> x.ColumnSpan.WordSpan.Line < newStartLine)
+                yield! oldSpans |> Seq.skipWhile (fun x -> x.ColumnSpan.WordSpan.Line < newEndLine) 
+                yield! newSpans
             }
-            |> Seq.sortBy (fun x -> x.WordSpan.Line)
+            |> Seq.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
             |> Seq.toArray
 
 
@@ -267,13 +282,13 @@ type SyntaxConstructClassifier
                 let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                     getCategoriesAndLocations (symbolsUses, checkResults, lexer, getTextLineOneBased, openDecls, entities)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
-                    |> Array.map (fun x -> { x with Snapshot = Some snapshot })
+                    |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
 
                 let notUsedSpans =
                     spans
-                    |> Array.filterMap  (fun s -> s.Category = Category.Unused)
-                                        // save current snapshot in order to create a proper SnapshotSpan from it
-                                        (fun s -> s.WordSpan, { s with Snapshot = Some snapshot })
+                    |> Array.filterMap
+                        (fun x -> x.ColumnSpan.Category = Category.Unused)
+                        (fun x -> x.ColumnSpan.WordSpan, x)
                     |> Map.ofArray
 
                 fastState.Swap (function
@@ -361,18 +376,17 @@ type SyntaxConstructClassifier
                 let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                     getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
-                    |> Array.map (fun x -> { x with Snapshot = Some snapshot })
+                    |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
 
                 let spans =
                     match slowState.Value with
                     | SlowStage.Data { UnusedSpans = oldUnusedSpans } ->
                         spans
                         |> Array.filter (fun s ->
-                            not (oldUnusedSpans |> Map.containsKey s.WordSpan))
+                            not (oldUnusedSpans |> Map.containsKey s.ColumnSpan.WordSpan))
                         |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd)
+                        |> Array.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
                     | _ -> spans
-
-                let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
 
                 let! singleSymbolsProjects =
                     async {
@@ -465,24 +479,17 @@ type SyntaxConstructClassifier
 
     let getClassificationSpans (targetSnapshotSpan: SnapshotSpan) =
         match fastState.Value with
-        | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans }
-        | FastStage.Updating (Some { FastStageData.Snapshot = snapshot; Spans = spans }, _) ->
+        | FastStage.Data { FastStageData.Spans = spans }
+        | FastStage.Updating (Some { FastStageData.Spans = spans }, _) ->
             let spanStartLine = max 0 (targetSnapshotSpan.Start.GetContainingLine().LineNumber - 10)
             let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 10
             spans
             // Locations are sorted, so we can safely filter them efficiently
-            |> Seq.skipWhile (fun span -> span.WordSpan.Line < spanStartLine)
-            |> Seq.choose (fun columnSpan ->
+            |> Seq.skipWhile (fun span -> span.ColumnSpan.WordSpan.Line < spanStartLine)
+            |> Seq.choose (fun snapshotSpan ->
                 maybe {
-                    let! clType = getClassificationType columnSpan.Category
-                    // Create a span on the original snapshot
-                    let origSnapshot = columnSpan.Snapshot |> Option.getOrElse snapshot
-                    let! span = fromRange origSnapshot (columnSpan.WordSpan.ToRange())
-                    let span =
-                        if targetSnapshotSpan.Snapshot <> span.Snapshot then
-                            span.TranslateTo(targetSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)
-                        else span
-                    // Translate the span to the new snapshot
+                    let! clType = getClassificationType snapshotSpan.ColumnSpan.Category
+                    let! span = snapshotSpan.GetSnapshotSpan targetSnapshotSpan.Snapshot
                     return clType, span
                 })
             |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
