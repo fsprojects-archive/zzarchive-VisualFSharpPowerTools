@@ -203,18 +203,20 @@ type SyntaxConstructClassifier
         | Category.Other -> false
 
     let mergeSpans (oldSpans: CategorizedSnapshotSpan[]) (newSpans: CategorizedSnapshotSpan[]) =
-        let getTypeCheckerSpans (spans: CategorizedSnapshotSpan[]) =
-            spans |> Array.filter (fun x -> isTypeCheckerCategory x.ColumnSpan.Category)
-
-        let getLineRange spans =
-            let typeCheckerSpans = getTypeCheckerSpans spans
+        let getLineRange includingUnused (spans: CategorizedSnapshotSpan[]) =
+            let typeCheckerSpans = 
+                spans 
+                |> Array.filter (fun x -> 
+                    isTypeCheckerCategory x.ColumnSpan.Category
+                    || (includingUnused && x.ColumnSpan.Category = Category.Unused))
             typeCheckerSpans,
             typeCheckerSpans
             |> Array.map (fun x -> x.ColumnSpan.WordSpan.Line)
             |> function [||] -> -1, -1 | lines -> Array.min lines, Array.max lines
 
-        let newTcSpans, (newStartLine, newEndLine) = getLineRange newSpans
-        let oldTcSpans, (oldStartLine, oldEndLine) = getLineRange oldSpans
+        // we take into account new Unused spans, but do not old ones.
+        let newTcSpans, (newStartLine, newEndLine) = getLineRange true newSpans
+        let oldTcSpans, (oldStartLine, oldEndLine) = getLineRange false oldSpans
         let isNewRangeLarger = newStartLine <= oldStartLine && newEndLine >= oldEndLine
 
         // returns `true` if both first and last spans are still here, which means
@@ -250,7 +252,7 @@ type SyntaxConstructClassifier
                         (newStartLine, newEndLine) (oldStartLine, oldEndLine))
             seq { 
                 yield! oldSpans |> Seq.takeWhile (fun x -> x.ColumnSpan.WordSpan.Line < newStartLine)
-                yield! oldSpans |> Seq.skipWhile (fun x -> x.ColumnSpan.WordSpan.Line < newEndLine) 
+                yield! oldSpans |> Seq.skipWhile (fun x -> x.ColumnSpan.WordSpan.Line <= newEndLine) 
                 yield! newSpans
             }
             |> Seq.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
@@ -341,11 +343,10 @@ type SyntaxConstructClassifier
                 | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> ()
                 | SlowStage.NoData (isUpdating = true) -> ()
                 | _ ->
+                    let cancelToken = newCancellationToken slowStageCancellationToken
                     slowState.Swap (function
                         | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true }
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
-
-                    let cancelToken = newCancellationToken slowStageCancellationToken
                     Async.StartInThreadPoolSafe(worker (project, snapshot), cancelToken.Token)
         | _ -> ()
 
