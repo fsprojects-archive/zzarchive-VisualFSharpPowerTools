@@ -67,7 +67,7 @@ type VSLanguageService
     let suggestRecoveryAfterFailure ex fileName _source opts =
         Logging.logError (fun _ -> sprintf "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-        statusBar.SetText(Resource.languageServiceErrorMessage) |> ignore 
+        statusBar.SetText Resource.languageServiceErrorMessage |> ignore 
                 
     do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure
        openDocumentsTracker.DocumentChanged.Add instance.OnFileChanged

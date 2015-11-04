@@ -103,7 +103,7 @@ module InterfaceStubGenerator =
             None
         | _ -> 
             let revd = List.rev xs
-            Some(List.rev revd.Tail, revd.Head)
+            Some (List.rev revd.Tail, revd.Head)
 
     let internal getTypeParameterName (typar: FSharpGenericParameter) =
         (if typar.IsSolveAtCompileTime then "^" else "'") + typar.Name
@@ -122,7 +122,7 @@ module InterfaceStubGenerator =
             match arg.Name with 
             | None ->
                 if arg.Type.HasTypeDefinition && arg.Type.TypeDefinition.XmlDocSig = "T:Microsoft.FSharp.Core.unit" then "()" 
-                else sprintf "arg%d" (namesWithIndices |> Map.toList |> List.map snd |> List.sumBy Set.count |> max 1)
+                else sprintf "arg%d" (namesWithIndices |> Map.toSeq |> Seq.map snd |> Seq.sumBy Set.count |> max 1)
             | Some x -> x
         
         let nm, namesWithIndices = normalizeArgName namesWithIndices nm
@@ -402,8 +402,9 @@ module InterfaceStubGenerator =
 
     let internal (|LongIdentPattern|_|) = function
         | SynPat.LongIdent(LongIdentWithDots(xs, _), _, _, _, _, _) ->
-            let (name, range) = xs |> Seq.map (fun x -> x.idText, x.idRange) |> Seq.last
-            Some(name, range)
+//            let (name, range) = xs |> List.map (fun x -> x.idText, x.idRange) |> List.last
+            let last = List.last xs
+            Some(last.idText, last.idRange)
         | _ -> 
             None
 
@@ -468,11 +469,11 @@ module InterfaceStubGenerator =
         async {
             let! symbolUses = 
                 getMemberNameAndRanges interfaceData
-                |> Seq.toArray
+                |> List.toArray
                 |> Async.Array.map getMemberByLocation
-            return symbolUses |> Seq.choose (Option.bind formatMemberSignature)
-                              |> Seq.concat
-                              |> Set.ofSeq
+            return symbolUses |> Array.choose (Option.bind formatMemberSignature >> Option.map String.Concat)
+                             // |> Array.concat
+                              |> Set.ofArray
         }
 
     /// Check whether an entity is an interface or type abbreviation of an interface
