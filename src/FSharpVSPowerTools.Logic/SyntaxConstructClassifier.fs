@@ -146,12 +146,12 @@ type SyntaxConstructClassifier
 
     let triggerClassificationChanged snapshot reason =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
-        classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
+        classificationChanged.Trigger(self, ClassificationChangedEventArgs span)
         debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
 
     let triggerUnusedDeclarationChanged snapshot =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
-        unusedDeclarationChanged.Trigger(self, SnapshotSpanEventArgs(span))
+        unusedDeclarationChanged.Trigger(self, SnapshotSpanEventArgs span)
 
     let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
         let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
@@ -175,8 +175,8 @@ type SyntaxConstructClassifier
                     |> Option.map
                      (Seq.groupBy (fun e -> e.FullName)
                      >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                     >> Dict.ofSeq)
-                                    , openDecls)
+                     >> Dict.ofSeq),
+                openDecls)
         }
     }
 

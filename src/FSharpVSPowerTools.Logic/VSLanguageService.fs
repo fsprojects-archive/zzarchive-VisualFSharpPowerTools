@@ -108,8 +108,9 @@ type VSLanguageService
         let source = point.Snapshot.GetText()
         let line = point.Snapshot.GetLineNumberFromPosition point.Position
         let col = point.Position - point.GetContainingLine().Start.Position
-        let lineStr = point.GetContainingLine().GetText()                
+        let lineStr = point.GetContainingLine().GetText()
         let args = projectProvider.CompilerOptions
+        
         let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
             let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
             let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
