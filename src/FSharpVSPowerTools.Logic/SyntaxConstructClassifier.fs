@@ -511,11 +511,14 @@ type SyntaxConstructClassifier
         match fastState.Value with
         | FastStage.Data { FastStageData.Spans = spans }
         | FastStage.Updating (Some { FastStageData.Spans = spans }, _) ->
-            let spanStartLine = max 0 (targetSnapshotSpan.Start.GetContainingLine().LineNumber - 10)
-            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 10
+            let spanStartLine = targetSnapshotSpan.Start.GetContainingLine().LineNumber
+            let widenSpanStartLine = max 0 (spanStartLine - 10)
+            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber
             spans
-            // Locations are sorted, so we can safely filter them efficiently
-            |> Seq.skipWhile (fun span -> span.ColumnSpan.WordSpan.Line < spanStartLine)
+            // Locations are sorted, so we can safely filter them efficiently.
+            // Skip spans that's not are potential candidates for return (we widen the range 
+            // because spans may shift to up after translation).
+            |> Seq.skipWhile (fun span -> span.ColumnSpan.WordSpan.Line < widenSpanStartLine)
             |> Seq.choose (fun snapshotSpan ->
                 maybe {
                     let! clType = getClassificationType snapshotSpan.ColumnSpan.Category
@@ -523,6 +526,8 @@ type SyntaxConstructClassifier
                     return clType, span
                 })
             |> Seq.takeWhile (fun (_, span) -> span.Line <= spanEndLine)
+            // Because we may translate spans above, some of them may not be contained in the requested `SnapshotSpan`.
+            |> Seq.filter (fun (_, span) -> targetSnapshotSpan.Contains span.Span)
             |> Seq.map (fun (clType, span) -> ClassificationSpan (span.Span, clType))
             |> Seq.toArray
         | FastStage.NoData ->

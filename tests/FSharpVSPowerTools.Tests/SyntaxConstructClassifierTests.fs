@@ -131,7 +131,7 @@ let internal f() = ()
                 [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) }
                   { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) }
                   { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) }
-                  {Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
+                  { Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
             actual |> assertEqual expected
         File.Delete(fileName)
         
