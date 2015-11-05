@@ -37,7 +37,7 @@ let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 // (<solutionFile>.sln is built during the building process)
 let solutionFile  = "FSharpVSPowerTools"
 // Pattern specifying assemblies to be tested using NUnit
-let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
+let testAssemblies = "tests/**/bin/Release/*.Tests*.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted 
