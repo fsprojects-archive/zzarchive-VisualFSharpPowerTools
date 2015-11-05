@@ -9,7 +9,7 @@ open FSharpVSPowerTools.DepthColorizer
 type DepthTaggerHelper() =
     inherit VsTestBase()
 
-    let taggerProvider = DepthColorizerTaggerProvider(base.ServiceProvider,base.DocumentFactoryService,base.ProjectFactory ,base.VsLanguageService  )
+    let taggerProvider = DepthColorizerTaggerProvider(base.ServiceProvider, base.DocumentFactoryService, base.ProjectFactory, base.VsLanguageService)
 
     member __.GetTagger(buffer) = 
         taggerProvider.CreateTagger<_>(buffer)
@@ -40,6 +40,7 @@ type T() =
     member x.M = ()
 """
         let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let tagger = helper.GetTagger(buffer)
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
@@ -62,6 +63,7 @@ namespace global
 type Hoge () =
 """
         let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
         let tagger = helper.GetTagger(buffer)
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
