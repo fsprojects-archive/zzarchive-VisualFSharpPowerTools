@@ -160,9 +160,9 @@ Target "UnitTests" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
-// Run the unit tests using test runner
+// Run the unit tests using test runner in parallel
 
-Target "PUnitTests" (fun _ ->
+Target "ParallelUnitTests" (fun _ ->
     !! testAssemblies 
     |> NUnitParallel (fun p ->
         let param =
@@ -173,18 +173,6 @@ Target "PUnitTests" (fun _ ->
                 Domain = NUnitDomainModel.MultipleDomainModel
                 OutputFile = "TestResults.xml" }
         if isAppVeyorBuild then { param with ExcludeCategory = "AppVeyorLongRunning" } else param)
-)
-
-
-// --------------------------------------------------------------------------------------
-// Run the integration tests using test runner
-
-Target "IntegrationTests" (fun _ ->
-    !! "tests/**/bin/Release/FSharpVSPowerTools.IntegrationTests.dll" 
-    |> MSTest.MSTest (fun p ->
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-        })
 )
 
 // --------------------------------------------------------------------------------------
@@ -341,7 +329,7 @@ Target "All" DoNothing
 "Clean"
   ==> "Build"
   ==> "BuildTests"
-  ==> "PUnitTests"
+  ==> "ParallelUnitTests"
 
 "Clean"
  ==> "RunStatistics"
@@ -352,7 +340,6 @@ Target "All" DoNothing
   ==> "ReleaseAll"
 
 "Main"
-  =?> ("IntegrationTests", isLocalBuild)
   ==> "All"
 
 "Main" 
