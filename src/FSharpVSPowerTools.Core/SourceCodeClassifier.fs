@@ -98,7 +98,7 @@ module private StringCategorizers =
                             Line = line
                             StartCol = startColumn + m.Index
                             EndCol = startColumn + m.Index + m.Length }}
-                  category :: acc  
+                  category :: acc
                 ) [])
          
     module EscapedChars =
@@ -307,16 +307,15 @@ module SourceCodeClassifier =
                     | [span] -> span
                     | spans -> 
                         spans 
-                        |> List.sortBy (fun span -> 
+                        |> List.minBy (fun span -> 
                             match span.Category with
                             | Category.Other -> 3
                             | Category.Unused -> 2
                             | Category.Function -> 0 // we prefer Function to hide ReferenceType on some methods in signature files
-                            | _ -> 1)
-                        |> List.head)
+                            | _ -> 1))
             |> Seq.distinct
 
-//        debug "LongIdents by line:"  
+//        debug "LongIdents by line:"
 //        longIdentsByEndPos 
 //        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
 //        |> Seq.iter (debug "%A")
